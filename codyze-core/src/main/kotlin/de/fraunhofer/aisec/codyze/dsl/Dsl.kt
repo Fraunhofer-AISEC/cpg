@@ -23,6 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.codyze.dsl
 
 import de.fraunhofer.aisec.codyze.AnalysisProject
@@ -33,6 +35,8 @@ import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
+import de.fraunhofer.aisec.cpg.passes.concepts.TagOverlaysPass
+import de.fraunhofer.aisec.cpg.passes.concepts.TaggingContext
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import java.io.File
 import java.nio.file.Path
@@ -40,6 +44,19 @@ import kotlin.io.path.Path
 import kotlin.uuid.Uuid
 
 @DslMarker annotation class CodyzeDsl
+
+interface IncludeCategory
+
+object AssumptionDecisions : IncludeCategory
+
+object ManualAssessment : IncludeCategory
+
+object Tagging : IncludeCategory
+
+/** Represents a builder to include other scripts. */
+class IncludeBuilder {
+    val includes: MutableMap<IncludeCategory, String> = mutableMapOf()
+}
 
 /** Represents a builder for a single requirement of the TOE. */
 class RequirementBuilder(var name: String = "") {
@@ -52,7 +69,16 @@ class RequirementsBuilder {
 }
 
 /** Represents a builder for a list of all assumptions of the evaluation project. */
-class AssumptionsBuilder
+class AssumptionsBuilder {
+    internal val decisionBuilder = DecisionBuilder()
+
+    class DecisionBuilder
+}
+
+/** Represents a builder for manual assessments of requirements. */
+class ManualAssessmentBuilder {
+    internal val assessments = mutableMapOf<String, () -> QueryTree<Boolean>>()
+}
 
 /** Represents a builder for tool metadata and configuration. */
 class ToolBuilder {
@@ -125,6 +151,8 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
     internal var toeBuilder = ToEBuilder()
     internal val requirementsBuilder = RequirementsBuilder()
     internal val assumptionsBuilder = AssumptionsBuilder()
+    internal val manualAssessmentBuilder = ManualAssessmentBuilder()
+    internal var taggingCtx = TaggingContext()
 
     /** Builds an [AnalysisProject] out of the current state of the builder. */
     fun build(
@@ -136,6 +164,7 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
         val configBuilder =
             TranslationConfiguration.builder()
                 .defaultPasses()
+                .registerPass<TagOverlaysPass>()
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
@@ -182,6 +211,11 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
 
         val requirementsFunctions = requirementsBuilder.requirements
 
+        // Configure tagging from tagging builder
+        configBuilder.configurePass<TagOverlaysPass>(
+            TagOverlaysPass.Configuration(tag = taggingCtx)
+        )
+
         return AnalysisProject(
             name,
             projectDir = projectDir,
@@ -191,14 +225,29 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
     }
 }
 
+/** Includes other script files. */
+@CodyzeDsl
+fun CodyzeScript.include(block: IncludeBuilder.() -> Unit) {
+    includeBuilder.apply(block)
+}
+
+context(IncludeBuilder)
+@CodyzeDsl
+infix fun IncludeCategory.from(path: String) {
+    (this@IncludeBuilder).includes[this] = path
+}
+
 /** Spans the project-Block */
 @CodyzeDsl
 fun CodyzeScript.project(block: ProjectBuilder.() -> Unit) {
-    block(project)
+    projectBuilder.apply(block)
 }
 
 /** Spans the block for the tagging logic. */
-@CodyzeDsl fun CodyzeScript.tagging(block: ProjectBuilder.() -> Unit) {}
+@CodyzeDsl
+fun ProjectBuilder.tagging(block: () -> TaggingContext) {
+    taggingCtx = block()
+}
 
 /** Describes some configuration and metadata about the evaluation tool */
 fun ProjectBuilder.tool(block: ToolBuilder.() -> Unit) {
@@ -254,14 +303,19 @@ fun RequirementsBuilder.requirement(name: String, block: RequirementBuilder.() -
  * [QueryTree.value] set to `true`.
  */
 @CodyzeDsl
-fun RequirementBuilder.byQuery(query: (result: TranslationResult) -> QueryTree<Boolean>) {
+fun RequirementBuilder.by(query: (result: TranslationResult) -> QueryTree<Boolean>) {
     this.query = query
 }
 
 /** Describes that the requirement had to be checked manually. */
+context(ProjectBuilder)
 @CodyzeDsl
-fun RequirementBuilder.byManualAssessment(id: String): Unit {
-    this.query = { result -> QueryTree(true) }
+fun RequirementBuilder.manualAssessmentOf(id: String): QueryTree<Boolean> {
+    val manualAssessment = this@ProjectBuilder.manualAssessmentBuilder.assessments[id]
+    if (manualAssessment == null) {
+        throw IllegalStateException("No manual assessment found for requirement '$id'")
+    }
+    return manualAssessment()
 }
 
 /** Describes the assumptions which have been handled and assessed. */
@@ -276,6 +330,12 @@ fun ProjectBuilder.assumptions(block: AssumptionsBuilder.() -> Unit) {
  */
 @CodyzeDsl fun AssumptionsBuilder.assume(message: () -> String) {}
 
+/** Allows specifying in a block whether assumptions are accepted, rejected or undecided. */
+@CodyzeDsl
+fun AssumptionsBuilder.decisions(block: AssumptionsBuilder.DecisionBuilder.() -> Unit) {
+    decisionBuilder.apply(block)
+}
+
 /**
  * Describes that the assumption with the given [uuid] was assessed and considered as
  * acceptable/valid.
@@ -285,7 +345,7 @@ fun ProjectBuilder.assumptions(block: AssumptionsBuilder.() -> Unit) {
  *   or uppercase.
  */
 @CodyzeDsl
-fun AssumptionsBuilder.accept(uuid: String) {
+fun AssumptionsBuilder.DecisionBuilder.accept(uuid: String) {
     parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Accepted)
 }
 
@@ -298,7 +358,7 @@ fun AssumptionsBuilder.accept(uuid: String) {
  *   or uppercase.
  */
 @CodyzeDsl
-fun AssumptionsBuilder.reject(uuid: String) {
+fun AssumptionsBuilder.DecisionBuilder.reject(uuid: String) {
     parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Rejected)
 }
 
@@ -310,7 +370,7 @@ fun AssumptionsBuilder.reject(uuid: String) {
  *   or uppercase.
  */
 @CodyzeDsl
-fun AssumptionsBuilder.undecided(uuid: String) {
+fun AssumptionsBuilder.DecisionBuilder.undecided(uuid: String) {
     parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Undecided)
 }
 
@@ -323,8 +383,23 @@ fun AssumptionsBuilder.undecided(uuid: String) {
  *   or uppercase.
  */
 @CodyzeDsl
-fun AssumptionsBuilder.ignore(uuid: String) {
+fun AssumptionsBuilder.DecisionBuilder.ignore(uuid: String) {
     parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Ignored)
+}
+
+/** Describes the manual assessments. */
+@CodyzeDsl
+fun ProjectBuilder.manualAssessment(block: ManualAssessmentBuilder.() -> Unit) {
+    manualAssessmentBuilder.apply(block)
+}
+
+/**
+ * Describes a manual assessment of a requirement with the given [id]. The [block] is expected to
+ * return a [QueryTree] that evaluates to `true` if the requirement is fulfilled.
+ */
+@CodyzeDsl
+fun ManualAssessmentBuilder.of(id: String, block: () -> QueryTree<Boolean>) {
+    assessments[id] = block
 }
 
 private fun parseUuidAndAnnotateAssumptions(uuid: String, status: AssumptionStatus) {

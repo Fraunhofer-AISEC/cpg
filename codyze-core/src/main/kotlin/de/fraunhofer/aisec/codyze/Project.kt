@@ -193,13 +193,12 @@ class AnalysisProject(
         ): AnalysisProject? {
             // We need to evaluate the script in order to invoke our project builder inside the
             // script
-            val script = executeScript(file)
-
+            val script = evaluateScriptAndIncludes(file)
             if (script == null) {
                 return null
             }
 
-            return script.project.build(configModifier)
+            return script.projectBuilder.build(configModifier)
         }
 
         /** Builds a translation configuration from the given project directory. */
