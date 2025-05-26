@@ -34,29 +34,29 @@ typealias Decision = QueryTree<DecisionState>
 sealed class DecisionState
 
 /**
- * Represents a requirement whose query has been evaluated and the result is known to be `false` or
- * some [QueryTree.assumptions] have [de.fraunhofer.aisec.cpg.assumptions.Assumption.status]
+ * Represents a query that has been evaluated and the result is known to be `false` or some
+ * [QueryTree.assumptions] have [de.fraunhofer.aisec.cpg.assumptions.Assumption.status]
  * [AssumptionStatus.Rejected].
  */
 data object Failed : DecisionState()
 
 /**
- * Represents a requirement whose query has been evaluated and the result is known to be `true` and
- * all [QueryTree.assumptions] have [de.fraunhofer.aisec.cpg.assumptions.Assumption.status]
+ * Represents a query that has been evaluated and the result is known to be `true` and all
+ * [QueryTree.assumptions] have [de.fraunhofer.aisec.cpg.assumptions.Assumption.status]
  * [AssumptionStatus.Accepted] or [AssumptionStatus.Ignored].
  */
 data object Succeeded : DecisionState()
 
 /**
- * Represents a requirement whose query has been evaluated but the result is not yet known because
- * some [QueryTree.assumptions] have [de.fraunhofer.aisec.cpg.assumptions.Assumption.status]
+ * Represents a query that has been evaluated but the result is not yet known because some
+ * [QueryTree.assumptions] have [de.fraunhofer.aisec.cpg.assumptions.Assumption.status]
  * [AssumptionStatus.Undecided].
  */
 data object Undecided : DecisionState()
 
 /**
- * Represents a requirement whose query that has not yet been evaluated. Will be most likely used in
- * the context of manual assessments which have to be conducted.
+ * Represents a query that has not yet been evaluated. Will be most likely used in the context of
+ * manual assessments which have to be conducted.
  */
 data object NotYetEvaluated : DecisionState()
 
