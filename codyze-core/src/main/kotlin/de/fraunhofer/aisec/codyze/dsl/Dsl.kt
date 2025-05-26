@@ -388,6 +388,17 @@ fun ManualAssessmentBuilder.of(id: String, block: () -> Decision) {
     assessments[id] = block
 }
 
+/*
+@CodyzeDsl
+fun ManualAssessmentBuilder.of(id: String, block: () -> QueryTree<Boolean>) {
+    assessments[id] = { block().decide() }
+}
+
+@CodyzeDsl
+fun ManualAssessmentBuilder.of(id: String, block: () -> Boolean) {
+    assessments[id] = { block().toQueryTree().decide() }
+}*/
+
 private fun parseUuidAndAnnotateAssumptions(uuid: String, status: AssumptionStatus) {
     val parsedUuid = Uuid.parse(uuid)
     // TODO: Acutally get the TranslationResult

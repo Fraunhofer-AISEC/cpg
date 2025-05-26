@@ -28,7 +28,7 @@ package example
 project {
     manualAssessment {
         of("SEC-TARGET") {
-            /** Yes, I really checked that 6 is greater than 5 */
+            /* Yes, I really checked that 6 is greater than 5 */
             val expectedValue = 5
             val actualValue = 6
             (actualValue gt expectedValue).decide()
@@ -36,7 +36,12 @@ project {
 
         of("THIRD-PARTY-LIBRARY") {
             /** Yes, the rumors are true. */
-            true.toQueryTree().decide()
+            Succeeded.toQueryTree()
+        }
+
+        of("SOMETHING-ELSE") {
+            /* Hmm. I am not sure about this one. */
+            Undecided.toQueryTree()
         }
     }
 }
