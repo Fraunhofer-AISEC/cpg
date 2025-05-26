@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.assumptions.addAssumptionDependence
-import de.fraunhofer.aisec.cpg.assumptions.addAssumptionDependences
 import de.fraunhofer.aisec.cpg.assumptions.assume
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.AccessValues
@@ -344,7 +343,7 @@ fun Node.generatesNewData(): NodeCollectionWithAssumption {
             else -> emptySet()
         }
     return NodeCollectionWithAssumption(splitNodes)
-        .addAssumptionDependences(tempAssumptions + splitNodes + this)
+        .addAssumptionDependence(tempAssumptions + splitNodes + this)
         .assume(
             AssumptionType.DataFlowAssumption,
             "We assume that the node $this generates the following new \"objects\" which require separate handling as they represent copies/clones of the original \"object\": $splitNodes.\n\n" +

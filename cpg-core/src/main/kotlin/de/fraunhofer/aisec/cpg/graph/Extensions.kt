@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
-import de.fraunhofer.aisec.cpg.assumptions.addAssumptionDependences
+import de.fraunhofer.aisec.cpg.assumptions.addAssumptionDependence
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ControlDependence
@@ -836,7 +836,7 @@ fun Node.followXUntilHit(
             failedPaths.add(
                 FailureReason.PATH_ENDED to
                     NodePath(currentPath.map { it.first })
-                        .addAssumptionDependences(currentPath.map { it.second }.toList())
+                        .addAssumptionDependence(currentPath.map { it.second }.toList())
             )
         }
 
@@ -847,7 +847,7 @@ fun Node.followXUntilHit(
                 // the path to the results.
                 fulfilledPaths.add(
                     NodePath(currentPathNodes.toMutableList() + next)
-                        .addAssumptionDependences(currentPath.map { it.second } + newContext)
+                        .addAssumptionDependence(currentPath.map { it.second } + newContext)
                 )
                 continue // Don't add this path anymore. The requirement is satisfied.
             }
@@ -855,7 +855,7 @@ fun Node.followXUntilHit(
                 failedPaths.add(
                     FailureReason.HIT_EARLY_TERMINATION to
                         NodePath(currentPath.map { it.first } + next)
-                            .addAssumptionDependences(currentPath.map { it.second } + newContext)
+                            .addAssumptionDependence(currentPath.map { it.second } + newContext)
                 )
                 continue // Don't add this path anymore. We already failed.
             }
@@ -872,7 +872,7 @@ fun Node.followXUntilHit(
                 // There's a loop.
                 loopingPaths.add(
                     NodePath(currentPathNodes + next)
-                        .addAssumptionDependences(currentPath.map { it.second } + newContext)
+                        .addAssumptionDependence(currentPath.map { it.second } + newContext)
                 )
             }
         }

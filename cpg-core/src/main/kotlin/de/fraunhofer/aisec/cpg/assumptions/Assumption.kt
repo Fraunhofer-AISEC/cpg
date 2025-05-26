@@ -284,7 +284,7 @@ enum class AssumptionType {
  * code analysis. The assumptions are stored in a field [assumptions] and can be newly created with
  * [HasAssumptions.assume]. If an object that implements this interface is created conditionally
  * from other objects that implement this interface, the assumptions can be carried over by calling
- * [HasAssumptions.addAssumptionDependences] or [HasAssumptions.addAssumptionDependence].
+ * [HasAssumptions.addAssumptionDependence] or [HasAssumptions.addAssumptionDependence].
  */
 interface HasAssumptions {
     val assumptions: MutableSet<Assumption>
@@ -346,22 +346,24 @@ fun <T : HasAssumptions> T.assume(
  *
  * @param haveAssumptions nodes that hold assumptions this object dependent on.
  */
-fun <T : HasAssumptions> T.addAssumptionDependences(
-    haveAssumptions: Collection<HasAssumptions>
-): T {
+fun <T : HasAssumptions> T.addAssumptionDependence(vararg haveAssumptions: HasAssumptions): T {
     this.assumptions.addAll(haveAssumptions.flatMap { it.collectAssumptions() })
     return this
 }
 
 /**
- * A convenience function to add a dependency to a single object holding assumptions. For more
- * documentation see [HasAssumptions.addAssumptionDependences].
+ * This function is supposed to be used when a new object is created after searching through the
+ * graph that can depend on assumptions made on other objects. One example is when creating concepts
+ * after following a DFG path. Concepts are added to the graph and then serve as nodes for further
+ * queries, and therefore indirect assumptions would be lost if not copied over with this function.
  *
- * @param hasAssumptions add dependence to assumptions of a single other node.
+ * This is the current implementation for assumption propagation and is not needed when the object
+ * already contains the assumption dependent node.
+ *
+ * @param haveAssumptions nodes that hold assumptions this object dependent on.
  */
-fun <T : HasAssumptions> T.addAssumptionDependence(hasAssumptions: HasAssumptions): T {
-    this.addAssumptionDependences(listOf(hasAssumptions))
-    return this
+fun <T : HasAssumptions> T.addAssumptionDependence(haveAssumptions: Collection<HasAssumptions>): T {
+    return this.addAssumptionDependence(*haveAssumptions.toTypedArray())
 }
 
 /**
