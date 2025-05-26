@@ -74,11 +74,11 @@ class CodyzeScriptCompilationConfiguration :
         defaultImports.append(
             "de.fraunhofer.aisec.codyze.*",
             "de.fraunhofer.aisec.codyze.dsl.*",
-            "de.fraunhofer.aisec.codyze.dsl.Import",
             "de.fraunhofer.aisec.cpg.*",
             "de.fraunhofer.aisec.cpg.graph.*",
             "de.fraunhofer.aisec.cpg.query.*",
             "de.fraunhofer.aisec.cpg.passes.concepts.*",
+            "de.fraunhofer.aisec.cpg.assumptions.*",
         )
         jvm {
             val cp = classpathFromClassloader(CodyzeScript::class.java.classLoader)
