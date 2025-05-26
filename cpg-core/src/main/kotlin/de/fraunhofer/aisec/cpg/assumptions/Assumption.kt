@@ -284,47 +284,10 @@ enum class AssumptionType {
  * code analysis. The assumptions are stored in a field [assumptions] and can be newly created with
  * [HasAssumptions.assume]. If an object that implements this interface is created conditionally
  * from other objects that implement this interface, the assumptions can be carried over by calling
- * [HasAssumptions.addAssumptionDependences] or [HasAssumptions.addAssumptionDependence].
+ * [HasAssumptions.addAssumptionDependence] or [HasAssumptions.addAssumptionDependence].
  */
 interface HasAssumptions {
     val assumptions: MutableSet<Assumption>
-
-    /**
-     * This function adds a new assumption to the object it is called on. If the object is a node or
-     * edge. The Assumption is added as an overlaying node for presentation in the graph. The
-     * assumption is also added to the [assumptions] list. In the future the [Node.id] will be
-     * deterministic across functions.
-     *
-     * Notes on writing the [message]: The message should specify what we assume, the condition, and
-     * ideally the reason why this assumption was necessary and how it can be verified. The text
-     * should start with a pattern such as "We assume that ... .", where "..." contains a
-     * description of the assumption with the reference to concrete nodes or edges affected by it.
-     * Afterward, it is beneficial to continue with a paragraph "To verify this assumption, we need
-     * to check ...".
-     *
-     * @param assumptionType The type of assumption used to differentiate between assumptions and
-     *   group similar assumptions.
-     * @param scope The scope that the assumption has validity for, here the scope is a node,
-     *   because the assumption is valid for every node in its ast subtree.
-     * @param message The message describing the assumption that was taken.
-     */
-    fun <T : HasAssumptions> T.assume(
-        assumptionType: AssumptionType,
-        message: String,
-        scope: Node? = null,
-    ): T {
-        this.assumptions.add(
-            Assumption(
-                assumptionType,
-                message,
-                getCallerFileAndLine(),
-                node = this as? Node,
-                edge = this as? Edge<*>,
-                assumptionScope = scope,
-            )
-        )
-        return this
-    }
 
     /**
      * This is function is used to collect all assumptions stored in the [HasAssumptions] object and
@@ -334,62 +297,99 @@ interface HasAssumptions {
     fun collectAssumptions(): Set<Assumption> {
         return assumptions.toSet()
     }
+}
 
-    /**
-     * This function is supposed to be used when a new object is created after searching through the
-     * graph that can depend on assumptions made on other objects. One example is when creating
-     * concepts after following a DFG path. Concepts are added to the graph and then serve as nodes
-     * for further queries, and therefore indirect assumptions would be lost if not copied over with
-     * this function.
-     *
-     * This is the current implementation for assumption propagation and is not needed when the
-     * object already contains the assumption dependent node.
-     *
-     * @param haveAssumptions nodes that hold assumptions this object dependent on.
-     */
-    fun <T : HasAssumptions> T.addAssumptionDependences(
-        haveAssumptions: Collection<HasAssumptions>
-    ): T {
-        this.assumptions.addAll(haveAssumptions.flatMap { it.collectAssumptions() })
-        return this
-    }
+/**
+ * This function adds a new assumption to the object it is called on. If the object is a node or
+ * edge. The Assumption is added as an overlaying node for presentation in the graph. The assumption
+ * is also added to the [assumptions] list. In the future the [Node.id] will be deterministic across
+ * functions.
+ *
+ * Notes on writing the [message]: The message should specify what we assume, the condition, and
+ * ideally the reason why this assumption was necessary and how it can be verified. The text should
+ * start with a pattern such as "We assume that ... .", where "..." contains a description of the
+ * assumption with the reference to concrete nodes or edges affected by it. Afterward, it is
+ * beneficial to continue with a paragraph "To verify this assumption, we need to check ...".
+ *
+ * @param assumptionType The type of assumption used to differentiate between assumptions and group
+ *   similar assumptions.
+ * @param scope The scope that the assumption has validity for, here the scope is a node, because
+ *   the assumption is valid for every node in its ast subtree.
+ * @param message The message describing the assumption that was taken.
+ */
+fun <T : HasAssumptions> T.assume(
+    assumptionType: AssumptionType,
+    message: String,
+    scope: Node? = null,
+): T {
+    this.assumptions.add(
+        Assumption(
+            assumptionType,
+            message,
+            getCallerFileAndLine(),
+            node = this as? Node,
+            edge = this as? Edge<*>,
+            assumptionScope = scope,
+        )
+    )
+    return this
+}
 
-    /**
-     * A convenience function to add a dependency to a single object holding assumptions. For more
-     * documentation see [HasAssumptions.addAssumptionDependences].
-     *
-     * @param hasAssumptions add dependence to assumptions of a single other node.
-     */
-    fun <T : HasAssumptions> T.addAssumptionDependence(hasAssumptions: HasAssumptions): T {
-        this.addAssumptionDependences(listOf(hasAssumptions))
-        return this
-    }
+/**
+ * This function is supposed to be used when a new object is created after searching through the
+ * graph that can depend on assumptions made on other objects. One example is when creating concepts
+ * after following a DFG path. Concepts are added to the graph and then serve as nodes for further
+ * queries, and therefore indirect assumptions would be lost if not copied over with this function.
+ *
+ * This is the current implementation for assumption propagation and is not needed when the object
+ * already contains the assumption dependent node.
+ *
+ * @param haveAssumptions nodes that hold assumptions this object dependent on.
+ */
+fun <T : HasAssumptions> T.addAssumptionDependence(vararg haveAssumptions: HasAssumptions): T {
+    this.assumptions.addAll(haveAssumptions.flatMap { it.collectAssumptions() })
+    return this
+}
 
-    /**
-     * This function returns a SARIF formatted location of the caller that creates an assumption.
-     * The function is intentionally made private to avoid outside use and functions if it is called
-     * inside of [HasAssumptions].
-     */
-    private fun getCallerFileAndLine(): PhysicalLocation {
-        // The first stack trace element is the call to Thread.getStackTrace. which we do not need
-        val stackTrace = Thread.currentThread().stackTrace.toList().drop(1)
+/**
+ * This function is supposed to be used when a new object is created after searching through the
+ * graph that can depend on assumptions made on other objects. One example is when creating concepts
+ * after following a DFG path. Concepts are added to the graph and then serve as nodes for further
+ * queries, and therefore indirect assumptions would be lost if not copied over with this function.
+ *
+ * This is the current implementation for assumption propagation and is not needed when the object
+ * already contains the assumption dependent node.
+ *
+ * @param haveAssumptions nodes that hold assumptions this object dependent on.
+ */
+fun <T : HasAssumptions> T.addAssumptionDependence(haveAssumptions: Collection<HasAssumptions>): T {
+    return this.addAssumptionDependence(*haveAssumptions.toTypedArray())
+}
 
-        val thisFileName = stackTrace[0].fileName
-        val interfaceImplementingFileName =
-            stackTrace.firstOrNull { it.fileName != thisFileName }?.fileName
-        // The first stack trace with the filename that is neither this, nor the interface
-        // implementing class is the caller of assumption creation
-        val stackTraceElement =
-            stackTrace.firstOrNull {
-                it.fileName !in listOf(thisFileName, interfaceImplementingFileName)
-            }
-        stackTraceElement?.let {
-            return PhysicalLocation(
-                URI(stackTraceElement.fileName ?: ""),
-                Region(stackTraceElement.lineNumber, 0, stackTraceElement.lineNumber, 0),
-            )
+/**
+ * This function returns a SARIF formatted location of the caller that creates an assumption. The
+ * function is intentionally made private to avoid outside use and functions if it is called inside
+ * of [HasAssumptions].
+ */
+private fun getCallerFileAndLine(): PhysicalLocation {
+    // The first stack trace element is the call to Thread.getStackTrace. which we do not need
+    val stackTrace = Thread.currentThread().stackTrace.toList().drop(1)
+
+    val thisFileName = stackTrace[0].fileName
+    val interfaceImplementingFileName =
+        stackTrace.firstOrNull { it.fileName != thisFileName }?.fileName
+    // The first stack trace with the filename that is neither this, nor the interface
+    // implementing class is the caller of assumption creation
+    val stackTraceElement =
+        stackTrace.firstOrNull {
+            it.fileName !in listOf(thisFileName, interfaceImplementingFileName)
         }
-
-        return PhysicalLocation(URI(""), Region(-1, -1, -1, -1))
+    stackTraceElement?.let {
+        return PhysicalLocation(
+            URI(stackTraceElement.fileName ?: ""),
+            Region(stackTraceElement.lineNumber, 0, stackTraceElement.lineNumber, 0),
+        )
     }
+
+    return PhysicalLocation(URI(""), Region(-1, -1, -1, -1))
 }
