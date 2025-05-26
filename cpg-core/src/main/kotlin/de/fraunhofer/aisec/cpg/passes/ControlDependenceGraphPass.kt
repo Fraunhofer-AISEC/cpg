@@ -41,7 +41,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
-import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import kotlin.collections.component1
 import kotlin.collections.component2
@@ -117,101 +116,19 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         for ((node, dominatorPaths) in finalState) {
             val dominatorsList =
                 dominatorPaths.entries.map { (k, v) -> Pair(k, v.toMutableSet()) }.toMutableList()
-            val finalDominators = mutableListOf<Pair<Node, MutableSet<Node>>>()
-            val conditionKeys =
-                dominatorPaths.entries
-                    .filter { (k, _) ->
-                        (k as? BranchingNode)?.branchedBy == node ||
-                            node in
-                                ((k as? BranchingNode)?.branchedBy?.allChildren<Node>() ?: listOf())
-                    }
-                    .map { (k, _) -> k }
-            if (conditionKeys.isNotEmpty()) {
-                // The node is part of the condition. For loops, it happens that these nodes are
-                // somehow put in the CDG of the surrounding statement (e.g. the loop) but we don't
-                // want this. Move it one layer up.
-                for (k1 in conditionKeys) {
-                    dominatorsList.removeIf { k1 == it.first }
-                    finalState[k1]?.forEach { (newK, newV) ->
-                        val entry = dominatorsList.firstOrNull { it.first == newK }
-                        entry?.let {
-                            dominatorsList.remove(entry)
-                            val update = entry.second.addAll(newV)
-                            if (update) dominatorsList.add(entry) else finalDominators.add(entry)
-                        } ?: dominatorsList.add(Pair(newK, newV.toMutableSet()))
-                    }
-                }
-            }
-            val alreadySeen = mutableSetOf<Pair<Node, MutableSet<Node>>>()
 
-            while (dominatorsList.isNotEmpty()) {
-                val (k, v) = dominatorsList.removeFirst()
-                if (alreadySeen.any { it.first == k && !it.second.addAll(v) }) {
-                    continue
-                } else if (k == node) {
-                    // We are at the node itself, so we can skip it but will add all possible paths
-                    // to alreadySeen.
-                    alreadySeen.add(
-                        k to (branchingNodeConditionals[k]?.toMutableSet() ?: v.toMutableSet())
-                    )
-                    continue
-                } else {
-                    alreadySeen.add(Pair(k, v.toMutableSet()))
-                }
-                if (k != startNode && v.containsAll(branchingNodeConditionals[k] ?: setOf())) {
-                    // We are reachable from all the branches of a branching node. Add this parent
-                    // to the worklist or update an existing entry. Also consider already existing
-                    // entries in finalDominators list and update it (if necessary)
-                    val newDominatorMap = finalState[k]
-                    newDominatorMap?.forEach { (newK, newV) ->
-                        when {
-                            dominatorsList.any { it.first == newK } -> {
-                                // Entry exists => update it
-                                dominatorsList.first { it.first == newK }.second.addAll(newV)
-                            }
-                            finalDominators.any { it.first == newK } -> {
-                                // Entry in final dominators => Delete it and add it to the worklist
-                                // (but only if something changed)
-                                val entry = finalDominators.first { it.first == newK }
-                                finalDominators.remove(entry)
-                                val update = entry.second.addAll(newV)
-                                if (
-                                    update &&
-                                        alreadySeen.none {
-                                            it.first == entry.first &&
-                                                it.second.containsAll(entry.second)
-                                        }
-                                ) {
-                                    dominatorsList.add(entry)
-                                } else finalDominators.add(entry)
-                            }
-                            alreadySeen.none {
-                                // it.first == newK && it.second == newV
-                                it == Pair(newK, newV.toMutableSet())
-                            } -> {
-                                // We don't have an entry yet => add a new one
-                                val newEntry = Pair(newK, newV.toIdentitySet())
-                                dominatorsList.add(newEntry)
-                            }
-                            else -> {
-                                // Not sure what to do, there seems to be a cycle but this entry is
-                                // not in finalDominators for some reason. Add to finalDominators
-                                // now.
-                                finalDominators.add(Pair(newK, newV.toIdentitySet()))
-                            }
-                        }
-                    }
-                } else {
-                    // Node is not reachable from all branches => k dominates node. Add to
-                    // finalDominators.
-                    finalDominators.add(Pair(k, v))
-                }
+            dominatorsList.removeIf { (k, v) ->
+                v.containsAll(branchingNodeConditionals[k] ?: setOf())
+            }
+
+            if (dominatorsList.isEmpty()) {
+                // No dominators left, so we add the start node.
+                dominatorsList.add(startNode to mutableSetOf(startNode))
             }
 
             // We have all the dominators of this node and potentially traversed the graph
             // "upwards". Add the CDG edges
-            // log.info("[CDG] iterating through the finalDomniators")
-            finalDominators
+            dominatorsList
                 .filter { (k, _) -> k != node }
                 .forEach { (k, v) ->
                     val branchesSet =
@@ -318,13 +235,13 @@ fun transfer(
         // for the branching node "start", we have a path through "end".
         val prevPathLattice =
             newState[currentStart]
-                ?.filter { (k, _) -> k == currentStart }
+                ?.filter { (k, _) -> k != currentStart }
                 ?.let { PrevEOGLatticeElement(it) } ?: PrevEOGLatticeElement()
 
         val map = PrevEOGLatticeElement(currentStart to PowersetLattice.Element(currentEnd))
 
-        // val newPath = lattice.innerLattice.lub(map, prevPathLattice, true)
-        newState = lattice.push(newState, currentEnd, map)
+        val newPath = lattice.innerLattice.lub(map, prevPathLattice, false)
+        newState = lattice.push(newState, currentEnd, newPath)
     } else {
         // We did not start in a branching node, so for the next node, we have the same path
         // (last branching + first end node) as for the start node of this edge.
