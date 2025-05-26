@@ -142,12 +142,21 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                     }
                 }
             }
-            val alreadySeen = mutableSetOf<Int>()
+            val alreadySeen = mutableSetOf<Pair<Node, MutableSet<Node>>>()
 
             while (dominatorsList.isNotEmpty()) {
                 val (k, v) = dominatorsList.removeFirst()
-                if (!alreadySeen.add(Pair(k, v).hashCode())) {
+                if (alreadySeen.any { it.first == k && !it.second.addAll(v) }) {
                     continue
+                } else if (k == node) {
+                    // We are at the node itself, so we can skip it but will add all possible paths
+                    // to alreadySeen.
+                    alreadySeen.add(
+                        k to (branchingNodeConditionals[k]?.toMutableSet() ?: v.toMutableSet())
+                    )
+                    continue
+                } else {
+                    alreadySeen.add(Pair(k, v.toMutableSet()))
                 }
                 if (k != startNode && v.containsAll(branchingNodeConditionals[k] ?: setOf())) {
                     // We are reachable from all the branches of a branching node. Add this parent
@@ -168,14 +177,17 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                                 val update = entry.second.addAll(newV)
                                 if (
                                     update &&
-                                        Pair(entry.first, entry.second).hashCode() !in alreadySeen
+                                        alreadySeen.none {
+                                            it.first == entry.first &&
+                                                it.second.containsAll(entry.second)
+                                        }
                                 ) {
                                     dominatorsList.add(entry)
                                 } else finalDominators.add(entry)
                             }
                             alreadySeen.none {
                                 // it.first == newK && it.second == newV
-                                it == Pair(newK, newV.toMutableSet()).hashCode()
+                                it == Pair(newK, newV.toMutableSet())
                             } -> {
                                 // We don't have an entry yet => add a new one
                                 val newEntry = Pair(newK, newV.toIdentitySet())
