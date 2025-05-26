@@ -83,3 +83,143 @@ fun QueryTree<Boolean>.toQueryState(): RequirementEvaluation {
         stringRepresentation = "The requirement ${ newValue::class.simpleName } because $stringInfo",
     )
 }
+
+/**
+ * Performs a logical and (&&) operation between the values and creates and returns [QueryTree]s.
+ */
+infix fun RequirementState.and(other: RequirementState): RequirementEvaluation {
+    return this.toQueryTree() and other.toQueryTree()
+}
+
+/**
+ * Performs a logical and (&&) operation between the values and creates and returns [QueryTree]s.
+ */
+infix fun RequirementState.and(other: RequirementEvaluation): RequirementEvaluation {
+    return this.toQueryTree() and other
+}
+
+/**
+ * Performs a logical and (&&) operation between the values and creates and returns [QueryTree]s.
+ */
+infix fun RequirementEvaluation.and(other: RequirementState): RequirementEvaluation {
+    return this and other.toQueryTree()
+}
+
+/** Performs a logical and (&&) operation between the values of two [QueryTree]s. */
+infix fun RequirementEvaluation.and(other: RequirementEvaluation): RequirementEvaluation {
+    return QueryTree(
+        if (this.value == Succeeded && other.value == Succeeded) Succeeded
+        else if (this.value == Failed || other.value == Failed) Failed
+        else if (this.value == NotYetEvaluated && other.value == NotYetEvaluated) NotYetEvaluated
+        else Undecided,
+        mutableListOf(this, other),
+        stringRepresentation = "${this.value} && ${other.value}",
+    )
+}
+
+/** Performs a logical or (||) operation between the values and creates and returns [QueryTree]s. */
+infix fun RequirementState.or(other: RequirementState): RequirementEvaluation {
+    return this.toQueryTree() or other.toQueryTree()
+}
+
+/** Performs a logical or (||) operation between the values and creates and returns [QueryTree]s. */
+infix fun RequirementState.or(other: RequirementEvaluation): RequirementEvaluation {
+    return this.toQueryTree() or other
+}
+
+/** Performs a logical or (||) operation between the values and creates and returns [QueryTree]s. */
+infix fun RequirementEvaluation.or(other: RequirementState): RequirementEvaluation {
+    return this or other.toQueryTree()
+}
+
+/** Performs a logical or (||) operation between the values of two [QueryTree]s. */
+infix fun RequirementEvaluation.or(other: RequirementEvaluation): RequirementEvaluation {
+    return QueryTree(
+        if (this.value == Succeeded || other.value == Succeeded) Succeeded
+        else if (this.value == Failed && other.value == Failed) Failed
+        else if (this.value == NotYetEvaluated && other.value == NotYetEvaluated) NotYetEvaluated
+        else Undecided,
+        mutableListOf(this, other),
+        stringRepresentation = "${this.value} || ${other.value}",
+    )
+}
+
+/** Performs a logical xor operation between the values and creates and returns [QueryTree]s. */
+infix fun RequirementState.xor(other: RequirementState): RequirementEvaluation {
+    return this.toQueryTree() xor other.toQueryTree()
+}
+
+/** Performs a logical xor operation between the values and creates and returns [QueryTree]s. */
+infix fun RequirementState.xor(other: RequirementEvaluation): RequirementEvaluation {
+    return this.toQueryTree() xor other
+}
+
+/** Performs a logical xor operation between the values and creates and returns [QueryTree]s. */
+infix fun RequirementEvaluation.xor(other: RequirementState): RequirementEvaluation {
+    return this xor other.toQueryTree()
+}
+
+/** Performs a logical xor operation between the values of two [QueryTree]s. */
+infix fun RequirementEvaluation.xor(other: RequirementEvaluation): RequirementEvaluation {
+    return QueryTree(
+        if (this.value == Succeeded && other.value == Failed) Succeeded
+        else if (this.value == Failed && other.value == Succeeded) Succeeded
+        else if (this.value == Failed && other.value == Failed) Failed
+        else if (this.value == NotYetEvaluated && other.value == NotYetEvaluated) Failed
+        else if (this.value == Succeeded && other.value == Succeeded) Failed
+        else if (this.value == Undecided && other.value == Undecided) Failed else Undecided,
+        mutableListOf(this, other),
+        stringRepresentation = "${this.value} xor ${other.value}",
+    )
+}
+
+/**
+ * Performs a logical implication (->) operation between the values and creates and returns
+ * [QueryTree]s.
+ */
+infix fun RequirementState.implies(other: RequirementState): RequirementEvaluation {
+    return this.toQueryTree() implies other.toQueryTree()
+}
+
+/**
+ * Performs a logical implication (->) operation between the values and creates and returns
+ * [QueryTree]s.
+ */
+infix fun RequirementState.implies(other: RequirementEvaluation): RequirementEvaluation {
+    return this.toQueryTree() implies other
+}
+
+/**
+ * Performs a logical implication (->) operation between the values and creates and returns
+ * [QueryTree]s.
+ */
+infix fun RequirementEvaluation.implies(other: RequirementState): RequirementEvaluation {
+    return this implies other.toQueryTree()
+}
+
+/** Evaluates a logical implication (->) operation between the values of two [QueryTree]s. */
+infix fun RequirementEvaluation.implies(other: RequirementEvaluation): RequirementEvaluation {
+    return QueryTree(
+        if (this.value == Succeeded && other.value == Succeeded) Succeeded
+        else if (this.value == Failed) Succeeded
+        else if (this.value == Succeeded && other.value == Failed) Failed
+        else if (this.value == NotYetEvaluated && other.value == NotYetEvaluated) NotYetEvaluated
+        else Undecided,
+        mutableListOf(this, other),
+        stringRepresentation = "${this.value} => ${other.value}",
+    )
+}
+
+/** Negates the value of [arg] and returns the resulting [QueryTree]. */
+fun not(arg: RequirementEvaluation): RequirementEvaluation {
+    val result =
+        if (arg.value == Succeeded) Failed
+        else if (arg.value == Failed) Succeeded
+        else if (arg.value == NotYetEvaluated) NotYetEvaluated else Undecided
+    return QueryTree(result, mutableListOf(arg), "! ${arg.value}")
+}
+
+/** Negates the value of [arg] and returns the resulting [QueryTree]. */
+fun not(arg: RequirementState): RequirementEvaluation {
+    return not(arg.toQueryTree())
+}
