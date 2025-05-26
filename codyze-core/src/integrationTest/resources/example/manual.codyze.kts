@@ -29,19 +29,20 @@ project {
     manualAssessment {
         of("SEC-TARGET") {
             /* Yes, I really checked that 6 is greater than 5 */
-            val expectedValue = 5
-            val actualValue = 6
-            (actualValue gt expectedValue).decide()
+            val expectedValue = 2
+            /* See URL .... */
+            val actualValue = 3
+            actualValue gt expectedValue
         }
 
         of("THIRD-PARTY-LIBRARY") {
             /** Yes, the rumors are true. */
-            Succeeded.toQueryTree()
+            true
         }
 
         of("SOMETHING-ELSE") {
             /* Hmm. I am not sure about this one. */
-            Undecided.toQueryTree()
+            Undecided
         }
     }
 }

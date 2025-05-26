@@ -37,9 +37,12 @@ import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
 import de.fraunhofer.aisec.cpg.passes.concepts.TagOverlaysPass
 import de.fraunhofer.aisec.cpg.passes.concepts.TaggingContext
+import de.fraunhofer.aisec.cpg.query.*
 import de.fraunhofer.aisec.cpg.query.Decision
+import de.fraunhofer.aisec.cpg.query.DecisionState
 import de.fraunhofer.aisec.cpg.query.NotYetEvaluated
 import de.fraunhofer.aisec.cpg.query.QueryTree
+import de.fraunhofer.aisec.cpg.query.decide
 import de.fraunhofer.aisec.cpg.query.toQueryTree
 import java.io.File
 import java.nio.file.Path
@@ -286,10 +289,33 @@ fun ModulesBuilder.module(name: String, block: ModuleBuilder.() -> Unit) {
     modules += builder
 }
 
-/** Describes a single requirement of the TOE. */
+sealed class RequirementReturnType
+
+object RequirementDecision : RequirementReturnType()
+
+object RequirementQueryTree : RequirementReturnType()
+
+/** Describes a single requirement of the TOE by a function that returns a [Decision]. */
 @CodyzeDsl
-fun RequirementsBuilder.requirement(name: String, query: (TranslationResult) -> Decision) {
+@OverloadResolutionByLambdaReturnType
+fun RequirementsBuilder.requirement(
+    name: String,
+    query: (TranslationResult) -> Decision,
+): RequirementDecision {
     requirements[name] = query
+    return RequirementDecision
+}
+
+/**
+ * Describes a single requirement of the TOE by a function that returns a [QueryTree] of [Boolean].
+ */
+@CodyzeDsl
+fun RequirementsBuilder.requirement(
+    name: String,
+    query: (TranslationResult) -> QueryTree<Boolean>,
+): RequirementQueryTree {
+    requirements[name] = { query(it).decide() }
+    return RequirementQueryTree
 }
 
 /** Describes that the requirement had to be checked manually. */
@@ -379,25 +405,55 @@ fun ProjectBuilder.manualAssessment(block: ManualAssessmentBuilder.() -> Unit) {
     manualAssessmentBuilder.apply(block)
 }
 
+sealed class OfReturnType
+
+object OfDecision : OfReturnType()
+
+object OfDecisionState : OfReturnType()
+
+object OfQueryTree : OfReturnType()
+
+object OfBoolean : OfReturnType()
+
+/**
+ * Describes a manual assessment of a requirement with the given [id]. The [block] is expected to
+ * return a [Decision] that evaluates to [Succeeded] if the requirement is fulfilled.
+ */
+@CodyzeDsl
+@OverloadResolutionByLambdaReturnType
+fun ManualAssessmentBuilder.of(id: String, block: () -> Decision): OfDecision {
+    assessments[id] = block
+    return OfDecision
+}
+
+/**
+ * Describes a manual assessment of a requirement with the given [id]. The [block] is expected to
+ * return a [DecisionState] that evaluates to [Succeeded] if the requirement is fulfilled.
+ */
+fun ManualAssessmentBuilder.of(id: String, block: () -> DecisionState): OfDecisionState {
+    assessments[id] = { block().toQueryTree() }
+    return OfDecisionState
+}
+
 /**
  * Describes a manual assessment of a requirement with the given [id]. The [block] is expected to
  * return a [QueryTree] that evaluates to `true` if the requirement is fulfilled.
  */
 @CodyzeDsl
-fun ManualAssessmentBuilder.of(id: String, block: () -> Decision) {
-    assessments[id] = block
-}
-
-/*
-@CodyzeDsl
-fun ManualAssessmentBuilder.of(id: String, block: () -> QueryTree<Boolean>) {
+fun ManualAssessmentBuilder.of(id: String, block: () -> QueryTree<Boolean>): OfQueryTree {
     assessments[id] = { block().decide() }
+    return OfQueryTree
 }
 
+/**
+ * Describes a manual assessment of a requirement with the given [id]. The [block] is expected to
+ * return a [Boolean] that evaluates to `true` if the requirement is fulfilled.
+ */
 @CodyzeDsl
-fun ManualAssessmentBuilder.of(id: String, block: () -> Boolean) {
+fun ManualAssessmentBuilder.of(id: String, block: () -> Boolean): OfBoolean {
     assessments[id] = { block().toQueryTree().decide() }
-}*/
+    return OfBoolean
+}
 
 private fun parseUuidAndAnnotateAssumptions(uuid: String, status: AssumptionStatus) {
     val parsedUuid = Uuid.parse(uuid)

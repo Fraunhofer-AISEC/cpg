@@ -85,6 +85,10 @@ class CodyzeScriptCompilationConfiguration :
             checkNotNull(cp) { "Could not read classpath" }
             updateClasspath(cp)
         }
-        compilerOptions("-Xcontext-receivers", "-jvm-target=21")
+        compilerOptions(
+            "-opt-in=kotlin.experimental.ExperimentalTypeInference",
+            "-Xcontext-receivers",
+            "-jvm-target=21",
+        )
         ide { acceptedLocations(ScriptAcceptedLocation.Everywhere) }
     })
