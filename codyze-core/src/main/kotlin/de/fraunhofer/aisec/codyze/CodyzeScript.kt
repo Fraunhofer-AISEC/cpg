@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.codyze
 
+import de.fraunhofer.aisec.codyze.dsl.IncludeBuilder
+import de.fraunhofer.aisec.codyze.dsl.ProjectBuilder
 import kotlin.script.experimental.annotations.KotlinScript
 import kotlin.script.experimental.api.*
 import kotlin.script.experimental.jvm.jvm
@@ -33,50 +35,56 @@ import kotlin.script.experimental.jvm.util.classpathFromClassloader
 import kotlin.script.templates.ScriptTemplateDefinition
 
 /**
- * Abstract base class for concept scripts. Concept scripts are Kotlin scripts that can be used to
- * define new concept classes and "tag" them on the CPG. The script must define one.
+ * Abstract base class for Codyze scripts. Codyze scripts are Kotlin scripts that can be used to
+ * - Define a project structure that describes the "target of evaluation" (ToE) for the analysis as
+ *   well as requirements the ToE must fulfill
+ * - Define queries that evaluate whether the requirements are met
  *
  * This class is the scription definition (template) needed for the Kotlin compiler to recognize
  * this as a script.
  */
-@ScriptTemplateDefinition(scriptFilePattern = ".*\\.concept\\.kts")
+@ScriptTemplateDefinition(scriptFilePattern = ".*\\.codyze\\.kts")
 @KotlinScript(
     // File extension for the script type
-    fileExtension = "concept.kts",
+    fileExtension = "codyze.kts",
     // Compilation configuration for the script type
-    compilationConfiguration = ConceptScriptConfiguration::class,
+    compilationConfiguration = CodyzeScriptCompilationConfiguration::class,
 )
-abstract class ConceptScript() {}
+abstract class CodyzeScript(internal var projectBuilder: ProjectBuilder) {
+
+    internal var includeBuilder: IncludeBuilder = IncludeBuilder()
+}
+
+val baseLibraries =
+    arrayOf(
+        "codyze-core",
+        "cpg-core",
+        "cpg-concepts",
+        "cpg-analysis",
+        "kotlin-stdlib",
+        "kotlin-reflect",
+    )
 
 /**
- * Configuration for the Kotlin compiler to compile concept scripts.
- *
- * It configures the classpath and imports needed for the script to compile and run.
+ * Contains the configuration for the compilation of Codyze scripts. This includes the imports that
+ * are required and some specifications of the compiler options.
  */
-object ConceptScriptConfiguration :
+class CodyzeScriptCompilationConfiguration :
     ScriptCompilationConfiguration({
-        baseClass(ConceptScript::class)
-        jvm {
-            val libraries =
-                setOf(
-                    "codyze-core",
-                    "cpg-core",
-                    "cpg-concepts",
-                    "cpg-analysis",
-                    "kotlin-stdlib",
-                    "kotlin-reflect",
-                )
-            val cp = classpathFromClassloader(ConceptScript::class.java.classLoader)
-            checkNotNull(cp) { "Could not read classpath" }
-            updateClasspath(cp.filter { element -> libraries.any { it in element.toString() } })
-        }
-        compilerOptions("-Xcontext-receivers", "-jvm-target=21")
         defaultImports.append(
             "de.fraunhofer.aisec.codyze.*",
+            "de.fraunhofer.aisec.codyze.dsl.*",
+            "de.fraunhofer.aisec.codyze.dsl.Import",
             "de.fraunhofer.aisec.cpg.*",
             "de.fraunhofer.aisec.cpg.graph.*",
+            "de.fraunhofer.aisec.cpg.query.*",
+            "de.fraunhofer.aisec.cpg.passes.concepts.*",
         )
+        jvm {
+            val cp = classpathFromClassloader(CodyzeScript::class.java.classLoader)
+            checkNotNull(cp) { "Could not read classpath" }
+            updateClasspath(cp)
+        }
+        compilerOptions("-Xcontext-receivers", "-jvm-target=21")
         ide { acceptedLocations(ScriptAcceptedLocation.Everywhere) }
-    }) {
-    private fun readResolve(): Any = ConceptScriptConfiguration
-}
+    })

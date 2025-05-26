@@ -35,7 +35,7 @@ import kotlin.io.path.Path
 import kotlin.test.Test
 
 class DslTest {
-    object Mock : CodyzeScript(projectDir = Path("."))
+    object Mock : CodyzeScript(projectBuilder = ProjectBuilder(projectDir = Path(".")))
 
     @Test
     fun testDsl() {
@@ -63,16 +63,18 @@ class DslTest {
 
                 requirements {
                     requirement("Good Encryption") {
-                        byQuery { result -> query1(result) and query2(result) }
+                        by { result -> query1(result) and query2(result) }
                     }
                 }
 
                 assumptions {
-                    assume() { "We assume that everything is fine." }
-                    accept("00000000-0000-0000-0000-000000000000")
-                    reject("00000000-0000-0000-0000-000000000001")
-                    undecided("00000000-0000-0000-0000-000000000002")
-                    ignore("00000000-0000-0000-0000-000000000003")
+                    assume { "We assume that everything is fine." }
+                    decisions {
+                        accept("00000000-0000-0000-0000-000000000000")
+                        reject("00000000-0000-0000-0000-000000000001")
+                        undecided("00000000-0000-0000-0000-000000000002")
+                        ignore("00000000-0000-0000-0000-000000000003")
+                    }
                 }
             }
         }
