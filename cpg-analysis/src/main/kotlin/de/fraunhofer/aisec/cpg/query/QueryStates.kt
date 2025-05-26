@@ -27,59 +27,57 @@ package de.fraunhofer.aisec.cpg.query
 
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 
-typealias RequirementEvaluation = QueryTree<RequirementState>
-
-sealed class RequirementState
+sealed class RequirementState(val queryValue: QueryTree<Boolean>, val reason: String)
 
 /**
- * Represents a query that has been evaluated and the result is known to be `false` or some
- * [QueryTree.assumptions] have [de.fraunhofer.aisec.cpg.assumptions.Assumption.status]
+ * Represents a requirement whose query has been evaluated and the result is known to be `false` or
+ * some [QueryTree.assumptions] have [de.fraunhofer.aisec.cpg.assumptions.Assumption.status]
  * [AssumptionStatus.Rejected].
  */
-data object Failed : RequirementState()
+class Failed(queryValue: QueryTree<Boolean>, reason: String) : RequirementState(queryValue, reason)
 
 /**
- * Represents a query that has been evaluated and the result is known to be `true` and all
- * [QueryTree.assumptions] have [de.fraunhofer.aisec.cpg.assumptions.Assumption.status]
+ * Represents a requirement whose query has been evaluated and the result is known to be `true` and
+ * all [QueryTree.assumptions] have [de.fraunhofer.aisec.cpg.assumptions.Assumption.status]
  * [AssumptionStatus.Accepted] or [AssumptionStatus.Ignored].
  */
-data object Succeeded : RequirementState()
+class Succeeded(queryValue: QueryTree<Boolean>, reason: String) :
+    RequirementState(queryValue, reason)
 
 /**
- * Represents a query that has been evaluated but the result is not yet known because some
- * [QueryTree.assumptions] have [de.fraunhofer.aisec.cpg.assumptions.Assumption.status]
+ * Represents a requirement whose query has been evaluated but the result is not yet known because
+ * some [QueryTree.assumptions] have [de.fraunhofer.aisec.cpg.assumptions.Assumption.status]
  * [AssumptionStatus.Undecided].
  */
-data object Undecided : RequirementState()
+class Undecided(queryValue: QueryTree<Boolean>, reason: String) :
+    RequirementState(queryValue, reason)
 
 /**
- * Represents a query that has not yet been evaluated. Will be most likely used in the context of
- * manual assessments which have to be conducted.
+ * Represents a requirement whose query that has not yet been evaluated. Will be most likely used in
+ * the context of manual assessments which have to be conducted.
  */
-data object NotYetEvaluated : RequirementState()
+class NotYetEvaluated(queryValue: QueryTree<Boolean>, reason: String) :
+    RequirementState(queryValue, reason)
 
-fun QueryTree<Boolean>.toQueryState(): RequirementEvaluation {
-    val (newValue, stringInfo) =
-        when {
-            !this.value || this.assumptions.any { it.status == AssumptionStatus.Rejected } ->
-                Failed to
-                    (if (!this.value) "The query was evaluated to false"
-                    else
-                        "The assumptions ${this.assumptions.filter { it.status == AssumptionStatus.Rejected }.map { it.id.toHexDashString() } } were rejected")
-            this.assumptions.any { it.status == AssumptionStatus.Undecided } ->
-                Undecided to
-                    "The assumptions ${this.assumptions.filter { it.status == AssumptionStatus.Undecided }.map { it.id.toHexDashString() }} are not yet decided"
-            this.value ==
-                this.assumptions.all {
-                    it.status == AssumptionStatus.Ignored || it.status == AssumptionStatus.Accepted
-                } ->
-                Succeeded to "The query was evaluated to true and all assumptions were accepted."
-            else -> NotYetEvaluated to "Something went wrong"
-        }
-
-    return QueryTree(
-        value = newValue,
-        children = mutableListOf(this),
-        stringRepresentation = "The requirement ${ newValue::class.simpleName } because $stringInfo",
-    )
+fun QueryTree<Boolean>.toRequirementState(): RequirementState {
+    return when {
+        !this.value || this.assumptions.any { it.status == AssumptionStatus.Rejected } ->
+            Failed(
+                this,
+                if (!this.value) "The query was evaluated to false"
+                else
+                    "The assumptions ${this.assumptions.filter { it.status == AssumptionStatus.Rejected }.map { it.id.toHexDashString() } } were rejected",
+            )
+        this.assumptions.any { it.status == AssumptionStatus.Undecided } ->
+            Undecided(
+                this,
+                "The assumptions ${this.assumptions.filter { it.status == AssumptionStatus.Undecided }.map { it.id.toHexDashString() }} are not yet decided",
+            )
+        this.value ==
+            this.assumptions.all {
+                it.status == AssumptionStatus.Ignored || it.status == AssumptionStatus.Accepted
+            } ->
+            Succeeded(this, "The query was evaluated to true and all assumptions were accepted.")
+        else -> NotYetEvaluated(this, "Something went wrong. There's no evaluation found.")
+    }
 }
