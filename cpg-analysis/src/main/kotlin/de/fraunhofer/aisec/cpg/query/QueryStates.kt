@@ -58,6 +58,12 @@ data object Undecided : DecisionState()
  */
 data object NotYetEvaluated : DecisionState()
 
+/**
+ * Wraps the given [QueryTree] in a new [Decision] object by checking if the value is `true` or
+ * `false` and based on the [de.fraunhofer.aisec.cpg.assumptions.Assumption.status] of all
+ * [QueryTree.assumptions] (i.e., it checks if all are [AssumptionStatus.Accepted] or if some are
+ * [AssumptionStatus.Rejected] or [AssumptionStatus.Undecided]).
+ */
 fun QueryTree<Boolean>.decide(): Decision {
     val (newValue, stringInfo) =
         when {
