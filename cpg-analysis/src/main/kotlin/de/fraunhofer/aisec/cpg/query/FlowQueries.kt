@@ -28,7 +28,8 @@ package de.fraunhofer.aisec.cpg.query
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
-import de.fraunhofer.aisec.cpg.frontends.NoLanguage.addAssumptionDependence
+import de.fraunhofer.aisec.cpg.assumptions.addAssumptionDependence
+import de.fraunhofer.aisec.cpg.assumptions.assume
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.AnalysisSensitivity
@@ -236,7 +237,8 @@ fun executionPath(
 /**
  * This function tracks if the data in [source] always flow through a node which fulfills
  * [validatorPredicate] before reaching a sink which is specified by [sinkPredicate]. The analysis
- * can be configured with [scope] and [sensitivities].
+ * can be configured with [scope] and [sensitivities]. If no matching sink is found, the path is
+ * considered as ok even if there's no validator on that path.
  */
 fun dataFlowWithValidator(
     source: Node,
@@ -245,10 +247,12 @@ fun dataFlowWithValidator(
     scope: AnalysisScope,
     vararg sensitivities: AnalysisSensitivity,
 ): QueryTree<Boolean> {
-    return source.alwaysFlowsTo(
+    return source.alwaysFlowsToInternal(
         allowOverwritingValue = true,
+        noSinkIsGood = true,
         earlyTermination = sinkPredicate,
         identifyCopies = false,
+        stopIfImpossible = true,
         scope = scope,
         sensitivities = sensitivities,
         predicate = validatorPredicate,
@@ -339,7 +343,7 @@ fun Node.generatesNewData(): NodeCollectionWithAssumption {
             else -> emptySet()
         }
     return NodeCollectionWithAssumption(splitNodes)
-        .addAssumptionDependences(tempAssumptions + splitNodes + this)
+        .addAssumptionDependence(tempAssumptions + splitNodes + this)
         .assume(
             AssumptionType.DataFlowAssumption,
             "We assume that the node $this generates the following new \"objects\" which require separate handling as they represent copies/clones of the original \"object\": $splitNodes.\n\n" +
@@ -399,6 +403,41 @@ fun Node.identifyInfoToTrack(
  */
 fun Node.alwaysFlowsTo(
     allowOverwritingValue: Boolean = false,
+    earlyTermination: ((Node) -> Boolean)? = null,
+    identifyCopies: Boolean = true,
+    stopIfImpossible: Boolean = true,
+    scope: AnalysisScope,
+    vararg sensitivities: AnalysisSensitivity =
+        ContextSensitive + FieldSensitive + FilterUnreachableEOG,
+    predicate: (Node) -> Boolean,
+): QueryTree<Boolean> {
+    return this.alwaysFlowsToInternal(
+        allowOverwritingValue = allowOverwritingValue,
+        noSinkIsGood = false,
+        earlyTermination = earlyTermination,
+        identifyCopies = identifyCopies,
+        stopIfImpossible = stopIfImpossible,
+        scope = scope,
+        sensitivities = sensitivities,
+        predicate = predicate,
+    )
+}
+
+/**
+ * This function tracks if the data in [this] always flow through a node which fulfills [predicate].
+ * An early termination can be specified by the predicate [earlyTermination].
+ * [allowOverwritingValue] can be used to configure if overwriting the value (or part of it) results
+ * in a failure of the requirement (if `false`) or if it does not affect the evaluation. The
+ * analysis can be configured with [scope] and [sensitivities]. [stopIfImpossible] enables the
+ * option to stop iterating through the EOG if we already left the function where we started and
+ * none of the nodes reaching by the DFG is in the new scope or one of its parents (i.e., the
+ * condition cannot be fulfilled anymore).
+ *
+ * If [noSinkIsGood] is set to `true`, all results with "ended path" are considered as fulfilled.
+ */
+internal fun Node.alwaysFlowsToInternal(
+    allowOverwritingValue: Boolean = false,
+    noSinkIsGood: Boolean = false,
     earlyTermination: ((Node) -> Boolean)? = null,
     identifyCopies: Boolean = true,
     stopIfImpossible: Boolean = true,
@@ -494,7 +533,16 @@ fun Node.alwaysFlowsTo(
                         terminationReason = Success(it.nodes.last()),
                     )
                 }
-        nothingFailed = nothingFailed && nextEOGEvaluation.failed.isEmpty()
+        nothingFailed =
+            nothingFailed &&
+                nextEOGEvaluation.failed.all {
+                    // If we configure this function with "noSinkIsGood == true", then we only
+                    // consider paths which hit the early termination or which exceeded the steps
+                    // (though the latter is debatable).
+                    // If "noSinkIsGood == false", we consider all paths which are not fulfilled as
+                    // failed.
+                    noSinkIsGood && it.first == FailureReason.PATH_ENDED
+                }
     }
     return QueryTree(
         value = nothingFailed,

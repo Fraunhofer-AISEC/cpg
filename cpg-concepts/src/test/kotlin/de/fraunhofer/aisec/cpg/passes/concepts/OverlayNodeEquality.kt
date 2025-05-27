@@ -23,37 +23,35 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.codyze
+package de.fraunhofer.aisec.cpg.passes.concepts
 
-import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
-import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.invoke
-import de.fraunhofer.aisec.cpg.test.analyze
-import kotlin.io.path.Path
-import kotlin.test.Ignore
+import de.fraunhofer.aisec.cpg.graph.concepts.file.File
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
+import de.fraunhofer.aisec.cpg.sarif.Region
+import java.net.URI
 import kotlin.test.Test
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 
-@Ignore
-class ConceptScriptPassTest {
-
+class OverlayNodeEquality {
     @Test
-    fun testConceptScriptPass() {
-        val topLevel = Path("src/integrationTest/resources")
-        val result =
-            analyze(listOf(topLevel.resolve("encrypt.py").toFile()), topLevel, true) {
-                it.registerLanguage<PythonLanguage>()
-                it.registerPass<ConceptScriptPass>()
-                it.configurePass<ConceptScriptPass>(
-                    ConceptScriptPass.Configuration(
-                        scriptFile = topLevel.resolve("encryption.concept.kts").toFile()
-                    )
-                )
-            }
-        assertNotNull(result)
+    fun testOverlayNodeEquality() {
+        val file1 = File(fileName = "node1")
+        val file2 = File(fileName = "node1")
+        val file3 = File(fileName = "node2")
+        assertEquals(file1, file2)
+        assertNotEquals(file1, file3)
+        assertNotEquals(file2, file3)
 
-        val encrypt = result.calls("encrypt")
-        encrypt.forEach { assertTrue(it.operationNodes.isNotEmpty()) }
+        val call1 = CallExpression()
+        call1.location = PhysicalLocation(URI("./some/path"), Region(1, 1, 1, 1))
+        val call2 = CallExpression()
+        call2.location = PhysicalLocation(URI("./some/path"), Region(1, 2, 1, 3))
+
+        file1.underlyingNode = call1
+        assertEquals(file1, file2)
+        file2.underlyingNode = call2
+        assertNotEquals(file1, file2)
     }
 }

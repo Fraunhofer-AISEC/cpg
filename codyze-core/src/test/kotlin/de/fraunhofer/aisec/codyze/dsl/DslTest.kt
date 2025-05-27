@@ -31,10 +31,12 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.query.*
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.allExtended
+import kotlin.io.path.Path
 import kotlin.test.Test
+import kotlin.test.assertIs
 
 class DslTest {
-    object Mock : CodyzeScript()
+    object Mock : CodyzeScript(projectBuilder = ProjectBuilder(projectDir = Path(".")))
 
     @Test
     fun testDsl() {
@@ -61,17 +63,32 @@ class DslTest {
                 }
 
                 requirements {
-                    requirement("Good Encryption") {
-                        byQuery { result -> query1(result) and query2(result) }
+                    requirement("Is Security Target Correctly specified") {
+                        manualAssessmentOf("SEC-TARGET")
+                    }
+                    requirement("Good Encryption") { result -> query1(result) and query2(result) }
+                    requirement("Good Encryption with some manual analysis") { result ->
+                        val logic =
+                            query1(result) and
+                                query2(result) and
+                                manualAssessmentOf("THIRD-PARTY-LIBRARY")
+                        assertIs<Decision>(logic)
+                    }
+                    requirement("Manual analysis with good encryption") { result ->
+                        val logic =
+                            manualAssessmentOf("SEC-TARGET") and query1(result) and query2(result)
+                        assertIs<Decision>(logic)
                     }
                 }
 
                 assumptions {
-                    assume() { "We assume that everything is fine." }
-                    accept("00000000-0000-0000-0000-000000000000")
-                    reject("00000000-0000-0000-0000-000000000001")
-                    undecided("00000000-0000-0000-0000-000000000002")
-                    ignore("00000000-0000-0000-0000-000000000003")
+                    assume { "We assume that everything is fine." }
+                    decisions {
+                        accept("00000000-0000-0000-0000-000000000000")
+                        reject("00000000-0000-0000-0000-000000000001")
+                        undecided("00000000-0000-0000-0000-000000000002")
+                        ignore("00000000-0000-0000-0000-000000000003")
+                    }
                 }
             }
         }

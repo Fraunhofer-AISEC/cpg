@@ -23,26 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.codyze
+package example
 
-import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.query.QueryTree
-import de.fraunhofer.aisec.cpg.query.allExtended
-import de.fraunhofer.aisec.cpg.query.eq
-import kotlin.test.Test
+import de.fraunhofer.aisec.cpg.passes.concepts.*
 
-fun goodCryptoFunc(result: TranslationResult): QueryTree<Boolean> {
-    return result.allExtended<CallExpression> { it.name eq "encrypt" }
-}
-
-fun goodArgumentSize(result: TranslationResult): QueryTree<Boolean> {
-    return result.allExtended<CallExpression> { it.arguments.size eq 2 }
-}
-
-class CodyzeExecutorTest {
-    @Test
-    fun testExecute() {
-        evaluateWithCodyze("src/integrationTest/resources/example/example.codyze.kts")
-    }
-}
+project { tagging { tag { each<CallExpression>("get_secret_from_server").with { Secret() } } } }

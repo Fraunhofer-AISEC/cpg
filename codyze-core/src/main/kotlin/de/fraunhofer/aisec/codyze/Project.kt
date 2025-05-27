@@ -35,11 +35,13 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
+import de.fraunhofer.aisec.cpg.query.Decision
 import io.github.detekt.sarif4k.*
 import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.isDirectory
+import kotlin.io.path.pathString
 
 /** Options common to all subcommands dealing projects. */
 class ProjectOptions : OptionGroup("Project Options") {
@@ -82,6 +84,7 @@ class TranslationOptions : OptionGroup("CPG Translation Options") {
 data class AnalysisResult(
     val translationResult: TranslationResult,
     val sarif: SarifSchema210 = SarifSchema210(version = Version.The210, runs = listOf()),
+    val requirementsResults: Map<String, Decision> = mutableMapOf(),
     val project: AnalysisProject,
 ) : ContextProvider by translationResult {
     fun writeSarifJson(file: File) {
@@ -118,6 +121,7 @@ class AnalysisProject(
      * if the namespace starts with mylibrary.
      */
     var librariesPath: Path? = projectDir?.resolve("libraries"),
+    var requirementFunctions: MutableMap<String, (TranslationResult) -> Decision> = mutableMapOf(),
     /** The translation configuration for the project. */
     var config: TranslationConfiguration,
     /**
@@ -133,6 +137,10 @@ class AnalysisProject(
     fun analyze(): AnalysisResult {
         val tr = TranslationManager.builder().config(config).build().analyze().get()
         val (rules, results) = postProcess?.invoke(this, tr) ?: Pair(emptyList(), emptyList())
+
+        // Run requirements
+        val requirementsResults =
+            requirementFunctions.map { (name, func) -> Pair(name, func(tr)) }.associate { it }
 
         // Create a new SARIF run, including a tool definition and rules corresponding to the
         // individual security statements
@@ -150,11 +158,48 @@ class AnalysisProject(
         return AnalysisResult(
             translationResult = tr,
             sarif = SarifSchema210(version = Version.The210, runs = listOf(run)),
+            requirementsResults = requirementsResults,
             project = this,
         )
     }
 
     companion object {
+        /**
+         * Builds a new [AnalysisProject] from a directory that contains a `project.codyze.kts`
+         * file.
+         */
+        fun fromDirectory(
+            directory: String,
+            configModifier:
+                ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
+                null,
+        ): AnalysisProject? {
+            return fromScript(
+                Path(directory).resolve("project.codyze.kts").pathString,
+                configModifier = configModifier,
+            )
+        }
+
+        /**
+         * Builds a new [AnalysisProject] from a `.codyze.kts` file, which represents a
+         * [CodyzeScript].
+         */
+        fun fromScript(
+            file: String,
+            configModifier:
+                ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
+                null,
+        ): AnalysisProject? {
+            // We need to evaluate the script in order to invoke our project builder inside the
+            // script
+            val script = evaluateScriptAndIncludes(file)
+            if (script == null) {
+                return null
+            }
+
+            return script.projectBuilder.build(configModifier)
+        }
+
         /** Builds a translation configuration from the given project directory. */
         fun from(
             projectDir: Path,
@@ -168,7 +213,7 @@ class AnalysisProject(
                         List<Result>,
                     >)? =
                 null,
-            configBuilder:
+            configModifier:
                 ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
                 null,
         ): AnalysisProject {
@@ -234,7 +279,7 @@ class AnalysisProject(
             }
 
             exclusionPatterns?.forEach { builder = builder.exclusionPatterns(it) }
-            configBuilder?.invoke(builder)
+            configModifier?.invoke(builder)
 
             return AnalysisProject(
                 config = builder.build(),
@@ -264,7 +309,7 @@ class AnalysisProject(
                 translationOptions.sources,
                 translationOptions.components,
                 translationOptions.exclusionPatterns,
-                configBuilder = configModifier,
+                configModifier = configModifier,
                 postProcess = postProcess,
             )
         }

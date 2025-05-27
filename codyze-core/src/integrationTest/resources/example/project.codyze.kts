@@ -25,31 +25,47 @@
  */
 package example
 
+include {
+    AssumptionDecisions from "assumptions.codyze.kts"
+    ManualAssessment from "manual.codyze.kts"
+    Tagging from "tagging.codyze.kts"
+}
+
 project {
+    name = "My Project"
+
+    tool {
+        configuration {
+            includePath("src/integrationTest/resources/example/src/third-party/mylib")
+            loadIncludes(true)
+        }
+    }
+
     toe {
         name = "My Mock TOE"
         architecture {
             modules {
                 module("module1") {
                     directory = "src/module1"
-                    include("*")
+                    includeAll()
+                    exclude("tests")
+                }
+                module("module2") {
+                    directory = "src/module2"
+                    include("pkg")
                 }
             }
         }
     }
 
     requirements {
-        requirement("Is Security Target Correctly specified") { byManualCheck() }
-        requirement("Good Encryption") {
-            byQuery { result -> goodCryptoFunc(result) and goodArgumentSize(result) }
+        requirement("Is Security Target Correctly specified") { manualAssessmentOf("SEC-TARGET") }
+        requirement("Good Encryption") { result ->
+            goodCryptoFunc(result).decide() and
+                goodArgumentSize(result).decide() and
+                manualAssessmentOf("THIRD-PARTY-LIBRARY")
         }
     }
 
-    assumptions {
-        assume() { "We assume that everything is fine." }
-        accept("00000000-0000-0000-0000-000000000000")
-        reject("00000000-0000-0000-0000-000000000001")
-        undecided("00000000-0000-0000-0000-000000000002")
-        ignore("00000000-0000-0000-0000-000000000003")
-    }
+    assumptions { assume { "We assume that everything is fine." } }
 }
