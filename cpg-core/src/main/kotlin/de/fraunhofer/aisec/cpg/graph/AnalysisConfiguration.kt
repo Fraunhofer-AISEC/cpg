@@ -54,6 +54,7 @@ interface StepSelector {
         edge: Edge<Node>,
         ctx: Context,
         analysisDirection: AnalysisDirection,
+        interproceduralEdgesExist: Boolean = false,
     ): Boolean
 }
 
@@ -73,6 +74,7 @@ class Intraprocedural(maxSteps: Int? = null) : AnalysisScope(maxSteps) {
         edge: Edge<Node>,
         ctx: Context,
         analysisDirection: AnalysisDirection,
+        interproceduralEdgesExist: Boolean,
     ): Boolean {
         // Follow the edge if we're still in the maxSteps range and not an edge across function
         // boundaries.
@@ -94,6 +96,7 @@ class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
         edge: Edge<Node>,
         ctx: Context,
         analysisDirection: AnalysisDirection,
+        interproceduralEdgesExist: Boolean,
     ): Boolean {
         // is this a short Function Summary Edge?
         val isShortFS = ((edge as? Dataflow)?.functionSummary) == true
@@ -102,7 +105,7 @@ class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
         // Are we still in the range of the max depth?
         val maxDepthOk = (maxCallDepth == null || ctx.callStack.depth < maxCallDepth)
         // If we have a shortFS and we exceeded the max depth, we follow it. Otherwise, we ignore it
-        val followShortFS = isShortFS && !maxDepthOk
+        val followShortFS = isShortFS && (!maxDepthOk || !interproceduralEdgesExist)
         // If this is no shortFS and we did not yet reach the max depth, we follow it
         val followEverythingButShortFS = !isShortFS && maxDepthOk
         // Is this even an interprocedural edge or an edge we are going to follow anyways (assuming
@@ -130,6 +133,7 @@ class InterproceduralWithDfgTermination(
         edge: Edge<Node>,
         ctx: Context,
         analysisDirection: AnalysisDirection,
+        interproceduralEdgesExist: Boolean,
     ): Boolean {
         val nextNode = analysisDirection.unwrapNextStepFromEdge(edge)
         if (
@@ -239,8 +243,17 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
         return edges.mapNotNull { edge ->
             val newCtx = ctx.clone()
             if (
-                scope.followEdge(currentNode, edge, newCtx, this) &&
-                    sensitivities.all { it.followEdge(currentNode, edge, newCtx, this) }
+                scope.followEdge(
+                    currentNode,
+                    edge,
+                    newCtx,
+                    this,
+                    edges.any {
+                        it is ContextSensitiveDataflow &&
+                            ((it.start as? FunctionDeclaration)?.isInferred == false ||
+                                (it.end as? FunctionDeclaration)?.isInferred == false)
+                    },
+                ) && sensitivities.all { it.followEdge(currentNode, edge, newCtx, this) }
             ) {
                 Pair(edge, newCtx)
             } else null
@@ -553,6 +566,7 @@ object FilterUnreachableEOG : AnalysisSensitivity() {
         edge: Edge<Node>,
         ctx: Context,
         analysisDirection: AnalysisDirection,
+        interproceduralEdgesExist: Boolean,
     ): Boolean {
         return edge !is EvaluationOrder || edge.unreachable != true
     }
@@ -565,6 +579,7 @@ object OnlyFullDFG : AnalysisSensitivity() {
         edge: Edge<Node>,
         ctx: Context,
         analysisDirection: AnalysisDirection,
+        interproceduralEdgesExist: Boolean,
     ): Boolean {
         return edge !is Dataflow || edge.granularity is FullDataflowGranularity
     }
@@ -577,6 +592,7 @@ object ContextSensitive : AnalysisSensitivity() {
         edge: Edge<Node>,
         ctx: Context,
         analysisDirection: AnalysisDirection,
+        interproceduralEdgesExist: Boolean,
     ): Boolean {
         return if (analysisDirection.edgeRequiresCallPush(currentNode, edge)) {
             // Push the call of our calling context to the stack.
@@ -619,6 +635,7 @@ object FieldSensitive : AnalysisSensitivity() {
         edge: Edge<Node>,
         ctx: Context,
         analysisDirection: AnalysisDirection,
+        interproceduralEdgesExist: Boolean,
     ): Boolean {
         return if (edge is Dataflow) {
             if (
@@ -660,6 +677,7 @@ object Implicit : AnalysisSensitivity() {
         edge: Edge<Node>,
         ctx: Context,
         analysisDirection: AnalysisDirection,
+        interproceduralEdgesExist: Boolean,
     ): Boolean {
         return true
     }
