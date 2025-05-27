@@ -112,13 +112,26 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
 
         val branchingNodeConditionals = getBranchingNodeConditions(startNode)
 
+        // Remove all dominators where all paths lead to this node. This means that they do
+        // not really affect the node.
+        finalState.entries.forEach { (dominator, dominatorPaths) ->
+            dominatorPaths.entries.removeIf { (k, v) ->
+                k == dominator || v.containsAll(branchingNodeConditionals[k] ?: setOf())
+            }
+        }
+
         // Collect the information, identify merge points, etc. This is not really efficient yet :(
         for ((node, dominatorPaths) in finalState) {
             val dominatorsList =
                 dominatorPaths.entries.map { (k, v) -> Pair(k, v.toMutableSet()) }.toMutableList()
 
-            dominatorsList.removeIf { (k, v) ->
-                v.containsAll(branchingNodeConditionals[k] ?: setOf())
+            dominatorPaths.entries.forEach { (dominator, paths) ->
+                // Check if the dominator and this node share a common dominator. That one should be
+                // removed from the current list.
+                val dominatorDominators = finalState[dominator]
+                dominatorsList.removeIf { (k, v) ->
+                    dominatorDominators?.any { k == it.key && v == it.value } == true
+                }
             }
 
             if (dominatorsList.isEmpty()) {
