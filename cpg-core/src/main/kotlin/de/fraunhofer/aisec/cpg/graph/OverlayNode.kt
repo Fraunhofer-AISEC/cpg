@@ -54,9 +54,21 @@ abstract class OverlayNode() : Node() {
      * have different underlying nodes.
      */
     override fun equals(other: Any?): Boolean {
+        if (this === other) {
+            return true
+        }
         return other is OverlayNode &&
-            super.equals(other) &&
-            this.underlyingNode == other.underlyingNode
+            name == other.name &&
+            code == other.code &&
+            comment == other.comment &&
+            location == other.location &&
+            isImplicit == other.isImplicit &&
+            // If the underlying node is null, we don't care about it. We also cannot compare the
+            // location in this case.
+            (this.underlyingNode == null ||
+                other.underlyingNode == null ||
+                // If both have an underlying node, it should be the same one.
+                (this.underlyingNode == other.underlyingNode && this.location == other.location))
     }
 
     /**

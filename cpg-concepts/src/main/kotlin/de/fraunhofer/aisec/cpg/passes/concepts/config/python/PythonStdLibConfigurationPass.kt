@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.passes.concepts.config.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.assumptions.addAssumptionDependence
 import de.fraunhofer.aisec.cpg.evaluation.MultiValueEvaluator
-import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage.addAssumptionDependence
 import de.fraunhofer.aisec.cpg.graph.Backward
 import de.fraunhofer.aisec.cpg.graph.GraphToFollow
 import de.fraunhofer.aisec.cpg.graph.Name

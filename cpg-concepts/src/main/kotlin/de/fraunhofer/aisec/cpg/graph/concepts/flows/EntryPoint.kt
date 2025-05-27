@@ -55,11 +55,11 @@ abstract class LocalEntryPoint(
 }
 
 /** The main function of a program. */
-class Main(underlyingNode: FunctionDeclaration? = null, os: OperatingSystemArchitecture) :
+open class Main(underlyingNode: FunctionDeclaration? = null, os: OperatingSystemArchitecture) :
     LocalEntryPoint(underlyingNode = underlyingNode, os = os)
 
 /** Represents an entry point that is triggered if the code is loaded as a (dynamic) library. */
-class LibraryEntryPoint(
+open class LibraryEntryPoint(
     underlyingNode: FunctionDeclaration? = null,
     os: OperatingSystemArchitecture,
 ) : LocalEntryPoint(underlyingNode = underlyingNode, os = os)

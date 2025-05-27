@@ -29,9 +29,9 @@ import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
+import de.fraunhofer.aisec.cpg.assumptions.assume
 import de.fraunhofer.aisec.cpg.frontends.HasClasses
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.NoLanguage.assume
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -161,8 +161,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
 
                 // Some more magic, that adds it to the AST. Note: this might not be 100 % compliant
                 // with the language, since in some languages the AST of a method declaration could
-                // be
-                // outside of a method, but this will do for now
+                // be outside a method, but this will do for now
                 if (record != null && inferred is MethodDeclaration) {
                     record.addMethod(inferred)
                 }
@@ -181,7 +180,8 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             }
             .assume(
                 AssumptionType.InferenceAssumption,
-                "Assuming the start of inference is a record, namespace or translation unit",
+                "We assume that the start of inference is a record, namespace or translation unit.\n\n" +
+                    "To verify this assumption, we should check if the function is indeed part of the parent where it was inferred in external code.",
             )
     }
 

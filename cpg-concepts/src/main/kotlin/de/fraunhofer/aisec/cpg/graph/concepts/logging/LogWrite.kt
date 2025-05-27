@@ -50,7 +50,7 @@ enum class LogLevel {
  * @param logArguments The underlying CPG nodes of the logging arguments, i.e. what is written to
  *   the log.
  */
-class LogWrite(
+open class LogWrite(
     underlyingNode: Node? = null,
     override val concept: Log,
     val logLevel: LogLevel,
