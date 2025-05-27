@@ -56,17 +56,17 @@ import java.util.*
 class PythonFileConceptPrePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
     override fun handleCallExpression(
         state: NodeToOverlayStateElement,
-        callExpression: CallExpression,
+        node: CallExpression,
     ): Collection<OverlayNode> {
         // Since we cannot directly depend on the Python frontend, we have to check the language
         // here based on the node's language.
-        if (callExpression.language.name.localName != "PythonLanguage") {
+        if (node.language.name.localName != "PythonLanguage") {
             return emptyList()
         }
 
-        return when (callExpression.callee.name.toString()) {
+        return when (node.callee.name.toString()) {
             "tempfile.gettempdir" -> {
-                handleGetTempDir(callExpression)
+                handleGetTempDir(node)
             }
             else -> {
                 emptyList()
@@ -76,16 +76,16 @@ class PythonFileConceptPrePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
 
     override fun handleMemberCallExpression(
         state: NodeToOverlayStateElement,
-        callExpression: MemberCallExpression,
+        node: MemberCallExpression,
     ): Collection<OverlayNode> {
         // Since we cannot directly depend on the Python frontend, we have to check the language
         // here based on the node's language.
-        if (callExpression.language.name.localName != "PythonLanguage") {
+        if (node.language.name.localName != "PythonLanguage") {
             return emptyList()
         }
-        return when (callExpression.reconstructedImportName.toString()) {
+        return when (node.reconstructedImportName.toString()) {
             "tempfile.gettempdir" -> {
-                handleGetTempDir(callExpression)
+                handleGetTempDir(node)
             }
             else -> {
                 emptyList()

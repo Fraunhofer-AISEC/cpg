@@ -55,17 +55,17 @@ import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
 class PythonFileJoinPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
     override fun handleCallExpression(
         state: NodeToOverlayStateElement,
-        callExpression: CallExpression,
+        node: CallExpression,
     ): Collection<OverlayNode> {
         // Since we cannot directly depend on the Python frontend, we have to check the language
         // here based on the node's language.
-        if (callExpression.language.name.localName != "PythonLanguage") {
+        if (node.language.name.localName != "PythonLanguage") {
             return emptyList()
         }
 
-        return when (callExpression.callee.name.toString()) {
+        return when (node.callee.name.toString()) {
             "os.path.join" -> {
-                handlePathJoin(callExpression)
+                handlePathJoin(node)
             }
             else -> {
                 emptyList()
@@ -75,16 +75,16 @@ class PythonFileJoinPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
 
     override fun handleMemberCallExpression(
         state: NodeToOverlayStateElement,
-        callExpression: MemberCallExpression,
+        node: MemberCallExpression,
     ): Collection<OverlayNode> {
         // Since we cannot directly depend on the Python frontend, we have to check the language
         // here based on the node's language.
-        if (callExpression.language.name.localName != "PythonLanguage") {
+        if (node.language.name.localName != "PythonLanguage") {
             return emptyList()
         }
-        return when (callExpression.reconstructedImportName.toString()) {
+        return when (node.reconstructedImportName.toString()) {
             "os.path.join" -> {
-                handlePathJoin(callExpression)
+                handlePathJoin(node)
             }
             else -> {
                 emptyList()
@@ -99,6 +99,7 @@ class PythonFileJoinPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                 combinedFileName +=
                     argument.overlays.filterIsInstance<File>().joinToString { it.fileName }
                 argument.overlays.filterIsInstance<File>().forEach { file ->
+                    log.debug("Disconnecting file from graph: {}", file.fileName)
                     file.disconnectFromGraph()
                 }
             } else if (argument is Literal<*>) {
@@ -110,10 +111,11 @@ class PythonFileJoinPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
 
         return listOf(
             newFile(
-                underlyingNode = callExpression,
-                fileName = combinedFileName.joinToString("/"),
-                connect = false,
-            )
+                    underlyingNode = callExpression,
+                    fileName = combinedFileName.joinToString("/"),
+                    connect = false,
+                )
+                .also { file -> log.debug("Created new file from path join: {}", file.fileName) }
         )
     }
 }

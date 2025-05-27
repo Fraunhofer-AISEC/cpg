@@ -365,6 +365,18 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      *   cache (`false`) is returned, too.
      *
      *     TODO: update
+     *
+     * Was will ich hier machen?
+     * - Input: eine CallExpression, die ein File-Argument hat (via `argumentName`)
+     * - Output: eine Liste von File-Objekten
+     * - How:
+     *     - laufe den DFG und sammle alle File-Overlays, die vom `argumentName`-Argument ausgehen
+     *       ein
+     *         - hier ist die Annahme, dass wir schon die präziesete Information haben, wenn ein
+     *           `File` Object vorhanden ist.
+     *     - alle Pfade mit Dead Ends, die ich finde: erstelle ein neues File-Objekt
+     *         - dazu muss `collectFailedPaths` auf `true` gesetzt sein
+     *         - dazu muss `findAllPossiblePaths` auf `true` gesetzt sein (???)
      */
     internal fun getOrCreateFile(
         callExpression: CallExpression,
@@ -382,30 +394,82 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             )
             return emptyList()
         }
-
-        val newPaths = arg.getOverlaysByPrevDFG<File>(state)
-        val oldPaths =
+        val result = mutableListOf<File>()
+        val paths =
             arg.followDFGEdgesUntilHit(
-                    collectFailedPaths = true,
-                    findAllPossiblePaths = true,
-                    direction = Backward(GraphToFollow.DFG),
-                ) {
-                    false
+                collectFailedPaths = true,
+                findAllPossiblePaths = true,
+                direction = Backward(GraphToFollow.DFG),
+            ) { node ->
+                // First we check if there is a [File] overlay on the node.
+                node.overlays.any { it is File } ||
+                    // If not, we check if there is a [File] overlay in the [state]
+                    state[node]?.any { it is File } == true
+            }
+
+        // for the successful paths, we return the [File] overlays
+        result +=
+            paths.fulfilled
+                .map { it.nodes.last() }
+                .flatMap {
+                    // collect all "overlay" nodes
+                    state[it] ?: setOf(it, *it.overlays.toTypedArray())
                 }
-                .failed
-                .map { it.second }
+                .filterIsInstance<File>()
 
-        oldPaths.map { path ->
-            val existingFile =
-                path
-                    .firstOrNull { it.overlays.any { overlay -> overlay is File } }
-                    ?.overlays
-                    ?.filterIsInstance<File>()
-                    ?.firstOrNull()
-        }
+        // for the failed paths, we create a new [File] node
+        result +=
+            paths.failed
+                .map { it.second.nodes.last() }
+                .map { cpgNode ->
+                    val fileName =
+                        cpgNode.language.evaluator.evaluateAs<String>(cpgNode)?.result
+                            ?: "unknown_file"
+                    newFile(underlyingNode = cpgNode, fileName = fileName, connect = false)
+                        .apply {
+                            this.isTempFile =
+                                if (fileName.startsWith("/tmp/")) {
+                                    FileTempFileStatus.TEMP_FILE
+                                } else {
+                                    FileTempFileStatus.NOT_A_TEMP_FILE
+                                }
+                        }
+                        .also { newFile ->
+                            lattice.lub(
+                                one = state,
+                                two =
+                                    NodeToOverlayStateElement(
+                                        cpgNode to PowersetLattice.Element(newFile)
+                                    ),
+                                allowModify = true,
+                            )
+                        }
+                }
 
+        /*
+                val newPaths = arg.getOverlaysByPrevDFG<File>(state)
+                val oldPaths =
+                    arg.followDFGEdgesUntilHit(
+                            collectFailedPaths = true,
+                            findAllPossiblePaths = true,
+                            direction = Backward(GraphToFollow.DFG),
+                        ) {
+                            false
+                        }
+                        .failed
+                        .map { it.second }
+
+                oldPaths.map { path ->
+                    val existingFile =
+                        path
+                            .firstOrNull { it.overlays.any { overlay -> overlay is File } }
+                            ?.overlays
+                            ?.filterIsInstance<File>()
+                            ?.firstOrNull()
+                }
+        */
         // val name = call.argumentValueByNameOrPosition<String>(name = argumentName, position = 0)
-        return TODO()
+        return result
 
         // val fileName = getFileName(callExpression, argumentName) ?: TODO()
         // return handleInternal(fileName, callExpression, lattice, state)
@@ -461,7 +525,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             )
 
             currentMap[fileName.result] = newEntry
-            return listOf(newEntry)
+            return listOf(newEntry) // TODO: FIXME no need to return this according to Alex
         } else {
             TODO()
         }
