@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes.concepts.file.python
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.file.File
+import de.fraunhofer.aisec.cpg.graph.concepts.file.FileTempFileStatus
 import de.fraunhofer.aisec.cpg.graph.concepts.file.newFile
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
@@ -94,16 +95,30 @@ class PythonFileJoinPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
 
     private fun handlePathJoin(callExpression: CallExpression): Collection<OverlayNode> {
         val combinedFileName = mutableListOf<String>()
+        var tempFileStatus = FileTempFileStatus.NOT_A_TEMP_FILE
         callExpression.arguments.forEach { argument ->
             if (argument.overlays.any { it is File }) {
                 combinedFileName +=
                     argument.overlays.filterIsInstance<File>().joinToString { it.fileName }
+                if (
+                    argument.overlays.filterIsInstance<File>().any {
+                        it.isTempFile == FileTempFileStatus.TEMP_FILE
+                    }
+                ) {
+                    tempFileStatus = FileTempFileStatus.TEMP_FILE
+                }
                 argument.overlays.filterIsInstance<File>().forEach { file ->
                     log.debug("Disconnecting file from graph: {}", file.fileName)
                     file.disconnectFromGraph()
                 }
             } else if (argument is Literal<*>) {
-                combinedFileName += argument.value.toString()
+                val evaluatedArg = argument.value.toString()
+                if (evaluatedArg.startsWith("/tmp")) {
+                    // TODO this should only be set if the file path *starts* with /tmp, not if it
+                    // contains it
+                    tempFileStatus = FileTempFileStatus.TEMP_FILE
+                }
+                combinedFileName += evaluatedArg
             } else {
                 // TODO()
             }
@@ -115,6 +130,7 @@ class PythonFileJoinPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                     fileName = combinedFileName.joinToString("/"),
                     connect = false,
                 )
+                .apply { this.isTempFile = tempFileStatus }
                 .also { file -> log.debug("Created new file from path join: {}", file.fileName) }
         )
     }
