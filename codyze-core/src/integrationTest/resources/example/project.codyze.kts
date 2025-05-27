@@ -61,8 +61,8 @@ project {
     requirements {
         requirement("Is Security Target Correctly specified") { manualAssessmentOf("SEC-TARGET") }
         requirement("Good Encryption") { result ->
-            goodCryptoFunc(result).decide() and
-                goodArgumentSize(result).decide() and
+            goodCryptoFunc(result) and
+                goodArgumentSize(result) and
                 manualAssessmentOf("THIRD-PARTY-LIBRARY")
         }
     }
