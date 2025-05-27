@@ -74,17 +74,21 @@ class CodyzeScriptCompilationConfiguration :
         defaultImports.append(
             "de.fraunhofer.aisec.codyze.*",
             "de.fraunhofer.aisec.codyze.dsl.*",
-            "de.fraunhofer.aisec.codyze.dsl.Import",
             "de.fraunhofer.aisec.cpg.*",
             "de.fraunhofer.aisec.cpg.graph.*",
             "de.fraunhofer.aisec.cpg.query.*",
             "de.fraunhofer.aisec.cpg.passes.concepts.*",
+            "de.fraunhofer.aisec.cpg.assumptions.*",
         )
         jvm {
             val cp = classpathFromClassloader(CodyzeScript::class.java.classLoader)
             checkNotNull(cp) { "Could not read classpath" }
             updateClasspath(cp)
         }
-        compilerOptions("-Xcontext-receivers", "-jvm-target=21")
+        compilerOptions(
+            "-opt-in=kotlin.experimental.ExperimentalTypeInference",
+            "-Xcontext-receivers",
+            "-jvm-target=21",
+        )
         ide { acceptedLocations(ScriptAcceptedLocation.Everywhere) }
     })

@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.query.Failed
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.allExtended
 import de.fraunhofer.aisec.cpg.query.eq
@@ -67,7 +68,7 @@ class CodyzeExecutorTest {
         assertFalse(myFunc.isInferred)
 
         assertEquals(2, result.requirementsResults.size)
-        assertFalse(result.requirementsResults["Good Encryption"]?.value == true)
+        assertEquals(result.requirementsResults["Good Encryption"]?.value, Failed)
 
         val myFuncCall = result.translationResult.calls["my_func"]
         assertNotNull(myFuncCall)
