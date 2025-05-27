@@ -817,7 +817,12 @@ fun Node.followXUntilHit(
     worklist.add(listOf(this to context)) // We start only with the "from" node (=this)
 
     val alreadySeenNodes = mutableSetOf<Pair<Node, Context>>()
-
+    // First check if the current node satisfies the predicate.
+    // If it does, we consider this path fulfilled and skip further traversal.
+    if (predicate(this)) {
+        fulfilledPaths.add(NodePath(mutableListOf(this)).addAssumptionDependence(this))
+        return FulfilledAndFailedPaths(fulfilledPaths.toSet().toList(), failedPaths)
+    }
     while (worklist.isNotEmpty()) {
         val currentPath = worklist.maxBy { it.size }
         worklist.remove(currentPath)
@@ -1399,6 +1404,7 @@ fun Expression?.unwrapReference(): Reference? {
         this is Reference -> this
         this is UnaryOperator && (this.operatorCode == "*" || this.operatorCode == "&") ->
             this.input.unwrapReference()
+
         this is CastExpression -> this.expression.unwrapReference()
         else -> null
     }
