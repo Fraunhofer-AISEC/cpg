@@ -421,10 +421,20 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         result +=
             paths.failed
                 .map { it.second.nodes.last() }
-                .map { cpgNode ->
-                    val fileName =
-                        cpgNode.language.evaluator.evaluateAs<String>(cpgNode)?.result
-                            ?: "unknown_file"
+                .mapNotNull map@{ cpgNode ->
+                    val fileName = cpgNode.language.evaluator.evaluateAs<String>(cpgNode)?.result
+
+                    if (fileName == null) {
+                        Util.errorWithFileLocation(
+                            callExpression,
+                            log,
+                            "Failed to evaluate the file name for the call expression. Ignoring the entire CallExpression \"$callExpression\".",
+                        )
+                        return@map null
+                    }
+
+                    // We have a cache of files per component, so we can avoid creating multiple
+                    // [File]s for the same file name.
                     val currentMap = fileCache.computeIfAbsent(currentComponent) { mutableMapOf() }
                     val existingEntry = currentMap[fileName]
                     existingEntry
@@ -438,7 +448,9 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                                     }
                             }
                             .also { newFile ->
+                                // store the new file in the cache
                                 currentMap[fileName] = newFile
+                                // and add it to the lattice
                                 lattice.lub(
                                     one = state,
                                     two =
