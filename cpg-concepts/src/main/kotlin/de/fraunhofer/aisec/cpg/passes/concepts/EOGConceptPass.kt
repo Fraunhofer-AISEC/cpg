@@ -95,6 +95,8 @@ open class EOGConceptPass(ctx: TranslationContext) :
                 }
             }
         }
+        // clean up the state in order to not mess up other [EOGConceptPass]
+        // instances
         finalState.clear()
     }
 
