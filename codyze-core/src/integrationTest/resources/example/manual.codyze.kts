@@ -28,15 +28,25 @@ package example
 project {
     manualAssessment {
         of("SEC-TARGET") {
-            /** Yes, I really checked that 6 is greater than 5 */
-            val expectedValue = 5
-            val actualValue = 6
-            actualValue gt expectedValue
+            val expectedValue = 2
+            val actualValue = 3
+
+            /* Yes, I really checked that 6 is greater than 5 */
+            val result = actualValue gt expectedValue
+            result.assume(
+                AssumptionType.SoundnessAssumption,
+                "We assume that mathematical principles are sound",
+            )
         }
 
         of("THIRD-PARTY-LIBRARY") {
-            /** Yes, the rumors are true. */
-            true.toQueryTree()
+            /* Yes, the rumors are true. */
+            true
+        }
+
+        of("SOMETHING-ELSE") {
+            /* Hmm. I am not sure about this one. */
+            Undecided
         }
     }
 }
