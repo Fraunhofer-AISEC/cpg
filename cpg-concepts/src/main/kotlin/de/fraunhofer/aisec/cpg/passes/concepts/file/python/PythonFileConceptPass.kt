@@ -425,25 +425,29 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                     val fileName =
                         cpgNode.language.evaluator.evaluateAs<String>(cpgNode)?.result
                             ?: "unknown_file"
-                    newFile(underlyingNode = cpgNode, fileName = fileName, connect = false)
-                        .apply {
-                            this.isTempFile =
-                                if (fileName.startsWith("/tmp/")) {
-                                    FileTempFileStatus.TEMP_FILE
-                                } else {
-                                    FileTempFileStatus.NOT_A_TEMP_FILE
-                                }
-                        }
-                        .also { newFile ->
-                            lattice.lub(
-                                one = state,
-                                two =
-                                    NodeToOverlayStateElement(
-                                        cpgNode to PowersetLattice.Element(newFile)
-                                    ),
-                                allowModify = true,
-                            )
-                        }
+                    val currentMap = fileCache.computeIfAbsent(currentComponent) { mutableMapOf() }
+                    val existingEntry = currentMap[fileName]
+                    existingEntry
+                        ?: newFile(underlyingNode = cpgNode, fileName = fileName, connect = false)
+                            .apply {
+                                this.isTempFile =
+                                    if (fileName.startsWith("/tmp/")) {
+                                        FileTempFileStatus.TEMP_FILE
+                                    } else {
+                                        FileTempFileStatus.NOT_A_TEMP_FILE
+                                    }
+                            }
+                            .also { newFile ->
+                                currentMap[fileName] = newFile
+                                lattice.lub(
+                                    one = state,
+                                    two =
+                                        NodeToOverlayStateElement(
+                                            cpgNode to PowersetLattice.Element(newFile)
+                                        ),
+                                    allowModify = true,
+                                )
+                            }
                 }
 
         /*

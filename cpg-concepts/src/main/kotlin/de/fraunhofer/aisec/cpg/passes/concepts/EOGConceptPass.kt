@@ -39,7 +39,6 @@ import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.concepts.EOGConceptPass.Companion.intermediateState
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import kotlin.collections.none
 
 typealias NodeToOverlayStateElement = MapLattice.Element<Node, PowersetLattice.Element<OverlayNode>>
 
