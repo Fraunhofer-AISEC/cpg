@@ -23,25 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
+package example
 
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import java.util.Objects
+import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.passes.concepts.*
 
-abstract class CipherOperation(underlyingNode: Node?, override val concept: Cipher) :
-    Operation(underlyingNode = underlyingNode, concept = concept), IsDiskEncryption
-
-class Encrypt(
-    underlyingNode: Node? = null,
-    concept: Cipher,
-    /** The key used for encryption */
-    val key: Secret,
-) : CipherOperation(underlyingNode = underlyingNode, concept = concept) {
-
-    override fun equals(other: Any?): Boolean {
-        return other is Encrypt && super.equals(other) && other.key == this.key
-    }
-
-    override fun hashCode() = Objects.hash(super.hashCode(), key)
-}
+project { tagging { tag { each<CallExpression>("get_secret_from_server").with { Secret() } } } }

@@ -334,6 +334,46 @@ class FlowQueriesTest {
                 }
             }
 
+        fun validatorDataflowOnlyIfSink(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage<TestLanguage>()
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("Dataflow.java") {
+                        function("foo", t("string")) {
+                            param("arg", t("int"))
+                            body { returnStmt { call("toString") { ref("arg") } } }
+                        }
+
+                        function("main", void()) {
+                            param("args", t("string").array())
+                            body {
+                                declare { variable("a", t("int")) { literal(5, t("int")) } }
+
+                                declare {
+                                    variable("b", t("string")) {
+                                        literal("bla", t("string")) + call("foo") { call("bar") }
+                                    }
+                                }
+
+                                ifStmt {
+                                    condition { ref("b") eq literal("test", t("string")) }
+                                    thenStmt {
+                                        call("print") { ref("a") }
+                                        call("baz") { ref("a") + ref("b") }
+                                    }
+                                    elseStmt { call("print") { ref("c") } }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
         fun validatorDataflowLinearWithCall(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()

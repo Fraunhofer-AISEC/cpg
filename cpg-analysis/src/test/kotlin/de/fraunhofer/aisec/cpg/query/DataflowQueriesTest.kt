@@ -527,7 +527,7 @@ class DataflowQueriesTest {
     }
 
     @Test
-    fun testValidatorDFGSimple() {
+    fun testValidatorDFGSimpleLinear() {
         val resultLinear = FlowQueriesTest.validatorDataflowLinearSimple()
         val linearStartA = resultLinear.variables["a"]
         assertNotNull(linearStartA, "There's a variable \"a\" in main")
@@ -546,7 +546,10 @@ class DataflowQueriesTest {
             linearResult.value,
             "There is only one path which goes from the variable through print to baz.",
         )
+    }
 
+    @Test
+    fun testValidatorDFGLinear() {
         val resultLinearWithB = FlowQueriesTest.validatorDataflowLinear()
         val linearStartAWithB = resultLinearWithB.variables["a"]
         assertNotNull(linearStartAWithB, "There's a variable \"a\" in main")
@@ -565,7 +568,10 @@ class DataflowQueriesTest {
             linearResultWithB.value,
             "There is only one path which goes from the variable through print(b) to baz.",
         )
+    }
 
+    @Test
+    fun testValidatorDFGSimpleLinearWithCall() {
         val resultLinearWithBInterProc = FlowQueriesTest.validatorDataflowLinearWithCall()
         val linearStartAWithBInterProc = resultLinearWithBInterProc.variables["a"]
         assertNotNull(linearStartAWithBInterProc, "There's a variable \"a\" in main")
@@ -603,7 +609,10 @@ class DataflowQueriesTest {
             ifResult.value,
             "There is a path which goes through the \"else\" branch without passing print before reaching baz.",
         )
+    }
 
+    @Test
+    fun testValidatorDFGIf() {
         val resultIfWithB = FlowQueriesTest.validatorDataflowIf()
         val ifStartAWithB = resultIfWithB.variables["a"]
         assertNotNull(ifStartAWithB, "There's a variable \"a\" in main")
@@ -622,7 +631,10 @@ class DataflowQueriesTest {
             ifResultWithB.value,
             "There is a path which goes through the \"else\" branch but prints b before reaching baz.",
         )
+    }
 
+    @Test
+    fun testValidatorDFGSimpleIfWithCall() {
         val resultIfWithBInterProc = FlowQueriesTest.validatorDataflowIfWithCall()
         val ifStartAWithBInterProc = resultIfWithBInterProc.variables["a"]
         assertNotNull(ifStartAWithBInterProc, "There's a variable \"a\" in main")
@@ -641,7 +653,10 @@ class DataflowQueriesTest {
             ifResultWithBInterProc.value,
             "The path using \"b\" cannot be found because we have to go through the function call \"foo\".",
         )
+    }
 
+    @Test
+    fun testValidatorDFGSimpleIfElse() {
         val resultIfElse = FlowQueriesTest.validatorDataflowIfElseSimple()
         val ifElseStartA = resultIfElse.variables["a"]
         assertNotNull(ifElseStartA, "There's a variable \"a\" in main")
@@ -657,7 +672,32 @@ class DataflowQueriesTest {
                 scope = Intraprocedural(),
             )
         assertTrue(ifElseResult.value, "Both paths go from the variable through print to baz.")
+    }
 
+    @Test
+    fun testValidatorDataflowOnlyIfSink() {
+        val resultIfElse = FlowQueriesTest.validatorDataflowOnlyIfSink()
+        val ifElseStartA = resultIfElse.variables["a"]
+        assertNotNull(ifElseStartA, "There's a variable \"a\" in main")
+        val ifElseResult =
+            dataFlowWithValidator(
+                source = ifElseStartA,
+                validatorPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "print"
+                },
+                sinkPredicate = { node ->
+                    (node.astParent as? CallExpression)?.name?.localName == "baz"
+                },
+                scope = Intraprocedural(),
+            )
+        assertTrue(
+            ifElseResult.value,
+            "Whenever we reach baz, we go through print. No call to baz is also fine.",
+        )
+    }
+
+    @Test
+    fun testValidatorDFGSIfElse() {
         val resultIfElseWithB = FlowQueriesTest.validatorDataflowIfElse()
         val ifElseStartAWithB = resultIfElseWithB.variables["a"]
         assertNotNull(ifElseStartAWithB, "There's a variable \"a\" in main")
@@ -673,7 +713,10 @@ class DataflowQueriesTest {
                 scope = Intraprocedural(),
             )
         assertTrue(ifElseWithBResult.value, "Both paths go from the variable through print to baz.")
+    }
 
+    @Test
+    fun testValidatorDFGIfElseWithCall() {
         val resultIfElseWithBInterProc = FlowQueriesTest.validatorDataflowIfElseWithCall()
         val ifElseStartAWithBInterProc = resultIfElseWithBInterProc.variables["a"]
         assertNotNull(ifElseStartAWithBInterProc, "There's a variable \"a\" in main")
@@ -695,7 +738,7 @@ class DataflowQueriesTest {
     }
 
     @Test
-    fun testValidatorDFGSimpleInterprocedural() {
+    fun testValidatorDFGLinearInterprocedural() {
         val resultLinearWithBInterProc = FlowQueriesTest.validatorDataflowLinearWithCall()
         val linearStartAWithBInterProc = resultLinearWithBInterProc.variables["a"]
         assertNotNull(linearStartAWithBInterProc, "There's a variable \"a\" in main")
@@ -715,6 +758,10 @@ class DataflowQueriesTest {
             linearResultWithBInterProc.value,
             "There is only one path which goes from the variable through print(b) to baz.",
         )
+    }
+
+    @Test
+    fun testValidatorDFGIfInterprocedural() {
 
         val resultIfWithBInterProc = FlowQueriesTest.validatorDataflowIfWithCall()
         val ifStartAWithBInterProc = resultIfWithBInterProc.variables["a"]
@@ -734,7 +781,10 @@ class DataflowQueriesTest {
             ifResultWithBInterProc.value,
             "There is a path which goes through the \"else\" branch but prints b before reaching baz.",
         )
+    }
 
+    @Test
+    fun testValidatorDFGIfElseInterprocedural() {
         val resultIfElseWithBInterProc = FlowQueriesTest.validatorDataflowIfElseWithCall()
         val ifElseStartAWithBInterProc = resultIfElseWithBInterProc.variables["a"]
         assertNotNull(ifElseStartAWithBInterProc, "There's a variable \"a\" in main")

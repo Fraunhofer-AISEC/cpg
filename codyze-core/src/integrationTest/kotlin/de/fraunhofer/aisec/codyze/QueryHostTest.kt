@@ -23,35 +23,30 @@
  *                    \______/ \__|       \______/
  *
  */
-package codyze
+package de.fraunhofer.aisec.codyze
 
-import de.fraunhofer.aisec.codyze.ConceptScriptPass
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.test.analyze
+import java.io.File
 import kotlin.io.path.Path
 import kotlin.test.Test
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import kotlin.test.assertEquals
 
-class ConceptScriptPassTest {
-
+class QueryHostTest {
     @Test
-    fun testConceptScriptPass() {
+    fun testQuery() {
         val topLevel = Path("src/integrationTest/resources")
         val result =
-            analyze(listOf(topLevel.resolve("encrypt.py").toFile()), topLevel, true) {
+            analyze(listOf(topLevel.resolve("simple.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
-                it.registerPass<ConceptScriptPass>()
-                it.configurePass<ConceptScriptPass>(
-                    ConceptScriptPass.Configuration(
-                        scriptFile = topLevel.resolve("encryption.concept.kts").toFile()
-                    )
-                )
             }
-        assertNotNull(result)
-
-        val encrypt = result.calls("encrypt")
-        encrypt.forEach { assertTrue(it.operationNodes.isNotEmpty()) }
+        val queryResult =
+            result.evalQuery(
+                File("src/integrationTest/resources/simple.query.kts"),
+                "statement1",
+                "statement1",
+            )
+        assertEquals(true, queryResult.tree.value)
     }
 }
