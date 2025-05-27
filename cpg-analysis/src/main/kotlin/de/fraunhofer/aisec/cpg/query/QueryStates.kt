@@ -219,9 +219,12 @@ infix fun Decision.implies(other: Decision): Decision {
 /** Negates the value of [arg] and returns the resulting [QueryTree]. */
 fun not(arg: Decision): Decision {
     val result =
-        if (arg.value == Succeeded) Failed
-        else if (arg.value == Failed) Succeeded
-        else if (arg.value == NotYetEvaluated) NotYetEvaluated else Undecided
+        when (arg.value) {
+            Succeeded -> Failed
+            Failed -> Succeeded
+            NotYetEvaluated -> NotYetEvaluated
+            else -> Undecided
+        }
     return QueryTree(result, mutableListOf(arg), "! ${arg.value}")
 }
 

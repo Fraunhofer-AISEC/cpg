@@ -35,7 +35,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
-import de.fraunhofer.aisec.cpg.query.QueryTree
+import de.fraunhofer.aisec.cpg.query.Decision
 import io.github.detekt.sarif4k.*
 import java.io.File
 import java.nio.file.Path
@@ -84,7 +84,7 @@ class TranslationOptions : OptionGroup("CPG Translation Options") {
 data class AnalysisResult(
     val translationResult: TranslationResult,
     val sarif: SarifSchema210 = SarifSchema210(version = Version.The210, runs = listOf()),
-    val requirementsResults: Map<String, QueryTree<Boolean>> = mutableMapOf(),
+    val requirementsResults: Map<String, Decision> = mutableMapOf(),
     val project: AnalysisProject,
 ) : ContextProvider by translationResult {
     fun writeSarifJson(file: File) {
@@ -121,8 +121,7 @@ class AnalysisProject(
      * if the namespace starts with mylibrary.
      */
     var librariesPath: Path? = projectDir?.resolve("libraries"),
-    var requirementFunctions: MutableMap<String, (TranslationResult) -> QueryTree<Boolean>> =
-        mutableMapOf(),
+    var requirementFunctions: MutableMap<String, (TranslationResult) -> Decision> = mutableMapOf(),
     /** The translation configuration for the project. */
     var config: TranslationConfiguration,
     /**
