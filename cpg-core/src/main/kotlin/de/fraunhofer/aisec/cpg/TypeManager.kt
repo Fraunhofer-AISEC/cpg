@@ -353,7 +353,7 @@ val Collection<Type>.commonType: Type?
  * Note: This involves some symbol lookup (using [ScopeManager.lookupTypeSymbolByName]), so this can
  * only be used in passes.
  */
-context(Pass<*>)
+context(pass: Pass<*>)
 fun Reference.nameIsType(): Type? {
     // First, check if it is a simple type
     var type = language.getSimpleTypeOf(name)
@@ -362,11 +362,11 @@ fun Reference.nameIsType(): Type? {
     }
 
     // This could also be a typedef
-    type = scopeManager.typedefFor(name, scope)
+    type = pass.scopeManager.typedefFor(name, scope)
     if (type != null) {
         return type
     }
 
     // Lastly, check if the reference contains a symbol that points to type (declaration)
-    return scopeManager.lookupTypeSymbolByName(name, language, scope)?.declaredType
+    return pass.scopeManager.lookupTypeSymbolByName(name, language, scope)?.declaredType
 }

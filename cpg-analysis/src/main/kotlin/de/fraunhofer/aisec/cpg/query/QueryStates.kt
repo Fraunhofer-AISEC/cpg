@@ -67,9 +67,9 @@ data object NotYetEvaluated : DecisionState()
  * [QueryTree.assumptions] (i.e., it checks if all are [AssumptionStatus.Accepted] or if some are
  * [AssumptionStatus.Rejected] or [AssumptionStatus.Undecided]).
  */
-context(TranslationResult)
+context(result: TranslationResult)
 fun QueryTree<Boolean>.decide(): Decision {
-    val statues = this@TranslationResult.assumptionStatuses
+    val statues = result.assumptionStatuses
     // TODO(kweiss): Use status to set status
 
     val (newValue, stringInfo) =

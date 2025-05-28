@@ -224,7 +224,7 @@ fun AnalysisResult.toJSON(): AnalysisResultJSON =
     }
 
 /** Converts a [TranslationUnitDeclaration] into its JSON representation. */
-context(ContextProvider)
+context(_: ContextProvider)
 fun TranslationUnitDeclaration.toJSON(): TranslationUnitJSON {
     val localName =
         component?.topLevel()?.let {
@@ -241,7 +241,7 @@ fun TranslationUnitDeclaration.toJSON(): TranslationUnitJSON {
 }
 
 /** Converts a [Component] into its JSON representation. */
-context(ContextProvider)
+context(_: ContextProvider)
 fun Component.toJSON(): ComponentJSON {
     return ComponentJSON(
         name = this.name.toString(),
@@ -280,12 +280,12 @@ fun Edge<*>.toJSON(): EdgeJSON {
  * Converts a SARIF [Result] into its JSON representation. It needs a [TranslationResult] as a
  * context receiver to find the component and translation unit of the finding.
  */
-context(TranslationResult)
+context(result: TranslationResult)
 fun Result.toJSON(): FindingsJSON {
-    var path = this.locations?.firstOrNull()?.physicalLocation?.artifactLocation?.absolutePath
+    val path = this.locations?.firstOrNull()?.physicalLocation?.artifactLocation?.absolutePath
 
-    var translationUnit =
-        this@TranslationResult.components
+    val translationUnit =
+        result.components
             .flatMap { it.translationUnits }
             .firstOrNull { tu -> tu.location?.artifactLocation?.uri?.toPath() == path }
 
@@ -306,7 +306,7 @@ fun Result.toJSON(): FindingsJSON {
  * Tries to convert the [ArtifactLocation.uri] (which can either be absolute or relative to a
  * [Component.topLevel]) into an absolute [Path].
  */
-context(TranslationResult)
+context(result: TranslationResult)
 val ArtifactLocation.absolutePath: Path?
     get() {
         val uri = this.uri
@@ -325,7 +325,7 @@ val ArtifactLocation.absolutePath: Path?
             // build an absolute path again
             else -> {
                 val componentPath =
-                    this@TranslationResult.components[uriBaseID]?.topLevel()?.absoluteFile?.toPath()
+                    result.components[uriBaseID]?.topLevel()?.absoluteFile?.toPath()
                 return componentPath?.resolve(uri)
             }
         }

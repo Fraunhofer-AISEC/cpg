@@ -409,7 +409,7 @@ object SubgraphWalker {
  *   [old] and [new] expressions are of different types (e.g., exchanging a simple [Reference] for a
  *   [MemberExpression]), we also replace the [CallExpression] with a [MemberCallExpression].
  */
-context(ContextProvider)
+context(provider: ContextProvider)
 fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Expression): Boolean {
     // We do not allow to replace nodes where the DFG (or other dependent nodes, such as PDG have
     // been set). The reason for that is that these edges contain a lot of information on the edges
