@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.allExtended
 import de.fraunhofer.aisec.cpg.query.eq
 import de.fraunhofer.aisec.cpg.test.assertInvokes
+import kotlin.io.path.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -51,7 +52,9 @@ class CodyzeExecutorTest {
     @Test
     fun testEvaluate() {
         val project =
-            AnalysisProject.fromScript("src/integrationTest/resources/example/project.codyze.kts")
+            AnalysisProject.fromScript(
+                Path("src/integrationTest/resources/example/project.codyze.kts")
+            )
         assertNotNull(project)
 
         val result = project.analyze()
@@ -68,7 +71,7 @@ class CodyzeExecutorTest {
         assertFalse(myFunc.isInferred)
 
         assertEquals(2, result.requirementsResults.size)
-        assertEquals(result.requirementsResults["Good Encryption"]?.value, Failed)
+        assertEquals(result.requirementsResults["RQ-ENCRYPTION-01"]?.value, Failed)
 
         val myFuncCall = result.translationResult.calls["my_func"]
         assertNotNull(myFuncCall)

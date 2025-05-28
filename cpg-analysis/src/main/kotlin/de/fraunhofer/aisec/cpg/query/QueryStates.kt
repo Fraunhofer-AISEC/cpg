@@ -69,17 +69,17 @@ fun QueryTree<Boolean>.decide(): Decision {
         when {
             !this.value || this.assumptions.any { it.status == AssumptionStatus.Rejected } ->
                 Failed to
-                    (if (!this.value) "The query was evaluated to false"
+                    (if (!this.value) "the query was evaluated to false"
                     else
-                        "The assumptions ${this.assumptions.filter { it.status == AssumptionStatus.Rejected }.map { it.id.toHexDashString() } } were rejected")
+                        "the assumptions ${this.assumptions.filter { it.status == AssumptionStatus.Rejected }.map { it.id.toHexDashString() } } were rejected")
             this.assumptions.any { it.status == AssumptionStatus.Undecided } ->
                 Undecided to
-                    "The assumptions ${this.assumptions.filter { it.status == AssumptionStatus.Undecided }.map { it.id.toHexDashString() }} are not yet decided"
+                    "the assumptions ${this.assumptions.filter { it.status == AssumptionStatus.Undecided }.map { it.id.toHexDashString() }} are not yet decided"
             this.value ==
                 this.assumptions.all {
                     it.status == AssumptionStatus.Ignored || it.status == AssumptionStatus.Accepted
                 } ->
-                Succeeded to "The query was evaluated to true and all assumptions were accepted."
+                Succeeded to "the query was evaluated to true and all assumptions were accepted."
             else -> NotYetEvaluated to "Something went wrong"
         }
 

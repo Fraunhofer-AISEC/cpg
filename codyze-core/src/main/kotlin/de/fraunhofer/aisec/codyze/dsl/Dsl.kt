@@ -28,6 +28,7 @@
 package de.fraunhofer.aisec.codyze.dsl
 
 import de.fraunhofer.aisec.codyze.AnalysisProject
+import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.codyze.CodyzeScript
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
@@ -44,6 +45,8 @@ import de.fraunhofer.aisec.cpg.query.NotYetEvaluated
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.decide
 import de.fraunhofer.aisec.cpg.query.toQueryTree
+import io.github.detekt.sarif4k.ReportingDescriptor
+import io.github.detekt.sarif4k.Result
 import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.Path
@@ -64,9 +67,58 @@ class IncludeBuilder {
     val includes: MutableMap<IncludeCategory, String> = mutableMapOf()
 }
 
+/**
+ * Represents the default category for requirements. This is used when no specific category is
+ * provided for a requirement. This category is created automatically if
+ * [RequirementsBuilder.requirement] is called.
+ */
+val DefaultCategory =
+    RequirementCategoryBuilder("DEFAULT").apply {
+        name = "Default Requirements Category"
+        description =
+            "This is the default category for requirements that do not fit into any other category."
+    }
+
 /** Represents a builder for a list of all requirements of the TOE. */
 class RequirementsBuilder {
-    val requirements = mutableMapOf<String, (TranslationResult) -> Decision>()
+    var description: String? = null
+
+    internal val categoryBuilders = mutableMapOf<String, RequirementCategoryBuilder>()
+}
+
+/** Represents a builder for a single category of requirements of the evaluation project. */
+class RequirementCategoryBuilder(
+    /** The unique identifier of the category. */
+    var id: String
+) {
+    /** An optional human-readable name of the requirement. This is used for display purposes. */
+    var name: String? = id
+
+    /** A human-readable description of the category. This is used for display purposes. */
+    var description: String? = null
+
+    /** The requirements in this category. */
+    internal val requirements = mutableMapOf<String, RequirementBuilder>()
+}
+
+/** Represents a builder for a single requirement of the evaluation project. */
+class RequirementBuilder(
+    /** The unique identifier of the requirement. This is used to reference the requirement. */
+    var id: String
+) {
+    /** An optional human-readable name of the requirement. This is used for display purposes. */
+    var name: String? = id
+
+    /**
+     * An optional human-readable description of the requirement. This is used for display purposes.
+     */
+    var description: String? = null
+
+    /**
+     * A function that returns a [Decision] that evaluates whether the requirement is fulfilled.
+     * This function is expected to be used in the context of a [TranslationResult].
+     */
+    var fulfilledBy: (TranslationResult) -> Decision = { NotYetEvaluated.toQueryTree() }
 }
 
 /** Represents a builder for a list of all assumptions of the evaluation project. */
@@ -155,10 +207,25 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
     internal val manualAssessmentBuilder = ManualAssessmentBuilder()
     internal var taggingCtx = TaggingContext()
 
+    /**
+     * Returns a list of all requirements in all categories of the project. This is useful to
+     * collect all requirements in a single list, for example, to generate reports or to evaluate
+     * them.
+     */
+    val allRequirements: Map<String, RequirementBuilder>
+        get() {
+            return requirementsBuilder.categoryBuilders
+                .map { it.value }
+                .flatMap { it.requirements.entries }
+                .associate { it.key to it.value }
+        }
+
     /** Builds an [AnalysisProject] out of the current state of the builder. */
     fun build(
+        postProcess:
+            (AnalysisProject.(AnalysisResult) -> Pair<List<ReportingDescriptor>, List<Result>>)?,
         configModifier: ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
-            null
+            null,
     ): AnalysisProject {
         val name = name
 
@@ -215,11 +282,20 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
             TagOverlaysPass.Configuration(tag = taggingCtx)
         )
 
+        // Collect all requirements functions from all categories
+        val requirementFunctions =
+            requirementsBuilder.categoryBuilders
+                .map { it.value }
+                .flatMap { it.requirements.map { rq -> Pair(rq.key, rq.value.fulfilledBy) } }
+                .associate { it }
+
         return AnalysisProject(
+            builder = this,
             name,
             projectDir = projectDir,
-            requirementFunctions = requirementsBuilder.requirements,
+            requirementFunctions = requirementFunctions,
             config = configBuilder.build(),
+            postProcess = postProcess,
         )
     }
 }
@@ -289,33 +365,84 @@ fun ModulesBuilder.module(name: String, block: ModuleBuilder.() -> Unit) {
     modules += builder
 }
 
-sealed class RequirementReturnType
+sealed class FulfilledByReturnType
 
-object RequirementDecision : RequirementReturnType()
+object FulfilledByDecision : FulfilledByReturnType()
 
-object RequirementQueryTree : RequirementReturnType()
+object FulfilledByQueryTree : FulfilledByReturnType()
 
-/** Describes a single requirement of the TOE by a function that returns a [Decision]. */
+/**
+ * Generates a default identifier for the next requirement in the format
+ * `RQ-<category_id>-<number>`,
+ */
+fun RequirementCategoryBuilder.nextRQ(): String {
+    // Generate a default identifier based on the current size of the requirements map
+    return "RQ-${id}-${String.format("%03d", requirements.size + 1)}"
+}
+
+/**
+ * Describes a single requirement of the TOE (in the [DefaultCategory]) by a function that returns a
+ * [Decision].
+ *
+ * An [id] can be provided to identify the requirement. If no [id] is provided, a default identifier
+ * is generated based on the current size of the requirements map in the format specified by
+ * [nextRQ].
+ */
+@CodyzeDsl
+fun RequirementsBuilder.requirement(id: String? = null, block: RequirementBuilder.() -> Unit) {
+    // Check, if the default category exists, if not, create it
+    val defaultCategory = categoryBuilders.getOrPut(DefaultCategory.id) { DefaultCategory }
+
+    return defaultCategory.requirement(id, block)
+}
+
+/**
+ * Describes a single requirement category of the TOE.
+ *
+ * An [id] is needed to identify the category. This is used to reference the category in creating
+ * requirements using [nextRQ]
+ */
+@CodyzeDsl
+fun RequirementsBuilder.category(id: String, block: RequirementCategoryBuilder.() -> Unit) {
+    categoryBuilders[id] = RequirementCategoryBuilder(id).apply(block)
+}
+
+/**
+ * Describes a single requirement of the TOE (within the current requirement category) by a function
+ * that returns a [Decision].
+ *
+ * An [id] can be provided to identify the requirement. If no [id] is provided, a default identifier
+ * is generated based on the current size of the requirements map in the format specified by
+ * [nextRQ].
+ */
+@CodyzeDsl
+fun RequirementCategoryBuilder.requirement(
+    id: String? = null,
+    block: RequirementBuilder.() -> Unit,
+) {
+    val id = id ?: nextRQ()
+    val builder = RequirementBuilder(id)
+    block(builder)
+
+    requirements[id] = builder
+}
+
 @CodyzeDsl
 @OverloadResolutionByLambdaReturnType
-fun RequirementsBuilder.requirement(
-    name: String,
-    query: (TranslationResult) -> Decision,
-): RequirementDecision {
-    requirements[name] = query
-    return RequirementDecision
+fun RequirementBuilder.fulfilledBy(query: (TranslationResult) -> Decision): FulfilledByDecision {
+    fulfilledBy = query
+    return FulfilledByDecision
 }
 
 /**
  * Describes a single requirement of the TOE by a function that returns a [QueryTree] of [Boolean].
  */
 @CodyzeDsl
-fun RequirementsBuilder.requirement(
-    name: String,
-    query: (TranslationResult) -> QueryTree<Boolean>,
-): RequirementQueryTree {
-    requirements[name] = { query(it).decide() }
-    return RequirementQueryTree
+fun RequirementBuilder.fulfilledBy(
+    query: (TranslationResult) -> QueryTree<Boolean>
+): FulfilledByQueryTree {
+    fulfilledBy = { query(it).decide() }
+    return FulfilledByQueryTree
 }
 
 /** Describes that the requirement had to be checked manually. */
