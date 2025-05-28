@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.allExtended
 import de.fraunhofer.aisec.cpg.query.eq
 import de.fraunhofer.aisec.cpg.test.assertInvokes
+import kotlin.io.path.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -51,7 +52,9 @@ class CodyzeExecutorTest {
     @Test
     fun testEvaluate() {
         val project =
-            AnalysisProject.fromScript("src/integrationTest/resources/example/project.codyze.kts")
+            AnalysisProject.fromScript(
+                Path("src/integrationTest/resources/example/project.codyze.kts")
+            )
         assertNotNull(project)
 
         val result = project.analyze()
