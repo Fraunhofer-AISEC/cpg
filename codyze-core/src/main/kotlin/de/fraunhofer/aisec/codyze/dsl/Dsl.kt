@@ -32,10 +32,8 @@ import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.codyze.CodyzeScript
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
 import de.fraunhofer.aisec.cpg.passes.concepts.TagOverlaysPass
 import de.fraunhofer.aisec.cpg.passes.concepts.TaggingContext
 import de.fraunhofer.aisec.cpg.query.*
@@ -125,12 +123,15 @@ class RequirementBuilder(
 class AssumptionsBuilder {
     internal val decisionBuilder = DecisionBuilder()
 
-    class DecisionBuilder
+    class DecisionBuilder {
+        val assumptionStatusFunctions =
+            mutableMapOf<String, TranslationResult.() -> AssumptionStatus>()
+    }
 }
 
 /** Represents a builder for manual assessments of requirements. */
 class ManualAssessmentBuilder {
-    internal val assessments = mutableMapOf<String, () -> Decision>()
+    internal val assessments = mutableMapOf<String, (TranslationResult) -> Decision>()
 }
 
 /** Represents a builder for tool metadata and configuration. */
@@ -446,15 +447,15 @@ fun RequirementBuilder.fulfilledBy(
 }
 
 /** Describes that the requirement had to be checked manually. */
-context(ProjectBuilder)
+context(ProjectBuilder, RequirementsBuilder, TranslationResult)
 @CodyzeDsl
-fun RequirementsBuilder.manualAssessmentOf(id: String): Decision {
+fun manualAssessmentOf(id: String): Decision {
     val manualAssessment = this@ProjectBuilder.manualAssessmentBuilder.assessments[id]
     if (manualAssessment == null) {
         return NotYetEvaluated.toQueryTree()
     }
 
-    return manualAssessment()
+    return manualAssessment(this@TranslationResult)
 }
 
 /** Describes the assumptions which have been handled and assessed. */
@@ -485,7 +486,7 @@ fun AssumptionsBuilder.decisions(block: AssumptionsBuilder.DecisionBuilder.() ->
  */
 @CodyzeDsl
 fun AssumptionsBuilder.DecisionBuilder.accept(uuid: String) {
-    parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Accepted)
+    assumptionStatusFunctions += uuid to { AssumptionStatus.Accepted }
 }
 
 /**
@@ -498,7 +499,7 @@ fun AssumptionsBuilder.DecisionBuilder.accept(uuid: String) {
  */
 @CodyzeDsl
 fun AssumptionsBuilder.DecisionBuilder.reject(uuid: String) {
-    parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Rejected)
+    assumptionStatusFunctions += uuid to { AssumptionStatus.Rejected }
 }
 
 /**
@@ -510,7 +511,7 @@ fun AssumptionsBuilder.DecisionBuilder.reject(uuid: String) {
  */
 @CodyzeDsl
 fun AssumptionsBuilder.DecisionBuilder.undecided(uuid: String) {
-    parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Undecided)
+    assumptionStatusFunctions += uuid to { AssumptionStatus.Undecided }
 }
 
 /**
@@ -523,7 +524,7 @@ fun AssumptionsBuilder.DecisionBuilder.undecided(uuid: String) {
  */
 @CodyzeDsl
 fun AssumptionsBuilder.DecisionBuilder.ignore(uuid: String) {
-    parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Ignored)
+    assumptionStatusFunctions += uuid to { AssumptionStatus.Ignored }
 }
 
 /** Describes the manual assessments. */
@@ -548,7 +549,7 @@ object OfBoolean : OfReturnType()
  */
 @CodyzeDsl
 @OverloadResolutionByLambdaReturnType
-fun ManualAssessmentBuilder.of(id: String, block: () -> Decision): OfDecision {
+fun ManualAssessmentBuilder.of(id: String, block: (TranslationResult) -> Decision): OfDecision {
     assessments[id] = block
     return OfDecision
 }
@@ -567,8 +568,11 @@ fun ManualAssessmentBuilder.of(id: String, block: () -> DecisionState): OfDecisi
  * return a [QueryTree] that evaluates to `true` if the requirement is fulfilled.
  */
 @CodyzeDsl
-fun ManualAssessmentBuilder.of(id: String, block: () -> QueryTree<Boolean>): OfQueryTree {
-    assessments[id] = { block().decide() }
+fun ManualAssessmentBuilder.of(
+    id: String,
+    block: (TranslationResult) -> QueryTree<Boolean>,
+): OfQueryTree {
+    assessments[id] = { result -> with(result) { block(result).decide() } }
     return OfQueryTree
 }
 
@@ -577,18 +581,14 @@ fun ManualAssessmentBuilder.of(id: String, block: () -> QueryTree<Boolean>): OfQ
  * return a [Boolean] that evaluates to `true` if the requirement is fulfilled.
  */
 @CodyzeDsl
-fun ManualAssessmentBuilder.of(id: String, block: () -> Boolean): OfBoolean {
-    assessments[id] = { block().toQueryTree().decide() }
+fun ManualAssessmentBuilder.of(id: String, block: (TranslationResult) -> Boolean): OfBoolean {
+    assessments[id] = { result -> with(result) { block(result).toQueryTree().decide() } }
     return OfBoolean
 }
 
+context(TranslationResult)
 private fun parseUuidAndAnnotateAssumptions(uuid: String, status: AssumptionStatus) {
     val parsedUuid = Uuid.parse(uuid)
-    // TODO: Acutally get the TranslationResult
-    val result: TranslationResult? = null
-    // TODO: Do we find all assumptions like this (i.e., also those related to overlays of a node
-    // and edges)?
-    result
-        .allChildrenWithOverlays<Assumption> { it.id == parsedUuid }
-        .forEach { assumption -> assumption.status = status }
+
+    this@TranslationResult.assumptionStatuses[parsedUuid] = status
 }

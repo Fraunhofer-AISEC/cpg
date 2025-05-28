@@ -23,8 +23,11 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.query
 
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 
 typealias Decision = QueryTree<DecisionState>
@@ -64,7 +67,11 @@ data object NotYetEvaluated : DecisionState()
  * [QueryTree.assumptions] (i.e., it checks if all are [AssumptionStatus.Accepted] or if some are
  * [AssumptionStatus.Rejected] or [AssumptionStatus.Undecided]).
  */
+context(TranslationResult)
 fun QueryTree<Boolean>.decide(): Decision {
+    val statues = this@TranslationResult.assumptionStatuses
+    // TODO(kweiss): Use status to set status
+
     val (newValue, stringInfo) =
         when {
             !this.value || this.assumptions.any { it.status == AssumptionStatus.Rejected } ->

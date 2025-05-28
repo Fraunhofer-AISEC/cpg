@@ -41,12 +41,12 @@ class DslTest {
     @Test
     fun testDsl() {
         with(Mock) {
-            fun query1(result: TranslationResult): QueryTree<Boolean> {
-                return result.allExtended<CallExpression> { it.name eq "encrypt" }
+            fun TranslationResult.query1(): QueryTree<Boolean> {
+                return allExtended<CallExpression> { it.name eq "encrypt" }
             }
 
-            fun query2(result: TranslationResult): QueryTree<Boolean> {
-                return result.allExtended<CallExpression> { it.arguments.size eq 2 }
+            fun TranslationResult.query2(): QueryTree<Boolean> {
+                return allExtended<CallExpression> { it.arguments.size eq 2 }
             }
 
             project {

@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.codyze.dsl.ProjectBuilder
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.query.Decision
 import io.github.detekt.sarif4k.*
@@ -141,6 +142,11 @@ class AnalysisProject(
     /** Analyzes the project and returns the result. */
     fun analyze(): AnalysisResult {
         val tr = TranslationManager.builder().config(config).build().analyze().get()
+
+        // Propagate assumption status into translation result
+        assumptionStatusFunctions.forEach { (uuid, func) ->
+            tr.assumptionStatuses[Uuid.parse(uuid)] = func(tr)
+        }
 
         // Run requirements
         val requirementsResults =

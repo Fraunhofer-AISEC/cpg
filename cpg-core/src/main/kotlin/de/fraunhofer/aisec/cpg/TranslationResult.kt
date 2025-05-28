@@ -28,6 +28,8 @@
 package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
+import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.multiLanguage
@@ -46,6 +48,7 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
+import kotlin.uuid.Uuid
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
@@ -100,6 +103,12 @@ class TranslationResult(
 
     val isCancelled: Boolean
         get() = translationManager.isCancelled()
+
+    /**
+     * A map of assumption statuses for the translation result. This can used to explicitly set a
+     * status of an [Assumption].
+     */
+    val assumptionStatuses = mutableMapOf<Uuid, AssumptionStatus>()
 
     /**
      * Checks if only a single software component has been analyzed and returns its translation
