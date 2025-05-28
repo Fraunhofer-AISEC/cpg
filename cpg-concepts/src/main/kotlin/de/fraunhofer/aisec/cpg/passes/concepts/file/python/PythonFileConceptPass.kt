@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.passes.concepts.file.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
@@ -34,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.concepts.file.*
 import de.fraunhofer.aisec.cpg.graph.edges.get
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
@@ -203,9 +201,10 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                     true
                 }
                 "tempfile.NamedTemporaryFile" -> {
-                    callExpression
-                        .argumentValueByNameOrPosition<Boolean>(name = "delete", position = 8)
-                        ?.result ?: true
+                    callExpression.argumentValueByNameOrPosition<Boolean>(
+                        name = "delete",
+                        position = 8,
+                    ) ?: true
                 }
                 else -> false
             }
@@ -333,7 +332,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             newFileSetMask(
                 underlyingNode = callExpression,
                 file = file,
-                mask = mode.result,
+                mask = mode,
                 connect = false,
             )
         }
@@ -422,7 +421,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             paths.failed
                 .map { it.second.nodes.last() }
                 .mapNotNull map@{ cpgNode ->
-                    val fileName = cpgNode.language.evaluator.evaluateAs<String>(cpgNode)?.result
+                    val fileName = cpgNode.language.evaluator.evaluateAs<String>(cpgNode)
 
                     if (fileName == null) {
                         Util.errorWithFileLocation(
@@ -491,80 +490,6 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         // return handleInternal(fileName, callExpression, lattice, state)
     }
 
-    private fun handleInternal(
-        fileName: ValueEvaluator.ResultWithPath<String>,
-        callExpression: CallExpression,
-        lattice: NodeToOverlayState,
-        state: NodeToOverlayStateElement,
-    ): List<File> {
-        val last = fileName.path.lastOrNull()
-        if (last == null) {
-            return emptyList()
-        }
-
-        if (last.overlays.any { it is File }) {
-            return last.overlays.filterIsInstance<File>()
-        }
-
-        if (last.prevDFG.size > 1) {
-            val result = mutableListOf<File>()
-            last.prevDFG.forEach {
-                it.language.evaluator.evaluateAs<String>(it)?.let { fileName ->
-                    result += handleInternal(fileName, callExpression, lattice, state)
-                }
-            }
-            return result
-        }
-
-        if (last is Literal<*>) {
-            val tempFileStatus =
-                if (fileName.result.startsWith("/tmp/")) {
-                    FileTempFileStatus.TEMP_FILE
-                } else {
-                    getTempFileStatus(callExpression, fileName)
-                }
-            val currentMap = fileCache.computeIfAbsent(currentComponent) { mutableMapOf() }
-            val existingEntry = currentMap[fileName.result]
-            if (existingEntry != null) {
-                return listOf(existingEntry)
-            }
-
-            val newEntry =
-                newFile(underlyingNode = last, fileName = fileName.result, connect = false).apply {
-                    this.isTempFile = tempFileStatus
-                }
-
-            lattice.lub(
-                one = state,
-                two = NodeToOverlayStateElement(last to PowersetLattice.Element(newEntry)),
-                allowModify = true,
-            )
-
-            currentMap[fileName.result] = newEntry
-            return listOf(newEntry) // TODO: FIXME no need to return this according to Alex
-        } else {
-            TODO()
-        }
-    }
-
-    /** TODO */
-    private fun getTempFileStatus(
-        callExpression: CallExpression,
-        fileName: ValueEvaluator.ResultWithPath<String>,
-    ): FileTempFileStatus {
-        return fileName.path.lastOrNull()?.let { node ->
-            if (
-                node.overlays.any { overlay ->
-                    overlay is File && overlay.isTempFile == FileTempFileStatus.TEMP_FILE
-                }
-            ) {
-                FileTempFileStatus.TEMP_FILE
-            } else {
-                FileTempFileStatus.NOT_A_TEMP_FILE
-            }
-        } ?: FileTempFileStatus.UNKNOWN
-    }
-
     /**
      * Walks the DFG backwards until a [OpenFile] node is found.
      *
@@ -590,7 +515,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * ```
      */
     internal fun getBuiltinOpenMode(call: CallExpression): String? {
-        return call.argumentValueByNameOrPosition<String>(name = "mode", position = 1)?.result
+        return call.argumentValueByNameOrPosition<String>(name = "mode", position = 1)
     }
 
     /**
@@ -607,7 +532,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * @return The `mode`
      */
     internal fun getOsOpenMode(call: CallExpression): Long? {
-        return call.argumentValueByNameOrPosition<Long>(name = "mode", position = 2)?.result
+        return call.argumentValueByNameOrPosition<Long>(name = "mode", position = 2)
     }
 
     /**
@@ -619,7 +544,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      * ```
      */
     internal fun getOsOpenFlags(call: CallExpression): Long? {
-        return call.argumentValueByNameOrPosition<Long>(name = "flags", position = 1)?.result
+        return call.argumentValueByNameOrPosition<Long>(name = "flags", position = 1)
     }
 
     /**

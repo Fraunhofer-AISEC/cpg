@@ -47,12 +47,12 @@ val NewArrayExpression.capacity: Int
  * @param this The [CallExpression] to analyze.
  * @param name Optionally: the [CallExpression.arguments] name.
  * @param position Optionally: the [CallExpression.arguments] position.
- * @return The evaluated result (as [ValueEvaluator.ResultWithPath]) or `null`.
+ * @return The evaluated result or `null` on failure.
  */
 inline fun <reified T> CallExpression.argumentValueByNameOrPosition(
     name: String? = null,
     position: Int? = null,
-): ValueEvaluator.ResultWithPath<T>? {
+): T? {
     val arg =
         name?.let { this.argumentEdges[it]?.end } ?: position?.let { this.arguments.getOrNull(it) }
     val value = this.language.evaluator.evaluateAs<T>(arg)
