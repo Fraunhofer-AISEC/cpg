@@ -32,8 +32,6 @@ import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 
 typealias Decision = QueryTree<DecisionState>
 
-typealias Decision = QueryTree<DecisionState>
-
 sealed class DecisionState
 
 /**
