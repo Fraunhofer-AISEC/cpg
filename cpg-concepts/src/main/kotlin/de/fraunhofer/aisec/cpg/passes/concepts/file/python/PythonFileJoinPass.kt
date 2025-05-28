@@ -49,13 +49,13 @@ import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
  * created with the concatenated string as the file name. If any of the arguments is a temporary
  * file, the resulting file will also be marked as a temporary file. This pass must be executed
  * before the [PythonFileConceptPass] because the latter builds upon the nodes being available in
- * the graph. It must be executed after the [PythonFileConceptPrePass] to ensure that the
- * temporary-file nodes are created before the join operation is handled.
+ * the graph. It must be executed after the [PythonTempFilePass] to ensure that the temporary-file
+ * nodes are created before the join operation is handled.
  */
 @ExecuteLate
 @DependsOn(DFGPass::class, false)
 @DependsOn(EvaluationOrderGraphPass::class, false)
-@DependsOn(PythonFileConceptPrePass::class, false)
+@DependsOn(PythonTempFilePass::class, false)
 @ExecuteBefore(PythonFileConceptPass::class, false)
 class PythonFileJoinPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
     override fun handleCallExpression(

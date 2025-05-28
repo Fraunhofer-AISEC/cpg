@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.passes.concepts.file.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
-import de.fraunhofer.aisec.cpg.graph.concepts.file.File
 import de.fraunhofer.aisec.cpg.graph.concepts.file.FileTempFileStatus
 import de.fraunhofer.aisec.cpg.graph.concepts.file.newFile
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -43,17 +42,16 @@ import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
 import java.util.*
 
 /**
- * TODO
- *
- * This pass adds [File] nodes to `tempfile` calls. It must be executed before the
- * [PythonFileConceptPass] because the later builds upon the nodes being available in the graph.
+ * This pass handles various library calls in Python code that are related to temporary files. It
+ * must be executed before the [PythonFileJoinPass] to allow the latter to eventually concatenate
+ * paths.
  */
 @ExecuteLate
 @DependsOn(DFGPass::class, false)
 @DependsOn(EvaluationOrderGraphPass::class, false)
 @ExecuteBefore(PythonFileJoinPass::class, false)
 @ExecuteBefore(PythonFileConceptPass::class, false)
-class PythonFileConceptPrePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
+class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
     override fun handleCallExpression(
         state: NodeToOverlayStateElement,
         node: CallExpression,
@@ -97,7 +95,8 @@ class PythonFileConceptPrePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         return listOf(
             newFile(
                     underlyingNode = callExpression,
-                    fileName = "tempfile.gettempdir()" + UUID.randomUUID().toString(),
+                    fileName = "tempfile.gettempdir(${UUID.randomUUID()})", // Unique name to avoid
+                    // collisions
                     connect = false,
                 )
                 .apply { this.isTempFile = FileTempFileStatus.TEMP_FILE }

@@ -55,7 +55,7 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 @DependsOn(DFGPass::class, false)
 @DependsOn(EvaluationOrderGraphPass::class, false)
 @DependsOn(PythonFileJoinPass::class, false)
-@DependsOn(PythonFileConceptPrePass::class, false)
+@DependsOn(PythonTempFilePass::class, false)
 class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
     companion object {
         /**
@@ -171,7 +171,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             }
             "tempfile.gettempdir" -> {
                 emptyList()
-                /** see [PythonFileConceptPrePass] */
+                /** see [PythonTempFilePass] */
             }
             else -> {
                 emptyList()
