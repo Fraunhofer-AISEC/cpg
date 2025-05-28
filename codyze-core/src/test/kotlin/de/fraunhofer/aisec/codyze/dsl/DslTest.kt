@@ -63,21 +63,41 @@ class DslTest {
                 }
 
                 requirements {
-                    requirement("Is Security Target Correctly specified") {
-                        manualAssessmentOf("SEC-TARGET")
+                    requirement("RQ-SEC-TARGET") {
+                        name = "Is Security Target Correctly specified"
+                        description = "test"
+
+                        fulfilledBy { manualAssessmentOf("SEC-TARGET") }
                     }
-                    requirement("Good Encryption") { result -> query1(result) and query2(result) }
-                    requirement("Good Encryption with some manual analysis") { result ->
-                        val logic =
-                            query1(result) and
-                                query2(result) and
-                                manualAssessmentOf("THIRD-PARTY-LIBRARY")
-                        assertIs<Decision>(logic)
+
+                    requirement("RQ-ENCRYPTION-01") {
+                        name = "Good Encryption"
+
+                        fulfilledBy { result -> query1(result) and query2(result) }
                     }
-                    requirement("Manual analysis with good encryption") { result ->
-                        val logic =
-                            manualAssessmentOf("SEC-TARGET") and query1(result) and query2(result)
-                        assertIs<Decision>(logic)
+
+                    requirement("RQ-ENCRYPTION-02") {
+                        name = "Good Encryption with some manual analysis"
+
+                        fulfilledBy { result ->
+                            val logic =
+                                query1(result) and
+                                    query2(result) and
+                                    manualAssessmentOf("THIRD-PARTY-LIBRARY")
+                            assertIs<Decision>(logic)
+                        }
+                    }
+
+                    requirement("RQ-ENCRYPTION-03") {
+                        name = "Manual analysis with good encryption"
+
+                        fulfilledBy { result ->
+                            val logic =
+                                manualAssessmentOf("SEC-TARGET") and
+                                    query1(result) and
+                                    query2(result)
+                            assertIs<Decision>(logic)
+                        }
                     }
                 }
 

@@ -103,7 +103,8 @@ data class AnalysisResult(
  */
 class AnalysisProject(
     /**
-     * The builder for the project. Potentially null if this is a temporary project that was created using [AnalysisProject.temporary].
+     * The builder for the project. Potentially null if this is a temporary project that was created
+     * using [AnalysisProject.temporary].
      */
     var builder: ProjectBuilder? = null,
     /** The project name. */
@@ -126,7 +127,7 @@ class AnalysisProject(
      * if the namespace starts with mylibrary.
      */
     var librariesPath: Path? = projectDir?.resolve("libraries"),
-    var requirementFunctions: MutableMap<String, (TranslationResult) -> Decision> = mutableMapOf(),
+    var requirementFunctions: Map<String, (TranslationResult) -> Decision> = emptyMap(),
     /** The translation configuration for the project. */
     var config: TranslationConfiguration,
     /**
@@ -148,12 +149,13 @@ class AnalysisProject(
 
         // Prepare analysis result
         val runs = mutableListOf<Run>()
-        val result = AnalysisResult(
-            translationResult = tr,
-            sarif = SarifSchema210(version = Version.The210, runs = runs),
-            requirementsResults = requirementsResults,
-            project = this,
-        )
+        val result =
+            AnalysisResult(
+                translationResult = tr,
+                sarif = SarifSchema210(version = Version.The210, runs = runs),
+                requirementsResults = requirementsResults,
+                project = this,
+            )
 
         // Create a new SARIF run, including a tool definition and rules corresponding to the
         // individual requirements

@@ -36,10 +36,7 @@ class SarifTest {
     @Test
     fun testSarifFindings() {
         val project =
-            AnalysisProject.fromDirectory(
-                projectDir = "src/integrationTest/resources/demo-app",
-                postProcess = AnalysisProject::buildSarif,
-            )
+            AnalysisProject.fromDirectory(projectDir = "src/integrationTest/resources/demo-app")
         assertNotNull(project)
 
         val result = project.analyze()

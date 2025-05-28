@@ -35,38 +35,41 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.query.DecisionState
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.SinglePathResult
+import de.fraunhofer.aisec.cpg.query.Succeeded
+import de.fraunhofer.aisec.cpg.query.toQueryTree
 import io.github.detekt.sarif4k.*
 import java.io.File
 import kotlin.io.path.relativeToOrSelf
 import kotlin.io.path.toPath
 
-/**
- * Builds the SARIF report for the given [AnalysisResult.requirementsResults].
- */
+/** Builds the SARIF report for the given [AnalysisResult.requirementsResults]. */
 fun AnalysisProject.buildSarif(
     result: AnalysisResult
 ): Pair<List<ReportingDescriptor>, List<Result>> {
     val sarifRules = mutableListOf<ReportingDescriptor>()
     val sarifResults = mutableListOf<Result>()
 
-    for( (requirementID, decision) in result.requirementsResults) {
+    for ((requirementID, decision) in result.requirementsResults) {
         val report = decision.undecide().toSarif(requirementID)
 
-        val rule =
+        /*val rule =
             ReportingDescriptor(
                 id = requirementID,
-                name = requirementFunctions,
+                name =
+                    builder?.requirementsBuilder?.requirements[requirementID]?.name
+                        ?: "Unknown requirement",
                 shortDescription = MultiformatMessageString(text = stmt.value),
             )
 
-        sarifRules += rule
+        sarifRules += rule*/
     }
 
     // Connect the security goals to the translation result for now. Later we will add them
     // to individual concepts
-    for (goal in goals) {
+    /*for (goal in goals) {
         goal.underlyingNode = tr
 
         // Load and execute queries associated to the goals
@@ -92,9 +95,24 @@ fun AnalysisProject.buildSarif(
                 }
             }
         }
-    }
+    }*/
 
     return Pair(sarifRules, sarifResults)
+}
+
+/**
+ * Converts a [QueryTree] of type [DecisionState] to a [QueryTree] of type [Boolean]. This is used
+ * to determine if the query was successful or not. All states except [Succeeded] are considered as
+ * failed, which results in a [QueryTree] with value `false`.
+ *
+ * We need to make this binary decision because SARIF only supports boolean results for individual
+ * findings.
+ */
+fun QueryTree<DecisionState>.undecide(): QueryTree<Boolean> {
+    return when (this.value) {
+        is Succeeded -> true
+        else -> false
+    }.toQueryTree()
 }
 
 /**

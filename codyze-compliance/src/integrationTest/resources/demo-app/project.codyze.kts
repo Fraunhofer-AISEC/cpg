@@ -48,9 +48,10 @@ project {
     }
 
     requirements {
-        requirement("Proper Handling of Key Material") {
+        requirement {
+            name = "Proper Handling of Key Material"
             description = "Sensitive material, such as keys are handled properly"
-            properHandlingOfKeyMaterial(it)
+            fulfilledBy(::properHandlingOfKeyMaterial)
         }
     }
 

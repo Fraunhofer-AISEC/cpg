@@ -70,7 +70,27 @@ class IncludeBuilder {
 /** Represents a builder for a list of all requirements of the TOE. */
 class RequirementsBuilder {
     var description: String? = null
-    internal val requirements = mutableMapOf<String, (TranslationResult) -> Decision>()
+    internal val requirements = mutableMapOf<String, RequirementBuilder>()
+}
+
+/** Represents a builder for a single requirement of the evaluation project. */
+class RequirementBuilder(
+    /** The unique identifier of the requirement. This is used to reference the requirement. */
+    var id: String
+) {
+    /** A optional human-readable name of the requirement. This is used for display purposes. */
+    var name: String? = id
+
+    /**
+     * An optional human-readable description of the requirement. This is used for display purposes.
+     */
+    var description: String? = null
+
+    /**
+     * A function that returns a [Decision] that evaluates whether the requirement is fulfilled.
+     * This function is expected to be used in the context of a [TranslationResult].
+     */
+    var fulfilledBy: (TranslationResult) -> Decision = { NotYetEvaluated.toQueryTree() }
 }
 
 /** Represents a builder for a list of all assumptions of the evaluation project. */
@@ -225,7 +245,10 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
             builder = this,
             name,
             projectDir = projectDir,
-            requirementFunctions = requirementsBuilder.requirements,
+            requirementFunctions =
+                requirementsBuilder.requirements
+                    .map { Pair(it.key, it.value.fulfilledBy) }
+                    .associate { it },
             config = configBuilder.build(),
             postProcess = postProcess,
         )
@@ -297,33 +320,51 @@ fun ModulesBuilder.module(name: String, block: ModuleBuilder.() -> Unit) {
     modules += builder
 }
 
-sealed class RequirementReturnType
+sealed class FulfilledByReturnType
 
-object RequirementDecision : RequirementReturnType()
+object FulfilledByDecision : FulfilledByReturnType()
 
-object RequirementQueryTree : RequirementReturnType()
+object FulfilledByQueryTree : FulfilledByReturnType()
 
-/** Describes a single requirement of the TOE by a function that returns a [Decision]. */
+/**
+ * Generates a default identifier for the next requirement in the format "RQ-001", "RQ-002", etc.
+ */
+fun RequirementsBuilder.nextRQ(): String {
+    // Generate a default identifier based on the current size of the requirements map
+    return "RQ-${String.format("%03d", requirements.size + 1)}"
+}
+
+/**
+ * Describes a single requirement of the TOE by a function that returns a [Decision].
+ *
+ * An [id] can be provided to identify the requirement. If no [id] is provided, a default identifier
+ * is generated based on the current size of the requirements map in the format specified by
+ * [nextRQ].
+ */
+@CodyzeDsl
+fun RequirementsBuilder.requirement(id: String = nextRQ(), block: RequirementBuilder.() -> Unit) {
+    val builder = RequirementBuilder(id)
+    block(builder)
+
+    requirements[id] = builder
+}
+
 @CodyzeDsl
 @OverloadResolutionByLambdaReturnType
-fun RequirementsBuilder.requirement(
-    name: String,
-    query: (TranslationResult) -> Decision,
-): RequirementDecision {
-    requirements[name] = query
-    return RequirementDecision
+fun RequirementBuilder.fulfilledBy(query: (TranslationResult) -> Decision): FulfilledByDecision {
+    fulfilledBy = query
+    return FulfilledByDecision
 }
 
 /**
  * Describes a single requirement of the TOE by a function that returns a [QueryTree] of [Boolean].
  */
 @CodyzeDsl
-fun RequirementsBuilder.requirement(
-    name: String,
-    query: (TranslationResult) -> QueryTree<Boolean>,
-): RequirementQueryTree {
-    requirements[name] = { query(it).decide() }
-    return RequirementQueryTree
+fun RequirementBuilder.fulfilledBy(
+    query: (TranslationResult) -> QueryTree<Boolean>
+): FulfilledByQueryTree {
+    fulfilledBy = { query(it).decide() }
+    return FulfilledByQueryTree
 }
 
 /** Describes that the requirement had to be checked manually. */
