@@ -23,17 +23,42 @@
  *                    \______/ \__|       \______/
  *
  */
-import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edges.*
+import de.fraunhofer.aisec.cpg.graph.edges.get
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.query.QueryTree
-import de.fraunhofer.aisec.cpg.query.allExtended
-import de.fraunhofer.aisec.cpg.query.executionPath
 
-fun statement1(tr: TranslationResult): QueryTree<Boolean> {
+project {
+    name = "Demo Project"
+
+    toe {
+        name = "Demo TOE"
+        architecture {
+            modules {
+                module("webapp") {
+                    directory = "src/webapp"
+                    include("auth")
+                }
+                module("auth") {
+                    directory = "src/auth"
+                    include("webapp")
+                }
+            }
+        }
+    }
+
+    requirements {
+        requirement("Proper Handling of Key Material") {
+            description = "Sensitive material, such as keys are handled properly"
+            properHandlingOfKeyMaterial(it)
+        }
+    }
+
+    assumptions { assume { "Third party code is very good" } }
+}
+
+/** For each key K, if K is used in encryption or decryption, it must be deleted after use */
+fun properHandlingOfKeyMaterial(tr: TranslationResult): QueryTree<Boolean> {
     val result =
         tr.allExtended<CallExpression>(
             sel = {
@@ -41,14 +66,14 @@ fun statement1(tr: TranslationResult): QueryTree<Boolean> {
                     it.arguments[0].evaluate() in listOf("encrypt", "decrypt")
             }
         ) {
-            val processInput = it.argumentEdges["stdin"]?.end
-            if (processInput == null) {
+            val k = it.argumentEdges["stdin"]?.end
+            if (k == null) {
                 QueryTree(true)
             } else {
-                executionPath(processInput) { to ->
+                executionPath(k) { to ->
                     to is DeleteExpression &&
                         to.operands.any {
-                            it is Reference && it.refersTo == (processInput as? Reference)?.refersTo
+                            it is Reference && it.refersTo == (k as? Reference)?.refersTo
                         }
                 }
             }

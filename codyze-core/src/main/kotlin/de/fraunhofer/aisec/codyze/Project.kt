@@ -31,6 +31,7 @@ import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.boolean
 import com.github.ajalt.clikt.parameters.types.path
+import de.fraunhofer.aisec.codyze.dsl.ProjectBuilder
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
@@ -101,6 +102,10 @@ data class AnalysisResult(
  * the project is the central entity for the analysis.
  */
 class AnalysisProject(
+    /**
+     * The builder for the project. Potentially null if this is a temporary project that was created using [AnalysisProject.temporary].
+     */
+    var builder: ProjectBuilder? = null,
     /** The project name. */
     var name: String,
     /** The project directory, if it exists on file. Null if the project is an ad-hoc project. */
@@ -129,21 +134,30 @@ class AnalysisProject(
      * used to fill [AnalysisResult.sarif].
      */
     var postProcess:
-        (AnalysisProject.(TranslationResult) -> Pair<List<ReportingDescriptor>, List<Result>>)? =
+        (AnalysisProject.(AnalysisResult) -> Pair<List<ReportingDescriptor>, List<Result>>)? =
         null,
 ) {
 
     /** Analyzes the project and returns the result. */
     fun analyze(): AnalysisResult {
         val tr = TranslationManager.builder().config(config).build().analyze().get()
-        val (rules, results) = postProcess?.invoke(this, tr) ?: Pair(emptyList(), emptyList())
 
         // Run requirements
         val requirementsResults =
             requirementFunctions.map { (name, func) -> Pair(name, func(tr)) }.associate { it }
 
+        // Prepare analysis result
+        val runs = mutableListOf<Run>()
+        val result = AnalysisResult(
+            translationResult = tr,
+            sarif = SarifSchema210(version = Version.The210, runs = runs),
+            requirementsResults = requirementsResults,
+            project = this,
+        )
+
         // Create a new SARIF run, including a tool definition and rules corresponding to the
-        // individual security statements
+        // individual requirements
+        val (rules, results) = buildSarif(result)
         val run =
             Run(
                 tool =
@@ -154,13 +168,9 @@ class AnalysisProject(
                         .mapNotNull { Pair(it.key, it.toSarifLocation()) }
                         .associate { it },
             )
+        runs += run
 
-        return AnalysisResult(
-            translationResult = tr,
-            sarif = SarifSchema210(version = Version.The210, runs = listOf(run)),
-            requirementsResults = requirementsResults,
-            project = this,
-        )
+        return result
     }
 
     companion object {
@@ -169,13 +179,20 @@ class AnalysisProject(
          * file.
          */
         fun fromDirectory(
-            directory: String,
+            projectDir: String,
+            postProcess:
+                (AnalysisProject.(AnalysisResult) -> Pair<
+                        List<ReportingDescriptor>,
+                        List<Result>,
+                    >)? =
+                null,
             configModifier:
                 ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
                 null,
         ): AnalysisProject? {
             return fromScript(
-                Path(directory).resolve("project.codyze.kts").pathString,
+                Path(projectDir).resolve("project.codyze.kts").pathString,
+                postProcess = postProcess,
                 configModifier = configModifier,
             )
         }
@@ -186,6 +203,12 @@ class AnalysisProject(
          */
         fun fromScript(
             file: String,
+            postProcess:
+                (AnalysisProject.(AnalysisResult) -> Pair<
+                        List<ReportingDescriptor>,
+                        List<Result>,
+                    >)? =
+                null,
             configModifier:
                 ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
                 null,
@@ -197,18 +220,24 @@ class AnalysisProject(
                 return null
             }
 
-            return script.projectBuilder.build(configModifier)
+            return script.projectBuilder.build(
+                postProcess = postProcess,
+                configModifier = configModifier,
+            )
         }
 
-        /** Builds a translation configuration from the given project directory. */
-        fun from(
+        /**
+         * Builds a temporary [AnalysisProject] from the given values without having a `.codyze.kts`
+         * file in place.
+         */
+        fun temporary(
             projectDir: Path,
             sources: List<Path>? = null,
             components: List<String>? = null,
             exclusionPatterns: List<String>? = null,
             librariesPath: Path? = projectDir.resolve("libraries"),
             postProcess:
-                (AnalysisProject.(TranslationResult) -> Pair<
+                (AnalysisProject.(AnalysisResult) -> Pair<
                         List<ReportingDescriptor>,
                         List<Result>,
                     >)? =
@@ -295,7 +324,7 @@ class AnalysisProject(
             projectOptions: ProjectOptions,
             translationOptions: TranslationOptions,
             postProcess:
-                (AnalysisProject.(TranslationResult) -> Pair<
+                (AnalysisProject.(AnalysisResult) -> Pair<
                         List<ReportingDescriptor>,
                         List<Result>,
                     >)? =
@@ -304,7 +333,7 @@ class AnalysisProject(
                 ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
                 null,
         ): AnalysisProject {
-            return from(
+            return temporary(
                 projectOptions.directory,
                 translationOptions.sources,
                 translationOptions.components,

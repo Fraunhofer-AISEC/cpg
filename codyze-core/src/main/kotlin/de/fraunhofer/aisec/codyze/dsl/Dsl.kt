@@ -28,6 +28,7 @@
 package de.fraunhofer.aisec.codyze.dsl
 
 import de.fraunhofer.aisec.codyze.AnalysisProject
+import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.codyze.CodyzeScript
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
@@ -44,6 +45,8 @@ import de.fraunhofer.aisec.cpg.query.NotYetEvaluated
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.decide
 import de.fraunhofer.aisec.cpg.query.toQueryTree
+import io.github.detekt.sarif4k.ReportingDescriptor
+import io.github.detekt.sarif4k.Result
 import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.Path
@@ -66,7 +69,8 @@ class IncludeBuilder {
 
 /** Represents a builder for a list of all requirements of the TOE. */
 class RequirementsBuilder {
-    val requirements = mutableMapOf<String, (TranslationResult) -> Decision>()
+    var description: String? = null
+    internal val requirements = mutableMapOf<String, (TranslationResult) -> Decision>()
 }
 
 /** Represents a builder for a list of all assumptions of the evaluation project. */
@@ -157,8 +161,10 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
 
     /** Builds an [AnalysisProject] out of the current state of the builder. */
     fun build(
+        postProcess:
+            (AnalysisProject.(AnalysisResult) -> Pair<List<ReportingDescriptor>, List<Result>>)?,
         configModifier: ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
-            null
+            null,
     ): AnalysisProject {
         val name = name
 
@@ -216,10 +222,12 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
         )
 
         return AnalysisProject(
+            builder = this,
             name,
             projectDir = projectDir,
             requirementFunctions = requirementsBuilder.requirements,
             config = configBuilder.build(),
+            postProcess = postProcess,
         )
     }
 }

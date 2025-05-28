@@ -56,7 +56,7 @@ open class ScanCommand : ProjectCommand() {
             AnalysisProject.fromOptions(
                 projectOptions,
                 translationOptions,
-                postProcess = AnalysisProject::executeSecurityGoalsQueries,
+                postProcess = AnalysisProject::buildSarif,
             ) {
                 // just to show that we can use a config build here
                 it

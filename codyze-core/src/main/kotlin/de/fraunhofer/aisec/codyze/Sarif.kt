@@ -43,6 +43,61 @@ import kotlin.io.path.relativeToOrSelf
 import kotlin.io.path.toPath
 
 /**
+ * Builds the SARIF report for the given [AnalysisResult.requirementsResults].
+ */
+fun AnalysisProject.buildSarif(
+    result: AnalysisResult
+): Pair<List<ReportingDescriptor>, List<Result>> {
+    val sarifRules = mutableListOf<ReportingDescriptor>()
+    val sarifResults = mutableListOf<Result>()
+
+    for( (requirementID, decision) in result.requirementsResults) {
+        val report = decision.undecide().toSarif(requirementID)
+
+        val rule =
+            ReportingDescriptor(
+                id = requirementID,
+                name = requirementFunctions,
+                shortDescription = MultiformatMessageString(text = stmt.value),
+            )
+
+        sarifRules += rule
+    }
+
+    // Connect the security goals to the translation result for now. Later we will add them
+    // to individual concepts
+    for (goal in goals) {
+        goal.underlyingNode = tr
+
+        // Load and execute queries associated to the goals
+        for (objective in goal.objectives) {
+            val objectiveID = objective.name.localName.lowercase().replace(" ", "-")
+            objective.underlyingNode = tr
+
+            projectDir?.let {
+                val scriptFile = it.resolve("queries").resolve("${objectiveID}.query.kts")
+                for (stmt in objective.statements.withIndex()) {
+                    val idx1 = stmt.index + 1
+                    val statementID = "statement${idx1}"
+                    val rule =
+                        ReportingDescriptor(
+                            id = "${objectiveID}-${statementID}",
+                            name = "${objective.name.localName}: Statement $idx1",
+                            shortDescription = MultiformatMessageString(text = stmt.value),
+                        )
+                    val queryResult = tr.evalQuery(scriptFile.toFile(), statementID, rule.id)
+                    sarifResults += queryResult.sarif
+
+                    sarifRules += rule
+                }
+            }
+        }
+    }
+
+    return Pair(sarifRules, sarifResults)
+}
+
+/**
  * Converts a [QueryTree] to a list of [Result]s. This expects that the query tree is of type
  * [Boolean] and that the [QueryTree.children] represent the individual findings.
  */

@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.codyze.compliance
 
 import de.fraunhofer.aisec.codyze.*
-import de.fraunhofer.aisec.cpg.TranslationResult
 import io.github.detekt.sarif4k.MultiformatMessageString
 import io.github.detekt.sarif4k.ReportingDescriptor
 import io.github.detekt.sarif4k.Result
@@ -36,46 +35,4 @@ fun AnalysisProject.loadSecurityGoals(): List<SecurityGoal> {
     return securityGoalsFolder?.let { loadSecurityGoals(it) } ?: listOf()
 }
 
-/**
- * Executes the security goals queries and returns the security goals as SARIF rules and the query
- * results as SARIF results.
- */
-fun AnalysisProject.executeSecurityGoalsQueries(
-    tr: TranslationResult
-): Pair<List<ReportingDescriptor>, List<Result>> {
-    val rules = mutableListOf<ReportingDescriptor>()
-    val results = mutableListOf<Result>()
-    val goals = loadSecurityGoals()
 
-    // Connect the security goals to the translation result for now. Later we will add them
-    // to individual concepts
-    for (goal in goals) {
-        goal.underlyingNode = tr
-
-        // Load and execute queries associated to the goals
-        for (objective in goal.objectives) {
-            val objectiveID = objective.name.localName.lowercase().replace(" ", "-")
-            objective.underlyingNode = tr
-
-            projectDir?.let {
-                val scriptFile = it.resolve("queries").resolve("${objectiveID}.query.kts")
-                for (stmt in objective.statements.withIndex()) {
-                    val idx1 = stmt.index + 1
-                    val statementID = "statement${idx1}"
-                    val rule =
-                        ReportingDescriptor(
-                            id = "${objectiveID}-${statementID}",
-                            name = "${objective.name.localName}: Statement $idx1",
-                            shortDescription = MultiformatMessageString(text = stmt.value),
-                        )
-                    val queryResult = tr.evalQuery(scriptFile.toFile(), statementID, rule.id)
-                    results += queryResult.sarif
-
-                    rules += rule
-                }
-            }
-        }
-    }
-
-    return Pair(rules, results)
-}

@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.codyze.compliance
 
 import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.cpg.graph.*
-import kotlin.io.path.Path
 import kotlin.io.path.createTempFile
 import kotlin.test.Test
 import kotlin.test.assertNotNull
@@ -37,11 +36,11 @@ class SarifTest {
     @Test
     fun testSarifFindings() {
         val project =
-            AnalysisProject.from(
-                projectDir = Path("src/integrationTest/resources/demo-app"),
-                components = listOf("webapp"),
-                postProcess = AnalysisProject::executeSecurityGoalsQueries,
+            AnalysisProject.fromDirectory(
+                projectDir = "src/integrationTest/resources/demo-app",
+                postProcess = AnalysisProject::buildSarif,
             )
+        assertNotNull(project)
 
         val result = project.analyze()
         val tr = result.translationResult
