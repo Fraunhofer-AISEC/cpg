@@ -28,6 +28,7 @@
 package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
+import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.multiLanguage
@@ -48,6 +49,7 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
+import kotlin.uuid.Uuid
 
 /**
  * The global (intermediate) result of the translation. A [LanguageFrontend] will initially populate
@@ -81,6 +83,14 @@ class TranslationResult(
 
     /** Contains all languages that were considered in the translation process. */
     @Transient val usedLanguages = mutableSetOf<Language<*>>()
+
+    /**
+     * This map holds the status assigned to assumptions identified by a specific uuid when being set
+     * manually. The map is empty after a new analysis and can be filled during manual evaluation of
+     * assumptions. The Map is then used when an objects is decided(.decide()) to update the assumptions
+     * that are attached to the object.
+     */
+    @Transient val assumptionStates: Map<Uuid, AssumptionStatus> = mutableMapOf()
 
     /**
      * Scratch storage that can be used by passes to store additional information in this result.
