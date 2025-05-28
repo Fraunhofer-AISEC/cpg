@@ -113,6 +113,12 @@ class TranslationResult(
         get() = translationManager.isCancelled()
 
     /**
+     * A map of assumption statuses for the translation result. This can used to explicitly set a
+     * status of an [Assumption].
+     */
+    val assumptionStatuses = mutableMapOf<Uuid, AssumptionStatus>()
+
+    /**
      * Checks if only a single software component has been analyzed and returns its translation
      * units. For multiple software components, it aggregates the results.
      *
