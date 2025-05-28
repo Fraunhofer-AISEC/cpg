@@ -43,6 +43,7 @@ import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.isDirectory
+import kotlin.uuid.Uuid
 
 /** Options common to all subcommands dealing projects. */
 class ProjectOptions : OptionGroup("Project Options") {
@@ -127,7 +128,9 @@ class AnalysisProject(
      * if the namespace starts with mylibrary.
      */
     var librariesPath: Path? = projectDir?.resolve("libraries"),
-    var requirementFunctions: Map<String, (TranslationResult) -> Decision> = emptyMap(),
+    var requirementFunctions: Map<String, TranslationResult.() -> Decision> = emptyMap(),
+    var assumptionStatusFunctions: Map<String, TranslationResult.() -> AssumptionStatus> =
+        emptyMap(),
     /** The translation configuration for the project. */
     var config: TranslationConfiguration,
     /**

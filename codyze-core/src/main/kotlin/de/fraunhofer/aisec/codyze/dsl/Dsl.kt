@@ -48,7 +48,6 @@ import io.github.detekt.sarif4k.Result
 import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.Path
-import kotlin.uuid.Uuid
 
 @DslMarker annotation class CodyzeDsl
 
@@ -116,7 +115,7 @@ class RequirementBuilder(
      * A function that returns a [Decision] that evaluates whether the requirement is fulfilled.
      * This function is expected to be used in the context of a [TranslationResult].
      */
-    var fulfilledBy: (TranslationResult) -> Decision = { NotYetEvaluated.toQueryTree() }
+    var fulfilledBy: TranslationResult.() -> Decision = { NotYetEvaluated.toQueryTree() }
 }
 
 /** Represents a builder for a list of all assumptions of the evaluation project. */
@@ -131,7 +130,7 @@ class AssumptionsBuilder {
 
 /** Represents a builder for manual assessments of requirements. */
 class ManualAssessmentBuilder {
-    internal val assessments = mutableMapOf<String, (TranslationResult) -> Decision>()
+    internal val assessments = mutableMapOf<String, TranslationResult.() -> Decision>()
 }
 
 /** Represents a builder for tool metadata and configuration. */
@@ -430,7 +429,7 @@ fun RequirementCategoryBuilder.requirement(
 
 @CodyzeDsl
 @OverloadResolutionByLambdaReturnType
-fun RequirementBuilder.fulfilledBy(query: (TranslationResult) -> Decision): FulfilledByDecision {
+fun RequirementBuilder.fulfilledBy(query: TranslationResult.() -> Decision): FulfilledByDecision {
     fulfilledBy = query
     return FulfilledByDecision
 }
@@ -440,9 +439,9 @@ fun RequirementBuilder.fulfilledBy(query: (TranslationResult) -> Decision): Fulf
  */
 @CodyzeDsl
 fun RequirementBuilder.fulfilledBy(
-    query: (TranslationResult) -> QueryTree<Boolean>
+    query: TranslationResult.() -> QueryTree<Boolean>
 ): FulfilledByQueryTree {
-    fulfilledBy = { query(it).decide() }
+    fulfilledBy = { query().decide() }
     return FulfilledByQueryTree
 }
 
@@ -549,7 +548,7 @@ object OfBoolean : OfReturnType()
  */
 @CodyzeDsl
 @OverloadResolutionByLambdaReturnType
-fun ManualAssessmentBuilder.of(id: String, block: (TranslationResult) -> Decision): OfDecision {
+fun ManualAssessmentBuilder.of(id: String, block: TranslationResult.() -> Decision): OfDecision {
     assessments[id] = block
     return OfDecision
 }
@@ -558,7 +557,10 @@ fun ManualAssessmentBuilder.of(id: String, block: (TranslationResult) -> Decisio
  * Describes a manual assessment of a requirement with the given [id]. The [block] is expected to
  * return a [DecisionState] that evaluates to [Succeeded] if the requirement is fulfilled.
  */
-fun ManualAssessmentBuilder.of(id: String, block: () -> DecisionState): OfDecisionState {
+fun ManualAssessmentBuilder.of(
+    id: String,
+    block: TranslationResult.() -> DecisionState,
+): OfDecisionState {
     assessments[id] = { block().toQueryTree() }
     return OfDecisionState
 }
@@ -570,9 +572,9 @@ fun ManualAssessmentBuilder.of(id: String, block: () -> DecisionState): OfDecisi
 @CodyzeDsl
 fun ManualAssessmentBuilder.of(
     id: String,
-    block: (TranslationResult) -> QueryTree<Boolean>,
+    block: TranslationResult.() -> QueryTree<Boolean>,
 ): OfQueryTree {
-    assessments[id] = { result -> with(result) { block(result).decide() } }
+    assessments[id] = { block().decide() }
     return OfQueryTree
 }
 
@@ -581,14 +583,7 @@ fun ManualAssessmentBuilder.of(
  * return a [Boolean] that evaluates to `true` if the requirement is fulfilled.
  */
 @CodyzeDsl
-fun ManualAssessmentBuilder.of(id: String, block: (TranslationResult) -> Boolean): OfBoolean {
-    assessments[id] = { result -> with(result) { block(result).toQueryTree().decide() } }
+fun ManualAssessmentBuilder.of(id: String, block: TranslationResult.() -> Boolean): OfBoolean {
+    assessments[id] = { block().toQueryTree().decide() }
     return OfBoolean
-}
-
-context(TranslationResult)
-private fun parseUuidAndAnnotateAssumptions(uuid: String, status: AssumptionStatus) {
-    val parsedUuid = Uuid.parse(uuid)
-
-    this@TranslationResult.assumptionStatuses[parsedUuid] = status
 }

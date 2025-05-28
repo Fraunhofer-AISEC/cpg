@@ -73,9 +73,9 @@ project {
             requirement("RQ-ENCRYPTION-01") {
                 name = "Good Encryption"
 
-                fulfilledBy { result ->
-                    goodCryptoFunc(result) and
-                        goodArgumentSize(result) and
+                fulfilledBy {
+                    goodCryptoFunc() and
+                        goodArgumentSize() and
                         manualAssessmentOf("THIRD-PARTY-LIBRARY")
                 }
             }
