@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.passes.configuration
 
 import de.fraunhofer.aisec.cpg.ConfigurationException
 import de.fraunhofer.aisec.cpg.passes.*
+import de.fraunhofer.aisec.cpg.passes.Pass
+import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotations
 import org.slf4j.LoggerFactory
@@ -51,9 +53,7 @@ import org.slf4j.LoggerFactory
  *        dependencies) as [PassWithDependencies] containers:
  *         1. [ExecuteFirst] and [ExecuteLast] passes are stored in separate lists to keep the
  *            ordering logic simple.
- *         2. Normal passes are stored in the [workingList] This step does not yet register any
- *            dependencies ([PassWithDependencies.dependenciesRemaining]), it just collects the
- *            passes.
+ *         2. Normal passes are stored in the [workingList]
  *     2. [ExecuteBefore] passes: "`A` execute before `B`" implies that "`B` depends on `A`" -> the
  *        dependency is stored in the [PassWithDependencies.dependenciesRemaining] of "`B`". This
  *        logic is implemented in [populateExecuteBeforeDependencies].
@@ -101,22 +101,35 @@ class PassOrderingHelper {
         populateExecuteBeforeDependencies()
 
         // clean up soft dependencies which are not registered in the workingList
-        populateDependsOnDependencies()
+        populateNormalDependencies()
 
         // finally, run a sanity check
         sanityCheck()
     }
 
+    /** Register all (soft and hard) dependencies. */
+    private fun populateNormalDependencies() {
+        for (pass in workingList) {
+            pass.passClass.hardDependencies.forEach { pass.dependenciesRemaining += it }
+            pass.passClass.softDependencies
+                .filter { workingList.map { it.passClass }.contains(it) }
+                .forEach { pass.dependenciesRemaining += it }
+        }
+    }
+
     /**
-     * Add a pass to the internal [workingList], iff it does not exist. The
-     * [PassWithDependencies.dependenciesRemaining] will be initialized as an empty set and must be
-     * populated later by [populateDependsOnDependencies] and [populateExecuteBeforeDependencies].
+     * Add a pass to the internal [workingList], iff it does not exist.
      *
-     * Also, this function adds hard dependencies([ExecuteBefore] and [DependsOn]) to the working
-     * list.
+     * Also, add
+     * * hard dependencies
+     * * [ExecuteBefore] dependencies
      */
     private fun addToWorkingList(newElement: KClass<out Pass<*>>) {
-        if ((workingList + firstPassesList + lastPassesList).any { it.passClass == newElement }) {
+        if (
+            (workingList + firstPassesList + lastPassesList)
+                .filter { it.passClass == newElement }
+                .isNotEmpty()
+        ) {
             // we already know about this pass
             return
         }
@@ -124,14 +137,14 @@ class PassOrderingHelper {
         var firstOrLastPass = false
         if (newElement.findAnnotations<ExecuteFirst>().isNotEmpty()) {
             firstOrLastPass = true
-            firstPassesList += PassWithDependencies(newElement, mutableSetOf())
+            firstPassesList.add(PassWithDependencies(newElement, mutableSetOf()))
         }
         if (newElement.findAnnotations<ExecuteLast>().isNotEmpty()) {
             firstOrLastPass = true
-            lastPassesList += PassWithDependencies(newElement, mutableSetOf())
+            lastPassesList.add(PassWithDependencies(newElement, mutableSetOf()))
         }
         if (!firstOrLastPass) {
-            workingList += PassWithDependencies(newElement, mutableSetOf())
+            workingList.add(PassWithDependencies(newElement, mutableSetOf()))
         }
 
         // take care of hard dependencies
@@ -146,43 +159,6 @@ class PassOrderingHelper {
             if (!dep.softDependency) {
                 addToWorkingList(dep.other)
             }
-        }
-    }
-
-    /**
-     * A pass annotated with [ExecuteBefore] implies that the other pass depends on it. We populate
-     * the [de.fraunhofer.aisec.cpg.passes.configuration.PassWithDependencies.dependenciesRemaining]
-     * field in the other pass to make the analysis simpler.
-     */
-    private fun populateExecuteBeforeDependencies() {
-        for (currentPass in
-            (workingList + firstPassesList + lastPassesList)) { // iterate over entire workingList
-            for (executeBeforePass in
-                (currentPass.passClass.softExecuteBefore +
-                    currentPass.passClass
-                        .hardExecuteBefore)) { // iterate over all executeBefore passes
-                (workingList + firstPassesList + lastPassesList)
-                    .filter { it.passClass == executeBeforePass } // find the executeBeforePass
-                    .forEach { otherPass ->
-                        otherPass.dependenciesRemaining += currentPass.passClass
-                    } // add the original pass to the dependency list
-            }
-        }
-    }
-
-    /**
-     * Register all (soft and hard) [DependsOn] dependencies in
-     * [PassWithDependencies.dependenciesRemaining].
-     */
-    private fun populateDependsOnDependencies() {
-        val allPasses = workingList + firstPassesList + lastPassesList
-        for (currentPass in allPasses) {
-            currentPass.passClass.hardDependencies.forEach { dependentPass ->
-                currentPass.dependenciesRemaining += dependentPass
-            }
-            currentPass.passClass.softDependencies
-                .filter { softDep -> allPasses.map { it.passClass }.contains(softDep) }
-                .forEach { currentPass.dependenciesRemaining += it }
         }
     }
 
@@ -231,6 +207,27 @@ class PassOrderingHelper {
             result.map { list -> list.map { it.simpleName } },
         )
         return result
+    }
+
+    /**
+     * A pass annotated with [ExecuteBefore] implies that the other pass depends on it. We populate
+     * the [de.fraunhofer.aisec.cpg.passes.configuration.PassWithDependencies.dependenciesRemaining]
+     * field in the other pass to make the analysis simpler.
+     */
+    private fun populateExecuteBeforeDependencies() {
+        for (pass in
+            (workingList + firstPassesList + lastPassesList)) { // iterate over entire workingList
+            for (executeBeforePass in
+                (pass.passClass.softExecuteBefore +
+                    pass.passClass.hardExecuteBefore)) { // iterate over all executeBefore passes
+                (workingList + firstPassesList + lastPassesList)
+                    .map { it }
+                    .filter { it.passClass == executeBeforePass } // find the executeBeforePass
+                    .forEach {
+                        it.dependenciesRemaining += pass.passClass
+                    } // add the original pass to the dependency list
+            }
+        }
     }
 
     /**
