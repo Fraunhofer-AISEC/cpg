@@ -43,10 +43,14 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
 
 /**
- * TODO
- *
- * This pass adds [File] nodes to `tempfile` calls. It must be executed before the
- * [PythonFileConceptPass] because the later builds upon the nodes being available in the graph.
+ * This pass handles the `os.path.join` calls in Python code and creates [File] nodes from them.
+ * This is done by removing exising File nodes in the arguments and replacing them with new [File]
+ * nodes representing the concatenated file. If the arguments are strings, a new [File] node is
+ * created with the concatenated string as the file name. If any of the arguments is a temporary
+ * file, the resulting file will also be marked as a temporary file. This pass must be executed
+ * before the [PythonFileConceptPass] because the latter builds upon the nodes being available in
+ * the graph. It must be executed after the [PythonFileConceptPrePass] to ensure that the
+ * temporary-file nodes are created before the join operation is handled.
  */
 @ExecuteLate
 @DependsOn(DFGPass::class, false)
@@ -69,6 +73,7 @@ class PythonFileJoinPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                 handlePathJoin(node)
             }
             else -> {
+                // We currently do not handle other calls
                 emptyList()
             }
         }
@@ -88,6 +93,7 @@ class PythonFileJoinPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                 handlePathJoin(node)
             }
             else -> {
+                // We currently do not handle other calls
                 emptyList()
             }
         }
@@ -120,7 +126,7 @@ class PythonFileJoinPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                 }
                 combinedFileName += evaluatedArg
             } else {
-                // TODO()
+                log.warn("Unexpected argument: \"{}\". This will be ignored.", argument)
             }
         }
 
