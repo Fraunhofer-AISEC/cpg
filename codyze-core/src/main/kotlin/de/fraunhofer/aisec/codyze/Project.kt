@@ -42,7 +42,6 @@ import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.isDirectory
-import kotlin.io.path.pathString
 
 /** Options common to all subcommands dealing projects. */
 class ProjectOptions : OptionGroup("Project Options") {
@@ -181,7 +180,7 @@ class AnalysisProject(
          * file.
          */
         fun fromDirectory(
-            projectDir: String,
+            projectDir: Path,
             postProcess:
                 (AnalysisProject.(AnalysisResult) -> Pair<
                         List<ReportingDescriptor>,
@@ -193,7 +192,7 @@ class AnalysisProject(
                 null,
         ): AnalysisProject? {
             return fromScript(
-                Path(projectDir).resolve("project.codyze.kts").pathString,
+                projectDir.resolve("project.codyze.kts"),
                 postProcess = postProcess,
                 configModifier = configModifier,
             )
@@ -204,7 +203,7 @@ class AnalysisProject(
          * [CodyzeScript].
          */
         fun fromScript(
-            file: String,
+            file: Path,
             postProcess:
                 (AnalysisProject.(AnalysisResult) -> Pair<
                         List<ReportingDescriptor>,
@@ -335,14 +334,24 @@ class AnalysisProject(
                 ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
                 null,
         ): AnalysisProject {
-            return temporary(
-                projectOptions.directory,
-                translationOptions.sources,
-                translationOptions.components,
-                translationOptions.exclusionPatterns,
-                configModifier = configModifier,
-                postProcess = postProcess,
-            )
+            // Try to load a project from the given directory
+            val project =
+                fromDirectory(
+                    projectOptions.directory,
+                    postProcess = postProcess,
+                    configModifier = configModifier,
+                )
+            return project
+                ?: // If no project was found, we create a temporary project
+                // with the given options
+                temporary(
+                    projectOptions.directory,
+                    translationOptions.sources,
+                    translationOptions.components,
+                    translationOptions.exclusionPatterns,
+                    configModifier = configModifier,
+                    postProcess = postProcess,
+                )
         }
     }
 }

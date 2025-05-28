@@ -39,7 +39,6 @@ import de.fraunhofer.aisec.cpg.query.DecisionState
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.SinglePathResult
 import de.fraunhofer.aisec.cpg.query.Succeeded
-import de.fraunhofer.aisec.cpg.query.toQueryTree
 import io.github.detekt.sarif4k.*
 import java.io.File
 import kotlin.io.path.relativeToOrSelf
@@ -79,10 +78,7 @@ fun AnalysisProject.buildSarif(
  * findings.
  */
 fun QueryTree<DecisionState>.undecide(): QueryTree<Boolean> {
-    return when (this.value) {
-        is Succeeded -> true
-        else -> false
-    }.toQueryTree()
+    return this.children[0] as QueryTree<Boolean>
 }
 
 /**
