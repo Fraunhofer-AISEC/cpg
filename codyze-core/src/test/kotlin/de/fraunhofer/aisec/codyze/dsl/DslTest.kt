@@ -35,20 +35,23 @@ import kotlin.io.path.Path
 import kotlin.test.Test
 import kotlin.test.assertIs
 
+@Suppress("CONTEXT_RECEIVERS_DEPRECATED")
 class DslTest {
+    context(TranslationResult)
+    fun query1(): QueryTree<Boolean> {
+        return allExtended<CallExpression> { it.name eq "encrypt" }
+    }
+
+    context(TranslationResult)
+    fun query2(): QueryTree<Boolean> {
+        return allExtended<CallExpression> { it.arguments.size eq 2 }
+    }
+
     object Mock : CodyzeScript(projectBuilder = ProjectBuilder(projectDir = Path(".")))
 
     @Test
     fun testDsl() {
         with(Mock) {
-            fun query1(result: TranslationResult): QueryTree<Boolean> {
-                return result.allExtended<CallExpression> { it.name eq "encrypt" }
-            }
-
-            fun query2(result: TranslationResult): QueryTree<Boolean> {
-                return result.allExtended<CallExpression> { it.arguments.size eq 2 }
-            }
-
             project {
                 toe {
                     name = "My Mock TOES"
@@ -63,21 +66,44 @@ class DslTest {
                 }
 
                 requirements {
-                    requirement("Is Security Target Correctly specified") {
-                        manualAssessmentOf("SEC-TARGET")
+                    requirement {
+                        name = "Is Security Target Correctly specified"
+                        description = "test"
+
+                        fulfilledBy { manualAssessmentOf("SEC-TARGET") }
                     }
-                    requirement("Good Encryption") { result -> query1(result) and query2(result) }
-                    requirement("Good Encryption with some manual analysis") { result ->
-                        val logic =
-                            query1(result) and
-                                query2(result) and
-                                manualAssessmentOf("THIRD-PARTY-LIBRARY")
-                        assertIs<Decision>(logic)
-                    }
-                    requirement("Manual analysis with good encryption") { result ->
-                        val logic =
-                            manualAssessmentOf("SEC-TARGET") and query1(result) and query2(result)
-                        assertIs<Decision>(logic)
+
+                    category("ENCRYPTION") {
+                        name = "Encryption Requirements"
+                        description = "Requirements related to encryption"
+
+                        requirement("RQ-ENCRYPTION-01") {
+                            name = "Good Encryption"
+
+                            fulfilledBy { query1() and query2() }
+                        }
+
+                        requirement("RQ-ENCRYPTION-02") {
+                            name = "Good Encryption with some manual analysis"
+
+                            fulfilledBy {
+                                val logic =
+                                    query1() and
+                                        query2() and
+                                        manualAssessmentOf("THIRD-PARTY-LIBRARY")
+                                assertIs<Decision>(logic)
+                            }
+                        }
+
+                        requirement("RQ-ENCRYPTION-03") {
+                            name = "Manual analysis with good encryption"
+
+                            fulfilledBy {
+                                val logic =
+                                    manualAssessmentOf("SEC-TARGET") and query1() and query2()
+                                assertIs<Decision>(logic)
+                            }
+                        }
                     }
                 }
 
@@ -91,6 +117,8 @@ class DslTest {
                     }
                 }
             }
+
+            project { manualAssessment { of("SEC-TARGET") { true } } }
         }
     }
 }
