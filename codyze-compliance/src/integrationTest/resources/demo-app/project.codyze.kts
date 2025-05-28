@@ -36,12 +36,12 @@ project {
         architecture {
             modules {
                 module("webapp") {
-                    directory = "src/webapp"
-                    include("auth")
+                    directory = "components/webapp"
+                    include("webapp")
                 }
                 module("auth") {
-                    directory = "src/auth"
-                    include("webapp")
+                    directory = "components/auth"
+                    include("auth")
                 }
             }
         }
@@ -51,6 +51,7 @@ project {
         requirement {
             name = "Proper Handling of Key Material"
             description = "Sensitive material, such as keys are handled properly"
+
             fulfilledBy(::properHandlingOfKeyMaterial)
         }
     }

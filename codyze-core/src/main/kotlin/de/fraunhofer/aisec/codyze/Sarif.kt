@@ -53,49 +53,19 @@ fun AnalysisProject.buildSarif(
     val sarifResults = mutableListOf<Result>()
 
     for ((requirementID, decision) in result.requirementsResults) {
-        val report = decision.undecide().toSarif(requirementID)
+        val sarifResult = decision.undecide().toSarif(requirementID)
+        val req = builder?.requirementsBuilder?.requirements[requirementID]
 
-        /*val rule =
+        val sarifRule =
             ReportingDescriptor(
                 id = requirementID,
-                name =
-                    builder?.requirementsBuilder?.requirements[requirementID]?.name
-                        ?: "Unknown requirement",
-                shortDescription = MultiformatMessageString(text = stmt.value),
+                name = req?.name,
+                shortDescription = req?.description?.let { MultiformatMessageString(text = it) },
             )
 
-        sarifRules += rule*/
+        sarifResults += sarifResult
+        sarifRules += sarifRule
     }
-
-    // Connect the security goals to the translation result for now. Later we will add them
-    // to individual concepts
-    /*for (goal in goals) {
-        goal.underlyingNode = tr
-
-        // Load and execute queries associated to the goals
-        for (objective in goal.objectives) {
-            val objectiveID = objective.name.localName.lowercase().replace(" ", "-")
-            objective.underlyingNode = tr
-
-            projectDir?.let {
-                val scriptFile = it.resolve("queries").resolve("${objectiveID}.query.kts")
-                for (stmt in objective.statements.withIndex()) {
-                    val idx1 = stmt.index + 1
-                    val statementID = "statement${idx1}"
-                    val rule =
-                        ReportingDescriptor(
-                            id = "${objectiveID}-${statementID}",
-                            name = "${objective.name.localName}: Statement $idx1",
-                            shortDescription = MultiformatMessageString(text = stmt.value),
-                        )
-                    val queryResult = tr.evalQuery(scriptFile.toFile(), statementID, rule.id)
-                    sarifResults += queryResult.sarif
-
-                    sarifRules += rule
-                }
-            }
-        }
-    }*/
 
     return Pair(sarifRules, sarifResults)
 }
