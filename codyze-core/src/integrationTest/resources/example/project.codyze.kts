@@ -62,20 +62,22 @@ project {
     }
 
     requirements {
-        requirement("RQ-SEC-TARGET") {
+        requirement {
             name = "Is Security Target Correctly specified"
             description = "test"
 
             fulfilledBy { manualAssessmentOf("SEC-TARGET") }
         }
 
-        requirement("RQ-ENCRYPTION-01") {
-            name = "Good Encryption"
+        category("ENCRYPTION") {
+            requirement("RQ-ENCRYPTION-01") {
+                name = "Good Encryption"
 
-            fulfilledBy { result ->
-                goodCryptoFunc(result) and
-                    goodArgumentSize(result) and
-                    manualAssessmentOf("THIRD-PARTY-LIBRARY")
+                fulfilledBy { result ->
+                    goodCryptoFunc(result) and
+                        goodArgumentSize(result) and
+                        manualAssessmentOf("THIRD-PARTY-LIBRARY")
+                }
             }
         }
     }

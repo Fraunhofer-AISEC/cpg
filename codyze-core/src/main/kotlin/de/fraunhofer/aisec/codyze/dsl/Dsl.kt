@@ -67,9 +67,37 @@ class IncludeBuilder {
     val includes: MutableMap<IncludeCategory, String> = mutableMapOf()
 }
 
+/**
+ * Represents the default category for requirements. This is used when no specific category is
+ * provided for a requirement. This category is created automatically if
+ * [RequirementsBuilder.requirement] is called.
+ */
+val DefaultCategory =
+    RequirementCategoryBuilder("DEFAULT").apply {
+        name = "Default Requirements Category"
+        description =
+            "This is the default category for requirements that do not fit into any other category."
+    }
+
 /** Represents a builder for a list of all requirements of the TOE. */
 class RequirementsBuilder {
     var description: String? = null
+
+    internal val categoryBuilders = mutableMapOf<String, RequirementCategoryBuilder>()
+}
+
+/** Represents a builder for a single category of requirements of the evaluation project. */
+class RequirementCategoryBuilder(
+    /** The unique identifier of the category. */
+    var id: String
+) {
+    /** An optional human-readable name of the requirement. This is used for display purposes. */
+    var name: String? = id
+
+    /** A human-readable description of the category. This is used for display purposes. */
+    var description: String? = null
+
+    /** The requirements in this category. */
     internal val requirements = mutableMapOf<String, RequirementBuilder>()
 }
 
@@ -78,7 +106,7 @@ class RequirementBuilder(
     /** The unique identifier of the requirement. This is used to reference the requirement. */
     var id: String
 ) {
-    /** A optional human-readable name of the requirement. This is used for display purposes. */
+    /** An optional human-readable name of the requirement. This is used for display purposes. */
     var name: String? = id
 
     /**
@@ -179,6 +207,19 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
     internal val manualAssessmentBuilder = ManualAssessmentBuilder()
     internal var taggingCtx = TaggingContext()
 
+    /**
+     * Returns a list of all requirements in all categories of the project. This is useful to
+     * collect all requirements in a single list, for example, to generate reports or to evaluate
+     * them.
+     */
+    val allRequirements: Map<String, RequirementBuilder>
+        get() {
+            return requirementsBuilder.categoryBuilders
+                .map { it.value }
+                .flatMap { it.requirements.entries }
+                .associate { it.key to it.value }
+        }
+
     /** Builds an [AnalysisProject] out of the current state of the builder. */
     fun build(
         postProcess:
@@ -241,14 +282,18 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
             TagOverlaysPass.Configuration(tag = taggingCtx)
         )
 
+        // Collect all requirements functions from all categories
+        val requirementFunctions =
+            requirementsBuilder.categoryBuilders
+                .map { it.value }
+                .flatMap { it.requirements.map { rq -> Pair(rq.key, rq.value.fulfilledBy) } }
+                .associate { it }
+
         return AnalysisProject(
             builder = this,
             name,
             projectDir = projectDir,
-            requirementFunctions =
-                requirementsBuilder.requirements
-                    .map { Pair(it.key, it.value.fulfilledBy) }
-                    .associate { it },
+            requirementFunctions = requirementFunctions,
             config = configBuilder.build(),
             postProcess = postProcess,
         )
@@ -327,22 +372,55 @@ object FulfilledByDecision : FulfilledByReturnType()
 object FulfilledByQueryTree : FulfilledByReturnType()
 
 /**
- * Generates a default identifier for the next requirement in the format "RQ-001", "RQ-002", etc.
+ * Generates a default identifier for the next requirement in the format
+ * `RQ-<category_id>-<number>`,
  */
-fun RequirementsBuilder.nextRQ(): String {
+fun RequirementCategoryBuilder.nextRQ(): String {
     // Generate a default identifier based on the current size of the requirements map
-    return "RQ-${String.format("%03d", requirements.size + 1)}"
+    return "RQ-${id}-${String.format("%03d", requirements.size + 1)}"
 }
 
 /**
- * Describes a single requirement of the TOE by a function that returns a [Decision].
+ * Describes a single requirement of the TOE (in the [DefaultCategory]) by a function that returns a
+ * [Decision].
  *
  * An [id] can be provided to identify the requirement. If no [id] is provided, a default identifier
  * is generated based on the current size of the requirements map in the format specified by
  * [nextRQ].
  */
 @CodyzeDsl
-fun RequirementsBuilder.requirement(id: String = nextRQ(), block: RequirementBuilder.() -> Unit) {
+fun RequirementsBuilder.requirement(id: String? = null, block: RequirementBuilder.() -> Unit) {
+    // Check, if the default category exists, if not, create it
+    val defaultCategory = categoryBuilders.getOrPut(DefaultCategory.id) { DefaultCategory }
+
+    return defaultCategory.requirement(id, block)
+}
+
+/**
+ * Describes a single requirement category of the TOE.
+ *
+ * An [id] is needed to identify the category. This is used to reference the category in creating
+ * requirements using [nextRQ]
+ */
+@CodyzeDsl
+fun RequirementsBuilder.category(id: String, block: RequirementCategoryBuilder.() -> Unit) {
+    categoryBuilders[id] = RequirementCategoryBuilder(id).apply(block)
+}
+
+/**
+ * Describes a single requirement of the TOE (within the current requirement category) by a function
+ * that returns a [Decision].
+ *
+ * An [id] can be provided to identify the requirement. If no [id] is provided, a default identifier
+ * is generated based on the current size of the requirements map in the format specified by
+ * [nextRQ].
+ */
+@CodyzeDsl
+fun RequirementCategoryBuilder.requirement(
+    id: String? = null,
+    block: RequirementBuilder.() -> Unit,
+) {
+    val id = id ?: nextRQ()
     val builder = RequirementBuilder(id)
     block(builder)
 

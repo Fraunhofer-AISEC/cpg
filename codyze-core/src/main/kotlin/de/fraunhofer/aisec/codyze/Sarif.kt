@@ -53,7 +53,7 @@ fun AnalysisProject.buildSarif(
 
     for ((requirementID, decision) in result.requirementsResults) {
         val sarifResult = decision.undecide().toSarif(requirementID)
-        val req = builder?.requirementsBuilder?.requirements[requirementID]
+        val req = builder?.allRequirements[requirementID]
 
         val sarifRule =
             ReportingDescriptor(
