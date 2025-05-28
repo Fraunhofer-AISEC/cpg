@@ -264,8 +264,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                 )
             openOps += newFileOpen(underlyingNode = callExpression, file = file, connect = false)
 
-            fileHandles +=
-                newFileHandle(underlyingNode = callExpression, file = file, connect = false)
+            fileHandles += newFileHandle(underlyingNode = callExpression, connect = false)
         }
         return listOf(setFlagsOps, openOps, fileHandles).flatten()
     }
@@ -306,8 +305,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             fileOpenNodes +=
                 newFileOpen(underlyingNode = callExpression, file = file, connect = false)
 
-            fileHandles +=
-                newFileHandle(underlyingNode = callExpression, file = file, connect = false)
+            fileHandles += newFileHandle(underlyingNode = callExpression, connect = false)
         }
         return listOfNotNull(openFlags, maskOps, fileOpenNodes, fileHandles).flatten()
     }

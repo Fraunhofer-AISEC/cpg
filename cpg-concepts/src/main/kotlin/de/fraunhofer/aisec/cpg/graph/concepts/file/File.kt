@@ -213,5 +213,13 @@ abstract class FileOperation(underlyingNode: Node? = null, file: File) :
         get() = this.concept as File
 }
 
-/** TODO */
+/**
+ * This class represents a file handle.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ *
+ * TODO: The file operations cannot be mapped to this `Concept` and the [File] concept, as they
+ *   allow only for one [Concept] relationship. Do we want to keep this here? Do we want to change
+ *   [Operation]?
+ */
 class FileHandle(underlyingNode: Node? = null) : Concept(underlyingNode = underlyingNode), IsFile
