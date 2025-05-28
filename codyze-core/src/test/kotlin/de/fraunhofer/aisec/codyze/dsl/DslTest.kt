@@ -37,21 +37,21 @@ import kotlin.test.assertIs
 
 @Suppress("CONTEXT_RECEIVERS_DEPRECATED")
 class DslTest {
+    context(TranslationResult)
+    fun query1(): QueryTree<Boolean> {
+        return allExtended<CallExpression> { it.name eq "encrypt" }
+    }
+
+    context(TranslationResult)
+    fun query2(): QueryTree<Boolean> {
+        return allExtended<CallExpression> { it.arguments.size eq 2 }
+    }
+
     object Mock : CodyzeScript(projectBuilder = ProjectBuilder(projectDir = Path(".")))
 
     @Test
     fun testDsl() {
         with(Mock) {
-            context(TranslationResult)
-            fun query1(): QueryTree<Boolean> {
-                return allExtended<CallExpression> { it.name eq "encrypt" }
-            }
-
-            context(TranslationResult)
-            fun query2(): QueryTree<Boolean> {
-                return allExtended<CallExpression> { it.arguments.size eq 2 }
-            }
-
             project {
                 toe {
                     name = "My Mock TOES"
