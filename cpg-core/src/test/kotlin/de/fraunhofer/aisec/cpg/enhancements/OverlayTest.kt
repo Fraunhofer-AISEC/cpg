@@ -36,15 +36,42 @@ import kotlin.test.assertTrue
 class OverlayTest {
 
     @Test
+    fun testDisconnect() {
+        with(TestLanguageFrontend()) {
+            val underlay = newLiteral(1)
+            val overlay = object : OverlayNode() {}
+            overlay.underlyingNode = underlay
+            assertTrue(
+                underlay.overlayEdges.isNotEmpty(),
+                "Overlay edges of underlay should not be empty after connecting overlay to underlay",
+            )
+
+            underlay.disconnectFromGraph()
+            assertTrue(
+                underlay.overlayEdges.isEmpty(),
+                "Overlay edges of underlay should be empty after disconnecting underlay from graph",
+            )
+
+            // Let's reconnect and try from the other side
+            underlay.overlayEdges += overlay
+            overlay.disconnectFromGraph()
+            assertTrue(
+                underlay.overlayEdges.isEmpty(),
+                "Overlay edges of underlay should be empty after disconnecting overlay from graph",
+            )
+        }
+    }
+
+    @Test
     fun testCheckOverlayingDFGAndEOG() {
         with(TestLanguageFrontend()) {
-            var overlay1: OverlayNode = object : OverlayNode() {}
-            var overlay2: OverlayNode = object : OverlayNode() {}
+            val overlay1: OverlayNode = object : OverlayNode() {}
+            val overlay2: OverlayNode = object : OverlayNode() {}
 
             overlay1.nextDFG += overlay2
 
-            var codeNode1: Node = newLiteral(1)
-            var codeNode2: Node = newLiteral(2)
+            val codeNode1: Node = newLiteral(1)
+            val codeNode2: Node = newLiteral(2)
 
             overlay2.nextDFG += codeNode1
             codeNode1.nextDFG += codeNode2
