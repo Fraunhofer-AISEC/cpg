@@ -41,6 +41,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 
 // Specific CPG Statements & Expressions
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
@@ -142,7 +144,8 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
     ) {
         program.instance?.let { handleInstanceScript(it, tu) }
         program.module?.let { handleModuleScript(it, tu) }
-        // TODO: Handle HTML structure (program.html)
+        // Handle HTML structure (program.html)
+        handleHtmlTemplate(program.html, tu)
         // TODO: Handle CSS (program.css)
     }
 
@@ -172,6 +175,104 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
             val afterCount = tu.declarations.size
             if (afterCount > beforeCount) {
                 val newDecls = tu.declarations.subList(beforeCount, afterCount)
+            }
+        }
+    }
+
+    private fun handleHtmlTemplate(fragment: SvelteFragment, tu: TranslationUnitDeclaration) {
+        // Process the HTML template structure
+        log.info("Processing HTML template with {} children", fragment.children.size)
+        
+        for (child in fragment.children) {
+            val htmlNode = handleSvelteNode(child, tu)
+            // For now, we'll create a placeholder record to represent the HTML structure
+            if (htmlNode != null) {
+                // HTML elements don't become top-level declarations in typical CPG,
+                // but we can create representations for analysis
+                log.debug("Created HTML node: {} ({})", htmlNode.javaClass.simpleName, htmlNode)
+            }
+        }
+    }
+
+    private fun handleSvelteNode(node: SvelteNode, tu: TranslationUnitDeclaration): Node? {
+        return when (node) {
+            is SvelteElement -> {
+                log.debug("Processing HTML element: {}", node.name)
+                
+                // Create a record declaration to represent the HTML element
+                val elementName = node.name ?: "unknown_element"
+                val htmlElement = newRecordDeclaration(
+                    parseName(elementName),
+                    "html_element", // kind
+                    rawNode = node
+                )
+                
+                // Process attributes (including event handlers)
+                node.attributes?.forEach { attr ->
+                    when (attr) {
+                        is SvelteEventHandler -> {
+                            log.debug("Processing event handler: {}", attr.name)
+                            // Event handlers connect HTML to script functions
+                            // Create a field to represent the event binding
+                            val eventField = newFieldDeclaration(
+                                parseName("on_${attr.name}"),
+                                unknownType(),
+                                listOf("event_handler"), // modifiers
+                                rawNode = attr
+                            )
+                            
+                            // If there's an expression, it references a function from script
+                            attr.expression?.let { expr ->
+                                val handlerRef = handleExpression(expr)
+                                if (handlerRef != null) {
+                                    log.debug("Event handler references: {}", handlerRef)
+                                    // In a full implementation, we'd link this to the function
+                                }
+                            }
+                            
+                            htmlElement.addField(eventField)
+                        }
+                        is SvelteAttribute -> {
+                            log.debug("Processing attribute: {}", attr.name)
+                            // Regular HTML attributes
+                            val attrField = newFieldDeclaration(
+                                parseName(attr.name),
+                                unknownType(),
+                                listOf("html_attribute"),
+                                rawNode = attr
+                            )
+                            htmlElement.addField(attrField)
+                        }
+                    }
+                }
+                
+                // Process child elements recursively
+                node.children?.forEach { child ->
+                    val childNode = handleSvelteNode(child, tu)
+                    // In a more complete implementation, we'd establish parent-child relationships
+                }
+                
+                htmlElement
+            }
+            is SvelteText -> {
+                log.debug("Processing text node: {}", node.data.take(50))
+                // Text nodes could contain expressions, but for now we'll create a simple literal
+                val textLiteral = newLiteral(node.data, language.getSimpleTypeOf("string") ?: unknownType(), rawNode = node)
+                textLiteral
+            }
+            is SvelteMustacheTag -> {
+                log.debug("Processing Svelte expression: {}", node.expression.javaClass.simpleName)
+                // This is a Svelte expression like {name} or {count}
+                val expression = handleExpression(node.expression)
+                if (expression != null) {
+                    log.debug("Svelte expression resolved to: {}", expression.javaClass.simpleName)
+                    // In a full implementation, we'd track these expressions and their dependencies
+                }
+                expression
+            }
+            else -> {
+                log.warn("Unhandled Svelte node type: {}", node.javaClass.simpleName)
+                null
             }
         }
     }
