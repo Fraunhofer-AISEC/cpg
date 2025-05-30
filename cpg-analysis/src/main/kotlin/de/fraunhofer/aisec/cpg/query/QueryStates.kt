@@ -64,26 +64,29 @@ data object NotYetEvaluated : DecisionState()
 /**
  * Wraps the given [QueryTree] in a new [Decision] object by checking if the value is `true` or
  * `false` and based on the [de.fraunhofer.aisec.cpg.assumptions.Assumption.status] of all
- * [QueryTree.assumptions] (i.e., it checks if all are [AssumptionStatus.Accepted] or if some are
+ * [QueryTree.collectAssumptions] (i.e., it checks if all are [AssumptionStatus.Accepted] or if some are
  * [AssumptionStatus.Rejected] or [AssumptionStatus.Undecided]).
  */
 context(TranslationResult)
 fun QueryTree<Boolean>.decide(): Decision {
     val statues = this@TranslationResult.assumptionStatuses
-    // TODO(kweiss): Use status to set status
+    val assumptions = this.collectAssumptions()
+    assumptions.forEach {
+        it.status = statues.getOrDefault(it.id, it.status)
+    }
 
     val (newValue, stringInfo) =
         when {
-            !this.value || this.assumptions.any { it.status == AssumptionStatus.Rejected } ->
+            !this.value || assumptions.any { it.status == AssumptionStatus.Rejected } ->
                 Failed to
                     (if (!this.value) "the query was evaluated to false"
                     else
-                        "the assumptions ${this.assumptions.filter { it.status == AssumptionStatus.Rejected }.map { it.id.toHexDashString() } } were rejected")
-            this.assumptions.any { it.status == AssumptionStatus.Undecided } ->
+                        "the assumptions ${assumptions.filter { it.status == AssumptionStatus.Rejected }.map { it.id.toHexDashString() } } were rejected")
+            assumptions.any { it.status == AssumptionStatus.Undecided } ->
                 Undecided to
-                    "the assumptions ${this.assumptions.filter { it.status == AssumptionStatus.Undecided }.map { it.id.toHexDashString() }} are not yet decided"
+                    "the assumptions ${assumptions.filter { it.status == AssumptionStatus.Undecided }.map { it.id.toHexDashString() }} are not yet decided"
             this.value ==
-                this.assumptions.all {
+                assumptions.all {
                     it.status == AssumptionStatus.Ignored || it.status == AssumptionStatus.Accepted
                 } ->
                 Succeeded to "the query was evaluated to true and all assumptions were accepted."
