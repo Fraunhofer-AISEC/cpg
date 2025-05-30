@@ -156,7 +156,7 @@ class SetFileMask(underlyingNode: Node? = null, concept: File, val mask: Long) :
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param concept The corresponding [File] node.
  */
-class CloseFile(underlyingNode: Node? = null, concept: File) :
+open class CloseFile(underlyingNode: Node? = null, concept: File) :
     FileOperation(underlyingNode = underlyingNode, file = concept), IsFile
 
 /**
