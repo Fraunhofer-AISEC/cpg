@@ -82,4 +82,11 @@ class SwitchStatement : Statement(), BranchingNode {
             selector,
             statement,
         )
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.initializerStatement?.getStartingPrevEOG()
+            ?: this.selector?.getStartingPrevEOG()
+            ?: this.selectorDeclaration?.getStartingPrevEOG()
+            ?: this.prevEOG
+    }
 }
