@@ -297,7 +297,7 @@ abstract class Node() :
      */
     fun disconnectFromGraph() {
         // Disconnect all AST children first
-        this.astChildren.forEach { it.disconnectFromGraph() }
+        astChildren.forEach { it.disconnectFromGraph() }
 
         nextDFGEdges.clear()
         prevDFGEdges.clear()
@@ -309,17 +309,9 @@ abstract class Node() :
         prevEOGEdges.clear()
 
         if (this is OverlayNode) {
-            underlyingNode?.overlayEdges?.removeAll { edge ->
-                edge.end === this || edge.start === this
-            }
             underlyingNodeEdge.clear()
         }
-        this.overlays.forEach { overlay ->
-            overlay is OverlayNode &&
-                overlay.underlyingNodeEdge.removeAll { edge ->
-                    edge.end === this || edge.start === this
-                }
-        }
+
         this.overlayEdges.clear()
     }
 

@@ -23,14 +23,11 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
+package de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 
-/** Represents a "secret key", e.g. used in hard disk encryption. */
-open class Secret(underlyingNode: Node? = null) :
-    Concept(underlyingNode = underlyingNode), IsDiskEncryption {
-    /** Key size. */
-    var keySize: Int? = null
+open class CreateSecret(underlyingNode: Node? = null, concept: Secret) :
+    SecretOperation(underlyingNode = underlyingNode, concept = concept) {
+    // TODO: which secret? specs (key size, cipher suite, storage)?
 }

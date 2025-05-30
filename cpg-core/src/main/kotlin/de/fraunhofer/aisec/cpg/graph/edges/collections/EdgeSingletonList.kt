@@ -102,11 +102,21 @@ open class EdgeSingletonList<
     }
 
     override fun remove(element: EdgeType): Boolean {
-        throw UnsupportedOperationException()
+        if (this.element == element) {
+            clear()
+            return true
+        }
+
+        return false
     }
 
     override fun removeAll(elements: Collection<EdgeType>): Boolean {
-        throw UnsupportedOperationException()
+        if (this.element in elements) {
+            clear()
+            return true
+        }
+
+        return false
     }
 
     override fun retainAll(elements: Collection<EdgeType>): Boolean {
@@ -141,7 +151,7 @@ open class EdgeSingletonList<
         var hasNext = isNotEmpty()
 
         override fun remove() {
-            throw UnsupportedOperationException()
+            clear()
         }
 
         override fun hasNext(): Boolean {
