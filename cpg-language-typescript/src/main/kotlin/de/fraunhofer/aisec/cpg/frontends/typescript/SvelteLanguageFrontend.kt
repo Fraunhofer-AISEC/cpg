@@ -25,11 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
-// import de.fraunhofer.aisec.cpg.passes.CallResolver // Currently unused, consider re-adding if
-// call resolution for Svelte is implemented
-// import de.fraunhofer.aisec.cpg.helpers.executeCommandWithOutputAfterTimeout // Removing this
-// problematic import
-// import java.nio.file.Files // No longer needed for Files.createTempDirectory with this change
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import de.fraunhofer.aisec.cpg.TranslationContext
@@ -37,11 +32,34 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguageFrontend.Companion.parserFile
-import de.fraunhofer.aisec.cpg.graph.*
+// Core CPG
+import de.fraunhofer.aisec.cpg.graph.* // For Node, Type, ScopeManager, ProblemNode, parseName, newFunctionDeclaration, newVariableDeclaration, newParameterDeclaration, newProblemDeclaration, newProblemExpression, newAssignExpression, newUnaryOperator, newReturnStatement etc.
+
+// Specific CPG Declarations
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+
+// Specific CPG Statements & Expressions
+import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+
+// Explicit imports for builder functions that might be problematic with wildcard
+import de.fraunhofer.aisec.cpg.graph.newBlock
+import de.fraunhofer.aisec.cpg.graph.newDeclarationStatement
+
+// CPG Types
 import de.fraunhofer.aisec.cpg.graph.types.*
+
+// SARIF
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
@@ -131,7 +149,11 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
     private fun handleInstanceScript(scriptNode: SvelteScript, tu: TranslationUnitDeclaration) {
         for (statementNode in scriptNode.ast.body) {
             val beforeCount = tu.declarations.size
-            handleScriptStatement(statementNode, tu)
+            val cpgNode = handleScriptStatement(statementNode)
+            if (cpgNode is Declaration) {
+                tu.addDeclaration(cpgNode)
+                scopeManager.addDeclaration(cpgNode)
+            }
             val afterCount = tu.declarations.size
             if (afterCount > beforeCount) {
                 val newDecls = tu.declarations.subList(beforeCount, afterCount)
@@ -142,7 +164,11 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
     private fun handleModuleScript(scriptNode: SvelteScript, tu: TranslationUnitDeclaration) {
         for (statementNode in scriptNode.ast.body) {
             val beforeCount = tu.declarations.size
-            handleScriptStatement(statementNode, tu)
+            val cpgNode = handleScriptStatement(statementNode)
+            if (cpgNode is Declaration) {
+                tu.addDeclaration(cpgNode)
+                scopeManager.addDeclaration(cpgNode)
+            }
             val afterCount = tu.declarations.size
             if (afterCount > beforeCount) {
                 val newDecls = tu.declarations.subList(beforeCount, afterCount)
@@ -150,51 +176,169 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         }
     }
 
-    private fun handleScriptStatement(stmtNode: EsTreeNode, parent: TranslationUnitDeclaration) {
+    private fun handleScriptStatement(stmtNode: EsTreeNode): Node? {
         when (stmtNode) {
             is EsTreeVariableDeclaration -> {
                 val cpgDeclarations = handleVariableDeclaration(stmtNode)
-                for (cpgDecl in cpgDeclarations) {
-                    parent.addDeclaration(cpgDecl)
-                    scopeManager.addDeclaration(cpgDecl)
-                }
+                // Callers (handleInstanceScript/handleModuleScript) will add these to TU and scopeManager
+                // if the returned node is a Declaration.
+                // We return the first one as the representative Node for this statement.
+                return cpgDeclarations.firstOrNull()
             }
             is EsTreeFunctionDeclaration -> {
                 val funcName = stmtNode.id?.name?.let { parseName(it) } ?: parseName("anonymous")
                 val cpgFunction = newFunctionDeclaration(funcName, rawNode = stmtNode)
-                // TODO: Handle parameters, body, return type, etc.
-                parent.addDeclaration(cpgFunction)
-                scopeManager.addDeclaration(cpgFunction)
+                // Callers will add cpgFunction to TU and scopeManager.
+
+                scopeManager.enterScope(cpgFunction)
+
+                // Handle parameters
+                for (paramNode in stmtNode.params) {
+                    if (paramNode is EsTreeIdentifier) { // Assuming params are EsTreeIdentifier for now
+                        val paramName = parseName(paramNode.name)
+                        // TODO: Infer type from type annotations if available in EsTreeIdentifier or sibling node
+                        val paramType = unknownType()
+                        val cpgParam = newParameterDeclaration(paramName.localName, paramType, false, rawNode = paramNode)
+                        scopeManager.addDeclaration(cpgParam)
+                    } else {
+                        // Handle other parameter types (e.g., object patterns, array patterns) if necessary
+                        val problem = newProblemDeclaration(
+                            "Unhandled Svelte/ESTree parameter type: ${paramNode::class.simpleName}",
+                            ProblemNode.ProblemType.PARSING, // Changed from PARSER to PARSING
+                            rawNode = paramNode
+                        )
+                    }
+                }
+
+                // Handle body
+                val functionBodyCompound = newBlock(rawNode = stmtNode.body)
+                cpgFunction.body = functionBodyCompound
+
+                for (bodyStmtNode in stmtNode.body.body) {
+                    val cpgStatement = handleScriptStatement(bodyStmtNode)
+                    if (cpgStatement is Statement) {
+                        functionBodyCompound.statements += cpgStatement // Changed from addStatement to statements +=
+                    }
+                    // If it's a Declaration, it should have been returned by handleScriptStatement
+                    // and added to the scope/TU by the top-level callers (handleInstanceScript/ModuleScript).
+                    // Here, we are inside a function body, so declarations would typically be local variables.
+                    // The current setup for handleScriptStatement might need adjustment if it returns Declarations
+                    // that are meant to be local to a function body and not top-level in the TU.
+                    // For now, we only add Statements to the CompoundStatement.
+                    // Local variable declarations will be handled when handleScriptStatement(EsTreeVariableDeclaration) is called.
+                    // Those will be returned as VariableDeclaration (Node), and the caller (handleInstanceScript/ModuleScript)
+                    // will add them to the TU. This is not quite right for local variables.
+
+                    // Let's refine: if handleScriptStatement returns a Declaration inside a function body,
+                    // it should be added to the function's scope and potentially to the compound statement as a DeclaredStatement.
+                    else if (cpgStatement is Declaration) {
+                         // Add to scope, but also need to wrap it in a statement for the block
+                         scopeManager.addDeclaration(cpgStatement) // Add to current function scope
+                         val declStmt = newDeclarationStatement() // Remove rawNode parameter since cpgStatement doesn't have it
+                         (declStmt as DeclarationStatement).addDeclaration(cpgStatement) // Rely on DeclarationStatement method
+                         functionBodyCompound.statements += declStmt // Changed from addStatement to statements +=
+                    }
+                }
+
+                scopeManager.leaveScope(cpgFunction)
+
+                return cpgFunction
             }
             is EsTreeExportNamedDeclaration -> {
                 stmtNode.declaration?.let { decl ->
                     when (decl) {
                         is EsTreeVariableDeclaration -> {
                             val cpgDeclarations = handleVariableDeclaration(decl)
-                            for (cpgDecl in cpgDeclarations) {
-                                parent.addDeclaration(cpgDecl)
-                                scopeManager.addDeclaration(cpgDecl)
-                                // TODO: Mark these as exported? CPG has ExportDeclaration node type
-                            }
+                            // Callers will add these to TU and scopeManager.
+                            // TODO: Mark these as exported? CPG has ExportDeclaration node type
+                            return cpgDeclarations.firstOrNull()
                         }
                         is EsTreeFunctionDeclaration -> {
                             val funcName =
                                 decl.id?.name?.let { parseName(it) } ?: parseName("anonymous")
                             val cpgFunction = newFunctionDeclaration(funcName, rawNode = decl)
-                            // TODO: Handle parameters, body, return type, etc.
-                            parent.addDeclaration(cpgFunction)
-                            scopeManager.addDeclaration(cpgFunction)
+                            // Callers will add cpgFunction to TU and scopeManager.
                             // TODO: Mark as exported?
+
+                            scopeManager.enterScope(cpgFunction)
+
+                            // Handle parameters (mirrors the EsTreeFunctionDeclaration case)
+                            for (paramNode in decl.params) {
+                                if (paramNode is EsTreeIdentifier) {
+                                    val paramName = parseName(paramNode.name)
+                                    val paramType = unknownType()
+                                    val cpgParam = newParameterDeclaration(paramName.localName, paramType, false, rawNode = paramNode)
+                                    scopeManager.addDeclaration(cpgParam)
+                                } else {
+                                    val problem = newProblemDeclaration(
+                                        "Unhandled Svelte/ESTree parameter type: ${paramNode::class.simpleName}",
+                                        ProblemNode.ProblemType.PARSING, // Changed from PARSER to PARSING
+                                        rawNode = paramNode
+                                    )
+                                }
+                            }
+
+                            // Handle body (mirrors the EsTreeFunctionDeclaration case)
+                            val functionBodyCompound = newBlock(rawNode = decl.body)
+                            cpgFunction.body = functionBodyCompound
+
+                            for (bodyStmtNode in decl.body.body) {
+                                val cpgStatement = handleScriptStatement(bodyStmtNode)
+                                if (cpgStatement is Statement) {
+                                    functionBodyCompound.statements += cpgStatement // Changed from addStatement to statements +=
+                                }
+                                else if (cpgStatement is Declaration) {
+                                     scopeManager.addDeclaration(cpgStatement)
+                                     val declStmt = newDeclarationStatement() // Remove rawNode parameter
+                                     (declStmt as DeclarationStatement).addDeclaration(cpgStatement)
+                                     functionBodyCompound.statements += declStmt // Changed from addStatement to statements +=
+                                }
+                            }
+
+                            scopeManager.leaveScope(cpgFunction)
+
+                            return cpgFunction
                         }
                         else -> {
+                            return null
                         }
                     }
                 }
                 // TODO: Handle stmtNode.specifiers for re-exports like export { name1, name2 }
+                return null // Or handle specifiers and return something
+            }
+            is EsTreeExpressionStatement -> { // Added case for EsTreeExpressionStatement
+                val expression = handleExpression(stmtNode.expression)
+                if (expression != null) {
+                    // Just return the expression directly since expressions inherit from statements
+                    return expression
+                } else {
+                    // If expression is null, create a problem
+                    val problem = newProblemDeclaration(
+                        "Could not handle expression within ExpressionStatement: ${stmtNode.expression::class.simpleName}",
+                        ProblemNode.ProblemType.PARSING, // Changed from PARSER to PARSING
+                        rawNode = stmtNode.expression ?: stmtNode // Prefer expression raw node if available
+                    )
+                    return problem
+                }
+            }
+            is EsTreeReturnStatement -> { // Added case for EsTreeReturnStatement
+                val returnStmt = newReturnStatement(rawNode = stmtNode)
+                stmtNode.argument?.let {
+                    returnStmt.returnValue = handleExpression(it)
+                }
+                return returnStmt
             }
             else -> {
                 val loc =
                     this.locationOf(stmtNode)
+                // Create a ProblemNode for unhandled statements
+                val problem = newProblemDeclaration(
+                    "Unhandled Svelte/ESTree AST node type: ${stmtNode::class.simpleName}",
+                    ProblemNode.ProblemType.PARSING, // Changed from PARSER to PARSING
+                    rawNode = stmtNode
+                )
+                return problem
             }
         }
     }
@@ -216,8 +360,6 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                     false, // implicitInitializerAllowed
                     declarator // rawNode
                 )
-            cpgVariableDeclaration.code = this.codeOf(declarator as GenericAstNode)
-            cpgVariableDeclaration.location = this.locationOf(declarator as GenericAstNode)
             this.process(declarator, cpgVariableDeclaration)
 
             declarator.init?.let {
@@ -240,10 +382,55 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         return when (exprNode) {
             is EsTreeLiteral -> handleLiteral(exprNode)
             is EsTreeIdentifier -> handleIdentifierReference(exprNode)
+            is EsTreeAssignmentExpression -> {
+                val newAssign = newAssignExpression(rawNode = exprNode)
+
+                val lhs = handleExpression(exprNode.left)
+                val rhs = handleExpression(exprNode.right)
+
+                if (lhs != null && rhs != null) {
+                    newAssign.lhs = mutableListOf(lhs)
+                    newAssign.rhs = mutableListOf(rhs)
+                    newAssign.operatorCode = exprNode.operator
+                    return newAssign
+                } else {
+                    val problem = newProblemExpression(
+                        "Could not handle LHS or RHS of AssignmentExpression",
+                        ProblemNode.ProblemType.PARSING, // Changed from PARSER to PARSING
+                        rawNode = exprNode
+                    )
+                    return problem
+                }
+            }
+            is EsTreeUpdateExpression -> { 
+                val unaryOp = newUnaryOperator(
+                    exprNode.operator, // operatorCode
+                    exprNode.prefix,   // isPrefix
+                    !exprNode.prefix,  // isPostfix
+                    rawNode = exprNode
+                )
+                val inputExpr = handleExpression(exprNode.argument)
+                if (inputExpr != null) {
+                    unaryOp.input = inputExpr
+                    return unaryOp
+                } else {
+                    val problem = newProblemExpression(
+                        "Could not handle argument of UpdateExpression",
+                        ProblemNode.ProblemType.PARSING, // Changed from PARSER to PARSING
+                        rawNode = exprNode
+                    )
+                    return problem
+                }
+            }
             else -> {
                 val loc =
                     this.locationOf(exprNode)
-                null
+                val problem = newProblemExpression(
+                    "Unknown expression type: ${exprNode::class.simpleName}",
+                     ProblemNode.ProblemType.PARSING, // Changed from PARSER to PARSING
+                    rawNode = exprNode
+                )
+                return problem
             }
         }
     }
@@ -281,14 +468,7 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         return unknownType()
     }
 
-    // Explicitly override codeOf and locationOf for RawNodeType (GenericAstNode)
-    // to ensure these are called by the CPG framework instead of trying to cast
-    // GenericAstNode to SvelteProgram (our AstNodeType).
-
-    // This is now the primary override for AstNode (which is GenericAstNode)
     override fun codeOf(astNode: GenericAstNode): String? {
-        // Delegate to our existing helper that handles GenericAstNode
-        // Specific handling for SvelteProgram if needed
         if (astNode is SvelteProgram) {
             return if (this::code.isInitialized) {
                 this.code
@@ -313,10 +493,7 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         }
     }
 
-    // This is now the primary override for AstNode (which is GenericAstNode)
     override fun locationOf(astNode: GenericAstNode): PhysicalLocation? {
-        // Delegate to our existing helper that handles GenericAstNode
-        // Specific handling for SvelteProgram if needed
         if (astNode is SvelteProgram) {
             if (!this::currentFile.isInitialized || !this::code.isInitialized) {
                 return null
@@ -342,58 +519,7 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         return PhysicalLocation(this.currentFile.toURI(), region ?: Region(-1, -1, -1, -1))
     }
 
-    // This is the method for AstNodeType (SvelteProgram)
-    // Corresponds to abstract override fun codeOf(astNode: AstNode): String?
-    // NO LONGER NEEDED AS SEPARATE OVERRIDE - Handled by `override fun codeOf(astNode: GenericAstNode)`
-    /*
-    override fun codeOf(astNode: SvelteProgram): String? {
-        if (astNode !is SvelteProgram) {
-            LOGGER.error("codeOf(SvelteProgram) called with wrong type: {}", astNode::class.qualifiedName)
-            return null
-        }
-        return if (this::code.isInitialized) {
-            this.code
-        } else {
-            LOGGER.warn("Attempted to get codeOf SvelteProgram before code was initialized.")
-            null
-        }
-    }
-    */
-
-    // This is the method for AstNodeType (SvelteProgram)
-    // Corresponds to abstract override fun locationOf(astNode: AstNode): PhysicalLocation?
-    // NO LONGER NEEDED AS SEPARATE OVERRIDE - Handled by `override fun locationOf(astNode: GenericAstNode)`
-    /*
-    override fun locationOf(astNode: SvelteProgram): PhysicalLocation? {
-        if (astNode !is SvelteProgram) {
-            LOGGER.error("locationOf(SvelteProgram) called with wrong type: {}", astNode::class.qualifiedName)
-            return null
-        }
-        if (!this::currentFile.isInitialized || !this::code.isInitialized) {
-            LOGGER.warn("currentFile or code is not initialized for SvelteProgram. Skipping location.")
-            return null
-        }
-        val region =
-            getRegionFromStartEnd(this.currentFile, this.code, 0, this.code.length.coerceAtLeast(0))
-        return PhysicalLocation(this.currentFile.toURI(), region ?: Region(-1, -1, -1, -1))
-    }
-    */
-
-    // This is the method for AstNodeType (SvelteProgram)
-    // Corresponds to abstract fun setComment(node: Node, astNode: AstNode)
-    // Signature changes to match new AstNode type (GenericAstNode)
     override fun setComment(node: Node, astNode: GenericAstNode) {
-        // Specific handling for SvelteProgram if astNode is one
-        if (astNode is SvelteProgram) {
-        } else {
-            // Generic handling for other GenericAstNodes if needed
-        }
     }
-
-    // Note: A public `fun setComment(node: Node, astNode: GenericAstNode)` (no override) might be
-    // needed
-    // if the CPG framework attempts to call setComment with RawNodeType. The base LanguageFrontend
-    // does not have an abstract or open setComment for TypeNode.
-    // For now, we only provide the abstract override for SvelteProgram.
 }
 

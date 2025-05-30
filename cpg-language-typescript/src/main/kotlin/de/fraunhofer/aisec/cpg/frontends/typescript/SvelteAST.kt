@@ -164,6 +164,8 @@ data class SvelteStyleContent(
     // Added types found in function bodies
     JsonSubTypes.Type(value = EsTreeExpressionStatement::class, name = "ExpressionStatement"),
     JsonSubTypes.Type(value = EsTreeAssignmentExpression::class, name = "AssignmentExpression"),
+    JsonSubTypes.Type(value = EsTreeUpdateExpression::class, name = "UpdateExpression"),
+    JsonSubTypes.Type(value = EsTreeReturnStatement::class, name = "ReturnStatement"),
 )
 @JsonIgnoreProperties(ignoreUnknown = true)
 interface EsTreeNode : GenericAstNode {
@@ -378,3 +380,21 @@ data class EsTreeAssignmentExpression(
     override val start: Int?,
     override val end: Int?,
 ) : EsTreeNode, EsTreeExpression
+
+// --- New class for UpdateExpression ---
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeUpdateExpression(
+    val operator: String, // "++" or "--"
+    val argument: EsTreeNode, // The identifier being updated
+    val prefix: Boolean, // true if prefix (++x), false if postfix (x++)
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeExpression
+
+// --- New class for ReturnStatement ---
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeReturnStatement(
+    val argument: EsTreeNode?, // The expression being returned, can be null
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeStatement // ReturnStatement is a Statement
