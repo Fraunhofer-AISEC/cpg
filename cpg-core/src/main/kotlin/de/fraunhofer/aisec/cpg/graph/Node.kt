@@ -287,7 +287,7 @@ abstract class Node() :
     var overlays by unwrapping(Node::overlayEdges)
 
     override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + (component?.collectAssumptions() ?: emptySet())
+        return super.collectAssumptions() + (component?.assumptions ?: emptySet())
     }
 
     /**
