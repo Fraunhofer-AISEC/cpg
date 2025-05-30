@@ -238,7 +238,7 @@ abstract class FileOperation(underlyingNode: Node? = null, file: File) :
  * @param fileName The name of the file this handle is associated with.
  * @param isTempFile Whether this file handle is a temporary file or not.
  */
-class FileHandle(
+open class FileHandle(
     underlyingNode: Node? = null,
     fileName: String,
     isTempFile: FileTempFileStatus = FileTempFileStatus.UNKNOWN,
