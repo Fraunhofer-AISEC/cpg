@@ -292,7 +292,7 @@ abstract class Node() :
      * [Component]. See [HasAssumptions.collectAssumptions].
      */
     override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + (component?.assumptions ?: emptySet())
+        return super.collectAssumptions() + (component?.collectAssumptions() ?: emptySet())
     }
 
     /**

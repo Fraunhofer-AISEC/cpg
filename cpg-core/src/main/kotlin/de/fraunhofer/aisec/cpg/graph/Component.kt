@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
+import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.multiLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -64,6 +66,14 @@ open class Component : Node() {
     @Synchronized
     fun addTranslationUnit(tu: TranslationUnitDeclaration) {
         translationUnits.add(tu)
+    }
+
+    /**
+     * In contrast to other Nodes we do not add the assumptions collected over the component because
+     * we are already the component. See [HasAssumptions.collectAssumptions].
+     */
+    override fun collectAssumptions(): Set<Assumption> {
+        return assumptions.toSet()
     }
 
     /**
