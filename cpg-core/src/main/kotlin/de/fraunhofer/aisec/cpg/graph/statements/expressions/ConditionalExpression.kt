@@ -141,6 +141,6 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
         Objects.hash(super.hashCode(), condition, thenExpression, elseExpression)
 
     override fun getStartingPrevEOG(): Collection<Node> {
-        return condition.prevEOG
+        return condition.getStartingPrevEOG()
     }
 }

@@ -49,6 +49,6 @@ class SynchronizedStatement : Statement() {
     override fun hashCode() = Objects.hash(super.hashCode(), expression, block)
 
     override fun getStartingPrevEOG(): Collection<Node> {
-        return expression?.getStartingPrevEOG() ?: setOf()
+        return expression?.getStartingPrevEOG() ?: this.prevEOG
     }
 }

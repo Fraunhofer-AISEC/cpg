@@ -77,6 +77,8 @@ class DoStatement : LoopStatement(), ArgumentHolder {
     override fun hashCode() = Objects.hash(super.hashCode(), condition)
 
     override fun getStartingPrevEOG(): Collection<Node> {
-        return statement?.getStartingPrevEOG() ?: setOf()
+        return statement?.getStartingPrevEOG()?.filter { it != this }
+            ?: condition?.getStartingPrevEOG()
+            ?: this.prevEOG
     }
 }

@@ -91,10 +91,6 @@ class IfStatement : Statement(), BranchingNode, ArgumentHolder {
         return this.condition == expression
     }
 
-    override fun getPrevEOGandElements(): Pair<MutableList<Node>, List<Node>> {
-        TODO("Not yet implemented")
-    }
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is IfStatement) return false
@@ -119,6 +115,9 @@ class IfStatement : Statement(), BranchingNode, ArgumentHolder {
         )
 
     override fun getStartingPrevEOG(): Collection<Node> {
-        return initializerStatement?.getStartingPrevEOG() ?: setOf()
+        return initializerStatement?.getStartingPrevEOG()
+            ?: condition?.getStartingPrevEOG()
+            ?: conditionDeclaration?.getStartingPrevEOG()
+            ?: this.prevEOG
     }
 }
