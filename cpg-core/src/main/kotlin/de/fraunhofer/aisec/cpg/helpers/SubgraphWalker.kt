@@ -455,16 +455,16 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
         )
     } else {
         // Store any eventual EOG nodes and disconnect old node
-        val oldNextEOG = old.getExitNextEOG()
-        val oldPrevEOG = old.getStartingPrevEOG()
-        old.disconnectFromGraph()
-
-        if (
+        val oldNextEOG = old.getExitNextEOG().toSet()
+        val oldPrevEOG = old.getStartingPrevEOG().toSet()
+        val hasEOG =
             oldNextEOG.isNotEmpty() ||
                 oldPrevEOG.isNotEmpty() ||
                 old.prevEOG.isNotEmpty() ||
                 old.nextEOG.isNotEmpty()
-        ) {
+        old.disconnectFromGraph()
+
+        if (hasEOG) {
             // We actively re-trigger the EOG pass to handle the new node but only if it has already
             // been run before. To figure this out, we check if there's some sort of EOG edges
             // somewhere. This is required because we

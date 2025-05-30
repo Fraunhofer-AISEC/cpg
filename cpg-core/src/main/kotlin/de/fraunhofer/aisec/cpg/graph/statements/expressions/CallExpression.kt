@@ -303,6 +303,8 @@ open class CallExpression :
         get() = signature
 
     override fun getStartingPrevEOG(): Collection<Node> {
-        return this.callee.getStartingPrevEOG()
+        return if (this.callee is ProblemExpression)
+            this.arguments.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
+        else this.callee.getStartingPrevEOG()
     }
 }
