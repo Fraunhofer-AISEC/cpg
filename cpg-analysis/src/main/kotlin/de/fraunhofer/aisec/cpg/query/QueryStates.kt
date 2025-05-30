@@ -70,7 +70,14 @@ data object NotYetEvaluated : DecisionState()
 context(TranslationResult)
 fun QueryTree<Boolean>.decide(): Decision {
     val statues = this@TranslationResult.assumptionStatuses
+    // The assumptions need to be collected, as they are located at the respective construct they are placed on and only
+    // forwarded on evaluation. Accepting or rejecting an assumption has a different impact on query evaluation depending
+    // on the sup-query tree the assumption is placed on.
     val assumptions = this.collectAssumptions()
+    // Todo kw: Include global or component wide assumptions?
+    this@TranslationResult.collectAssumptions()
+
+
     assumptions.forEach {
         it.status = statues.getOrDefault(it.id, it.status)
     }
@@ -81,15 +88,19 @@ fun QueryTree<Boolean>.decide(): Decision {
                 Failed to
                     (if (!this.value) "the query was evaluated to false"
                     else
-                        "the assumptions ${assumptions.filter { it.status == AssumptionStatus.Rejected }.map { it.id.toHexDashString() } } were rejected")
+                        "the assumptions ${assumptions.filter { it.status == AssumptionStatus.Rejected }.map { it.id.toHexDashString() }.joinToString(", ") } were rejected")
+
+
             assumptions.any { it.status == AssumptionStatus.Undecided } ->
                 Undecided to
-                    "the assumptions ${assumptions.filter { it.status == AssumptionStatus.Undecided }.map { it.id.toHexDashString() }} are not yet decided"
-            this.value ==
+                    "the assumptions ${assumptions.filter { it.status == AssumptionStatus.Undecided }.map { it.id.toHexDashString() }.joinToString(", ")} are not yet decided"
+
+            this.value &&
                 assumptions.all {
                     it.status == AssumptionStatus.Ignored || it.status == AssumptionStatus.Accepted
                 } ->
-                Succeeded to "the query was evaluated to true and all assumptions were accepted."
+                Succeeded to "the query was evaluated to true and all assumptions were accepted or deemed not influencing the result."
+
             else -> NotYetEvaluated to "Something went wrong"
         }
 
