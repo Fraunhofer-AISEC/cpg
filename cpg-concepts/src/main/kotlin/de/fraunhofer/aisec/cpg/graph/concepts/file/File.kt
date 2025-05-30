@@ -101,7 +101,7 @@ abstract class FileLikeObject(
  * @param isTempFile Whether this file is a temporary file or not.
  * @param deleteOnClose Whether this file will be automatically deleted when closed.
  */
-class File(
+open class File(
     underlyingNode: Node? = null,
     fileName: String,
     isTempFile: FileTempFileStatus = FileTempFileStatus.UNKNOWN,
