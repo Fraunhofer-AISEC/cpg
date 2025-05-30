@@ -351,12 +351,21 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
 
     /**
      * Looks for the requested file in the [fileCache]. If none is found, a new [File] is created
-     * and added to the cache.
+     * and added to the [state] and the [fileCache]. Note: As this method already adds the [File] to
+     * the [state], it should not be added again to the set of overlays to create for the node.
      *
      * @param callExpression The [CallExpression] triggering the call lookup. It is used as a basis
      *   ([File.underlyingNode]) if a new file has to be created.
      * @param argumentName The name of the argument to be used for the file name in the
      *   [callExpression].
+     * @param argumentName The name of the argument which holds the name/path of the file in the
+     *   given [CallExpression]'s [CallExpression.arguments] if named arguments are used.
+     * @param argumentIndex The index of the argument which holds the name/path of the file in the
+     *   given [CallExpression]'s [CallExpression.arguments] if no named arguments are used.
+     * @param lattice The [NodeToOverlayState] which the [EOGConceptPass] operates on. It is used to
+     *   add the [File].
+     * @param state The [NodeToOverlayStateElement] which is used to store the [File]. If a new
+     *   [File] has to be created, it is added to this state element.
      * @return The [File] found in the cache or the new file in case it had to be created.
      *   Additionally, a flag whether the [File] was created (`true`) or already existed in the
      *   cache (`false`) is returned, too.

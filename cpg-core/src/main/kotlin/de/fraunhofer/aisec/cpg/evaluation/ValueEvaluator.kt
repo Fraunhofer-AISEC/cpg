@@ -83,7 +83,7 @@ open class ValueEvaluator(
      * Tries to evaluate this node and returns the result as the specified type [T]. If the
      * evaluation fails, the result is "null".
      *
-     * @return The result of the evaluation. If the evaluation fails, the result is null.
+     * @return The result of the evaluation. If the evaluation fails, the result is `null`.
      */
     inline fun <reified T> evaluateAs(node: Node?): T? {
         val result = evaluateInternal(node, 0)
