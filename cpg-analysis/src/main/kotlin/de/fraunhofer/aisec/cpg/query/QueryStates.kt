@@ -71,13 +71,10 @@ context(TranslationResult)
 fun QueryTree<Boolean>.decide(): Decision {
     val statues = this@TranslationResult.assumptionStatuses
     // The assumptions need to be collected, as they are located at the respective construct they
-    // are placed on and only
-    // forwarded on evaluation. Accepting or rejecting an assumption has a different impact on query
-    // evaluation depending
-    // on the sup-query tree the assumption is placed on.
-    // Global assumptions are also included below, component wide assumptions are included with
-    // collectAssumptions() in
-    // the individual nodes.
+    // are placed on and only forwarded on evaluation. Accepting or rejecting an assumption has a
+    // different impact on query evaluation depending on the sup-query tree the assumption is placed
+    // on. Global assumptions are also included below, component wide assumptions are included with
+    // collectAssumptions() in the individual nodes.
     val assumptions = this.collectAssumptions() + this@TranslationResult.collectAssumptions()
 
     assumptions.forEach { it.status = statues.getOrDefault(it.id, it.status) }
