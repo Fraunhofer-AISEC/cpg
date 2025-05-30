@@ -76,6 +76,11 @@ class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             "tempfile.mkdtemp" -> {
                 handleMkdtemp(node)
             }
+            "tempfile.mktemp" -> {
+                // This is a legacy function that is not recommended to use anymore, but we still
+                // handle it for completeness.
+                handleMktemp(node)
+            }
 
             else -> {
                 emptyList()
@@ -105,6 +110,11 @@ class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             }
             "tempfile.mkdtemp" -> {
                 handleMkdtemp(node)
+            }
+            "tempfile.mktemp" -> {
+                // This is a legacy function that is not recommended to use anymore, but we still
+                // handle it for completeness.
+                handleMktemp(node)
             }
             else -> {
                 emptyList()
@@ -174,6 +184,27 @@ class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             newFileHandle(
                 underlyingNode = callExpression,
                 fileName = "tempfile.mkdtemp" + callExpression.id.toString(),
+                tempFileStatus = FileTempFileStatus.TEMP_FILE,
+                connect = false,
+            )
+        )
+    }
+
+    private fun handleMktemp(callExpression: CallExpression): Collection<OverlayNode> {
+        return listOf(
+            newFileHandle(
+                underlyingNode = callExpression,
+                fileName =
+                    "tempfile.mktemp" +
+                        (callExpression.argumentValueByNameOrPosition<String>(
+                            name = "suffix",
+                            position = 1,
+                        ) ?: "NOSUFFIX") +
+                        (callExpression.argumentValueByNameOrPosition<String>(
+                            name = "prefix",
+                            position = 1,
+                        ) ?: "NOPREFIX") +
+                        callExpression.id.toString(),
                 tempFileStatus = FileTempFileStatus.TEMP_FILE,
                 connect = false,
             )

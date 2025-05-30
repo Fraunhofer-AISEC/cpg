@@ -189,7 +189,16 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         return listOfNotNull(fileClose, fileDelete)
     }
 
-    /** TODO */
+    /**
+     * This function handles the `open` call, which is used to open a file.
+     *
+     * It creates [OpenFile] and [SetFileFlags] and [SetFileMask] nodes for the file.
+     *
+     * @param lattice The [NodeToOverlayState] which the [EOGConceptPass] operates on.
+     * @param state The [NodeToOverlayStateElement] which is used to store the [File] nodes.
+     * @param callExpression The [CallExpression] representing the `open` call.
+     * @return A collection of [OverlayNode]s representing the file open operations.
+     */
     private fun handleOpen(
         lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
@@ -214,7 +223,6 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
 
         val setFlagsOps = mutableListOf<SetFileFlags>()
         val openOps = mutableListOf<OpenFile>()
-        val fileHandles = mutableListOf<FileHandle>()
         file.forEach { file ->
             setFlagsOps +=
                 newFileSetFlags(
@@ -224,19 +232,20 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                     connect = false,
                 )
             openOps += newFileOpen(underlyingNode = callExpression, file = file, connect = false)
-
-            fileHandles +=
-                newFileHandle(
-                    underlyingNode = callExpression,
-                    fileName = file.fileName,
-                    tempFileStatus = file.isTempFile,
-                    connect = false,
-                )
         }
-        return listOf(setFlagsOps, openOps, fileHandles).flatten()
+        return listOf(setFlagsOps, openOps).flatten()
     }
 
-    /** TODO */
+    /**
+     * This function handles the `os.open` call, which is used to open a file.
+     *
+     * It creates [OpenFile] and [SetFileFlags] and [SetFileMask] nodes for the file.
+     *
+     * @param lattice The [NodeToOverlayState] which the [EOGConceptPass] operates on.
+     * @param state The [NodeToOverlayStateElement] which is used to store the [File] nodes.
+     * @param callExpression The [CallExpression] representing the `os.open` call.
+     * @return A collection of [OverlayNode]s representing the file open operations.
+     */
     private fun handleOsOpen(
         lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
@@ -247,7 +256,6 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         val openFlags = mutableListOf<SetFileFlags>()
         val maskOps = mutableListOf<SetFileMask>()
         val fileOpenNodes = mutableListOf<OpenFile>()
-        val fileHandles = mutableListOf<FileHandle>()
         files.forEach { file ->
             getOsOpenFlags(callExpression)?.let { flags ->
                 newFileSetFlags(
@@ -271,18 +279,20 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
 
             fileOpenNodes +=
                 newFileOpen(underlyingNode = callExpression, file = file, connect = false)
-
-            fileHandles +=
-                newFileHandle(
-                    underlyingNode = callExpression,
-                    fileName = file.fileName,
-                    tempFileStatus = file.isTempFile,
-                    connect = false,
-                )
         }
-        return listOfNotNull(openFlags, maskOps, fileOpenNodes, fileHandles).flatten()
+        return listOfNotNull(openFlags, maskOps, fileOpenNodes).flatten()
     }
 
+    /**
+     * This function handles the `os.fdopen` call, which is used to open a file descriptor as a file
+     * object.
+     *
+     * It creates [OpenFile] and [SetFileFlags] nodes for the file descriptor.
+     *
+     * @param lattice The [NodeToOverlayState] which the [EOGConceptPass] operates on.
+     * @param state The [NodeToOverlayStateElement] which is used to store the [File] nodes.
+     * @param callExpression The [CallExpression] representing the `os.fdopen` call.
+     */
     private fun handleOsFdOpen(
         lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
@@ -308,7 +318,16 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         return listOf(setFlagsOps, openOps).flatten()
     }
 
-    /** TODO */
+    /**
+     * This function handles the `os.chmod` call, which is used to change files.
+     *
+     * It creates [SetFileMask] nodes for each file that is to be removed.
+     *
+     * @param lattice The [NodeToOverlayState] which the [EOGConceptPass] operates on.
+     * @param state The [NodeToOverlayStateElement] which is used to store the [File] nodes.
+     * @param callExpression The [CallExpression] representing the `os.chmod` call.
+     * @return A collection of [SetFileMask] nodes representing the file chmod operations.
+     */
     private fun handleOsChmod(
         lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
@@ -334,7 +353,16 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         }
     }
 
-    /** TODO */
+    /**
+     * This function handles the `os.remove` call, which is used to delete files.
+     *
+     * It creates [DeleteFile] nodes for each file that is to be removed.
+     *
+     * @param lattice The [NodeToOverlayState] which the [EOGConceptPass] operates on.
+     * @param state The [NodeToOverlayStateElement] which is used to store the [File] nodes.
+     * @param callExpression The [CallExpression] representing the `os.remove` call.
+     * @return A collection of [DeleteFile] nodes representing the file deletion operations.
+     */
     private fun handleOsRemove(
         lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
@@ -364,19 +392,25 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      *   Additionally, a flag whether the [File] was created (`true`) or already existed in the
      *   cache (`false`) is returned, too.
      *
-     *     TODO: update
+     * This is one of the core methods of the [PythonFileConceptPass] and contains the most
+     * complexity. The general idea is to follow the DFG path of the current node's file argument to
+     * find all possible values that can be assigned to the file argument. This can be as easy as an
+     * `open('foo')` call or more complex like using references (with possibly multiple values) or
+     * calls to other functions. The main goals are:
+     * - return the same [File] node for multiple calls to the same file name (even if it is a
+     *   different [Literal] node evaluating to the same string) -> this is acomplished by using the
+     *   [fileCache].
      *
-     * Was will ich hier machen?
-     * - Input: eine CallExpression, die ein File-Argument hat (via `argumentName`)
-     * - Output: eine Liste von File-Objekten
+     * The logic is as follows:
+     * - Input: a [CallExpression] that has a file argument (via `argumentName`)
+     * - Output: a list of [File] objects
      * - How:
-     *     - laufe den DFG und sammle alle File-Overlays, die vom `argumentName`-Argument ausgehen
-     *       ein
-     *         - hier ist die Annahme, dass wir schon die präziesete Information haben, wenn ein
-     *           `File` Object vorhanden ist.
-     *     - alle Pfade mit Dead Ends, die ich finde: erstelle ein neues File-Objekt
-     *         - dazu muss `collectFailedPaths` auf `true` gesetzt sein
-     *         - dazu muss `findAllPossiblePaths` auf `true` gesetzt sein (???)
+     *     - traverse the DFG and collect all [FileLikeObject] overlays that are reachable from the
+     *       argument
+     *         - if a [File] overlay is found, return it
+     *         - if a [FileHandle] overlay is found, create a new [File] node and return it
+     *     - if no [File] or [FileHandle] overlay is found, create a new [File] node with the file
+     *       name
      */
     internal fun getOrCreateFile(
         callExpression: CallExpression,
@@ -423,7 +457,8 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                 }
 
         if (lastNode.filterIsInstance<File>().isNotEmpty()) {
-            // TODO: better check if the file is already in the cache
+            // TODO: better check if that all [FileHandle] have [File] nodes in the cache and use
+            // them
             result += lastNode.filterIsInstance<File>()
         } else {
             // There is a [FileHandle] but no [File] overlay, so we create a new [File] node
