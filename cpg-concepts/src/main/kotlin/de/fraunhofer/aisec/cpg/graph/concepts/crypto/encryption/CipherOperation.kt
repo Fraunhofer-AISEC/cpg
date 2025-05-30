@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret
 import java.util.Objects
 
 abstract class CipherOperation(underlyingNode: Node?, override val concept: Cipher) :
