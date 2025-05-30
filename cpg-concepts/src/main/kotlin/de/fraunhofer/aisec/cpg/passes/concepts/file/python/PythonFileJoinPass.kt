@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes.concepts.file.python
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.file.File
+import de.fraunhofer.aisec.cpg.graph.concepts.file.FileLikeObject
 import de.fraunhofer.aisec.cpg.graph.concepts.file.FileTempFileStatus
 import de.fraunhofer.aisec.cpg.graph.concepts.file.newFile
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -103,18 +104,20 @@ class PythonFileJoinPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         val combinedFileName = mutableListOf<String>()
         var tempFileStatus = FileTempFileStatus.NOT_A_TEMP_FILE
         callExpression.arguments.forEach { argument ->
-            if (argument.overlays.any { it is File }) {
+            if (argument.overlays.any { it is FileLikeObject }) {
                 combinedFileName +=
-                    argument.overlays.filterIsInstance<File>().joinToString { it.fileName }
+                    argument.overlays.filterIsInstance<FileLikeObject>().joinToString {
+                        it.fileName
+                    }
                 if (
-                    argument.overlays.filterIsInstance<File>().any {
+                    argument.overlays.filterIsInstance<FileLikeObject>().any {
                         it.isTempFile == FileTempFileStatus.TEMP_FILE
                     }
                 ) {
                     tempFileStatus = FileTempFileStatus.TEMP_FILE
                 }
-                argument.overlays.filterIsInstance<File>().forEach { file ->
-                    // not disconnectiong from graph because the file exists, even if we only use it
+                argument.overlays.filterIsInstance<FileLikeObject>().forEach { file ->
+                    // not disconnecting from graph because the file exists, even if we only use it
                     // in the "joined from"
                     // log.debug("Disconnecting file from graph: {}", file.fileName)
                     // file.disconnectFromGraph()

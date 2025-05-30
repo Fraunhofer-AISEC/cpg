@@ -72,6 +72,28 @@ enum class FileTempFileStatus {
 const val O_ACCMODE_MODE_MASK = 3L
 
 /**
+ * This is the base class for all file-like objects. It provides the common properties and methods
+ * that are shared by all file-like objects.
+ *
+ * @param fileName The name of the file e.g. `foo/bar/example.txt`
+ * @param isTempFile Whether this file is a temporary file or not.
+ */
+abstract class FileLikeObject(
+    underlyingNode: Node?,
+    open val fileName: String,
+    open var isTempFile: FileTempFileStatus,
+) : Concept(underlyingNode = underlyingNode), IsFile {
+    override fun equals(other: Any?): Boolean {
+        return other is FileLikeObject &&
+            super.equals(other) &&
+            other.fileName == this.fileName &&
+            other.isTempFile == this.isTempFile
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), fileName, isTempFile)
+}
+
+/**
  * Represents a file.
  *
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
@@ -81,19 +103,15 @@ const val O_ACCMODE_MODE_MASK = 3L
  */
 class File(
     underlyingNode: Node? = null,
-    val fileName: String,
-    var isTempFile: FileTempFileStatus = FileTempFileStatus.UNKNOWN,
+    fileName: String,
+    isTempFile: FileTempFileStatus = FileTempFileStatus.UNKNOWN,
     var deleteOnClose: Boolean = false,
-) : Concept(underlyingNode = underlyingNode), IsFile {
+) : FileLikeObject(underlyingNode, fileName, isTempFile), IsFile {
     override fun equals(other: Any?): Boolean {
-        return other is File &&
-            super.equals(other) &&
-            other.fileName == this.fileName &&
-            other.isTempFile == this.isTempFile &&
-            other.deleteOnClose == this.deleteOnClose
+        return other is File && super.equals(other) && other.deleteOnClose == this.deleteOnClose
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), fileName, isTempFile, deleteOnClose)
+    override fun hashCode() = Objects.hash(super.hashCode(), deleteOnClose)
 }
 
 /**
@@ -139,7 +157,7 @@ class SetFileMask(underlyingNode: Node? = null, concept: File, val mask: Long) :
  * @param concept The corresponding [File] node.
  */
 class CloseFile(underlyingNode: Node? = null, concept: File) :
-    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {}
+    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile
 
 /**
  * Represents deleting a file.
@@ -148,7 +166,7 @@ class CloseFile(underlyingNode: Node? = null, concept: File) :
  * @param concept The corresponding [File] node.
  */
 class DeleteFile(underlyingNode: Node? = null, concept: File) :
-    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {}
+    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile
 
 /**
  * Represents opening a file. This is usually done with the same underlying node the [concept] field
@@ -158,7 +176,7 @@ class DeleteFile(underlyingNode: Node? = null, concept: File) :
  * @param concept The corresponding [File] node.
  */
 class OpenFile(underlyingNode: Node? = null, concept: File) :
-    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {}
+    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile
 
 /**
  * Represents reading from a file.
@@ -217,9 +235,11 @@ abstract class FileOperation(underlyingNode: Node? = null, file: File) :
  * This class represents a file handle.
  *
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
- *
- * TODO: The file operations cannot be mapped to this `Concept` and the [File] concept, as they
- *   allow only for one [Concept] relationship. Do we want to keep this here? Do we want to change
- *   [Operation]?
+ * @param fileName The name of the file this handle is associated with.
+ * @param isTempFile Whether this file handle is a temporary file or not.
  */
-class FileHandle(underlyingNode: Node? = null) : Concept(underlyingNode = underlyingNode), IsFile
+class FileHandle(
+    underlyingNode: Node? = null,
+    fileName: String,
+    isTempFile: FileTempFileStatus = FileTempFileStatus.UNKNOWN,
+) : FileLikeObject(underlyingNode = underlyingNode, fileName, isTempFile), IsFile

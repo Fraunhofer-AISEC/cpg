@@ -183,9 +183,19 @@ fun MetadataProvider.newFileWrite(underlyingNode: Node, file: File, what: Node, 
  * Creates a new [FileHandle] node. Unlike the [File] directly, this represents a handle to a file.
  *
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param fileName The name of the file handle, e.g. `foo/bar/example.txt`
  * @param connect If `true`, the created [Concept] will be connected to the underlying node by
  *   setting its `underlyingNode`.
  * @return The new [FileHandle] node.
  */
-fun MetadataProvider.newFileHandle(underlyingNode: Node, connect: Boolean) =
-    newConcept({ FileHandle() }, underlyingNode = underlyingNode, connect = connect)
+fun MetadataProvider.newFileHandle(
+    underlyingNode: Node,
+    fileName: String,
+    tempFileStatus: FileTempFileStatus = FileTempFileStatus.UNKNOWN,
+    connect: Boolean,
+) =
+    newConcept(
+        { FileHandle(fileName = fileName, isTempFile = tempFileStatus) },
+        underlyingNode = underlyingNode,
+        connect = connect,
+    )

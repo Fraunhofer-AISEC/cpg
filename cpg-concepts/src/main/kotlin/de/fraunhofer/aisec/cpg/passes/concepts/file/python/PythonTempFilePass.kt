@@ -28,10 +28,7 @@ package de.fraunhofer.aisec.cpg.passes.concepts.file.python
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.argumentValueByNameOrPosition
-import de.fraunhofer.aisec.cpg.graph.concepts.file.FileTempFileStatus
-import de.fraunhofer.aisec.cpg.graph.concepts.file.newFile
-import de.fraunhofer.aisec.cpg.graph.concepts.file.newFileOpen
-import de.fraunhofer.aisec.cpg.graph.concepts.file.newFileSetMask
+import de.fraunhofer.aisec.cpg.graph.concepts.file.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.passes.DFGPass
@@ -70,9 +67,14 @@ class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                 handleGetTempDir(node)
             }
             "tempfile.TemporaryFile",
-            "tempfile.NamedTemporaryFile"
-            /* TODO filedescriptor support... "tempfile.mkstemp" */ -> {
+            "tempfile.NamedTemporaryFile" -> {
                 handleTempFile(node)
+            }
+            "tempfile.mkstemp" -> {
+                handleMkstemp(node)
+            }
+            "tempfile.mkdtemp" -> {
+                handleMkdtemp(node)
             }
 
             else -> {
@@ -95,9 +97,14 @@ class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                 handleGetTempDir(node)
             }
             "tempfile.TemporaryFile",
-            "tempfile.NamedTemporaryFile"
-            /* TODO filedescriptor support... "tempfile.mkstemp" */ -> {
+            "tempfile.NamedTemporaryFile" -> {
                 handleTempFile(node)
+            }
+            "tempfile.mkstemp" -> {
+                handleMkstemp(node)
+            }
+            "tempfile.mkdtemp" -> {
+                handleMkdtemp(node)
             }
             else -> {
                 emptyList()
@@ -149,5 +156,27 @@ class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             )
         val openTemp = newFileOpen(underlyingNode = callExpression, file = file, connect = false)
         return listOf(file, permissions, openTemp)
+    }
+
+    private fun handleMkstemp(callExpression: CallExpression): Collection<OverlayNode> {
+        return listOf(
+            newFileHandle(
+                underlyingNode = callExpression,
+                fileName = "tempfile.mkstemp" + callExpression.id.toString(),
+                tempFileStatus = FileTempFileStatus.TEMP_FILE,
+                connect = false,
+            )
+        )
+    }
+
+    private fun handleMkdtemp(callExpression: CallExpression): Collection<OverlayNode> {
+        return listOf(
+            newFileHandle(
+                underlyingNode = callExpression,
+                fileName = "tempfile.mkdtemp" + callExpression.id.toString(),
+                tempFileStatus = FileTempFileStatus.TEMP_FILE,
+                connect = false,
+            )
+        )
     }
 }

@@ -165,6 +165,9 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             "os.remove" -> {
                 handleOsRemove(lattice, state, node)
             }
+            "os.fdopen" -> {
+                handleOsFdOpen(lattice, state, node)
+            }
             else -> {
                 emptyList()
             }
@@ -222,7 +225,13 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                 )
             openOps += newFileOpen(underlyingNode = callExpression, file = file, connect = false)
 
-            fileHandles += newFileHandle(underlyingNode = callExpression, connect = false)
+            fileHandles +=
+                newFileHandle(
+                    underlyingNode = callExpression,
+                    fileName = file.fileName,
+                    tempFileStatus = file.isTempFile,
+                    connect = false,
+                )
         }
         return listOf(setFlagsOps, openOps, fileHandles).flatten()
     }
@@ -263,9 +272,40 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             fileOpenNodes +=
                 newFileOpen(underlyingNode = callExpression, file = file, connect = false)
 
-            fileHandles += newFileHandle(underlyingNode = callExpression, connect = false)
+            fileHandles +=
+                newFileHandle(
+                    underlyingNode = callExpression,
+                    fileName = file.fileName,
+                    tempFileStatus = file.isTempFile,
+                    connect = false,
+                )
         }
         return listOfNotNull(openFlags, maskOps, fileOpenNodes, fileHandles).flatten()
+    }
+
+    private fun handleOsFdOpen(
+        lattice: NodeToOverlayState,
+        state: NodeToOverlayStateElement,
+        callExpression: CallExpression,
+    ): Collection<OverlayNode> {
+        val file = getOrCreateFile(callExpression, "fd", lattice, state)
+
+        val mode = getBuiltinOpenMode(callExpression) ?: "r" // default is 'r'
+        val flags = translateBuiltinOpenMode(mode)
+
+        val setFlagsOps = mutableListOf<SetFileFlags>()
+        val openOps = mutableListOf<OpenFile>()
+        file.forEach { file ->
+            setFlagsOps +=
+                newFileSetFlags(
+                    underlyingNode = callExpression,
+                    file = file,
+                    flags = flags,
+                    connect = false,
+                )
+            openOps += newFileOpen(underlyingNode = callExpression, file = file, connect = false)
+        }
+        return listOf(setFlagsOps, openOps).flatten()
     }
 
     /** TODO */
@@ -355,27 +395,62 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             return emptyList()
         }
         val result = mutableListOf<File>()
+
+        // We have a cache of files per component, so we can avoid creating multiple
+        // [File]s for the same file name.
+        val currentMap = fileCache.computeIfAbsent(currentComponent) { mutableMapOf() }
+
         val paths =
             arg.followDFGEdgesUntilHit(
                 collectFailedPaths = true,
                 findAllPossiblePaths = true,
                 direction = Backward(GraphToFollow.DFG),
             ) { node ->
-                // First we check if there is a [File] overlay on the node.
-                node.overlays.any { it is File } ||
-                    // If not, we check if there is a [File] overlay in the [state]
-                    state[node]?.any { it is File } == true
+                // First we check if there is a [File] or [FileHandle] overlay on the node.
+                node.overlays.any { it is FileLikeObject } ||
+                    // If not, we check if there is a [File] or [FileHandle] overlay in the [state]
+                    state[node]?.any { it is FileLikeObject } == true
             }
 
-        // for the successful paths, we return the [File] overlays
-        result +=
+        // for the successful paths, we return the [File] overlays and create new [File] nodes if
+        // there is only a [FileHandle]
+        val lastNode =
             paths.fulfilled
                 .map { it.nodes.last() }
                 .flatMap {
                     // collect all "overlay" nodes
                     state[it] ?: setOf(it, *it.overlays.toTypedArray())
                 }
-                .filterIsInstance<File>()
+
+        if (lastNode.filterIsInstance<File>().isNotEmpty()) {
+            // TODO: better check if the file is already in the cache
+            result += lastNode.filterIsInstance<File>()
+        } else {
+            // There is a [FileHandle] but no [File] overlay, so we create a new [File] node
+            lastNode.filterIsInstance<FileHandle>().map { fileHandle ->
+                result +=
+                    newFile(
+                            underlyingNode = fileHandle.underlyingNode!! /* TODO */,
+                            fileName = fileHandle.fileName,
+                            connect = false,
+                        )
+                        .apply { isTempFile = fileHandle.isTempFile }
+                        .also { newFile ->
+                            // store the new file in the cache
+                            currentMap[fileHandle.fileName] = newFile
+                            // and add it to the lattice
+                            lattice.lub(
+                                one = state,
+                                two =
+                                    NodeToOverlayStateElement(
+                                        fileHandle.underlyingNode!! /* TODO*/ to
+                                            PowersetLattice.Element(newFile)
+                                    ),
+                                allowModify = true,
+                            )
+                        }
+            }
+        }
 
         // for the failed paths, we create a new [File] node
         result +=
@@ -392,10 +467,6 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                         )
                         return@map null
                     }
-
-                    // We have a cache of files per component, so we can avoid creating multiple
-                    // [File]s for the same file name.
-                    val currentMap = fileCache.computeIfAbsent(currentComponent) { mutableMapOf() }
                     val existingEntry = currentMap[fileName]
                     existingEntry
                         ?: newFile(underlyingNode = cpgNode, fileName = fileName, connect = false)
@@ -422,33 +493,7 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                             }
                 }
 
-        /*
-                val newPaths = arg.getOverlaysByPrevDFG<File>(state)
-                val oldPaths =
-                    arg.followDFGEdgesUntilHit(
-                            collectFailedPaths = true,
-                            findAllPossiblePaths = true,
-                            direction = Backward(GraphToFollow.DFG),
-                        ) {
-                            false
-                        }
-                        .failed
-                        .map { it.second }
-
-                oldPaths.map { path ->
-                    val existingFile =
-                        path
-                            .firstOrNull { it.overlays.any { overlay -> overlay is File } }
-                            ?.overlays
-                            ?.filterIsInstance<File>()
-                            ?.firstOrNull()
-                }
-        */
-        // val name = call.argumentValueByNameOrPosition<String>(name = argumentName, position = 0)
         return result
-
-        // val fileName = getFileName(callExpression, argumentName) ?: TODO()
-        // return handleInternal(fileName, callExpression, lattice, state)
     }
 
     /**
