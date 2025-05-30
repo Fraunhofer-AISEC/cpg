@@ -366,6 +366,11 @@ abstract class Node() :
         return this.prevEOG
     }
 
+    /** Returns the exit point of the EOG outside this node and its children. */
+    open fun getExitNextEOG(): Collection<Node> {
+        return this.nextEOG
+    }
+
     companion object {
         @JvmField var TO_STRING_STYLE: ToStringStyle = ToStringStyle.SHORT_PREFIX_STYLE
 

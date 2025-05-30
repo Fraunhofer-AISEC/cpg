@@ -454,8 +454,8 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
             "Replacing expression $old was not successful. Further analysis might not be entirely accurate."
         )
     } else {
-        // Store any eventual EOG/DFG nodes and disconnect old node
-        val oldNextEOG = old.nextEOG.toMutableList()
+        // Store any eventual EOG nodes and disconnect old node
+        val oldNextEOG = old.getExitNextEOG()
         val oldPrevEOG = old.getStartingPrevEOG()
         old.disconnectFromGraph()
 

@@ -97,4 +97,8 @@ class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
             ?: variable?.getStartingPrevEOG()
             ?: this.prevEOG
     }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return this.nextEOG.filter { it !in statement.allChildren<Node> { true } }
+    }
 }

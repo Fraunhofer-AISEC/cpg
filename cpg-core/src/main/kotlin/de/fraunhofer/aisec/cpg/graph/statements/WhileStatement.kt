@@ -92,4 +92,8 @@ class WhileStatement : LoopStatement(), BranchingNode, ArgumentHolder {
             ?: conditionDeclaration?.getStartingPrevEOG()
             ?: setOf()
     }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return this.nextEOG.filter { it !in statement.allChildren<Node> { true } }
+    }
 }

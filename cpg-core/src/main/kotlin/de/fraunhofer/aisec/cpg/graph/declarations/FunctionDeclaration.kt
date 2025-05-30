@@ -227,6 +227,10 @@ open class FunctionDeclaration :
         return setOf()
     }
 
+    override fun getExitNextEOG(): Collection<Node> {
+        return setOf()
+    }
+
     companion object {
         const val WHITESPACE = " "
         const val BRACKET_LEFT = "("

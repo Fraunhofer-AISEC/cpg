@@ -51,4 +51,8 @@ class SynchronizedStatement : Statement() {
     override fun getStartingPrevEOG(): Collection<Node> {
         return expression?.getStartingPrevEOG() ?: this.prevEOG
     }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return this.block?.getExitNextEOG() ?: this.nextEOG
+    }
 }

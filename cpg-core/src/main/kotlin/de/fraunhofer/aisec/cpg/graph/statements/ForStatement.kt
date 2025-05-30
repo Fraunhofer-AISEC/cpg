@@ -116,4 +116,8 @@ class ForStatement : LoopStatement(), BranchingNode, StatementHolder {
             ?: this.conditionDeclaration?.getStartingPrevEOG()?.filter { it !in astChildren }
             ?: this.prevEOG
     }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return this.nextEOG.filter { it !in statement.allChildren<Node> { true } }
+    }
 }

@@ -105,4 +105,8 @@ class ReturnStatement : Statement(), ArgumentHolder {
     override fun getStartingPrevEOG(): Collection<Node> {
         return this.returnValue?.getStartingPrevEOG() ?: this.prevEOG
     }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return setOf()
+    }
 }

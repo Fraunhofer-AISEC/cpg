@@ -147,4 +147,8 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
     override fun getStartingPrevEOG(): Collection<Node> {
         return this.prevEOG
     }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return this.initializer?.getExitNextEOG() ?: this.nextEOG
+    }
 }
