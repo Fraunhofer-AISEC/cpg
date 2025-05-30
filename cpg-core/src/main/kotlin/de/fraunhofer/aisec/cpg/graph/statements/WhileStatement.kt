@@ -84,4 +84,10 @@ class WhileStatement : LoopStatement(), BranchingNode, ArgumentHolder {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), conditionDeclaration, condition)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return condition?.getStartingPrevEOG()
+            ?: conditionDeclaration?.getStartingPrevEOG()
+            ?: setOf()
+    }
 }

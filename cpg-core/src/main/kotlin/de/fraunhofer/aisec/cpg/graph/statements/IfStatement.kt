@@ -117,4 +117,8 @@ class IfStatement : Statement(), BranchingNode, ArgumentHolder {
             thenStatement,
             elseStatement,
         )
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return initializerStatement?.getStartingPrevEOG() ?: setOf()
+    }
 }

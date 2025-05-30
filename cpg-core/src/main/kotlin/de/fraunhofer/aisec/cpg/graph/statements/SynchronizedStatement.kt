@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -46,4 +47,8 @@ class SynchronizedStatement : Statement() {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), expression, block)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return expression?.getStartingPrevEOG() ?: setOf()
+    }
 }

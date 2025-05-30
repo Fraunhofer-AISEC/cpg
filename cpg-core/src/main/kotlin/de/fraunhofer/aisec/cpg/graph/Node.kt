@@ -362,7 +362,9 @@ abstract class Node() :
     }
 
     /** Returns the starting point of the EOG outside this node and its children. */
-    abstract fun getStartingPrevEOG(): Collection<Node>
+    open fun getStartingPrevEOG(): Collection<Node> {
+        return this.prevEOG
+    }
 
     companion object {
         @JvmField var TO_STRING_STYLE: ToStringStyle = ToStringStyle.SHORT_PREFIX_STYLE

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -74,4 +75,8 @@ class DoStatement : LoopStatement(), ArgumentHolder {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), condition)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return statement?.getStartingPrevEOG() ?: setOf()
+    }
 }

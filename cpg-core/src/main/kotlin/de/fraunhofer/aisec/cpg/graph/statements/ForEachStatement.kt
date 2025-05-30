@@ -90,4 +90,8 @@ class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), variable, iterable)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return iterable?.getStartingPrevEOG() ?: setOf()
+    }
 }

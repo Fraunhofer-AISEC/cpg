@@ -108,4 +108,8 @@ class ForStatement : LoopStatement(), BranchingNode, StatementHolder {
             this.iterationStatement,
         )
     }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return initializerStatement?.getStartingPrevEOG() ?: setOf()
+    }
 }
