@@ -297,7 +297,7 @@ abstract class Node() :
      */
     fun disconnectFromGraph() {
         // Disconnect all AST children first
-        this.astChildren.forEach { it.disconnectFromGraph() }
+        astChildren.forEach { it.disconnectFromGraph() }
 
         nextDFGEdges.clear()
         prevDFGEdges.clear()
@@ -307,6 +307,12 @@ abstract class Node() :
         nextPDGEdges.clear()
         nextEOGEdges.clear()
         prevEOGEdges.clear()
+
+        if (this is OverlayNode) {
+            underlyingNodeEdge.clear()
+        }
+
+        this.overlayEdges.clear()
     }
 
     override fun toString(): String {

@@ -62,7 +62,7 @@ kotlin {
 
 tasks.withType<KotlinCompile> {
     compilerOptions {
-        freeCompilerArgs = listOf("-opt-in=kotlin.RequiresOptIn", "-opt-in=kotlin.uuid.ExperimentalUuidApi", "-Xcontext-receivers")
+        freeCompilerArgs = listOf("-opt-in=kotlin.RequiresOptIn", "-opt-in=kotlin.uuid.ExperimentalUuidApi", "-opt-in=kotlin.experimental.ExperimentalTypeInference", "-Xcontext-receivers")
     }
 }
 

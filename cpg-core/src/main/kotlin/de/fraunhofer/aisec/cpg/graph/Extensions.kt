@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
+import de.fraunhofer.aisec.cpg.assumptions.addAssumptionDependence
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ControlDependence
@@ -816,7 +817,12 @@ fun Node.followXUntilHit(
     worklist.add(listOf(this to context)) // We start only with the "from" node (=this)
 
     val alreadySeenNodes = mutableSetOf<Pair<Node, Context>>()
-
+    // First check if the current node satisfies the predicate.
+    // If it does, we consider this path fulfilled and skip further traversal.
+    if (predicate(this)) {
+        fulfilledPaths.add(NodePath(mutableListOf(this)).addAssumptionDependence(this))
+        return FulfilledAndFailedPaths(fulfilledPaths.toSet().toList(), failedPaths)
+    }
     while (worklist.isNotEmpty()) {
         val currentPath = worklist.maxBy { it.size }
         worklist.remove(currentPath)
@@ -835,7 +841,7 @@ fun Node.followXUntilHit(
             failedPaths.add(
                 FailureReason.PATH_ENDED to
                     NodePath(currentPath.map { it.first })
-                        .addAssumptionDependences(currentPath.map { it.second }.toList())
+                        .addAssumptionDependence(currentPath.map { it.second }.toList())
             )
         }
 
@@ -846,7 +852,7 @@ fun Node.followXUntilHit(
                 // the path to the results.
                 fulfilledPaths.add(
                     NodePath(currentPathNodes.toMutableList() + next)
-                        .addAssumptionDependences(currentPath.map { it.second } + newContext)
+                        .addAssumptionDependence(currentPath.map { it.second } + newContext)
                 )
                 continue // Don't add this path anymore. The requirement is satisfied.
             }
@@ -854,7 +860,7 @@ fun Node.followXUntilHit(
                 failedPaths.add(
                     FailureReason.HIT_EARLY_TERMINATION to
                         NodePath(currentPath.map { it.first } + next)
-                            .addAssumptionDependences(currentPath.map { it.second } + newContext)
+                            .addAssumptionDependence(currentPath.map { it.second } + newContext)
                 )
                 continue // Don't add this path anymore. We already failed.
             }
@@ -871,7 +877,7 @@ fun Node.followXUntilHit(
                 // There's a loop.
                 loopingPaths.add(
                     NodePath(currentPathNodes + next)
-                        .addAssumptionDependences(currentPath.map { it.second } + newContext)
+                        .addAssumptionDependence(currentPath.map { it.second } + newContext)
                 )
             }
         }
@@ -1398,6 +1404,7 @@ fun Expression?.unwrapReference(): Reference? {
         this is Reference -> this
         this is UnaryOperator && (this.operatorCode == "*" || this.operatorCode == "&") ->
             this.input.unwrapReference()
+
         this is CastExpression -> this.expression.unwrapReference()
         else -> null
     }

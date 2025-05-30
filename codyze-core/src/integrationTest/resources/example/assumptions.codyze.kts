@@ -23,10 +23,15 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
+package example
 
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-
-abstract class SecretOperation(underlyingNode: Node? = null, override val concept: Secret) :
-    Operation(underlyingNode = underlyingNode, concept = concept), IsDiskEncryption
+project {
+    assumptions {
+        decisions {
+            accept("00000000-0000-0000-0000-000000000000")
+            reject("00000000-0000-0000-0000-000000000001")
+            undecided("00000000-0000-0000-0000-000000000002")
+            ignore("00000000-0000-0000-0000-000000000003")
+        }
+    }
+}

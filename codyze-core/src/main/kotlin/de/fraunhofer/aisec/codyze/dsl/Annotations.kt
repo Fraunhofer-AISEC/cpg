@@ -23,11 +23,9 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
+package de.fraunhofer.aisec.codyze.dsl
 
-import de.fraunhofer.aisec.cpg.graph.Node
-
-open class CreateSecret(underlyingNode: Node? = null, concept: Secret) :
-    SecretOperation(underlyingNode = underlyingNode, concept = concept) {
-    // TODO: which secret? specs (key size, cipher suite, storage)?
-}
+@Target(AnnotationTarget.FILE)
+@Repeatable
+@Retention(AnnotationRetention.SOURCE)
+annotation class Import(vararg val paths: String)

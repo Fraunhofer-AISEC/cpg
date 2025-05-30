@@ -23,12 +23,30 @@
  *                    \______/ \__|       \______/
  *
  */
-import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.query.QueryTree
-import de.fraunhofer.aisec.cpg.query.allExtended
+package example
 
-fun statement1(tr: TranslationResult): QueryTree<Boolean> {
-    val result = tr.allExtended<FunctionDeclaration>(mustSatisfy = { QueryTree(it.name.localName) eq "foo" })
-    return result
+project {
+    manualAssessment {
+        of("SEC-TARGET") {
+            val expectedValue = 2
+            val actualValue = 3
+
+            /* Yes, I really checked that 6 is greater than 5 */
+            val result = actualValue gt expectedValue
+            result.assume(
+                AssumptionType.SoundnessAssumption,
+                "We assume that mathematical principles are sound",
+            )
+        }
+
+        of("THIRD-PARTY-LIBRARY") {
+            /* Yes, the rumors are true. */
+            true
+        }
+
+        of("SOMETHING-ELSE") {
+            /* Hmm. I am not sure about this one. */
+            Undecided
+        }
+    }
 }

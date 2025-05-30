@@ -23,9 +23,19 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
+package de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption
 
 import de.fraunhofer.aisec.cpg.graph.Node
 
+/**
+ * An operation that retrieves a secret from a (remote) location. This can be a local keystore, a
+ * remote key server or a hardware device such as a TPM or HSM.
+ */
 open class GetSecret(underlyingNode: Node? = null, concept: Secret) :
-    SecretOperation(underlyingNode = underlyingNode, concept = concept)
+    SecretOperation(underlyingNode = underlyingNode, concept = concept) {
+    override fun setDFG() {
+        // Since we are retrieving a secret, we want to model a data flow from the secret to the
+        // operation that retrieves it. This is done by adding the secret to the prevDFG edge.
+        this.prevDFG += concept
+    }
+}

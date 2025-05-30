@@ -23,31 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
-package codyze
+package de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption
 
-import de.fraunhofer.aisec.codyze.evalQuery
-import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
-import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.test.analyze
-import java.io.File
-import kotlin.io.path.Path
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
-class QueryHostTest {
-    @Test
-    fun testQuery() {
-        val topLevel = Path("src/integrationTest/resources")
-        val result =
-            analyze(listOf(topLevel.resolve("simple.py").toFile()), topLevel, true) {
-                it.registerLanguage<PythonLanguage>()
-            }
-        val queryResult =
-            result.evalQuery(
-                File("src/integrationTest/resources/simple.query.kts"),
-                "statement1",
-                "statement1",
-            )
-        assertEquals(true, queryResult.tree.value)
-    }
-}
+abstract class SecretOperation(underlyingNode: Node? = null, override val concept: Secret) :
+    Operation(underlyingNode = underlyingNode, concept = concept), IsEncryption
