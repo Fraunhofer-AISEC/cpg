@@ -70,24 +70,30 @@ class PolicyTest {
                     TagOverlaysPass.Configuration(
                         tag =
                             tag {
+                                // Tag the class "Team" with the concept "Boundary"
                                 each<RecordDeclaration>(
                                         predicate = { node -> node.name.localName == "Team" }
                                     )
                                     .with { Boundary(underlyingNode = node) }
+                                // Tag the field "__members" with the concept "ProtectedAsset"
                                 each<FieldDeclaration>(
                                         predicate = { node -> node.name.localName == "__members" }
                                     )
                                     .with {
                                         ProtectedAsset(underlyingNode = node, scope = node.scope)
                                     }
+                                // Tag the field "manager" with the concept "Principal"
                                 each<FieldDeclaration>(
                                         predicate = { node -> node.name.localName == "manager" }
                                     )
                                     .with { Principal(underlyingNode = node) }
+                                // Tag the reference "whoami" with the concept "Context"
                                 each<Reference>(
                                         predicate = { node -> node.name.localName == "whoami" }
                                     )
                                     .with { Context(underlyingNode = node) }
+                                // Tag IfStatements that compare a Context with a Principal and that
+                                // check access to a ProtectedRessource with "CheckAccess"
                                 each<IfStatement>().with {
                                     val condition = node.condition as? BinaryOperator
                                     val lhs = condition?.lhs
@@ -119,6 +125,10 @@ class PolicyTest {
             }
         assertNotNull(result)
         val q =
+            /*
+            Run through all ReturnStatements (as those will exit the Boundary) and check if they return a ProtectedAsset.
+            If so, verify if a CheckAccess is performed before the ProtectedAsset is returned
+             */
             result.allExtended<ReturnStatement>(
                 sel = {
                     it.returnValue
@@ -146,6 +156,7 @@ class PolicyTest {
                     QueryTree<Boolean>(paths.failed.isEmpty())
                 },
             )
+        println(q.printNicely())
         assertFalse(q.value)
     }
 }
