@@ -27,10 +27,14 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.KotlinModule
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class SvelteLanguageFrontendTest {
 
@@ -66,6 +70,124 @@ class SvelteLanguageFrontendTest {
                 it.name.localName == "handleClick"
             }
         assertNotNull(funcHandleClick, "Function 'handleClick' should be declared")
+
+        // Test JSON output for cpg-wrapper-service visualizer
+        println("=== CPG STRUCTURE FOR VISUALIZER ===")
+        
+        // Print TranslationUnit info
+        println("TranslationUnit: ${tu.name}")
+        println("File: ${tu.location?.artifactLocation?.uri?.path}")
+        println("Language: ${tu.language?.name}")
+        
+        // Print all declarations with details
+        println("\n=== DECLARATIONS ===")
+        tu.declarations.forEachIndexed { index, declaration ->
+            println("$index. ${declaration::class.simpleName}: ${declaration.name.localName}")
+            println("   - Type: ${(declaration as? ValueDeclaration)?.type}")
+            println("   - Location: ${declaration.location}")
+            if (declaration is VariableDeclaration) {
+                println("   - Initial Value: ${declaration.initializer}")
+                println("   - Is Exported: ${declaration.name.localName == "name"}")
+            }
+            if (declaration is FunctionDeclaration) {
+                println("   - Parameters: ${declaration.parameters.size}")
+                println("   - Body Statements: ${(declaration.body as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Block)?.statements?.size ?: 0}")
+            }
+        }
+        
+        // Test function body details
+        println("\n=== FUNCTION BODY ANALYSIS ===")
+        val handleClickFunction = funcHandleClick
+        if (handleClickFunction != null) {
+            println("Function: ${handleClickFunction.name.localName}")
+            println("Parameters: ${handleClickFunction.parameters.size}")
+            
+            val functionBody = handleClickFunction.body
+            println("Body type: ${functionBody?.javaClass?.simpleName}")
+            
+            if (functionBody is de.fraunhofer.aisec.cpg.graph.statements.expressions.Block) {
+                println("Body statements count: ${functionBody.statements.size}")
+                functionBody.statements.forEachIndexed { index, statement ->
+                    println("  Statement $index: ${statement.javaClass.simpleName}")
+                    when (statement) {
+                        is de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression -> {
+                            println("    - Assignment: ${statement.operatorCode}")
+                            println("    - LHS: ${statement.lhs.firstOrNull()?.javaClass?.simpleName}")
+                            println("    - RHS: ${statement.rhs.firstOrNull()?.javaClass?.simpleName}")
+                        }
+                        is de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement -> {
+                            println("    - Declaration Statement")
+                            statement.declarations.forEach { decl ->
+                                println("      - Declaration: ${decl.javaClass.simpleName} - ${decl.name.localName}")
+                            }
+                        }
+                        else -> {
+                            println("    - Content: ${statement}")
+                        }
+                    }
+                }
+            } else {
+                println("Function body is not a Block: ${functionBody}")
+            }
+        }
+        
+        // Create JSON representation for the visualizer
+        val objectMapper = ObjectMapper().registerModule(KotlinModule.Builder().build())
+        
+        try {
+            // Create a simplified structure for visualization
+            val nodeInfo = mapOf(
+                "translationUnit" to mapOf(
+                    "name" to tu.name.toString(),
+                    "file" to tu.location?.artifactLocation?.uri?.path,
+                    "language" to tu.language?.name,
+                    "declarations" to tu.declarations.map { declaration ->
+                        mapOf(
+                            "type" to declaration::class.simpleName,
+                            "name" to declaration.name.localName,
+                            "nodeType" to (declaration as? ValueDeclaration)?.type.toString(),
+                            "location" to mapOf(
+                                "region" to declaration.location?.region.toString(),
+                                "artifactLocation" to declaration.location?.artifactLocation?.uri?.path
+                            ),
+                            "additionalInfo" to when (declaration) {
+                                is VariableDeclaration -> mapOf(
+                                    "initializer" to declaration.initializer?.toString(),
+                                    "isExported" to (declaration.name.localName == "name")
+                                )
+                                is FunctionDeclaration -> mapOf(
+                                    "parameters" to declaration.parameters.size,
+                                    "bodyStatements" to ((declaration.body as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Block)?.statements?.size ?: 0)
+                                )
+                                else -> emptyMap<String, Any>()
+                            }
+                        )
+                    }
+                )
+            )
+            
+            val jsonOutput = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(nodeInfo)
+            println("\n=== JSON OUTPUT FOR CPG-WRAPPER-SERVICE ===")
+            println(jsonOutput)
+            
+            // Write JSON to file for cpg-wrapper-service
+            val outputDir = java.io.File("build/test-results/svelte")
+            outputDir.mkdirs()
+            val jsonFile = java.io.File(outputDir, "SimpleComponent-cpg.json")
+            jsonFile.writeText(jsonOutput)
+            println("\n=== JSON FILE WRITTEN ===")
+            println("JSON output written to: ${jsonFile.absolutePath}")
+            
+            // Verify the JSON structure is valid and contains expected elements
+            assertTrue(jsonOutput.contains("translationUnit"), "JSON should contain translationUnit")
+            assertTrue(jsonOutput.contains("name"), "JSON should contain variable 'name'")
+            assertTrue(jsonOutput.contains("count"), "JSON should contain variable 'count'")
+            assertTrue(jsonOutput.contains("handleClick"), "JSON should contain function 'handleClick'")
+            
+        } catch (e: Exception) {
+            println("Error creating JSON output: ${e.message}")
+            e.printStackTrace()
+        }
 
         println("Basic assertions passed. Further implementation needed.")
     }

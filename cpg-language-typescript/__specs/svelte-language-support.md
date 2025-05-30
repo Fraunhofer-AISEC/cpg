@@ -167,7 +167,7 @@ In essence: The frontend can parse .svelte files and understand the top-lev
 
 ### 4. Current Status & Next Immediate Actions ⚡
 
-**Current State (January 2025):**
+**Current State (May 2025):**
 ✅ **COMPLETED:**
 - Basic Svelte parsing infrastructure is fully working
 - Script block parsing with proper CPG node generation
@@ -179,14 +179,14 @@ In essence: The frontend can parse .svelte files and understand the top-lev
 - JSON output enhancement for visualization tools
 - Property access fixes in test (resolved compilation errors)
 
-📋 **IMMEDIATE NEXT STEPS:**
-1. **Run Enhanced Test** - Execute the updated test to verify JSON output for cpg-wrapper-service
-2. **Function Body Implementation** - Complete parsing of function internals (statements, expressions)
-3. **HTML Template Parsing** - Begin implementing CPG nodes for Svelte template syntax
-4. **Integration Testing** - Test with cpg-wrapper-service visualizer to ensure graph compatibility
-
-**Ready for Commit:**
-The current implementation represents a significant milestone - basic Svelte language support is functional and can parse script blocks into proper CPG nodes. This is ready to be committed as a solid foundation for the next development phase.
+📋 **IMMEDIATE NEXT TODOS:**
+[✅] 1. **Run Enhanced Test** - Execute the updated test to verify JSON output for cpg-wrapper-service ✅ **COMPLETED**
+   - JSON file successfully generated: `build/test-results/svelte/SimpleComponent-cpg.json`
+   - Contains proper CPG structure for variables, functions, types, and locations
+   - Ready for cpg-wrapper-service integration
+[ ] 2. **Function Body Implementation** - Complete parsing of function internals (statements, expressions)
+[ ] 3. **HTML Template Parsing** - Begin implementing CPG nodes for Svelte template syntax
+[ ] 4. **Integration Testing** - Test with cpg-wrapper-service visualizer to ensure graph compatibility
 
 **Technical Debt/TODOs:**
 - Function body statement parsing (partially implemented but encountering build errors)
@@ -194,5 +194,7 @@ The current implementation represents a significant milestone - basic Svelte lan
 - CSS block parsing (not started)  
 - Svelte directives (`{#if}`, `{#each}`, `on:click`, etc.) → CPG representation
 - Enhanced type resolution beyond `unknownType()`
+
+
 
 
