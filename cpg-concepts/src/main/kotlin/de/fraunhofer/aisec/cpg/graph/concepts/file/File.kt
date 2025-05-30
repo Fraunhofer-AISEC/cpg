@@ -184,7 +184,7 @@ class OpenFile(underlyingNode: Node? = null, concept: File) :
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param concept The corresponding [File] node.
  */
-class ReadFile(underlyingNode: Node? = null, concept: File) :
+open class ReadFile(underlyingNode: Node? = null, concept: File) :
     FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {
     override fun setDFG() {
         this.file.nextDFG += this
