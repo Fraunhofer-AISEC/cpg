@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
@@ -75,4 +76,8 @@ class LabelStatement : Statement(), StatementHolder {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), label)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.prevEOG
+    }
 }

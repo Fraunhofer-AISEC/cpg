@@ -148,12 +148,6 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
         return this.input == expression
     }
 
-    override fun getPrevEOGandElements(): Pair<MutableList<Node>, List<Node>> {
-        val prev = this.input.prevEOG
-        val elements = listOf(this.input, this)
-        return Pair(prev, elements)
-    }
-
     override fun equals(other: Any?): Boolean {
         if (this === other) {
             return true
@@ -179,5 +173,9 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
     companion object {
         const val OPERATOR_POSTFIX_INCREMENT = "++"
         const val OPERATOR_POSTFIX_DECREMENT = "--"
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.input.getStartingPrevEOG()
     }
 }
