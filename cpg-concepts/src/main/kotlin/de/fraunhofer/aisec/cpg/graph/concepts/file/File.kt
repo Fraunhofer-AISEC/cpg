@@ -165,7 +165,7 @@ class CloseFile(underlyingNode: Node? = null, concept: File) :
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param concept The corresponding [File] node.
  */
-class DeleteFile(underlyingNode: Node? = null, concept: File) :
+open class DeleteFile(underlyingNode: Node? = null, concept: File) :
     FileOperation(underlyingNode = underlyingNode, file = concept), IsFile
 
 /**
