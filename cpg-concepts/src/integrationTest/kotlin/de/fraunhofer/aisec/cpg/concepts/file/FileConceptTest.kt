@@ -645,8 +645,8 @@ class FileConceptTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val file = result.conceptNodes.filterIsInstance<File>().singleOrNull()
-        assertNotNull(file)
+        val file = result.conceptNodes.singleOrNull { it is File && it.fileName.contains("foo") }
+        assertIs<File>(file)
 
         assertEquals(
             FileTempFileStatus.TEMP_FILE,
@@ -675,7 +675,10 @@ class FileConceptTest : BaseTest() {
         // assertEquals(2, file.size, "Expected to find 2 files. One for the tempfile and one for
         // the normal file.")
 
-        val tempFile = file.singleOrNull { it.isTempFile == FileTempFileStatus.TEMP_FILE }
+        val tempFile =
+            file.singleOrNull {
+                it.isTempFile == FileTempFileStatus.TEMP_FILE && it.fileName.contains("foo")
+            }
         assertNotNull(tempFile)
 
         val notTempFile = file.singleOrNull { it.isTempFile == FileTempFileStatus.NOT_A_TEMP_FILE }
@@ -692,6 +695,58 @@ class FileConceptTest : BaseTest() {
         assertTrue(
             dataFlow(startNode = barLiteral, predicate = { it === notTempFile }).value,
             "Expected to find a dataflow from the literal \"bar\" to the non-temp file.",
+        )
+    }
+
+    @Test
+    fun testMkstempMkdtemp() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("file_mkstemp_mkdtemp.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        assertNotNull(result)
+
+        val files = result.conceptNodes.filterIsInstance<File>()
+
+        val mkstempFile =
+            files.singleOrNull {
+                it.isTempFile == FileTempFileStatus.TEMP_FILE &&
+                    it.fileName.contains("tempfile.mkstemp")
+            }
+        assertNotNull(mkstempFile)
+
+        val stuffLiteral =
+            result.literals.singleOrNull { it.value is String && it.value == "stuff" }
+        assertNotNull(stuffLiteral)
+
+        assertTrue(
+            dataFlow(startNode = stuffLiteral, predicate = { it === mkstempFile }).value,
+            "Expected to find a dataflow from the literal \"stuff\" to the mkstemp file.",
+        )
+
+        val mkdtempFile =
+            files.singleOrNull {
+                it.isTempFile == FileTempFileStatus.TEMP_FILE &&
+                    it.fileName.contains("tempfile.mkdtemp") &&
+                    it.fileName.contains("foobarbaz")
+            }
+        assertNotNull(mkdtempFile)
+
+        val helloWorldLiteral =
+            result.literals.singleOrNull { it.value is String && it.value == "hello world!" }
+        assertNotNull(helloWorldLiteral)
+
+        assertTrue(
+            dataFlow(startNode = helloWorldLiteral, predicate = { it === mkdtempFile }).value,
+            "Expected to find a dataflow from the literal \"hello world!\" to the mkdtempFile file.",
         )
     }
 }

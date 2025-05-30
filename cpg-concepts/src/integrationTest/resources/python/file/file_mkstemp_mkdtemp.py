@@ -6,12 +6,8 @@ fd, path = tempfile.mkstemp()
 tmp = os.fdopen(fd, 'w')
 tmp.write('stuff')
 
-os.remove(path)
 
-tmpdir = tempfile.mkdtemp()
-predictable_filename = 'foobarbaz'
-
-path = os.path.join(tmpdir, predictable_filename)
+path = os.path.join(tempfile.mkdtemp(), 'foobarbaz')
 
 tmp = open(path, "w")
-tmp.write("secrets!")
+tmp.write("hello world!")

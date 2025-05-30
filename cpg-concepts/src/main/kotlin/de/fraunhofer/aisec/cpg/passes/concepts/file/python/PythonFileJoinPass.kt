@@ -104,6 +104,9 @@ class PythonFileJoinPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         val combinedFileName = mutableListOf<String>()
         var tempFileStatus = FileTempFileStatus.NOT_A_TEMP_FILE
         callExpression.arguments.forEach { argument ->
+            /*
+             * TODO: We should follow the DFG paths here.
+             */
             if (argument.overlays.any { it is FileLikeObject }) {
                 combinedFileName +=
                     argument.overlays.filterIsInstance<FileLikeObject>().joinToString {
