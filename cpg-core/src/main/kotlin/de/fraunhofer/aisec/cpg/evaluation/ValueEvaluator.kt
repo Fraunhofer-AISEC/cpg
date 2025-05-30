@@ -82,8 +82,14 @@ open class ValueEvaluator(
     /**
      * Tries to evaluate this node and returns the result as the specified type [T]. If the
      * evaluation fails, the result is "null".
+     *
+     * @return The result of the evaluation. If the evaluation fails, the result is `null`.
      */
     inline fun <reified T> evaluateAs(node: Node?): T? {
+        if (node == null) return null // Nothing to do, return null right away
+        clearPath() // clear the path before evaluating or we may start with old data if re-using
+        // the ValueEvaluator object
+
         val result = evaluateInternal(node, 0)
         return if (result !is T) {
             Util.errorWithFileLocation(

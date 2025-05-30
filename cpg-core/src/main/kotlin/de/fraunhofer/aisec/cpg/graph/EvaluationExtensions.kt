@@ -47,7 +47,7 @@ val NewArrayExpression.capacity: Int
  * @param this The [CallExpression] to analyze.
  * @param name Optionally: the [CallExpression.arguments] name.
  * @param position Optionally: the [CallExpression.arguments] position.
- * @return The evaluated result (of type [T]) or `null`.
+ * @return The evaluated result (of type [T]) or `null` on failure.
  */
 inline fun <reified T> CallExpression.argumentValueByNameOrPosition(
     name: String? = null,

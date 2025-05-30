@@ -29,8 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import java.util.Objects
-import kotlin.collections.plusAssign
+import java.util.*
 
 /**
  * This interface indicates that the corresponding node is connected to a file concept or operation.
@@ -59,22 +58,60 @@ enum class FileAccessModeFlags(val value: Long) : IsFile {
     O_WRONLY(1),
 }
 
+/**
+ * Represents the status of a file. This is used to determine if a file is a temporary file or not.
+ */
+enum class FileTempFileStatus {
+    TEMP_FILE,
+    NOT_A_TEMP_FILE,
+    UNKNOWN,
+}
+
 /** The bit-mask to be used to get the [FileAccessModeFlags] from an entire flags value. */
 const val O_ACCMODE_MODE_MASK = 3L
+
+/**
+ * This is the base class for all file-like objects. It provides the common properties and methods
+ * that are shared by all file-like objects.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param fileName The name of the file e.g. `foo/bar/example.txt`
+ * @param isTempFile Whether this file is a temporary file or not.
+ */
+abstract class FileLikeObject(
+    underlyingNode: Node?,
+    open val fileName: String,
+    open var isTempFile: FileTempFileStatus,
+) : Concept(underlyingNode = underlyingNode), IsFile {
+    override fun equals(other: Any?): Boolean {
+        return other is FileLikeObject &&
+            super.equals(other) &&
+            other.fileName == this.fileName &&
+            other.isTempFile == this.isTempFile
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), fileName, isTempFile)
+}
 
 /**
  * Represents a file.
  *
  * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param fileName The name of the file e.g. `foo/bar/example.txt`
+ * @param isTempFile Whether this file is a temporary file or not.
+ * @param deleteOnClose Whether this file will be automatically deleted when closed.
  */
-open class File(underlyingNode: Node? = null, val fileName: String) :
-    Concept(underlyingNode = underlyingNode), IsFile {
+open class File(
+    underlyingNode: Node? = null,
+    fileName: String,
+    isTempFile: FileTempFileStatus = FileTempFileStatus.UNKNOWN,
+    var deleteOnClose: Boolean = false,
+) : FileLikeObject(underlyingNode, fileName, isTempFile), IsFile {
     override fun equals(other: Any?): Boolean {
-        return other is File && super.equals(other) && other.fileName == this.fileName
+        return other is File && super.equals(other) && other.deleteOnClose == this.deleteOnClose
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), fileName)
+    override fun hashCode() = Objects.hash(super.hashCode(), deleteOnClose)
 }
 
 /**
@@ -120,7 +157,7 @@ open class SetFileMask(underlyingNode: Node? = null, concept: File, val mask: Lo
  * @param concept The corresponding [File] node.
  */
 open class CloseFile(underlyingNode: Node? = null, concept: File) :
-    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {}
+    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile
 
 /**
  * Represents deleting a file.
@@ -129,7 +166,7 @@ open class CloseFile(underlyingNode: Node? = null, concept: File) :
  * @param concept The corresponding [File] node.
  */
 open class DeleteFile(underlyingNode: Node? = null, concept: File) :
-    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {}
+    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile
 
 /**
  * Represents opening a file. This is usually done with the same underlying node the [concept] field
@@ -139,7 +176,7 @@ open class DeleteFile(underlyingNode: Node? = null, concept: File) :
  * @param concept The corresponding [File] node.
  */
 open class OpenFile(underlyingNode: Node? = null, concept: File) :
-    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {}
+    FileOperation(underlyingNode = underlyingNode, file = concept), IsFile
 
 /**
  * Represents reading from a file.
@@ -193,3 +230,16 @@ abstract class FileOperation(underlyingNode: Node? = null, file: File) :
     val file: File
         get() = this.concept as File
 }
+
+/**
+ * This class represents a file handle.
+ *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
+ * @param fileName The name of the file this handle is associated with.
+ * @param isTempFile Whether this file handle is a temporary file or not.
+ */
+open class FileHandle(
+    underlyingNode: Node? = null,
+    fileName: String,
+    isTempFile: FileTempFileStatus = FileTempFileStatus.UNKNOWN,
+) : FileLikeObject(underlyingNode = underlyingNode, fileName, isTempFile), IsFile
