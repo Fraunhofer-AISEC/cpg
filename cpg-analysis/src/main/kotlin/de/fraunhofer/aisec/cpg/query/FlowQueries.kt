@@ -268,7 +268,7 @@ data class NodeWithAssumption(val node: Node) : HasAssumptions {
     override val assumptions: MutableSet<Assumption> = mutableSetOf()
 
     override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + node.assumptions
+        return super.collectAssumptions() + node.collectAssumptions()
     }
 }
 
@@ -281,7 +281,7 @@ data class NodeCollectionWithAssumption(val nodes: Collection<Node>) : HasAssump
     override val assumptions: MutableSet<Assumption> = mutableSetOf()
 
     override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + nodes.flatMap { it.assumptions }
+        return super.collectAssumptions() + nodes.flatMap { it.collectAssumptions() }
     }
 }
 

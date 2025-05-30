@@ -286,6 +286,10 @@ abstract class Node() :
         Overlays(this, mirrorProperty = OverlayNode::underlyingNodeEdge, outgoing = true)
     var overlays by unwrapping(Node::overlayEdges)
 
+    override fun collectAssumptions(): Set<Assumption> {
+        return super.collectAssumptions() + (component?.collectAssumptions() ?: emptySet())
+    }
+
     /**
      * If a node should be removed from the graph, just removing it from the AST is not enough (see
      * issue #60). It will most probably be referenced somewhere via DFG or EOG edges. Thus, if it

@@ -73,9 +73,9 @@ fun QueryTree<Boolean>.decide(): Decision {
     // The assumptions need to be collected, as they are located at the respective construct they are placed on and only
     // forwarded on evaluation. Accepting or rejecting an assumption has a different impact on query evaluation depending
     // on the sup-query tree the assumption is placed on.
-    val assumptions = this.collectAssumptions()
-    // Todo kw: Include global or component wide assumptions?
-    this@TranslationResult.collectAssumptions()
+    // Global assumptions are also included below, component wide assumptions are included with collectAssumptions() in
+    // the individual nodes.
+    val assumptions = this.collectAssumptions() + this@TranslationResult.collectAssumptions()
 
 
     assumptions.forEach {
