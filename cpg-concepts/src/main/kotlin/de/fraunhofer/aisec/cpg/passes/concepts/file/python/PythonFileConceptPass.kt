@@ -46,6 +46,7 @@ import de.fraunhofer.aisec.cpg.passes.concepts.getOverlaysByPrevDFG
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 
+// TODO: move file creation before join pass
 /**
  * This pass implements the creating of [Concept] and [Operation] nodes for Python file
  * manipulation. Currently, this pass supports the builtin `open` and `os.open` with the
@@ -143,35 +144,26 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
     override fun handleCallExpression(
         lattice: NodeToOverlayState,
         state: NodeToOverlayStateElement,
-        callExpression: CallExpression,
+        node: CallExpression,
     ): Collection<OverlayNode> {
         // Since we cannot directly depend on the Python frontend, we have to check the language
         // here based on the node's language.
-        if (callExpression.language.name.localName != "PythonLanguage") {
+        if (node.language.name.localName != "PythonLanguage") {
             return emptyList()
         }
 
-        return when (callExpression.callee.name.toString()) {
+        return when (node.callee.name.toString()) {
             "open" -> {
-                handleOpen(lattice, state, callExpression = callExpression)
+                handleOpen(lattice, state, callExpression = node)
             }
             "os.open" -> {
-                handleOsOpen(lattice, state, callExpression)
+                handleOsOpen(lattice, state, node)
             }
             "os.chmod" -> {
-                handleOsChmod(lattice, state, callExpression)
+                handleOsChmod(lattice, state, node)
             }
             "os.remove" -> {
-                handleOsRemove(lattice, state, callExpression)
-            }
-            "tempfile.TemporaryFile",
-            "tempfile.NamedTemporaryFile"
-            /* TODO filedescriptor support... "tempfile.mkstemp" */ -> {
-                handleTempFile(callExpression)
-            }
-            "tempfile.gettempdir" -> {
-                emptyList()
-                /** see [PythonTempFilePass] */
+                handleOsRemove(lattice, state, node)
             }
             else -> {
                 emptyList()
@@ -192,40 +184,6 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                 null
             }
         return listOfNotNull(fileClose, fileDelete)
-    }
-
-    private fun handleTempFile(callExpression: CallExpression): Collection<OverlayNode> {
-        val deleteOnClose =
-            when (callExpression.callee.name.toString()) {
-                "tempfile.TemporaryFile" -> {
-                    true
-                }
-                "tempfile.NamedTemporaryFile" -> {
-                    callExpression.argumentValueByNameOrPosition<Boolean>(
-                        name = "delete",
-                        position = 8,
-                    ) ?: true
-                }
-                else -> false
-            }
-
-        val file =
-            newFile(
-                    underlyingNode = callExpression,
-                    fileName = "tempfile" + callExpression.id.toString(),
-                    connect = false,
-                ) // TODO: id to model random names
-                .apply { this.isTempFile = FileTempFileStatus.TEMP_FILE }
-                .apply { this.deleteOnClose = deleteOnClose }
-        val permissions =
-            newFileSetMask(
-                underlyingNode = callExpression,
-                file = file,
-                mask = 384 /* 0600 octet to decimal */,
-                connect = false,
-            )
-        val openTemp = newFileOpen(underlyingNode = callExpression, file = file, connect = false)
-        return listOf(file, permissions, openTemp)
     }
 
     /** TODO */
@@ -356,12 +314,8 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
      *
      * @param callExpression The [CallExpression] triggering the call lookup. It is used as a basis
      *   ([File.underlyingNode]) if a new file has to be created.
-     * @param argumentName The name of the argument to be used for the file name in the
-     *   [callExpression].
      * @param argumentName The name of the argument which holds the name/path of the file in the
      *   given [CallExpression]'s [CallExpression.arguments] if named arguments are used.
-     * @param argumentIndex The index of the argument which holds the name/path of the file in the
-     *   given [CallExpression]'s [CallExpression.arguments] if no named arguments are used.
      * @param lattice The [NodeToOverlayState] which the [EOGConceptPass] operates on. It is used to
      *   add the [File].
      * @param state The [NodeToOverlayStateElement] which is used to store the [File]. If a new

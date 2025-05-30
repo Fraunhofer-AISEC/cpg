@@ -114,8 +114,10 @@ class PythonFileJoinPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                     tempFileStatus = FileTempFileStatus.TEMP_FILE
                 }
                 argument.overlays.filterIsInstance<File>().forEach { file ->
-                    log.debug("Disconnecting file from graph: {}", file.fileName)
-                    file.disconnectFromGraph()
+                    // not disconnectiong from graph because the file exists, even if we only use it
+                    // in the "joined from"
+                    // log.debug("Disconnecting file from graph: {}", file.fileName)
+                    // file.disconnectFromGraph()
                 }
             } else if (argument is Literal<*>) {
                 val evaluatedArg = argument.value.toString()

@@ -27,8 +27,11 @@ package de.fraunhofer.aisec.cpg.passes.concepts.file.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
+import de.fraunhofer.aisec.cpg.graph.argumentValueByNameOrPosition
 import de.fraunhofer.aisec.cpg.graph.concepts.file.FileTempFileStatus
 import de.fraunhofer.aisec.cpg.graph.concepts.file.newFile
+import de.fraunhofer.aisec.cpg.graph.concepts.file.newFileOpen
+import de.fraunhofer.aisec.cpg.graph.concepts.file.newFileSetMask
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.passes.DFGPass
@@ -66,6 +69,12 @@ class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             "tempfile.gettempdir" -> {
                 handleGetTempDir(node)
             }
+            "tempfile.TemporaryFile",
+            "tempfile.NamedTemporaryFile"
+            /* TODO filedescriptor support... "tempfile.mkstemp" */ -> {
+                handleTempFile(node)
+            }
+
             else -> {
                 emptyList()
             }
@@ -85,6 +94,11 @@ class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             "tempfile.gettempdir" -> {
                 handleGetTempDir(node)
             }
+            "tempfile.TemporaryFile",
+            "tempfile.NamedTemporaryFile"
+            /* TODO filedescriptor support... "tempfile.mkstemp" */ -> {
+                handleTempFile(node)
+            }
             else -> {
                 emptyList()
             }
@@ -101,5 +115,39 @@ class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                 )
                 .apply { this.isTempFile = FileTempFileStatus.TEMP_FILE }
         )
+    }
+
+    private fun handleTempFile(callExpression: CallExpression): Collection<OverlayNode> {
+        val deleteOnClose =
+            when (callExpression.callee.name.toString()) {
+                "tempfile.TemporaryFile" -> {
+                    true
+                }
+                "tempfile.NamedTemporaryFile" -> {
+                    callExpression.argumentValueByNameOrPosition<Boolean>(
+                        name = "delete",
+                        position = 8,
+                    ) ?: true
+                }
+                else -> false
+            }
+
+        val file =
+            newFile(
+                    underlyingNode = callExpression,
+                    fileName = "tempfile" + callExpression.id.toString(),
+                    connect = false,
+                ) // TODO: id to model random names
+                .apply { this.isTempFile = FileTempFileStatus.TEMP_FILE }
+                .apply { this.deleteOnClose = deleteOnClose }
+        val permissions =
+            newFileSetMask(
+                underlyingNode = callExpression,
+                file = file,
+                mask = 384 /* 0600 octet to decimal */,
+                connect = false,
+            )
+        val openTemp = newFileOpen(underlyingNode = callExpression, file = file, connect = false)
+        return listOf(file, permissions, openTemp)
     }
 }
