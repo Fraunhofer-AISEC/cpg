@@ -355,7 +355,7 @@ abstract class Node() :
         return Objects.hash(name, location, this.javaClass)
     }
 
-    /** Returns a Pair with the prevEOG outside the ArgumentHolder. */
+    /** Returns the starting point of the EOG outside this node and its children. */
     abstract fun getStartingPrevEOG(): Collection<Node>
 
     companion object {

@@ -40,8 +40,7 @@ class EnumConstantDeclaration : ValueDeclaration(), HasInitializer {
     @Relationship("INITIALIZER") var initializerEdge = astOptionalEdgeOf<Expression>()
     override var initializer by unwrapping(EnumConstantDeclaration::initializerEdge)
 
-    /** Returns a Pair with the prevEOG outside the ArgumentHolder. */
     override fun getStartingPrevEOG(): Collection<Node> {
-        return this.initializer?.getStartingPrevEOG() ?: setOf()
+        return initializer?.getStartingPrevEOG() ?: setOf()
     }
 }

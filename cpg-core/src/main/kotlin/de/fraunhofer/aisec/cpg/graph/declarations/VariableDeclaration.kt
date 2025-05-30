@@ -143,4 +143,8 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
     override fun hashCode(): Int {
         return super.hashCode()
     }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.prevEOG
+    }
 }

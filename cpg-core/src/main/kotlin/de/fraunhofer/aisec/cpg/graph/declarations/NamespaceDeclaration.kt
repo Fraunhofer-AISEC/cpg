@@ -87,4 +87,8 @@ class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder, 
 
             return list
         }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return setOf()
+    }
 }

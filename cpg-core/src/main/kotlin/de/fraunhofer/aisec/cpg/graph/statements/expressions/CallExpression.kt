@@ -301,4 +301,8 @@ open class CallExpression :
 
     override val secondaryTypes: List<Type>
         get() = signature
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.callee.getStartingPrevEOG()
+    }
 }
