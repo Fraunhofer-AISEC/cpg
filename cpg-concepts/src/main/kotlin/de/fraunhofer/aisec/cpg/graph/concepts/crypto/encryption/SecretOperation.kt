@@ -23,9 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
+package de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
-open class GetSecret(underlyingNode: Node? = null, concept: Secret) :
-    SecretOperation(underlyingNode = underlyingNode, concept = concept)
+abstract class SecretOperation(underlyingNode: Node? = null, override val concept: Secret) :
+    Operation(underlyingNode = underlyingNode, concept = concept), IsEncryption

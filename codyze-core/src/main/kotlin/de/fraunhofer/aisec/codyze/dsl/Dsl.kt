@@ -28,13 +28,12 @@
 package de.fraunhofer.aisec.codyze.dsl
 
 import de.fraunhofer.aisec.codyze.AnalysisProject
+import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.codyze.CodyzeScript
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.graph.Component
-import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
 import de.fraunhofer.aisec.cpg.passes.concepts.TagOverlaysPass
 import de.fraunhofer.aisec.cpg.passes.concepts.TaggingContext
 import de.fraunhofer.aisec.cpg.query.*
@@ -44,10 +43,11 @@ import de.fraunhofer.aisec.cpg.query.NotYetEvaluated
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.decide
 import de.fraunhofer.aisec.cpg.query.toQueryTree
+import io.github.detekt.sarif4k.ReportingDescriptor
+import io.github.detekt.sarif4k.Result
 import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.Path
-import kotlin.uuid.Uuid
 
 @DslMarker annotation class CodyzeDsl
 
@@ -64,21 +64,73 @@ class IncludeBuilder {
     val includes: MutableMap<IncludeCategory, String> = mutableMapOf()
 }
 
+/**
+ * Represents the default category for requirements. This is used when no specific category is
+ * provided for a requirement. This category is created automatically if
+ * [RequirementsBuilder.requirement] is called.
+ */
+val DefaultCategory =
+    RequirementCategoryBuilder("DEFAULT").apply {
+        name = "Default Requirements Category"
+        description =
+            "This is the default category for requirements that do not fit into any other category."
+    }
+
 /** Represents a builder for a list of all requirements of the TOE. */
 class RequirementsBuilder {
-    val requirements = mutableMapOf<String, (TranslationResult) -> Decision>()
+    var description: String? = null
+
+    internal val categoryBuilders = mutableMapOf<String, RequirementCategoryBuilder>()
+}
+
+/** Represents a builder for a single category of requirements of the evaluation project. */
+class RequirementCategoryBuilder(
+    /** The unique identifier of the category. */
+    var id: String
+) {
+    /** An optional human-readable name of the requirement. This is used for display purposes. */
+    var name: String? = id
+
+    /** A human-readable description of the category. This is used for display purposes. */
+    var description: String? = null
+
+    /** The requirements in this category. */
+    internal val requirements = mutableMapOf<String, RequirementBuilder>()
+}
+
+/** Represents a builder for a single requirement of the evaluation project. */
+class RequirementBuilder(
+    /** The unique identifier of the requirement. This is used to reference the requirement. */
+    var id: String
+) {
+    /** An optional human-readable name of the requirement. This is used for display purposes. */
+    var name: String? = id
+
+    /**
+     * An optional human-readable description of the requirement. This is used for display purposes.
+     */
+    var description: String? = null
+
+    /**
+     * A function that returns a [Decision] that evaluates whether the requirement is fulfilled.
+     * This function is expected to be used in the context of a [TranslationResult].
+     */
+    var fulfilledBy: TranslationResult.() -> Decision = { NotYetEvaluated.toQueryTree() }
 }
 
 /** Represents a builder for a list of all assumptions of the evaluation project. */
 class AssumptionsBuilder {
     internal val decisionBuilder = DecisionBuilder()
 
-    class DecisionBuilder
+    class DecisionBuilder {
+        val assumptionStatusFunctions =
+            mutableMapOf<String, TranslationResult.() -> AssumptionStatus>()
+    }
 }
 
 /** Represents a builder for manual assessments of requirements. */
 class ManualAssessmentBuilder {
-    internal val assessments = mutableMapOf<String, () -> Decision>()
+    internal val assessments = mutableMapOf<String, TranslationResult.() -> Decision>()
 }
 
 /** Represents a builder for tool metadata and configuration. */
@@ -155,10 +207,25 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
     internal val manualAssessmentBuilder = ManualAssessmentBuilder()
     internal var taggingCtx = TaggingContext()
 
+    /**
+     * Returns a list of all requirements in all categories of the project. This is useful to
+     * collect all requirements in a single list, for example, to generate reports or to evaluate
+     * them.
+     */
+    val allRequirements: Map<String, RequirementBuilder>
+        get() {
+            return requirementsBuilder.categoryBuilders
+                .map { it.value }
+                .flatMap { it.requirements.entries }
+                .associate { it.key to it.value }
+        }
+
     /** Builds an [AnalysisProject] out of the current state of the builder. */
     fun build(
+        postProcess:
+            (AnalysisProject.(AnalysisResult) -> Pair<List<ReportingDescriptor>, List<Result>>)?,
         configModifier: ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
-            null
+            null,
     ): AnalysisProject {
         val name = name
 
@@ -215,11 +282,20 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
             TagOverlaysPass.Configuration(tag = taggingCtx)
         )
 
+        // Collect all requirements functions from all categories
+        val requirementFunctions =
+            requirementsBuilder.categoryBuilders
+                .map { it.value }
+                .flatMap { it.requirements.map { rq -> Pair(rq.key, rq.value.fulfilledBy) } }
+                .associate { it }
+
         return AnalysisProject(
+            builder = this,
             name,
             projectDir = projectDir,
-            requirementFunctions = requirementsBuilder.requirements,
+            requirementFunctions = requirementFunctions,
             config = configBuilder.build(),
+            postProcess = postProcess,
         )
     }
 }
@@ -289,45 +365,96 @@ fun ModulesBuilder.module(name: String, block: ModuleBuilder.() -> Unit) {
     modules += builder
 }
 
-sealed class RequirementReturnType
+sealed class FulfilledByReturnType
 
-object RequirementDecision : RequirementReturnType()
+object FulfilledByDecision : FulfilledByReturnType()
 
-object RequirementQueryTree : RequirementReturnType()
+object FulfilledByQueryTree : FulfilledByReturnType()
 
-/** Describes a single requirement of the TOE by a function that returns a [Decision]. */
+/**
+ * Generates a default identifier for the next requirement in the format
+ * `RQ-<category_id>-<number>`,
+ */
+fun RequirementCategoryBuilder.nextRQ(): String {
+    // Generate a default identifier based on the current size of the requirements map
+    return "RQ-${id}-${String.format("%03d", requirements.size + 1)}"
+}
+
+/**
+ * Describes a single requirement of the TOE (in the [DefaultCategory]) by a function that returns a
+ * [Decision].
+ *
+ * An [id] can be provided to identify the requirement. If no [id] is provided, a default identifier
+ * is generated based on the current size of the requirements map in the format specified by
+ * [nextRQ].
+ */
+@CodyzeDsl
+fun RequirementsBuilder.requirement(id: String? = null, block: RequirementBuilder.() -> Unit) {
+    // Check, if the default category exists, if not, create it
+    val defaultCategory = categoryBuilders.getOrPut(DefaultCategory.id) { DefaultCategory }
+
+    return defaultCategory.requirement(id, block)
+}
+
+/**
+ * Describes a single requirement category of the TOE.
+ *
+ * An [id] is needed to identify the category. This is used to reference the category in creating
+ * requirements using [nextRQ]
+ */
+@CodyzeDsl
+fun RequirementsBuilder.category(id: String, block: RequirementCategoryBuilder.() -> Unit) {
+    categoryBuilders[id] = RequirementCategoryBuilder(id).apply(block)
+}
+
+/**
+ * Describes a single requirement of the TOE (within the current requirement category) by a function
+ * that returns a [Decision].
+ *
+ * An [id] can be provided to identify the requirement. If no [id] is provided, a default identifier
+ * is generated based on the current size of the requirements map in the format specified by
+ * [nextRQ].
+ */
+@CodyzeDsl
+fun RequirementCategoryBuilder.requirement(
+    id: String? = null,
+    block: RequirementBuilder.() -> Unit,
+) {
+    val id = id ?: nextRQ()
+    val builder = RequirementBuilder(id)
+    block(builder)
+
+    requirements[id] = builder
+}
+
 @CodyzeDsl
 @OverloadResolutionByLambdaReturnType
-fun RequirementsBuilder.requirement(
-    name: String,
-    query: (TranslationResult) -> Decision,
-): RequirementDecision {
-    requirements[name] = query
-    return RequirementDecision
+fun RequirementBuilder.fulfilledBy(query: TranslationResult.() -> Decision): FulfilledByDecision {
+    fulfilledBy = query
+    return FulfilledByDecision
 }
 
 /**
  * Describes a single requirement of the TOE by a function that returns a [QueryTree] of [Boolean].
  */
 @CodyzeDsl
-fun RequirementsBuilder.requirement(
-    name: String,
-    query: (TranslationResult) -> QueryTree<Boolean>,
-): RequirementQueryTree {
-    requirements[name] = { query(it).decide() }
-    return RequirementQueryTree
+fun RequirementBuilder.fulfilledBy(
+    query: TranslationResult.() -> QueryTree<Boolean>
+): FulfilledByQueryTree {
+    fulfilledBy = { query().decide() }
+    return FulfilledByQueryTree
 }
 
 /** Describes that the requirement had to be checked manually. */
-context(ProjectBuilder)
+context(ProjectBuilder, RequirementsBuilder, TranslationResult)
 @CodyzeDsl
-fun RequirementsBuilder.manualAssessmentOf(id: String): Decision {
+fun manualAssessmentOf(id: String): Decision {
     val manualAssessment = this@ProjectBuilder.manualAssessmentBuilder.assessments[id]
     if (manualAssessment == null) {
         return NotYetEvaluated.toQueryTree()
     }
 
-    return manualAssessment()
+    return manualAssessment(this@TranslationResult)
 }
 
 /** Describes the assumptions which have been handled and assessed. */
@@ -358,7 +485,7 @@ fun AssumptionsBuilder.decisions(block: AssumptionsBuilder.DecisionBuilder.() ->
  */
 @CodyzeDsl
 fun AssumptionsBuilder.DecisionBuilder.accept(uuid: String) {
-    parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Accepted)
+    assumptionStatusFunctions += uuid to { AssumptionStatus.Accepted }
 }
 
 /**
@@ -371,7 +498,7 @@ fun AssumptionsBuilder.DecisionBuilder.accept(uuid: String) {
  */
 @CodyzeDsl
 fun AssumptionsBuilder.DecisionBuilder.reject(uuid: String) {
-    parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Rejected)
+    assumptionStatusFunctions += uuid to { AssumptionStatus.Rejected }
 }
 
 /**
@@ -383,7 +510,7 @@ fun AssumptionsBuilder.DecisionBuilder.reject(uuid: String) {
  */
 @CodyzeDsl
 fun AssumptionsBuilder.DecisionBuilder.undecided(uuid: String) {
-    parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Undecided)
+    assumptionStatusFunctions += uuid to { AssumptionStatus.Undecided }
 }
 
 /**
@@ -396,7 +523,7 @@ fun AssumptionsBuilder.DecisionBuilder.undecided(uuid: String) {
  */
 @CodyzeDsl
 fun AssumptionsBuilder.DecisionBuilder.ignore(uuid: String) {
-    parseUuidAndAnnotateAssumptions(uuid, AssumptionStatus.Ignored)
+    assumptionStatusFunctions += uuid to { AssumptionStatus.Ignored }
 }
 
 /** Describes the manual assessments. */
@@ -421,7 +548,7 @@ object OfBoolean : OfReturnType()
  */
 @CodyzeDsl
 @OverloadResolutionByLambdaReturnType
-fun ManualAssessmentBuilder.of(id: String, block: () -> Decision): OfDecision {
+fun ManualAssessmentBuilder.of(id: String, block: TranslationResult.() -> Decision): OfDecision {
     assessments[id] = block
     return OfDecision
 }
@@ -430,7 +557,10 @@ fun ManualAssessmentBuilder.of(id: String, block: () -> Decision): OfDecision {
  * Describes a manual assessment of a requirement with the given [id]. The [block] is expected to
  * return a [DecisionState] that evaluates to [Succeeded] if the requirement is fulfilled.
  */
-fun ManualAssessmentBuilder.of(id: String, block: () -> DecisionState): OfDecisionState {
+fun ManualAssessmentBuilder.of(
+    id: String,
+    block: TranslationResult.() -> DecisionState,
+): OfDecisionState {
     assessments[id] = { block().toQueryTree() }
     return OfDecisionState
 }
@@ -440,7 +570,10 @@ fun ManualAssessmentBuilder.of(id: String, block: () -> DecisionState): OfDecisi
  * return a [QueryTree] that evaluates to `true` if the requirement is fulfilled.
  */
 @CodyzeDsl
-fun ManualAssessmentBuilder.of(id: String, block: () -> QueryTree<Boolean>): OfQueryTree {
+fun ManualAssessmentBuilder.of(
+    id: String,
+    block: TranslationResult.() -> QueryTree<Boolean>,
+): OfQueryTree {
     assessments[id] = { block().decide() }
     return OfQueryTree
 }
@@ -450,18 +583,7 @@ fun ManualAssessmentBuilder.of(id: String, block: () -> QueryTree<Boolean>): OfQ
  * return a [Boolean] that evaluates to `true` if the requirement is fulfilled.
  */
 @CodyzeDsl
-fun ManualAssessmentBuilder.of(id: String, block: () -> Boolean): OfBoolean {
+fun ManualAssessmentBuilder.of(id: String, block: TranslationResult.() -> Boolean): OfBoolean {
     assessments[id] = { block().toQueryTree().decide() }
     return OfBoolean
-}
-
-private fun parseUuidAndAnnotateAssumptions(uuid: String, status: AssumptionStatus) {
-    val parsedUuid = Uuid.parse(uuid)
-    // TODO: Acutally get the TranslationResult
-    val result: TranslationResult? = null
-    // TODO: Do we find all assumptions like this (i.e., also those related to overlays of a node
-    // and edges)?
-    result
-        .allChildrenWithOverlays<Assumption> { it.id == parsedUuid }
-        .forEach { assumption -> assumption.status = status }
 }
