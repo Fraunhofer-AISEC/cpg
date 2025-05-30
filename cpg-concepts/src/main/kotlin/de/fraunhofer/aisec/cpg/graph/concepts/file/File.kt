@@ -121,7 +121,7 @@ class File(
  * @param concept The corresponding [File] node.
  * @param flags A set of file flags (see [FileAccessModeFlags]).
  */
-class SetFileFlags(
+open class SetFileFlags(
     underlyingNode: Node? = null,
     concept: File,
     val flags: Set<FileAccessModeFlags>,
