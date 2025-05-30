@@ -265,10 +265,15 @@ fun dataFlowWithValidator(
  * computing this node as the result of a function.
  */
 data class NodeWithAssumption(val node: Node) : HasAssumptions {
+    /** See [HasAssumptions.assumptions]. */
     override val assumptions: MutableSet<Assumption> = mutableSetOf()
 
+    /**
+     * Adds the [assumptions] of the current [NodeCollectionWithAssumption] and the assumptions of
+     * the node that is the result. See [HasAssumptions.collectAssumptions].
+     */
     override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + node.assumptions
+        return super.collectAssumptions() + node.collectAssumptions()
     }
 }
 
@@ -278,10 +283,15 @@ data class NodeWithAssumption(val node: Node) : HasAssumptions {
  * taken when computing this collection of nodes as the result of a function.
  */
 data class NodeCollectionWithAssumption(val nodes: Collection<Node>) : HasAssumptions {
+    /** See [HasAssumptions.assumptions]. */
     override val assumptions: MutableSet<Assumption> = mutableSetOf()
 
+    /**
+     * Adds the [assumptions] of the current [NodeCollectionWithAssumption] and the assumptions of
+     * all nodes contained in the object. See [HasAssumptions.collectAssumptions].
+     */
     override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + nodes.flatMap { it.assumptions }
+        return super.collectAssumptions() + nodes.flatMap { it.collectAssumptions() }
     }
 }
 

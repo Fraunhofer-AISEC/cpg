@@ -70,10 +70,7 @@ open class QueryTree<T>(
      */
     open var node: Node? = null,
 
-    /**
-     * Assumptions can be created in the QueryTree object with the [assume] function ore by adding
-     * an assumption manually.
-     */
+    /** See [HasAssumptions.assumptions]. */
     override var assumptions: MutableSet<Assumption> = mutableSetOf(),
 ) : Comparable<QueryTree<T>>, HasAssumptions {
     fun printNicely(depth: Int = 0): String {
@@ -117,6 +114,10 @@ open class QueryTree<T>(
         throw QueryException("Cannot compare objects of type ${this.value} and ${other.value}")
     }
 
+    /**
+     * Adds the [assumptions] attached to the [QueryTree] itself and of all sub [QueryTree]s that
+     * were declared as children. See [HasAssumptions.collectAssumptions].
+     */
     override fun collectAssumptions(): Set<Assumption> {
         return super.collectAssumptions() + children.flatMap { it.collectAssumptions() }.toSet()
     }

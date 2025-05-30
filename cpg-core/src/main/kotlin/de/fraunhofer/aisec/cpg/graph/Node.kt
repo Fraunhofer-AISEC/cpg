@@ -234,6 +234,7 @@ abstract class Node() :
 
     var prevPDG by unwrapping(Node::prevPDGEdges)
 
+    /** See [HasAssumptions.assumptions]. */
     @DoNotPersist override val assumptions: MutableSet<Assumption> = mutableSetOf()
 
     /**
@@ -285,6 +286,14 @@ abstract class Node() :
     val overlayEdges: Overlays =
         Overlays(this, mirrorProperty = OverlayNode::underlyingNodeEdge, outgoing = true)
     var overlays by unwrapping(Node::overlayEdges)
+
+    /**
+     * Adds the [assumptions] attached to the [Node] and of relevant supernodes in the AST. Currently, of the
+     * [Component]. See [HasAssumptions.collectAssumptions].
+     */
+    override fun collectAssumptions(): Set<Assumption> {
+        return super.collectAssumptions() + (component?.collectAssumptions() ?: emptySet())
+    }
 
     /**
      * If a node should be removed from the graph, just removing it from the AST is not enough (see
