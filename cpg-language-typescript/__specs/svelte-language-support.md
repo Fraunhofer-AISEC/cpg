@@ -184,13 +184,16 @@ In essence: The frontend can parse .svelte files and understand the top-lev
    - JSON file successfully generated: `build/test-results/svelte/SimpleComponent-cpg.json`
    - Contains proper CPG structure for variables, functions, types, and locations
    - Ready for cpg-wrapper-service integration
-[ ] 2. **Function Body Implementation** - Complete parsing of function internals (statements, expressions)
-[ ] 3. **HTML Template Parsing** - Begin implementing CPG nodes for Svelte template syntax
+[✅] 2. **Function Body Implementation** - Complete parsing of function internals (statements, expressions) ✅ **COMPLETED**
+   - Assignment expressions working: `count += 1;` correctly parsed as `AssignExpression` with operator `"+="`
+   - Variable references working: `count` identified as `Reference` type
+   - Literals working: `1` identified as `Literal` type
+   - Function body compound statements working: 1 statement correctly detected in `handleClick()`
+[🔄] 3. **HTML Template Parsing** - Begin implementing CPG nodes for Svelte template syntax
 [ ] 4. **Integration Testing** - Test with cpg-wrapper-service visualizer to ensure graph compatibility
 
 **Technical Debt/TODOs:**
-- Function body statement parsing (partially implemented but encountering build errors)
-- HTML template structure → CPG mapping (not started)
+- HTML template structure → CPG mapping (not started) - **NEXT PRIORITY**
 - CSS block parsing (not started)  
 - Svelte directives (`{#if}`, `{#each}`, `on:click`, etc.) → CPG representation
 - Enhanced type resolution beyond `unknownType()`

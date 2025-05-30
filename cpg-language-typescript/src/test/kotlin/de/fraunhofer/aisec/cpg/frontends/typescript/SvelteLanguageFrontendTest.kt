@@ -157,7 +157,28 @@ class SvelteLanguageFrontendTest {
                                 )
                                 is FunctionDeclaration -> mapOf(
                                     "parameters" to declaration.parameters.size,
-                                    "bodyStatements" to ((declaration.body as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Block)?.statements?.size ?: 0)
+                                    "bodyStatements" to ((declaration.body as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Block)?.statements?.size ?: 0),
+                                    "bodyDetails" to if (declaration.body is de.fraunhofer.aisec.cpg.graph.statements.expressions.Block) {
+                                        (declaration.body as de.fraunhofer.aisec.cpg.graph.statements.expressions.Block).statements.mapIndexed { index, stmt ->
+                                            mapOf(
+                                                "index" to index,
+                                                "type" to stmt.javaClass.simpleName,
+                                                "details" to when (stmt) {
+                                                    is de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression -> mapOf(
+                                                        "operator" to stmt.operatorCode,
+                                                        "lhsType" to stmt.lhs.firstOrNull()?.javaClass?.simpleName,
+                                                        "rhsType" to stmt.rhs.firstOrNull()?.javaClass?.simpleName
+                                                    )
+                                                    is de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement -> mapOf(
+                                                        "declarations" to stmt.declarations.map { decl -> 
+                                                            mapOf("type" to decl.javaClass.simpleName, "name" to decl.name.localName)
+                                                        }
+                                                    )
+                                                    else -> mapOf("content" to stmt.toString())
+                                                }
+                                            )
+                                        }
+                                    } else emptyList<Map<String, Any>>()
                                 )
                                 else -> emptyMap<String, Any>()
                             }
