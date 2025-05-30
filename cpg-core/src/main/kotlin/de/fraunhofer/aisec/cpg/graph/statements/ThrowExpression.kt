@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -89,5 +90,11 @@ class ThrowExpression : Expression(), ArgumentHolder {
             .append("exception", exception)
             .append("parentException", parentException)
             .toString()
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.exception?.getStartingPrevEOG()
+            ?: this.parentException?.getStartingPrevEOG()
+            ?: this.prevEOG
     }
 }

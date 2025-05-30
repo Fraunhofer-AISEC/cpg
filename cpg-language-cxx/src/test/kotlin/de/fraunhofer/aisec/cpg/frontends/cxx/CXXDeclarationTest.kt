@@ -279,23 +279,23 @@ class CXXDeclarationTest {
             }
         assertNotNull(result)
 
-        var proxy = result.records["Proxy"]
+        val proxy = result.records["Proxy"]
         assertNotNull(proxy)
 
-        var op = proxy.operators["operator->"]
+        val op = proxy.operators["operator->"]
         assertNotNull(op)
 
-        var data = result.records["Data"]
+        val data = result.records["Data"]
         assertNotNull(data)
 
-        var size = data.fields["size"]
+        val size = data.fields["size"]
         assertNotNull(size)
 
         val p = result.refs["p"]
         assertNotNull(p)
         assertEquals(proxy.toType(), p.type)
 
-        var sizeRef = result.memberExpressions["size"]
+        val sizeRef = result.memberExpressions["size"]
         assertNotNull(sizeRef)
         assertRefersTo(sizeRef, size)
 
@@ -316,30 +316,30 @@ class CXXDeclarationTest {
             }
         assertNotNull(result)
 
-        var proxy = result.records["Proxy"]
+        val proxy = result.records["Proxy"]
         assertNotNull(proxy)
 
-        var funcBar = proxy.functions["bar"]
+        val funcBar = proxy.functions["bar"]
         assertNotNull(funcBar)
 
-        var op = proxy.operators["operator->"]
+        val op = proxy.operators["operator->"]
         assertNotNull(op)
 
-        var data = result.records["Data"]
+        val data = result.records["Data"]
         assertNotNull(data)
 
-        var funcFoo = data.functions["foo"]
+        val funcFoo = data.functions["foo"]
         assertNotNull(funcFoo)
 
         val p = result.refs["p"]
         assertNotNull(p)
         assertEquals(proxy.toType(), p.type)
 
-        var funcFooRef = result.memberExpressions["foo"]
+        val funcFooRef = result.memberExpressions["foo"]
         assertNotNull(funcFooRef)
         assertRefersTo(funcFooRef, funcFoo)
 
-        var funcBarRef = result.memberExpressions["bar"]
+        val funcBarRef = result.memberExpressions["bar"]
         assertNotNull(funcBarRef)
         assertRefersTo(funcBarRef, funcBar)
 
