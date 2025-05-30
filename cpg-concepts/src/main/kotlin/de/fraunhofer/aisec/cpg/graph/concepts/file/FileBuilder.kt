@@ -186,6 +186,14 @@ fun MetadataProvider.newFileWrite(underlyingNode: Node, file: File, what: Node, 
         connect = connect,
     )
 
-/** TODO */
+/**
+ * Creates a new [FileHandle] node. This node represents a file on a hard-disk somewhere.
+ *
+ * @param underlyingNode The underlying CPG node.
+ * @param file The [File] this handle is associated with.
+ * @param connect If `true`, the created [Concept] will be connected to the underlying node by
+ *   setting its `underlyingNode`.
+ * @return The new [FileHandle] node.
+ */
 fun MetadataProvider.newFileHandle(underlyingNode: Node, file: File, connect: Boolean) =
-    newConcept({ FileHandle() }, underlyingNode = underlyingNode, connect = connect)
+    newConcept({ FileHandle(file = file) }, underlyingNode = underlyingNode, connect = connect)

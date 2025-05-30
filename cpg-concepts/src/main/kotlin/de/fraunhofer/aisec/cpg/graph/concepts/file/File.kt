@@ -193,5 +193,11 @@ abstract class FileOperation(underlyingNode: Node? = null, file: File) :
         get() = this.concept as File
 }
 
-/** TODO */
-class FileHandle(underlyingNode: Node? = null) : Concept(underlyingNode = underlyingNode), IsFile
+/**
+ * Represents a file handle.
+ *
+ * @param file The [File] this handle is associated with.
+ * @param underlyingNode The underlying CPG node.
+ */
+class FileHandle(val file: File, underlyingNode: Node? = null) :
+    Concept(underlyingNode = underlyingNode), IsFile

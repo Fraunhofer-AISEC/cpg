@@ -90,7 +90,7 @@ open class ValueEvaluator(
      * evaluation fails, the result is "null".
      *
      * @return The result of the evaluation as [ResultWithPath]. If the evaluation fails, the result
-     *   is null.
+     *   is `null`.
      */
     inline fun <reified T> evaluateAs(node: Node?): ResultWithPath<T>? {
         val result = evaluateInternal(node, 0)
