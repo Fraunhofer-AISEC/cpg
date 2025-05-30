@@ -141,7 +141,7 @@ class SetFileFlags(
  * @param concept The corresponding [File] node.
  * @param mask The file mask in UNIX notation (i.e. 0o644)
  */
-class SetFileMask(underlyingNode: Node? = null, concept: File, val mask: Long) :
+open class SetFileMask(underlyingNode: Node? = null, concept: File, val mask: Long) :
     FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {
     override fun equals(other: Any?): Boolean {
         return other is SetFileMask && super.equals(other) && other.mask == this.mask
