@@ -459,20 +459,31 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
         val oldPrevEOG = old.getStartingPrevEOG()
         old.disconnectFromGraph()
 
-        // We actively re-trigger the EOG pass to handle the new node. This is required because we
-        // cannot set the currentPredecessors with the incremental building logic.
-        val eogPass = EvaluationOrderGraphPass(ctx)
-        // Set the currentPredecessors to the old prevEOG nodes. This is necessary because the
-        // EOGPass takes these nodes to connect the first node in the children to the EOG and then
-        // constructs the remaining EOG edges in the new node's AST children.
-        eogPass.currentPredecessors.addAll(oldPrevEOG)
-        eogPass.handleEOG(new)
-        // For the old EOG predecessors, we need to set the new exit node of the EOG of this
-        // subgraph. These are stored in the currentPredecessors of the EOGPass.
-        oldNextEOG.forEach {
-            // TODO: It may be necessary for some nodes to also add properties (e.g. branches) to
-            // the EOG edges but we do not have access to this information here.
-            it.prevEOG = eogPass.currentPredecessors
+        if (
+            oldNextEOG.isNotEmpty() ||
+                oldPrevEOG.isNotEmpty() ||
+                old.prevEOG.isNotEmpty() ||
+                old.nextEOG.isNotEmpty()
+        ) {
+            // We actively re-trigger the EOG pass to handle the new node but only if it has already
+            // been run before. To figure this out, we check if there's some sort of EOG edges
+            // somewhere. This is required because we
+            // cannot set the currentPredecessors with the incremental building logic.
+            val eogPass = EvaluationOrderGraphPass(ctx)
+            // Set the currentPredecessors to the old prevEOG nodes. This is necessary because the
+            // EOGPass takes these nodes to connect the first node in the children to the EOG and
+            // then
+            // constructs the remaining EOG edges in the new node's AST children.
+            eogPass.currentPredecessors.addAll(oldPrevEOG)
+            eogPass.handleEOG(new)
+            // For the old EOG predecessors, we need to set the new exit node of the EOG of this
+            // subgraph. These are stored in the currentPredecessors of the EOGPass.
+            oldNextEOG.forEach {
+                // TODO: It may be necessary for some nodes to also add properties (e.g. branches)
+                // to the EOG edges but we do not have access to this information here.
+                it.prevEOG = eogPass.currentPredecessors
+            }
+            eogPass.cleanup()
         }
 
         // Also move over any type observers
