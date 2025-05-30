@@ -127,23 +127,20 @@ class PythonFileJoinPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
                 }
             } else if (argument is Literal<*>) {
                 val evaluatedArg = argument.value.toString()
-                if (evaluatedArg.startsWith("/tmp")) {
-                    // TODO this should only be set if the file path *starts* with /tmp, not if it
-                    // contains it
-                    tempFileStatus = FileTempFileStatus.TEMP_FILE
-                }
                 combinedFileName += evaluatedArg
             } else {
                 log.warn("Unexpected argument: \"{}\". This will be ignored.", argument)
             }
         }
 
+        val newFileName = combinedFileName.joinToString("/")
+
+        if (newFileName.startsWith("/tmp/")) {
+            tempFileStatus = FileTempFileStatus.TEMP_FILE
+        }
+
         return listOf(
-            newFile(
-                    underlyingNode = callExpression,
-                    fileName = combinedFileName.joinToString("/"),
-                    connect = false,
-                )
+            newFile(underlyingNode = callExpression, fileName = newFileName, connect = false)
                 .apply { this.isTempFile = tempFileStatus }
                 .also { file -> log.debug("Created new file from path join: {}", file.fileName) }
         )
