@@ -63,7 +63,6 @@ enum class FileAccessModeFlags(val value: Long) : IsFile {
  */
 enum class FileTempFileStatus {
     TEMP_FILE,
-    TEMP_OR_NOT_TEMP,
     NOT_A_TEMP_FILE,
     UNKNOWN,
 }
@@ -75,6 +74,7 @@ const val O_ACCMODE_MODE_MASK = 3L
  * This is the base class for all file-like objects. It provides the common properties and methods
  * that are shared by all file-like objects.
  *
+ * @param underlyingNode The underlying CPG node (usually a [CallExpression]).
  * @param fileName The name of the file e.g. `foo/bar/example.txt`
  * @param isTempFile Whether this file is a temporary file or not.
  */
