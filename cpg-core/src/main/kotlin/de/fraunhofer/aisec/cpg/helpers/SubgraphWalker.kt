@@ -456,13 +456,7 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
     } else {
         // Store any eventual EOG/DFG nodes and disconnect old node
         val oldNextEOG = old.nextEOG.toMutableList()
-        val oldPrevEOG =
-            when (old) {
-                is ArgumentHolder -> {
-                    old.getStartingPrevEOG()
-                }
-                else -> old.prevEOG.toMutableList()
-            }
+        val oldPrevEOG = old.getStartingPrevEOG()
         old.disconnectFromGraph()
 
         // We actively re-trigger the EOG pass to handle the new node. This is required because we
