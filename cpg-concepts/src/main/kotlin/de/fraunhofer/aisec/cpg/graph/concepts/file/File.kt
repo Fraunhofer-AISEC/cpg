@@ -199,7 +199,7 @@ class ReadFile(underlyingNode: Node? = null, concept: File) :
  * @param concept The corresponding [File] node.
  * @param what The node being written to the file.
  */
-class WriteFile(underlyingNode: Node? = null, concept: File, val what: Node) :
+open class WriteFile(underlyingNode: Node? = null, concept: File, val what: Node) :
     FileOperation(underlyingNode = underlyingNode, file = concept), IsFile {
     override fun equals(other: Any?): Boolean {
         return other is WriteFile && super.equals(other) && other.what == this.what
