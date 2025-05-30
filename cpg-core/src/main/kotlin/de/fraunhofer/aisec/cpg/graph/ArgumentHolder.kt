@@ -75,10 +75,4 @@ interface ArgumentHolder : Holder<Expression> {
 
     /** Checks, if [expression] is part of the arguments. */
     fun hasArgument(expression: Expression): Boolean
-
-    /**
-     * Returns a Pair with the prevEOG outside of the ArgumentHolder and a list of all elements
-     * within the Argumentholder
-     */
-    fun getPrevEOGandElements(): Pair<MutableList<Node>, List<Node>>
 }

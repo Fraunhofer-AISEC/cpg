@@ -153,10 +153,8 @@ open class BinaryOperator :
         return lhs == expression || rhs == expression
     }
 
-    override fun getPrevEOGandElements(): Pair<MutableList<Node>, List<Node>> {
-        val prev = this.lhs.prevEOG
-        val elements = listOf(this.lhs, this.rhs)
-        return Pair(prev, elements)
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.lhs.getStartingPrevEOG()
     }
 
     val base: Expression?

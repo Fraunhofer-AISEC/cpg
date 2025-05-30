@@ -355,6 +355,9 @@ abstract class Node() :
         return Objects.hash(name, location, this.javaClass)
     }
 
+    /** Returns a Pair with the prevEOG outside the ArgumentHolder. */
+    abstract fun getStartingPrevEOG(): Collection<Node>
+
     companion object {
         @JvmField var TO_STRING_STYLE: ToStringStyle = ToStringStyle.SHORT_PREFIX_STYLE
 

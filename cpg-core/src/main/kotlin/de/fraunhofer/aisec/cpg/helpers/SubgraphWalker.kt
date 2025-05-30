@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.fieldCache
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.lang.annotation.AnnotationFormatError
@@ -458,16 +459,16 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
         val oldPrevEOG =
             when (old) {
                 is ArgumentHolder -> {
-                    val (prev, elements) = old.getPrevEOGandElements()
-                    elements.forEach { it.disconnectFromGraph() }
-                    prev
+                    old.getStartingPrevEOG()
                 }
                 else -> old.prevEOG.toMutableList()
             }
         old.disconnectFromGraph()
 
         // Put the stored EOG nodes to the new node
-        new.prevEOG = oldPrevEOG
+        val eogPass = EvaluationOrderGraphPass(ctx)
+        eogPass.currentPredecessors.addAll(oldPrevEOG)
+        eogPass.handleEOG(new)
         new.nextEOG = oldNextEOG
 
         // Also move over any type observers
