@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
@@ -50,5 +51,9 @@ class GotoStatement : Statement() {
             .append("targetName", targetLabel)
             .append("location", location)
             .toString()
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.prevEOG
     }
 }

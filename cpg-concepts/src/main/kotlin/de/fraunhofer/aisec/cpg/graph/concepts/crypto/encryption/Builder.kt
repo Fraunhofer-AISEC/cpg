@@ -23,94 +23,94 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
+package de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption
 
 import de.fraunhofer.aisec.cpg.graph.MetadataProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Cipher
-import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
 
 /**
- * Creates a new [DiskEncryption] concept.
- *
- * @param underlyingNode The underlying node representing this concept.
- * @param cipher The cipher used for encryption.
- * @param key The secret key used for encryption.
- * @param connect If `true`, the created [Concept] will be connected to the underlying node by
- *   setting its `underlyingNode`.
- * @return The created [DiskEncryption] concept.
- */
-fun MetadataProvider.newDiskEncryption(
-    underlyingNode: Node,
-    cipher: Cipher?,
-    key: Secret?,
-    connect: Boolean,
-) =
-    newConcept(
-        {
-            val node = DiskEncryption()
-            key?.let { node.key = it }
-            cipher?.let { node.cipher = it }
-            node
-        },
-        underlyingNode = underlyingNode,
-        connect = connect,
-    )
-
-/**
- * Creates a new [BlockStorage] concept.
+ * Creates a new [Cipher] concept.
  *
  * @param underlyingNode The underlying node representing this concept.
  * @param connect If `true`, the created [Concept] will be connected to the underlying node by
  *   setting its `underlyingNode`.
- * @return The created [BlockStorage] concept.
+ * @return The created [Cipher] concept.
  */
-fun MetadataProvider.newBlockStorage(underlyingNode: Node, connect: Boolean) =
-    newConcept(::BlockStorage, underlyingNode = underlyingNode, connect = connect)
+fun MetadataProvider.newCipher(underlyingNode: Node, connect: Boolean) =
+    newConcept(::Cipher, underlyingNode = underlyingNode, connect = connect)
 
 /**
- * Creates a new [CreateEncryptedDisk] operation.
+ * Creates a new [Secret] concept.
+ *
+ * @param underlyingNode The underlying node representing this concept.
+ * @param connect If `true`, the created [Concept] will be connected to the underlying node by
+ *   setting its `underlyingNode`.
+ * @return The created [Secret] concept.
+ */
+fun MetadataProvider.newSecret(underlyingNode: Node, connect: Boolean) =
+    newConcept(::Secret, underlyingNode = underlyingNode, connect = connect)
+
+/**
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.CreateSecret] operation.
  *
  * @param underlyingNode The underlying node representing this operation.
- * @param concept The [DiskEncryption] concept to which the operation belongs.
+ * @param concept The [Secret] concept to which the operation belongs.
  * @param connect If `true`, the created [Operation] will be connected to the underlying node by
  *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
  *   [Concept.ops].
- * @return The created [CreateEncryptedDisk] operation.
+ * @return The created [de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.CreateSecret]
+ *   operation.
  */
-fun MetadataProvider.newCreateEncryptedDisk(
-    underlyingNode: Node,
-    concept: DiskEncryption,
-    connect: Boolean,
-) =
+fun MetadataProvider.newCreateSecret(underlyingNode: Node, concept: Secret, connect: Boolean) =
     newOperation(
-        { concept -> CreateEncryptedDisk(concept = concept) },
+        { concept -> CreateSecret(concept = concept) },
         underlyingNode = underlyingNode,
         concept = concept,
         connect = connect,
     )
 
 /**
- * Creates a new [UnlockEncryptedDisk] operation.
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.GetSecret] operation.
  *
  * @param underlyingNode The underlying node representing this operation.
- * @param concept The [DiskEncryption] concept to which the operation belongs.
+ * @param concept The [Secret] concept to which the operation belongs.
  * @param connect If `true`, the created [Operation] will be connected to the underlying node by
  *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
  *   [Concept.ops].
- * @return The created [UnlockEncryptedDisk] operation.
+ * @return The created [de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.GetSecret]
+ *   operation.
  */
-fun MetadataProvider.newUnlockEncryptedDisk(
+fun MetadataProvider.newGetSecret(underlyingNode: Node, concept: Secret, connect: Boolean) =
+    newOperation(
+        { concept -> GetSecret(concept = concept) },
+        underlyingNode = underlyingNode,
+        concept = concept,
+        connect = connect,
+    )
+
+/**
+ * Creates a new [Encrypt] operation.
+ *
+ * @param underlyingNode The underlying node representing this operation.
+ * @param concept The [Cipher] concept to which the operation belongs.
+ * @param key The secret key used for encryption.
+ * @param connect If `true`, the created [Operation] will be connected to the underlying node by
+ *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
+ *   [Concept.ops].
+ * @return The created [Encrypt] operation.
+ */
+fun MetadataProvider.newEncryptOperation(
     underlyingNode: Node,
-    concept: DiskEncryption,
+    concept: Cipher,
+    key: Secret,
     connect: Boolean,
 ) =
     newOperation(
-        { concept -> UnlockEncryptedDisk(concept = concept) },
+        { concept -> Encrypt(concept = concept, key = key) },
         underlyingNode = underlyingNode,
         concept = concept,
         connect = connect,

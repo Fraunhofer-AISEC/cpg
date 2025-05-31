@@ -37,11 +37,10 @@ class SarifTest {
     @Test
     fun testSarifFindings() {
         val project =
-            AnalysisProject.from(
-                projectDir = Path("src/integrationTest/resources/demo-app"),
-                components = listOf("webapp"),
-                postProcess = AnalysisProject::executeSecurityGoalsQueries,
+            AnalysisProject.fromDirectory(
+                projectDir = Path("src/integrationTest/resources/demo-app")
             )
+        assertNotNull(project)
 
         val result = project.analyze()
         val tr = result.translationResult

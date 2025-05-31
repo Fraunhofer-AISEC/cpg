@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.newTupleDeclaration
@@ -77,5 +78,9 @@ class TupleDeclaration : VariableDeclaration() {
         this.elements += element
         // Make sure we inform the new element about our type changes
         registerTypeObserver(element)
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.initializer?.getStartingPrevEOG() ?: setOf()
     }
 }

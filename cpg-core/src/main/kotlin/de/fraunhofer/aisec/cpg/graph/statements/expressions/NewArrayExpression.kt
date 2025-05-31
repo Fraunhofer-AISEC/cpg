@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.HasInitializer
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
@@ -74,4 +75,10 @@ class NewArrayExpression : Expression(), HasInitializer {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), initializer, dimensions)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.dimensions.firstOrNull()?.getStartingPrevEOG()
+            ?: this.initializer?.getStartingPrevEOG()
+            ?: this.prevEOG
+    }
 }

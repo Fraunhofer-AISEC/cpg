@@ -23,28 +23,11 @@
  *                    \______/ \__|       \______/
  *
  */
-package encrypt
+package de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption
 
-import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.passes.concepts.*
+import de.fraunhofer.aisec.cpg.graph.Node
 
-class MySpecialSecret() : Concept(null) {
-    override fun setDFG() {
-        underlyingNode?.nextDFG += this
-    }
-}
-
-class SpecialOperation(concept: MySpecialSecret) : Operation(null, concept)
-
-tag {
-    each<CallExpression>("get_secret_from_server").with { MySpecialSecret() }
-
-    each<CallExpression> { it.name.localName == "encrypt" && it.arguments.size == 3 }
-        .withMultiple {
-            node.getOverlaysByPrevDFG<MySpecialSecret>(state).map { secret ->
-                SpecialOperation(concept = secret)
-            }
-        }
+open class CreateSecret(underlyingNode: Node? = null, concept: Secret) :
+    SecretOperation(underlyingNode = underlyingNode, concept = concept) {
+    // TODO: which secret? specs (key size, cipher suite, storage)?
 }

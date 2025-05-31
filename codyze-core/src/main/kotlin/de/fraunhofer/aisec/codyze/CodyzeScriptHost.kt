@@ -29,9 +29,8 @@ import de.fraunhofer.aisec.codyze.dsl.IncludeBuilder
 import de.fraunhofer.aisec.codyze.dsl.ProjectBuilder
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import java.io.File
+import java.nio.file.Path
 import kotlin.io.path.Path
-import kotlin.io.path.pathString
 import kotlin.script.experimental.api.ResultWithDiagnostics
 import kotlin.script.experimental.api.constructorArgs
 import kotlin.script.experimental.api.scriptsInstancesSharing
@@ -46,7 +45,7 @@ import kotlin.script.experimental.jvmhost.createJvmEvaluationConfigurationFromTe
  * Furthermore, each included file inside [IncludeBuilder] is also evaluated and added to the
  * [CodyzeScript.projectBuilder].
  */
-fun evaluateScriptAndIncludes(scriptFile: String): CodyzeScript? {
+fun evaluateScriptAndIncludes(scriptFile: Path): CodyzeScript? {
     val script = evaluateScript(scriptFile)
     if (script == null) {
         return null
@@ -54,10 +53,7 @@ fun evaluateScriptAndIncludes(scriptFile: String): CodyzeScript? {
 
     // Evaluate any included files based on our project builder
     for (include in script.includeBuilder.includes.values) {
-        evaluateScript(
-            script.projectBuilder.projectDir.resolve(include).pathString,
-            script.projectBuilder,
-        )
+        evaluateScript(script.projectBuilder.projectDir.resolve(include), script.projectBuilder)
     }
 
     return script
@@ -65,8 +61,8 @@ fun evaluateScriptAndIncludes(scriptFile: String): CodyzeScript? {
 
 /** Evaluates a Codyze script from the given file path. */
 fun evaluateScript(
-    scriptFile: String,
-    projectBuilder: ProjectBuilder = ProjectBuilder(projectDir = Path(scriptFile).parent),
+    scriptFile: Path,
+    projectBuilder: ProjectBuilder = ProjectBuilder(projectDir = scriptFile.parent),
 ): CodyzeScript? {
     val b = Benchmark(TranslationResult::class.java, "Compiling query script $scriptFile")
     val compilationConfiguration = createJvmCompilationConfigurationFromTemplate<CodyzeScript>()
@@ -79,7 +75,7 @@ fun evaluateScript(
     val scriptResult =
         BasicJvmScriptingHost()
             .eval(
-                File(scriptFile).toScriptSource(),
+                scriptFile.toFile().toScriptSource(),
                 compilationConfiguration,
                 evaluationConfiguration,
             )

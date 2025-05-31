@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -51,5 +52,9 @@ class ExpressionList : Expression() {
 
     override fun hashCode(): Int {
         return Objects.hash(super.hashCode(), expressions)
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.expressions.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
     }
 }

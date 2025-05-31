@@ -35,12 +35,51 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.query.DecisionState
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.SinglePathResult
+import de.fraunhofer.aisec.cpg.query.Succeeded
 import io.github.detekt.sarif4k.*
 import java.io.File
 import kotlin.io.path.relativeToOrSelf
 import kotlin.io.path.toPath
+
+/** Builds the SARIF report for the given [AnalysisResult.requirementsResults]. */
+fun AnalysisProject.buildSarif(
+    result: AnalysisResult
+): Pair<List<ReportingDescriptor>, List<Result>> {
+    val sarifRules = mutableListOf<ReportingDescriptor>()
+    val sarifResults = mutableListOf<Result>()
+
+    for ((requirementID, decision) in result.requirementsResults) {
+        val sarifResult = decision.undecide().toSarif(requirementID)
+        val req = builder?.allRequirements[requirementID]
+
+        val sarifRule =
+            ReportingDescriptor(
+                id = requirementID,
+                name = req?.name,
+                shortDescription = req?.description?.let { MultiformatMessageString(text = it) },
+            )
+
+        sarifResults += sarifResult
+        sarifRules += sarifRule
+    }
+
+    return Pair(sarifRules, sarifResults)
+}
+
+/**
+ * Converts a [QueryTree] of type [DecisionState] to a [QueryTree] of type [Boolean]. This is used
+ * to determine if the query was successful or not. All states except [Succeeded] are considered as
+ * failed, which results in a [QueryTree] with value `false`.
+ *
+ * We need to make this binary decision because SARIF only supports boolean results for individual
+ * findings.
+ */
+fun QueryTree<DecisionState>.undecide(): QueryTree<Boolean> {
+    return this.children[0] as QueryTree<Boolean>
+}
 
 /**
  * Converts a [QueryTree] to a list of [Result]s. This expects that the query tree is of type

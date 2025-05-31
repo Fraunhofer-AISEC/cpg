@@ -115,4 +115,11 @@ class CollectionComprehension : Expression(), ArgumentHolder {
     override fun hasArgument(expression: Expression): Boolean {
         return this.statement == expression || expression in this.comprehensionExpressions
     }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        val allChildren = this.allChildren<Node> { true }
+        return comprehensionExpressions.firstOrNull()?.getStartingPrevEOG()?.filter {
+            it !in allChildren
+        } ?: setOf()
+    }
 }

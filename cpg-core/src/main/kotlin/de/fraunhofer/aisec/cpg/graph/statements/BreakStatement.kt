@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import java.util.Objects
 
 /**
@@ -43,4 +44,8 @@ class BreakStatement : Statement() {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), label)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.prevEOG
+    }
 }

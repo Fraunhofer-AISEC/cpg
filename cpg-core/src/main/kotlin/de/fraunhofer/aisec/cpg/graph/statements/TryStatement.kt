@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
@@ -92,4 +93,11 @@ class TryStatement : Statement() {
 
     override fun hashCode() =
         Objects.hash(super.hashCode(), resources, tryBlock, finallyBlock, catchClauses, elseBlock)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.resources.firstOrNull()?.getStartingPrevEOG()
+            ?: this.tryBlock?.getStartingPrevEOG()
+            ?: this.finallyBlock?.getStartingPrevEOG()
+            ?: this.prevEOG
+    }
 }

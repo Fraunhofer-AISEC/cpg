@@ -40,7 +40,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
-import java.util.Objects
 import kotlin.collections.filter
 import kotlin.collections.firstOrNull
 import kotlin.math.absoluteValue
@@ -425,16 +424,6 @@ class Context(
         this.steps++
         return this
     }
-
-    override fun equals(other: Any?): Boolean {
-        return other is Context &&
-            this.indexStack == other.indexStack &&
-            this.callStack == other.callStack
-    }
-
-    override fun hashCode(): Int {
-        return Objects.hash(super.hashCode(), indexStack, callStack)
-    }
 }
 
 /** Implementation of a simple stack, based on an [ArrayDeque] */
@@ -813,7 +802,6 @@ fun Node.followXUntilHit(
     x: (Node, Context, List<Node>) -> Collection<Pair<Node, Context>>,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
-    continueAfterHit: Boolean = false,
     context: Context = Context(steps = 0),
     earlyTermination: (Node, Context) -> Boolean,
     predicate: (Node) -> Boolean,
@@ -829,7 +817,12 @@ fun Node.followXUntilHit(
     worklist.add(listOf(this to context)) // We start only with the "from" node (=this)
 
     val alreadySeenNodes = mutableSetOf<Pair<Node, Context>>()
-
+    // First check if the current node satisfies the predicate.
+    // If it does, we consider this path fulfilled and skip further traversal.
+    if (predicate(this)) {
+        fulfilledPaths.add(NodePath(mutableListOf(this)).addAssumptionDependence(this))
+        return FulfilledAndFailedPaths(fulfilledPaths.toSet().toList(), failedPaths)
+    }
     while (worklist.isNotEmpty()) {
         val currentPath = worklist.maxBy { it.size }
         worklist.remove(currentPath)
@@ -873,22 +866,6 @@ fun Node.followXUntilHit(
             }
             // The next node is new in the current path (i.e., there's no loop), so we add the path
             // with the next step to the worklist.
-            // For our daily dose of special magic, we check that the path reaching the next node
-            // differs. If the path is different, we do accept seeing the same node multiple times.
-            /*val indexedPath =
-                currentPath.first
-                    .mapIndexed { index, node -> if (node == next) Pair(index, node) else null }
-                    .filterNotNull()
-            if (
-                (indexedPath.isEmpty() ||
-                        indexedPath.all {
-                            it.first == 0 || currentNode != currentPath.first[it.first - 1]
-                        }) &&
-                ((findAllPossiblePaths && currentPath.first.count { it == next } <= 2) ||
-                        (next !in currentPath.first &&
-                                (findAllPossiblePaths ||
-                                        (next !in alreadySeenNodes && worklist.none { next in it.first }))))
-            )*/
             if (
                 !isNodeWithCallStackInPath(next, newContext, currentPath) &&
                     (findAllPossiblePaths ||
@@ -1425,8 +1402,9 @@ private fun Node.eogDistanceTo(to: Node): Int {
 fun Expression?.unwrapReference(): Reference? {
     return when {
         this is Reference -> this
-        this is PointerReference -> this
-        this is PointerDereference -> this
+        this is UnaryOperator && (this.operatorCode == "*" || this.operatorCode == "&") ->
+            this.input.unwrapReference()
+
         this is CastExpression -> this.expression.unwrapReference()
         else -> null
     }
