@@ -81,7 +81,7 @@ internal typealias Relationship = Map<String, Any?>
  *   configuration.
  * - A [Session] context to perform persistence actions.
  */
-context(Session)
+context(_: Session)
 fun TranslationResult.persist() {
     val b = Benchmark(Persistable::class.java, "Persisting translation result")
 
@@ -119,13 +119,13 @@ fun TranslationResult.persist() {
  * The function uses the APOC library for creating nodes in the database. For each node in the list,
  * it extracts the labels and properties and executes the Cypher query to persist the node.
  */
-context(Session)
+context(session: Session)
 private fun List<Node>.persist() {
     this.chunked(nodeChunkSize).map { chunk ->
         val b = Benchmark(Persistable::class.java, "Persisting chunk of ${chunk.size} nodes")
         val params =
             mapOf("props" to chunk.map { mapOf("labels" to it::class.labels) + it.properties() })
-        this@Session.executeWrite { tx ->
+        session.executeWrite { tx ->
             tx.run(
                     """
                    UNWIND ${"$"}props AS map
@@ -159,15 +159,15 @@ private fun List<Node>.persist() {
  * - Edges are chunked to avoid overloading transactional operations.
  * - Relationship properties and labels are mapped before using database utilities for creation.
  */
-context(Session)
+context(session: Session)
 private fun Collection<Relationship>.persist() {
     // Create an index for the "id" field of node, because we are "MATCH"ing on it in the edge
     // creation. We need to wait for this to be finished
-    this@Session.executeWrite { tx ->
+    session.executeWrite { tx ->
         tx.run("CREATE INDEX IF NOT EXISTS FOR (n:Node) ON (n.id)").consume()
     }
 
-    this.chunked(edgeChunkSize).map { chunk -> createRelationships(chunk) }
+    this.chunked(edgeChunkSize).map { chunk -> session.createRelationships(chunk) }
 }
 
 /**

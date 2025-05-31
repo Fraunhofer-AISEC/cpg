@@ -23,8 +23,6 @@
  *                    \______/ \__|       \______/
  *
  */
-@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
-
 package de.fraunhofer.aisec.codyze
 
 import de.fraunhofer.aisec.cpg.TranslationResult
@@ -42,14 +40,21 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 
-context(TranslationResult)
+/**
+ * A query that simulates checking for a good encryption function.
+ *
+ * It requires the [TranslationResult] to be in the context.
+ */
+context(result: TranslationResult)
 fun goodCryptoFunc(): QueryTree<Boolean> {
-    return allExtended<CallExpression> { it.name eq "encrypt" }
+    return result.allExtended<CallExpression> { it.name eq "encrypt" }
 }
 
-context(TranslationResult)
+
+
+context(result: TranslationResult)
 fun goodArgumentSize(): QueryTree<Boolean> {
-    return allExtended<CallExpression> { it.arguments.size eq 2 }
+    return result.allExtended<CallExpression> { it.arguments.size eq 2 }
 }
 
 class CodyzeExecutorTest {

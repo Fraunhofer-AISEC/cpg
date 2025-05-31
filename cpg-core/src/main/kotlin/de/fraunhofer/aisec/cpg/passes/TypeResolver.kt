@@ -207,10 +207,10 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
  * This helper function sets the [Type.scope] to the current [ScopeManager.globalScope] if it has a
  * [GlobalScope]. This is necessary because the parallel parsing introduces multiple global scopes.
  */
-context(ContextProvider)
+context(provider: ContextProvider)
 private fun Type.updateGlobalScope() {
     if (scope is GlobalScope) {
-        scope = ctx.scopeManager.globalScope
+        scope = provider.ctx.scopeManager.globalScope
         secondOrderTypes.forEach { it.updateGlobalScope() }
     }
 }

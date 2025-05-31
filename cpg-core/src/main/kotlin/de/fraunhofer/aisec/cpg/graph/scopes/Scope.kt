@@ -134,7 +134,7 @@ sealed class Scope(
     }
 
     /** Adds a [declaration] with the defined [symbol]. */
-    context(ContextProvider)
+    context(provider: ContextProvider)
     open fun addSymbol(symbol: Symbol, declaration: Declaration) {
         if (
             declaration is ImportDeclaration &&
@@ -169,7 +169,7 @@ sealed class Scope(
      *   wildcards should be replaced with their actual nodes
      * @param predicate An optional predicate which should be used in the lookup.
      */
-    context(ContextProvider)
+    context(provider: ContextProvider)
     fun lookupSymbol(
         symbol: Symbol,
         languageOnly: Language<*>? = null,
@@ -236,7 +236,7 @@ sealed class Scope(
         // If the symbol was still not resolved, and we are performing an unqualified resolution, we
         // search in the
         // language's builtins scope for the symbol
-        val scopeManager = ctx.scopeManager
+        val scopeManager = provider.ctx.scopeManager
         if (list.isNullOrEmpty() && !qualifiedLookup && languageOnly is HasBuiltins) {
             // If the language has builtins we can search there for the symbol
             val builtinsNamespace = languageOnly.builtinsNamespace

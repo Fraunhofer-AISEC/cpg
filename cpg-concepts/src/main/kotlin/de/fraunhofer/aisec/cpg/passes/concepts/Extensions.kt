@@ -89,7 +89,7 @@ inline fun <reified S : Node, reified T : Node> BuilderContext<S>.propagate(
  * Specifies a [builder] that creates the actual overlay node. It is used to assign a single overlay
  * node to a single selected "underlying" node.
  */
-context(TaggingContext)
+context(_: TaggingContext)
 fun <S : Node, T : Node> Propagator<S, T>.with(builder: BuilderContext<T>.() -> OverlayNode) {
     this.builders += { listOf(builder(it)) }
 }
@@ -98,7 +98,7 @@ fun <S : Node, T : Node> Propagator<S, T>.with(builder: BuilderContext<T>.() -> 
  * Specifies a [builder] that creates the actual overlay nodes. It is used to assign multiple
  * overlay nodes to a single selected "underlying" node.
  */
-context(TaggingContext)
+context(_: TaggingContext)
 fun <S : Node, T : Node> Propagator<S, T>.withMultiple(
     builder: BuilderContext<T>.() -> List<OverlayNode>
 ) {
@@ -109,10 +109,10 @@ fun <S : Node, T : Node> Propagator<S, T>.withMultiple(
  * Specifies a [builder] that creates the actual overlay node. It is used to assign a single overlay
  * node to a single selected "underlying" node.
  */
-context(TaggingContext)
+context(context: TaggingContext)
 fun <T : Node> Selector<T>.with(builder: BuilderContext<T>.() -> OverlayNode): EachContext<T> {
     val ctx = EachContext(selector = this, builder = { listOf(builder(it)) })
-    listOfEach += ctx
+    context.listOfEach += ctx
     return ctx
 }
 
@@ -120,12 +120,12 @@ fun <T : Node> Selector<T>.with(builder: BuilderContext<T>.() -> OverlayNode): E
  * Specifies a [builder] that creates the actual overlay nodes. It is used to assign multiple
  * overlay nodes to a single selected "underlying" node.
  */
-context(TaggingContext)
+context(context: TaggingContext)
 fun <T : Node> Selector<T>.withMultiple(
     builder: BuilderContext<T>.() -> List<OverlayNode>
 ): EachContext<T> {
     val ctx = EachContext(selector = this, builder = builder)
-    listOfEach += ctx
+    context.listOfEach += ctx
     return ctx
 }
 

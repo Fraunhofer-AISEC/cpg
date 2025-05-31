@@ -378,7 +378,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
      *   the best. The ranking is determined by the [CastResult.depthDistance] of all cast results
      *   in the signature results.
      */
-    context(ContextProvider)
+    context(provider: ContextProvider)
     open fun bestViableResolution(
         result: CallResolutionResult
     ): Pair<Set<FunctionDeclaration>, CallResolutionResult.SuccessKind> {
@@ -413,7 +413,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
                     null,
                     source,
                     false,
-                    ctx,
+                    provider.ctx,
                     null,
                     needsExactMatch = true,
                 )
@@ -488,7 +488,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
      * @param TypeToInfer the type of the node that should be inferred
      * @param source the source that was responsible for the inference
      */
-    context(ContextProvider)
+    context(provider: ContextProvider)
     fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnitDeclaration {
         // The easiest way to identify the current component would be traversing the AST, but that
         // does not work for types. But types have a scope and the scope (should) have the
@@ -497,10 +497,10 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
         val component =
             if (source !is Type) {
                 source.component
-                    ?: this@ContextProvider.ctx.currentComponent
+                    ?: provider.ctx.currentComponent
                     ?: source.scope?.astNode?.component
             } else {
-                this@ContextProvider.ctx.currentComponent ?: source.scope?.astNode?.component
+                provider.ctx.currentComponent ?: source.scope?.astNode?.component
             }
         if (component == null) {
             val msg =

@@ -284,9 +284,9 @@ fun <T : Node> T.codeAndLocationFrom(other: Node): T {
  * code/location to the statement rather than the expression, after it comes back from the
  * expression handler.
  */
-context(CodeAndLocationProvider<AstNode>, ContextProvider)
+context(provider: CodeAndLocationProvider<AstNode>, contextProvider: ContextProvider)
 fun <T : Node, AstNode> T.codeAndLocationFromOtherRawNode(rawNode: AstNode?): T {
-    rawNode?.let { setCodeAndLocation(this@CodeAndLocationProvider, it) }
+    rawNode?.let { setCodeAndLocation(provider, it) }
     return this
 }
 
@@ -305,7 +305,7 @@ fun <T : Node, AstNode> T.codeAndLocationFromOtherRawNode(rawNode: AstNode?): T 
  *   This is needed because the location block spanning the children usually comprises more than one
  *   line.
  */
-context(CodeAndLocationProvider<AstNode>)
+context(provider: CodeAndLocationProvider<AstNode>)
 fun <T : Node, AstNode> T.codeAndLocationFromChildren(
     parentNode: AstNode,
     lineBreakSequence: CharSequence = "\n",
@@ -361,8 +361,8 @@ fun <T : Node, AstNode> T.codeAndLocationFromChildren(
         this.location =
             PhysicalLocation(first.location?.artifactLocation?.uri ?: URI(""), newRegion)
 
-        val parentCode = this@CodeAndLocationProvider.codeOf(parentNode)
-        val parentRegion = this@CodeAndLocationProvider.locationOf(parentNode)?.region
+        val parentCode = provider.codeOf(parentNode)
+        val parentRegion = provider.locationOf(parentNode)?.region
         if (parentCode != null && parentRegion != null) {
             // If the parent has code and region the new region is used to extract the code
             this.code = getCodeOfSubregion(parentCode, parentRegion, newRegion, lineBreakSequence)
@@ -376,12 +376,12 @@ fun <T : Node, AstNode> T.codeAndLocationFromChildren(
  * This internal function sets the code and location according to the [CodeAndLocationProvider].
  * This also performs some checks, e.g., if the config disabled setting the code.
  */
-context(ContextProvider)
+context(contextProvider: ContextProvider)
 private fun <AstNode> Node.setCodeAndLocation(
     provider: CodeAndLocationProvider<AstNode>,
     rawNode: AstNode,
 ) {
-    if (this@ContextProvider.ctx.config.codeInNodes == true) {
+    if (contextProvider.ctx.config.codeInNodes) {
         // only set code, if it's not already set or empty
         val code = provider.codeOf(rawNode)
         if (code != null) {

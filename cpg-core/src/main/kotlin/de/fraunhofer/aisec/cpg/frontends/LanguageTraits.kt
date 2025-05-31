@@ -315,10 +315,10 @@ inline infix fun <reified T : HasOverloadedOperation> KClass<T>.of(
 }
 
 /** Checks whether the name for a function (as [CharSequence]) is a known operator name. */
-context(LanguageProvider)
+context(provider: LanguageProvider)
 val CharSequence.isKnownOperatorName: Boolean
     get() {
-        val language = language
+        val language = provider.language
         if (language !is HasOperatorOverloading) {
             return false
         }

@@ -306,10 +306,10 @@ fun CodyzeScript.include(block: IncludeBuilder.() -> Unit) {
     includeBuilder.apply(block)
 }
 
-context(IncludeBuilder)
+context(builder: IncludeBuilder)
 @CodyzeDsl
 infix fun IncludeCategory.from(path: String) {
-    (this@IncludeBuilder).includes[this] = path
+    (builder).includes[this] = path
 }
 
 /** Spans the project-Block */
@@ -446,15 +446,15 @@ fun RequirementBuilder.fulfilledBy(
 }
 
 /** Describes that the requirement had to be checked manually. */
-context(ProjectBuilder, RequirementsBuilder, TranslationResult)
+context(builder: ProjectBuilder, _: RequirementsBuilder, result: TranslationResult)
 @CodyzeDsl
 fun manualAssessmentOf(id: String): Decision {
-    val manualAssessment = this@ProjectBuilder.manualAssessmentBuilder.assessments[id]
+    val manualAssessment = builder.manualAssessmentBuilder.assessments[id]
     if (manualAssessment == null) {
         return NotYetEvaluated.toQueryTree()
     }
 
-    return manualAssessment(this@TranslationResult)
+    return manualAssessment(result)
 }
 
 /** Describes the assumptions which have been handled and assessed. */
