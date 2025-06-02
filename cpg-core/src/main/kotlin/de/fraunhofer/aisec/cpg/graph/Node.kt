@@ -234,7 +234,6 @@ abstract class Node() :
 
     var prevPDG by unwrapping(Node::prevPDGEdges)
 
-    /** See [HasAssumptions.assumptions]. */
     @DoNotPersist override val assumptions: MutableSet<Assumption> = mutableSetOf()
 
     /**
@@ -289,7 +288,7 @@ abstract class Node() :
 
     /**
      * Adds the [assumptions] attached to the [Node] and of relevant supernodes in the AST. Currently, of the
-     * [Component]. See [HasAssumptions.collectAssumptions].
+     * [Component].
      */
     override fun collectAssumptions(): Set<Assumption> {
         return super.collectAssumptions() + (component?.collectAssumptions() ?: emptySet())

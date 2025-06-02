@@ -261,12 +261,11 @@ enum class FailureReason {
  */
 data class NodePath(
     val nodes: List<Node>,
-    /** See [HasAssumptions.assumptions]. */
     override val assumptions: MutableSet<Assumption> = mutableSetOf(),
 ) : HasAssumptions {
 
     /**
-     * Adds the [assumptions] attached to the [NodePath] itself and of all [Node] contained in the path. See [HasAssumptions.collectAssumptions].
+     * Adds the [assumptions] attached to the [NodePath] itself and of all [Node] contained in the path.
      */
     override fun collectAssumptions(): Set<Assumption> {
         return super.collectAssumptions() + nodes.flatMap { it.collectAssumptions() }
@@ -419,7 +418,6 @@ class Context(
     var steps: Int,
 ) : HasAssumptions {
 
-    /** See [HasAssumptions.assumptions]. */
     override val assumptions: MutableSet<Assumption> = mutableSetOf()
 
     fun clone(): Context {

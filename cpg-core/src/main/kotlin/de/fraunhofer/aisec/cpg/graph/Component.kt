@@ -70,7 +70,7 @@ open class Component : Node() {
 
     /**
      * In contrast to other Nodes we do not add the assumptions collected over the component because
-     * we are already the component. See [HasAssumptions.collectAssumptions].
+     * we are already the component.
      */
     override fun collectAssumptions(): Set<Assumption> {
         return assumptions.toSet()

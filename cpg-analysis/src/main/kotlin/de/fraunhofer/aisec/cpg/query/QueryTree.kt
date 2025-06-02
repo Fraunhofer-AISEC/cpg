@@ -70,7 +70,6 @@ open class QueryTree<T>(
      */
     open var node: Node? = null,
 
-    /** See [HasAssumptions.assumptions]. */
     override var assumptions: MutableSet<Assumption> = mutableSetOf(),
 ) : Comparable<QueryTree<T>>, HasAssumptions {
     fun printNicely(depth: Int = 0): String {
@@ -116,7 +115,7 @@ open class QueryTree<T>(
 
     /**
      * Adds the [assumptions] attached to the [QueryTree] itself and of all sub [QueryTree]s that
-     * were declared as children. See [HasAssumptions.collectAssumptions].
+     * were declared as children.
      */
     override fun collectAssumptions(): Set<Assumption> {
         return super.collectAssumptions() + children.flatMap { it.collectAssumptions() }.toSet()
