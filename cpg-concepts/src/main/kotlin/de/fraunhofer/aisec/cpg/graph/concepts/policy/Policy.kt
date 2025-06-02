@@ -46,7 +46,11 @@ abstract class PolicyRule(val policy: Policy) : Concept()
  */
 abstract class PolicyOperation(val policy: Policy) : Operation(concept = policy)
 
-open class AndRule(policy: Policy) : PolicyRule(policy)
+/**
+ * Represents a rule that combines two other rules using a logical AND operation. This means that
+ * both rules must be satisfied for the combined rule to be satisfied.
+ */
+class AndRule(val lhs: PolicyRule, val rhs: PolicyRule, policy: Policy) : PolicyRule(policy)
 
 /**
  * Represents a principal that is allowed to access a resource. This can for example be a (structure

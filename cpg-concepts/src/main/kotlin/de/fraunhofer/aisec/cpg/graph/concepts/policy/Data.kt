@@ -43,7 +43,8 @@ open class ProtectedAsset(scope: Scope?) : Concept()
 abstract class ProtectedAssetOperation(asset: ProtectedAsset) : Operation(concept = asset)
 
 /** Represents an operation that checks whether a user or principal has access to a protected */
-open class CheckAccess(asset: ProtectedAsset, predicate: Predicate) : ProtectedAssetOperation(asset)
+open class CheckAccess(asset: ProtectedAsset, predicate: Predicate) :
+    ProtectedAssetOperation(asset)
 
 /**
  * Base class for predicates used in an [CheckAccess] operation. Predicates define the conditions
