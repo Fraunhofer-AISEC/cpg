@@ -67,6 +67,7 @@ Switching to Tree-sitter would be a substantial architectural change and a new 
 
 ## Progress Notes
 
+
 ### 1. Add svelte support in current typescript modules
 *   **Strategy Shift:** Decided to integrate Svelte support directly into `cpg-language-typescript` instead of a separate module, based on maintainer feedback.
 *   **Kotlin Stubs:** Created initial Kotlin classes within `cpg-language-typescript`:
@@ -78,6 +79,7 @@ Switching to Tree-sitter would be a substantial architectural change and a new 
     *   The build process in `cpg-language-typescript/build.gradle.kts` will need to be adjusted to handle Deno execution for the combined parser (specific tasks to be defined).
 *   **Frontend Integration:** Modified `TypeScriptLanguageFrontend.kt`'s `parse` method to detect `.svelte` files and delegate to `SvelteLanguageFrontend` (when instantiated).
 *   **Build Status (Current):** Successfully added Kotlin stubs. Next step is to resolve Kotlin compilation errors in the new Svelte files and attempt a build (`./gradlew :cpg-language-typescript:build`).
+
 
 ### 2. Refactor: Unified AST Handling with `GenericAstNode`
 
@@ -125,6 +127,7 @@ What Has NOT Been Implemented Yet:
 * Other Script-Related TODOs: Several other TODOs related to richer script analysis (export details, type resolution beyond unknownType()) were planned after getting the basic function bodies working.
 In essence: The frontend can parse .svelte files and understand the top-level structure of the <script> tag, including variable and function declarations. The current errors are preventing us from correctly parsing the implementation details inside those functions. The HTML and CSS aspects are still pending.
 
+
 ### 3. Basic Svelte Parsing Implementation Complete ✅
 
 **Status:** Successfully implemented basic Svelte file parsing with working CPG node generation for script content.
@@ -165,7 +168,8 @@ In essence: The frontend can parse .svelte files and understand the top-lev
 - All compilation passes without errors
 - Ready for next phase of implementation
 
-### 4. Current Status & Next Immediate Actions ⚡
+
+### 4. Basic Svelte parsing infrastructure
 
 **Current State (May 2025):**
 ✅ **COMPLETED:**
@@ -203,39 +207,46 @@ In essence: The frontend can parse .svelte files and understand the top-lev
    - CSS declarations processing: Properties and values are logged and processed
    - **JSON output confirms**: `"cssDeclarations" : 2` - Multiple stylesheet declarations detected
    - **Integration verified**: CSS parsing works alongside script and HTML template parsing
-[ ] 5. **Integration Testing** - Test with cpg-wrapper-service visualizer to ensure graph compatibility
-
-## 🎯 **MAJOR MILESTONE ACHIEVED: Complete Basic Svelte Language Support** 
-
-### ✅ **All Core Parsing Components Implemented and Working:**
-
-1. **📝 Script Block Parsing** ✅ **COMPLETE**
-   - Variable declarations (including exports): `export let name: string = "World"`
-   - Function declarations with parameters and body statements
-   - Expression handling: assignments, literals, references, update expressions
-   - Type inference and CPG node generation
-
-2. **🌐 HTML Template Parsing** ✅ **COMPLETE**  
-   - HTML elements: `<h1>`, `<p>`, `<button>` with proper nesting
-   - Text content: Static text nodes with string literals
-   - Svelte expressions: `{name}`, `{count}` with variable references
-   - Event handlers: `on:click={handleClick}` with function linkage
-   - Mixed content: Combined text, elements, and expressions
-
-3. **🎨 CSS Block Parsing** ✅ **COMPLETE**
-   - Style blocks: `<style>` content processed into stylesheet declarations
-   - CSS rules: Selector-based field declarations (`rule_h1`, etc.)
-   - CSS properties: Property-value pairs with proper typing
-   - Integration: Works seamlessly with script and HTML parsing
-
-4. **📊 JSON Output & Testing** ✅ **COMPLETE**
-   - Complete CPG structure exported to JSON for visualization
-   - Test framework validates all parsing components
-   - Ready for cpg-wrapper-service integration
-   - Type-safe JSON generation with proper error handling
-
-**Technical Debt/TODOs:**
+[✅] 5. **Integration Testing** - Test with cpg-wrapper-service visualizer to ensure graph compatibility
 
 
+## 5. TemplateLiteral Support Added
 
+The first test of the `CheckerBoardBackground.svelte` component revealed and helped us fix the `TemplateLiteral` parsing issue. Our approach of incrementally adding AST node types works perfectly.
+
+### Analysis Results
+
+**✅ Before Fix:**
+```
+InvalidTypeIdException: Could not resolve type id 'TemplateLiteral' as a subtype of EsTreeNode
+```
+
+**✅ After Fix:**
+```
+InvalidTypeIdException: Could not resolve type id 'ObjectPattern' as a subtype of EsTreeIdentifier
+```
+
+This shows clear progress - `TemplateLiteral` is now working, and we've discovered the next AST node type that needs support (`ObjectPattern` for ES6 destructuring).
+
+### Implementation Pattern
+
+Our incremental approach works:
+
+1. **Test Real Components**: Use actual Svelte components from production code
+2. **Identify Missing AST Nodes**: Jackson errors clearly indicate what's missing
+3. **Add AST Definitions**: Add the missing node types to `SvelteAST.kt`
+4. **Register in Jackson**: Add `@JsonSubTypes.Type` annotations
+5. **Add Handler Logic**: Implement parsing logic in `SvelteLanguageFrontend.kt`
+6. **Test and Iterate**: Repeat until all required AST nodes are supported
+
+This methodology allows us to build comprehensive Svelte support based on real-world usage patterns.
+
+### Next Steps
+
+Continue adding support for discovered AST node types:
+- `ObjectPattern` (ES6 destructuring)
+- `Property` (object properties)  
+- `MemberExpression` (property access)
+- `CallExpression` (function calls)
+- And others as discovered through testing
 

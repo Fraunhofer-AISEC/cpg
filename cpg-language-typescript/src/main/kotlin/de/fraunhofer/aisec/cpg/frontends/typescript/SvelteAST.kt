@@ -166,6 +166,9 @@ data class SvelteStyleContent(
     JsonSubTypes.Type(value = EsTreeAssignmentExpression::class, name = "AssignmentExpression"),
     JsonSubTypes.Type(value = EsTreeUpdateExpression::class, name = "UpdateExpression"),
     JsonSubTypes.Type(value = EsTreeReturnStatement::class, name = "ReturnStatement"),
+    // Added TemplateLiteral support
+    JsonSubTypes.Type(value = EsTreeTemplateLiteral::class, name = "TemplateLiteral"),
+    JsonSubTypes.Type(value = EsTreeTemplateElement::class, name = "TemplateElement"),
 )
 @JsonIgnoreProperties(ignoreUnknown = true)
 interface EsTreeNode : GenericAstNode {
@@ -398,3 +401,26 @@ data class EsTreeReturnStatement(
     override val start: Int?,
     override val end: Int?,
 ) : EsTreeNode, EsTreeStatement // ReturnStatement is a Statement
+
+// --- New classes for TemplateLiteral support ---
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeTemplateLiteral(
+    val quasis: List<EsTreeTemplateElement>, // Template literal parts (strings)
+    val expressions: List<EsTreeNode>, // Expressions within ${} 
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeExpression
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeTemplateElement(
+    val value: TemplateElementValue,
+    val tail: Boolean, // true if this is the final element
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class TemplateElementValue(
+    val raw: String, // Raw string content including escape sequences
+    val cooked: String? // Processed string content (null if contains invalid escape sequences)
+)

@@ -504,6 +504,10 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                     return problem
                 }
             }
+            is EsTreeTemplateLiteral -> {
+                // Handle template literals like `Hello ${name}!`
+                return handleTemplateLiteral(exprNode)
+            }
             is EsTreeUpdateExpression -> { 
                 val unaryOp = newUnaryOperator(
                     exprNode.operator, // operatorCode
@@ -563,6 +567,63 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         val reference = newReference(name, type, rawNode = identifierNode)
 
         return reference
+    }
+
+    /**
+     * Handles template literals like `Hello ${name}!` by converting them to
+     * binary expressions that concatenate string parts with interpolated expressions.
+     */
+    private fun handleTemplateLiteral(templateNode: EsTreeTemplateLiteral): Expression {
+        val quasis = templateNode.quasis
+        val expressions = templateNode.expressions
+        
+        // For a template literal like `Hello ${name}!`, we have:
+        // - quasis: ["Hello ", "!"] (string parts)
+        // - expressions: [name] (interpolated expressions)
+        
+        if (quasis.isEmpty()) {
+            // Empty template literal, return empty string
+            return newLiteral("", language.getSimpleTypeOf("string") ?: unknownType(), rawNode = templateNode)
+        }
+        
+        if (expressions.isEmpty()) {
+            // No interpolations, just a single string
+            val value = quasis.firstOrNull()?.value?.cooked ?: ""
+            return newLiteral(value, language.getSimpleTypeOf("string") ?: unknownType(), rawNode = templateNode)
+        }
+        
+        // Build concatenation expression: quasi[0] + expr[0] + quasi[1] + expr[1] + ... + quasi[n]
+        var result: Expression? = null
+        
+        for (i in quasis.indices) {
+            val quasi = quasis[i]
+            val quasiValue = quasi.value.cooked ?: quasi.value.raw
+            
+            // Create string literal for the current quasi
+            val stringPart = newLiteral(quasiValue, language.getSimpleTypeOf("string") ?: unknownType(), rawNode = quasi)
+            
+            result = if (result == null) {
+                stringPart
+            } else {
+                newBinaryOperator("+", rawNode = templateNode).apply {
+                    lhs = result
+                    rhs = stringPart
+                }
+            }
+            
+            // Add the interpolated expression if it exists
+            if (i < expressions.size) {
+                val expr = handleExpression(expressions[i])
+                if (expr != null) {
+                    result = newBinaryOperator("+", rawNode = templateNode).apply {
+                        lhs = result
+                        rhs = expr
+                    }
+                }
+            }
+        }
+        
+        return result ?: newLiteral("", language.getSimpleTypeOf("string") ?: unknownType(), rawNode = templateNode)
     }
 
     // Corresponds to abstract fun typeOf(type: TypeNode): Type in LanguageFrontend
