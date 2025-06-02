@@ -263,8 +263,13 @@ data class NodePath(
     val nodes: List<Node>,
     override val assumptions: MutableSet<Assumption> = mutableSetOf(),
 ) : HasAssumptions {
+
+    /**
+     * Adds the [assumptions] attached to the [NodePath] itself and of all [Node] contained in the
+     * path.
+     */
     override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + nodes.flatMap { it.assumptions }
+        return super.collectAssumptions() + nodes.flatMap { it.collectAssumptions() }
     }
 }
 

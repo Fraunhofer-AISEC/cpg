@@ -287,6 +287,14 @@ abstract class Node() :
     var overlays by unwrapping(Node::overlayEdges)
 
     /**
+     * Adds the [assumptions] attached to the [Node] and of relevant supernodes in the AST.
+     * Currently, of the [Component].
+     */
+    override fun collectAssumptions(): Set<Assumption> {
+        return super.collectAssumptions() + (component?.collectAssumptions() ?: emptySet())
+    }
+
+    /**
      * If a node should be removed from the graph, just removing it from the AST is not enough (see
      * issue #60). It will most probably be referenced somewhere via DFG or EOG edges. Thus, if it
      * needs to be disconnected completely, we will have to take care of correctly disconnecting
