@@ -146,7 +146,8 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         program.module?.let { handleModuleScript(it, tu) }
         // Handle HTML structure (program.html)
         handleHtmlTemplate(program.html, tu)
-        // TODO: Handle CSS (program.css)
+        // Handle CSS (program.css)
+        program.css?.let { handleCssBlock(it, tu) }
     }
 
     private fun handleInstanceScript(scriptNode: SvelteScript, tu: TranslationUnitDeclaration) {
@@ -621,6 +622,82 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
     }
 
     override fun setComment(node: Node, astNode: GenericAstNode) {
+    }
+
+    private fun handleCssBlock(cssNode: SvelteStyleNode, tu: TranslationUnitDeclaration) {
+        log.info("Processing CSS block with {} children", cssNode.children?.size ?: 0)
+        
+        // Create a record declaration to represent the CSS stylesheet
+        val cssStylesheet = newRecordDeclaration(
+            parseName("stylesheet"),
+            "css_stylesheet",
+            rawNode = cssNode
+        )
+        
+        // Process CSS rules
+        cssNode.children?.forEach { child ->
+            when (child) {
+                is SvelteRule -> {
+                    log.debug("Processing CSS rule")
+                    val cssRule = handleCssRule(child)
+                    if (cssRule != null) {
+                        cssStylesheet.addField(cssRule)
+                    }
+                }
+                else -> {
+                    log.debug("Unhandled CSS child type: {}", child.javaClass.simpleName)
+                }
+            }
+        }
+        
+        // Add the stylesheet as a declaration to the translation unit
+        tu.addDeclaration(cssStylesheet)
+        log.debug("Added CSS stylesheet to translation unit")
+    }
+
+    private fun handleCssRule(rule: SvelteRule): FieldDeclaration? {
+        log.debug("Processing CSS rule with selector list")
+        
+        // Process the selector (e.g., "h1")
+        val selectorName = extractSelectorName(rule.prelude)
+        log.debug("CSS rule targets selector: {}", selectorName)
+        
+        // Create a field to represent the CSS rule with the selector name
+        val ruleField = newFieldDeclaration(
+            parseName("rule_$selectorName"),
+            unknownType(),
+            listOf("css_rule"),
+            rawNode = rule
+        )
+        
+        // Process CSS declarations (properties and values)
+        rule.block.children.forEach { declaration ->
+            log.debug("Processing CSS declaration: {} = {}", declaration.property, declaration.value)
+            
+            // Create a literal for the CSS value
+            val cssValue = newLiteral(
+                declaration.value,
+                language.getSimpleTypeOf("string") ?: unknownType(),
+                rawNode = declaration
+            )
+            
+            // For now, we'll combine all properties into a string representation
+            // In a more complete implementation, each property could be a separate field
+        }
+        
+        return ruleField
+    }
+
+    private fun extractSelectorName(selectorList: SvelteSelectorList): String {
+        // Extract the main selector name from the selector list
+        for (selector in selectorList.children) {
+            for (selectorChild in selector.children) {
+                if (selectorChild is SvelteTypeSelector) {
+                    return selectorChild.name
+                }
+            }
+        }
+        return "unknown_selector"
     }
 }
 

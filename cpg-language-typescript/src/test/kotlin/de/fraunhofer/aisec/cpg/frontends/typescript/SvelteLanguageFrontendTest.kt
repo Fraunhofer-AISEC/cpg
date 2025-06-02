@@ -136,54 +136,53 @@ class SvelteLanguageFrontendTest {
         
         try {
             // Create a simplified structure for visualization
-            val nodeInfo = mapOf(
-                "translationUnit" to mapOf(
-                    "name" to tu.name.toString(),
-                    "file" to tu.location?.artifactLocation?.uri?.path,
-                    "language" to tu.language?.name,
-                    "declarations" to tu.declarations.map { declaration ->
-                        mapOf(
-                            "type" to declaration::class.simpleName,
-                            "name" to declaration.name.localName,
-                            "nodeType" to (declaration as? ValueDeclaration)?.type.toString(),
-                            "location" to mapOf(
-                                "region" to declaration.location?.region.toString(),
-                                "artifactLocation" to declaration.location?.artifactLocation?.uri?.path
-                            ),
-                            "additionalInfo" to when (declaration) {
-                                is VariableDeclaration -> mapOf(
-                                    "initializer" to declaration.initializer?.toString(),
-                                    "isExported" to (declaration.name.localName == "name")
-                                )
-                                is FunctionDeclaration -> mapOf(
-                                    "parameters" to declaration.parameters.size,
-                                    "bodyStatements" to ((declaration.body as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Block)?.statements?.size ?: 0),
-                                    "bodyDetails" to if (declaration.body is de.fraunhofer.aisec.cpg.graph.statements.expressions.Block) {
-                                        (declaration.body as de.fraunhofer.aisec.cpg.graph.statements.expressions.Block).statements.mapIndexed { index, stmt ->
-                                            mapOf(
-                                                "index" to index,
-                                                "type" to stmt.javaClass.simpleName,
-                                                "details" to when (stmt) {
-                                                    is de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression -> mapOf(
-                                                        "operator" to stmt.operatorCode,
-                                                        "lhsType" to stmt.lhs.firstOrNull()?.javaClass?.simpleName,
-                                                        "rhsType" to stmt.rhs.firstOrNull()?.javaClass?.simpleName
-                                                    )
-                                                    is de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement -> mapOf(
-                                                        "declarations" to stmt.declarations.map { decl -> 
-                                                            mapOf("type" to decl.javaClass.simpleName, "name" to decl.name.localName)
-                                                        }
-                                                    )
-                                                    else -> mapOf("content" to stmt.toString())
-                                                }
-                                            )
-                                        }
-                                    } else emptyList<Map<String, Any>>()
-                                )
-                                else -> emptyMap<String, Any>()
-                            }
-                        )
+            val declarations = tu.declarations.map { declaration ->
+                val basicInfo = mutableMapOf<String, Any>(
+                    "type" to declaration::class.simpleName!!,
+                    "name" to declaration.name.localName
+                )
+                
+                // Add type information if available
+                (declaration as? ValueDeclaration)?.type?.let {
+                    basicInfo["nodeType"] = it.toString()
+                }
+                
+                // Add location information
+                declaration.location?.let { loc ->
+                    basicInfo["location"] = loc.toString()
+                }
+                
+                // Add specific information based on declaration type
+                when (declaration) {
+                    is VariableDeclaration -> {
+                        basicInfo["initializer"] = declaration.initializer?.toString() ?: "null"
+                        basicInfo["isExported"] = (declaration.name.localName == "name")
                     }
+                    is FunctionDeclaration -> {
+                        basicInfo["parameters"] = declaration.parameters.size
+                        val bodyStatements = (declaration.body as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Block)?.statements?.size ?: 0
+                        basicInfo["bodyStatements"] = bodyStatements
+                    }
+                }
+                
+                basicInfo.toMap()
+            }
+            
+            // Count different types of declarations
+            val cssCount = tu.declarations.count { it.name.localName == "stylesheet" }
+            val htmlElementsCount = tu.declarations.count { 
+                it is de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration && 
+                it.kind == "html_element" 
+            }
+            
+            val nodeInfo = mapOf<String, Any>(
+                "translationUnit" to mapOf<String, Any>(
+                    "name" to tu.name.toString(),
+                    "file" to (tu.location?.artifactLocation?.uri?.path ?: "unknown"),
+                    "language" to (tu.language?.name ?: "unknown"),
+                    "declarations" to declarations,
+                    "cssDeclarations" to cssCount,
+                    "htmlElements" to htmlElementsCount
                 )
             )
             
