@@ -88,6 +88,11 @@ inline fun <reified T> Node?.allChildrenWithOverlays(
     }
 }
 
+/** Checks, whether this [Node] has any overlays of type [T]. */
+inline fun <reified T : OverlayNode> Node.hasOverlay(): Boolean {
+    return this.overlays.filterIsInstance<T>().isNotEmpty()
+}
+
 /**
  * Returns a list of all [Node]s, starting from the current [Node], which are the beginning of an
  * EOG path created by the [EvaluationOrderGraphPass]. Typical examples include all top-level

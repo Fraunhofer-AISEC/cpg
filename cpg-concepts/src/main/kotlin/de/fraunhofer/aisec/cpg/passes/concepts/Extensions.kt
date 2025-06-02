@@ -110,8 +110,8 @@ fun <S : Node, T : Node> Propagator<S, T>.withMultiple(
  * node to a single selected "underlying" node.
  */
 context(TaggingContext)
-fun <T : Node> Selector<T>.with(builder: BuilderContext<T>.() -> OverlayNode): EachContext<T> {
-    val ctx = EachContext(selector = this, builder = { listOf(builder(it)) })
+fun <T : Node> Selector<T>.with(builder: BuilderContext<T>.() -> OverlayNode?): EachContext<T> {
+    val ctx = EachContext(selector = this, builder = { listOfNotNull(builder(it)) })
     listOfEach += ctx
     return ctx
 }
