@@ -69,7 +69,6 @@ open class QueryTree<T>(
      * in [stringRepresentation].
      */
     open var node: Node? = null,
-
     override var assumptions: MutableSet<Assumption> = mutableSetOf(),
 ) : Comparable<QueryTree<T>>, HasAssumptions {
     fun printNicely(depth: Int = 0): String {

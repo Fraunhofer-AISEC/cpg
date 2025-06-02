@@ -289,10 +289,10 @@ enum class AssumptionType {
 interface HasAssumptions {
 
     /**
-     * This set only contains the assumptions that were added by invoking [assume] or [addAssumptionDependence]
-     * to this object. To gather all assumptions that are relevant for this object, call [collectAssumptions].
-     * This is necessary as different parts of cpg construction and augmentation can add assumptions to a
-     * dependent object.
+     * This set only contains the assumptions that were added by invoking [assume] or
+     * [addAssumptionDependence] to this object. To gather all assumptions that are relevant for
+     * this object, call [collectAssumptions]. This is necessary as different parts of cpg
+     * construction and augmentation can add assumptions to a dependent object.
      */
     val assumptions: MutableSet<Assumption>
 

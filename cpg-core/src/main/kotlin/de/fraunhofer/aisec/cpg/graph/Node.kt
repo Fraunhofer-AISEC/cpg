@@ -287,8 +287,8 @@ abstract class Node() :
     var overlays by unwrapping(Node::overlayEdges)
 
     /**
-     * Adds the [assumptions] attached to the [Node] and of relevant supernodes in the AST. Currently, of the
-     * [Component].
+     * Adds the [assumptions] attached to the [Node] and of relevant supernodes in the AST.
+     * Currently, of the [Component].
      */
     override fun collectAssumptions(): Set<Assumption> {
         return super.collectAssumptions() + (component?.collectAssumptions() ?: emptySet())

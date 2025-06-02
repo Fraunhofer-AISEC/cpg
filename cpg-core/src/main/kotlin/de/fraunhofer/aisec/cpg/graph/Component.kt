@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
-import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.multiLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
