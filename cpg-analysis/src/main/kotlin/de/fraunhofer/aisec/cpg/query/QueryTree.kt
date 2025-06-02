@@ -224,6 +224,15 @@ infix fun QueryTree<Boolean>.and(other: QueryTree<Boolean>): QueryTree<Boolean> 
     )
 }
 
+/** Performs a logical and (&&) operation between the values of two [QueryTree]s. */
+infix fun QueryTree<Boolean>.and(other: Lazy<QueryTree<Boolean>>): QueryTree<Boolean> {
+    return QueryTree(
+        this.value && other.value.value,
+        if (!this.value) mutableListOf(this) else mutableListOf(this, other.value),
+        stringRepresentation = if (!this.value) "${this.value}" else "${this.value} && ${other.value.value}",
+    )
+}
+
 /** Performs a logical or (||) operation between the values and creates and returns [QueryTree]s. */
 infix fun Boolean.or(other: Boolean): QueryTree<Boolean> {
     return this.toQueryTree() or other.toQueryTree()
