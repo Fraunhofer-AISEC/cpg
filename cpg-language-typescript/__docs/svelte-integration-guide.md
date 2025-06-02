@@ -115,36 +115,41 @@ Expected test coverage:
 
 ### 2. Integration Testing
 
-Create a test Svelte component:
+Use the existing test Svelte component from the test resources:
+
+```bash
+# The test component is located at:
+# cpg-language-typescript/src/test/resources/svelte/SimpleComponent.svelte
+```
 
 ```svelte
-<!-- SimpleComponent.svelte -->
+<!-- SimpleComponent.svelte (from test resources) -->
 <script lang="ts">
-    export let name: string = "World";
-    let count: number = 0;
-    
-    function handleClick() {
-        count += 1;
-    }
+  export let name: string = "World";
+  let count: number = 0;
+
+  function handleClick() {
+    count += 1;
+  }
 </script>
 
 <h1>Hello {name}!</h1>
-<p>You've clicked the button {count} times.</p>
+<p>You've clicked the button {count} {count === 1 ? 'time' : 'times'}.</p>
 <button on:click={handleClick}>
-    Click me
+  Click me
 </button>
 
 <style>
-    h1 {
-        color: purple;
-    }
+  h1 {
+    color: purple;
+  }
 </style>
 ```
 
-Test with CPG tool:
+Test with CPG tool using the test resource:
 
 ```bash
-./cpg-neo4j/bin/cpg-neo4j --export-json=output.json --no-neo4j SimpleComponent.svelte
+./cpg-neo4j/bin/cpg-neo4j --export-json=output.json --no-neo4j cpg-language-typescript/src/test/resources/svelte/SimpleComponent.svelte
 ```
 
 Expected output indicators:
@@ -183,7 +188,13 @@ cp -r cpg-neo4j/build/install/cpg-neo4j /path/to/external-project/cpg-tool-dist/
 
 ```bash
 cd /path/to/external-project/cpg-tool-dist
-./cpg-neo4j/bin/cpg-neo4j --export-json=svelte-analysis.json --no-neo4j my-component.svelte
+
+# Option 1: Copy test component from CPG project
+cp /path/to/cpg/cpg-language-typescript/src/test/resources/svelte/SimpleComponent.svelte .
+./cpg-neo4j/bin/cpg-neo4j --export-json=svelte-analysis.json --no-neo4j SimpleComponent.svelte
+
+# Option 2: Use absolute path to test component
+./cpg-neo4j/bin/cpg-neo4j --export-json=svelte-analysis.json --no-neo4j /path/to/cpg/cpg-language-typescript/src/test/resources/svelte/SimpleComponent.svelte
 ```
 
 #### 3. Verification Steps
