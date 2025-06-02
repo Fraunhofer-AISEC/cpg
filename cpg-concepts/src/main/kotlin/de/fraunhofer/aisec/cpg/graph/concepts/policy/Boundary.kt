@@ -25,7 +25,36 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.policy
 
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import de.fraunhofer.aisec.cpg.graph.concepts.http.HttpEndpoint
 
-class Boundary(underlyingNode: Node? = null) : Concept(underlyingNode)
+/**
+ * Represents a boundary in data processing, which can be used to define the scope of a policy or
+ * the separation between different policies.
+ *
+ * For example, a boundary could be defined around an [HttpEndpoint], so that the policy applies
+ * once data either comes in or goes out of the HTTP endpoint.
+ */
+class Boundary() : Concept() {
+
+    /** All exit operations that are part of this boundary. */
+    val exits: List<ExitBoundary>
+        get() {
+            return ops.filterIsInstance<ExitBoundary>()
+        }
+}
+
+/**
+ * Represents an exit operation that is part of a [Boundary]. This operation is used to define the
+ * point at which data leaves the boundary.
+ */
+class ExitBoundary(concept: Boundary) : Operation(concept = concept) {
+    init {
+        concept.ops += this
+    }
+
+    override fun setDFG() {
+        underlyingNode?.let { this.prevDFG.add(it) }
+    }
+}

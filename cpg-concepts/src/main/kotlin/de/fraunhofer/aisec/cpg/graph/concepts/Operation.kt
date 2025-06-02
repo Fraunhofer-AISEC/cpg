@@ -35,7 +35,7 @@ import java.util.Objects
  * `write` on a file or log object or an `execute` on a database.
  */
 abstract class Operation(
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
     /** The [Concept] this operation belongs to. */
     open val concept: Concept,
 ) : OverlayNode() {

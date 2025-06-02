@@ -25,35 +25,38 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.policy
 
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
-class Policy(underlyingNode: Node?) : Concept(underlyingNode) {}
+/**
+ * Represents a policy that can be applied to a resource or a set of resources. Policies can contain
+ * rules and operations that define how access to the resource is controlled.
+ */
+class Policy() : Concept() {}
 
-abstract class PolicyRule(underlyingNode: Node?, val policy: Policy) : Concept(underlyingNode)
+/**
+ * Represents a rule that is part of a policy. This can be used to define conditions that must be
+ * met for the policy to be enforced.
+ */
+abstract class PolicyRule(val policy: Policy) : Concept()
 
-abstract class PolicyOperation(underlyingNode: Node?, val policy: Policy) :
-    Operation(underlyingNode, policy)
+/**
+ * Represents an operation that is part of a policy. This can be used to define rules or checks that
+ * need to be performed to enforce the policy.
+ */
+abstract class PolicyOperation(val policy: Policy) : Operation(concept = policy)
 
-class AndRule(underlyingNode: Node?, policy: Policy) : PolicyRule(underlyingNode, policy)
+class AndRule(policy: Policy) : PolicyRule(policy)
 
 /**
  * Represents a principal that is allowed to access a resource. This can for example be a (structure
  * representing) a user or a group of users.
  */
-class Principal(underlyingNode: Node?) : Concept(underlyingNode)
+class Principal() : Concept()
 
-class EqualityCheck(
-    underlyingNode: Node?,
-    policy: Policy,
-    val left: Principal,
-    val right: Principal,
-) : PolicyOperation(underlyingNode, policy)
+/** Represents an operation that checks whether two principals are equal. */
+class EqualityCheck(policy: Policy, val left: Principal, val right: Principal) :
+    PolicyOperation(policy)
 
-class IsInCheck(
-    underlyingNode: Node?,
-    policy: Policy,
-    val principal: Principal,
-    val group: Principal,
-)
+/** Represents an operation that checks whether a principal is in a specific group. */
+class IsInCheck(policy: Policy, val principal: Principal, val group: Principal)
