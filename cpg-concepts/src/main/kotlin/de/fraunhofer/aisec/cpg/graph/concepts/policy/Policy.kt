@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Operation
  * Represents a policy that can be applied to a resource or a set of resources. Policies can contain
  * rules and operations that define how access to the resource is controlled.
  */
-class Policy() : Concept() {}
+open class Policy() : Concept() {}
 
 /**
  * Represents a rule that is part of a policy. This can be used to define conditions that must be
@@ -46,7 +46,7 @@ abstract class PolicyRule(val policy: Policy) : Concept()
  */
 abstract class PolicyOperation(val policy: Policy) : Operation(concept = policy)
 
-class AndRule(policy: Policy) : PolicyRule(policy)
+open class AndRule(policy: Policy) : PolicyRule(policy)
 
 /**
  * Represents a principal that is allowed to access a resource. This can for example be a (structure
@@ -59,4 +59,4 @@ class EqualityCheck(policy: Policy, val left: Principal, val right: Principal) :
     PolicyOperation(policy)
 
 /** Represents an operation that checks whether a principal is in a specific group. */
-class IsInCheck(policy: Policy, val principal: Principal, val group: Principal)
+open class IsInCheck(policy: Policy, val principal: Principal, val group: Principal)

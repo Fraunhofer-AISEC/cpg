@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Scope
  * Represents an asset that is protected by a policy. This can be an in-memory data structure, a
  * file, a database, or any other resource that requires access control.
  */
-class ProtectedAsset(scope: Scope?) : Concept()
+open class ProtectedAsset(scope: Scope?) : Concept()
 
 /**
  * Base class for operations that involve protected assets. These operations can include checks for
@@ -43,7 +43,7 @@ class ProtectedAsset(scope: Scope?) : Concept()
 abstract class ProtectedAssetOperation(asset: ProtectedAsset) : Operation(concept = asset)
 
 /** Represents an operation that checks whether a user or principal has access to a protected */
-class CheckAccess(asset: ProtectedAsset, predicate: Predicate) : ProtectedAssetOperation(asset)
+open class CheckAccess(asset: ProtectedAsset, predicate: Predicate) : ProtectedAssetOperation(asset)
 
 /**
  * Base class for predicates used in an [CheckAccess] operation. Predicates define the conditions

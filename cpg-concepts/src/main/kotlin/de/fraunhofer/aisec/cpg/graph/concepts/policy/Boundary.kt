@@ -36,7 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.http.HttpEndpoint
  * For example, a boundary could be defined around an [HttpEndpoint], so that the policy applies
  * once data either comes in or goes out of the HTTP endpoint.
  */
-class Boundary() : Concept() {
+open class Boundary() : Concept() {
 
     /** All exit operations that are part of this boundary. */
     val exits: List<ExitBoundary>
@@ -49,7 +49,7 @@ class Boundary() : Concept() {
  * Represents an exit operation that is part of a [Boundary]. This operation is used to define the
  * point at which data leaves the boundary.
  */
-class ExitBoundary(concept: Boundary) : Operation(concept = concept) {
+open class ExitBoundary(concept: Boundary) : Operation(concept = concept) {
     init {
         concept.ops += this
     }
