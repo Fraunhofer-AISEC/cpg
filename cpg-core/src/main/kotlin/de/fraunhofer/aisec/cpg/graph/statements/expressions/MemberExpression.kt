@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.HasBase
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -115,5 +116,9 @@ class MemberExpression : Reference(), HasOverloadedOperation, ArgumentHolder, Ha
     private fun updateName() {
         val baseType = (base as? PointerDereference)?.input?.type ?: base.type
         this.name = baseType.root.name.fqn(name.localName)
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.base.getStartingPrevEOG()
     }
 }

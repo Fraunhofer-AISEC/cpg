@@ -29,8 +29,6 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.Forward
-import de.fraunhofer.aisec.cpg.graph.Interprocedural
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encrypt
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.SymmetricEncryption
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.GetSecret
@@ -39,6 +37,12 @@ import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.newCipher
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.newEncryptOperation
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.newGetSecret
 import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.newSecret
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.GetSecret
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.newCipher
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.newEncryptOperation
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.newGetSecret
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.newSecret
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.DeAllocate
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.MemoryManagementMode
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.newDeallocate
@@ -64,7 +68,7 @@ class MemoryTest {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
-        mapNodesToConcepts(result, true)
+        result.mapNodesToConcepts(true)
 
         val key = result.allChildrenWithOverlays<Secret>().singleOrNull()
         assertNotNull(key)
@@ -118,7 +122,7 @@ class MemoryTest {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
-        mapNodesToConcepts(result, true)
+        result.mapNodesToConcepts(true)
 
         val queryTreeResult =
             result.allExtended<GetSecret>(
@@ -144,7 +148,7 @@ class MemoryTest {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
-        mapNodesToConcepts(result, false)
+        result.mapNodesToConcepts(false)
 
         val key = result.allChildrenWithOverlays<Secret>().singleOrNull()
         assertNotNull(key)
@@ -199,7 +203,7 @@ class MemoryTest {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
-        mapNodesToConcepts(result, false)
+        result.mapNodesToConcepts(false)
 
         val queryTreeResult =
             result.allExtended<GetSecret>(
@@ -217,21 +221,19 @@ class MemoryTest {
         assertFalse(queryTreeResult.value)
     }
 
-    fun mapNodesToConcepts(result: TranslationResult, mapToFunctionDeclaration: Boolean) {
+    fun TranslationResult.mapNodesToConcepts(mapToFunctionDeclaration: Boolean) {
         // Secrets (key) concepts
         val keyRefLine1 =
-            result.refs.singleOrNull {
-                it.name.localName == "key" && it.location?.region?.startLine == 1
-            }
-        val key = result.newSecret(underlyingNode = assertNotNull(keyRefLine1), connect = true)
+            refs.singleOrNull { it.name.localName == "key" && it.location?.region?.startLine == 1 }
+        val key = newSecret(underlyingNode = assertNotNull(keyRefLine1), connect = true)
         val getSecretFromServer =
             if (mapToFunctionDeclaration) {
-                result.functions["get_secret_from_server"]
+                functions["get_secret_from_server"]
             } else {
-                result.calls["get_secret_from_server"]
+                calls["get_secret_from_server"]
             }
         val getSecret =
-            result.newGetSecret(
+            newGetSecret(
                 underlyingNode = assertNotNull(getSecretFromServer),
                 concept = key,
                 connect = true,
@@ -240,11 +242,9 @@ class MemoryTest {
 
         // Cipher (encryption) concepts
         val cipher =
-            result.newCipher(
+            newCipher(
                 underlyingNode =
-                    assertNotNull(
-                        assertNotNull(result.calls["encrypt"]).argumentEdges["cipher"]?.end
-                    ),
+                    assertNotNull(assertNotNull(calls["encrypt"]).argumentEdges["cipher"]?.end),
                 connect = true,
             )
         val cipherAndSize = (cipher.underlyingNode?.evaluate() as? String)?.split("-")
@@ -252,31 +252,23 @@ class MemoryTest {
         cipher.blockSize = cipherAndSize?.get(1)?.toIntOrNull()
         assertEquals("AES", cipher.cipherName)
         assertEquals(256, cipher.blockSize)
-        val encryption = SymmetricEncryption<Node>(cipher.underlyingNode)
-        encryption.cipher = cipher
-        result.newEncryptOperation(
-            underlyingNode = assertNotNull(result.calls["encrypt"]),
-            concept = encryption,
+        newEncryptOperation(
+            underlyingNode = assertNotNull(calls["encrypt"]),
+            concept = cipher,
             key = key,
             connect = true,
         )
 
         // Memory concepts
         val memory =
-            result.newMemory(
-                underlyingNode = assertNotNull(result.components[DEFAULT_APPLICATION_NAME]),
+            newMemory(
+                underlyingNode = assertNotNull(components[DEFAULT_APPLICATION_NAME]),
                 mode = MemoryManagementMode.MANAGED_WITH_GARBAGE_COLLECTION,
                 connect = true,
             )
-        result.allChildren<DeleteExpression>().flatMap { delete ->
+        allChildren<DeleteExpression>().flatMap { delete ->
             delete.operands.map {
-                result
-                    .newDeallocate(
-                        underlyingNode = delete,
-                        concept = memory,
-                        what = it,
-                        connect = true,
-                    )
+                newDeallocate(underlyingNode = delete, concept = memory, what = it, connect = true)
                     .apply { this.prevDFG += it }
             }
         }

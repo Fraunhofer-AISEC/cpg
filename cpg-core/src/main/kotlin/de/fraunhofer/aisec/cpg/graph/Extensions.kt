@@ -829,7 +829,12 @@ fun Node.followXUntilHit(
     worklist.add(listOf(this to context)) // We start only with the "from" node (=this)
 
     val alreadySeenNodes = mutableSetOf<Pair<Node, Context>>()
-
+    // First check if the current node satisfies the predicate.
+    // If it does, we consider this path fulfilled and skip further traversal.
+    if (predicate(this)) {
+        fulfilledPaths.add(NodePath(mutableListOf(this)).addAssumptionDependence(this))
+        return FulfilledAndFailedPaths(fulfilledPaths.toSet().toList(), failedPaths)
+    }
     while (worklist.isNotEmpty()) {
         val currentPath = worklist.maxBy { it.size }
         worklist.remove(currentPath)
@@ -873,22 +878,6 @@ fun Node.followXUntilHit(
             }
             // The next node is new in the current path (i.e., there's no loop), so we add the path
             // with the next step to the worklist.
-            // For our daily dose of special magic, we check that the path reaching the next node
-            // differs. If the path is different, we do accept seeing the same node multiple times.
-            /*val indexedPath =
-                currentPath.first
-                    .mapIndexed { index, node -> if (node == next) Pair(index, node) else null }
-                    .filterNotNull()
-            if (
-                (indexedPath.isEmpty() ||
-                        indexedPath.all {
-                            it.first == 0 || currentNode != currentPath.first[it.first - 1]
-                        }) &&
-                ((findAllPossiblePaths && currentPath.first.count { it == next } <= 2) ||
-                        (next !in currentPath.first &&
-                                (findAllPossiblePaths ||
-                                        (next !in alreadySeenNodes && worklist.none { next in it.first }))))
-            )*/
             if (
                 !isNodeWithCallStackInPath(next, newContext, currentPath) &&
                     (findAllPossiblePaths ||

@@ -89,4 +89,12 @@ abstract class Declaration : Node(), HasMemoryAddress, HasMemoryValue {
             outgoing = false,
         )
     override var memoryValues by unwrapping(Declaration::memoryValueEdges)
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return setOf()
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return setOf()
+    }
 }

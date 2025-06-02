@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.fieldCache
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.lang.annotation.AnnotationFormatError
@@ -453,23 +454,37 @@ fun SubgraphWalker.ScopedWalker.replace(parent: Node?, old: Expression, new: Exp
             "Replacing expression $old was not successful. Further analysis might not be entirely accurate."
         )
     } else {
-        // Store any eventual EOG/DFG nodes and disconnect old node
-        val oldNextEOG = old.nextEOG.toMutableList()
-        val oldPrevEOG =
-            when (old) {
-                is BinaryOperator -> {
-                    val prev = old.lhs.prevEOG.toMutableList()
-                    old.lhs.disconnectFromGraph()
-                    old.rhs.disconnectFromGraph()
-                    prev
-                }
-                else -> old.prevEOG.toMutableList()
-            }
+        // Store any eventual EOG nodes and disconnect old node
+        val oldNextEOG = old.getExitNextEOG().toSet()
+        val oldPrevEOG = old.getStartingPrevEOG().toSet()
+        val hasEOG =
+            oldNextEOG.isNotEmpty() ||
+                oldPrevEOG.isNotEmpty() ||
+                old.prevEOG.isNotEmpty() ||
+                old.nextEOG.isNotEmpty()
         old.disconnectFromGraph()
 
-        // Put the stored EOG nodes to the new node
-        new.prevEOG = oldPrevEOG
-        new.nextEOG = oldNextEOG
+        if (hasEOG) {
+            // We actively re-trigger the EOG pass to handle the new node but only if it has already
+            // been run before. To figure this out, we check if there's some sort of EOG edges
+            // somewhere. This is required because we
+            // cannot set the currentPredecessors with the incremental building logic.
+            val eogPass = EvaluationOrderGraphPass(ctx)
+            // Set the currentPredecessors to the old prevEOG nodes. This is necessary because the
+            // EOGPass takes these nodes to connect the first node in the children to the EOG and
+            // then
+            // constructs the remaining EOG edges in the new node's AST children.
+            eogPass.currentPredecessors.addAll(oldPrevEOG)
+            eogPass.handleEOG(new)
+            // For the old EOG predecessors, we need to set the new exit node of the EOG of this
+            // subgraph. These are stored in the currentPredecessors of the EOGPass.
+            oldNextEOG.forEach {
+                // TODO: It may be necessary for some nodes to also add properties (e.g. branches)
+                // to the EOG edges but we do not have access to this information here.
+                it.prevEOG = eogPass.currentPredecessors
+            }
+            eogPass.cleanup()
+        }
 
         // Also move over any type observers
         old.typeObservers.forEach {

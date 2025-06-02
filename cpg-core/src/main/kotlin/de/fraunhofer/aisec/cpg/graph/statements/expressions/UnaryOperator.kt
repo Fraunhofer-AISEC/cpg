@@ -26,6 +26,10 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.AccessValues
+import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
@@ -173,5 +177,9 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
     companion object {
         const val OPERATOR_POSTFIX_INCREMENT = "++"
         const val OPERATOR_POSTFIX_DECREMENT = "--"
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.input.getStartingPrevEOG()
     }
 }

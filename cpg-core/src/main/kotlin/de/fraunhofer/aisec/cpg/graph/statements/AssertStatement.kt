@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -48,4 +49,9 @@ class AssertStatement : Statement() {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), condition, message)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.condition?.getStartingPrevEOG()
+            ?: (this.prevEOG + (this.message?.getStartingPrevEOG() ?: setOf()))
+    }
 }

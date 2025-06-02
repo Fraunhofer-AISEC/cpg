@@ -27,31 +27,35 @@
 
 package de.fraunhofer.aisec.codyze.dsl
 
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.query.*
 
 /** Performs a logical and (&&) operation between the values and creates and returns [Decision]s. */
+context(TranslationResult)
 infix fun QueryTree<Boolean>.and(other: Decision): Decision {
     return this.decide() and other
 }
 
 /** Performs a logical and (&&) operation between the values and creates and returns [Decision]s. */
-context(RequirementsBuilder)
+context(RequirementsBuilder, TranslationResult)
 infix fun Decision.and(other: QueryTree<Boolean>): Decision {
     return this and other.decide()
 }
 
 /** Performs a logical or (||) operation between the values and creates and returns [Decision]s. */
+context(TranslationResult)
 infix fun QueryTree<Boolean>.or(other: DecisionState): Decision {
     return this.decide() or other.toQueryTree()
 }
 
 /** Performs a logical or (||) operation between the values and creates and returns [Decision]s. */
-context(RequirementsBuilder)
+context(RequirementsBuilder, TranslationResult)
 infix fun Decision.or(other: QueryTree<Boolean>): Decision {
     return this or other.decide()
 }
 
 /** Performs a logical xor operation between the values and creates and returns [Decision]s. */
+context(TranslationResult)
 infix fun QueryTree<Boolean>.xor(other: DecisionState): Decision {
     return this.decide() xor other.toQueryTree()
 }
@@ -60,6 +64,7 @@ infix fun QueryTree<Boolean>.xor(other: DecisionState): Decision {
  * Performs a logical implication (->) operation between the values and creates and returns
  * [QueryTree]s.
  */
+context(TranslationResult)
 infix fun QueryTree<Boolean>.implies(other: DecisionState): Decision {
     return this.decide() implies other.toQueryTree()
 }
@@ -68,7 +73,7 @@ infix fun QueryTree<Boolean>.implies(other: DecisionState): Decision {
  * Performs a logical implication (->) operation between the values and creates and returns
  * [QueryTree]s.
  */
-context(RequirementsBuilder)
+context(RequirementsBuilder, TranslationResult)
 infix fun Decision.implies(other: QueryTree<Boolean>): Decision {
     return this implies other.decide()
 }

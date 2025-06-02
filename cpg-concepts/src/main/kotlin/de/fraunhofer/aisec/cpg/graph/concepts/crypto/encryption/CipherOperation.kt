@@ -27,15 +27,14 @@ package de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret
 import java.util.Objects
 
-abstract class CipherOperation(underlyingNode: Node?, override val concept: Encryption<Node>) :
+abstract class CipherOperation(underlyingNode: Node?, override val concept: Cipher) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsEncryption
 
 open class Encrypt(
     underlyingNode: Node? = null,
-    concept: Encryption<Node>,
+    concept: Cipher,
     /** The key used for encryption */
     val key: Secret,
     var plaintext: Node? = null,
@@ -55,7 +54,7 @@ open class Encrypt(
 
 open class Decrypt(
     underlyingNode: Node? = null,
-    concept: Encryption<Node>,
+    concept: Cipher,
     /** The key used for encryption */
     val key: Secret,
     var plaintext: Node? = null,

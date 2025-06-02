@@ -25,6 +25,9 @@
  */
 package example
 
+import de.fraunhofer.aisec.codyze.dsl.and
+import de.fraunhofer.aisec.cpg.query.and
+
 include {
     AssumptionDecisions from "assumptions.codyze.kts"
     ManualAssessment from "manual.codyze.kts"
@@ -59,11 +62,23 @@ project {
     }
 
     requirements {
-        requirement("Is Security Target Correctly specified") { manualAssessmentOf("SEC-TARGET") }
-        requirement("Good Encryption") { result ->
-            goodCryptoFunc(result).decide() and
-                goodArgumentSize(result).decide() and
-                manualAssessmentOf("THIRD-PARTY-LIBRARY")
+        requirement {
+            name = "Is Security Target Correctly specified"
+            description = "test"
+
+            fulfilledBy { manualAssessmentOf("SEC-TARGET") }
+        }
+
+        category("ENCRYPTION") {
+            requirement("RQ-ENCRYPTION-01") {
+                name = "Good Encryption"
+
+                fulfilledBy {
+                    goodCryptoFunc() and
+                        goodArgumentSize() and
+                        manualAssessmentOf("THIRD-PARTY-LIBRARY")
+                }
+            }
         }
     }
 
