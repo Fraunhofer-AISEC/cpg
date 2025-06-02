@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.policy.CheckAccess
 import de.fraunhofer.aisec.cpg.graph.concepts.policy.ExitBoundary
 import de.fraunhofer.aisec.cpg.graph.concepts.policy.ProtectedAsset
 import de.fraunhofer.aisec.cpg.graph.followPrevCDGUntilHit
+import de.fraunhofer.aisec.cpg.graph.hasOverlay
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.allExtended
 import de.fraunhofer.aisec.cpg.query.dataFlow
@@ -50,7 +51,8 @@ fun assetsAreProtected(): QueryTree<Boolean> {
                     startNode = it,
                     direction = Backward(GraphToFollow.DFG),
                     predicate = { node ->
-                        node.overlays.filterIsInstance<ProtectedAsset>().isNotEmpty()
+                        // We only want to consider assets that are actually protected
+                        node.hasOverlay<ProtectedAsset>()
                     },
                 )
                 .value
@@ -58,11 +60,7 @@ fun assetsAreProtected(): QueryTree<Boolean> {
         mustSatisfy = {
             // TODO(oxisto): We need to check if the check access is actually matching the policy
             val paths =
-                it.followPrevCDGUntilHit(
-                    predicate = { node ->
-                        node.overlays.filterIsInstance<CheckAccess>().isNotEmpty()
-                    }
-                )
+                it.followPrevCDGUntilHit(predicate = { node -> node.hasOverlay<CheckAccess>() })
             paths.failed.isEmpty().toQueryTree()
         },
     )
