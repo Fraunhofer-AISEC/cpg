@@ -88,7 +88,7 @@ import org.slf4j.LoggerFactory
 @Suppress("MemberVisibilityCanBePrivate")
 open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
-    protected var currentPredecessors = mutableListOf<Node>()
+    var currentPredecessors = mutableListOf<Node>()
     protected var nextEdgeBranch: Boolean? = null
 
     /**
@@ -339,7 +339,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * custom adaptation of control flow behavior when handling nodes that influence control flow,
      * e.g. [LoopStatement]s or [BreakStatement].
      */
-    protected fun handleEOG(node: Node?) {
+    fun handleEOG(node: Node?) {
         if (node == null) {
             return
         }
