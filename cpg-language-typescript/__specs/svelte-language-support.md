@@ -294,23 +294,55 @@ Our incremental approach has proven highly effective:
 - Handles optional else blocks with children content
 - Fixed Kotlin keyword conflict using `@JsonProperty("else")`
 
+✅ **LogicalExpression** - Logical operators
+- Handles `&&`, `||`, `??` operators in JavaScript/TypeScript
+- Creates BinaryOperator expressions with correct precedence
+- Essential for conditional logic in templates and scripts
+
+✅ **UnaryExpression** - Unary operators  
+- Supports `!`, `-`, `+`, `typeof`, `void`, `delete`, etc.
+- Handles both prefix and postfix operators
+- Creates UnaryOperator expressions in CPG
+
+✅ **Comment** - HTML/Svelte comments
+- Processes `<!-- comment -->` syntax in templates
+- Creates Literal nodes for comment content
+- Preserves comments for documentation analysis
+
+✅ **ArrowFunctionExpression** - ES6 arrow functions
+- Handles `() => {}` and `(x) => x + 1` syntax
+- Creates placeholder literals for now (can be enhanced to full lambda support)
+- Essential for modern JavaScript/TypeScript patterns
+
+✅ **Class (SvelteClassDirective)** - Svelte class bindings
+- Supports `class:active={isActive}` syntax
+- Creates FieldDeclaration with "svelte_class_directive" kind
+- Processes conditional class application expressions
+
+✅ **MemberExpression** - Property access
+- Handles `object.property` and `array[index]` syntax
+- Creates MemberExpression nodes in CPG
+- Fixed Kotlin keyword conflict by renaming `object` → `objectNode` with `@JsonProperty("object")`
+- Supports both dot notation and computed access
+
 **Testing Results:**
 - **CheckerBoardBackground.svelte**: Template literal parsing ✅
 - **ColorPickerInputController.svelte**: ES6 destructuring ✅  
 - **PropsEditor.svelte**: Complex component with all features ✅
 - Each test iteration revealed exactly one new missing AST node type
-- Progressive error resolution: TemplateLiteral → ObjectPattern → InlineComponent → CallExpression → IfBlock → LogicalExpression
+- Progressive error resolution: TemplateLiteral → ObjectPattern → InlineComponent → CallExpression → IfBlock → LogicalExpression → UnaryExpression → Comment → ArrowFunctionExpression → Class → MemberExpression
 
 **Technical Implementation:**
 - All AST classes properly implement `GenericAstNode` interface
 - Jackson deserialization working for complex nested structures
 - Handler logic creates appropriate CPG nodes for each AST type
 - Build process successful with comprehensive warnings resolution
+- Resolved Kotlin keyword conflicts with proper escaping
 
 **Current State:**
-- Can parse sophisticated real-world Svelte components
-- Supports ES6 features, custom components, conditional rendering, function calls
-- Ready for next phase: LogicalExpression support (discovered from PropsEditor.svelte)
-- Infrastructure proven for adding additional AST node types as needed
+- Can parse sophisticated real-world Svelte components with 11 major AST node types
+- Supports ES6 features, custom components, conditional rendering, function calls, property access
+- Framework ready for additional AST node types as discovered through continued testing
+- Infrastructure proven for systematic expansion based on real-world usage patterns
 
-**Next Missing AST Node:** `LogicalExpression` (logical operators like `&&`, `||`, `??` in JavaScript/TypeScript expressions)
+**Next Steps:** Continue incremental testing with additional complex Svelte components to discover and implement remaining AST node types as needed.

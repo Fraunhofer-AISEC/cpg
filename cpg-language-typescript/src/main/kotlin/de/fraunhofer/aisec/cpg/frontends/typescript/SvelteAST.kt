@@ -59,6 +59,7 @@ interface GenericAstNode {
     JsonSubTypes.Type(value = SvelteInlineComponent::class, name = "InlineComponent"),
     JsonSubTypes.Type(value = SvelteIfBlock::class, name = "IfBlock"),
     JsonSubTypes.Type(value = SvelteElseBlock::class, name = "ElseBlock"),
+    JsonSubTypes.Type(value = SvelteComment::class, name = "Comment"),
     // CSS Nodes
     JsonSubTypes.Type(value = SvelteRule::class, name = "Rule"),
     JsonSubTypes.Type(value = SvelteSelectorList::class, name = "SelectorList"),
@@ -145,6 +146,14 @@ data class SvelteElseBlock(
     override val end: Int?,
 ) : SvelteNode
 
+/** Represents a Svelte/HTML comment (e.g., `<!-- comment -->`). */
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class SvelteComment(
+    val data: String, // The comment text content
+    override val start: Int?,
+    override val end: Int?,
+) : SvelteNode
+
 /** Represents a `<script>` block. */
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class SvelteScript(
@@ -205,6 +214,10 @@ data class SvelteStyleContent(
     JsonSubTypes.Type(value = EsTreeProperty::class, name = "Property"),
     JsonSubTypes.Type(value = EsTreeAssignmentPattern::class, name = "AssignmentPattern"),
     JsonSubTypes.Type(value = EsTreeCallExpression::class, name = "CallExpression"),
+    JsonSubTypes.Type(value = EsTreeLogicalExpression::class, name = "LogicalExpression"),
+    JsonSubTypes.Type(value = EsTreeUnaryExpression::class, name = "UnaryExpression"),
+    JsonSubTypes.Type(value = EsTreeArrowFunctionExpression::class, name = "ArrowFunctionExpression"),
+    JsonSubTypes.Type(value = EsTreeMemberExpression::class, name = "MemberExpression"),
 )
 @JsonIgnoreProperties(ignoreUnknown = true)
 interface EsTreeNode : GenericAstNode {
@@ -296,6 +309,7 @@ data class EsTreeExportNamedDeclaration(
 @JsonSubTypes(
     JsonSubTypes.Type(value = SvelteAttribute::class, name = "Attribute"),
     JsonSubTypes.Type(value = SvelteEventHandler::class, name = "EventHandler"),
+    JsonSubTypes.Type(value = SvelteClassDirective::class, name = "Class"),
     // Add other types like Binding, ClassList, Spread, etc.
 )
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -319,6 +333,15 @@ data class SvelteEventHandler(
     val expression: EsTreeNode?, // Can be null for shorthand like on:click
     val modifiers: List<String> = listOf(),
 ) : SvelteNode, SvelteAttributeLike // Implement both
+
+/** Represents a Svelte class directive (e.g., class:active={isActive}). */
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class SvelteClassDirective(
+    override val start: Int?,
+    override val end: Int?,
+    val name: String, // e.g., "active" for class:active
+    val expression: EsTreeNode?, // The condition expression, can be null for shorthand
+) : SvelteNode, SvelteAttributeLike
 
 /** Placeholder for different types of expressions within Svelte templates or scripts. */
 @JsonIgnoreProperties(ignoreUnknown = true) interface SvelteExpression : SvelteNode
@@ -495,6 +518,47 @@ data class EsTreeCallExpression(
     val callee: EsTreeNode, // The function being called (Identifier, MemberExpression, etc.)
     val arguments: List<EsTreeNode>, // List of argument expressions
     val optional: Boolean = false, // true for optional chaining (func?.())
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeExpression
+
+// --- New class for LogicalExpression support ---
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeLogicalExpression(
+    val operator: String, // Logical operator: "&&", "||", "??"
+    val left: EsTreeNode, // Left operand expression
+    val right: EsTreeNode, // Right operand expression
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeExpression
+
+// --- New class for UnaryExpression support ---
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeUnaryExpression(
+    val operator: String, // Unary operator: "+", "-", "!", "~", "typeof", "void", "delete", etc.
+    val argument: EsTreeNode, // The expression being operated on
+    val prefix: Boolean = true, // true for prefix operators (most unary ops), false for postfix
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeExpression
+
+// --- New class for ArrowFunctionExpression support ---
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeArrowFunctionExpression(
+    val params: List<EsTreeNode>, // Function parameters (Identifier, Pattern, etc.)
+    val body: EsTreeNode, // Function body (BlockStatement or Expression)
+    val async: Boolean = false, // true for async arrow functions
+    val expression: Boolean = true, // true if body is an expression, false if BlockStatement
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeExpression
+
+// --- New class for MemberExpression support ---
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeMemberExpression(
+    @JsonProperty("object") val objectNode: EsTreeNode, // The object being accessed (renamed to avoid keyword conflict)
+    val property: EsTreeNode, // The property being accessed
+    val computed: Boolean = false, // true for computed access like array[index], false for dot notation
     override val start: Int?,
     override val end: Int?,
 ) : EsTreeNode, EsTreeExpression

@@ -244,6 +244,27 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                             )
                             htmlElement.addField(attrField)
                         }
+                        is SvelteClassDirective -> {
+                            log.debug("Processing class directive: {}", attr.name)
+                            // Svelte class directives like class:active={isActive}
+                            val classField = newFieldDeclaration(
+                                parseName("class_${attr.name}"),
+                                unknownType(),
+                                listOf("svelte_class_directive"),
+                                rawNode = attr
+                            )
+                            
+                            // If there's an expression, it determines when the class is applied
+                            attr.expression?.let { expr ->
+                                val conditionRef = handleExpression(expr)
+                                if (conditionRef != null) {
+                                    log.debug("Class directive condition: {}", conditionRef)
+                                    // In a full implementation, we'd link this to the condition
+                                }
+                            }
+                            
+                            htmlElement.addField(classField)
+                        }
                     }
                 }
                 
@@ -313,6 +334,25 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                             )
                             componentElement.addField(propField)
                         }
+                        is SvelteClassDirective -> {
+                            log.debug("Processing component class directive: {}", attr.name)
+                            // Svelte class directives on components like class:active={isActive}
+                            val classField = newFieldDeclaration(
+                                parseName("class_${attr.name}"),
+                                unknownType(),
+                                listOf("component_class_directive"),
+                                rawNode = attr
+                            )
+                            
+                            attr.expression?.let { expr ->
+                                val conditionRef = handleExpression(expr)
+                                if (conditionRef != null) {
+                                    log.debug("Component class directive condition: {}", conditionRef)
+                                }
+                            }
+                            
+                            componentElement.addField(classField)
+                        }
                     }
                 }
                 
@@ -366,6 +406,20 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                 }
                 
                 elseBlock
+            }
+            is SvelteComment -> {
+                log.debug("Processing Svelte comment: {}", node.data.take(100))
+                
+                // Create a literal to represent the comment content
+                val commentLiteral = newLiteral(
+                    node.data, 
+                    language.getSimpleTypeOf("string") ?: unknownType(), 
+                    rawNode = node
+                )
+                
+                // Comments don't typically become part of the runtime program structure,
+                // but we include them for completeness in analysis
+                commentLiteral
             }
             else -> {
                 log.warn("Unhandled Svelte node type: {}", node.javaClass.simpleName)
@@ -814,6 +868,105 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                     exprNode.arguments.size)
                 
                 return callExpr
+            }
+            is EsTreeLogicalExpression -> {
+                // Handle logical expressions: &&, ||, ??
+                val logicalOp = newBinaryOperator(
+                    exprNode.operator, // operatorCode (&&, ||, ??)
+                    rawNode = exprNode
+                )
+                
+                val leftExpr = handleExpression(exprNode.left)
+                val rightExpr = handleExpression(exprNode.right)
+                
+                if (leftExpr != null && rightExpr != null) {
+                    logicalOp.lhs = leftExpr
+                    logicalOp.rhs = rightExpr
+                    return logicalOp
+                } else {
+                    val problem = newProblemExpression(
+                        "Could not handle operands of LogicalExpression",
+                        ProblemNode.ProblemType.PARSING,
+                        rawNode = exprNode
+                    )
+                    return problem
+                }
+            }
+            is EsTreeUnaryExpression -> {
+                // Handle unary expressions: !, -, +, typeof, void, delete, etc.
+                val unaryOp = newUnaryOperator(
+                    exprNode.operator, // operatorCode (!, -, +, typeof, etc.)
+                    exprNode.prefix,   // isPrefix
+                    !exprNode.prefix,  // isPostfix
+                    rawNode = exprNode
+                )
+                
+                val argumentExpr = handleExpression(exprNode.argument)
+                if (argumentExpr != null) {
+                    unaryOp.input = argumentExpr
+                    return unaryOp
+                } else {
+                    val problem = newProblemExpression(
+                        "Could not handle argument of UnaryExpression",
+                        ProblemNode.ProblemType.PARSING,
+                        rawNode = exprNode
+                    )
+                    return problem
+                }
+            }
+            is EsTreeArrowFunctionExpression -> {
+                // Handle arrow functions: () => {}, (x) => x + 1, etc.
+                log.debug("Processing arrow function with {} parameters", exprNode.params.size)
+                
+                // For now, create a placeholder literal to represent the arrow function
+                // In a more complete implementation, this would create a proper lambda/closure expression
+                val functionPlaceholder = newLiteral(
+                    "[ArrowFunction]",
+                    language.getSimpleTypeOf("function") ?: unknownType(),
+                    rawNode = exprNode
+                )
+                
+                log.debug("Arrow function parameters: {}", exprNode.params.size)
+                log.debug("Arrow function is expression: {}", exprNode.expression)
+                log.debug("Arrow function body type: {}", exprNode.body::class.simpleName)
+                
+                return functionPlaceholder
+            }
+            is EsTreeMemberExpression -> {
+                // Handle member expressions: object.property, array[index], etc.
+                log.debug("Processing member expression: object={}, property={}", 
+                    exprNode.objectNode::class.simpleName, 
+                    exprNode.property::class.simpleName)
+                
+                val objectExpr = handleExpression(exprNode.objectNode)
+                val propertyName = when (exprNode.property) {
+                    is EsTreeIdentifier -> exprNode.property.name
+                    is EsTreeLiteral -> exprNode.property.value?.toString() ?: "unknown"
+                    else -> "unknown_property"
+                }
+                
+                if (objectExpr != null) {
+                    // Create a member expression
+                    val memberExpr = newMemberExpression(
+                        propertyName,
+                        objectExpr,
+                        unknownType(),
+                        rawNode = exprNode
+                    )
+                    
+                    log.debug("Created member expression: {}.{}", 
+                        objectExpr::class.simpleName, 
+                        propertyName)
+                    
+                    return memberExpr
+                } else {
+                    val problem = newProblemExpression(
+                        "Could not handle object of MemberExpression",
+                        ProblemNode.ProblemType.PARSING,
+                        rawNode = exprNode
+                    )
+                    return problem
+                }
             }
             else -> {
                 val loc =
