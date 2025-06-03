@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.concepts.EOGConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.NodeToOverlayStateElement
+import de.fraunhofer.aisec.cpg.passes.concepts.getOverlaysByPrevDFG
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
@@ -111,9 +112,11 @@ class PythonFileJoinPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
             callExpression.arguments.fold(
                 listOf(listOf<String>() to FileTempFileStatus.NOT_A_TEMP_FILE)
             ) { currentPaths, argument ->
-                // TODO: This should be more generic and follow the prevDFG paths to find the
-                // FileLikeObjects and Literals.
-                val fileLikeArgs = argument.overlays.filterIsInstance<FileLikeObject>()
+                // Get possible FileLikeObjects from the argument by following its previous DFG
+                // paths. We create an empty NodeToOverlayStateElement because it's required by the
+                // function, but it has no effect on the result.
+                val fileLikeArgs =
+                    argument.getOverlaysByPrevDFG<FileLikeObject>(NodeToOverlayStateElement())
                 if (fileLikeArgs.isNotEmpty()) {
                     // If the given argument is a FileLikeObject, we append its fileName and set
                     // that the resulting path is a temp_file if it's a temp file. Otherwise, we
