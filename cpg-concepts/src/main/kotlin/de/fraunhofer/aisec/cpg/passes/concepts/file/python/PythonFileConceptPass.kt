@@ -174,6 +174,11 @@ class PythonFileConceptPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         }
     }
 
+    /**
+     * Creates a [CloseFile] and possibly a [DeleteFile] node for the given [callExpression] and on
+     * the [File] [fileNode]. The [DeleteFile] node is created if [File.deleteOnClose] is set to
+     * `true` for the [fileNode].
+     */
     private fun handleCloseFileObject(
         callExpression: MemberCallExpression,
         fileNode: File,
