@@ -100,49 +100,58 @@ class PythonFileJoinPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         }
     }
 
+    /**
+     * Handles the calls to `os.path.join` and creates a new [File] node from the arguments.
+     *
+     * To do so, it concatenates the file names of the [FileLikeObject]s and [Literal]s in the
+     * arguments with the separator `"/"` and generates new [File] nodes with the computed names.
+     */
     private fun handlePathJoin(callExpression: CallExpression): Collection<OverlayNode> {
-        val combinedFileName = mutableListOf<String>()
-        var tempFileStatus = FileTempFileStatus.NOT_A_TEMP_FILE
-        callExpression.arguments.forEach { argument ->
-            /*
-             * TODO: We should follow the DFG paths here.
-             */
-            if (argument.overlays.any { it is FileLikeObject }) {
-                combinedFileName +=
-                    argument.overlays.filterIsInstance<FileLikeObject>().joinToString {
-                        it.fileName
+        val allCombinedPaths =
+            callExpression.arguments.fold(
+                listOf(listOf<String>() to FileTempFileStatus.NOT_A_TEMP_FILE)
+            ) { currentPaths, argument ->
+                // TODO: This should be more generic and follow the prevDFG paths to find the
+                // FileLikeObjects and Literals.
+                val fileLikeArgs = argument.overlays.filterIsInstance<FileLikeObject>()
+                if (fileLikeArgs.isNotEmpty()) {
+                    // If the given argument is a FileLikeObject, we append its fileName and set
+                    // that the resulting path is a temp_file if it's a temp file. Otherwise, we
+                    // keep the tempFileStatus as it is.
+                    fileLikeArgs.flatMap {
+                        currentPaths.map { path ->
+                            (path.first + it.fileName) to
+                                if (it.isTempFile == FileTempFileStatus.TEMP_FILE)
+                                    FileTempFileStatus.TEMP_FILE
+                                else path.second
+                        }
                     }
-                if (
-                    argument.overlays.filterIsInstance<FileLikeObject>().any {
-                        it.isTempFile == FileTempFileStatus.TEMP_FILE
-                    }
-                ) {
-                    tempFileStatus = FileTempFileStatus.TEMP_FILE
+                } else if (argument is Literal<*>) {
+                    // If the given argument is a Literal, we append its value as a string to the
+                    // current paths. We keep the tempFileStatus as it is.
+                    val evaluatedArg = argument.value.toString()
+                    currentPaths.map { path -> path.first + evaluatedArg to path.second }
+                } else {
+                    log.warn("Unexpected argument: \"{}\". This will be ignored.", argument)
+                    currentPaths
                 }
-                argument.overlays.filterIsInstance<FileLikeObject>().forEach { file ->
-                    // not disconnecting from graph because the file exists, even if we only use it
-                    // in the "joined from"
-                    // log.debug("Disconnecting file from graph: {}", file.fileName)
-                    // file.disconnectFromGraph()
-                }
-            } else if (argument is Literal<*>) {
-                val evaluatedArg = argument.value.toString()
-                combinedFileName += evaluatedArg
-            } else {
-                log.warn("Unexpected argument: \"{}\". This will be ignored.", argument)
             }
-        }
 
-        val newFileName = combinedFileName.joinToString("/")
+        // Map the paths and create the new File nodes.
+        return allCombinedPaths.map { (combinedFileName, tempFileStatus) ->
+            // Join the paths with "/"
+            val newFileName = combinedFileName.joinToString("/")
+            // If the file name starts with "/tmp/", we consider it a temporary file, otherwise we
+            // use the pre-computed value.
+            val isTempFile =
+                if (newFileName.startsWith("/tmp/")) {
+                    FileTempFileStatus.TEMP_FILE
+                } else tempFileStatus
 
-        if (newFileName.startsWith("/tmp/")) {
-            tempFileStatus = FileTempFileStatus.TEMP_FILE
-        }
-
-        return listOf(
+            // Create the new File node with the computed name and temp file status.
             newFile(underlyingNode = callExpression, fileName = newFileName, connect = false)
-                .apply { this.isTempFile = tempFileStatus }
+                .apply { this.isTempFile = isTempFile }
                 .also { file -> log.debug("Created new file from path join: {}", file.fileName) }
-        )
+        }
     }
 }
