@@ -219,6 +219,7 @@ data class SvelteStyleContent(
     JsonSubTypes.Type(value = EsTreeArrowFunctionExpression::class, name = "ArrowFunctionExpression"),
     JsonSubTypes.Type(value = EsTreeMemberExpression::class, name = "MemberExpression"),
     JsonSubTypes.Type(value = EsTreeImportDeclaration::class, name = "ImportDeclaration"),
+    JsonSubTypes.Type(value = EsTreeImportSpecifier::class, name = "ImportSpecifier"),
 )
 @JsonIgnoreProperties(ignoreUnknown = true)
 interface EsTreeNode : GenericAstNode {
@@ -568,6 +569,15 @@ data class EsTreeMemberExpression(
 data class EsTreeImportDeclaration(
     val specifiers: List<EsTreeNode>,
     val source: EsTreeLiteral,
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode
+
+// --- New class for ImportSpecifier support ---
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeImportSpecifier(
+    val imported: EsTreeNode, // The name being imported from the module (usually Identifier)
+    val local: EsTreeNode, // The local name it's bound to (usually Identifier, can be different for aliases)
     override val start: Int?,
     override val end: Int?,
 ) : EsTreeNode

@@ -581,9 +581,24 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                             // Simple import like: import defaultExport from 'module'
                             log.debug("Processing default import: {}", specifier.name)
                         }
+                        is EsTreeImportSpecifier -> {
+                            // Named import like: import { onMount, createEventDispatcher } from 'svelte'
+                            val importedName = when (specifier.imported) {
+                                is EsTreeIdentifier -> specifier.imported.name
+                                else -> "unknown_import"
+                            }
+                            val localName = when (specifier.local) {
+                                is EsTreeIdentifier -> specifier.local.name
+                                else -> "unknown_local"
+                            }
+                            log.debug("Processing named import: {} as {}", importedName, localName)
+                            
+                            // In a complete implementation, we'd create variable declarations
+                            // for the imported symbols to make them available in the scope
+                        }
                         else -> {
                             log.debug("Processing import specifier type: {}", specifier::class.simpleName)
-                            // Handle other import specifier types (ImportSpecifier, ImportDefaultSpecifier, etc.)
+                            // Handle other import specifier types (ImportDefaultSpecifier, ImportNamespaceSpecifier, etc.)
                             // These would need additional AST node definitions if encountered
                         }
                     }
