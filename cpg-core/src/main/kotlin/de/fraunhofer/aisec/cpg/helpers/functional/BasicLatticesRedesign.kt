@@ -330,7 +330,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         }
 
         override fun duplicate(): Element<K, V> {
-            return Element(this.map { (k, v) -> Pair<K, V>(k, v.duplicate() as V) }.toMap())
+            return Element(*this.map { (k, v) -> Pair<K, V>(k, v.duplicate() as V) }.toTypedArray())
         }
 
         override fun hashCode(): Int {
