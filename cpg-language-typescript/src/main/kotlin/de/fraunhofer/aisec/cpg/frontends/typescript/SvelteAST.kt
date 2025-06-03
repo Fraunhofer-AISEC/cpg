@@ -56,6 +56,9 @@ interface GenericAstNode {
     JsonSubTypes.Type(value = SvelteScript::class, name = "Script"),
     JsonSubTypes.Type(value = SvelteStyleNode::class, name = "Style"),
     JsonSubTypes.Type(value = SvelteEventHandler::class, name = "EventHandler"),
+    JsonSubTypes.Type(value = SvelteInlineComponent::class, name = "InlineComponent"),
+    JsonSubTypes.Type(value = SvelteIfBlock::class, name = "IfBlock"),
+    JsonSubTypes.Type(value = SvelteElseBlock::class, name = "ElseBlock"),
     // CSS Nodes
     JsonSubTypes.Type(value = SvelteRule::class, name = "Rule"),
     JsonSubTypes.Type(value = SvelteSelectorList::class, name = "SelectorList"),
@@ -110,6 +113,34 @@ data class SvelteText(val data: String, override val start: Int?, override val e
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class SvelteMustacheTag(
     val expression: EsTreeNode, // The expression inside { }
+    override val start: Int?,
+    override val end: Int?,
+) : SvelteNode
+
+/** Represents an inline Svelte component (e.g., `<CustomComponent />`). */
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class SvelteInlineComponent(
+    val name: String, // Component name, e.g., "CustomComponent"
+    val attributes: List<SvelteAttributeLike>? = listOf(), // Props and directives
+    val children: List<SvelteNode>? = listOf(), // Child content
+    override val start: Int?,
+    override val end: Int?,
+) : SvelteNode
+
+/** Represents a Svelte conditional block (e.g., `{#if condition}...{/if}`). */
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class SvelteIfBlock(
+    val expression: EsTreeNode, // The condition expression
+    val children: List<SvelteNode>? = listOf(), // Content when condition is true
+    @JsonProperty("else") val elseBlock: SvelteElseBlock? = null, // Optional else block
+    override val start: Int?,
+    override val end: Int?,
+) : SvelteNode
+
+/** Represents a Svelte else block (part of if/else chain). */
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class SvelteElseBlock(
+    val children: List<SvelteNode>? = listOf(), // Content for else case
     override val start: Int?,
     override val end: Int?,
 ) : SvelteNode
@@ -169,6 +200,11 @@ data class SvelteStyleContent(
     // Added TemplateLiteral support
     JsonSubTypes.Type(value = EsTreeTemplateLiteral::class, name = "TemplateLiteral"),
     JsonSubTypes.Type(value = EsTreeTemplateElement::class, name = "TemplateElement"),
+    // Added ObjectPattern support for ES6 destructuring
+    JsonSubTypes.Type(value = EsTreeObjectPattern::class, name = "ObjectPattern"),
+    JsonSubTypes.Type(value = EsTreeProperty::class, name = "Property"),
+    JsonSubTypes.Type(value = EsTreeAssignmentPattern::class, name = "AssignmentPattern"),
+    JsonSubTypes.Type(value = EsTreeCallExpression::class, name = "CallExpression"),
 )
 @JsonIgnoreProperties(ignoreUnknown = true)
 interface EsTreeNode : GenericAstNode {
@@ -198,7 +234,7 @@ data class EsTreeVariableDeclaration(
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class EsTreeVariableDeclarator(
-    val id: EsTreeIdentifier,
+    val id: EsTreeNode, // Changed from EsTreeIdentifier to EsTreeNode to support ObjectPattern
     val init: EsTreeNode?, // Actually an EsTreeExpression
     override val start: Int?,
     override val end: Int?,
@@ -424,3 +460,41 @@ data class TemplateElementValue(
     val raw: String, // Raw string content including escape sequences
     val cooked: String? // Processed string content (null if contains invalid escape sequences)
 )
+
+// --- New classes for ObjectPattern support (ES6 destructuring) ---
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeObjectPattern(
+    val properties: List<EsTreeProperty>, // List of property patterns
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeExpression
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeProperty(
+    val key: EsTreeNode, // Property key (usually Identifier)
+    val value: EsTreeNode, // Property value pattern (Identifier, default value, etc.)
+    val kind: String = "init", // "init", "get", "set"
+    val method: Boolean = false, // true if method
+    val shorthand: Boolean = false, // true if shorthand property ({x} instead of {x: x})
+    val computed: Boolean = false, // true if computed property ([key]: value)
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeAssignmentPattern(
+    val left: EsTreeNode, // The pattern being assigned to (usually Identifier)
+    val right: EsTreeNode, // The default value expression
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeExpression
+
+// --- New class for CallExpression support ---
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeCallExpression(
+    val callee: EsTreeNode, // The function being called (Identifier, MemberExpression, etc.)
+    val arguments: List<EsTreeNode>, // List of argument expressions
+    val optional: Boolean = false, // true for optional chaining (func?.())
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeExpression
