@@ -91,8 +91,7 @@ class PythonValueEvaluator : ValueEvaluator() {
     override fun handleCallExpression(call: CallExpression, depth: Int): Any? {
         return when (call.reconstructedImportName.toString()) {
             "os.path.join" -> {
-                call.arguments.joinToString(separator = "/") { // TODO separator
-                arg ->
+                call.arguments.joinToString(separator = "/") { arg ->
                     super.evaluate(arg).toString()
                 }
             }
