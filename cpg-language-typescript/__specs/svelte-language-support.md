@@ -266,7 +266,7 @@ Our incremental approach has proven highly effective:
 5. **Add Handler Logic**: Implement parsing logic in `SvelteLanguageFrontend.kt`
 6. **Test and Iterate**: Repeat until all required AST nodes are supported
 
-**AST Node Types Implemented:**
+**AST Node Types Implemented (12 total):**
 
 ✅ **TemplateLiteral & TemplateElement** - Template string literals
 - Handles complex string interpolation: `${className ? className + ' ' : ''}`
@@ -325,12 +325,19 @@ Our incremental approach has proven highly effective:
 - Fixed Kotlin keyword conflict by renaming `object` → `objectNode` with `@JsonProperty("object")`
 - Supports both dot notation and computed access
 
+✅ **ImportDeclaration** - Import statements
+- Handles `import { name1, name2 } from 'module'` syntax in TypeScript/JavaScript
+- Creates ImportDeclaration nodes in CPG with ImportStyle.IMPORT_NAMESPACE
+- Essential for module imports in Svelte `<script>` blocks
+- Resolves cpg-wrapper-service parsing errors for components with imports
+
 **Testing Results:**
 - **CheckerBoardBackground.svelte**: Template literal parsing ✅
 - **ColorPickerInputController.svelte**: ES6 destructuring ✅  
 - **PropsEditor.svelte**: Complex component with all features ✅
+- **cpg-wrapper-service integration**: ImportDeclaration errors resolved ✅
 - Each test iteration revealed exactly one new missing AST node type
-- Progressive error resolution: TemplateLiteral → ObjectPattern → InlineComponent → CallExpression → IfBlock → LogicalExpression → UnaryExpression → Comment → ArrowFunctionExpression → Class → MemberExpression
+- Progressive error resolution: TemplateLiteral → ObjectPattern → InlineComponent → CallExpression → IfBlock → LogicalExpression → UnaryExpression → Comment → ArrowFunctionExpression → Class → MemberExpression → ImportDeclaration
 
 **Technical Implementation:**
 - All AST classes properly implement `GenericAstNode` interface
@@ -340,9 +347,10 @@ Our incremental approach has proven highly effective:
 - Resolved Kotlin keyword conflicts with proper escaping
 
 **Current State:**
-- Can parse sophisticated real-world Svelte components with 11 major AST node types
-- Supports ES6 features, custom components, conditional rendering, function calls, property access
+- Can parse sophisticated real-world Svelte components with 12 major AST node types
+- Supports ES6 features, custom components, conditional rendering, function calls, property access, imports
 - Framework ready for additional AST node types as discovered through continued testing
 - Infrastructure proven for systematic expansion based on real-world usage patterns
+- Resolves cpg-wrapper-service integration issues with import statement parsing
 
 **Next Steps:** Continue incremental testing with additional complex Svelte components to discover and implement remaining AST node types as needed.

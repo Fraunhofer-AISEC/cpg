@@ -64,6 +64,7 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 // SARIF
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import java.io.File
 import java.io.InputStreamReader // For reading process output
 import kotlin.jvm.Throws
@@ -558,6 +559,37 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                 }
                 // TODO: Handle stmtNode.specifiers for re-exports like export { name1, name2 }
                 return null // Or handle specifiers and return something
+            }
+            is EsTreeImportDeclaration -> {
+                // Handle import statements: import { name1, name2 } from 'module'
+                log.debug("Processing import declaration from: {}", stmtNode.source.value)
+                
+                // Get the module name
+                val moduleName = stmtNode.source.value?.toString() ?: "unknown"
+                
+                // Create an import declaration in CPG with required parameters
+                val importDecl = newImportDeclaration(
+                    import = parseName(moduleName),
+                    style = ImportStyle.IMPORT_NAMESPACE, // Use proper ImportStyle enum value
+                    rawNode = stmtNode
+                )
+                
+                // Process import specifiers (named imports, default imports, etc.)
+                for (specifier in stmtNode.specifiers) {
+                    when (specifier) {
+                        is EsTreeIdentifier -> {
+                            // Simple import like: import defaultExport from 'module'
+                            log.debug("Processing default import: {}", specifier.name)
+                        }
+                        else -> {
+                            log.debug("Processing import specifier type: {}", specifier::class.simpleName)
+                            // Handle other import specifier types (ImportSpecifier, ImportDefaultSpecifier, etc.)
+                            // These would need additional AST node definitions if encountered
+                        }
+                    }
+                }
+                
+                return importDecl
             }
             is EsTreeExpressionStatement -> { // Added case for EsTreeExpressionStatement
                 val expression = handleExpression(stmtNode.expression)
