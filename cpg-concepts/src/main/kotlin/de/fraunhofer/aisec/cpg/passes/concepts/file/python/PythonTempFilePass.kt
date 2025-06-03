@@ -122,6 +122,11 @@ class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         }
     }
 
+    /**
+     * Handles calls to `tempfile.gettempdir` and creates a new [File] concept with the name
+     * `tempfile.gettempdir(<UUID>)`, where `<UUID>` is a unique identifier to avoid collisions. It
+     * also sets the file as a temporary file.
+     */
     private fun handleGetTempDir(callExpression: CallExpression): Collection<OverlayNode> {
         return listOf(
             newFile(
@@ -134,6 +139,11 @@ class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         )
     }
 
+    /**
+     * Handles calls to `tempfile.TemporaryFile` and `tempfile.NamedTemporaryFile`. It checks if the
+     * file is deleted when the file is closed (default is `true`) and creates a new [File] concept,
+     * [OpenFile] operation and [SetFileMask] operation and returns them in the list.
+     */
     private fun handleTempFile(callExpression: CallExpression): Collection<OverlayNode> {
         val deleteOnClose =
             when (callExpression.callee.name.toString()) {
@@ -168,43 +178,119 @@ class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         return listOf(file, permissions, openTemp)
     }
 
+    /**
+     * Handles the `tempfile.mkstemp` function. It creates a temporary file with a unique name based
+     * on the provided prefix and suffix and the id of the [callExpression].
+     */
     private fun handleMkstemp(callExpression: CallExpression): Collection<OverlayNode> {
         return listOf(
             newFileHandle(
                 underlyingNode = callExpression,
-                fileName = "tempfile.mkstemp" + callExpression.id.toString(),
+                fileName =
+                    createFilename(
+                        // Get the prefix (default is "tmp") and add it at the beginning of the file
+                        // name.
+                        prefix =
+                            (callExpression.argumentValueByNameOrPosition<String>(
+                                name = "prefix",
+                                position = 1,
+                            ) ?: "tmp"),
+                        // We use "tempfile.mkstemp" and the call expression ID as "unique" part in
+                        // the middle of the file name.
+                        middle = "tempfile.mkstemp",
+                        callExpression = callExpression,
+                        // Get the suffix (default is empty string) and add it to the end of the
+                        // file name.
+                        suffix =
+                            (callExpression.argumentValueByNameOrPosition<String>(
+                                name = "suffix",
+                                position = 0,
+                            ) ?: ""),
+                    ),
                 tempFileStatus = FileTempFileStatus.TEMP_FILE,
                 connect = false,
             )
         )
     }
 
+    /**
+     * Handles the `tempfile.mkdtemp` function. It creates a temporary directory with a unique name
+     * based on the provided prefix and suffix and the id of the [callExpression].
+     */
     private fun handleMkdtemp(callExpression: CallExpression): Collection<OverlayNode> {
         return listOf(
             newFileHandle(
                 underlyingNode = callExpression,
-                fileName = "tempfile.mkdtemp" + callExpression.id.toString(),
+                fileName =
+                    createFilename(
+                        // Get the prefix (default is "tmp") and add it at the beginning of the file
+                        // name.
+                        prefix =
+                            (callExpression.argumentValueByNameOrPosition<String>(
+                                name = "prefix",
+                                position = 1,
+                            ) ?: "tmp"),
+                        // We use "tempfile.mkdtemp" and the call expression ID as "unique" part in
+                        // the middle of the file name.
+                        middle = "tempfile.mkdtemp",
+                        callExpression = callExpression,
+                        // Get the suffix (default is empty string) and add it to the end of the
+                        // file name.
+                        suffix =
+                            (callExpression.argumentValueByNameOrPosition<String>(
+                                name = "suffix",
+                                position = 0,
+                            ) ?: ""),
+                    ),
                 tempFileStatus = FileTempFileStatus.TEMP_FILE,
                 connect = false,
             )
         )
     }
 
+    /**
+     * Creates a temporary file with a unique name based on the provided [prefix], [suffix],
+     * [middle] aand the id of the [callExpression].
+     */
+    fun createFilename(
+        prefix: String,
+        middle: String,
+        callExpression: CallExpression,
+        suffix: String,
+    ): String {
+        return prefix + middle + callExpression.id.toString() + suffix
+    }
+
+    /**
+     * Handles the legacy `tempfile.mktemp` function, which is not recommended to use anymore. It
+     * creates a temporary file with a unique name based on the provided prefix and suffix and the
+     * id of the [callExpression].
+     */
     private fun handleMktemp(callExpression: CallExpression): Collection<OverlayNode> {
         return listOf(
             newFileHandle(
                 underlyingNode = callExpression,
                 fileName =
-                    "tempfile.mktemp" +
-                        (callExpression.argumentValueByNameOrPosition<String>(
-                            name = "suffix",
-                            position = 1,
-                        ) ?: "NOSUFFIX") +
-                        (callExpression.argumentValueByNameOrPosition<String>(
-                            name = "prefix",
-                            position = 1,
-                        ) ?: "NOPREFIX") +
-                        callExpression.id.toString(),
+                    createFilename(
+                        // Get the prefix (default is "tmp") and add it at the beginning of the file
+                        // name.
+                        prefix =
+                            (callExpression.argumentValueByNameOrPosition<String>(
+                                name = "prefix",
+                                position = 1,
+                            ) ?: "tmp"),
+                        // We use "tempfile.mktemp" and the call expression ID as "unique" part in
+                        // the middle of the file name.
+                        middle = "tempfile.mktemp",
+                        callExpression = callExpression,
+                        // Get the suffix (default is empty string) and add it to the end of the
+                        // file name.
+                        suffix =
+                            (callExpression.argumentValueByNameOrPosition<String>(
+                                name = "suffix",
+                                position = 0,
+                            ) ?: ""),
+                    ),
                 tempFileStatus = FileTempFileStatus.TEMP_FILE,
                 connect = false,
             )
