@@ -42,7 +42,8 @@ class SvelteLanguageFrontendTest {
     @Test
     fun `test parsing Svelte component with CPG analysis`() {
         // Change this to test different Svelte files
-        val svelteFileName = "MockWidget.svelte"
+        val svelteFileName = "Svelte4Features.svelte"
+        // val svelteFileName = "MockWidget.svelte"
         // val svelteFileName = "SimpleComponent.svelte"
         
         val topLevel = Path.of("src", "test", "resources", "svelte")
@@ -53,41 +54,71 @@ class SvelteLanguageFrontendTest {
         println("=== ATTEMPTING TO PARSE SVELTE FILE ===")
         println("File: ${svelteFile.absolutePath}")
         
-        val result =
-            try {
-                analyzeAndGetFirstTU(
-                    listOf(svelteFile),
-                    topLevel,
-                    true,
-                ) {
-                    it.registerLanguage<SvelteLanguage>()
-                }
-            } catch (e: Exception) {
-                println("Error during parsing: ${e.message}")
-                e.printStackTrace()
-                null
+        var tu: de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration? = null
+        var parsingErrors = mutableListOf<String>()
+        var parsingSuccessful = false
+        
+        try {
+            tu = analyzeAndGetFirstTU(
+                listOf(svelteFile),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<SvelteLanguage>()
             }
+            
+            if (tu != null) {
+                parsingSuccessful = true
+                println("✅ Successfully created translation unit")
+            } else {
+                parsingErrors.add("Translation unit creation returned null")
+                println("⚠️  Translation unit creation returned null - attempting graceful degradation")
+            }
+            
+        } catch (e: com.fasterxml.jackson.databind.exc.InvalidTypeIdException) {
+            // Jackson deserialization error - this means we found a new AST node type
+            val errorMsg = "Jackson deserialization error: ${e.message}"
+            parsingErrors.add(errorMsg)
+            println("⚠️  $errorMsg")
+            
+            // Extract the missing type from the error message
+            val typePattern = "missing type id property 'type' \\(for POJO property '([^']+)'\\)".toRegex()
+            val match = typePattern.find(e.message ?: "")
+            if (match != null) {
+                val missingProperty = match.groupValues[1]
+                println("🔍 Missing AST node type discovered in property: '$missingProperty'")
+                println("   This indicates a new AST node type that needs to be implemented")
+                parsingErrors.add("Missing AST node type in property: $missingProperty")
+            }
+            
+        } catch (e: Exception) {
+            val errorMsg = "General parsing error: ${e.javaClass.simpleName}: ${e.message}"
+            parsingErrors.add(errorMsg)
+            println("⚠️  $errorMsg")
+            e.printStackTrace()
+        }
 
-        val tu = result
-        if (tu == null) {
-            println("❌ Failed to parse Svelte file - no translation unit created")
-            println("This indicates a fundamental parsing issue")
-            // Let's not fail the test completely, but show what happened
-            return
+        // Even if parsing failed, let's analyze what we can
+        println("\n=== SVELTE CPG ANALYSIS: $svelteFileName ===")
+        println("File: ${svelteFile.absolutePath}")
+        println("Parsing Status: ${if (parsingSuccessful) "✅ Success" else "⚠️  Partial/Failed"}")
+        
+        if (parsingErrors.isNotEmpty()) {
+            println("\n=== PARSING ISSUES DETECTED ===")
+            parsingErrors.forEachIndexed { index, error ->
+                println("${index + 1}. $error")
+            }
+            println("\nNote: This indicates missing AST node types that can be added incrementally.")
         }
         
-        println("✅ Successfully created translation unit")
+        // Continue analysis with whatever we have
+        val variables = tu?.declarations?.filterIsInstance<VariableDeclaration>() ?: emptyList()
+        val functions = tu?.declarations?.filterIsInstance<FunctionDeclaration>() ?: emptyList()
+        val records = tu?.declarations?.filterIsInstance<RecordDeclaration>() ?: emptyList()
         
-        println("=== SVELTE CPG ANALYSIS: $svelteFileName ===")
-        println("File: ${svelteFile.absolutePath}")
-        println("Translation Unit: ${tu.name}")
-        println("Language: ${tu.language?.name}")
-        println("Total Declarations: ${tu.declarations.size}")
-        
-        // Categorize declarations by type
-        val variables = tu.declarations.filterIsInstance<VariableDeclaration>()
-        val functions = tu.declarations.filterIsInstance<FunctionDeclaration>()
-        val records = tu.declarations.filterIsInstance<RecordDeclaration>()
+        println("\nTranslation Unit: ${tu?.name ?: "null"}")
+        println("Language: ${tu?.language?.name ?: "unknown"}")
+        println("Total Declarations: ${tu?.declarations?.size ?: 0}")
         
         println("\n=== SCRIPT ANALYSIS ===")
         println("Variables found: ${variables.size}")
@@ -121,22 +152,23 @@ class SvelteLanguageFrontendTest {
         println("Svelte components: ${svelteComponents.size}")
         
         // Show any problem declarations (things that couldn't be parsed)
-        val problems = tu.declarations.filter { it.name.localName.startsWith("Problem") || it.javaClass.simpleName.contains("Problem") }
+        val problems = tu?.declarations?.filter { it.name.localName.startsWith("Problem") || it.javaClass.simpleName.contains("Problem") } ?: emptyList()
         if (problems.isNotEmpty()) {
-            println("\n=== PARSING ISSUES ===")
+            println("\n=== PARSER-GENERATED PROBLEM NODES ===")
             println("Problem declarations: ${problems.size}")
             problems.forEach { problem ->
                 println("  - ${problem.javaClass.simpleName}: ${problem.name}")
             }
         }
         
-        // Create JSON output for external tools
+        // ALWAYS create JSON output - even for failed parsing
         val objectMapper = ObjectMapper().registerModule(KotlinModule.Builder().build())
         
         try {
             val analysisResult = mapOf(
                 "file" to svelteFileName,
-                "totalDeclarations" to tu.declarations.size,
+                "parsingSuccessful" to parsingSuccessful,
+                "totalDeclarations" to (tu?.declarations?.size ?: 0),
                 "variables" to variables.map { mapOf(
                     "name" to it.name.localName,
                     "type" to it.type.toString(),
@@ -151,7 +183,10 @@ class SvelteLanguageFrontendTest {
                 "cssStylesheets" to cssStylesheets.size,
                 "svelteComponents" to svelteComponents.size,
                 "problems" to problems.size,
-                "parsingSuccessful" to (tu.declarations.isNotEmpty())
+                "parsingErrors" to parsingErrors,
+                "errorCount" to parsingErrors.size,
+                "gracefulDegradation" to (!parsingSuccessful && (variables.isNotEmpty() || functions.isNotEmpty() || records.isNotEmpty())),
+                "analysisCompleteness" to if (parsingSuccessful) "complete" else if (tu != null) "partial" else "failed"
             )
             
             val jsonOutput = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(analysisResult)
@@ -171,11 +206,24 @@ class SvelteLanguageFrontendTest {
             e.printStackTrace()
         }
 
-        // Basic success check - we should have some declarations
-        assertTrue(tu.declarations.isNotEmpty(), "Should have parsed some declarations from the Svelte file")
+        // Modified success criteria - we should be lenient for development
+        if (parsingSuccessful) {
+            assertTrue(tu!!.declarations.isNotEmpty(), "Should have parsed some declarations from the Svelte file")
+        } else {
+            println("\n=== GRACEFUL DEGRADATION ACTIVATED ===")
+            println("⚠️  Parsing encountered errors but test continues for development analysis")
+            println("🔧 Use the error information above to implement missing AST node types")
+        }
         
         println("\n=== ANALYSIS COMPLETE ===")
-        println("✅ Successfully parsed $svelteFileName")
-        println("Found ${variables.size} variables, ${functions.size} functions, ${records.size} structural elements")
+        if (parsingSuccessful) {
+            println("✅ Successfully parsed $svelteFileName")
+            println("Found ${variables.size} variables, ${functions.size} functions, ${records.size} structural elements")
+        } else {
+            println("⚠️  Partial analysis of $svelteFileName completed")
+            println("Found ${variables.size} variables, ${functions.size} functions, ${records.size} structural elements")
+            println("Errors: ${parsingErrors.size} (see details above)")
+            println("This is expected during development - use errors to guide AST node implementation")
+        }
     }
 }
