@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.helpers.functional
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice.Element
-import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import java.io.Serializable
 import java.util.*
@@ -252,24 +251,19 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
         get() = Element()
 
     override fun lub(one: Element<T>, two: Element<T>, allowModify: Boolean): Element<T> {
+        if (allowModify) {
+            one += two
+            return one
+        }
         return when (compare(one, two)) {
-            Order.LESSER ->
-                if (allowModify) {
-                    one += two
-                    one
-                } else two.duplicate()
+            Order.LESSER -> two.duplicate()
             Order.EQUAL,
             Order.GREATER -> one
             Order.UNEQUAL -> {
-                if (allowModify) {
-                    one += two
-                    one
-                } else {
-                    val result = Element<T>(one.size + two.size)
-                    result += one
-                    result += two
-                    result
-                }
+                val result = Element<T>(one.size + two.size)
+                result += one
+                result += two
+                result
             }
         }
     }
@@ -418,24 +412,25 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         get() = MapLattice.Element()
 
     override fun lub(one: Element<K, V>, two: Element<K, V>, allowModify: Boolean): Element<K, V> {
+        if (allowModify) {
+            two.forEach { (k, v) ->
+                if (!one.containsKey(k)) {
+                    // This key is not in "one", so we add the value from "two" to "one"
+                    one[k] = v
+                } else {
+                    // This key already exists in "one", so we have to compute the lub of the values
+                    one[k]?.let { oneValue -> innerLattice.lub(oneValue, v, true) }
+                }
+            }
+            return one
+        }
+
         return when (val comp = compare(one, two)) {
             Order.EQUAL,
             Order.GREATER -> one
             Order.LESSER,
             Order.UNEQUAL -> {
-                if (allowModify) {
-                    // Requires identitySet and toList to avoid accidentally removing equal but not
-                    // identical keys
-                    val newKeys = two.keys.filterTo(identitySetOf()) { it !in one.keys }
-                    val existingKeys = two.keys.toList().minus(newKeys)
-                    newKeys.forEach { key -> one[key] = two[key] }
-                    existingKeys.forEach { key ->
-                        one[key]?.let { oneValue ->
-                            two[key]?.let { twoValue -> innerLattice.lub(oneValue, twoValue, true) }
-                        }
-                    }
-                    one
-                } else if (comp == Order.LESSER) {
+                if (comp == Order.LESSER) {
                     two.duplicate()
                 } else {
                     val allKeys = one.keys.toIdentitySet()
