@@ -531,21 +531,24 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 .map { it.nodes.last() }
                                 .forEach { sourceParamValue ->
                                     val matchingDeclarations =
-                                        node.parameters.filter {
+                                        node.parameters.singleOrNull {
                                             it.name == sourceParamValue.name.parent
                                         }
-                                    if (matchingDeclarations.size != 1) TODO()
+                                    if (matchingDeclarations == null) TODO()
                                     node.functionSummary
                                         .computeIfAbsent(param) { mutableSetOf() }
                                         .add(
                                             FunctionDeclaration.FSEntry(
                                                 dstValueDepth,
-                                                matchingDeclarations.first(),
+                                                matchingDeclarations,
                                                 stringToDepth(sourceParamValue.name.localName),
                                                 subAccessName,
                                                 true,
                                                 equalLinkedHashSetOf(
-                                                    Pair(param, equalLinkedHashSetOf())
+                                                    Pair(
+                                                        matchingDeclarations,
+                                                        equalLinkedHashSetOf(),
+                                                    )
                                                 ),
                                             )
                                         )
