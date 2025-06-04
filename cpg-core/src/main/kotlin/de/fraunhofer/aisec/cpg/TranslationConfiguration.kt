@@ -111,7 +111,7 @@ private constructor(
         Map<Pair<KClass<out Pass<out Node>>, KClass<out Language<*>>>, KClass<out Pass<out Node>>>,
     /** This list contains the files with function summaries which should be considered. */
     val functionSummaries: DFGFunctionSummaries,
-    languages: List<KClass<out Language<*>>>,
+    languages: Set<KClass<out Language<*>>>,
     codeInNodes: Boolean,
     processAnnotations: Boolean,
     disableCleanup: Boolean,
@@ -133,7 +133,7 @@ private constructor(
     val disableTypeObserver: Boolean,
 ) {
     /** This list contains all languages which we want to translate. */
-    @JsonIgnore val languages: List<KClass<out Language<*>>>
+    @JsonIgnore val languages: Set<KClass<out Language<*>>>
 
     /**
      * Switch off cleaning up TypeManager memory after analysis.
@@ -245,7 +245,7 @@ private constructor(
      */
     class Builder {
         private var softwareComponents: MutableMap<String, List<File>> = HashMap()
-        private val languages = mutableListOf<KClass<out Language<*>>>()
+        private val languages = mutableSetOf<KClass<out Language<*>>>()
         private var topLevels = mutableMapOf<String, File>()
         private var debugParser = false
         private var failOnError = false
