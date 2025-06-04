@@ -229,7 +229,8 @@ infix fun QueryTree<Boolean>.and(other: Lazy<QueryTree<Boolean>>): QueryTree<Boo
     return QueryTree(
         this.value && other.value.value,
         if (!this.value) mutableListOf(this) else mutableListOf(this, other.value),
-        stringRepresentation = if (!this.value) "${this.value}" else "${this.value} && ${other.value.value}",
+        stringRepresentation =
+            if (!this.value) "${this.value}" else "${this.value} && ${other.value.value}",
     )
 }
 
