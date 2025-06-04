@@ -31,13 +31,14 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Cipher
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encrypt
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encryption
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import java.util.Objects
 import kotlin.test.Test
 import kotlin.test.assertIs
@@ -72,12 +73,13 @@ class TagOverlaysPassTest {
                             config =
                                 TranslationConfiguration.builder()
                                     .registerPass<TagOverlaysPass>()
+                                    .registerPass<PointsToPass>()
                                     .configurePass<TagOverlaysPass>(
                                         TagOverlaysPass.Configuration(
                                             tag =
                                                 tag {
                                                     each<RecordDeclaration>("Encryption").with {
-                                                        Cipher()
+                                                        Encryption<Node>()
                                                     }
                                                     each<VariableDeclaration>("key").with {
                                                         Secret()
@@ -101,7 +103,9 @@ class TagOverlaysPassTest {
                                                                 val ciphers =
                                                                     state.values
                                                                         .flatMap { it }
-                                                                        .filterIsInstance<Cipher>()
+                                                                        .filterIsInstance<
+                                                                            Encryption<Node>
+                                                                        >()
                                                                 ciphers.map { cipher ->
                                                                     Encrypt(
                                                                         concept = cipher,
@@ -137,7 +141,7 @@ class TagOverlaysPassTest {
         assertNotNull(encryption)
 
         val cipher = encryption.conceptNodes.singleOrNull()
-        assertIs<Cipher>(cipher)
+        assertIs<Encryption<Node>>(cipher)
 
         val key = result.variables["key"]
         assertNotNull(key)

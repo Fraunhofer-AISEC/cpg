@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
+import java.util.Objects
 import kotlin.collections.filter
 import kotlin.collections.firstOrNull
 import kotlin.math.absoluteValue
@@ -434,6 +435,16 @@ class Context(
         this.steps++
         return this
     }
+
+    override fun equals(other: Any?): Boolean {
+        return other is Context &&
+            this.indexStack == other.indexStack &&
+            this.callStack == other.callStack
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hash(super.hashCode(), indexStack, callStack)
+    }
 }
 
 /** Implementation of a simple stack, based on an [ArrayDeque] */
@@ -812,6 +823,7 @@ fun Node.followXUntilHit(
     x: (Node, Context, List<Node>) -> Collection<Pair<Node, Context>>,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    continueAfterHit: Boolean = false,
     context: Context = Context(steps = 0),
     earlyTermination: (Node, Context) -> Boolean,
     predicate: (Node) -> Boolean,
@@ -1412,9 +1424,8 @@ private fun Node.eogDistanceTo(to: Node): Int {
 fun Expression?.unwrapReference(): Reference? {
     return when {
         this is Reference -> this
-        this is UnaryOperator && (this.operatorCode == "*" || this.operatorCode == "&") ->
-            this.input.unwrapReference()
-
+        this is PointerReference -> this
+        this is PointerDereference -> this
         this is CastExpression -> this.expression.unwrapReference()
         else -> null
     }

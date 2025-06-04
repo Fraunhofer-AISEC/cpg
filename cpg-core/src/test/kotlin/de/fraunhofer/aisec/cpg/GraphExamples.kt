@@ -646,15 +646,23 @@ class GraphExamples {
                                             ifStmt {
                                                 condition { ref("b") gt literal(0, t("int")) }
                                                 thenStmt {
-                                                    ref("d") assign ref("a") * literal(2, t("int"))
+                                                    ref("d") assign
+                                                        {
+                                                            ref("a") * literal(2, t("int"))
+                                                        }
                                                     ref("a") assign
-                                                        ref("a") + ref("d") * literal(2, t("int"))
+                                                        {
+                                                            ref("a") +
+                                                                ref("d") * literal(2, t("int"))
+                                                        }
                                                 }
                                                 elseIf {
                                                     condition { ref("b") lt literal(-2, t("int")) }
                                                     thenStmt {
                                                         ref("a") assign
-                                                            ref("a") - literal(10, t("int"))
+                                                            {
+                                                                ref("a") - literal(10, t("int"))
+                                                            }
                                                     }
                                                 }
                                             }
