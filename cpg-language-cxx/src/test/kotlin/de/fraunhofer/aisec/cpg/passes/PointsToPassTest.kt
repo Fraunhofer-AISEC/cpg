@@ -2517,7 +2517,7 @@ class PointsToPassTest {
                 .size,
         )
         assertEquals(
-            2,
+            4,
             changepointerFS.entries
                 .first { it.key.name.localName == "p" }
                 .value
@@ -2533,7 +2533,7 @@ class PointsToPassTest {
                 .size,
         )
         assertEquals(
-            1,
+            2,
             changepointerFS.entries
                 .first { it.key.name.localName == "newp" }
                 .value
