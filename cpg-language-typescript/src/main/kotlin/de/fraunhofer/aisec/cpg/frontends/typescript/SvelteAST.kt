@@ -29,6 +29,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.annotation.JsonSetter
+import com.fasterxml.jackson.annotation.Nulls
 
 /** Base interface for all Svelte and ESTree AST nodes, providing common properties. */
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -59,12 +61,17 @@ interface GenericAstNode {
     JsonSubTypes.Type(value = SvelteInlineComponent::class, name = "InlineComponent"),
     JsonSubTypes.Type(value = SvelteIfBlock::class, name = "IfBlock"),
     JsonSubTypes.Type(value = SvelteElseBlock::class, name = "ElseBlock"),
+    JsonSubTypes.Type(value = SvelteEachBlock::class, name = "EachBlock"),
     JsonSubTypes.Type(value = SvelteComment::class, name = "Comment"),
+    JsonSubTypes.Type(value = SvelteConstTag::class, name = "ConstTag"),
     // CSS Nodes
     JsonSubTypes.Type(value = SvelteRule::class, name = "Rule"),
     JsonSubTypes.Type(value = SvelteSelectorList::class, name = "SelectorList"),
     JsonSubTypes.Type(value = SvelteSelector::class, name = "Selector"),
     JsonSubTypes.Type(value = SvelteTypeSelector::class, name = "TypeSelector"),
+    JsonSubTypes.Type(value = SvelteClassSelector::class, name = "ClassSelector"),
+    JsonSubTypes.Type(value = SveltePseudoClassSelector::class, name = "PseudoClassSelector"),
+    JsonSubTypes.Type(value = SveltePseudoElementSelector::class, name = "PseudoElementSelector"),
     JsonSubTypes.Type(value = SvelteBlock::class, name = "Block"),
     JsonSubTypes.Type(value = SvelteDeclaration::class, name = "Declaration"),
     // TODO: Add other Svelte node types here as needed (e.g., Comment, Block, etc.)
@@ -146,6 +153,18 @@ data class SvelteElseBlock(
     override val end: Int?,
 ) : SvelteNode
 
+/** Represents a Svelte each block (e.g., {#each items as item}...{/each}). */
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class SvelteEachBlock(
+    override val start: Int?,
+    override val end: Int?,
+    val expression: EsTreeNode,  // The collection being iterated (e.g., items)
+    val context: EsTreeNode,     // Changed from String to EsTreeNode for Identifier (e.g., "item")
+    val index: String? = null,   // Optional index variable name (e.g., "i") - this is just a string!
+    val children: List<SvelteNode> = emptyList(),  // Content inside the each block
+    val elseBlock: SvelteElseBlock? = null         // Optional {:else} block for empty collections
+) : SvelteNode
+
 /** Represents a Svelte/HTML comment (e.g., `<!-- comment -->`). */
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class SvelteComment(
@@ -220,6 +239,15 @@ data class SvelteStyleContent(
     JsonSubTypes.Type(value = EsTreeMemberExpression::class, name = "MemberExpression"),
     JsonSubTypes.Type(value = EsTreeImportDeclaration::class, name = "ImportDeclaration"),
     JsonSubTypes.Type(value = EsTreeImportSpecifier::class, name = "ImportSpecifier"),
+    JsonSubTypes.Type(value = EsTreeImportDefaultSpecifier::class, name = "ImportDefaultSpecifier"),
+    JsonSubTypes.Type(value = EsTreeObjectExpression::class, name = "ObjectExpression"),
+    JsonSubTypes.Type(value = EsTreeArrayExpression::class, name = "ArrayExpression"),
+    JsonSubTypes.Type(value = EsTreeExportSpecifier::class, name = "ExportSpecifier"),
+    JsonSubTypes.Type(value = EsTreeIfStatement::class, name = "IfStatement"),
+    JsonSubTypes.Type(value = EsTreeTSAsExpression::class, name = "TSAsExpression"),
+    JsonSubTypes.Type(value = EsTreeTSTypeReference::class, name = "TSTypeReference"),
+    JsonSubTypes.Type(value = EsTreeSpreadElement::class, name = "SpreadElement"),
+    JsonSubTypes.Type(value = EsTreeChainExpression::class, name = "ChainExpression"),
 )
 @JsonIgnoreProperties(ignoreUnknown = true)
 interface EsTreeNode : GenericAstNode {
@@ -312,6 +340,7 @@ data class EsTreeExportNamedDeclaration(
     JsonSubTypes.Type(value = SvelteAttribute::class, name = "Attribute"),
     JsonSubTypes.Type(value = SvelteEventHandler::class, name = "EventHandler"),
     JsonSubTypes.Type(value = SvelteClassDirective::class, name = "Class"),
+    JsonSubTypes.Type(value = SvelteBinding::class, name = "Binding"),
     // Add other types like Binding, ClassList, Spread, etc.
 )
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -323,7 +352,7 @@ data class SvelteAttribute(
     override val start: Int,
     override val end: Int,
     val name: String,
-    val value: List<SvelteNode>? = null, // Attribute value can be complex
+    val value: Any? = null, // Attribute value can be Boolean for shorthand, or List<SvelteNode> for complex values
 ) : SvelteAttributeLike
 
 /** Represents an EventHandler attribute (e.g., on:click). */
@@ -343,6 +372,15 @@ data class SvelteClassDirective(
     override val end: Int?,
     val name: String, // e.g., "active" for class:active
     val expression: EsTreeNode?, // The condition expression, can be null for shorthand
+) : SvelteNode, SvelteAttributeLike
+
+/** Represents a Svelte binding directive (e.g., bind:value={myValue}). */
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class SvelteBinding(
+    override val start: Int?,
+    override val end: Int?,
+    val name: String, // e.g., "value" for bind:value
+    val expression: EsTreeNode?, // The variable being bound to, can be null for shorthand
 ) : SvelteNode, SvelteAttributeLike
 
 /** Placeholder for different types of expressions within Svelte templates or scripts. */
@@ -391,6 +429,27 @@ data class SvelteSelector(
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class SvelteTypeSelector(override val start: Int?, override val end: Int?, val name: String) :
     SvelteNode
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class SvelteClassSelector(
+    override val start: Int?,
+    override val end: Int?,
+    val name: String // The class name without the dot, e.g., "my-class" for ".my-class"
+) : SvelteNode
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class SveltePseudoClassSelector(
+    override val start: Int?,
+    override val end: Int?,
+    val name: String // The pseudo-class name, e.g., ":hover"
+) : SvelteNode
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class SveltePseudoElementSelector(
+    override val start: Int?,
+    override val end: Int?,
+    val name: String // The pseudo-element name, e.g., "::before"
+) : SvelteNode
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class SvelteBlock(
@@ -489,7 +548,7 @@ data class TemplateElementValue(
 // --- New classes for ObjectPattern support (ES6 destructuring) ---
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class EsTreeObjectPattern(
-    val properties: List<EsTreeProperty>, // List of property patterns
+    val properties: List<EsTreeNode>, // Changed from List<EsTreeProperty> to List<EsTreeNode> to support both Property and SpreadElement
     override val start: Int?,
     override val end: Int?,
 ) : EsTreeNode, EsTreeExpression
@@ -581,3 +640,82 @@ data class EsTreeImportSpecifier(
     override val start: Int?,
     override val end: Int?,
 ) : EsTreeNode
+
+// --- New class for ImportDefaultSpecifier support ---
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeImportDefaultSpecifier(
+    val local: EsTreeNode, // The local name it's bound to (usually Identifier)
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode
+
+// --- New class for ObjectExpression support ---
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeObjectExpression(
+    val properties: List<EsTreeNode>, // Changed from List<EsTreeProperty> to List<EsTreeNode> to support both Property and SpreadElement
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeExpression
+
+// --- New class for ArrayExpression support ---
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeArrayExpression(
+    val elements: List<EsTreeNode>, // List of array elements (can be null for sparse arrays)
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeExpression
+
+// --- New class for ExportSpecifier support ---
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeExportSpecifier(
+    val exported: EsTreeNode, // The name being exported (usually Identifier)
+    val local: EsTreeNode, // The local name being exported (usually Identifier, can be different for aliases)
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeIfStatement(
+    val test: EsTreeNode, // Changed from 'condition' to 'test' to match standard ESTree naming
+    val consequent: EsTreeNode, // Changed from 'then' to 'consequent' to match standard ESTree naming  
+    val alternate: EsTreeNode?, // Changed from 'else' to 'alternate' to match standard ESTree naming
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeStatement
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeTSAsExpression(
+    val typeAnnotation: EsTreeNode?, // Changed from 'type' to 'typeAnnotation' and made nullable
+    val expression: EsTreeNode,
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeExpression
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeTSTypeReference(
+    val typeName: EsTreeNode, // Changed from String to EsTreeNode for Identifier
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeExpression
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeSpreadElement(
+    val argument: EsTreeNode, // The expression being spread (e.g., obj in ...obj)
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeExpression
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class EsTreeChainExpression(
+    val expression: EsTreeNode, // The expression being chained
+    override val start: Int?,
+    override val end: Int?,
+) : EsTreeNode, EsTreeExpression
+
+/** Represents a Svelte const tag (e.g., {@const value = expression}). */
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class SvelteConstTag(
+    override val start: Int?,
+    override val end: Int?,
+    val expression: EsTreeNode, // The assignment expression (e.g., value = computed())
+) : SvelteNode

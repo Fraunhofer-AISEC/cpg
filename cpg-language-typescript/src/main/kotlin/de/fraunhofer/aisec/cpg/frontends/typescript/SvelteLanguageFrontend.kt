@@ -186,7 +186,7 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         log.info("Processing HTML template with {} children", fragment.children.size)
         
         for (child in fragment.children) {
-            val htmlNode = handleSvelteNode(child, tu)
+            val htmlNode = handleSvelteNode(child)
             // For now, we'll create a placeholder record to represent the HTML structure
             if (htmlNode != null) {
                 // HTML elements don't become top-level declarations in typical CPG,
@@ -196,7 +196,7 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         }
     }
 
-    private fun handleSvelteNode(node: SvelteNode, tu: TranslationUnitDeclaration): Node? {
+    private fun handleSvelteNode(node: SvelteNode): Node? {
         return when (node) {
             is SvelteElement -> {
                 log.debug("Processing HTML element: {}", node.name)
@@ -266,12 +266,33 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                             
                             htmlElement.addField(classField)
                         }
+                        is SvelteBinding -> {
+                            log.debug("Processing binding directive: {}", attr.name)
+                            // Svelte binding directives like bind:value={myValue}
+                            val bindingField = newFieldDeclaration(
+                                parseName("bind_${attr.name}"),
+                                unknownType(),
+                                listOf("svelte_binding_directive"),
+                                rawNode = attr
+                            )
+                            
+                            // If there's an expression, it represents the variable being bound
+                            attr.expression?.let { expr ->
+                                val boundRef = handleExpression(expr)
+                                if (boundRef != null) {
+                                    log.debug("Binding directive bound to: {}", boundRef)
+                                    // In a full implementation, we'd establish two-way binding relationship
+                                }
+                            }
+                            
+                            htmlElement.addField(bindingField)
+                        }
                     }
                 }
                 
                 // Process child elements recursively
                 node.children?.forEach { child ->
-                    val childNode = handleSvelteNode(child, tu)
+                    val childNode = handleSvelteNode(child)
                     // In a more complete implementation, we'd establish parent-child relationships
                 }
                 
@@ -354,12 +375,32 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                             
                             componentElement.addField(classField)
                         }
+                        is SvelteBinding -> {
+                            log.debug("Processing component binding directive: {}", attr.name)
+                            // Svelte binding directives on components like bind:value={myValue}
+                            val bindingField = newFieldDeclaration(
+                                parseName("bind_${attr.name}"),
+                                unknownType(),
+                                listOf("component_binding_directive"),
+                                rawNode = attr
+                            )
+                            
+                            attr.expression?.let { expr ->
+                                val boundRef = handleExpression(expr)
+                                if (boundRef != null) {
+                                    log.debug("Component binding directive bound to: {}", boundRef)
+                                    // In a full implementation, we'd establish two-way binding with component
+                                }
+                            }
+                            
+                            componentElement.addField(bindingField)
+                        }
                     }
                 }
                 
                 // Process child content recursively
                 node.children?.forEach { child ->
-                    val childNode = handleSvelteNode(child, tu)
+                    val childNode = handleSvelteNode(child)
                     // In a more complete implementation, we'd establish component slot relationships
                 }
                 
@@ -379,7 +420,7 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                 // Create a compound statement for the "then" block
                 val thenBlock = newBlock(rawNode = node)
                 node.children?.forEach { child ->
-                    val childNode = handleSvelteNode(child, tu)
+                    val childNode = handleSvelteNode(child)
                     // In a more complete implementation, we'd add child statements to the block
                 }
                 ifStmt.thenStatement = thenBlock
@@ -388,7 +429,7 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                 node.elseBlock?.let { elseBlock ->
                     val elseStmt = newBlock(rawNode = elseBlock)
                     elseBlock.children?.forEach { child ->
-                        val childNode = handleSvelteNode(child, tu)
+                        val childNode = handleSvelteNode(child)
                         // In a more complete implementation, we'd add child statements to the block
                     }
                     ifStmt.elseStatement = elseStmt
@@ -402,11 +443,42 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                 // Create a compound statement for the else block
                 val elseBlock = newBlock(rawNode = node)
                 node.children?.forEach { child ->
-                    val childNode = handleSvelteNode(child, tu)
+                    val childNode = handleSvelteNode(child)
                     // In a more complete implementation, we'd add child statements to the block
                 }
                 
                 elseBlock
+            }
+            is SvelteEachBlock -> {
+                log.debug("Processing each block for expression: {}", node.expression)
+                
+                // Create a block statement to represent the each loop
+                val blockStatement = newBlock(rawNode = node)
+                
+                // Process the children of the each block
+                node.children.forEach { child ->
+                    val childNode = handleSvelteNode(child)
+                    if (childNode != null) {
+                        // Extract the context variable name from the Identifier node
+                        val contextName = when (node.context) {
+                            is EsTreeIdentifier -> node.context.name
+                            else -> "item" // fallback name
+                        }
+                        
+                        // Extract the index variable name if present (now it's directly a string)
+                        val indexName = node.index // This is now a String? directly
+                        
+                        // Add a comment to document the each block structure
+                        val comment = newLiteral(
+                            "// Svelte each block iterating over $contextName${if (indexName != null) ", index: $indexName" else ""}",
+                            language.getSimpleTypeOf("string") ?: unknownType(),
+                            rawNode = node
+                        )
+                        // For now, just return the block as a simple representation
+                    }
+                }
+                
+                blockStatement
             }
             is SvelteComment -> {
                 log.debug("Processing Svelte comment: {}", node.data.take(100))
@@ -421,6 +493,19 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                 // Comments don't typically become part of the runtime program structure,
                 // but we include them for completeness in analysis
                 commentLiteral
+            }
+            is SvelteConstTag -> {
+                log.debug("Processing const tag")
+                
+                // For now, create a simple literal to represent the const tag
+                // In a more complete implementation, this would extract variable declarations
+                val constLiteral = newLiteral(
+                    "svelte_const_tag",
+                    language.getSimpleTypeOf("string") ?: unknownType(),
+                    rawNode = node
+                )
+                
+                constLiteral
             }
             else -> {
                 log.warn("Unhandled Svelte node type: {}", node.javaClass.simpleName)
@@ -557,8 +642,43 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                         }
                     }
                 }
-                // TODO: Handle stmtNode.specifiers for re-exports like export { name1, name2 }
-                return null // Or handle specifiers and return something
+                // Handle stmtNode.specifiers for re-exports like export { name1, name2 }
+                if (stmtNode.specifiers.isNotEmpty()) {
+                    log.debug("Processing export specifiers: {}", stmtNode.specifiers.size)
+                    
+                    // Create an export declaration for the named exports
+                    // For now, we'll create a placeholder that references the exported names
+                    val exportNames = mutableListOf<String>()
+                    
+                    for (specifier in stmtNode.specifiers) {
+                        when (specifier) {
+                            is EsTreeExportSpecifier -> {
+                                val exportedName = when (val exported = specifier.exported) {
+                                    is EsTreeIdentifier -> exported.name
+                                    else -> "unknown_export"
+                                }
+                                exportNames.add(exportedName)
+                                log.debug("Processing export specifier: {}", exportedName)
+                            }
+                            else -> {
+                                log.debug("Unhandled export specifier type: {}", specifier::class.simpleName)
+                            }
+                        }
+                    }
+                    
+                    // Create a variable declaration to represent the export statement
+                    // In a more complete implementation, this could create proper export declarations
+                    val exportPlaceholder = newVariableDeclaration(
+                        parseName("exports_${exportNames.joinToString("_")}"),
+                        unknownType(),
+                        false,
+                        rawNode = stmtNode
+                    )
+                    
+                    return exportPlaceholder
+                }
+                
+                return null
             }
             is EsTreeImportDeclaration -> {
                 // Handle import statements: import { name1, name2 } from 'module'
@@ -575,26 +695,36 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                 )
                 
                 // Process import specifiers (named imports, default imports, etc.)
+                val varDecls = mutableListOf<VariableDeclaration>()
                 for (specifier in stmtNode.specifiers) {
                     when (specifier) {
-                        is EsTreeIdentifier -> {
-                            // Simple import like: import defaultExport from 'module'
-                            log.debug("Processing default import: {}", specifier.name)
-                        }
                         is EsTreeImportSpecifier -> {
-                            // Named import like: import { onMount, createEventDispatcher } from 'svelte'
-                            val importedName = when (specifier.imported) {
-                                is EsTreeIdentifier -> specifier.imported.name
+                            // Create a variable declaration for the imported identifier
+                            val localName = when (val local = specifier.local) {
+                                is EsTreeIdentifier -> local.name
                                 else -> "unknown_import"
                             }
-                            val localName = when (specifier.local) {
-                                is EsTreeIdentifier -> specifier.local.name
-                                else -> "unknown_local"
+                            val varDecl = newVariableDeclaration(
+                                parseName(localName), 
+                                unknownType(), 
+                                false, 
+                                rawNode = specifier
+                            )
+                            varDecls.add(varDecl)
+                        }
+                        is EsTreeImportDefaultSpecifier -> {
+                            // Create a variable declaration for the default import identifier
+                            val localName = when (val local = specifier.local) {
+                                is EsTreeIdentifier -> local.name
+                                else -> "unknown_default_import"
                             }
-                            log.debug("Processing named import: {} as {}", importedName, localName)
-                            
-                            // In a complete implementation, we'd create variable declarations
-                            // for the imported symbols to make them available in the scope
+                            val varDecl = newVariableDeclaration(
+                                parseName(localName), 
+                                unknownType(), 
+                                false, 
+                                rawNode = specifier
+                            )
+                            varDecls.add(varDecl)
                         }
                         else -> {
                             log.debug("Processing import specifier type: {}", specifier::class.simpleName)
@@ -603,6 +733,10 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                         }
                     }
                 }
+                
+                // For import declarations, the ImportDeclaration node itself represents the import
+                // Individual variable declarations for imports are handled by the CPG import system
+                // Note: Individual specifiers create their own variable bindings automatically
                 
                 return importDecl
             }
@@ -627,6 +761,43 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                     returnStmt.returnValue = handleExpression(it)
                 }
                 return returnStmt
+            }
+            is EsTreeIfStatement -> {
+                // Handle if statements: if (condition) { ... } else { ... }
+                log.debug("Processing if statement")
+                
+                // Create the if statement
+                val ifStmt = newIfStatement(rawNode = stmtNode)
+                
+                // Handle the condition expression
+                val conditionExpression = handleExpression(stmtNode.test)
+                if (conditionExpression != null) {
+                    ifStmt.condition = conditionExpression
+                } else {
+                    // Create a problem for unhandled condition
+                    val conditionProblem = newProblemExpression(
+                        "Could not handle if statement condition: ${stmtNode.test::class.simpleName}",
+                        ProblemNode.ProblemType.PARSING,
+                        rawNode = stmtNode.test
+                    )
+                    ifStmt.condition = conditionProblem
+                }
+                
+                // Handle the then (consequent) branch
+                val thenStatement = handleScriptStatement(stmtNode.consequent)
+                if (thenStatement != null && thenStatement is Statement) {
+                    ifStmt.thenStatement = thenStatement
+                }
+                
+                // Handle the else (alternate) branch if present
+                stmtNode.alternate?.let { alternateNode ->
+                    val elseStatement = handleScriptStatement(alternateNode)
+                    if (elseStatement != null && elseStatement is Statement) {
+                        ifStmt.elseStatement = elseStatement
+                    }
+                }
+                
+                return ifStmt
             }
             else -> {
                 val loc =
@@ -713,50 +884,13 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         val declarations = mutableListOf<de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration>()
         
         for (property in objectPattern.properties) {
-            when (property.value) {
-                is EsTreeIdentifier -> {
-                    // Extract the variable name from the pattern
-                    val variableName = parseName(property.value.name)
-                    val variableType = unknownType()
-                    
-                    val cpgVariableDeclaration = newVariableDeclaration(
-                        variableName,
-                        variableType,
-                        false, // implicitInitializerAllowed
-                        property // rawNode
-                    )
-                    
-                    // For destructuring, we create a member access expression
-                    // e.g., for { class: className }, we create: className = source.class
-                    if (initExpression != null) {
-                        val sourceExpression = handleExpression(initExpression)
-                        if (sourceExpression != null) {
-                            // Get the property key name
-                            val keyName = when (property.key) {
-                                is EsTreeIdentifier -> property.key.name
-                                is EsTreeLiteral -> property.key.value?.toString() ?: "unknown"
-                                else -> "unknown"
-                            }
-                            
-                            // Create member access: source.propertyName
-                            val memberAccess = newMemberExpression(
-                                keyName,
-                                sourceExpression,
-                                unknownType(),
-                                rawNode = property
-                            )
-                            
-                            cpgVariableDeclaration.initializer = memberAccess
-                        }
-                    }
-                    
-                    declarations.add(cpgVariableDeclaration)
-                }
-                is EsTreeAssignmentPattern -> {
-                    // Handle destructuring with default values: { class: className = '' }
-                    when (property.value.left) {
+            when (property) {
+                is EsTreeProperty -> {
+                    // Handle regular property patterns
+                    when (property.value) {
                         is EsTreeIdentifier -> {
-                            val variableName = parseName(property.value.left.name)
+                            // Extract the variable name from the pattern
+                            val variableName = parseName(property.value.name)
                             val variableType = unknownType()
                             
                             val cpgVariableDeclaration = newVariableDeclaration(
@@ -766,13 +900,11 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                                 property // rawNode
                             )
                             
-                            // Create conditional assignment with default value
-                            // e.g., for { class: className = '' }, create: className = source.class || ''
+                            // For destructuring, we create a member access expression
+                            // e.g., for { class: className }, we create: className = source.class
                             if (initExpression != null) {
                                 val sourceExpression = handleExpression(initExpression)
-                                val defaultValue = handleExpression(property.value.right)
-                                
-                                if (sourceExpression != null && defaultValue != null) {
+                                if (sourceExpression != null) {
                                     // Get the property key name
                                     val keyName = when (property.key) {
                                         is EsTreeIdentifier -> property.key.name
@@ -788,30 +920,85 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                                         rawNode = property
                                     )
                                     
-                                    // Create logical OR expression: memberAccess || defaultValue
-                                    val logicalOr = newBinaryOperator("||", rawNode = property.value).apply {
-                                        lhs = memberAccess
-                                        rhs = defaultValue
-                                    }
-                                    
-                                    cpgVariableDeclaration.initializer = logicalOr
-                                } else if (defaultValue != null) {
-                                    // If we can't parse the source, just use the default
-                                    cpgVariableDeclaration.initializer = defaultValue
-                                }
-                            } else {
-                                // No init expression, just use the default value
-                                val defaultValue = handleExpression(property.value.right)
-                                if (defaultValue != null) {
-                                    cpgVariableDeclaration.initializer = defaultValue
+                                    cpgVariableDeclaration.initializer = memberAccess
                                 }
                             }
                             
                             declarations.add(cpgVariableDeclaration)
                         }
+                        is EsTreeAssignmentPattern -> {
+                            // Handle destructuring with default values: { class: className = '' }
+                            when (property.value.left) {
+                                is EsTreeIdentifier -> {
+                                    val variableName = parseName(property.value.left.name)
+                                    val variableType = unknownType()
+                                    
+                                    val cpgVariableDeclaration = newVariableDeclaration(
+                                        variableName,
+                                        variableType,
+                                        false, // implicitInitializerAllowed
+                                        property // rawNode
+                                    )
+                                    
+                                    // Create conditional assignment with default value
+                                    // e.g., for { class: className = '' }, create: className = source.class || ''
+                                    if (initExpression != null) {
+                                        val sourceExpression = handleExpression(initExpression)
+                                        val defaultValue = handleExpression(property.value.right)
+                                        
+                                        if (sourceExpression != null && defaultValue != null) {
+                                            // Get the property key name
+                                            val keyName = when (property.key) {
+                                                is EsTreeIdentifier -> property.key.name
+                                                is EsTreeLiteral -> property.key.value?.toString() ?: "unknown"
+                                                else -> "unknown"
+                                            }
+                                            
+                                            // Create member access: source.propertyName
+                                            val memberAccess = newMemberExpression(
+                                                keyName,
+                                                sourceExpression,
+                                                unknownType(),
+                                                rawNode = property
+                                            )
+                                            
+                                            // Create logical OR expression: memberAccess || defaultValue
+                                            val logicalOr = newBinaryOperator("||", rawNode = property.value).apply {
+                                                lhs = memberAccess
+                                                rhs = defaultValue
+                                            }
+                                            
+                                            cpgVariableDeclaration.initializer = logicalOr
+                                        } else if (defaultValue != null) {
+                                            // If we can't parse the source, just use the default
+                                            cpgVariableDeclaration.initializer = defaultValue
+                                        }
+                                    } else {
+                                        // No init expression, just use the default value
+                                        val defaultValue = handleExpression(property.value.right)
+                                        if (defaultValue != null) {
+                                            cpgVariableDeclaration.initializer = defaultValue
+                                        }
+                                    }
+                                    
+                                    declarations.add(cpgVariableDeclaration)
+                                }
+                                else -> {
+                                    // Complex left side pattern, create placeholder
+                                    val variableName = parseName("complex_destructured_var")
+                                    val cpgVariableDeclaration = newVariableDeclaration(
+                                        variableName,
+                                        unknownType(),
+                                        false,
+                                        property
+                                    )
+                                    declarations.add(cpgVariableDeclaration)
+                                }
+                            }
+                        }
                         else -> {
-                            // Complex left side pattern, create placeholder
-                            val variableName = parseName("complex_destructured_var")
+                            // For complex patterns, create a placeholder declaration
+                            val variableName = parseName("destructured_var")
                             val cpgVariableDeclaration = newVariableDeclaration(
                                 variableName,
                                 unknownType(),
@@ -822,9 +1009,34 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                         }
                     }
                 }
+                is EsTreeSpreadElement -> {
+                    // Handle spread elements in destructuring: { ...rest }
+                    val restVarName = when (property.argument) {
+                        is EsTreeIdentifier -> property.argument.name
+                        else -> "rest_spread"
+                    }
+                    
+                    val cpgVariableDeclaration = newVariableDeclaration(
+                        parseName(restVarName),
+                        unknownType(),
+                        false,
+                        property
+                    )
+                    
+                    // In a complete implementation, this would represent the remaining properties
+                    // For now, we'll create a placeholder that references the source object
+                    if (initExpression != null) {
+                        val sourceExpression = handleExpression(initExpression)
+                        if (sourceExpression != null) {
+                            cpgVariableDeclaration.initializer = sourceExpression
+                        }
+                    }
+                    
+                    declarations.add(cpgVariableDeclaration)
+                }
                 else -> {
-                    // For complex patterns, create a placeholder declaration
-                    val variableName = parseName("destructured_var")
+                    // For other types of pattern elements, create a placeholder declaration
+                    val variableName = parseName("unknown_pattern_element")
                     val cpgVariableDeclaration = newVariableDeclaration(
                         variableName,
                         unknownType(),
@@ -1013,6 +1225,68 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
                         rawNode = exprNode
                     )
                     return problem
+                }
+            }
+            is EsTreeObjectExpression -> {
+                // Handle object expressions: {key: value, ...}
+                log.debug("Processing object expression with {} properties", exprNode.properties.size)
+                
+                // For now, create a literal representation of the object
+                // In a more complete implementation, we could create individual field declarations
+                // or a more structured representation
+                return newLiteral(
+                    Any::class.java, // Using Any to represent object type
+                    language.getSimpleTypeOf("object") ?: unknownType(),
+                    rawNode = exprNode
+                )
+            }
+            is EsTreeArrayExpression -> {
+                // Handle array expressions: [item1, item2, ...]
+                log.debug("Processing array expression with {} elements", exprNode.elements.size)
+                
+                // For now, create a literal representation of the array
+                // In a more complete implementation, we could create individual element expressions
+                // or a more structured representation with proper array type
+                return newLiteral(
+                    Any::class.java, // Using Any to represent array type  
+                    language.getSimpleTypeOf("array") ?: unknownType(),
+                    rawNode = exprNode
+                )
+            }
+            is EsTreeTSAsExpression -> {
+                // Handle TypeScript type assertion expressions: expression as Type
+                log.debug("Processing TypeScript type assertion expression")
+                
+                // For now, we'll handle the main expression and treat it as a literal
+                // In a more complete implementation, we could create a proper type cast operation
+                val baseExpression = handleExpression(exprNode.expression)
+                if (baseExpression != null) {
+                    log.debug("TSAsExpression base expression: {}", baseExpression)
+                    return baseExpression
+                } else {
+                    return newLiteral(
+                        "type_assertion", // Placeholder for type assertion
+                        language.getSimpleTypeOf("any") ?: unknownType(),
+                        rawNode = exprNode
+                    )
+                }
+            }
+            is EsTreeChainExpression -> {
+                // Handle optional chaining expressions: obj?.prop, obj?.method()
+                log.debug("Processing optional chaining expression")
+                
+                // For now, handle the main expression being chained
+                // In a more complete implementation, we'd create a conditional access operation
+                val chainedExpression = handleExpression(exprNode.expression)
+                if (chainedExpression != null) {
+                    log.debug("ChainExpression base: {}", chainedExpression)
+                    return chainedExpression
+                } else {
+                    return newLiteral(
+                        "optional_chain", // Placeholder for optional chaining
+                        language.getSimpleTypeOf("any") ?: unknownType(),
+                        rawNode = exprNode
+                    )
                 }
             }
             else -> {
@@ -1248,4 +1522,5 @@ class SvelteLanguageFrontend(ctx: TranslationContext, language: Language<SvelteL
         return "unknown_selector"
     }
 }
+
 
