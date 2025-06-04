@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encrypt
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encryption
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
-import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression

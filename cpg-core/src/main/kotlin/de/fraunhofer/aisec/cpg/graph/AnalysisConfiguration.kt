@@ -248,11 +248,9 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
                     edge,
                     newCtx,
                     this,
-                    edges.any {
-                        it is ContextSensitiveDataflow &&
+                    edges.any { it is ContextSensitiveDataflow /*&&
                             ((it.start as? FunctionDeclaration)?.isInferred == false ||
-                                (it.end as? FunctionDeclaration)?.isInferred == false)
-                    },
+                                (it.end as? FunctionDeclaration)?.isInferred == false)*/ },
                 ) && sensitivities.all { it.followEdge(currentNode, edge, newCtx, this) }
             ) {
                 Pair(edge, newCtx)
