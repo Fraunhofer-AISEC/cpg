@@ -217,7 +217,7 @@ infix fun <T, S> T.IN(other: S): QueryTree<Boolean> {
             ?: throw IllegalArgumentException(
                 "Cannot check if ${thisQt.value} is of type ${otherQt.value}. The other value must be a Collection<*>."
             )
-    // Todo: here if we add a any combination of the other qt that match, that should be enough
+    
     return QueryTree(result, mutableListOf(thisQt, otherQt), "${thisQt.value} in ${otherQt.value}")
 }
 
