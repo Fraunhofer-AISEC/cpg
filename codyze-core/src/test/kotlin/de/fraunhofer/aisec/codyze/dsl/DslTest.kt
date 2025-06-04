@@ -88,8 +88,7 @@ class DslTest {
 
                             fulfilledBy {
                                 val logic =
-                                    (query1() and
-                                        query2()) or
+                                    (query1() and query2()) or
                                         manualAssessmentOf("THIRD-PARTY-LIBRARY")
                                 assertIs<Decision>(logic)
                             }
