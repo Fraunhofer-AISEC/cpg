@@ -72,10 +72,6 @@ open class EOGConceptPass(ctx: TranslationContext) :
     var currentComponent: Component? = null
 
     override fun cleanup() {
-        // Nothing to do
-    }
-
-    override fun finalCleanup() {
         val finalState = intermediateState ?: return
 
         // We set the underlying node based on the final state
@@ -98,6 +94,10 @@ open class EOGConceptPass(ctx: TranslationContext) :
         // clean up the state in order to not mess up other [EOGConceptPass]
         // instances
         finalState.clear()
+    }
+
+    override fun finalCleanup() {
+        // Nothing to do
     }
 
     override fun accept(node: Node) {
