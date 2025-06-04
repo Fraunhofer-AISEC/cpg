@@ -99,9 +99,15 @@ class TagOverlaysPassTest {
                                                         val encryptOps =
                                                             secrets.flatMap { secret ->
                                                                 val ciphers =
-                                                                    state.values
-                                                                        .flatMap { it }
-                                                                        .filterIsInstance<Cipher>()
+                                                                    node.translationUnit
+                                                                        .allChildrenWithOverlays<
+                                                                            Cipher
+                                                                        >() +
+                                                                        state.values
+                                                                            .flatMap { it }
+                                                                            .filterIsInstance<
+                                                                                Cipher
+                                                                            >()
                                                                 ciphers.map { cipher ->
                                                                     Encrypt(
                                                                         concept = cipher,
