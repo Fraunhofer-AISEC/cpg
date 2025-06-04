@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.*
-import de.fraunhofer.aisec.cpg.passes.concepts.EOGConceptPass.Companion.intermediateState
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
 typealias NodeToOverlayStateElement = MapLattice.Element<Node, PowersetLattice.Element<OverlayNode>>
@@ -72,8 +71,24 @@ open class EOGConceptPass(ctx: TranslationContext) :
     var currentComponent: Component? = null
 
     override fun cleanup() {
-        val finalState = intermediateState ?: return
+        // Nothing to do
+    }
 
+    override fun finalCleanup() {
+        // Nothing to do
+    }
+
+    override fun accept(node: Node) {
+        currentComponent = node.firstParentOrNull<Component>()
+
+        ctx.currentComponent = node.component
+
+        val lattice = NodeToOverlayState(PowersetLattice())
+        val startState = getInitialState(lattice, node)
+
+        val nextEog = node.nextEOGEdges.toList()
+        val finalState =
+            lattice.lub(lattice.iterateEOG(nextEog, startState, ::transfer), startState, true)
         // We set the underlying node based on the final state
         for ((underlyingNode, overlayNodes) in finalState) {
             overlayNodes.forEach {
@@ -91,26 +106,6 @@ open class EOGConceptPass(ctx: TranslationContext) :
                 }
             }
         }
-        // clean up the state in order to not mess up other [EOGConceptPass]
-        // instances
-        finalState.clear()
-    }
-
-    override fun finalCleanup() {
-        // Nothing to do
-    }
-
-    override fun accept(node: Node) {
-        currentComponent = node.firstParentOrNull<Component>()
-
-        ctx.currentComponent = node.component
-
-        val lattice = NodeToOverlayState(PowersetLattice())
-        val startState = getInitialState(lattice, node)
-
-        val nextEog = node.nextEOGEdges.toList()
-        intermediateState =
-            lattice.lub(startState, lattice.iterateEOG(nextEog, startState, ::transfer), true)
     }
 
     /**
@@ -197,12 +192,11 @@ open class EOGConceptPass(ctx: TranslationContext) :
 
     /**
      * Generates the initial [NodeToOverlayStateElement] state for the current execution of this
-     * pass, either based on a previous [intermediateState] or [MapLattice.bottom] if
-     * [intermediateState] is `null`.
+     * pass, which is currently [MapLattice.bottom] where some stuff based on [node] is already
+     * added.
      */
     open fun getInitialState(lattice: NodeToOverlayState, node: Node): NodeToOverlayStateElement {
-        val intermediateOrBottom = intermediateState ?: lattice.bottom
-        return overlayStateForNode(lattice, intermediateOrBottom, node)
+        return overlayStateForNode(lattice, lattice.bottom, node)
     }
 
     /** This function is called for each edge in the EOG until the fixpoint is computed. */
@@ -248,8 +242,6 @@ open class EOGConceptPass(ctx: TranslationContext) :
     }
 
     companion object {
-        var intermediateState: NodeToOverlayStateElement? = null
-
         /**
          * This is some magic to filter out overlays from [newOverlays] that are already in the
          * [currentState] (equal but not identical) for the same [node]. It also filters the
