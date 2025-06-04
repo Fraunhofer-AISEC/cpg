@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice.Element
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import java.io.Serializable
-import java.util.IdentityHashMap
+import java.util.*
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.fold
@@ -313,19 +313,78 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         }
 
         override fun compare(other: Lattice.Element): Order {
-            return when {
-                other !is Element<K, V> ->
-                    throw IllegalArgumentException(
-                        "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
-                    )
-                this === other -> Order.EQUAL
-                this.keys == other.keys &&
-                    this.entries.all { (k, v) ->
-                        other[k]?.let { v.compare(it) == Order.EQUAL } == true
-                    } -> Order.EQUAL
-                oneGETwo(this, other) -> Order.GREATER
-                oneGETwo(other, this) -> Order.LESSER
-                else -> Order.UNEQUAL
+            if (other !is Element<K, V>)
+                throw IllegalArgumentException(
+                    "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
+                )
+
+            if (this === other) return Order.EQUAL
+
+            val thisKeySetIsBiggerOrEqual = this.keys.containsAll(other.keys)
+            val otherKeySetIsBiggerOrEqual = other.keys.containsAll(this.keys)
+            if (!thisKeySetIsBiggerOrEqual && !otherKeySetIsBiggerOrEqual) {
+                // Each map has some keys that the other does not have, so the maps are unequal
+                return Order.UNEQUAL
+            }
+
+            // We can check if the entries are equal, greater or lesser
+            var someGreater = false
+            var someLesser = false
+            if (thisKeySetIsBiggerOrEqual) {
+                this.entries.forEach { (k, v) ->
+                    val otherV = other[k]
+                    if (otherV != null) {
+                        when (v.compare(otherV)) {
+                            Order.EQUAL -> {
+                                /* Nothing to do*/
+                            }
+                            Order.GREATER -> someGreater = true
+                            Order.LESSER -> someLesser = true
+                            Order.UNEQUAL -> {
+                                someGreater = true
+                                someLesser = true
+                            }
+                        }
+                    } else {
+                        someGreater = true // key is missing in other, so this is greater
+                    }
+                }
+            } else {
+                // otherKeySetIsBiggerOrEqual is true, so we can iterate over the other map and
+                // basically invert the results from above
+                other.entries.forEach { (k, v) ->
+                    val thisV = this[k]
+                    if (thisV != null) {
+                        when (v.compare(thisV)) {
+                            Order.EQUAL -> {
+                                /* Nothing to do*/
+                            }
+                            Order.GREATER -> someLesser = true
+                            Order.LESSER -> someGreater = true
+                            Order.UNEQUAL -> {
+                                someLesser = true
+                                someGreater = true
+                            }
+                        }
+                    } else {
+                        someLesser = true // key is missing in this, so this is lesser
+                    }
+                }
+            }
+            return if (!someGreater && !someLesser) {
+                // All entries are the same, so the maps are equal
+                Order.EQUAL
+            } else if (someLesser && !someGreater) {
+                // Some entries are equal, some are lesser and none are greater, so this map is
+                // lesser.
+                Order.LESSER
+            } else if (!someLesser && someGreater) {
+                // Some entries are equal, some are greater but none are lesser, so this map is
+                // greater.
+                Order.GREATER
+            } else {
+                // Some entries are greater and some are lesser, so the maps are unequal
+                Order.UNEQUAL
             }
         }
 
