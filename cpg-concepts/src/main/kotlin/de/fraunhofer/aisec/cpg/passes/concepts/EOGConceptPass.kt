@@ -79,9 +79,8 @@ open class EOGConceptPass(ctx: TranslationContext) :
     }
 
     override fun accept(node: Node) {
-        currentComponent = node.firstParentOrNull<Component>()
-
         ctx.currentComponent = node.component
+        currentComponent = ctx.currentComponent
 
         val lattice = NodeToOverlayState(PowersetLattice())
         val startState = getInitialState(lattice, node)

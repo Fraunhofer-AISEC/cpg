@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.helpers.functional
 
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
-import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice.Element
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import java.io.Serializable
 import java.util.*
@@ -388,23 +387,6 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
 
         override fun hashCode(): Int {
             return super.hashCode()
-        }
-
-        companion object {
-            private fun <K, V : Lattice.Element> oneGETwo(
-                one: Element<K, V>,
-                two: Element<K, V>,
-            ): Boolean {
-                if (one === two) return true
-
-                return one.keys.size >= two.keys.size &&
-                    one.keys.containsAll(two.keys) &&
-                    one.entries.all { (k, v) ->
-                        val otherV = two[k] ?: return@all true
-                        val cmp = v.compare(otherV)
-                        cmp == Order.EQUAL || cmp == Order.GREATER
-                    }
-            }
         }
     }
 
