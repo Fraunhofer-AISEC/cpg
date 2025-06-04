@@ -84,12 +84,12 @@ class DslTest {
                         }
 
                         requirement("RQ-ENCRYPTION-02") {
-                            name = "Good Encryption with some manual analysis"
+                            name = "Good Encryption or some manual analysis"
 
                             fulfilledBy {
                                 val logic =
-                                    query1() and
-                                        query2() and
+                                    (query1() and
+                                        query2()) or
                                         manualAssessmentOf("THIRD-PARTY-LIBRARY")
                                 assertIs<Decision>(logic)
                             }
