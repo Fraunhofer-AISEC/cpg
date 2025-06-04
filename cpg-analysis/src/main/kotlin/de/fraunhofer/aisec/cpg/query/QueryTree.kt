@@ -107,7 +107,7 @@ open class QueryTree<T>(
                     else
                         "the assumptions ${assumptions.filter { it.status == AssumptionStatus.Rejected }.map { it.id.toHexDashString() }.joinToString(", ") } were rejected")
 
-            assumptions.any { it.status == AssumptionStatus.Undecided } ->
+            this == Undecided || assumptions.any { it.status == AssumptionStatus.Undecided } ->
                 Undecided to
                     "the assumptions ${assumptions.filter { it.status == AssumptionStatus.Undecided }.map { it.id.toHexDashString() }.joinToString(", ")} are not yet decided"
 
@@ -217,7 +217,7 @@ infix fun <T, S> T.IN(other: S): QueryTree<Boolean> {
             ?: throw IllegalArgumentException(
                 "Cannot check if ${thisQt.value} is of type ${otherQt.value}. The other value must be a Collection<*>."
             )
-    
+
     return QueryTree(result, mutableListOf(thisQt, otherQt), "${thisQt.value} in ${otherQt.value}")
 }
 
@@ -533,7 +533,9 @@ infix fun <T : Number?, S : Number?> QueryTree<T>?.le(other: QueryTree<S>?): Que
 /** Negates the value of [arg] and returns the resulting [QueryTree]. */
 fun not(arg: QueryTree<Boolean>): QueryTree<Boolean> {
     val result = !arg.value
-    return QueryTree(result, mutableListOf(arg), "! ${arg.value}")
+    return QueryTree(result, mutableListOf(arg), "! ${arg.value}").setDecisionState {
+        not(arg.decisionState.value)
+    }
 }
 
 /** Negates the value of [arg] and returns the resulting [QueryTree]. */
