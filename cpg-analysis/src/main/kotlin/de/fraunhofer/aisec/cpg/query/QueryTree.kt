@@ -80,9 +80,10 @@ open class QueryTree<T>(
      * [Boolean], it will return [Failed] and [Succeeded] respectively. If the value is not a
      * [Boolean], it will return [Succeeded] for now as the value was simply determined.
      *
-     * Functions on QueryTree<Boolean> that will restrict, whether all assumptions in the query tree
-     * are relevant for decision-making, will have to override this function to provide a more
-     * specific logic, e.g., and, or, implies, etc.
+     * This function should be overridden for [QueryTree]s and certain operations to steer how
+     * assumptions affect the decision-making process. As an example, for logic operations "and",
+     * "or", and "implies", the decision should first be made for the left and right hand side of
+     * the operation because invalidating a subtree has different effects for each operation.
      */
     var lazyDecision = lazy {
         val boolValue: Boolean? = this.value as? Boolean
