@@ -37,5 +37,6 @@ open class GetSecret(underlyingNode: Node? = null, concept: Secret) :
         // Since we are retrieving a secret, we want to model a data flow from the secret to the
         // operation that retrieves it. This is done by adding the secret to the prevDFG edge.
         this.prevDFG += concept
+        this.underlyingNode?.let { this.nextDFG += it }
     }
 }
