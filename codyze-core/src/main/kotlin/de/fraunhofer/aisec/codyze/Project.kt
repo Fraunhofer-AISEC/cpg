@@ -131,6 +131,7 @@ class AnalysisProject(
     var requirementFunctions: Map<String, TranslationResult.() -> Decision> = emptyMap(),
     var assumptionStatusFunctions: Map<String, TranslationResult.() -> AssumptionStatus> =
         emptyMap(),
+    var suppressedQueryTreeIDs: Set<Uuid> = emptySet(),
     /** The translation configuration for the project. */
     var config: TranslationConfiguration,
     /**
@@ -148,8 +149,11 @@ class AnalysisProject(
 
         // Propagate assumption status into translation result
         assumptionStatusFunctions.forEach { (uuid, func) ->
-            tr.assumptionStatuses[Uuid.parse(uuid)] = func(tr)
+            tr.assumptionStates[Uuid.parse(uuid)] = func(tr)
         }
+
+        // Propagate suppressed query tree IDs into translation result
+        tr.suppressedQueryTreeIDs.addAll(suppressedQueryTreeIDs)
 
         // Run requirements
         val requirementsResults =

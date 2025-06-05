@@ -93,6 +93,9 @@ class TranslationResult(
      */
     @Transient val assumptionStates: MutableMap<Uuid, AssumptionStatus> = mutableMapOf()
 
+    /** A set of [Uuid]s of query trees that were suppressed during the decision process. */
+    @Transient val suppressedQueryTreeIDs = mutableSetOf<Uuid>()
+
     /**
      * Scratch storage that can be used by passes to store additional information in this result.
      * Callers must ensure that keys are unique. It is recommended to prefix them with the class
@@ -111,12 +114,6 @@ class TranslationResult(
 
     val isCancelled: Boolean
         get() = translationManager.isCancelled()
-
-    /**
-     * A map of assumption statuses for the translation result. This can used to explicitly set a
-     * status of an [Assumption].
-     */
-    val assumptionStatuses = mutableMapOf<Uuid, AssumptionStatus>()
 
     /**
      * Checks if only a single software component has been analyzed and returns its translation

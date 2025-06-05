@@ -23,6 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.get
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
@@ -52,17 +53,42 @@ project {
             name = "Proper Handling of Key Material"
             description = "Sensitive material, such as keys are handled properly"
 
-            fulfilledBy(::properHandlingOfKeyMaterial)
+            fulfilledBy { properHandlingOfKeyMaterial() }
         }
+
+        requirement {
+            name = "Encryption Functions have Many Parameters"
+
+            fulfilledBy {
+                val q = crappyQuery().decide()
+                q
+            }
+        }
+    }
+
+    // comp: 00000000-40d0-3285-ffff-ffff9c7a5a6c
+    // tr: 00000000-0000-0000-0000-000040d03285
+    // comp hashcode: 495340980
+
+    suppressions {
+        /** I think it has enough parameters. */
+        queryTree("ffffffff-c371-ad94-0000-000000000533")
     }
 
     assumptions { assume { "Third party code is very good" } }
 }
 
+fun TranslationResult.crappyQuery(): QueryTree<Boolean> {
+    return allExtended<FunctionDeclaration>(
+        sel = { it.name.localName == "encrypt" },
+        { it.parameters.size eq 1 },
+    )
+}
+
 /** For each key K, if K is used in encryption or decryption, it must be deleted after use */
-fun properHandlingOfKeyMaterial(tr: TranslationResult): QueryTree<Boolean> {
+fun TranslationResult.properHandlingOfKeyMaterial(): QueryTree<Boolean> {
     val result =
-        tr.allExtended<CallExpression>(
+        allExtended<CallExpression>(
             sel = {
                 it.name.toString() == "execute" &&
                     it.arguments[0].evaluate() in listOf("encrypt", "decrypt")

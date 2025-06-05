@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.evaluation.compareTo
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.translationResult
 import java.util.Objects
 import kotlin.uuid.Uuid
 
@@ -91,11 +92,15 @@ open class QueryTree<T>(
         val boolValue: Boolean? = this.value as? Boolean
         val assumptions = collectAssumptions()
 
-        val decisionState =
+        var decisionState =
             when (boolValue) {
                 false -> Failed
                 else -> Succeeded
             }
+
+        if (node?.translationResult?.suppressedQueryTreeIDs?.contains(id) == true) {
+            decisionState = SucceededManually
+        }
 
         val (newValue, stringInfo) = decisionState.decideWithAssumptions(assumptions)
 
@@ -124,11 +129,17 @@ open class QueryTree<T>(
                 Failed to
                     (if (this == Failed) "the query failed given the accepted assumptions"
                     else
-                        "the assumptions ${assumptions.filter { it.status == AssumptionStatus.Rejected }.map { it.id.toHexDashString() }.joinToString(", ") } were rejected")
+                        "the assumptions ${
+                            assumptions.filter { it.status == AssumptionStatus.Rejected }
+                                .joinToString(", ") { it.id.toHexDashString() }
+                        } were rejected")
 
             this == Undecided || assumptions.any { it.status == AssumptionStatus.Undecided } ->
                 Undecided to
-                    "the assumptions ${assumptions.filter { it.status == AssumptionStatus.Undecided }.map { it.id.toHexDashString() }.joinToString(", ")} are not yet decided"
+                    "the assumptions ${
+                        assumptions.filter { it.status == AssumptionStatus.Undecided }
+                            .joinToString(", ") { it.id.toHexDashString() }
+                    } are not yet decided"
 
             this == Succeeded &&
                 assumptions.all {
@@ -136,6 +147,13 @@ open class QueryTree<T>(
                 } ->
                 Succeeded to
                     "the query was evaluated to true and all assumptions were accepted or deemed not influencing the result."
+
+            this == SucceededManually &&
+                assumptions.all {
+                    it.status == AssumptionStatus.Ignored || it.status == AssumptionStatus.Accepted
+                } ->
+                SucceededManually to
+                    "the query was manually set to true and all assumptions were accepted or deemed not influencing the result."
 
             else -> NotYetEvaluated to "Something went wrong"
         }

@@ -48,6 +48,7 @@ import io.github.detekt.sarif4k.Result
 import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.Path
+import kotlin.uuid.Uuid
 
 @DslMarker annotation class CodyzeDsl
 
@@ -116,6 +117,11 @@ class RequirementBuilder(
      * This function is expected to be used in the context of a [TranslationResult].
      */
     var fulfilledBy: TranslationResult.() -> Decision = { NotYetEvaluated.toQueryTree() }
+}
+
+/** Represents a builder for suppressions of the evaluation project. */
+class SuppressionsBuilder {
+    val suppressions = mutableSetOf<String>()
 }
 
 /** Represents a builder for a list of all assumptions of the evaluation project. */
@@ -204,6 +210,7 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
     internal var toeBuilder = ToEBuilder()
     internal val requirementsBuilder = RequirementsBuilder()
     internal val assumptionsBuilder = AssumptionsBuilder()
+    internal val suppressionsBuilder = SuppressionsBuilder()
     internal val manualAssessmentBuilder = ManualAssessmentBuilder()
     internal var taggingCtx = TaggingContext()
 
@@ -294,6 +301,10 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
             name,
             projectDir = projectDir,
             requirementFunctions = requirementFunctions,
+            assumptionStatusFunctions =
+                assumptionsBuilder.decisionBuilder.assumptionStatusFunctions,
+            suppressedQueryTreeIDs =
+                suppressionsBuilder.suppressions.map { Uuid.parse(it) }.toSet(),
             config = configBuilder.build(),
             postProcess = postProcess,
         )
@@ -461,6 +472,16 @@ fun manualAssessmentOf(id: String): Decision {
 @CodyzeDsl
 fun ProjectBuilder.assumptions(block: AssumptionsBuilder.() -> Unit) {
     assumptionsBuilder.apply(block)
+}
+
+@CodyzeDsl
+fun ProjectBuilder.suppressions(block: SuppressionsBuilder.() -> Unit) {
+    suppressionsBuilder.apply(block)
+}
+
+@CodyzeDsl
+fun SuppressionsBuilder.queryTree(uuid: String) {
+    suppressions += uuid
 }
 
 /**

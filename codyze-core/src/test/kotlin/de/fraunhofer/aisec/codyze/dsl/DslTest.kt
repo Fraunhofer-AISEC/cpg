@@ -115,6 +115,14 @@ class DslTest {
                         ignore("00000000-0000-0000-0000-000000000003")
                     }
                 }
+
+                suppressions {
+                    /**
+                     * This query tree ID needs to be suppressed because it is not relevant for the
+                     * current analysis.
+                     */
+                    queryTree("00000000-0000-0000-0000-000000000000")
+                }
             }
 
             project { manualAssessment { of("SEC-TARGET") { true } } }
