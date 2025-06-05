@@ -36,9 +36,13 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.query.DecisionState
+import de.fraunhofer.aisec.cpg.query.Failed
+import de.fraunhofer.aisec.cpg.query.NotYetEvaluated
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.SinglePathResult
 import de.fraunhofer.aisec.cpg.query.Succeeded
+import de.fraunhofer.aisec.cpg.query.Undecided
+import de.fraunhofer.aisec.cpg.query.toQueryTree
 import io.github.detekt.sarif4k.*
 import java.io.File
 import kotlin.io.path.relativeToOrSelf
@@ -52,7 +56,12 @@ fun AnalysisProject.buildSarif(
     val sarifResults = mutableListOf<Result>()
 
     for ((requirementID, decision) in result.requirementsResults) {
-        val sarifResult = decision.undecide().toSarif(requirementID)
+        val passFail = decision.toBooleanQueryTree()
+        if (passFail == null) {
+            // If the decision is not yet evaluated, we skip this requirement
+            continue
+        }
+        val sarifResult = passFail.toSarif(requirementID)
         val req = builder?.allRequirements[requirementID]
 
         val sarifRule =
@@ -77,8 +86,22 @@ fun AnalysisProject.buildSarif(
  * We need to make this binary decision because SARIF only supports boolean results for individual
  * findings.
  */
-fun QueryTree<DecisionState>.undecide(): QueryTree<Boolean> {
-    return this.children[0] as QueryTree<Boolean>
+fun <T : DecisionState> QueryTree<T>.toBooleanQueryTree(): QueryTree<Boolean>? {
+    // If this decision state came from a boolean value, we can just convert it back
+    val onlyChild = children.singleOrNull()
+    if (onlyChild?.value is Boolean) {
+        @Suppress("UNCHECKED_CAST")
+        return onlyChild as? QueryTree<Boolean>
+    }
+
+    // If this decision state has no single boolean children, we can return a new value based on the
+    // decision state directly
+    return when (this.value) {
+        is Succeeded -> true.toQueryTree()
+        is Failed -> false.toQueryTree()
+        is Undecided -> false.toQueryTree()
+        is NotYetEvaluated -> null
+    }
 }
 
 /**
