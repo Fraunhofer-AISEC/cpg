@@ -81,7 +81,14 @@ fun QueryTree<Boolean>.decide(): Decision {
 
     this.collectAssumptions().forEach { it.status = statues.getOrDefault(it.id, it.status) }
 
-    return this.lazyDecision.value
+    val decidedValue = this.lazyDecision.value
+
+    // Carry over result and string representation of decision on nested query trees
+    return QueryTree(
+        value = decidedValue.value,
+        children = mutableListOf(this),
+        stringRepresentation = decidedValue.stringRepresentation,
+    )
 }
 
 /**
