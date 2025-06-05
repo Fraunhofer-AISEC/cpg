@@ -75,36 +75,19 @@ fun QueryTree<Boolean>.decide(): Decision {
     // different impact on query evaluation depending on the sup-query tree the assumption is placed
     // on. Global assumptions are also included below, component wide assumptions are included with
     // collectAssumptions() in the individual nodes.
-    val assumptions = this.collectAssumptions() + this@TranslationResult.collectAssumptions()
 
-    assumptions.forEach { it.status = statues.getOrDefault(it.id, it.status) }
+    // Adding the global assumptions to the assumptions of this QueryTree before update and deciding
+    this.assumptions.addAll(this@TranslationResult.collectAssumptions())
 
-    val (newValue, stringInfo) =
-        when {
-            !this.value || assumptions.any { it.status == AssumptionStatus.Rejected } ->
-                Failed to
-                    (if (!this.value) "the query was evaluated to false"
-                    else
-                        "the assumptions ${assumptions.filter { it.status == AssumptionStatus.Rejected }.map { it.id.toHexDashString() }.joinToString(", ") } were rejected")
+    this.collectAssumptions().forEach { it.status = statues.getOrDefault(it.id, it.status) }
 
-            assumptions.any { it.status == AssumptionStatus.Undecided } ->
-                Undecided to
-                    "the assumptions ${assumptions.filter { it.status == AssumptionStatus.Undecided }.map { it.id.toHexDashString() }.joinToString(", ")} are not yet decided"
+    val decidedValue = this.lazyDecision.value
 
-            this.value &&
-                assumptions.all {
-                    it.status == AssumptionStatus.Ignored || it.status == AssumptionStatus.Accepted
-                } ->
-                Succeeded to
-                    "the query was evaluated to true and all assumptions were accepted or deemed not influencing the result."
-
-            else -> NotYetEvaluated to "Something went wrong"
-        }
-
+    // Carry over result and string representation of decision on nested query trees
     return QueryTree(
-        value = newValue,
+        value = decidedValue.value,
         children = mutableListOf(this),
-        stringRepresentation = "The requirement ${ newValue::class.simpleName } because $stringInfo",
+        stringRepresentation = decidedValue.stringRepresentation,
     )
 }
 

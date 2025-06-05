@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.query
 
+import de.fraunhofer.aisec.cpg.assumptions.addAssumptionDependence
 import de.fraunhofer.aisec.cpg.evaluation.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.evaluation.NumberSet
 import de.fraunhofer.aisec.cpg.evaluation.SizeEvaluator
@@ -70,7 +71,7 @@ inline fun <reified T> Node.evaluateExtended(
         if (n is Node) {
             res.node = n
         }
-        res
+        res.addAssumptionDependence(this)
     }
 }
 

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.query
 
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
+import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.evaluation.compareTo
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -71,6 +72,73 @@ open class QueryTree<T>(
     open var node: Node? = null,
     override var assumptions: MutableSet<Assumption> = mutableSetOf(),
 ) : Comparable<QueryTree<T>>, HasAssumptions {
+
+    /**
+     * The purpose of [lazyDecision] is to evaluate the decision after all post-processing
+     * information is applied, e.g., after setting the [AssumptionStatus] of the [Assumption]s. This
+     * default implementation will simply consider the value of the [QueryTree], if the value is a
+     * [Boolean], it will return [Failed] and [Succeeded] respectively. If the value is not a
+     * [Boolean], it will return [Succeeded] for now as the value was simply determined.
+     *
+     * This function should be overridden for [QueryTree]s and certain operations to steer how
+     * assumptions affect the decision-making process. As an example, for logic operations "and",
+     * "or", and "implies", the decision should first be made for the left and right hand side of
+     * the operation because invalidating a subtree has different effects for each operation.
+     */
+    var lazyDecision = lazy {
+        val boolValue: Boolean? = this.value as? Boolean
+        val assumptions = collectAssumptions()
+
+        val decisionState =
+            when (boolValue) {
+                false -> Failed
+                else -> Succeeded
+            }
+
+        val (newValue, stringInfo) = decisionState.decideWithAssumptions(assumptions)
+
+        QueryTree(
+            value = newValue,
+            children = mutableListOf(this),
+            stringRepresentation =
+                "The requirement ${ newValue::class.simpleName } because $stringInfo",
+        )
+    }
+
+    /**
+     * This function changes the decision state based on the [AssumptionStatus] of the provided
+     * assumptions. It is the basic logic for assumption based decisions when handling a leaf
+     * QueryTree<Boolean>, i.e. the first QueryTree<Boolean> to be converted into a [Decision] as
+     * well as the logic used for propagating [Decision]s in the QueryTree hierarchy, while
+     * considering assumptions on the intermediate levels.
+     */
+    fun DecisionState.decideWithAssumptions(
+        assumptions: Set<Assumption>
+    ): Pair<DecisionState, String> {
+        return when {
+            this == NotYetEvaluated ->
+                NotYetEvaluated to "QueryTree to decide is not a boolean value"
+            this == Failed || assumptions.any { it.status == AssumptionStatus.Rejected } ->
+                Failed to
+                    (if (this == Failed) "the query failed given the accepted assumptions"
+                    else
+                        "the assumptions ${assumptions.filter { it.status == AssumptionStatus.Rejected }.map { it.id.toHexDashString() }.joinToString(", ") } were rejected")
+
+            this == Undecided || assumptions.any { it.status == AssumptionStatus.Undecided } ->
+                Undecided to
+                    "the assumptions ${assumptions.filter { it.status == AssumptionStatus.Undecided }.map { it.id.toHexDashString() }.joinToString(", ")} are not yet decided"
+
+            this == Succeeded &&
+                assumptions.all {
+                    it.status == AssumptionStatus.Ignored || it.status == AssumptionStatus.Accepted
+                } ->
+                Succeeded to
+                    "the query was evaluated to true and all assumptions were accepted or deemed not influencing the result."
+
+            else -> NotYetEvaluated to "Something went wrong"
+        }
+    }
+
     fun printNicely(depth: Int = 0): String {
         var res =
             "  ".repeat(depth) +
@@ -166,6 +234,7 @@ infix fun <T, S> T.IN(other: S): QueryTree<Boolean> {
             ?: throw IllegalArgumentException(
                 "Cannot check if ${thisQt.value} is of type ${otherQt.value}. The other value must be a Collection<*>."
             )
+
     return QueryTree(result, mutableListOf(thisQt, otherQt), "${thisQt.value} in ${otherQt.value}")
 }
 
@@ -217,10 +286,33 @@ infix fun QueryTree<Boolean>.and(other: Boolean): QueryTree<Boolean> {
 /** Performs a logical and (&&) operation between the values of two [QueryTree]s. */
 infix fun QueryTree<Boolean>.and(other: QueryTree<Boolean>): QueryTree<Boolean> {
     return QueryTree(
-        this.value && other.value,
-        mutableListOf(this, other),
-        stringRepresentation = "${this.value} && ${other.value}",
-    )
+            this.value && other.value,
+            mutableListOf(this, other),
+            stringRepresentation = "${this.value} && ${other.value}",
+        )
+        .registerLazyDecision { this.lazyDecision.value and other.lazyDecision.value }
+}
+
+/**
+ * This function is used to add a lambda as lazy decision to a QueryTree<Boolean> for functions on
+ * those trees that need to change the default behavior of what assumptions need to be considered
+ * when deciding on nested [QueryTree]s. See [QueryTree.lazyDecision] for more information.
+ */
+fun QueryTree<Boolean>.registerLazyDecision(
+    decision: () -> QueryTree<DecisionState>
+): QueryTree<Boolean> {
+    val assumptions = this.assumptions
+    this.lazyDecision = lazy {
+        decision().also {
+            val decisionVal = it.value.decideWithAssumptions(assumptions).first
+            if (decisionVal != it.value) {
+                it.stringRepresentation =
+                    "$it.stringRepresentation changed to $decisionVal due to assumptions"
+            }
+            it.value = decisionVal
+        }
+    }
+    return this
 }
 
 /** Performs a logical or (||) operation between the values and creates and returns [QueryTree]s. */
@@ -241,10 +333,11 @@ infix fun QueryTree<Boolean>.or(other: Boolean): QueryTree<Boolean> {
 /** Performs a logical or (||) operation between the values of two [QueryTree]s. */
 infix fun QueryTree<Boolean>.or(other: QueryTree<Boolean>): QueryTree<Boolean> {
     return QueryTree(
-        this.value || other.value,
-        mutableListOf(this, other),
-        stringRepresentation = "${this.value} || ${other.value}",
-    )
+            this.value || other.value,
+            mutableListOf(this, other),
+            stringRepresentation = "${this.value} || ${other.value}",
+        )
+        .registerLazyDecision { this.lazyDecision.value or other.lazyDecision.value }
 }
 
 /** Performs a logical xor operation between the values and creates and returns [QueryTree]s. */
@@ -265,10 +358,11 @@ infix fun QueryTree<Boolean>.xor(other: Boolean): QueryTree<Boolean> {
 /** Performs a logical xor operation between the values of two [QueryTree]s. */
 infix fun QueryTree<Boolean>.xor(other: QueryTree<Boolean>): QueryTree<Boolean> {
     return QueryTree(
-        this.value xor other.value,
-        mutableListOf(this, other),
-        stringRepresentation = "${this.value} xor ${other.value}",
-    )
+            this.value xor other.value,
+            mutableListOf(this, other),
+            stringRepresentation = "${this.value} xor ${other.value}",
+        )
+        .registerLazyDecision { this.lazyDecision.value xor other.lazyDecision.value }
 }
 
 /**
@@ -298,20 +392,22 @@ infix fun QueryTree<Boolean>.implies(other: Boolean): QueryTree<Boolean> {
 /** Evaluates a logical implication (->) operation between the values of two [QueryTree]s. */
 infix fun QueryTree<Boolean>.implies(other: QueryTree<Boolean>): QueryTree<Boolean> {
     return QueryTree(
-        !this.value || other.value,
-        mutableListOf(this, other),
-        stringRepresentation = "${this.value} => ${other.value}",
-    )
+            !this.value || other.value,
+            mutableListOf(this, other),
+            stringRepresentation = "${this.value} => ${other.value}",
+        )
+        .registerLazyDecision { this.lazyDecision.value.implies(other.lazyDecision.value) }
 }
 
 /** Evaluates a logical implication (->) operation between the values of two [QueryTree]s. */
 infix fun QueryTree<Boolean>.implies(other: Lazy<QueryTree<Boolean>>): QueryTree<Boolean> {
     return QueryTree(
-        !this.value || other.value.value,
-        if (!this.value) mutableListOf(this) else mutableListOf(this, other.value),
-        stringRepresentation =
-            if (!this.value) "false => XYZ" else "${this.value} => ${other.value}",
-    )
+            !this.value || other.value.value,
+            if (!this.value) mutableListOf(this) else mutableListOf(this, other.value),
+            stringRepresentation =
+                if (!this.value) "false => XYZ" else "${this.value} => ${other.value}",
+        )
+        .registerLazyDecision { this.lazyDecision.value.implies(other.value.lazyDecision.value) }
 }
 
 /**
@@ -466,7 +562,9 @@ infix fun <T : Number?, S : Number?> QueryTree<T>?.le(other: QueryTree<S>?): Que
 /** Negates the value of [arg] and returns the resulting [QueryTree]. */
 fun not(arg: QueryTree<Boolean>): QueryTree<Boolean> {
     val result = !arg.value
-    return QueryTree(result, mutableListOf(arg), "! ${arg.value}")
+    return QueryTree(result, mutableListOf(arg), "! ${arg.value}").registerLazyDecision {
+        not(arg.lazyDecision.value)
+    }
 }
 
 /** Negates the value of [arg] and returns the resulting [QueryTree]. */
@@ -527,17 +625,23 @@ fun List<QueryTree<Boolean>>.mergeWithAll(
 ): QueryTree<Boolean> {
     val value = this.all { it.value }
     return QueryTree(
-        value = value,
-        children = this.toMutableList(),
-        stringRepresentation =
-            if (value) {
-                "All elements has value true"
-            } else {
-                "At least one of the elements has false"
-            },
-        node = node,
-        assumptions = assumptions,
-    )
+            value = value,
+            children = this.toMutableList(),
+            stringRepresentation =
+                if (value) {
+                    "All elements has value true"
+                } else {
+                    "At least one of the elements has false"
+                },
+            node = node,
+            assumptions = assumptions,
+        )
+        .registerLazyDecision {
+            // Performs an `AND` operation on the lazy decisions of all children
+            this.fold(true.toQueryTree().lazyDecision.value) { currentResult, subquery ->
+                currentResult and subquery.lazyDecision.value
+            }
+        }
 }
 
 /**
@@ -550,15 +654,21 @@ fun List<QueryTree<Boolean>>.mergeWithAny(
 ): QueryTree<Boolean> {
     val value = this.any { it.value }
     return QueryTree(
-        value = value,
-        children = this.toMutableList(),
-        stringRepresentation =
-            if (value) {
-                "At least one of the elements has value true"
-            } else {
-                "All elements have value false"
-            },
-        node = node,
-        assumptions = assumptions,
-    )
+            value = value,
+            children = this.toMutableList(),
+            stringRepresentation =
+                if (value) {
+                    "At least one of the elements has value true"
+                } else {
+                    "All elements have value false"
+                },
+            node = node,
+            assumptions = assumptions,
+        )
+        .registerLazyDecision {
+            // Performs an `OR` operation on the lazy decisions of all children
+            this.fold(false.toQueryTree().lazyDecision.value) { currentResult, subquery ->
+                currentResult or subquery.lazyDecision.value
+            }
+        }
 }
