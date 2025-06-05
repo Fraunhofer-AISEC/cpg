@@ -30,6 +30,8 @@ import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.evaluation.compareTo
 import de.fraunhofer.aisec.cpg.graph.Node
+import java.util.Objects
+import kotlin.uuid.Uuid
 
 /**
  * Holds the [value] to which the statements have been evaluated. The [children] define previous
@@ -138,6 +140,30 @@ open class QueryTree<T>(
             else -> NotYetEvaluated to "Something went wrong"
         }
     }
+
+    /**
+     * Returns a unique identifier for this [QueryTree]. The identifier is based on the node's ID,
+     * the ID of its children, and the hash of the value.
+     *
+     * This allows to uniquely identify the [QueryTree] even if it is not associated with a specific
+     * node.
+     */
+    val id: Uuid
+        get() {
+            val nodePart =
+                node?.id?.toLongs { mostSignificantBits, leastSignificantBits ->
+                    leastSignificantBits
+                }
+
+            val childrenIds =
+                children.sumOf {
+                    it.id.toLongs { mostSignificantBits, leastSignificantBits ->
+                        leastSignificantBits + mostSignificantBits
+                    }
+                }
+
+            return Uuid.fromLongs(nodePart ?: 0, childrenIds + Objects.hash(value))
+        }
 
     fun printNicely(depth: Int = 0): String {
         var res =
