@@ -141,6 +141,10 @@ open class IdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
 
     override fun hashCode() = map.hashCode()
 
+    fun intersect(other: IdentitySet<T>): IdentitySet<T> {
+        return this.filterTo(identitySetOf()) { it in other }
+    }
+
     override val size: Int
         get() = map.size
 }
