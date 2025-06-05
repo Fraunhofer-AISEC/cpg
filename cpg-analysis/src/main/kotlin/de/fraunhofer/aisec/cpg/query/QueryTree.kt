@@ -91,9 +91,7 @@ open class QueryTree<T>(
         val decisionState =
             when (boolValue) {
                 false -> Failed
-                else ->
-                    Succeeded // In the default case, if the bool value is true or the value is A
-            // value, we consider it to be succeeded.
+                else -> Succeeded
             }
 
         val (newValue, stringInfo) = decisionState.decideWithAssumptions(assumptions)
@@ -304,7 +302,13 @@ fun QueryTree<Boolean>.registerLazyDecision(
 ): QueryTree<Boolean> {
     val assumptions = this.assumptions
     this.lazyDecision = lazy {
-        decision().also { it.value = it.value.decideWithAssumptions(assumptions).first }
+        decision().also {
+            val decisionVal = it.value.decideWithAssumptions(assumptions).first
+            if(decisionVal != it.value){
+                it.stringRepresentation = "$it.stringRepresentation changed to $decisionVal due to assumptions"
+            }
+            it.value = decisionVal
+        }
     }
     return this
 }
