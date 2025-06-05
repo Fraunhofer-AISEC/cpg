@@ -44,8 +44,8 @@ infix fun Decision.and(other: QueryTree<Boolean>): Decision {
 
 /** Performs a logical or (||) operation between the values and creates and returns [Decision]s. */
 context(TranslationResult)
-infix fun QueryTree<Boolean>.or(other: DecisionState): Decision {
-    return this.decide() or other.toQueryTree()
+infix fun QueryTree<Boolean>.or(other: Decision): Decision {
+    return this.decide() or other
 }
 
 /** Performs a logical or (||) operation between the values and creates and returns [Decision]s. */
@@ -56,8 +56,14 @@ infix fun Decision.or(other: QueryTree<Boolean>): Decision {
 
 /** Performs a logical xor operation between the values and creates and returns [Decision]s. */
 context(TranslationResult)
-infix fun QueryTree<Boolean>.xor(other: DecisionState): Decision {
-    return this.decide() xor other.toQueryTree()
+infix fun QueryTree<Boolean>.xor(other: Decision): Decision {
+    return this.decide() xor other
+}
+
+/** Performs a logical xor operation between the values and creates and returns [Decision]s. */
+context(RequirementsBuilder, TranslationResult)
+infix fun Decision.xor(other: QueryTree<Boolean>): Decision {
+    return this xor other.decide()
 }
 
 /**
@@ -65,8 +71,8 @@ infix fun QueryTree<Boolean>.xor(other: DecisionState): Decision {
  * [QueryTree]s.
  */
 context(TranslationResult)
-infix fun QueryTree<Boolean>.implies(other: DecisionState): Decision {
-    return this.decide() implies other.toQueryTree()
+infix fun QueryTree<Boolean>.implies(other: Decision): Decision {
+    return this.decide() implies other
 }
 
 /**

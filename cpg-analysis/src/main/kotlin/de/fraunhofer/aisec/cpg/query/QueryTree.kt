@@ -75,7 +75,7 @@ open class QueryTree<T>(
 
     /**
      * The purpose of [lazyDecision] is to evaluate the decision after all post-processing
-     * information is applied e.g. after setting the [AssumptionStatus] of the [Assumption]s. This
+     * information is applied, e.g., after setting the [AssumptionStatus] of the [Assumption]s. This
      * default implementation will simply consider the value of the [QueryTree], if the value is a
      * [Boolean], it will return [Failed] and [Succeeded] respectively. If the value is not a
      * [Boolean], it will return [Succeeded] for now as the value was simply determined.
