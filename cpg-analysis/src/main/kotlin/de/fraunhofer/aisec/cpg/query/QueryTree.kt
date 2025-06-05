@@ -304,8 +304,9 @@ fun QueryTree<Boolean>.registerLazyDecision(
     this.lazyDecision = lazy {
         decision().also {
             val decisionVal = it.value.decideWithAssumptions(assumptions).first
-            if(decisionVal != it.value){
-                it.stringRepresentation = "$it.stringRepresentation changed to $decisionVal due to assumptions"
+            if (decisionVal != it.value) {
+                it.stringRepresentation =
+                    "$it.stringRepresentation changed to $decisionVal due to assumptions"
             }
             it.value = decisionVal
         }
