@@ -636,8 +636,9 @@ fun List<QueryTree<Boolean>>.mergeWithAll(
             assumptions = assumptions,
         )
         .registerLazyDecision {
-            this.drop(1).fold(this.first().lazyDecision.value) { acc, qt ->
-                acc and qt.lazyDecision.value
+            // Performs an `AND` operation on the lazy decisions of all children
+            this.fold(true.toQueryTree().lazyDecision.value) { currentResult, subquery ->
+                currentResult and subquery.lazyDecision.value
             }
         }
 }
@@ -664,8 +665,9 @@ fun List<QueryTree<Boolean>>.mergeWithAny(
             assumptions = assumptions,
         )
         .registerLazyDecision {
-            this.drop(1).fold(this.first().lazyDecision.value) { acc, qt ->
-                acc or qt.lazyDecision.value
+            // Performs an `OR` operation on the lazy decisions of all children
+            this.fold(false.toQueryTree().lazyDecision.value) { currentResult, subquery ->
+                currentResult or subquery.lazyDecision.value
             }
         }
 }
