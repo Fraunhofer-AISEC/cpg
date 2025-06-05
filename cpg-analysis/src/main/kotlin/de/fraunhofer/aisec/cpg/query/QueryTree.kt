@@ -73,7 +73,16 @@ open class QueryTree<T>(
     override var assumptions: MutableSet<Assumption> = mutableSetOf(),
 ) : Comparable<QueryTree<T>>, HasAssumptions {
 
-    var decisionState = lazy {
+    /**
+     * The purpose of [lazyDecision] is to evaluate the decision after all post-processing information is applied
+     * e.g. after setting the [AssumptionStatus] of the [Assumption]s. This default implementation will simply consider
+     * the value of the [QueryTree], if the value is a [Boolean], it will return [Failed] and [Succeeded] respectively.
+     * If the value is not a [Boolean], it will return [Succeeded] for now as the value was simply determined.
+     *
+     * Functions on QueryTree<Boolean> that will restrict, whether all assumptions in the query tree are relevant
+     * for decision-making, will have to override this function to provide a more specific logic, e.g., and, or, implies, etc.
+     */
+    var lazyDecision = lazy {
         val boolValue: Boolean? = this.value as? Boolean
         val assumptions = collectAssumptions()
 
@@ -95,6 +104,12 @@ open class QueryTree<T>(
         )
     }
 
+    /**
+     * This function changes the decision state based on the [AssumptionStatus] of the provided assumptions. It is the
+     * basic logic for assumption based decisions when handling a leaf QueryTree<Boolean>, i.e. the first QueryTree<Boolean>
+     *     to be converted into a [Decision] as well as the logic used for propagating [Decision]s in the QueryTree hierarchy, while considering
+     *     assumptions on the intermediate levels.
+     */
     fun DecisionState.decideWithAssumptions(
         assumptions: Set<Assumption>
     ): Pair<DecisionState, String> {
@@ -273,14 +288,19 @@ infix fun QueryTree<Boolean>.and(other: QueryTree<Boolean>): QueryTree<Boolean> 
             mutableListOf(this, other),
             stringRepresentation = "${this.value} && ${other.value}",
         )
-        .setDecisionState { this.decisionState.value and other.decisionState.value }
+        .registerLazyDecision { this.lazyDecision.value and other.lazyDecision.value }
 }
 
-fun QueryTree<Boolean>.setDecisionState(
+/**
+ * This function is used to add a lambda as lazy decision to a QueryTree<Boolean> for functions on those trees that
+ * need to change the default behavior of what assumptions need to be considered when deciding on nested [QueryTree]s.
+ * See [QueryTree.lazyDecision] for more information.
+ */
+fun QueryTree<Boolean>.registerLazyDecision(
     decision: () -> QueryTree<DecisionState>
 ): QueryTree<Boolean> {
     val assumptions = this.assumptions
-    this.decisionState = lazy {
+    this.lazyDecision = lazy {
         decision().also { it.value = it.value.decideWithAssumptions(assumptions).first }
     }
     return this
@@ -308,7 +328,7 @@ infix fun QueryTree<Boolean>.or(other: QueryTree<Boolean>): QueryTree<Boolean> {
             mutableListOf(this, other),
             stringRepresentation = "${this.value} || ${other.value}",
         )
-        .setDecisionState { this.decisionState.value or other.decisionState.value }
+        .registerLazyDecision { this.lazyDecision.value or other.lazyDecision.value }
 }
 
 /** Performs a logical xor operation between the values and creates and returns [QueryTree]s. */
@@ -333,7 +353,7 @@ infix fun QueryTree<Boolean>.xor(other: QueryTree<Boolean>): QueryTree<Boolean> 
             mutableListOf(this, other),
             stringRepresentation = "${this.value} xor ${other.value}",
         )
-        .setDecisionState { this.decisionState.value xor other.decisionState.value }
+        .registerLazyDecision { this.lazyDecision.value xor other.lazyDecision.value }
 }
 
 /**
@@ -367,7 +387,7 @@ infix fun QueryTree<Boolean>.implies(other: QueryTree<Boolean>): QueryTree<Boole
             mutableListOf(this, other),
             stringRepresentation = "${this.value} => ${other.value}",
         )
-        .setDecisionState { this.decisionState.value.implies(other.decisionState.value) }
+        .registerLazyDecision { this.lazyDecision.value.implies(other.lazyDecision.value) }
 }
 
 /** Evaluates a logical implication (->) operation between the values of two [QueryTree]s. */
@@ -378,7 +398,7 @@ infix fun QueryTree<Boolean>.implies(other: Lazy<QueryTree<Boolean>>): QueryTree
             stringRepresentation =
                 if (!this.value) "false => XYZ" else "${this.value} => ${other.value}",
         )
-        .setDecisionState { this.decisionState.value.implies(other.value.decisionState.value) }
+        .registerLazyDecision { this.lazyDecision.value.implies(other.value.lazyDecision.value) }
 }
 
 /**
@@ -533,8 +553,8 @@ infix fun <T : Number?, S : Number?> QueryTree<T>?.le(other: QueryTree<S>?): Que
 /** Negates the value of [arg] and returns the resulting [QueryTree]. */
 fun not(arg: QueryTree<Boolean>): QueryTree<Boolean> {
     val result = !arg.value
-    return QueryTree(result, mutableListOf(arg), "! ${arg.value}").setDecisionState {
-        not(arg.decisionState.value)
+    return QueryTree(result, mutableListOf(arg), "! ${arg.value}").registerLazyDecision {
+        not(arg.lazyDecision.value)
     }
 }
 
@@ -607,9 +627,9 @@ fun List<QueryTree<Boolean>>.mergeWithAll(
             node = node,
             assumptions = assumptions,
         )
-        .setDecisionState {
-            this.drop(1).fold(this.first().decisionState.value) { acc, qt ->
-                acc and qt.decisionState.value
+        .registerLazyDecision {
+            this.drop(1).fold(this.first().lazyDecision.value) { acc, qt ->
+                acc and qt.lazyDecision.value
             }
         }
 }
@@ -635,9 +655,9 @@ fun List<QueryTree<Boolean>>.mergeWithAny(
             node = node,
             assumptions = assumptions,
         )
-        .setDecisionState {
-            this.drop(1).fold(this.first().decisionState.value) { acc, qt ->
-                acc or qt.decisionState.value
+        .registerLazyDecision {
+            this.drop(1).fold(this.first().lazyDecision.value) { acc, qt ->
+                acc or qt.lazyDecision.value
             }
         }
 }

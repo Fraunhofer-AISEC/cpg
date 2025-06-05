@@ -81,7 +81,7 @@ fun QueryTree<Boolean>.decide(): Decision {
 
     this.collectAssumptions().forEach { it.status = statues.getOrDefault(it.id, it.status) }
 
-    return this.decisionState.value
+    return this.lazyDecision.value
 }
 
 /**
