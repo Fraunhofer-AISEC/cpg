@@ -74,13 +74,15 @@ open class QueryTree<T>(
 ) : Comparable<QueryTree<T>>, HasAssumptions {
 
     /**
-     * The purpose of [lazyDecision] is to evaluate the decision after all post-processing information is applied
-     * e.g. after setting the [AssumptionStatus] of the [Assumption]s. This default implementation will simply consider
-     * the value of the [QueryTree], if the value is a [Boolean], it will return [Failed] and [Succeeded] respectively.
-     * If the value is not a [Boolean], it will return [Succeeded] for now as the value was simply determined.
+     * The purpose of [lazyDecision] is to evaluate the decision after all post-processing
+     * information is applied e.g. after setting the [AssumptionStatus] of the [Assumption]s. This
+     * default implementation will simply consider the value of the [QueryTree], if the value is a
+     * [Boolean], it will return [Failed] and [Succeeded] respectively. If the value is not a
+     * [Boolean], it will return [Succeeded] for now as the value was simply determined.
      *
-     * Functions on QueryTree<Boolean> that will restrict, whether all assumptions in the query tree are relevant
-     * for decision-making, will have to override this function to provide a more specific logic, e.g., and, or, implies, etc.
+     * Functions on QueryTree<Boolean> that will restrict, whether all assumptions in the query tree
+     * are relevant for decision-making, will have to override this function to provide a more
+     * specific logic, e.g., and, or, implies, etc.
      */
     var lazyDecision = lazy {
         val boolValue: Boolean? = this.value as? Boolean
@@ -105,10 +107,11 @@ open class QueryTree<T>(
     }
 
     /**
-     * This function changes the decision state based on the [AssumptionStatus] of the provided assumptions. It is the
-     * basic logic for assumption based decisions when handling a leaf QueryTree<Boolean>, i.e. the first QueryTree<Boolean>
-     *     to be converted into a [Decision] as well as the logic used for propagating [Decision]s in the QueryTree hierarchy, while considering
-     *     assumptions on the intermediate levels.
+     * This function changes the decision state based on the [AssumptionStatus] of the provided
+     * assumptions. It is the basic logic for assumption based decisions when handling a leaf
+     * QueryTree<Boolean>, i.e. the first QueryTree<Boolean> to be converted into a [Decision] as
+     * well as the logic used for propagating [Decision]s in the QueryTree hierarchy, while
+     * considering assumptions on the intermediate levels.
      */
     fun DecisionState.decideWithAssumptions(
         assumptions: Set<Assumption>
@@ -292,9 +295,9 @@ infix fun QueryTree<Boolean>.and(other: QueryTree<Boolean>): QueryTree<Boolean> 
 }
 
 /**
- * This function is used to add a lambda as lazy decision to a QueryTree<Boolean> for functions on those trees that
- * need to change the default behavior of what assumptions need to be considered when deciding on nested [QueryTree]s.
- * See [QueryTree.lazyDecision] for more information.
+ * This function is used to add a lambda as lazy decision to a QueryTree<Boolean> for functions on
+ * those trees that need to change the default behavior of what assumptions need to be considered
+ * when deciding on nested [QueryTree]s. See [QueryTree.lazyDecision] for more information.
  */
 fun QueryTree<Boolean>.registerLazyDecision(
     decision: () -> QueryTree<DecisionState>
