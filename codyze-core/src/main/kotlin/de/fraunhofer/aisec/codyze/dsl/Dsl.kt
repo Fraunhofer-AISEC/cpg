@@ -48,6 +48,7 @@ import io.github.detekt.sarif4k.Result
 import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.Path
+import kotlin.uuid.Uuid
 
 @DslMarker annotation class CodyzeDsl
 
@@ -116,6 +117,11 @@ class RequirementBuilder(
      * This function is expected to be used in the context of a [TranslationResult].
      */
     var fulfilledBy: TranslationResult.() -> Decision = { NotYetEvaluated.toQueryTree() }
+}
+
+/** Represents a builder for suppressions of the evaluation project. */
+class SuppressionsBuilder {
+    val suppressions = mutableMapOf<(QueryTree<*>) -> Boolean, Any>()
 }
 
 /** Represents a builder for a list of all assumptions of the evaluation project. */
@@ -204,6 +210,7 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
     internal var toeBuilder = ToEBuilder()
     internal val requirementsBuilder = RequirementsBuilder()
     internal val assumptionsBuilder = AssumptionsBuilder()
+    internal val suppressionsBuilder = SuppressionsBuilder()
     internal val manualAssessmentBuilder = ManualAssessmentBuilder()
     internal var taggingCtx = TaggingContext()
 
@@ -294,6 +301,9 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
             name,
             projectDir = projectDir,
             requirementFunctions = requirementFunctions,
+            assumptionStatusFunctions =
+                assumptionsBuilder.decisionBuilder.assumptionStatusFunctions,
+            suppressedQueryTreeIDs = suppressionsBuilder.suppressions,
             config = configBuilder.build(),
             postProcess = postProcess,
         )
@@ -464,7 +474,39 @@ fun ProjectBuilder.assumptions(block: AssumptionsBuilder.() -> Unit) {
 }
 
 /**
- * Allows to explicitly list a custom assumption which has to hold and is always accepted for the
+ * Describes possible suppressions of the query tree. This is used to suppress certain queries that
+ * are known to be problematic or not relevant for the current evaluation project.
+ */
+@CodyzeDsl
+fun ProjectBuilder.suppressions(block: SuppressionsBuilder.() -> Unit) {
+    suppressionsBuilder.apply(block)
+}
+
+/**
+ * Allows suppressing a query tree by its [Uuid]. The [suppression] pair is expected to contain the
+ * [Uuid] as the first element and an optional value as the second element. The value is the value
+ * used in the suppression.
+ */
+@CodyzeDsl
+fun SuppressionsBuilder.queryTreeById(suppression: Pair<String, Any>) {
+    suppressions += Pair({ it.id == Uuid.parse(suppression.first) }, suppression.second)
+}
+
+/**
+ * Allows suppressing a query tree by a predicate function. The [suppression] pair is expected to
+ * contain a predicate function as the first element and an optional value as the second element.
+ */
+@CodyzeDsl
+fun <T> SuppressionsBuilder.queryTree(suppression: Pair<(QueryTree<T>) -> Boolean, T>) {
+    suppressions +=
+        Pair(
+            { @Suppress("UNCHECKED_CAST") suppression.first(it as QueryTree<T>) },
+            suppression.second as Any,
+        )
+}
+
+/**
+ * Allows explicitly listing a custom assumption which has to hold and is always accepted for the
  * current evaluation project.
  */
 @CodyzeDsl fun AssumptionsBuilder.assume(message: () -> String) {}

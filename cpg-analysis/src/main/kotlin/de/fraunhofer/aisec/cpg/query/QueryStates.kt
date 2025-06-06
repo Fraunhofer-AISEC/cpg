@@ -49,7 +49,7 @@ data object Failed : DecisionState()
 data object Succeeded : DecisionState()
 
 /**
- * Represents a query that has been evaluated but the result is not yet known because some
+ * Represents a query that has been evaluated, but the result is not yet known because some
  * [QueryTree.assumptions] have [de.fraunhofer.aisec.cpg.assumptions.Assumption.status]
  * [AssumptionStatus.Undecided].
  */
@@ -69,7 +69,7 @@ data object NotYetEvaluated : DecisionState()
  */
 context(TranslationResult)
 fun QueryTree<Boolean>.decide(): Decision {
-    val statues = this@TranslationResult.assumptionStatuses
+    val statues = this@TranslationResult.assumptionStates
     // The assumptions need to be collected, as they are located at the respective construct they
     // are placed on and only forwarded on evaluation. Accepting or rejecting an assumption has a
     // different impact on query evaluation depending on the sup-query tree the assumption is placed
@@ -115,10 +115,12 @@ infix fun Decision.and(other: DecisionState): Decision {
 /** Performs a logical and (&&) operation between the values of two [QueryTree]s. */
 infix fun Decision.and(other: Decision): Decision {
     return QueryTree(
-        if (this.value == Succeeded && other.value == Succeeded) Succeeded
-        else if (this.value == Failed || other.value == Failed) Failed
-        else if (this.value == NotYetEvaluated && other.value == NotYetEvaluated) NotYetEvaluated
-        else Undecided,
+        when {
+            this.value == Succeeded && other.value == Succeeded -> Succeeded
+            this.value == Failed || other.value == Failed -> Failed
+            this.value == NotYetEvaluated && other.value == NotYetEvaluated -> NotYetEvaluated
+            else -> Undecided
+        },
         mutableListOf(this, other),
         stringRepresentation = "${this.value} && ${other.value}",
     )
@@ -142,10 +144,12 @@ infix fun Decision.or(other: DecisionState): Decision {
 /** Performs a logical or (||) operation between the values of two [QueryTree]s. */
 infix fun Decision.or(other: Decision): Decision {
     return QueryTree(
-        if (this.value == Succeeded || other.value == Succeeded) Succeeded
-        else if (this.value == Failed && other.value == Failed) Failed
-        else if (this.value == NotYetEvaluated && other.value == NotYetEvaluated) NotYetEvaluated
-        else Undecided,
+        when {
+            this.value == Succeeded || other.value == Succeeded -> Succeeded
+            this.value == Failed && other.value == Failed -> Failed
+            this.value == NotYetEvaluated && other.value == NotYetEvaluated -> NotYetEvaluated
+            else -> Undecided
+        },
         mutableListOf(this, other),
         stringRepresentation = "${this.value} || ${other.value}",
     )
@@ -169,12 +173,15 @@ infix fun Decision.xor(other: DecisionState): Decision {
 /** Performs a logical xor operation between the values of two [QueryTree]s. */
 infix fun Decision.xor(other: Decision): Decision {
     return QueryTree(
-        if (this.value == Succeeded && other.value == Failed) Succeeded
-        else if (this.value == Failed && other.value == Succeeded) Succeeded
-        else if (this.value == Failed && other.value == Failed) Failed
-        else if (this.value == NotYetEvaluated && other.value == NotYetEvaluated) Failed
-        else if (this.value == Succeeded && other.value == Succeeded) Failed
-        else if (this.value == Undecided && other.value == Undecided) Failed else Undecided,
+        when {
+            this.value == Succeeded && other.value == Failed -> Succeeded
+            this.value == Failed && other.value == Succeeded -> Succeeded
+            this.value == Failed && other.value == Failed -> Failed
+            this.value == NotYetEvaluated && other.value == NotYetEvaluated -> Failed
+            this.value == Succeeded && other.value == Succeeded -> Failed
+            this.value == Undecided && other.value == Undecided -> Failed
+            else -> Undecided
+        },
         mutableListOf(this, other),
         stringRepresentation = "${this.value} xor ${other.value}",
     )
@@ -207,11 +214,13 @@ infix fun Decision.implies(other: DecisionState): Decision {
 /** Evaluates a logical implication (->) operation between the values of two [QueryTree]s. */
 infix fun Decision.implies(other: Decision): Decision {
     return QueryTree(
-        if (this.value == Succeeded && other.value == Succeeded) Succeeded
-        else if (this.value == Failed) Succeeded
-        else if (this.value == Succeeded && other.value == Failed) Failed
-        else if (this.value == NotYetEvaluated && other.value == NotYetEvaluated) NotYetEvaluated
-        else Undecided,
+        when {
+            this.value == Succeeded && other.value == Succeeded -> Succeeded
+            this.value == Failed -> Succeeded
+            this.value == Succeeded && other.value == Failed -> Failed
+            this.value == NotYetEvaluated && other.value == NotYetEvaluated -> NotYetEvaluated
+            else -> Undecided
+        },
         mutableListOf(this, other),
         stringRepresentation = "${this.value} => ${other.value}",
     )

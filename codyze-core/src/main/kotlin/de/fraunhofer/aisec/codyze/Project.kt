@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.query.Decision
+import de.fraunhofer.aisec.cpg.query.QueryTree
 import io.github.detekt.sarif4k.*
 import java.io.File
 import java.nio.file.Path
@@ -131,6 +132,7 @@ class AnalysisProject(
     var requirementFunctions: Map<String, TranslationResult.() -> Decision> = emptyMap(),
     var assumptionStatusFunctions: Map<String, TranslationResult.() -> AssumptionStatus> =
         emptyMap(),
+    var suppressedQueryTreeIDs: Map<(QueryTree<*>) -> Boolean, Any> = emptyMap(),
     /** The translation configuration for the project. */
     var config: TranslationConfiguration,
     /**
@@ -146,10 +148,13 @@ class AnalysisProject(
     fun analyze(): AnalysisResult {
         val tr = TranslationManager.builder().config(config).build().analyze().get()
 
-        // Propagate assumption status into translation result
+        // Propagate assumption status into a translation result
         assumptionStatusFunctions.forEach { (uuid, func) ->
-            tr.assumptionStatuses[Uuid.parse(uuid)] = func(tr)
+            tr.assumptionStates[Uuid.parse(uuid)] = func(tr)
         }
+
+        // Propagate suppressed query tree IDs into translation result
+        QueryTree.suppressions += suppressedQueryTreeIDs
 
         // Run requirements
         val requirementsResults =

@@ -30,6 +30,8 @@ import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.evaluation.compareTo
 import de.fraunhofer.aisec.cpg.graph.Node
+import java.util.*
+import kotlin.uuid.Uuid
 
 /**
  * Holds the [value] to which the statements have been evaluated. The [children] define previous
@@ -60,18 +62,56 @@ import de.fraunhofer.aisec.cpg.graph.Node
  * - **le**: Less than or equal (<=)
  */
 open class QueryTree<T>(
-    open var value: T,
-    open val children: MutableList<QueryTree<*>> = mutableListOf(),
-    open var stringRepresentation: String = "",
+    value: T,
+    var children: List<QueryTree<*>> = emptyList(),
+    var stringRepresentation: String = "",
 
     /**
      * The node, to which this current element of the query tree is associated with. This is useful
      * to access detailed information about the node that is otherwise only contained in string form
      * in [stringRepresentation].
      */
-    open var node: Node? = null,
+    node: Node? = null,
     override var assumptions: MutableSet<Assumption> = mutableSetOf(),
+
+    /**
+     * Indicates whether this [QueryTree] is suppressed by the user. The query tree itself will
+     * still hold the original value, but it is wrapped in a new [QueryTree] with the suppressed
+     * value as the only child.
+     *
+     * See [checkForSuppression] for more information.
+     */
+    var suppressed: Boolean = false,
 ) : Comparable<QueryTree<T>>, HasAssumptions {
+
+    /** The value of the [QueryTree] is the result of the query evaluation. */
+    var value = value
+        set(fieldValue) {
+            field = fieldValue
+
+            // Update the ID whenever the value changes
+            id = computeId()
+        }
+
+    /**
+     * The associated [Node]. This can be, for example, the node where the query was executed from.
+     */
+    var node = node
+        set(fieldValue) {
+            field = fieldValue
+
+            // Update the ID whenever the node changes
+            id = computeId()
+        }
+
+    /**
+     * Returns a unique identifier for this [QueryTree]. The identifier is based on the node's ID,
+     * the ID of its children, and the hash of the value.
+     *
+     * This allows uniquely identifying the [QueryTree] even if it is not associated with a specific
+     * node.
+     */
+    var id: Uuid
 
     /**
      * The purpose of [lazyDecision] is to evaluate the decision after all post-processing
@@ -89,7 +129,7 @@ open class QueryTree<T>(
         val boolValue: Boolean? = this.value as? Boolean
         val assumptions = collectAssumptions()
 
-        val decisionState =
+        var decisionState =
             when (boolValue) {
                 false -> Failed
                 else -> Succeeded
@@ -103,6 +143,48 @@ open class QueryTree<T>(
             stringRepresentation =
                 "The requirement ${ newValue::class.simpleName } because $stringInfo",
         )
+    }
+
+    init {
+        id = computeId()
+        checkForSuppression()
+    }
+
+    /**
+     * This functions checks if the [QueryTree] is suppressed by the user. If it is, it sets the
+     * value to `true` and creates a new [QueryTree] with the suppressed value as the only child.
+     *
+     * This is useful for cases where the analysis has an obvious error and the user wants to
+     * manually correct this.
+     */
+    fun checkForSuppression() {
+        if (suppressed) {
+            return
+        }
+
+        // Check for a suppression value for this node
+        val key = suppressions.keys.firstOrNull { it(this) }
+        if (key != null) {
+            val suppressionValue = suppressions[key]
+
+            // Create a copy of the original node with the suppressed value
+            val copyQ =
+                QueryTree(
+                    value = value,
+                    children = children.toList(),
+                    stringRepresentation = stringRepresentation,
+                    node = node,
+                    assumptions = assumptions.toMutableSet(),
+                    suppressed = true,
+                )
+            @Suppress("UNCHECKED_CAST")
+
+            // Set the value to true, update the string representation and set the original
+            // QueryTree as the only child
+            value = suppressionValue as T
+            stringRepresentation = "The query tree was set to $value by suppression"
+            children = listOf(copyQ)
+        }
     }
 
     /**
@@ -122,11 +204,17 @@ open class QueryTree<T>(
                 Failed to
                     (if (this == Failed) "the query failed given the accepted assumptions"
                     else
-                        "the assumptions ${assumptions.filter { it.status == AssumptionStatus.Rejected }.map { it.id.toHexDashString() }.joinToString(", ") } were rejected")
+                        "the assumptions ${
+                            assumptions.filter { it.status == AssumptionStatus.Rejected }
+                                .joinToString(", ") { it.id.toHexDashString() }
+                        } were rejected")
 
             this == Undecided || assumptions.any { it.status == AssumptionStatus.Undecided } ->
                 Undecided to
-                    "the assumptions ${assumptions.filter { it.status == AssumptionStatus.Undecided }.map { it.id.toHexDashString() }.joinToString(", ")} are not yet decided"
+                    "the assumptions ${
+                        assumptions.filter { it.status == AssumptionStatus.Undecided }
+                            .joinToString(", ") { it.id.toHexDashString() }
+                    } are not yet decided"
 
             this == Succeeded &&
                 assumptions.all {
@@ -137,6 +225,20 @@ open class QueryTree<T>(
 
             else -> NotYetEvaluated to "Something went wrong"
         }
+    }
+
+    fun computeId(): Uuid {
+        val nodePart =
+            node?.id?.toLongs { mostSignificantBits, leastSignificantBits -> leastSignificantBits }
+
+        val childrenIds =
+            children.sumOf { child ->
+                child.id.toLongs { mostSignificantBits, leastSignificantBits ->
+                    leastSignificantBits + mostSignificantBits
+                }
+            }
+
+        return Uuid.fromLongs(nodePart ?: 0, childrenIds + Objects.hash(value))
     }
 
     fun printNicely(depth: Int = 0): String {
@@ -186,6 +288,10 @@ open class QueryTree<T>(
      */
     override fun collectAssumptions(): Set<Assumption> {
         return super.collectAssumptions() + children.flatMap { it.collectAssumptions() }.toSet()
+    }
+
+    companion object {
+        val suppressions = mutableMapOf<(QueryTree<*>) -> Boolean, Any>()
     }
 }
 
@@ -605,11 +711,17 @@ data class StepsExceeded(override val endNode: Node) : TerminationReason
 
 data class HitEarlyTermination(override val endNode: Node) : TerminationReason
 
+/**
+ * Represents a single path result of a query evaluation. It contains the [value] of the path, the
+ * [children] that were evaluated to reach this path, the [stringRepresentation] of the path, the
+ * [node] that was evaluated, and the [terminationReason] that explains why this path was
+ * terminated.
+ */
 class SinglePathResult(
-    override var value: Boolean,
-    override val children: MutableList<QueryTree<*>> = mutableListOf(),
-    override var stringRepresentation: String = "",
-    override var node: Node? = null,
+    value: Boolean,
+    children: List<QueryTree<*>> = emptyList(),
+    stringRepresentation: String = "",
+    node: Node? = null,
     val terminationReason: TerminationReason,
 ) : QueryTree<Boolean>(value, children, stringRepresentation, node)
 
