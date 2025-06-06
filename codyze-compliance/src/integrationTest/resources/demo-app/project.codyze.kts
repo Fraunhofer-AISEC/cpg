@@ -66,10 +66,6 @@ project {
         }
     }
 
-    // comp: 00000000-40d0-3285-ffff-ffff9c7a5a6c
-    // tr: 00000000-0000-0000-0000-000040d03285
-    // comp hashcode: 495340980
-
     suppressions {
         /** I think it has enough parameters. */
         queryTree("00000000-2258-b0b4-0000-000000000533")
