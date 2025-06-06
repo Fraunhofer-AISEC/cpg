@@ -63,7 +63,7 @@ import kotlin.uuid.Uuid
  * - **le**: Less than or equal (<=)
  */
 open class QueryTree<T>(
-    var value: T,
+    value: T,
     var children: List<QueryTree<*>> = emptyList(),
     var stringRepresentation: String = "",
 
@@ -72,50 +72,38 @@ open class QueryTree<T>(
      * to access detailed information about the node that is otherwise only contained in string form
      * in [stringRepresentation].
      */
-    var node: Node? = null,
+    node: Node? = null,
     override var assumptions: MutableSet<Assumption> = mutableSetOf(),
-) : Comparable<QueryTree<T>>, HasAssumptions {
-
-    init {
-        checkForSuppression()
-    }
 
     /**
-     * This functions checks if the [QueryTree] is suppressed by the user. If it is, it sets the
-     * value to `true` and creates a new [QueryTree] with the suppressed value as the only child.
+     * Indicates whether this [QueryTree] is suppressed by the user. The query tree itself will
+     * still hold the original value but it is wrapped in a new [QueryTree] with the suppressed
+     * value as the only child.
      *
-     * This is useful for cases where the analysis has an obvious error and the user wants to
-     * manually correct this.
+     * See [checkForSuppression] for more information.
      */
-    fun checkForSuppression() {
-        if (
-            value is Boolean &&
-                node?.translationResult?.suppressedQueryTreeIDs?.contains(id) == true
-        ) {
-            // Save old values
-            val oldValue = value
-            val oldStringRepresentation = stringRepresentation
-            val oldChildren = children.toList()
+    var suppressed: Boolean = false,
+) : Comparable<QueryTree<T>>, HasAssumptions {
 
-            @Suppress("UNCHECKED_CAST")
-            value = true as T
-            stringRepresentation = "The result was manually set to true"
+    /** The value of the [QueryTree] is the result of the query evaluation. */
+    var value = value
+        set(fieldValue) {
+            field = fieldValue
 
-            // Create a new node to avoid confusion with the original QueryTree and set this as the
-            // only child.
-            val copyQ =
-                QueryTree(
-                    // value = oldValue, <- THIS PRODUCES A STACK OVERFLOW ERROR, WHY?
-                    value = value,
-                    children = oldChildren,
-                    stringRepresentation = oldStringRepresentation,
-                    node = node,
-                    assumptions = assumptions.toMutableSet(),
-                )
-
-            children = listOf(copyQ)
+            // Update the ID whenever the value changes
+            id = computeId()
         }
-    }
+
+    /**
+     * The associated [Node]. This can be, for example, the node where the query was executed from.
+     */
+    var node = node
+        set(fieldValue) {
+            field = fieldValue
+
+            // Update the ID whenever the node changes
+            id = computeId()
+        }
 
     /**
      * Returns a unique identifier for this [QueryTree]. The identifier is based on the node's ID,
@@ -124,22 +112,7 @@ open class QueryTree<T>(
      * This allows uniquely identifying the [QueryTree] even if it is not associated with a specific
      * node.
      */
-    val id: Uuid
-        get() {
-            val nodePart =
-                node?.id?.toLongs { mostSignificantBits, leastSignificantBits ->
-                    leastSignificantBits
-                }
-
-            val childrenIds =
-                children.sumOf {
-                    it.id.toLongs { mostSignificantBits, leastSignificantBits ->
-                        leastSignificantBits + mostSignificantBits
-                    }
-                }
-
-            return Uuid.fromLongs(nodePart ?: 0, childrenIds + Objects.hash(value))
-        }
+    var id: Uuid
 
     /**
      * The purpose of [lazyDecision] is to evaluate the decision after all post-processing
@@ -171,6 +144,47 @@ open class QueryTree<T>(
             stringRepresentation =
                 "The requirement ${ newValue::class.simpleName } because $stringInfo",
         )
+    }
+
+    init {
+        id = computeId()
+        checkForSuppression()
+    }
+
+    /**
+     * This functions checks if the [QueryTree] is suppressed by the user. If it is, it sets the
+     * value to `true` and creates a new [QueryTree] with the suppressed value as the only child.
+     *
+     * This is useful for cases where the analysis has an obvious error and the user wants to
+     * manually correct this.
+     */
+    fun checkForSuppression() {
+        if (suppressed) {
+            return
+        }
+
+        if (
+            value is Boolean &&
+                node?.translationResult?.suppressedQueryTreeIDs?.contains(id) == true
+        ) {
+            // Create a copy of the original node with the suppressed value
+            val copyQ =
+                QueryTree(
+                    value = value,
+                    children = children.toList(),
+                    stringRepresentation = stringRepresentation,
+                    node = node,
+                    assumptions = assumptions.toMutableSet(),
+                    suppressed = true,
+                )
+            @Suppress("UNCHECKED_CAST")
+
+            // Set the value to true, update the string representation and set the original
+            // QueryTree as the only child
+            value = true as T
+            stringRepresentation = "The result was manually set to true"
+            children = listOf(copyQ)
+        }
     }
 
     /**
@@ -211,6 +225,20 @@ open class QueryTree<T>(
 
             else -> NotYetEvaluated to "Something went wrong"
         }
+    }
+
+    fun computeId(): Uuid {
+        val nodePart =
+            node?.id?.toLongs { mostSignificantBits, leastSignificantBits -> leastSignificantBits }
+
+        val childrenIds =
+            children.sumOf { child ->
+                child.id.toLongs { mostSignificantBits, leastSignificantBits ->
+                    leastSignificantBits + mostSignificantBits
+                }
+            }
+
+        return Uuid.fromLongs(nodePart ?: 0, childrenIds + Objects.hash(value))
     }
 
     fun printNicely(depth: Int = 0): String {
