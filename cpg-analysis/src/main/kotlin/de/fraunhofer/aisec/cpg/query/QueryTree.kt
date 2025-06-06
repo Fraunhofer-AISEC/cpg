@@ -711,6 +711,12 @@ data class StepsExceeded(override val endNode: Node) : TerminationReason
 
 data class HitEarlyTermination(override val endNode: Node) : TerminationReason
 
+/**
+ * Represents a single path result of a query evaluation. It contains the [value] of the path,
+ * the [children] that were evaluated to reach this path, the [stringRepresentation] of the path,
+ * the [node] that was evaluated, and the [terminationReason] that explains why this path was
+ * terminated.
+ */
 class SinglePathResult(
     value: Boolean,
     children: List<QueryTree<*>> = emptyList(),
