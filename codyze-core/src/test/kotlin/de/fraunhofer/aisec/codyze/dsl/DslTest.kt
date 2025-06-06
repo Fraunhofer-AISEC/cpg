@@ -121,7 +121,12 @@ class DslTest {
                      * This query tree ID needs to be suppressed because it is not relevant for the
                      * current analysis.
                      */
-                    queryTree("00000000-0000-0000-0000-000000000000")
+                    queryTreeById("00000000-0000-0000-0000-000000000000" to true)
+
+                    /** All bogus queries that are not relevant for the current analysis */
+                    queryTree(
+                        { q: QueryTree<Boolean> -> q.stringRepresentation == "bogusQuery" } to true
+                    )
                 }
             }
 

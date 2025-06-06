@@ -30,8 +30,7 @@ import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.evaluation.compareTo
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.translationResult
-import java.util.Objects
+import java.util.*
 import kotlin.uuid.Uuid
 
 /**
@@ -77,7 +76,7 @@ open class QueryTree<T>(
 
     /**
      * Indicates whether this [QueryTree] is suppressed by the user. The query tree itself will
-     * still hold the original value but it is wrapped in a new [QueryTree] with the suppressed
+     * still hold the original value, but it is wrapped in a new [QueryTree] with the suppressed
      * value as the only child.
      *
      * See [checkForSuppression] for more information.
@@ -163,10 +162,11 @@ open class QueryTree<T>(
             return
         }
 
-        if (
-            value is Boolean &&
-                node?.translationResult?.suppressedQueryTreeIDs?.contains(id) == true
-        ) {
+        // Check for a suppression value for this node
+        val key = suppressions.keys.firstOrNull { it(this) }
+        if (key != null) {
+            val suppressionValue = suppressions[key]
+
             // Create a copy of the original node with the suppressed value
             val copyQ =
                 QueryTree(
@@ -181,8 +181,8 @@ open class QueryTree<T>(
 
             // Set the value to true, update the string representation and set the original
             // QueryTree as the only child
-            value = true as T
-            stringRepresentation = "The result was manually set to true"
+            value = suppressionValue as T
+            stringRepresentation = "The query tree was set to $value by suppression"
             children = listOf(copyQ)
         }
     }
@@ -288,6 +288,10 @@ open class QueryTree<T>(
      */
     override fun collectAssumptions(): Set<Assumption> {
         return super.collectAssumptions() + children.flatMap { it.collectAssumptions() }.toSet()
+    }
+
+    companion object {
+        val suppressions = mutableMapOf<(QueryTree<*>) -> Boolean, Any>()
     }
 }
 

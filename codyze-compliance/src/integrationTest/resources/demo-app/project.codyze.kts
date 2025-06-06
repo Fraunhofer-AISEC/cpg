@@ -23,7 +23,6 @@
  *                    \______/ \__|       \______/
  *
  */
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.get
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
@@ -55,30 +54,9 @@ project {
 
             fulfilledBy { properHandlingOfKeyMaterial() }
         }
-
-        requirement {
-            name = "Encryption Functions have Many Parameters"
-
-            fulfilledBy {
-                val q = crappyQuery()
-                q
-            }
-        }
-    }
-
-    suppressions {
-        /** I think it has enough parameters. */
-        queryTree("00000000-2258-b0b4-0000-000000000533")
     }
 
     assumptions { assume { "Third party code is very good" } }
-}
-
-fun TranslationResult.crappyQuery(): QueryTree<Boolean> {
-    return allExtended<FunctionDeclaration>(
-        sel = { it.name.localName == "encrypt" },
-        { it.parameters.size eq 1 },
-    )
 }
 
 /** For each key K, if K is used in encryption or decryption, it must be deleted after use */

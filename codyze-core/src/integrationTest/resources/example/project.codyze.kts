@@ -70,7 +70,7 @@ project {
         }
 
         category("ENCRYPTION") {
-            requirement("RQ-ENCRYPTION-01") {
+            requirement {
                 name = "Good Encryption"
 
                 fulfilledBy {
@@ -78,6 +78,32 @@ project {
                         goodArgumentSize() and
                         manualAssessmentOf("THIRD-PARTY-LIBRARY")
                 }
+            }
+
+            requirement {
+                name = "Long Function Names"
+
+                fulfilledBy {
+                    val q = veryLongFunctionName()
+                    q
+                }
+            }
+
+            suppressions {
+                /** The encrypt function has 7 characters, so its ok. */
+                queryTreeById("00000000-137f-f4c6-0000-000000000540" to true)
+
+                /**
+                 * This is a suppression for a query that checks for a function named "foo" and
+                 * contains a greater than sign in its string representation.
+                 *
+                 * Foo is so common that we do not want to report it.
+                 */
+                queryTree(
+                    { qt: QueryTree<Boolean> ->
+                        qt.node?.name?.localName == "foo" && qt.stringRepresentation.contains(">")
+                    } to true
+                )
             }
         }
     }

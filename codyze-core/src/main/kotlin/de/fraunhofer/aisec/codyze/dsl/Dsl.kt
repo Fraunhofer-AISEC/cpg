@@ -121,7 +121,7 @@ class RequirementBuilder(
 
 /** Represents a builder for suppressions of the evaluation project. */
 class SuppressionsBuilder {
-    val suppressions = mutableSetOf<String>()
+    val suppressions = mutableMapOf<(QueryTree<*>) -> Boolean, Any>()
 }
 
 /** Represents a builder for a list of all assumptions of the evaluation project. */
@@ -303,8 +303,7 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
             requirementFunctions = requirementFunctions,
             assumptionStatusFunctions =
                 assumptionsBuilder.decisionBuilder.assumptionStatusFunctions,
-            suppressedQueryTreeIDs =
-                suppressionsBuilder.suppressions.map { Uuid.parse(it) }.toSet(),
+            suppressedQueryTreeIDs = suppressionsBuilder.suppressions,
             config = configBuilder.build(),
             postProcess = postProcess,
         )
@@ -474,18 +473,40 @@ fun ProjectBuilder.assumptions(block: AssumptionsBuilder.() -> Unit) {
     assumptionsBuilder.apply(block)
 }
 
+/**
+ * Describes possible suppressions of the query tree. This is used to suppress certain queries that
+ * are known to be problematic or not relevant for the current evaluation project.
+ */
 @CodyzeDsl
 fun ProjectBuilder.suppressions(block: SuppressionsBuilder.() -> Unit) {
     suppressionsBuilder.apply(block)
 }
 
+/**
+ * Allows suppressing a query tree by its [Uuid]. The [suppression] pair is expected to contain the
+ * [Uuid] as the first element and an optional value as the second element. The value is the value
+ * used in the suppression.
+ */
 @CodyzeDsl
-fun SuppressionsBuilder.queryTree(uuid: String) {
-    suppressions += uuid
+fun SuppressionsBuilder.queryTreeById(suppression: Pair<String, Any>) {
+    suppressions += Pair({ it.id == Uuid.parse(suppression.first) }, suppression.second)
 }
 
 /**
- * Allows to explicitly list a custom assumption which has to hold and is always accepted for the
+ * Allows suppressing a query tree by a predicate function. The [suppression] pair is expected to
+ * contain a predicate function as the first element and an optional value as the second element.
+ */
+@CodyzeDsl
+fun <T> SuppressionsBuilder.queryTree(suppression: Pair<(QueryTree<T>) -> Boolean, T>) {
+    suppressions +=
+        Pair(
+            { @Suppress("UNCHECKED_CAST") suppression.first(it as QueryTree<T>) },
+            suppression.second as Any,
+        )
+}
+
+/**
+ * Allows explicitly listing a custom assumption which has to hold and is always accepted for the
  * current evaluation project.
  */
 @CodyzeDsl fun AssumptionsBuilder.assume(message: () -> String) {}

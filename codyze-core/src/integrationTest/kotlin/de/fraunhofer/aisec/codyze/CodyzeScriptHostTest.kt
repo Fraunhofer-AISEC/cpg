@@ -28,13 +28,14 @@
 package de.fraunhofer.aisec.codyze
 
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.functions
+import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.query.Failed
-import de.fraunhofer.aisec.cpg.query.QueryTree
-import de.fraunhofer.aisec.cpg.query.allExtended
-import de.fraunhofer.aisec.cpg.query.eq
+import de.fraunhofer.aisec.cpg.query.*
 import de.fraunhofer.aisec.cpg.test.assertInvokes
 import kotlin.io.path.Path
 import kotlin.test.Test
@@ -50,6 +51,11 @@ fun goodCryptoFunc(): QueryTree<Boolean> {
 context(TranslationResult)
 fun goodArgumentSize(): QueryTree<Boolean> {
     return allExtended<CallExpression> { it.arguments.size eq 2 }
+}
+
+context(TranslationResult)
+fun veryLongFunctionName(): QueryTree<Boolean> {
+    return allExtended<FunctionDeclaration> { it.name.localName.length gt 7 }
 }
 
 class CodyzeExecutorTest {
@@ -70,16 +76,17 @@ class CodyzeExecutorTest {
         val encrypt = result.translationResult.functions["encrypt"]
         assertNotNull(encrypt)
 
-        val myFunc = result.translationResult.functions["my_func"]
-        assertNotNull(myFunc)
-        assertFalse(myFunc.isInferred)
+        val specialFunc = result.translationResult.functions["special_func"]
+        assertNotNull(specialFunc)
+        assertFalse(specialFunc.isInferred)
 
-        assertEquals(2, result.requirementsResults.size)
-        assertEquals(result.requirementsResults["RQ-ENCRYPTION-01"]?.value, Failed)
+        assertEquals(3, result.requirementsResults.size)
+        assertEquals(result.requirementsResults["RQ-ENCRYPTION-001"]?.value, Failed)
+        assertEquals(result.requirementsResults["RQ-ENCRYPTION-002"]?.value, Succeeded)
 
-        val myFuncCall = result.translationResult.calls["my_func"]
+        val myFuncCall = result.translationResult.calls["special_func"]
         assertNotNull(myFuncCall)
-        assertInvokes(myFuncCall, myFunc)
+        assertInvokes(myFuncCall, specialFunc)
 
         val getSecretCall = result.translationResult.calls["get_secret_from_server"]
         assertNotNull(getSecretCall)
