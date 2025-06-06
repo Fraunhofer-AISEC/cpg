@@ -115,6 +115,19 @@ class DslTest {
                         ignore("00000000-0000-0000-0000-000000000003")
                     }
                 }
+
+                suppressions {
+                    /**
+                     * This query tree ID needs to be suppressed because it is not relevant for the
+                     * current analysis.
+                     */
+                    queryTreeById("00000000-0000-0000-0000-000000000000" to true)
+
+                    /** All bogus queries that are not relevant for the current analysis */
+                    queryTree(
+                        { q: QueryTree<Boolean> -> q.stringRepresentation == "bogusQuery" } to true
+                    )
+                }
             }
 
             project { manualAssessment { of("SEC-TARGET") { true } } }

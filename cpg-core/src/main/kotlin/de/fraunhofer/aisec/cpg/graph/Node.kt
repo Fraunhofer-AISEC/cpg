@@ -366,7 +366,7 @@ abstract class Node() :
      * location already when creating the node.
      */
     override fun hashCode(): Int {
-        return Objects.hash(name, location, this.javaClass)
+        return Objects.hash(name, location, this.javaClass.name)
     }
 
     /** Returns the starting point of the EOG outside this node and its children. */

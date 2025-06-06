@@ -1,2 +1,2 @@
-def my_func():
+def special_func():
     pass
