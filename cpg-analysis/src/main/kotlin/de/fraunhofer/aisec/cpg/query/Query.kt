@@ -71,6 +71,7 @@ inline fun <reified T> Node.evaluateExtended(
         if (n is Node) {
             res.node = n
         }
+        res.checkForSuppression()
         res.addAssumptionDependence(this)
     }
 }

@@ -48,10 +48,8 @@ data object Failed : DecisionState()
  */
 data object Succeeded : DecisionState()
 
-data object SucceededManually : DecisionState()
-
 /**
- * Represents a query that has been evaluated but the result is not yet known because some
+ * Represents a query that has been evaluated, but the result is not yet known because some
  * [QueryTree.assumptions] have [de.fraunhofer.aisec.cpg.assumptions.Assumption.status]
  * [AssumptionStatus.Undecided].
  */
@@ -118,8 +116,6 @@ infix fun Decision.and(other: DecisionState): Decision {
 infix fun Decision.and(other: Decision): Decision {
     return QueryTree(
         when {
-            this.value == SucceededManually && other.value == Succeeded -> SucceededManually
-            this.value == Succeeded && other.value == SucceededManually -> SucceededManually
             this.value == Succeeded && other.value == Succeeded -> Succeeded
             this.value == Failed || other.value == Failed -> Failed
             this.value == NotYetEvaluated && other.value == NotYetEvaluated -> NotYetEvaluated
@@ -150,7 +146,6 @@ infix fun Decision.or(other: Decision): Decision {
     return QueryTree(
         when {
             this.value == Succeeded || other.value == Succeeded -> Succeeded
-            this.value == SucceededManually || other.value == SucceededManually -> SucceededManually
             this.value == Failed && other.value == Failed -> Failed
             this.value == NotYetEvaluated && other.value == NotYetEvaluated -> NotYetEvaluated
             else -> Undecided
@@ -179,14 +174,10 @@ infix fun Decision.xor(other: DecisionState): Decision {
 infix fun Decision.xor(other: Decision): Decision {
     return QueryTree(
         when {
-            this.value == SucceededManually && other.value == Failed -> SucceededManually
-            this.value == Failed && other.value == SucceededManually -> SucceededManually
             this.value == Succeeded && other.value == Failed -> Succeeded
             this.value == Failed && other.value == Succeeded -> Succeeded
             this.value == Failed && other.value == Failed -> Failed
             this.value == NotYetEvaluated && other.value == NotYetEvaluated -> Failed
-            this.value == SucceededManually && other.value == Succeeded -> Failed
-            this.value == Succeeded && other.value == SucceededManually -> Failed
             this.value == Succeeded && other.value == Succeeded -> Failed
             this.value == Undecided && other.value == Undecided -> Failed
             else -> Undecided
@@ -224,12 +215,9 @@ infix fun Decision.implies(other: DecisionState): Decision {
 infix fun Decision.implies(other: Decision): Decision {
     return QueryTree(
         when {
-            this.value == SucceededManually && other.value == Succeeded -> Succeeded
-            this.value == Succeeded && other.value == SucceededManually -> SucceededManually
             this.value == Succeeded && other.value == Succeeded -> Succeeded
             this.value == Failed -> Succeeded
             this.value == Succeeded && other.value == Failed -> Failed
-            this.value == SucceededManually && other.value == Failed -> Failed
             this.value == NotYetEvaluated && other.value == NotYetEvaluated -> NotYetEvaluated
             else -> Undecided
         },

@@ -63,18 +63,83 @@ import kotlin.uuid.Uuid
  * - **le**: Less than or equal (<=)
  */
 open class QueryTree<T>(
-    open var value: T,
-    open val children: MutableList<QueryTree<*>> = mutableListOf(),
-    open var stringRepresentation: String = "",
+    var value: T,
+    var children: List<QueryTree<*>> = emptyList(),
+    var stringRepresentation: String = "",
 
     /**
      * The node, to which this current element of the query tree is associated with. This is useful
      * to access detailed information about the node that is otherwise only contained in string form
      * in [stringRepresentation].
      */
-    open var node: Node? = null,
+    var node: Node? = null,
     override var assumptions: MutableSet<Assumption> = mutableSetOf(),
 ) : Comparable<QueryTree<T>>, HasAssumptions {
+
+    init {
+        checkForSuppression()
+    }
+
+    /**
+     * This functions checks if the [QueryTree] is suppressed by the user. If it is, it sets the
+     * value to `true` and creates a new [QueryTree] with the suppressed value as the only child.
+     *
+     * This is useful for cases where the analysis has an obvious error and the user wants to
+     * manually correct this.
+     */
+    fun checkForSuppression() {
+        if (
+            value is Boolean &&
+                node?.translationResult?.suppressedQueryTreeIDs?.contains(id) == true
+        ) {
+            // Save old values
+            val oldValue = value
+            val oldStringRepresentation = stringRepresentation
+            val oldChildren = children.toList()
+
+            @Suppress("UNCHECKED_CAST")
+            value = true as T
+            stringRepresentation = "The result was manually set to true"
+
+            // Create a new node to avoid confusion with the original QueryTree and set this as the
+            // only child.
+            val copyQ =
+                QueryTree(
+                    // value = oldValue, <- THIS PRODUCES A STACK OVERFLOW ERROR, WHY?
+                    value = value,
+                    children = oldChildren,
+                    stringRepresentation = oldStringRepresentation,
+                    node = node,
+                    assumptions = assumptions.toMutableSet(),
+                )
+
+            children = listOf(copyQ)
+        }
+    }
+
+    /**
+     * Returns a unique identifier for this [QueryTree]. The identifier is based on the node's ID,
+     * the ID of its children, and the hash of the value.
+     *
+     * This allows uniquely identifying the [QueryTree] even if it is not associated with a specific
+     * node.
+     */
+    val id: Uuid
+        get() {
+            val nodePart =
+                node?.id?.toLongs { mostSignificantBits, leastSignificantBits ->
+                    leastSignificantBits
+                }
+
+            val childrenIds =
+                children.sumOf {
+                    it.id.toLongs { mostSignificantBits, leastSignificantBits ->
+                        leastSignificantBits + mostSignificantBits
+                    }
+                }
+
+            return Uuid.fromLongs(nodePart ?: 0, childrenIds + Objects.hash(value))
+        }
 
     /**
      * The purpose of [lazyDecision] is to evaluate the decision after all post-processing
@@ -97,10 +162,6 @@ open class QueryTree<T>(
                 false -> Failed
                 else -> Succeeded
             }
-
-        if (node?.translationResult?.suppressedQueryTreeIDs?.contains(id) == true) {
-            decisionState = SucceededManually
-        }
 
         val (newValue, stringInfo) = decisionState.decideWithAssumptions(assumptions)
 
@@ -148,40 +209,9 @@ open class QueryTree<T>(
                 Succeeded to
                     "the query was evaluated to true and all assumptions were accepted or deemed not influencing the result."
 
-            this == SucceededManually &&
-                assumptions.all {
-                    it.status == AssumptionStatus.Ignored || it.status == AssumptionStatus.Accepted
-                } ->
-                SucceededManually to
-                    "the query was manually set to true and all assumptions were accepted or deemed not influencing the result."
-
             else -> NotYetEvaluated to "Something went wrong"
         }
     }
-
-    /**
-     * Returns a unique identifier for this [QueryTree]. The identifier is based on the node's ID,
-     * the ID of its children, and the hash of the value.
-     *
-     * This allows to uniquely identify the [QueryTree] even if it is not associated with a specific
-     * node.
-     */
-    val id: Uuid
-        get() {
-            val nodePart =
-                node?.id?.toLongs { mostSignificantBits, leastSignificantBits ->
-                    leastSignificantBits
-                }
-
-            val childrenIds =
-                children.sumOf {
-                    it.id.toLongs { mostSignificantBits, leastSignificantBits ->
-                        leastSignificantBits + mostSignificantBits
-                    }
-                }
-
-            return Uuid.fromLongs(nodePart ?: 0, childrenIds + Objects.hash(value))
-        }
 
     fun printNicely(depth: Int = 0): String {
         var res =
@@ -650,10 +680,10 @@ data class StepsExceeded(override val endNode: Node) : TerminationReason
 data class HitEarlyTermination(override val endNode: Node) : TerminationReason
 
 class SinglePathResult(
-    override var value: Boolean,
-    override val children: MutableList<QueryTree<*>> = mutableListOf(),
-    override var stringRepresentation: String = "",
-    override var node: Node? = null,
+    value: Boolean,
+    children: List<QueryTree<*>> = emptyList(),
+    stringRepresentation: String = "",
+    node: Node? = null,
     val terminationReason: TerminationReason,
 ) : QueryTree<Boolean>(value, children, stringRepresentation, node)
 

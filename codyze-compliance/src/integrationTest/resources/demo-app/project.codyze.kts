@@ -60,7 +60,7 @@ project {
             name = "Encryption Functions have Many Parameters"
 
             fulfilledBy {
-                val q = crappyQuery().decide()
+                val q = crappyQuery()
                 q
             }
         }
@@ -72,7 +72,7 @@ project {
 
     suppressions {
         /** I think it has enough parameters. */
-        queryTree("ffffffff-c371-ad94-0000-000000000533")
+        queryTree("00000000-2258-b0b4-0000-000000000533")
     }
 
     assumptions { assume { "Third party code is very good" } }

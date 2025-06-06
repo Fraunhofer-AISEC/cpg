@@ -41,7 +41,6 @@ import de.fraunhofer.aisec.cpg.query.NotYetEvaluated
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.SinglePathResult
 import de.fraunhofer.aisec.cpg.query.Succeeded
-import de.fraunhofer.aisec.cpg.query.SucceededManually
 import de.fraunhofer.aisec.cpg.query.Undecided
 import de.fraunhofer.aisec.cpg.query.toQueryTree
 import io.github.detekt.sarif4k.*
@@ -99,7 +98,6 @@ fun <T : DecisionState> QueryTree<T>.toBooleanQueryTree(): QueryTree<Boolean>? {
     // decision state directly
     return when (this.value) {
         is Succeeded -> true.toQueryTree()
-        is SucceededManually -> true.toQueryTree()
         is Failed -> false.toQueryTree()
         is Undecided -> false.toQueryTree()
         is NotYetEvaluated -> null
