@@ -837,7 +837,7 @@ fun Node.followXUntilHit(
         val currentPath = worklist.maxBy { it.size }
         worklist.remove(currentPath)
         val currentNode = currentPath.last().first
-        var currentContext = currentPath.last().second
+        val currentContext = currentPath.last().second
         alreadySeenNodes.add(currentNode to currentContext)
         val currentPathNodes = currentPath.map { it.first }
         // The last node of the path is where we continue. We get all of its outgoing CDG edges and
@@ -925,8 +925,8 @@ fun isNodeWithCallStackInPath(
     path: Collection<Pair<Node, Context>>,
 ): Boolean {
     return path.any {
-        it.first == node &&
-            context.callStack.top?.let { top -> top in it.second.callStack } != false
+        it.first == node && context.callStack == it.second.callStack
+        // context.callStack.top?.let { top -> top in it.second.callStack } != false
     }
 }
 
