@@ -95,6 +95,15 @@ class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
         ctx: Context,
         analysisDirection: AnalysisDirection,
     ): Boolean {
+        if (
+            analysisDirection.edgeRequiresCallPush(currentNode, edge) &&
+                currentNode is CallExpression
+        ) {
+            // Check if the call expression is already in the call stack because this would indicate
+            // a loop (recursion).
+            return currentNode !in ctx.callStack
+        }
+
         // Follow the edge if we're still in the maxSteps range and (if maxCallDepth is null or the
         // call stack is not deeper yet)
         return (this.maxSteps == null || ctx.steps < maxSteps) &&
@@ -347,9 +356,7 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                             .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
                     }
 
-                if (interprocedural.isNotEmpty()) {
-                    interprocedural
-                } else {
+                interprocedural.ifEmpty {
                     filterEdges(
                             currentNode = currentNode,
                             edges = currentNode.nextEOGEdges,
@@ -449,9 +456,7 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
                             .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
                     }
 
-                if (interprocedural.isNotEmpty()) {
-                    interprocedural
-                } else {
+                interprocedural.ifEmpty {
                     filterEdges(
                             currentNode = currentNode,
                             edges = currentNode.prevEOGEdges,
