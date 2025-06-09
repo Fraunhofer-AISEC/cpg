@@ -856,7 +856,7 @@ fun Node.followXUntilHit(
         }
 
         for ((next, newContext) in nextNodes) {
-            // Copy the path for each outgoing CDG edge and add the next node
+            // Copy the path for each outgoing edge and add the next node
             if (predicate(next)) {
                 // We ended up in the node fulfilling "predicate", so we're done for this path. Add
                 // the path to the results.

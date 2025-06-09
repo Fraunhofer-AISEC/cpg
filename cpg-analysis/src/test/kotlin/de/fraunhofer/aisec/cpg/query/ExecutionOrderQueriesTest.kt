@@ -26,13 +26,37 @@
 package de.fraunhofer.aisec.cpg.query
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.testcases.FlowQueriesTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class ExecutionOrderQueriesTest {
+
+    @Test
+    fun testLoopDetection() {
+        val result = FlowQueriesTest.loopDetection()
+        val start = result.literals.singleOrNull { it.value == "start" }
+        assertNotNull(start)
+        val executionPath =
+            executionPath(
+                startNode = start,
+                direction = Forward(GraphToFollow.EOG),
+                type = Must,
+                scope = Interprocedural(),
+                predicate = { (it as? Literal<*>)?.value == "Then branch" },
+            )
+        assertFalse(executionPath.value)
+        val paths = executionPath.children
+        // There are six paths which succeed and four which fail (two for each branch of the
+        // function "a")
+        assertEquals(6, paths.filter { it.value == true }.size)
+        assertEquals(6, paths.filter { it.value == false }.size)
+    }
+
     @Test
     fun testIntraproceduralExecutionOrderForward() {
         val result = FlowQueriesTest.verySimpleDataflow()
