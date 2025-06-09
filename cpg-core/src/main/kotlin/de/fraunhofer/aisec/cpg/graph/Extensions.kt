@@ -924,10 +924,7 @@ fun isNodeWithCallStackInPath(
     context: Context,
     path: Collection<Pair<Node, Context>>,
 ): Boolean {
-    return path.any {
-        it.first == node && context.callStack == it.second.callStack
-        // context.callStack.top?.let { top -> top in it.second.callStack } != false
-    }
+    return path.any { it.first == node && context.callStack == it.second.callStack }
 }
 
 /**
