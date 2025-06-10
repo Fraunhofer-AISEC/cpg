@@ -126,6 +126,9 @@ open class FunctionDeclaration :
         // Node which a set of possible properties, such as a callingcontext
         val lastWrites: EqualLinkedHashSet<Pair<Node, EqualLinkedHashSet<Any>>> =
             equalLinkedHashSetOf(),
+        // Additional properties such the granularity
+        // TODO: We should include the shortFunctionSummary info in this
+        val properties: EqualLinkedHashSet<Any> = equalLinkedHashSetOf(),
     )
 
     var functionSummary = mutableMapOf<Node, MutableSet<FSEntry>>()

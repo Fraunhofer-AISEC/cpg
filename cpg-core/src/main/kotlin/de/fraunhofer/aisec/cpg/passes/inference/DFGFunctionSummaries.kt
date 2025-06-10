@@ -40,6 +40,9 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.applyMetadata
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
+import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.default
 import de.fraunhofer.aisec.cpg.graph.newFunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.newParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.parseName
@@ -291,6 +294,9 @@ class DFGFunctionSummaries {
         for (entry in dfgEntries) {
             var srcValueDepth = 1
             var destValueDepth = 1
+            val granularity =
+                if (entry.dfgType == "partial") PartialDataflowGranularity("hardcoded")
+                else default()
             val from =
                 if (entry.from.startsWith("param")) {
                     try {
@@ -337,6 +343,7 @@ class DFGFunctionSummaries {
                                         "",
                                         false,
                                         equalLinkedHashSetOf(Pair(paramTo, equalLinkedHashSetOf())),
+                                        equalLinkedHashSetOf(granularity),
                                     )
                                 )
                         }
@@ -379,7 +386,7 @@ class DFGFunctionSummaries {
             // TODO: Unsure if we still need this. We currently draw the edges between the
             // ParameterMemoryValues. We can't do this here because we don't yet have them, so we do
             // this in handleCallExpression in the pointsToPass
-            to?.let { from?.nextDFGEdges += it }
+            to?.let { from?.nextDFGEdges += Dataflow(from, it, granularity = granularity) }
         }
     }
 
