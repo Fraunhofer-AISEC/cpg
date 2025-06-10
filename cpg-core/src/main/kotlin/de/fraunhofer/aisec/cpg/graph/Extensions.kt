@@ -371,8 +371,15 @@ fun Node.followEOGEdgesUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return this.followXUntilHit(
-        x = { currentNode, ctx, path ->
-            direction.pickNextStep(currentNode, scope, ctx, sensitivities = sensitivities)
+        x = { currentNode, ctx, path, loopingPaths ->
+            direction.pickNextStep(
+                currentNode,
+                scope,
+                ctx,
+                path,
+                loopingPaths,
+                sensitivities = sensitivities,
+            )
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -400,8 +407,15 @@ fun Node.followDFGEdgesUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return this.followXUntilHit(
-        x = { currentNode, ctx, path ->
-            direction.pickNextStep(currentNode, scope, ctx, sensitivities = sensitivities)
+        x = { currentNode, ctx, path, loopingPaths ->
+            direction.pickNextStep(
+                currentNode,
+                scope,
+                ctx,
+                path,
+                loopingPaths,
+                sensitivities = sensitivities,
+            )
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -669,7 +683,7 @@ fun Node.followNextPDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx, _ ->
+        x = { currentNode, ctx, _, loopingPaths ->
             val nextNodes = currentNode.nextPDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
@@ -700,7 +714,7 @@ fun Node.followNextCDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx, _ ->
+        x = { currentNode, ctx, _, loopingPaths ->
             val nextNodes = currentNode.nextCDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
@@ -733,7 +747,7 @@ fun Node.followPrevPDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx, _ ->
+        x = { currentNode, ctx, _, loopingPaths ->
             val nextNodes = currentNode.prevPDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll(
@@ -775,7 +789,7 @@ fun Node.followPrevCDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx, _ ->
+        x = { currentNode, ctx, _, loopingPaths ->
             val nextNodes = currentNode.prevCDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll(
@@ -809,7 +823,10 @@ fun Node.followPrevCDGUntilHit(
  * not mandatory**. If the list "failed" is empty, the path is mandatory.
  */
 fun Node.followXUntilHit(
-    x: (Node, Context, List<Node>) -> Collection<Pair<Node, Context>>,
+    x:
+        (Node, Context, List<Pair<Node, Context>>, MutableList<NodePath>) -> Collection<
+                Pair<Node, Context>
+            >,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     context: Context = Context(steps = 0),
@@ -842,7 +859,7 @@ fun Node.followXUntilHit(
         val currentPathNodes = currentPath.map { it.first }
         // The last node of the path is where we continue. We get all of its outgoing CDG edges and
         // follow them
-        val nextNodes = x(currentNode, currentContext, currentPathNodes)
+        val nextNodes = x(currentNode, currentContext, currentPath, loopingPaths)
 
         // No further nodes in the path and the path criteria are not satisfied.
         if (nextNodes.isEmpty() && collectFailedPaths) {

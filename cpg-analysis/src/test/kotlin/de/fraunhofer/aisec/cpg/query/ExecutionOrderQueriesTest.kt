@@ -51,10 +51,10 @@ class ExecutionOrderQueriesTest {
             )
         assertFalse(executionPath.value)
         val paths = executionPath.children
-        // There are six paths which succeed and four which fail (two for each branch of the
-        // function "a")
+        // There are six paths which succeed and five which fail (two for each branch of the
+        // function "a" and the one which does not enter the loop).
         assertEquals(6, paths.filter { it.value == true }.size)
-        assertEquals(6, paths.filter { it.value == false }.size)
+        assertEquals(5, paths.filter { it.value == false }.size)
     }
 
     @Test

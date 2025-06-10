@@ -53,6 +53,8 @@ interface StepSelector {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
+        path: List<Pair<Node, Context>>,
+        loopingPaths: MutableList<NodePath>,
         analysisDirection: AnalysisDirection,
     ): Boolean
 }
@@ -72,6 +74,8 @@ class Intraprocedural(maxSteps: Int? = null) : AnalysisScope(maxSteps) {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
+        path: List<Pair<Node, Context>>,
+        loopingPaths: MutableList<NodePath>,
         analysisDirection: AnalysisDirection,
     ): Boolean {
         // Follow the edge if we're still in the maxSteps range and not an edge across function
@@ -93,6 +97,8 @@ class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
+        path: List<Pair<Node, Context>>,
+        loopingPaths: MutableList<NodePath>,
         analysisDirection: AnalysisDirection,
     ): Boolean {
         if (
@@ -101,7 +107,14 @@ class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
         ) {
             // Check if the call expression is already in the call stack because this would indicate
             // a loop (recursion).
-            return currentNode !in ctx.callStack
+
+            if (currentNode in ctx.callStack) {
+                loopingPaths.add(
+                    NodePath(path.map { it.first } + currentNode)
+                        .addAssumptionDependence(path.map { it.second } + ctx)
+                )
+                return false
+            }
         }
 
         // Follow the edge if we're still in the maxSteps range and (if maxCallDepth is null or the
@@ -125,6 +138,8 @@ class InterproceduralWithDfgTermination(
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
+        path: List<Pair<Node, Context>>,
+        loopingPaths: MutableList<NodePath>,
         analysisDirection: AnalysisDirection,
     ): Boolean {
         val nextNode = analysisDirection.unwrapNextStepFromEdge(edge)
@@ -185,6 +200,8 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
         currentNode: Node,
         scope: AnalysisScope,
         ctx: Context,
+        path: List<Pair<Node, Context>>,
+        loopingPaths: MutableList<NodePath>,
         vararg sensitivities: AnalysisSensitivity,
     ): Collection<Pair<Node, Context>>
 
@@ -230,13 +247,17 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
         edges: Collection<Edge<Node>>,
         ctx: Context,
         scope: AnalysisScope,
+        path: List<Pair<Node, Context>>,
+        loopingPaths: MutableList<NodePath>,
         vararg sensitivities: AnalysisSensitivity,
     ): Collection<Pair<Edge<Node>, Context>> {
         return edges.mapNotNull { edge ->
             val newCtx = ctx.clone()
             if (
-                scope.followEdge(currentNode, edge, newCtx, this) &&
-                    sensitivities.all { it.followEdge(currentNode, edge, newCtx, this) }
+                scope.followEdge(currentNode, edge, newCtx, path, loopingPaths, this) &&
+                    sensitivities.all {
+                        it.followEdge(currentNode, edge, newCtx, path, loopingPaths, this)
+                    }
             ) {
                 Pair(edge, newCtx)
             } else null
@@ -262,6 +283,8 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
         edges: Collection<Edge<Node>>,
         ctx: Context,
         scope: AnalysisScope,
+        path: List<Pair<Node, Context>>,
+        loopingPaths: MutableList<NodePath>,
         vararg sensitivities: AnalysisSensitivity,
         nextStep: (Node) -> Collection<Edge<Node>>,
         nodeStart: (Edge<Node>) -> Node,
@@ -272,6 +295,8 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
                 edges = edges,
                 ctx = ctx,
                 scope = scope,
+                path = path,
+                loopingPaths = loopingPaths,
                 sensitivities = sensitivities,
             )
         // This is a bit more tricky because we need to go to the next step when we
@@ -284,6 +309,8 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
                     edges = nextStep(nodeStart(nextEdge)),
                     ctx = newCtx,
                     scope = scope,
+                    path = path,
+                    loopingPaths = loopingPaths,
                     sensitivities = sensitivities,
                 )
                 .map { (edge, moreNewCtx) -> this.unwrapNextStepFromEdge(edge, moreNewCtx) }
@@ -297,6 +324,8 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
         currentNode: Node,
         scope: AnalysisScope,
         ctx: Context,
+        path: List<Pair<Node, Context>>,
+        loopingPaths: MutableList<NodePath>,
         vararg sensitivities: AnalysisSensitivity,
     ): Collection<Pair<Node, Context>> {
         return when (graphToFollow) {
@@ -309,6 +338,8 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                             else currentNode.nextDFGEdges,
                         ctx = ctx,
                         scope = scope,
+                        path = path,
+                        loopingPaths = loopingPaths,
                         sensitivities = sensitivities,
                     )
                     .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
@@ -324,6 +355,8 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                                 edges = called,
                                 ctx = ctx,
                                 scope = scope,
+                                path = path,
+                                loopingPaths = loopingPaths,
                                 sensitivities = sensitivities,
                             )
                             .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
@@ -343,6 +376,8 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                             scope = scope,
                             sensitivities = sensitivities,
                             nextStep = { it.nextEOGEdges },
+                            path = path,
+                            loopingPaths = loopingPaths,
                             nodeStart = { it.start },
                         )
                     } else {
@@ -351,6 +386,8 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                                 edges = currentNode.nextEOGEdges,
                                 ctx = ctx,
                                 scope = scope,
+                                path = path,
+                                loopingPaths = loopingPaths,
                                 sensitivities = sensitivities,
                             )
                             .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
@@ -362,6 +399,8 @@ class Forward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) {
                             edges = currentNode.nextEOGEdges,
                             ctx = ctx,
                             scope = scope,
+                            path = path,
+                            loopingPaths = loopingPaths,
                             sensitivities = sensitivities,
                         )
                         .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
@@ -404,6 +443,8 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
         currentNode: Node,
         scope: AnalysisScope,
         ctx: Context,
+        path: List<Pair<Node, Context>>,
+        loopingPaths: MutableList<NodePath>,
         vararg sensitivities: AnalysisSensitivity,
     ): Collection<Pair<Node, Context>> {
         return when (graphToFollow) {
@@ -415,6 +456,8 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
                             else currentNode.prevDFGEdges,
                         ctx = ctx,
                         scope = scope,
+                        path = path,
+                        loopingPaths = loopingPaths,
                         sensitivities = sensitivities,
                     )
                     .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
@@ -429,7 +472,9 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
                                 currentNode = currentNode,
                                 edges = returnedFrom,
                                 ctx = ctx,
-                                scope,
+                                scope = scope,
+                                path = path,
+                                loopingPaths = loopingPaths,
                                 sensitivities = sensitivities,
                             )
                             .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
@@ -443,6 +488,8 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
                             scope = scope,
                             sensitivities = sensitivities,
                             nextStep = { it.prevEOGEdges },
+                            path = path,
+                            loopingPaths = loopingPaths,
                             nodeStart = { it.start },
                         )
                     } else {
@@ -451,6 +498,8 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
                                 edges = currentNode.prevEOGEdges,
                                 ctx = ctx,
                                 scope = scope,
+                                path = path,
+                                loopingPaths = loopingPaths,
                                 sensitivities = sensitivities,
                             )
                             .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
@@ -462,6 +511,8 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
                             edges = currentNode.prevEOGEdges,
                             ctx = ctx,
                             scope = scope,
+                            path = path,
+                            loopingPaths = loopingPaths,
                             sensitivities = sensitivities,
                         )
                         .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
@@ -505,6 +556,8 @@ class Bidirectional(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFol
         currentNode: Node,
         scope: AnalysisScope,
         ctx: Context,
+        path: List<Pair<Node, Context>>,
+        loopingPaths: MutableList<NodePath>,
         vararg sensitivities: AnalysisSensitivity,
     ): Collection<Pair<Node, Context>> {
         TODO("Not yet implemented")
@@ -544,6 +597,8 @@ object FilterUnreachableEOG : AnalysisSensitivity() {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
+        path: List<Pair<Node, Context>>,
+        loopingPaths: MutableList<NodePath>,
         analysisDirection: AnalysisDirection,
     ): Boolean {
         return edge !is EvaluationOrder || edge.unreachable != true
@@ -556,6 +611,8 @@ object OnlyFullDFG : AnalysisSensitivity() {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
+        path: List<Pair<Node, Context>>,
+        loopingPaths: MutableList<NodePath>,
         analysisDirection: AnalysisDirection,
     ): Boolean {
         return edge !is Dataflow || edge.granularity is FullDataflowGranularity
@@ -568,6 +625,8 @@ object ContextSensitive : AnalysisSensitivity() {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
+        path: List<Pair<Node, Context>>,
+        loopingPaths: MutableList<NodePath>,
         analysisDirection: AnalysisDirection,
     ): Boolean {
         return if (analysisDirection.edgeRequiresCallPush(currentNode, edge)) {
@@ -605,6 +664,8 @@ object FieldSensitive : AnalysisSensitivity() {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
+        path: List<Pair<Node, Context>>,
+        loopingPaths: MutableList<NodePath>,
         analysisDirection: AnalysisDirection,
     ): Boolean {
         return if (edge is Dataflow) {
@@ -646,6 +707,8 @@ object Implicit : AnalysisSensitivity() {
         currentNode: Node,
         edge: Edge<Node>,
         ctx: Context,
+        path: List<Pair<Node, Context>>,
+        loopingPaths: MutableList<NodePath>,
         analysisDirection: AnalysisDirection,
     ): Boolean {
         return true
