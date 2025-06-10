@@ -342,8 +342,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         null,
                         1,
                         "",
-                        true,
                         equalLinkedHashSetOf(Pair(param, equalLinkedHashSetOf())),
+                        equalLinkedHashSetOf(true),
                     )
                 )
                 // The prevDFG edges for the function Declaration
@@ -398,7 +398,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             propertySet.add(
                                 FieldDeclaration().apply { name = Name(entry.subAccessName) }
                             )
-                        if (entry.shortFunctionSummary) propertySet.add(entry.shortFunctionSummary)
+                        val shortFsEntry = entry.properties.singleOrNull { it is Boolean }
+                        if (shortFsEntry != null) propertySet.add(shortFsEntry)
                         doubleState =
                             lattice.push(
                                 doubleState,
@@ -472,8 +473,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 value,
                                 srcValueDepth,
                                 subAccessName,
-                                shortFS,
                                 filteredLastWrites,
+                                equalLinkedHashSetOf(shortFS),
                             )
                         )
                         // Additionally, we store this as a shortFunctionSummary were the Function
@@ -484,8 +485,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 node,
                                 0,
                                 subAccessName,
-                                true,
                                 equalLinkedHashSetOf(Pair(node, equalLinkedHashSetOf())),
+                                equalLinkedHashSetOf(true),
                             )
                         )
                         val propertySet = identitySetOf<Any>(true)
@@ -543,13 +544,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                 matchingDeclarations,
                                                 stringToDepth(sourceParamValue.name.localName),
                                                 subAccessName,
-                                                true,
                                                 equalLinkedHashSetOf(
                                                     Pair(
                                                         matchingDeclarations,
                                                         equalLinkedHashSetOf(),
                                                     )
                                                 ),
+                                                equalLinkedHashSetOf(true),
                                             )
                                         )
                                 }
@@ -622,8 +623,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     it.first,
                                     1,
                                     "",
-                                    false,
                                     equalLinkedHashSetOf(Pair(parentFD, equalLinkedHashSetOf())),
+                                    equalLinkedHashSetOf(false),
                                 )
                             }
                         )
@@ -852,10 +853,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 srcNode,
                                 srcValueDepth,
                                 subAccessName,
-                                shortFS,
                                 lastWrites,
                                 properties,
                             ) ->
+                            val shortFS = properties.any { it == true }
                             val (destinationAddresses, destinations) =
                                 calculateCallExpressionDestinations(
                                     doubleState,

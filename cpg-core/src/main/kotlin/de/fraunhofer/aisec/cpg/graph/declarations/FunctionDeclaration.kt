@@ -122,7 +122,6 @@ open class FunctionDeclaration :
         val subAccessName: String,
         // We use shortFunctionSummaries to draw "short" DFG-Edges that allow us to follow DFG Paths
         // without going into functions. Not as detailed, but faster
-        val shortFunctionSummary: Boolean = false,
         // Node which a set of possible properties, such as a callingcontext
         val lastWrites: EqualLinkedHashSet<Pair<Node, EqualLinkedHashSet<Any>>> =
             equalLinkedHashSetOf(),

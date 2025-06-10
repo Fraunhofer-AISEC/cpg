@@ -1950,22 +1950,30 @@ class PointsToPassTest {
         assertLocalName("param_1", fsecallkeytoout.entries.firstOrNull()?.key)
         assertEquals(
             2,
-            fsecallkeytoout.entries.singleOrNull()?.value?.filter { !it.shortFunctionSummary }?.size,
+            fsecallkeytoout.entries
+                .singleOrNull()
+                ?.value
+                ?.filter { it.properties.none { it == true } }
+                ?.size,
         )
         assertEquals(
             2,
-            fsecallkeytoout.entries.singleOrNull()?.value?.filter { it.shortFunctionSummary }?.size,
+            fsecallkeytoout.entries
+                .singleOrNull()
+                ?.value
+                ?.filter { it.properties.any { it == true } }
+                ?.size,
         )
         fsecallkeytoout.entries
             .singleOrNull()
             ?.value
-            ?.filter { !it.shortFunctionSummary }
+            ?.filter { it.properties.none { it == true } }
             ?.any { it.srcNode is UnknownMemoryValue && it.srcNode?.name?.localName == "CONCAT71" }
             ?.let { assertTrue(it) }
         fsecallkeytoout.entries
             .singleOrNull()
             ?.value
-            ?.filter { !it.shortFunctionSummary }
+            ?.filter { it.properties.none { it == true } }
             ?.any {
                 it.srcNode is UnknownMemoryValue && it.srcNode?.name?.localName == "DAT_0011b1c8"
             }
@@ -1973,7 +1981,7 @@ class PointsToPassTest {
         fsecallkeytoout.entries
             .singleOrNull()
             ?.value
-            ?.filter { it.shortFunctionSummary }
+            ?.filter { it.properties.any { it == true } }
             ?.all { it.srcNode == fdecallkeytoout }
             ?.let { assertTrue(it) }
 
@@ -2004,7 +2012,7 @@ class PointsToPassTest {
                 .entries
                 .firstOrNull()
                 ?.value
-                ?.filter { !it.shortFunctionSummary }
+                ?.filter { it.properties.none { it == true } }
                 ?.size,
         )
         assertEquals(
@@ -2014,7 +2022,7 @@ class PointsToPassTest {
                 .entries
                 .firstOrNull()
                 ?.value
-                ?.filter { it.shortFunctionSummary }
+                ?.filter { it.properties.any { it == true } }
                 ?.size,
         )
         assertEquals(
@@ -2293,7 +2301,7 @@ class PointsToPassTest {
             unknownFuncFD.functionSummary.entries
                 ?.singleOrNull()
                 ?.value
-                ?.filter { it.shortFunctionSummary }
+                ?.filter { it.properties.any { it == true } }
                 ?.size,
         )
         assertEquals(
@@ -2301,7 +2309,7 @@ class PointsToPassTest {
             unknownFuncFD.functionSummary.entries
                 ?.singleOrNull()
                 ?.value
-                ?.filter { !it.shortFunctionSummary }
+                ?.filter { it.properties.none { it == true } }
                 ?.size,
         )
 
@@ -2404,7 +2412,8 @@ class PointsToPassTest {
         // Function Summary for mbedtls_ssl_read
         // Start with the precise function summaries:
         assertEquals(1, FSread.size)
-        val preciseFSread = FSread.entries.firstOrNull()?.value?.filter { !it.shortFunctionSummary }
+        val preciseFSread =
+            FSread.entries.firstOrNull()?.value?.filter { it.properties.none { it == true } }
         assertNotNull(preciseFSread)
         assertEquals(4, preciseFSread.size)
         assertTrue(preciseFSread.any { it.srcNode == literal1 && it.subAccessName == "i" })
@@ -2415,7 +2424,9 @@ class PointsToPassTest {
         // Function Summary for inner_renegotiate
         assertEquals(1, FSinnerrenegotiate.size)
         val preciseFSinnerrenegotiate =
-            FSinnerrenegotiate.entries.firstOrNull()?.value?.filter { !it.shortFunctionSummary }
+            FSinnerrenegotiate.entries.firstOrNull()?.value?.filter {
+                it.properties.none { it == true }
+            }
         assertNotNull(preciseFSinnerrenegotiate)
         assertEquals(2, preciseFSinnerrenegotiate.size)
         assertTrue(
@@ -2430,7 +2441,7 @@ class PointsToPassTest {
         // Function Summary for renegotiate
         assertEquals(1, FSrenegotiate.size)
         val preciseFSrenegotiate =
-            FSrenegotiate.entries.firstOrNull()?.value?.filter { !it.shortFunctionSummary }
+            FSrenegotiate.entries.firstOrNull()?.value?.filter { it.properties.none { it == true } }
         assertNotNull(preciseFSrenegotiate)
         // Since we overapproximate, we have 5 entries here: The writes in Line 15 & 16 appear once
         // with and once w/o the subAccesses
@@ -2513,7 +2524,7 @@ class PointsToPassTest {
             changepointerFS.entries
                 .first { it.key.name.localName == "p" }
                 .value
-                .filter { !it.shortFunctionSummary }
+                .filter { it.properties.none { it == true } }
                 .size,
         )
         assertEquals(
@@ -2521,7 +2532,7 @@ class PointsToPassTest {
             changepointerFS.entries
                 .first { it.key.name.localName == "p" }
                 .value
-                .filter { it.shortFunctionSummary }
+                .filter { it.properties.any { it == true } }
                 .size,
         )
         assertEquals(
@@ -2529,7 +2540,7 @@ class PointsToPassTest {
             changepointerFS.entries
                 .first { it.key.name.localName == "newp" }
                 .value
-                .filter { !it.shortFunctionSummary }
+                .filter { it.properties.none { it == true } }
                 .size,
         )
         assertEquals(
@@ -2537,7 +2548,7 @@ class PointsToPassTest {
             changepointerFS.entries
                 .first { it.key.name.localName == "newp" }
                 .value
-                .filter { it.shortFunctionSummary }
+                .filter { it.properties.any { it == true } }
                 .size,
         )
 
@@ -3408,29 +3419,33 @@ class PointsToPassTest {
             fsecallkeytoout2.entries
                 .singleOrNull()
                 ?.value
-                ?.filter { !it.shortFunctionSummary }
+                ?.filter { it.properties.none { it == true } }
                 ?.size,
         )
         assertEquals(
             2,
-            fsecallkeytoout2.entries.singleOrNull()?.value?.filter { it.shortFunctionSummary }?.size,
+            fsecallkeytoout2.entries
+                .singleOrNull()
+                ?.value
+                ?.filter { it.properties.any { it == true } }
+                ?.size,
         )
         fsecallkeytoout2.entries
             .singleOrNull()
             ?.value
-            ?.filter { !it.shortFunctionSummary }
+            ?.filter { it.properties.none { it == true } }
             ?.any { it.srcNode is UnknownMemoryValue && it.srcNode?.name?.localName == "CONCAT71" }
             ?.let { assertTrue(it) }
         fsecallkeytoout2.entries
             .singleOrNull()
             ?.value
-            ?.filter { !it.shortFunctionSummary }
+            ?.filter { it.properties.none { it == true } }
             ?.any { it.srcNode is UnknownMemoryValue && it.srcNode?.name?.localName == "key" }
             ?.let { assertTrue(it) }
         fsecallkeytoout2.entries
             .singleOrNull()
             ?.value
-            ?.filter { it.shortFunctionSummary }
+            ?.filter { it.properties.any { it == true } }
             ?.all { it.srcNode == fdecallkeytoout2 }
             ?.let { assertTrue(it) }
 
@@ -3461,7 +3476,7 @@ class PointsToPassTest {
                 .entries
                 .firstOrNull()
                 ?.value
-                ?.filter { !it.shortFunctionSummary }
+                ?.filter { it.properties.none { it == true } }
                 ?.size,
         )
         assertEquals(
@@ -3471,7 +3486,7 @@ class PointsToPassTest {
                 .entries
                 .firstOrNull()
                 ?.value
-                ?.filter { it.shortFunctionSummary }
+                ?.filter { it.properties.any { it == true } }
                 ?.size,
         )
         // From the in_outptr: The unknown value from CONCAT71 in Line 497
