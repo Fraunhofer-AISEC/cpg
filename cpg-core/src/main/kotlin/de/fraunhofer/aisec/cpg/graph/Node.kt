@@ -220,7 +220,7 @@ abstract class Node() :
     @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.OUTGOING)
     var nextPDGEdges: ProgramDependences<Node> =
-        ProgramDependences<Node>(this, mirrorProperty = Node::prevPDGEdges, outgoing = false)
+        ProgramDependences<Node>(this, mirrorProperty = Node::prevPDGEdges, outgoing = true)
         protected set
 
     var nextPDG by unwrapping(Node::nextPDGEdges)
