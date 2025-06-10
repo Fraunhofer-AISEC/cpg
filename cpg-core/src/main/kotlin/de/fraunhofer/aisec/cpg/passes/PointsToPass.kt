@@ -2353,9 +2353,6 @@ fun PointsToStateElement.updateValues(
     lastWrites: IdentitySet<Pair<Node, EqualLinkedHashSet<Any>>>,
 ): PointsToStateElement {
     var doubleState = doubleState
-    val newDeclState = this.declarationsState.duplicate()
-    val newGenState = this.generalState.duplicate()
-    var fullSourcesExist = true
 
     /* Update the declarationState for the addresses */
     destinationAddresses.forEach { destAddr ->
@@ -2365,7 +2362,6 @@ fun PointsToStateElement.updateValues(
 
             // If we want to update the State with exactly the same elements as are already in the
             // state, we do nothing in order not to confuse the iterateEOG function
-
             val newSources: IdentitySet<Pair<Node, Boolean>> =
                 sources
                     .mapTo(IdentitySet()) { triple ->
@@ -2380,7 +2376,7 @@ fun PointsToStateElement.updateValues(
                     .toIdentitySet()
 
             // Check if we have any full writes
-            fullSourcesExist = sources.any { !it.third }
+            val fullSourcesExist = sources.any { !it.third }
 
             /* val newPrevDFG =
             // TODO: Do we also need to fetch some properties here?
@@ -2401,12 +2397,14 @@ fun PointsToStateElement.updateValues(
 
             // If we have any full writes, we eliminate the previous state
             if (fullSourcesExist) {
+                val newDeclState = this.declarationsState.duplicate()
                 newDeclState[destAddr] =
                     DeclarationStateEntryElement(
                         PowersetLattice.Element(currentEntries),
                         PowersetLattice.Element(newSources),
                         PowersetLattice.Element(prevDFG),
                     )
+                doubleState = PointsToStateElement(doubleState.generalState, newDeclState)
             } else {
                 doubleState =
                     lattice.pushToDeclarationsState(
@@ -2434,6 +2432,7 @@ fun PointsToStateElement.updateValues(
                         lw.first in destinations)
             }
             destinations.forEach { d ->
+                val newGenState = this.generalState.duplicate()
                 newGenState[d] =
                     GeneralStateEntryElement(
                         PowersetLattice.Element(destinationAddresses),
@@ -2446,12 +2445,13 @@ fun PointsToStateElement.updateValues(
                         ),
                         PowersetLattice.Element(newLastWrites),
                     )
+                doubleState = PointsToStateElement(newGenState, doubleState.declarationsState)
             }
         } else {
             // For globals, we draw a DFG Edge from the source to the destination
             destinations.forEach { d ->
                 val entry =
-                    newGenState.computeIfAbsent(d) {
+                    doubleState.generalState.computeIfAbsent(d) {
                         GeneralStateEntryElement(
                             PowersetLattice.Element(),
                             PowersetLattice.Element(),
@@ -2465,5 +2465,5 @@ fun PointsToStateElement.updateValues(
         }
     }
 
-    return if (fullSourcesExist) PointsToStateElement(newGenState, newDeclState) else doubleState
+    return doubleState
 }

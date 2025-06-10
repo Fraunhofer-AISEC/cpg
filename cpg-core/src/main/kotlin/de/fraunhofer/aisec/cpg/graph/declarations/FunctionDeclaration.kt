@@ -120,13 +120,12 @@ open class FunctionDeclaration :
         val srcNode: Node?,
         val srcValueDepth: Int = 1, // 0: Address, 1: Value, 2: DerefValue, 3:
         val subAccessName: String,
-        // We use shortFunctionSummaries to draw "short" DFG-Edges that allow us to follow DFG Paths
-        // without going into functions. Not as detailed, but faster
         // Node which a set of possible properties, such as a callingcontext
         val lastWrites: EqualLinkedHashSet<Pair<Node, EqualLinkedHashSet<Any>>> =
             equalLinkedHashSetOf(),
-        // Additional properties such the granularity
-        // TODO: We should include the shortFunctionSummary info in this
+        // Additional properties such the granularity or the shortFS
+        // We use shortFunctionSummaries to draw "short" DFG-Edges that allow us to follow DFG Paths
+        // without going into functions. Not as detailed, but faster
         val properties: EqualLinkedHashSet<Any> = equalLinkedHashSetOf(),
     )
 
