@@ -42,9 +42,9 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.helpers.Util.debugWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
+import java.util.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.util.*
 
 /**
  * This class contains different kinds of helper that *infer* certain [Node]s that are not present
