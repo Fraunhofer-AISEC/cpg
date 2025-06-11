@@ -192,11 +192,16 @@ open class QueryTree<T>(
      * assumptions. It is the basic logic for assumption based decisions when handling a leaf
      * QueryTree<Boolean>, i.e. the first QueryTree<Boolean> to be converted into a [Decision] as
      * well as the logic used for propagating [Decision]s in the QueryTree hierarchy, while
-     * considering assumptions on the intermediate levels.
+     * considering assumptions on the intermediate levels. If [wasSuppressed] is `true`, the
+     * assumptions do not have any impact on the result.
      */
     fun DecisionState.decideWithAssumptions(
         assumptions: Set<Assumption>
     ): Pair<DecisionState, String> {
+        if (this@QueryTree.suppressed) {
+            this to
+                "The query tree was suppressed to status ${this.javaClass.simpleName}, so the assumptions do not have any impact on the result."
+        }
         return when {
             this == NotYetEvaluated ->
                 NotYetEvaluated to "QueryTree to decide is not a boolean value"
@@ -287,7 +292,8 @@ open class QueryTree<T>(
      * were declared as children.
      */
     override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + children.flatMap { it.collectAssumptions() }.toSet()
+        return super.collectAssumptions() +
+            children.flatMap { if (it.suppressed) setOf() else it.collectAssumptions() }.toSet()
     }
 
     companion object {
@@ -435,11 +441,11 @@ infix fun QueryTree<Boolean>.and(other: QueryTree<Boolean>): QueryTree<Boolean> 
  * when deciding on nested [QueryTree]s. See [QueryTree.lazyDecision] for more information.
  */
 fun QueryTree<Boolean>.registerLazyDecision(
-    decision: () -> QueryTree<DecisionState>
+    decision: (QueryTree<Boolean>) -> QueryTree<DecisionState>
 ): QueryTree<Boolean> {
     val assumptions = this.assumptions
     this.lazyDecision = lazy {
-        decision().also {
+        decision(this).also {
             val decisionVal = it.value.decideWithAssumptions(assumptions).first
             if (decisionVal != it.value) {
                 it.stringRepresentation =

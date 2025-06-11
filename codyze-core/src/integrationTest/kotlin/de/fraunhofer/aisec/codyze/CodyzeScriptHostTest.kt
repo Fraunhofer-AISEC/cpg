@@ -81,8 +81,8 @@ class CodyzeExecutorTest {
         assertFalse(specialFunc.isInferred)
 
         assertEquals(3, result.requirementsResults.size)
-        assertEquals(result.requirementsResults["RQ-ENCRYPTION-001"]?.value, Failed)
-        assertEquals(result.requirementsResults["RQ-ENCRYPTION-002"]?.value, Succeeded)
+        assertEquals(Failed, result.requirementsResults["RQ-ENCRYPTION-001"]?.value)
+        assertEquals(Succeeded, result.requirementsResults["RQ-ENCRYPTION-002"]?.value)
 
         val myFuncCall = result.translationResult.calls["special_func"]
         assertNotNull(myFuncCall)
