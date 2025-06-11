@@ -472,9 +472,8 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             debugWithFileLocation(
                 hint,
                 log,
-                "Inferred a new variable declaration {} with type {} in $it",
+                "Inferred a new field declaration {} in $it",
                 inferred.name,
-                inferred.type,
             )
 
             // Add it to the scope
