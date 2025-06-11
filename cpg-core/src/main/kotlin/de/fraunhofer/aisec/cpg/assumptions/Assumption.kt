@@ -353,8 +353,8 @@ fun <T : HasAssumptions> T.assume(
  *
  * @param haveAssumptions nodes that hold assumptions this object dependent on.
  */
-fun <T : HasAssumptions> T.addAssumptionDependence(vararg haveAssumptions: HasAssumptions): T {
-    this.assumptions.addAll(haveAssumptions.flatMap { it.collectAssumptions() })
+fun <T : HasAssumptions> T.addAssumptionDependence(vararg haveAssumptions: HasAssumptions?): T {
+    this.assumptions.addAll(haveAssumptions.flatMap { it?.collectAssumptions() ?: setOf() })
     return this
 }
 
