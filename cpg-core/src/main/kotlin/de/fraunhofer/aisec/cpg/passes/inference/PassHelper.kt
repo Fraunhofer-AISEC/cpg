@@ -39,7 +39,6 @@ import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.graph.methods
-import de.fraunhofer.aisec.cpg.graph.newFieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
@@ -57,7 +56,6 @@ import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import de.fraunhofer.aisec.cpg.passes.getPossibleContainingTypes
-import de.fraunhofer.aisec.cpg.passes.inference.Inference.TypeInferenceObserver
 import kotlin.collections.forEach
 
 /**
@@ -247,24 +245,7 @@ internal fun Pass<*>.tryFieldInference(
         return null
     }
 
-    val declaration =
-        ref.newFieldDeclaration(
-            ref.name.localName,
-            // we will set the type later through the type inference observer
-            record.unknownType(),
-            listOf(),
-            null,
-            false,
-        )
-    record.addField(declaration)
-    declaration.language = record.language
-    declaration.isInferred = true
-
-    // We might be able to resolve the type later (or better), if a type is
-    // assigned to our reference later
-    ref.registerTypeObserver(TypeInferenceObserver(declaration))
-
-    return declaration
+    return record.startInference(ctx)?.inferFieldDeclaration(ref)
 }
 
 /**

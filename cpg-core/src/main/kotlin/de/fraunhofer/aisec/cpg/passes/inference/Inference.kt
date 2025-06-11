@@ -442,6 +442,54 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
     }
 
     /**
+     * This infers a [FieldDeclaration] based on an unresolved [Reference], which is supplied as a
+     * [hint].
+     */
+    fun inferFieldDeclaration(hint: Reference): FieldDeclaration? {
+        if (!ctx.config.inferenceConfiguration.inferFields) {
+            return null
+        }
+
+        // We assume that the start is a record
+        val record = start as? RecordDeclaration
+        if (record == null) {
+            throw UnsupportedOperationException(
+                "Starting inference with the wrong type of start node"
+            )
+        }
+
+        return inferInScopeOf(record) {
+            val inferred =
+                newFieldDeclaration(
+                    hint.name.localName,
+                    // we will set the type later through the type inference observer
+                    record.unknownType(),
+                    listOf(),
+                    null,
+                    false,
+                )
+
+            debugWithFileLocation(
+                hint,
+                log,
+                "Inferred a new variable declaration {} with type {} in $it",
+                inferred.name,
+                inferred.type,
+            )
+
+            // Add it to the scope
+            scopeManager.addDeclaration(inferred)
+            record.addDeclaration(inferred)
+
+            // We might be able to resolve the type later (or better), if a type is
+            // assigned to our reference later
+            hint.registerTypeObserver(TypeInferenceObserver(inferred))
+
+            inferred
+        }
+    }
+
+    /**
      * This infers a [VariableDeclaration] based on an unresolved [Reference], which is supplied as
      * a [hint]. Currently, this is only used to infer global variables. In the future, we might
      * also infer static variables in namespaces.
