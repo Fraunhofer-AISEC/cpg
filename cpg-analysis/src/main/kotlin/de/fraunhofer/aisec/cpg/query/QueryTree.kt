@@ -542,7 +542,7 @@ fun List<QueryTree<Boolean>>.mergeWithAll(
         children = this.toMutableList(),
         stringRepresentation =
             if (value) {
-                "All elements has value true"
+                "All elements have value true"
             } else {
                 "At least one of the elements has false"
             },
