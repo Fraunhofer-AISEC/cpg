@@ -74,7 +74,8 @@ project {
                 name = "Good Encryption"
 
                 fulfilledBy {
-                    (goodCryptoFunc() and goodArgumentSize()) or
+                    goodCryptoFunc() and
+                        goodArgumentSize() and
                         manualAssessmentOf("THIRD-PARTY-LIBRARY")
                 }
             }
