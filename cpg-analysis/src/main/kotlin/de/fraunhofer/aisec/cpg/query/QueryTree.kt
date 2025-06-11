@@ -342,6 +342,18 @@ infix fun <T, S> T.IN(other: S): QueryTree<Boolean> {
             )
 
     return QueryTree(result, mutableListOf(thisQt, otherQt), "${thisQt.value} in ${otherQt.value}")
+        .registerLazyDecision {
+            // TODO: This is a quick-fix but it would be better to check which element causes a
+            // failing decision. If it's an element in otherQt which is not the same as thisQt's
+            // value, it should not affect the result.
+            val decision = getDecisionStateForComparison(thisQt, otherQt, result)
+            QueryTree(
+                value = decision,
+                children = listOfNotNull(thisQt, otherQt),
+                stringRepresentation =
+                    "The check ${thisQt.value} IN ${otherQt.value} ${decision.javaClass.simpleName}.",
+            )
+        }
 }
 
 /**
@@ -354,6 +366,15 @@ infix fun <T, S> T.eq(other: S): QueryTree<Boolean> {
 
     val result = thisQt.value == otherQt.value
     return QueryTree(result, mutableListOf(thisQt, otherQt), "${thisQt.value} == ${otherQt.value}")
+        .registerLazyDecision {
+            val decision = getDecisionStateForComparison(thisQt, otherQt, result)
+            QueryTree(
+                value = getDecisionStateForComparison(thisQt, otherQt, result),
+                children = listOfNotNull(thisQt, otherQt),
+                stringRepresentation =
+                    "The check ${thisQt.value} == ${otherQt.value} ${decision.javaClass.simpleName}.",
+            )
+        }
 }
 
 /**
@@ -366,6 +387,15 @@ infix fun <T, S> T.ne(other: S): QueryTree<Boolean> {
 
     val result = thisQt.value != otherQt.value
     return QueryTree(result, mutableListOf(thisQt, otherQt), "${thisQt.value} != ${otherQt.value}")
+        .registerLazyDecision {
+            val decision = getDecisionStateForComparison(thisQt, otherQt, result)
+            QueryTree(
+                value = decision,
+                children = listOfNotNull(thisQt, otherQt),
+                stringRepresentation =
+                    "The check ${thisQt.value} != ${otherQt.value} ${decision.javaClass.simpleName}.",
+            )
+        }
 }
 
 /**
@@ -546,10 +576,19 @@ infix fun <T : Number?, S : Number?> QueryTree<T>?.gt(other: QueryTree<S>?): Que
         this?.value?.let { thisV -> other?.value?.let { otherV -> thisV.compareTo(otherV) > 0 } }
             ?: false
     return QueryTree(
-        result,
-        listOfNotNull(this, other).toMutableList(),
-        "${this?.value} > ${other?.value}",
-    )
+            result,
+            listOfNotNull(this, other).toMutableList(),
+            "${this?.value} > ${other?.value}",
+        )
+        .registerLazyDecision {
+            val decision = getDecisionStateForComparison(this, other, result)
+            QueryTree(
+                value = decision,
+                children = listOfNotNull(this, other),
+                stringRepresentation =
+                    "The check ${this?.value} > ${other?.value} ${decision.javaClass.simpleName}.",
+            )
+        }
 }
 
 /**
@@ -585,10 +624,36 @@ infix fun <T : Number?, S : Number?> QueryTree<T>?.ge(other: QueryTree<S>?): Que
         this?.value?.let { thisV -> other?.value?.let { otherV -> thisV.compareTo(otherV) >= 0 } }
             ?: false
     return QueryTree(
-        result,
-        listOfNotNull(this, other).toMutableList(),
-        "${this?.value} >= ${other?.value}",
+            result,
+            listOfNotNull(this, other).toMutableList(),
+            "${this?.value} >= ${other?.value}",
+        )
+        .registerLazyDecision {
+            val decision = getDecisionStateForComparison(this, other, result)
+            QueryTree(
+                value = decision,
+                children = listOfNotNull(this, other),
+                stringRepresentation =
+                    "The check ${this?.value} >= ${other?.value} ${decision.javaClass.simpleName}.",
+            )
+        }
+}
+
+fun getDecisionStateForComparison(
+    first: QueryTree<*>?,
+    second: QueryTree<*>?,
+    result: Boolean,
+): DecisionState {
+    return if (
+        first?.collectAssumptions()?.any {
+            it.status != AssumptionStatus.Accepted && it.status != AssumptionStatus.Ignored
+        } == true ||
+            second?.collectAssumptions()?.any {
+                it.status != AssumptionStatus.Accepted && it.status != AssumptionStatus.Ignored
+            } == true
     )
+        NotYetEvaluated
+    else if (result) Succeeded else Failed
 }
 
 /**
@@ -621,10 +686,19 @@ infix fun <T : Number?, S : Number?> QueryTree<T>?.lt(other: QueryTree<S>?): Que
         this?.value?.let { thisV -> other?.value?.let { otherV -> thisV.compareTo(otherV) < 0 } }
             ?: false
     return QueryTree(
-        result,
-        listOfNotNull(this, other).toMutableList(),
-        "${this?.value} < ${other?.value}",
-    )
+            result,
+            listOfNotNull(this, other).toMutableList(),
+            "${this?.value} < ${other?.value}",
+        )
+        .registerLazyDecision {
+            val decision = getDecisionStateForComparison(this, other, result)
+            QueryTree(
+                value = decision,
+                children = listOfNotNull(this, other),
+                stringRepresentation =
+                    "The check ${this?.value} < ${other?.value} ${decision.javaClass.simpleName}.",
+            )
+        }
 }
 
 /**
@@ -659,10 +733,19 @@ infix fun <T : Number?, S : Number?> QueryTree<T>?.le(other: QueryTree<S>?): Que
         this?.value?.let { thisV -> other?.value?.let { otherV -> thisV.compareTo(otherV) <= 0 } }
             ?: false
     return QueryTree(
-        result,
-        listOfNotNull(this, other).toMutableList(),
-        "${this?.value} <= ${other?.value}",
-    )
+            result,
+            listOfNotNull(this, other).toMutableList(),
+            "${this?.value} <= ${other?.value}",
+        )
+        .registerLazyDecision {
+            val decision = getDecisionStateForComparison(this, other, result)
+            QueryTree(
+                value = decision,
+                children = listOfNotNull(this, other),
+                stringRepresentation =
+                    "The check ${this?.value} <= ${other?.value} ${decision.javaClass.simpleName}.",
+            )
+        }
 }
 
 /** Negates the value of [arg] and returns the resulting [QueryTree]. */
