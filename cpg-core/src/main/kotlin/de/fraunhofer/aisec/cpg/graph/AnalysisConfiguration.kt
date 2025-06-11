@@ -107,7 +107,6 @@ class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
         ) {
             // Check if the call expression is already in the call stack because this would indicate
             // a loop (recursion).
-
             if (currentNode in ctx.callStack) {
                 loopingPaths.add(
                     NodePath(path.map { it.first } + currentNode)

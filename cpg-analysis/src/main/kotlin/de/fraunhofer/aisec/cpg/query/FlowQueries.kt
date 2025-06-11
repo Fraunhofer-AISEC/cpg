@@ -107,7 +107,7 @@ object Must : AnalysisType() {
         val allPaths = evalRes.toQueryTree(startNode, queryType)
 
         return QueryTree(
-            evalRes.failed.isEmpty(),
+            allPaths.all { it.value },
             allPaths.toMutableList(),
             "$queryType from $startNode to ${evalRes.fulfilled.map { it.nodes.last() }}",
             startNode,
@@ -127,7 +127,7 @@ object May : AnalysisType() {
         val allPaths = evalRes.toQueryTree(startNode, queryType)
 
         return QueryTree(
-            evalRes.fulfilled.isNotEmpty(),
+            allPaths.any { it.value },
             allPaths.toMutableList(),
             "$queryType from $startNode to ${evalRes.fulfilled.map { it.nodes.last() }}",
             startNode,
