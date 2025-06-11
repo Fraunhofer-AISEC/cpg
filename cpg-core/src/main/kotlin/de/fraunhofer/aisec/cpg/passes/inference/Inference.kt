@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.passes.inference
 
+import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TypeManager
@@ -36,20 +37,14 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.TypeExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.helpers.Util.debugWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
-import java.util.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.util.*
 
 /**
  * This class contains different kinds of helper that *infer* certain [Node]s that are not present
@@ -120,7 +115,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                 createInferredParameters(inferred, signature)
 
                 // Set the type and return type(s)
-                var returnType =
+                val returnType =
                     if (
                         ctx.config.inferenceConfiguration.inferReturnTypes &&
                             incomingReturnType is UnknownType &&
@@ -615,7 +610,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
     fun inferReturnType(hint: CallExpression): Type? {
         // Try to find out, if the supplied hint is part of an assignment. If yes, we can use their
         // type as the return type of the function
-        var targetType =
+        val targetType =
             ctx.currentComponent.assignments.singleOrNull { it.value == hint }?.target?.type
         if (targetType != null && targetType !is UnknownType) {
             return targetType
