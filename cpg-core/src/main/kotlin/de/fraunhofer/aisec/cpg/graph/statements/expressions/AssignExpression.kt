@@ -74,14 +74,16 @@ class AssignExpression :
                 }
 
                 if (isSimpleAssignment) {
-                    val unwrapped =
-                        if (end is SubscriptExpression) end.arrayExpression
-                        else end.unwrapReference()
+                    // For SubscriptExpressions, the arrayExpression is not written to, so we ignore
+                    // it
+                    if (end !is SubscriptExpression) {
+                        val unwrapped = end.unwrapReference()
 
-                    if (unwrapped is Reference) {
-                        unwrapped.let {
-                            it.access = AccessValues.WRITE
-                            it.dfgHandlerHint = true
+                        if (unwrapped is Reference) {
+                            unwrapped.let {
+                                it.access = AccessValues.WRITE
+                                it.dfgHandlerHint = true
+                            }
                         }
                     }
                 } else {
