@@ -36,7 +36,7 @@ class AssumptionTest {
     @Test
     fun testAssumptionStatus() {
         with(TestLanguageFrontend()) {
-            Assumption.statues[Uuid.parse("00000000-0000-0000-ffff-fffffb51abe9")] =
+            Assumption.states[Uuid.parse("00000000-0000-0000-ffff-fffffb51abe9")] =
                 AssumptionStatus.Accepted
 
             val lit = newLiteral(1).assume(AssumptionType.SoundnessAssumption, "We assume 1 is 1")

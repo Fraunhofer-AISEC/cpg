@@ -98,7 +98,7 @@ class Assumption(
         location = node?.location
 
         // The ID should be stable now, so we can try to see if we have a pre-set status for it
-        statues[id]?.let { this.status = it }
+        states[id]?.let { this.status = it }
     }
 
     /**
@@ -130,7 +130,7 @@ class Assumption(
          * being set manually. The map is empty after a new analysis and can be filled during manual
          * evaluation of assumptions.
          */
-        val statues = mutableMapOf<Uuid, AssumptionStatus>()
+        val states = mutableMapOf<Uuid, AssumptionStatus>()
     }
 }
 

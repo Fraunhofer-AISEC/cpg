@@ -148,7 +148,7 @@ class AnalysisProject(
     fun analyze(): AnalysisResult {
         // Propagate assumption status into a translation result
         assumptionStatusFunctions.forEach { (uuid, func) ->
-            Assumption.statues[Uuid.parse(uuid)] = func()
+            Assumption.states[Uuid.parse(uuid)] = func()
         }
 
         // Propagate suppressed query tree IDs into translation result
