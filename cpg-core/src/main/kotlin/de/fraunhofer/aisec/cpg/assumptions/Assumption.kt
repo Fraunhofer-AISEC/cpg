@@ -111,7 +111,7 @@ class Assumption(
         // The underlying node is already in the hashCode of the super class implementation.
         // If the assumption is created from an edge, the edge is not null and therefore influences
         // the hashCode.
-        return Objects.hash(super.hashCode(), edge, assumptionType, message, assumptionLocation)
+        return Objects.hash(super.hashCode(), edge, assumptionType.name, message)
     }
 
     override fun equals(other: Any?): Boolean {

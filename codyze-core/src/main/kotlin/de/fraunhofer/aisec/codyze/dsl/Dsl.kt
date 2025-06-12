@@ -129,8 +129,7 @@ class AssumptionsBuilder {
     internal val decisionBuilder = DecisionBuilder()
 
     class DecisionBuilder {
-        val assumptionStatusFunctions =
-            mutableMapOf<String, TranslationResult.() -> AssumptionStatus>()
+        val assumptionStatusFunctions = mutableMapOf<String, () -> AssumptionStatus>()
     }
 }
 

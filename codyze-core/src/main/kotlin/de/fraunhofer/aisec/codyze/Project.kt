@@ -131,8 +131,7 @@ class AnalysisProject(
      */
     var librariesPath: Path? = projectDir?.resolve("libraries"),
     var requirementFunctions: Map<String, TranslationResult.() -> Decision> = emptyMap(),
-    var assumptionStatusFunctions: Map<String, TranslationResult.() -> AssumptionStatus> =
-        emptyMap(),
+    var assumptionStatusFunctions: Map<String, () -> AssumptionStatus> = emptyMap(),
     var suppressedQueryTreeIDs: Map<(QueryTree<*>) -> Boolean, Any> = emptyMap(),
     /** The translation configuration for the project. */
     var config: TranslationConfiguration,
@@ -147,15 +146,15 @@ class AnalysisProject(
 
     /** Analyzes the project and returns the result. */
     fun analyze(): AnalysisResult {
-        val tr = TranslationManager.builder().config(config).build().analyze().get()
-
         // Propagate assumption status into a translation result
         assumptionStatusFunctions.forEach { (uuid, func) ->
-            Assumption.statues[Uuid.parse(uuid)] = func(tr)
+            Assumption.statues[Uuid.parse(uuid)] = func()
         }
 
         // Propagate suppressed query tree IDs into translation result
         QueryTree.suppressions += suppressedQueryTreeIDs
+
+        val tr = TranslationManager.builder().config(config).build().analyze().get()
 
         // Run requirements
         val requirementsResults =
