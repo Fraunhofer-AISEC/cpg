@@ -82,12 +82,28 @@ open class QueryTree<T>(
      * See [checkForSuppression] for more information.
      */
     var suppressed: Boolean = false,
+    val operator: QueryOperators,
+) : Comparable<QueryTree<T>>, HasAssumptions {
     /**
      * Determines if the [QueryTree.value] is acceptable after evaluating the [assumptions] which
      * affect the result.
      */
-    var confidence: AcceptanceStatus,
-) : Comparable<QueryTree<T>>, HasAssumptions {
+    val confidence: AcceptanceStatus
+        get() {
+            return when (operator) {
+                QueryOperators.SUPPRESS -> AcceptedResult
+                QueryOperators.EVALUATE ->
+                    AcceptanceStatus.fromAssumptionsAndStatus(
+                        // TODO: Not sure what to use here.
+                        this.collectAssumptions()
+                    )
+                else ->
+                    AcceptanceStatus.fromAssumptionsAndStatus(
+                        children.map { it.confidence },
+                        this.assumptions,
+                    )
+            }
+        }
 
     /** The value of the [QueryTree] is the result of the query evaluation. */
     var value = value
@@ -148,8 +164,7 @@ open class QueryTree<T>(
             stringRepresentation =
                 "The requirement ${ newValue::class.simpleName } because $stringInfo",
             node = this.node,
-            confidence =
-                AcceptanceStatus.fromAssumptionsAndStatus(this.confidence, collectAssumptions()),
+            operator = QueryOperators.EVALUATE,
         )
     }
 
@@ -184,7 +199,7 @@ open class QueryTree<T>(
                     node = node,
                     assumptions = assumptions.toMutableSet(),
                     suppressed = true,
-                    confidence = AcceptedResult,
+                    operator = QueryOperators.SUPPRESS,
                 )
             @Suppress("UNCHECKED_CAST")
 
@@ -321,11 +336,28 @@ fun <T> T.toQueryTree(): QueryTree<T> {
         value = this,
         stringRepresentation = this.toString(),
         node = this as? Node,
-        confidence =
-            AcceptanceStatus.fromAssumptionsAndStatus(
-                (this as? HasAssumptions)?.collectAssumptions() ?: emptySet()
-            ),
+        operator = QueryOperators.EVALUATE,
     )
+}
+
+enum class QueryOperators {
+    ALL,
+    ANY,
+    AND,
+    OR,
+    XOR,
+    IMPLIES,
+    EQ,
+    NE,
+    GT,
+    GE,
+    LT,
+    LE,
+    IS,
+    IN,
+    NOT,
+    EVALUATE,
+    SUPPRESS,
 }
 
 /**
@@ -345,8 +377,7 @@ infix fun <T, S> T.IS(other: S): QueryTree<Boolean> {
         value = result,
         children = mutableListOf(thisQt, otherQt),
         stringRepresentation = "${thisQt.value} is ${otherQt.value}",
-        confidence =
-            AcceptanceStatus.fromAssumptionsAndStatus(setOf(thisQt.confidence, otherQt.confidence)),
+        operator = QueryOperators.IS,
     )
 }
 
@@ -368,8 +399,7 @@ infix fun <T, S> T.IN(other: S): QueryTree<Boolean> {
         value = result,
         children = mutableListOf(thisQt, otherQt),
         stringRepresentation = "${thisQt.value} in ${otherQt.value}",
-        confidence =
-            AcceptanceStatus.fromAssumptionsAndStatus(setOf(thisQt.confidence, otherQt.confidence)),
+        operator = QueryOperators.IN,
     )
 }
 
@@ -386,8 +416,7 @@ infix fun <T, S> T.eq(other: S): QueryTree<Boolean> {
         value = result,
         children = mutableListOf(thisQt, otherQt),
         stringRepresentation = "${thisQt.value} == ${otherQt.value}",
-        confidence =
-            AcceptanceStatus.fromAssumptionsAndStatus(setOf(thisQt.confidence, otherQt.confidence)),
+        operator = QueryOperators.EQ,
     )
 }
 
@@ -404,8 +433,7 @@ infix fun <T, S> T.ne(other: S): QueryTree<Boolean> {
         value = result,
         children = mutableListOf(thisQt, otherQt),
         stringRepresentation = "${thisQt.value} != ${otherQt.value}",
-        confidence =
-            AcceptanceStatus.fromAssumptionsAndStatus(setOf(thisQt.confidence, otherQt.confidence)),
+        operator = QueryOperators.NE,
     )
 }
 
@@ -436,7 +464,7 @@ infix fun QueryTree<Boolean>.and(other: QueryTree<Boolean>): QueryTree<Boolean> 
         value = this.value && other.value,
         children = mutableListOf(this, other),
         stringRepresentation = "${this.value} && ${other.value}",
-        confidence = minOf(this.confidence, other.confidence),
+        operator = QueryOperators.AND,
     )
 }
 
@@ -483,7 +511,7 @@ infix fun QueryTree<Boolean>.or(other: QueryTree<Boolean>): QueryTree<Boolean> {
             value = this.value || other.value,
             children = mutableListOf(this, other),
             stringRepresentation = "${this.value} || ${other.value}",
-            confidence = minOf(this.confidence, other.confidence),
+            operator = QueryOperators.OR,
         )
         .registerLazyDecision { this.lazyDecision.value or other.lazyDecision.value }
 }
@@ -509,6 +537,7 @@ infix fun QueryTree<Boolean>.xor(other: QueryTree<Boolean>): QueryTree<Boolean> 
             this.value xor other.value,
             mutableListOf(this, other),
             stringRepresentation = "${this.value} xor ${other.value}",
+            operator = QueryOperators.XOR,
         )
         .registerLazyDecision { this.lazyDecision.value xor other.lazyDecision.value }
 }
@@ -543,6 +572,7 @@ infix fun QueryTree<Boolean>.implies(other: QueryTree<Boolean>): QueryTree<Boole
             !this.value || other.value,
             mutableListOf(this, other),
             stringRepresentation = "${this.value} => ${other.value}",
+            operator = QueryOperators.IMPLIES,
         )
         .registerLazyDecision { this.lazyDecision.value.implies(other.lazyDecision.value) }
 }
@@ -554,6 +584,7 @@ infix fun QueryTree<Boolean>.implies(other: Lazy<QueryTree<Boolean>>): QueryTree
             if (!this.value) mutableListOf(this) else mutableListOf(this, other.value),
             stringRepresentation =
                 if (!this.value) "false => XYZ" else "${this.value} => ${other.value}",
+            operator = QueryOperators.IMPLIES,
         )
         .registerLazyDecision { this.lazyDecision.value.implies(other.value.lazyDecision.value) }
 }
@@ -591,6 +622,7 @@ infix fun <T : Number?, S : Number?> QueryTree<T>?.gt(other: QueryTree<S>?): Que
         result,
         listOfNotNull(this, other).toMutableList(),
         "${this?.value} > ${other?.value}",
+        operator = QueryOperators.GT,
     )
 }
 
@@ -630,6 +662,7 @@ infix fun <T : Number?, S : Number?> QueryTree<T>?.ge(other: QueryTree<S>?): Que
         result,
         listOfNotNull(this, other).toMutableList(),
         "${this?.value} >= ${other?.value}",
+        operator = QueryOperators.GE,
     )
 }
 
@@ -666,6 +699,7 @@ infix fun <T : Number?, S : Number?> QueryTree<T>?.lt(other: QueryTree<S>?): Que
         result,
         listOfNotNull(this, other).toMutableList(),
         "${this?.value} < ${other?.value}",
+        operator = QueryOperators.LT,
     )
 }
 
@@ -704,15 +738,20 @@ infix fun <T : Number?, S : Number?> QueryTree<T>?.le(other: QueryTree<S>?): Que
         result,
         listOfNotNull(this, other).toMutableList(),
         "${this?.value} <= ${other?.value}",
+        operator = QueryOperators.LE,
     )
 }
 
 /** Negates the value of [arg] and returns the resulting [QueryTree]. */
 fun not(arg: QueryTree<Boolean>): QueryTree<Boolean> {
     val result = !arg.value
-    return QueryTree(result, mutableListOf(arg), "! ${arg.value}").registerLazyDecision {
-        not(arg.lazyDecision.value)
-    }
+    return QueryTree(
+            value = result,
+            children = mutableListOf(arg),
+            stringRepresentation = "! ${arg.value}",
+            operator = QueryOperators.NOT,
+        )
+        .registerLazyDecision { not(arg.lazyDecision.value) }
 }
 
 /** Negates the value of [arg] and returns the resulting [QueryTree]. */
@@ -765,7 +804,15 @@ class SinglePathResult(
     stringRepresentation: String = "",
     node: Node? = null,
     val terminationReason: TerminationReason,
-) : QueryTree<Boolean>(value, children, stringRepresentation, node)
+    operator: QueryOperators,
+) :
+    QueryTree<Boolean>(
+        value = value,
+        children = children,
+        stringRepresentation = stringRepresentation,
+        node = node,
+        operator = operator,
+    )
 
 class QueryException(override val message: String) : Exception(message)
 
@@ -789,6 +836,7 @@ fun List<QueryTree<Boolean>>.mergeWithAll(
                 },
             node = node,
             assumptions = assumptions,
+            operator = QueryOperators.ALL,
         )
         .registerLazyDecision {
             // Performs an `AND` operation on the lazy decisions of all children
@@ -818,6 +866,7 @@ fun List<QueryTree<Boolean>>.mergeWithAny(
                 },
             node = node,
             assumptions = assumptions,
+            operator = QueryOperators.ANY,
         )
         .registerLazyDecision {
             // Performs an `OR` operation on the lazy decisions of all children

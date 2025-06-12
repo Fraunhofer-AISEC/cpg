@@ -95,6 +95,8 @@ class Assumption(
         }
         name = Name(assumptionType.name)
         location = node?.location
+
+        // TODO: Set the id and status here
     }
 
     /**
