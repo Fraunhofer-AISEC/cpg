@@ -90,17 +90,98 @@ open class QueryTree<T>(
      */
     val confidence: AcceptanceStatus
         get() {
+            val assumptionsToUse = this.assumptions
             return when (operator) {
                 QueryOperators.SUPPRESS -> AcceptedResult
                 QueryOperators.EVALUATE ->
+                    AcceptanceStatus.fromAssumptionsAndStatus(assumptionsToUse)
+
+                // These operators require everything to be Accepted and all assumptions are
+                // accepted/ignored
+                QueryOperators.ALL ->
                     AcceptanceStatus.fromAssumptionsAndStatus(
-                        // TODO: Not sure what to use here.
-                        this.collectAssumptions()
+                        children.map { it.confidence },
+                        assumptionsToUse,
+                    )
+                QueryOperators.AND,
+                QueryOperators.EQ,
+                QueryOperators.NE,
+                QueryOperators.GT,
+                QueryOperators.GE,
+                QueryOperators.LT,
+                QueryOperators.LE,
+                QueryOperators.IS,
+                QueryOperators.XOR ->
+                    AcceptanceStatus.fromAssumptionsAndStatus(
+                        minOf(children[0].confidence, children[1].confidence),
+                        assumptionsToUse,
+                    )
+
+                // These operators require only one "true" result to be Accepted. We also want all
+                // assumptions related to this requirement to be accepted/ignored.
+                QueryOperators.OR,
+                QueryOperators.ANY -> {
+                    val trueChildren = children.filter { it.value == true }
+                    val trueConfidence = trueChildren.map { it.confidence }
+                    val falseChildren = children.filter { it.value == false }
+                    val falseConfidence = trueChildren.map { it.confidence }
+                    val resultingConfidence =
+                        if (trueConfidence.isNotEmpty() && trueConfidence.max() is AcceptedResult) {
+                            AcceptedResult
+                        } else if (
+                            trueConfidence.isEmpty() &&
+                                falseChildren.isNotEmpty() &&
+                                falseConfidence.max() is RejectedResult
+                        ) {
+                            RejectedResult
+                        } else {
+                            UndecidedResult
+                        }
+
+                    AcceptanceStatus.fromAssumptionsAndStatus(resultingConfidence, assumptionsToUse)
+                }
+                QueryOperators.IMPLIES -> {
+                    // TODO: This is a tricky one... Workaround: everything has to be ok
+                    // If the lhs is false and accepted, we can say that the implication is
+                    // accepted.
+                    // If the rhs is true and accepted, we can say that the implication is accepted.
+                    // If the lhs is false and accepted, we can say that the implication is
+                    // accepted.
+                    AcceptanceStatus.fromAssumptionsAndStatus(
+                        children.map { it.confidence },
+                        assumptionsToUse,
+                    )
+                }
+                QueryOperators.IN -> {
+                    if (value == true) {
+                        // TODO: The lhs must be accepted and the element matching lhs in the rhs
+                        // must be accepted too. We do not care about the rest.
+                        // Qick-fix until we have this: Everything must be accepted.
+                        AcceptanceStatus.fromAssumptionsAndStatus(
+                            setOf(children[0].confidence, children[1].confidence),
+                            assumptionsToUse,
+                        )
+                    } else {
+                        // If the value is false and not everything is of confidence accepted, we
+                        // say it's undecided.
+                        if (minOf(children[0].confidence, children[1].confidence) != AcceptedResult)
+                            UndecidedResult
+                        else
+                            AcceptanceStatus.fromAssumptionsAndStatus(
+                                minOf(children[0].confidence, children[1].confidence),
+                                assumptionsToUse,
+                            )
+                    }
+                }
+                QueryOperators.NOT ->
+                    AcceptanceStatus.fromAssumptionsAndStatus(
+                        children[0].confidence,
+                        assumptionsToUse,
                     )
                 else ->
                     AcceptanceStatus.fromAssumptionsAndStatus(
                         children.map { it.confidence },
-                        this.assumptions,
+                        assumptionsToUse,
                     )
             }
         }
