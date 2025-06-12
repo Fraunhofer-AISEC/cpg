@@ -98,7 +98,7 @@ class Assumption(
         location = node?.location
 
         // The ID should be stable now, so we can try to see if we have a pre-set status for it
-        statues[super.id]?.let { this.status = it }
+        statues[id]?.let { this.status = it }
     }
 
     /**
@@ -322,8 +322,8 @@ interface HasAssumptions {
 /**
  * This function adds a new assumption to the object it is called on. If the object is a node or
  * edge. The Assumption is added as an overlaying node for presentation in the graph. The assumption
- * is also added to the [assumptions] list. In the future the [Node.id] will be deterministic across
- * functions.
+ * is also added to the [HasAssumptions.assumptions] list. In the future the [Node.id] will be
+ * deterministic across functions.
  *
  * Notes on writing the [message]: The message should specify what we assume, the condition, and
  * ideally the reason why this assumption was necessary and how it can be verified. The text should
