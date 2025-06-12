@@ -41,7 +41,7 @@ val NewArrayExpression.capacity: Int
 
 /**
  * A little helper function to find a [CallExpression]s argument [Node] by argument [name] or
- * argument [position].
+ * argument [position]. The function prioritizes resolution by [name] over the [position].
  *
  * @param this The [CallExpression] to analyze.
  * @param name Optionally: the [CallExpression.arguments] name.
