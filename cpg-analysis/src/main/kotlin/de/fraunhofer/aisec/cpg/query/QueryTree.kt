@@ -131,7 +131,7 @@ open class QueryTree<T>(
                     val trueChildren = children.filter { it.value == true }
                     val trueConfidence = trueChildren.map { it.confidence }
                     val falseChildren = children.filter { it.value == false }
-                    val falseConfidence = trueChildren.map { it.confidence }
+                    val falseConfidence = falseChildren.map { it.confidence }
                     val resultingConfidence =
                         if (trueConfidence.isNotEmpty() && trueConfidence.max() is AcceptedResult) {
                             AcceptedResult
