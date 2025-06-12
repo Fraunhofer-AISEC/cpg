@@ -403,6 +403,7 @@ fun Node.followDFGEdgesUntilHit(
     direction: AnalysisDirection = Forward(GraphToFollow.DFG),
     vararg sensitivities: AnalysisSensitivity = FieldSensitive + ContextSensitive,
     scope: AnalysisScope = Interprocedural(),
+    ctx: Context = Context(steps = 0),
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
@@ -419,6 +420,7 @@ fun Node.followDFGEdgesUntilHit(
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        ctx = ctx,
         earlyTermination = earlyTermination,
         predicate = predicate,
     )
@@ -435,7 +437,7 @@ fun Node.followDFGEdgesUntilHit(
 class Context(
     val indexStack: SimpleStack<IndexedDataflowGranularity> = SimpleStack(),
     val callStack: SimpleStack<CallExpression> = SimpleStack(),
-    var steps: Int,
+    var steps: Int = 0,
 ) : HasAssumptions {
 
     override val assumptions: MutableSet<Assumption> = mutableSetOf()
@@ -447,6 +449,18 @@ class Context(
     operator fun inc(): Context {
         this.steps++
         return this
+    }
+
+    companion object {
+        /**
+         * Creates a new [Context] with an empty index stack and call stack given by the
+         * [CallExpression]s provided in [calls].
+         */
+        fun ofCallStack(vararg calls: CallExpression): Context {
+            return Context(
+                callStack = SimpleStack<CallExpression>().apply { calls.forEach { push(it) } }
+            )
+        }
     }
 }
 
@@ -829,7 +843,7 @@ fun Node.followXUntilHit(
             >,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
-    context: Context = Context(steps = 0),
+    ctx: Context = Context(steps = 0),
     earlyTermination: (Node, Context) -> Boolean,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
@@ -841,7 +855,7 @@ fun Node.followXUntilHit(
     val loopingPaths = mutableListOf<NodePath>()
     // The list of paths where we're not done yet.
     val worklist = identitySetOf<List<Pair<Node, Context>>>()
-    worklist.add(listOf(this to context)) // We start only with the "from" node (=this)
+    worklist.add(listOf(this to ctx)) // We start only with the "from" node (=this)
 
     val alreadySeenNodes = mutableSetOf<Pair<Node, Context>>()
     // First check if the current node satisfies the predicate.
