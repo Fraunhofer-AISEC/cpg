@@ -27,6 +27,7 @@
 
 package de.fraunhofer.aisec.cpg.persistence
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Persistable
@@ -35,6 +36,10 @@ import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg_vis_neo4j.JsonEdge
+import de.fraunhofer.aisec.cpg_vis_neo4j.JsonGraph
+import de.fraunhofer.aisec.cpg_vis_neo4j.JsonNode
+import java.io.File
 import org.neo4j.driver.Session
 import org.slf4j.LoggerFactory
 
@@ -101,6 +106,47 @@ fun TranslationResult.persist() {
 
     log.info("Persisting {} relationships", relationships.size)
     relationships.persist()
+
+    b.stop()
+}
+
+fun TranslationResult.persistJson(path: File) {
+    val b = Benchmark(Persistable::class.java, "Persisting translation result")
+
+    val astNodes = this@persistJson.nodes
+    val connected = astNodes.flatMap { it.connectedNodes }.toSet()
+    val nodes = (astNodes + connected).distinct()
+
+    log.info(
+        "Persisting {} nodes: AST nodes ({}), other nodes ({})",
+        nodes.size,
+        astNodes.size,
+        connected.size,
+    )
+    // nodes.persist()
+    val nodes_js = nodes.map { JsonNode(it.id.toString(), it::class.labels, it.properties()) }
+
+    val relationships = nodes.collectRelationships()
+    val relationships_js =
+        relationships.mapIndexed { idx, rel ->
+            JsonEdge(
+                idx.toLong(),
+                rel["type"] as String,
+                rel["startId"] as String,
+                rel["endId"] as String,
+                rel.filterKeys { !arrayOf("type", "startId", "endId").contains(it) },
+            )
+        }
+
+    val js = JsonGraph(nodes_js, relationships_js)
+
+    val objectMapper = ObjectMapper()
+    objectMapper.writeValue(path, js)
+    log.info(
+        "Exported ${js.nodes.size} Nodes and ${js.edges.size} Edges to json file ${path.absoluteFile}"
+    )
+
+    log.info("Persisting {} relationships", relationships.size)
 
     b.stop()
 }

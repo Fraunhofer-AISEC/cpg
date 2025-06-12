@@ -25,13 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
 import de.fraunhofer.aisec.cpg.persistence.persist
+import de.fraunhofer.aisec.cpg.persistence.persistJson
 import java.io.File
 import java.net.ConnectException
 import java.nio.file.Paths
@@ -63,14 +63,14 @@ private const val DEFAULT_PASSWORD = "password"
 private const val DEFAULT_SAVE_DEPTH = -1
 private const val DEFAULT_MAX_COMPLEXITY = -1
 
-data class JsonNode(val id: Long, val labels: Set<String>, val properties: Map<String, Any>)
+data class JsonNode(val id: String, val labels: Set<String>, val properties: Map<String, Any?>)
 
 data class JsonEdge(
     val id: Long,
     val type: String,
-    val startNode: Long,
-    val endNode: Long,
-    val properties: Map<String, Any>,
+    val startNode: String,
+    val endNode: String,
+    val properties: Map<String, Any?>,
 )
 
 data class JsonGraph(val nodes: List<JsonNode>, val edges: List<JsonEdge>)
@@ -349,7 +349,7 @@ class Application : Callable<Int> {
             newNodeBuilders?.map {
                 val node = it.node()
                 JsonNode(
-                    node.id,
+                    node.id.toString(),
                     node.labels.toSet(),
                     node.propertyList.associate { prop -> prop.key to prop.value },
                 )
@@ -363,8 +363,8 @@ class Application : Callable<Int> {
                     JsonEdge(
                         edge.id,
                         edge.type,
-                        edge.startNode,
-                        edge.endNode,
+                        edge.startNode.toString(),
+                        edge.endNode.toString(),
                         edge.propertyList.associate { prop -> prop.key to prop.value },
                     )
                 } ?: emptyList()
@@ -380,16 +380,8 @@ class Application : Callable<Int> {
      */
     fun exportToJson(translationResult: TranslationResult, path: File) {
         val bench = Benchmark(this.javaClass, "Export cpg to json", false, translationResult)
-        log.info("Export graph to json using import depth: $depth")
+        translationResult.persistJson(path)
 
-        val (nodes, edges) = translateCPGToOGMBuilders(translationResult)
-        val graph = buildJsonGraph(nodes, edges)
-        val objectMapper = ObjectMapper()
-        objectMapper.writeValue(path, graph)
-
-        log.info(
-            "Exported ${graph.nodes.size} Nodes and ${graph.edges.size} Edges to json file ${path.absoluteFile}"
-        )
         bench.addMeasurement()
     }
 
