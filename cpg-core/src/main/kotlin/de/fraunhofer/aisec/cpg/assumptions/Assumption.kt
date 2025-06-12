@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
 import java.util.*
+import kotlin.uuid.Uuid
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.typeconversion.Convert
 
@@ -95,6 +96,9 @@ class Assumption(
         }
         name = Name(assumptionType.name)
         location = node?.location
+
+        // The ID should be stable now, so we can try to see if we have a pre-set status for it
+        statues[super.id]?.let { this.status = it }
     }
 
     /**
@@ -118,6 +122,15 @@ class Assumption(
             assumptionType == other.assumptionType &&
             message == other.message &&
             assumptionLocation == other.assumptionLocation
+    }
+
+    companion object {
+        /**
+         * This map holds the status assigned to assumptions identified by a specific [Uuid] when
+         * being set manually. The map is empty after a new analysis and can be filled during manual
+         * evaluation of assumptions.
+         */
+        val statues = mutableMapOf<Uuid, AssumptionStatus>()
     }
 }
 

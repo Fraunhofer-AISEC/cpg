@@ -69,7 +69,6 @@ data object NotYetEvaluated : DecisionState()
  */
 context(TranslationResult)
 fun QueryTree<Boolean>.decide(): Decision {
-    val statues = this@TranslationResult.assumptionStates
     // The assumptions need to be collected, as they are located at the respective construct they
     // are placed on and only forwarded on evaluation. Accepting or rejecting an assumption has a
     // different impact on query evaluation depending on the sup-query tree the assumption is placed
@@ -78,8 +77,6 @@ fun QueryTree<Boolean>.decide(): Decision {
 
     // Adding the global assumptions to the assumptions of this QueryTree before update and deciding
     this.assumptions.addAll(this@TranslationResult.collectAssumptions())
-
-    this.collectAssumptions().forEach { it.status = statues.getOrDefault(it.id, it.status) }
 
     val decidedValue = this.lazyDecision.value
 

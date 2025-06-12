@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.codyze.dsl.ProjectBuilder
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.query.Decision
@@ -150,7 +151,7 @@ class AnalysisProject(
 
         // Propagate assumption status into a translation result
         assumptionStatusFunctions.forEach { (uuid, func) ->
-            tr.assumptionStates[Uuid.parse(uuid)] = func(tr)
+            Assumption.statues[Uuid.parse(uuid)] = func(tr)
         }
 
         // Propagate suppressed query tree IDs into translation result
