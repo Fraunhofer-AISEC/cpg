@@ -155,6 +155,7 @@ fun dataFlow(
     type: AnalysisType = May,
     vararg sensitivities: AnalysisSensitivity = FieldSensitive + ContextSensitive,
     scope: AnalysisScope = Interprocedural(),
+    ctx: Context = Context(steps = 0),
     earlyTermination: ((Node) -> Boolean)? = null,
     predicate: (Node) -> Boolean,
 ): QueryTree<Boolean> {
@@ -176,6 +177,7 @@ fun dataFlow(
                         direction = direction,
                         sensitivities = sensitivities,
                         scope = scope,
+                        ctx = ctx,
                         earlyTermination = earlyTermination,
                         predicate = predicate,
                     )
