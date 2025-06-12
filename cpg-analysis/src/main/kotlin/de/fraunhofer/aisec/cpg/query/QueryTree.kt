@@ -82,6 +82,11 @@ open class QueryTree<T>(
      * See [checkForSuppression] for more information.
      */
     var suppressed: Boolean = false,
+    /**
+     * Determines if the [QueryTree.value] is acceptable after evaluating the [assumptions] which
+     * affect the result.
+     */
+    var confidence: AcceptanceStatus,
 ) : Comparable<QueryTree<T>>, HasAssumptions {
 
     /** The value of the [QueryTree] is the result of the query evaluation. */
@@ -142,6 +147,9 @@ open class QueryTree<T>(
             children = mutableListOf(this),
             stringRepresentation =
                 "The requirement ${ newValue::class.simpleName } because $stringInfo",
+            node = this.node,
+            confidence =
+                AcceptanceStatus.fromAssumptionsAndStatus(this.confidence, collectAssumptions()),
         )
     }
 
@@ -176,6 +184,7 @@ open class QueryTree<T>(
                     node = node,
                     assumptions = assumptions.toMutableSet(),
                     suppressed = true,
+                    confidence = AcceptedResult,
                 )
             @Suppress("UNCHECKED_CAST")
 
@@ -308,7 +317,15 @@ fun <T> T.toQueryTree(): QueryTree<T> {
         return this as QueryTree<T>
     }
 
-    return QueryTree(this, stringRepresentation = this.toString())
+    return QueryTree(
+        value = this,
+        stringRepresentation = this.toString(),
+        node = this as? Node,
+        confidence =
+            AcceptanceStatus.fromAssumptionsAndStatus(
+                (this as? HasAssumptions)?.collectAssumptions() ?: emptySet()
+            ),
+    )
 }
 
 /**
@@ -324,7 +341,13 @@ infix fun <T, S> T.IS(other: S): QueryTree<Boolean> {
             ?: throw IllegalArgumentException(
                 "Cannot check if ${thisQt.value} is of type ${otherQt.value}. The other value must be a Class<*>."
             )
-    return QueryTree(result, mutableListOf(thisQt, otherQt), "${thisQt.value} is ${otherQt.value}")
+    return QueryTree(
+        value = result,
+        children = mutableListOf(thisQt, otherQt),
+        stringRepresentation = "${thisQt.value} is ${otherQt.value}",
+        confidence =
+            AcceptanceStatus.fromAssumptionsAndStatus(setOf(thisQt.confidence, otherQt.confidence)),
+    )
 }
 
 /**
@@ -341,7 +364,13 @@ infix fun <T, S> T.IN(other: S): QueryTree<Boolean> {
                 "Cannot check if ${thisQt.value} is of type ${otherQt.value}. The other value must be a Collection<*>."
             )
 
-    return QueryTree(result, mutableListOf(thisQt, otherQt), "${thisQt.value} in ${otherQt.value}")
+    return QueryTree(
+        value = result,
+        children = mutableListOf(thisQt, otherQt),
+        stringRepresentation = "${thisQt.value} in ${otherQt.value}",
+        confidence =
+            AcceptanceStatus.fromAssumptionsAndStatus(setOf(thisQt.confidence, otherQt.confidence)),
+    )
 }
 
 /**
@@ -353,7 +382,13 @@ infix fun <T, S> T.eq(other: S): QueryTree<Boolean> {
     val otherQt = other.toQueryTree()
 
     val result = thisQt.value == otherQt.value
-    return QueryTree(result, mutableListOf(thisQt, otherQt), "${thisQt.value} == ${otherQt.value}")
+    return QueryTree(
+        value = result,
+        children = mutableListOf(thisQt, otherQt),
+        stringRepresentation = "${thisQt.value} == ${otherQt.value}",
+        confidence =
+            AcceptanceStatus.fromAssumptionsAndStatus(setOf(thisQt.confidence, otherQt.confidence)),
+    )
 }
 
 /**
@@ -365,7 +400,13 @@ infix fun <T, S> T.ne(other: S): QueryTree<Boolean> {
     val otherQt = other.toQueryTree()
 
     val result = thisQt.value != otherQt.value
-    return QueryTree(result, mutableListOf(thisQt, otherQt), "${thisQt.value} != ${otherQt.value}")
+    return QueryTree(
+        value = result,
+        children = mutableListOf(thisQt, otherQt),
+        stringRepresentation = "${thisQt.value} != ${otherQt.value}",
+        confidence =
+            AcceptanceStatus.fromAssumptionsAndStatus(setOf(thisQt.confidence, otherQt.confidence)),
+    )
 }
 
 /**
@@ -392,11 +433,11 @@ infix fun QueryTree<Boolean>.and(other: Boolean): QueryTree<Boolean> {
 /** Performs a logical and (&&) operation between the values of two [QueryTree]s. */
 infix fun QueryTree<Boolean>.and(other: QueryTree<Boolean>): QueryTree<Boolean> {
     return QueryTree(
-            this.value && other.value,
-            mutableListOf(this, other),
-            stringRepresentation = "${this.value} && ${other.value}",
-        )
-        .registerLazyDecision { this.lazyDecision.value and other.lazyDecision.value }
+        value = this.value && other.value,
+        children = mutableListOf(this, other),
+        stringRepresentation = "${this.value} && ${other.value}",
+        confidence = minOf(this.confidence, other.confidence),
+    )
 }
 
 /**
@@ -439,9 +480,10 @@ infix fun QueryTree<Boolean>.or(other: Boolean): QueryTree<Boolean> {
 /** Performs a logical or (||) operation between the values of two [QueryTree]s. */
 infix fun QueryTree<Boolean>.or(other: QueryTree<Boolean>): QueryTree<Boolean> {
     return QueryTree(
-            this.value || other.value,
-            mutableListOf(this, other),
+            value = this.value || other.value,
+            children = mutableListOf(this, other),
             stringRepresentation = "${this.value} || ${other.value}",
+            confidence = minOf(this.confidence, other.confidence),
         )
         .registerLazyDecision { this.lazyDecision.value or other.lazyDecision.value }
 }

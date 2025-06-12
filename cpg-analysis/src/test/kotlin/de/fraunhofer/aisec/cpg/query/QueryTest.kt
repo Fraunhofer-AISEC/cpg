@@ -720,7 +720,10 @@ class QueryTest {
             val func3 = newFunctionDeclaration("func3")
             tu.declarations += func3
 
-            val queryTree4 = tu.allExtended<FunctionDeclaration>(mustSatisfy = { QueryTree(true) })
+            val queryTree4 =
+                tu.allExtended<FunctionDeclaration>(
+                    mustSatisfy = { QueryTree(true, confidence = AcceptedResult) }
+                )
             assertNotNull(queryTree4)
             assertEquals(tu, queryTree4.node)
             assertEquals(listOf(func1, func2, func3), queryTree4.children.map { it.node })

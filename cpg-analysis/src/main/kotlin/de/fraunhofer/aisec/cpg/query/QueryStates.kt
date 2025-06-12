@@ -28,7 +28,79 @@
 package de.fraunhofer.aisec.cpg.query
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
+
+sealed class AcceptanceStatus : Comparable<AcceptanceStatus> {
+    override fun compareTo(other: AcceptanceStatus): Int {
+        return when {
+            this is AcceptedResult && other is AcceptedResult -> 0
+            this is RejectedResult && other is RejectedResult -> 0
+            this is UndecidedResult && other is UndecidedResult -> 0
+            this is AcceptedResult -> 1 // Accepted is the best status
+            this is RejectedResult && other is AcceptedResult ->
+                -1 // Rejected is "worse" than Accepted
+            this is RejectedResult && other is UndecidedResult ->
+                1 // Rejected is "better" than Undecided
+            else -> -1 // Undecided is worse than both Accepted and Rejected
+        }
+    }
+
+    companion object {
+        fun fromAssumptionsAndStatus(
+            statuses: Collection<AcceptanceStatus>,
+            assumptions: Collection<Assumption>,
+        ): AcceptanceStatus {
+            return when {
+                statuses.all { it is AcceptedResult } &&
+                    assumptions.all {
+                        it.status == AssumptionStatus.Accepted ||
+                            it.status == AssumptionStatus.Ignored
+                    } -> AcceptedResult
+                statuses.any { it is RejectedResult } ||
+                    assumptions.any { it.status == AssumptionStatus.Rejected } -> RejectedResult
+                statuses.any { it is UndecidedResult } ||
+                    assumptions.any { it.status == AssumptionStatus.Undecided } -> UndecidedResult
+                else -> UndecidedResult // Default case if no assumptions match
+            }
+        }
+
+        fun fromAssumptionsAndStatus(
+            statuses: Collection<AcceptanceStatus>,
+            vararg assumptions: Assumption,
+        ) = fromAssumptionsAndStatus(statuses, assumptions.asList())
+
+        fun fromAssumptionsAndStatus(status: AcceptanceStatus, vararg assumptions: Assumption) =
+            fromAssumptionsAndStatus(listOf(status), assumptions = assumptions.asList())
+
+        fun fromAssumptionsAndStatus(
+            status: AcceptanceStatus,
+            assumptions: Collection<Assumption>,
+        ) = fromAssumptionsAndStatus(listOf(status), assumptions = assumptions)
+
+        fun fromAssumptionsAndStatus(assumptions: Collection<Assumption>) =
+            fromAssumptionsAndStatus(emptySet(), assumptions = assumptions)
+    }
+}
+
+/**
+ * Represents that the value kept in [QueryTree.value] holds because all [QueryTree.assumptions]
+ * affecting the result have been accepted or ignored.
+ */
+data object AcceptedResult : AcceptanceStatus()
+
+/**
+ * Represents that the value kept in [QueryTree.value] holds because some [QueryTree.assumptions]
+ * affecting the result have been rejected.
+ */
+data object RejectedResult : AcceptanceStatus()
+
+/**
+ * Represents that it is not clear if the value kept in [QueryTree.value] holds because some
+ * [QueryTree.assumptions] affecting the results have not been decided upon or because rejecting a
+ * subtree prevents us from computing the [QueryTree.value] of this [QueryTree].
+ */
+data object UndecidedResult : AcceptanceStatus()
 
 typealias Decision = QueryTree<DecisionState>
 
@@ -81,13 +153,35 @@ fun QueryTree<Boolean>.decide(): Decision {
 
     this.collectAssumptions().forEach { it.status = statues.getOrDefault(it.id, it.status) }
 
-    val decidedValue = this.lazyDecision.value
+    val confidenceValue =
+        AcceptanceStatus.fromAssumptionsAndStatus(this.confidence, this.collectAssumptions())
+    val (decidedValue, stringRepresentation) =
+        when {
+            this.value && confidenceValue is AcceptedResult ->
+                Succeeded to
+                    "The requirement succeeded because the query was evaluated to true and all assumptions were accepted or deemed not influencing the result."
+            !this.value || confidenceValue is RejectedResult ->
+                Failed to
+                    "The requirement failed because " +
+                        if (!this.value) "the query was evaluated to false"
+                        else "some assumptions were rejected."
+            confidenceValue is UndecidedResult ->
+                Undecided to
+                    "The requirement is undecided because " +
+                        if (this.confidence is UndecidedResult) "the subtrees are undecided."
+                        else "some assumptions are undecided."
+            else ->
+                NotYetEvaluated to
+                    "The requirement cannot be evaluated because something went wrong"
+        }
 
     // Carry over result and string representation of decision on nested query trees
     return QueryTree(
-        value = decidedValue.value,
+        value = decidedValue,
         children = mutableListOf(this),
-        stringRepresentation = decidedValue.stringRepresentation,
+        stringRepresentation = stringRepresentation,
+        node = this.node,
+        confidence = confidenceValue,
     )
 }
 
@@ -115,14 +209,17 @@ infix fun Decision.and(other: DecisionState): Decision {
 /** Performs a logical and (&&) operation between the values of two [QueryTree]s. */
 infix fun Decision.and(other: Decision): Decision {
     return QueryTree(
-        when {
-            this.value == Succeeded && other.value == Succeeded -> Succeeded
-            this.value == Failed || other.value == Failed -> Failed
-            this.value == NotYetEvaluated && other.value == NotYetEvaluated -> NotYetEvaluated
-            else -> Undecided
-        },
-        mutableListOf(this, other),
+        value =
+            when {
+                this.value == Succeeded && other.value == Succeeded -> Succeeded
+                this.value == Failed || other.value == Failed -> Failed
+                this.value == NotYetEvaluated && other.value == NotYetEvaluated -> NotYetEvaluated
+                else -> Undecided
+            },
+        children = mutableListOf(this, other),
         stringRepresentation = "${this.value} && ${other.value}",
+        node = this.node,
+        confidence = minOf(this.confidence, other.confidence),
     )
 }
 
@@ -143,15 +240,24 @@ infix fun Decision.or(other: DecisionState): Decision {
 
 /** Performs a logical or (||) operation between the values of two [QueryTree]s. */
 infix fun Decision.or(other: Decision): Decision {
-    return QueryTree(
+    val (newValue, newConfidence) =
         when {
-            this.value == Succeeded || other.value == Succeeded -> Succeeded
-            this.value == Failed && other.value == Failed -> Failed
-            this.value == NotYetEvaluated && other.value == NotYetEvaluated -> NotYetEvaluated
-            else -> Undecided
-        },
-        mutableListOf(this, other),
+            this.value == Succeeded && other.value != Succeeded -> Succeeded to this.confidence
+            this.value == Succeeded && other.value == Succeeded ->
+                Succeeded to maxOf(this.confidence, other.confidence)
+            this.value != Succeeded && other.value == Succeeded -> Succeeded to other.confidence
+            this.value == Failed && other.value == Failed ->
+                Failed to minOf(this.confidence, other.confidence)
+            this.value == NotYetEvaluated && other.value == NotYetEvaluated ->
+                NotYetEvaluated to minOf(this.confidence, other.confidence)
+            else -> Undecided to minOf(this.confidence, other.confidence)
+        }
+    return QueryTree(
+        value = newValue,
+        children = mutableListOf(this, other),
         stringRepresentation = "${this.value} || ${other.value}",
+        node = this.node,
+        confidence = newConfidence,
     )
 }
 
@@ -172,7 +278,8 @@ infix fun Decision.xor(other: DecisionState): Decision {
 
 /** Performs a logical xor operation between the values of two [QueryTree]s. */
 infix fun Decision.xor(other: Decision): Decision {
-    return QueryTree(
+    val newConfidence = minOf(this.confidence, other.confidence)
+    val newValue =
         when {
             this.value == Succeeded && other.value == Failed -> Succeeded
             this.value == Failed && other.value == Succeeded -> Succeeded
@@ -181,9 +288,13 @@ infix fun Decision.xor(other: Decision): Decision {
             this.value == Succeeded && other.value == Succeeded -> Failed
             this.value == Undecided && other.value == Undecided -> Failed
             else -> Undecided
-        },
-        mutableListOf(this, other),
+        }
+    return QueryTree(
+        value = newValue,
+        children = mutableListOf(this, other),
         stringRepresentation = "${this.value} xor ${other.value}",
+        node = this.node,
+        confidence = newConfidence,
     )
 }
 
@@ -213,16 +324,23 @@ infix fun Decision.implies(other: DecisionState): Decision {
 
 /** Evaluates a logical implication (->) operation between the values of two [QueryTree]s. */
 infix fun Decision.implies(other: Decision): Decision {
-    return QueryTree(
+    val (newValue, newConfidence) =
         when {
-            this.value == Succeeded && other.value == Succeeded -> Succeeded
-            this.value == Failed -> Succeeded
-            this.value == Succeeded && other.value == Failed -> Failed
-            this.value == NotYetEvaluated && other.value == NotYetEvaluated -> NotYetEvaluated
-            else -> Undecided
-        },
-        mutableListOf(this, other),
+            this.value == Succeeded && other.value == Succeeded ->
+                Succeeded to minOf(this.confidence, other.confidence)
+            this.value == Failed -> Succeeded to this.confidence
+            this.value == Succeeded && other.value == Failed ->
+                Failed to minOf(this.confidence, other.confidence)
+            this.value == NotYetEvaluated && other.value == NotYetEvaluated ->
+                NotYetEvaluated to minOf(this.confidence, other.confidence)
+            else -> Undecided to minOf(this.confidence, other.confidence)
+        }
+    return QueryTree(
+        value = newValue,
+        children = mutableListOf(this, other),
         stringRepresentation = "${this.value} => ${other.value}",
+        node = this.node,
+        confidence = newConfidence,
     )
 }
 
@@ -235,7 +353,13 @@ fun not(arg: Decision): Decision {
             NotYetEvaluated -> NotYetEvaluated
             else -> Undecided
         }
-    return QueryTree(result, mutableListOf(arg), "! ${arg.value}")
+    return QueryTree(
+        value = result,
+        children = mutableListOf(arg),
+        stringRepresentation = "! ${arg.value}",
+        node = arg.node,
+        confidence = arg.confidence,
+    )
 }
 
 /** Negates the value of [arg] and returns the resulting [QueryTree]. */
