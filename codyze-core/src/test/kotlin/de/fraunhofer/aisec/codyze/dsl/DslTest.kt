@@ -90,7 +90,7 @@ class DslTest {
                                 val logic =
                                     (query1() and query2()) or
                                         manualAssessmentOf("THIRD-PARTY-LIBRARY")
-                                assertIs<Decision>(logic)
+                                assertIs<QueryTree<Boolean>>(logic)
                             }
                         }
 
@@ -100,7 +100,7 @@ class DslTest {
                             fulfilledBy {
                                 val logic =
                                     manualAssessmentOf("SEC-TARGET") and query1() and query2()
-                                assertIs<Decision>(logic)
+                                assertIs<QueryTree<Boolean>>(logic)
                             }
                         }
                     }
@@ -130,7 +130,7 @@ class DslTest {
                 }
             }
 
-            project { manualAssessment { of("SEC-TARGET") { true } } }
+            project { manualAssessment { ofBoolean("SEC-TARGET") { true } } }
         }
     }
 }

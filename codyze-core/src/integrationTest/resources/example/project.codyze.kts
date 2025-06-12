@@ -25,7 +25,6 @@
  */
 package example
 
-import de.fraunhofer.aisec.codyze.dsl.and
 import de.fraunhofer.aisec.cpg.query.and
 
 include {
