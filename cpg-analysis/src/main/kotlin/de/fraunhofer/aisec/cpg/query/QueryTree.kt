@@ -94,7 +94,10 @@ open class QueryTree<T>(
             return when (operator) {
                 QueryOperators.SUPPRESS -> AcceptedResult
                 QueryOperators.EVALUATE ->
-                    AcceptanceStatus.fromAssumptionsAndStatus(assumptionsToUse)
+                    AcceptanceStatus.fromAssumptionsAndStatus(
+                        this.children.map { it.confidence },
+                        assumptionsToUse,
+                    )
 
                 // These operators require everything to be Accepted and all assumptions are
                 // accepted/ignored
@@ -113,7 +116,7 @@ open class QueryTree<T>(
                 QueryOperators.IS,
                 QueryOperators.XOR ->
                     AcceptanceStatus.fromAssumptionsAndStatus(
-                        minOf(children[0].confidence, children[1].confidence),
+                        children.minOf { it.confidence },
                         assumptionsToUse,
                     )
 

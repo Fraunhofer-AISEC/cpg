@@ -181,7 +181,7 @@ fun QueryTree<Boolean>.decide(): Decision {
         children = mutableListOf(this),
         stringRepresentation = stringRepresentation,
         node = this.node,
-        confidence = confidenceValue,
+        operator = QueryOperators.EVALUATE,
     )
 }
 
@@ -219,7 +219,7 @@ infix fun Decision.and(other: Decision): Decision {
         children = mutableListOf(this, other),
         stringRepresentation = "${this.value} && ${other.value}",
         node = this.node,
-        confidence = minOf(this.confidence, other.confidence),
+        operator = QueryOperators.AND,
     )
 }
 
@@ -240,24 +240,21 @@ infix fun Decision.or(other: DecisionState): Decision {
 
 /** Performs a logical or (||) operation between the values of two [QueryTree]s. */
 infix fun Decision.or(other: Decision): Decision {
-    val (newValue, newConfidence) =
+    val newValue =
         when {
-            this.value == Succeeded && other.value != Succeeded -> Succeeded to this.confidence
-            this.value == Succeeded && other.value == Succeeded ->
-                Succeeded to maxOf(this.confidence, other.confidence)
-            this.value != Succeeded && other.value == Succeeded -> Succeeded to other.confidence
-            this.value == Failed && other.value == Failed ->
-                Failed to minOf(this.confidence, other.confidence)
-            this.value == NotYetEvaluated && other.value == NotYetEvaluated ->
-                NotYetEvaluated to minOf(this.confidence, other.confidence)
-            else -> Undecided to minOf(this.confidence, other.confidence)
+            this.value == Succeeded && other.value != Succeeded -> Succeeded
+            this.value == Succeeded && other.value == Succeeded -> Succeeded
+            this.value != Succeeded && other.value == Succeeded -> Succeeded
+            this.value == Failed && other.value == Failed -> Failed
+            this.value == NotYetEvaluated && other.value == NotYetEvaluated -> NotYetEvaluated
+            else -> Undecided
         }
     return QueryTree(
         value = newValue,
         children = mutableListOf(this, other),
         stringRepresentation = "${this.value} || ${other.value}",
         node = this.node,
-        confidence = newConfidence,
+        operator = QueryOperators.OR,
     )
 }
 
@@ -294,7 +291,7 @@ infix fun Decision.xor(other: Decision): Decision {
         children = mutableListOf(this, other),
         stringRepresentation = "${this.value} xor ${other.value}",
         node = this.node,
-        confidence = newConfidence,
+        operator = QueryOperators.XOR,
     )
 }
 
@@ -324,23 +321,20 @@ infix fun Decision.implies(other: DecisionState): Decision {
 
 /** Evaluates a logical implication (->) operation between the values of two [QueryTree]s. */
 infix fun Decision.implies(other: Decision): Decision {
-    val (newValue, newConfidence) =
+    val newValue =
         when {
-            this.value == Succeeded && other.value == Succeeded ->
-                Succeeded to minOf(this.confidence, other.confidence)
-            this.value == Failed -> Succeeded to this.confidence
-            this.value == Succeeded && other.value == Failed ->
-                Failed to minOf(this.confidence, other.confidence)
-            this.value == NotYetEvaluated && other.value == NotYetEvaluated ->
-                NotYetEvaluated to minOf(this.confidence, other.confidence)
-            else -> Undecided to minOf(this.confidence, other.confidence)
+            this.value == Succeeded && other.value == Succeeded -> Succeeded
+            this.value == Failed -> Succeeded
+            this.value == Succeeded && other.value == Failed -> Failed
+            this.value == NotYetEvaluated && other.value == NotYetEvaluated -> NotYetEvaluated
+            else -> Undecided
         }
     return QueryTree(
         value = newValue,
         children = mutableListOf(this, other),
         stringRepresentation = "${this.value} => ${other.value}",
         node = this.node,
-        confidence = newConfidence,
+        operator = QueryOperators.IMPLIES,
     )
 }
 
@@ -358,7 +352,7 @@ fun not(arg: Decision): Decision {
         children = mutableListOf(arg),
         stringRepresentation = "! ${arg.value}",
         node = arg.node,
-        confidence = arg.confidence,
+        operator = QueryOperators.NOT,
     )
 }
 

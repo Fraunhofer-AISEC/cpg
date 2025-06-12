@@ -58,29 +58,40 @@ fun FulfilledAndFailedPaths.toQueryTree(
 ): List<QueryTree<Boolean>> {
     return this.fulfilled.map {
         SinglePathResult(
-            true,
-            mutableListOf(QueryTree(it.nodes)),
-            "$queryType from $startNode to ${it.nodes.last()} fulfills the requirement",
-            startNode,
-            Success(it.nodes.last()),
+            value = true,
+            children =
+                mutableListOf(QueryTree(value = it.nodes, operator = QueryOperators.EVALUATE)),
+            stringRepresentation =
+                "$queryType from $startNode to ${it.nodes.last()} fulfills the requirement",
+            node = startNode,
+            terminationReason = Success(it.nodes.last()),
+            operator = QueryOperators.EVALUATE,
         )
     } +
         this.failed.map { (reason, nodePath) ->
             SinglePathResult(
-                false,
-                mutableListOf(QueryTree(nodePath.nodes).addAssumptionDependence(nodePath)),
-                "$queryType from $startNode to ${nodePath.nodes.last()} fulfills the requirement",
-                startNode,
-                if (reason == FailureReason.PATH_ENDED) {
-                    PathEnded(nodePath.nodes.last())
-                } else if (reason == FailureReason.HIT_EARLY_TERMINATION) {
-                    HitEarlyTermination(nodePath.nodes.last())
-                } else {
-                    // TODO: We cannot set this (yet) but it might be useful to differentiate
-                    // between "path is really at the end" or "we just stopped". Requires adaptions
-                    // in followXUntilHit and all of its callers
-                    StepsExceeded(nodePath.nodes.last())
-                },
+                value = false,
+                children =
+                    mutableListOf(
+                        QueryTree(value = nodePath.nodes, operator = QueryOperators.EVALUATE)
+                            .addAssumptionDependence(nodePath)
+                    ),
+                stringRepresentation =
+                    "$queryType from $startNode to ${nodePath.nodes.last()} fulfills the requirement",
+                node = startNode,
+                terminationReason =
+                    if (reason == FailureReason.PATH_ENDED) {
+                        PathEnded(nodePath.nodes.last())
+                    } else if (reason == FailureReason.HIT_EARLY_TERMINATION) {
+                        HitEarlyTermination(nodePath.nodes.last())
+                    } else {
+                        // TODO: We cannot set this (yet) but it might be useful to differentiate
+                        // between "path is really at the end" or "we just stopped". Requires
+                        // adaptions
+                        // in followXUntilHit and all of its callers
+                        StepsExceeded(nodePath.nodes.last())
+                    },
+                operator = QueryOperators.EVALUATE,
             )
         }
 }
@@ -107,10 +118,12 @@ object Must : AnalysisType() {
         val allPaths = evalRes.toQueryTree(startNode, queryType)
 
         return QueryTree(
-            allPaths.all { it.value },
-            allPaths.toMutableList(),
-            "$queryType from $startNode to ${evalRes.fulfilled.map { it.nodes.last() }}",
-            startNode,
+            value = allPaths.all { it.value },
+            children = allPaths.toMutableList(),
+            stringRepresentation =
+                "$queryType from $startNode to ${evalRes.fulfilled.map { it.nodes.last() }}",
+            node = startNode,
+            operator = QueryOperators.ALL,
         )
     }
 }
@@ -127,10 +140,12 @@ object May : AnalysisType() {
         val allPaths = evalRes.toQueryTree(startNode, queryType)
 
         return QueryTree(
-            allPaths.any { it.value },
-            allPaths.toMutableList(),
-            "$queryType from $startNode to ${evalRes.fulfilled.map { it.nodes.last() }}",
-            startNode,
+            value = allPaths.any { it.value },
+            children = allPaths.toMutableList(),
+            stringRepresentation =
+                "$queryType from $startNode to ${evalRes.fulfilled.map { it.nodes.last() }}",
+            node = startNode,
+            operator = QueryOperators.ANY,
         )
     }
 }
@@ -510,7 +525,10 @@ internal fun Node.alwaysFlowsToInternal(
                 SinglePathResult(
                     value = false,
                     children =
-                        mutableListOf(QueryTree(value = path.nodes).addAssumptionDependence(path)),
+                        mutableListOf(
+                            QueryTree(value = path.nodes, operator = QueryOperators.EVALUATE)
+                                .addAssumptionDependence(path)
+                        ),
                     stringRepresentation =
                         "The EOG path reached the end  " +
                             if (earlyTermination != null)
@@ -527,13 +545,17 @@ internal fun Node.alwaysFlowsToInternal(
                         } else {
                             StepsExceeded(nodes.last())
                         },
+                    operator = QueryOperators.EVALUATE,
                 )
             } +
                 nextEOGEvaluation.fulfilled.map {
                     SinglePathResult(
                         value = true,
                         children =
-                            mutableListOf(QueryTree(value = it.nodes).addAssumptionDependence(it)),
+                            mutableListOf(
+                                QueryTree(value = it.nodes, operator = QueryOperators.EVALUATE)
+                                    .addAssumptionDependence(it)
+                            ),
                         stringRepresentation =
                             "The EOG path reached the node ${it.nodes.lastOrNull()} matching the required predicate" +
                                 if (earlyTermination != null)
@@ -541,6 +563,7 @@ internal fun Node.alwaysFlowsToInternal(
                                 else "",
                         node = this,
                         terminationReason = Success(it.nodes.last()),
+                        operator = QueryOperators.EVALUATE,
                     )
                 }
         nothingFailed =
@@ -565,6 +588,7 @@ internal fun Node.alwaysFlowsToInternal(
             },
         node = this,
         assumptions = nodesToTrack.flatMap { it.assumptions }.toMutableSet(),
+        operator = QueryOperators.ALL,
     )
 }
 
@@ -621,5 +645,6 @@ fun Node.allNonLiteralsFlowTo(
         finalPathsChecked.all { it.value },
         finalPathsChecked.toMutableList(),
         node = this,
+        operator = QueryOperators.ALL,
     )
 }

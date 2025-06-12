@@ -722,7 +722,7 @@ class QueryTest {
 
             val queryTree4 =
                 tu.allExtended<FunctionDeclaration>(
-                    mustSatisfy = { QueryTree(true, confidence = AcceptedResult) }
+                    mustSatisfy = { QueryTree(true, operator = QueryOperators.EVALUATE) }
                 )
             assertNotNull(queryTree4)
             assertEquals(tu, queryTree4.node)
