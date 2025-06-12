@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.codyze.dsl.ProjectBuilder
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.query.Decision
@@ -130,8 +131,7 @@ class AnalysisProject(
      */
     var librariesPath: Path? = projectDir?.resolve("libraries"),
     var requirementFunctions: Map<String, TranslationResult.() -> Decision> = emptyMap(),
-    var assumptionStatusFunctions: Map<String, TranslationResult.() -> AssumptionStatus> =
-        emptyMap(),
+    var assumptionStatusFunctions: Map<String, () -> AssumptionStatus> = emptyMap(),
     var suppressedQueryTreeIDs: Map<(QueryTree<*>) -> Boolean, Any> = emptyMap(),
     /** The translation configuration for the project. */
     var config: TranslationConfiguration,
@@ -146,15 +146,15 @@ class AnalysisProject(
 
     /** Analyzes the project and returns the result. */
     fun analyze(): AnalysisResult {
-        val tr = TranslationManager.builder().config(config).build().analyze().get()
-
         // Propagate assumption status into a translation result
         assumptionStatusFunctions.forEach { (uuid, func) ->
-            tr.assumptionStates[Uuid.parse(uuid)] = func(tr)
+            Assumption.states[Uuid.parse(uuid)] = func()
         }
 
         // Propagate suppressed query tree IDs into translation result
         QueryTree.suppressions += suppressedQueryTreeIDs
+
+        val tr = TranslationManager.builder().config(config).build().analyze().get()
 
         // Run requirements
         val requirementsResults =
