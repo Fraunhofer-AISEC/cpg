@@ -53,7 +53,12 @@ fun evaluateScriptAndIncludes(scriptFile: Path): CodyzeScript? {
 
     // Evaluate any included files based on our project builder
     for (include in script.includeBuilder.includes.values) {
-        evaluateScript(script.projectBuilder.projectDir.resolve(include), script.projectBuilder)
+        val includedScript =
+            evaluateScript(script.projectBuilder.projectDir.resolve(include), script.projectBuilder)
+        // We also want to fail if an included script cannot be evaluated
+        if (includedScript == null) {
+            return null
+        }
     }
 
     return script

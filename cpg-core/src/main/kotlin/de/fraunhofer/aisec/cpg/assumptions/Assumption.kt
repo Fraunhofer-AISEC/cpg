@@ -80,7 +80,7 @@ class Assumption(
     @DoNotPersist var edge: Edge<*>? = null,
     @Relationship(value = "ASSUMPTION_SCOPE", direction = Relationship.Direction.OUTGOING)
     var assumptionScope: Node? = node,
-    var status: AssumptionStatus = AssumptionStatus.Ignored,
+    var status: AssumptionStatus = AssumptionStatus.Undecided,
 ) : OverlayNode() {
 
     init {

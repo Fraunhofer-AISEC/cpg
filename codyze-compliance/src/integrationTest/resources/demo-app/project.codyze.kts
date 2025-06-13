@@ -70,7 +70,7 @@ fun TranslationResult.properHandlingOfKeyMaterial(): QueryTree<Boolean> {
         ) {
             val k = it.argumentEdges["stdin"]?.end
             if (k == null) {
-                QueryTree(true)
+                QueryTree(true, operator = GenericQueryOperators.EVALUATE)
             } else {
                 executionPath(k) { to ->
                     to is DeleteExpression &&

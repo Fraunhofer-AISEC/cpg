@@ -23,21 +23,28 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.codyze.compliance
+package de.fraunhofer.aisec.cpg.query
 
-import com.github.ajalt.clikt.testing.test
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import de.fraunhofer.aisec.cpg.graph.Node
 
-class CommandIntegrationTest {
-    @Test
-    fun testScanCommand() {
-        val command = ScanCommand()
-        val result = command.test("--project-dir src/integrationTest/resources/demo-app")
-        assertEquals(
-            "Message(arguments=null, id=null, markdown=null, properties=null, text=The query was successful)\n" +
-                "Message(arguments=null, id=null, markdown=null, properties=null, text=The query was successful)\n",
-            result.output,
-        )
-    }
-}
+/**
+ * Represents a single path result of a query evaluation. It contains the [value] of the path, the
+ * [children] that were evaluated to reach this path, the [stringRepresentation] of the path, the
+ * [node] that was evaluated, and the [terminationReason] that explains why this path was
+ * terminated.
+ */
+class SinglePathResult(
+    value: Boolean,
+    children: List<QueryTree<*>> = emptyList(),
+    stringRepresentation: String = "",
+    node: Node? = null,
+    val terminationReason: TerminationReason,
+    operator: GenericQueryOperators,
+) :
+    QueryTree<Boolean>(
+        value = value,
+        children = children,
+        stringRepresentation = stringRepresentation,
+        node = node,
+        operator = operator,
+    )
