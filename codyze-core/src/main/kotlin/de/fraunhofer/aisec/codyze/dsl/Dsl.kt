@@ -109,10 +109,10 @@ class RequirementBuilder(
     var description: String? = null
 
     /**
-     * A function that returns a [Decision] that evaluates whether the requirement is fulfilled.
+     * A function that returns a [QueryTree] that evaluates whether the requirement is fulfilled.
      * This function is expected to be used in the context of a [TranslationResult].
      */
-    var fulfilledBy: TranslationResult.() -> QueryTree<Boolean> = { NotYetEvaluated() }
+    var fulfilledBy: TranslationResult.() -> QueryTree<Boolean> = { NotYetEvaluated }
 }
 
 /** Represents a builder for suppressions of the evaluation project. */
@@ -381,7 +381,7 @@ fun RequirementCategoryBuilder.nextRQ(): String {
 
 /**
  * Describes a single requirement of the TOE (in the [DefaultCategory]) by a function that returns a
- * [Decision].
+ * [QueryTree] of [Boolean].
  *
  * An [id] can be provided to identify the requirement. If no [id] is provided, a default identifier
  * is generated based on the current size of the requirements map in the format specified by
@@ -408,7 +408,7 @@ fun RequirementsBuilder.category(id: String, block: RequirementCategoryBuilder.(
 
 /**
  * Describes a single requirement of the TOE (within the current requirement category) by a function
- * that returns a [Decision].
+ * that returns a [QueryTree] of [Boolean].
  *
  * An [id] can be provided to identify the requirement. If no [id] is provided, a default identifier
  * is generated based on the current size of the requirements map in the format specified by
@@ -440,7 +440,7 @@ context(ProjectBuilder, RequirementsBuilder, TranslationResult)
 fun manualAssessmentOf(id: String): QueryTree<Boolean> {
     val manualAssessment = this@ProjectBuilder.manualAssessmentBuilder.assessments[id]
     if (manualAssessment == null) {
-        return NotYetEvaluated()
+        return NotYetEvaluated
     }
 
     return manualAssessment(this@TranslationResult)

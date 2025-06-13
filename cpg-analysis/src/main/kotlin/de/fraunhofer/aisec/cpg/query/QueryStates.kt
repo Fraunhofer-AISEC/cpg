@@ -101,7 +101,14 @@ data object RejectedResult : AcceptanceStatus()
  */
 data object UndecidedResult : AcceptanceStatus()
 
-class NotYetEvaluated :
+/**
+ * Represents a [QueryTree] that has not yet been evaluated. This is used to indicate that the query
+ * has not been processed yet, and the value is not yet known.
+ *
+ * We formally assign a value of `false` to this query tree, but its [confidence] is set to
+ * [UndecidedResult] to indicate that it has not been evaluated yet.
+ */
+object NotYetEvaluated :
     QueryTree<Boolean>(
         value = false,
         stringRepresentation = "This has to be evaluated.",
