@@ -112,7 +112,7 @@ object NotYetEvaluated :
     QueryTree<Boolean>(
         value = false,
         stringRepresentation = "This has to be evaluated.",
-        operator = QueryOperators.EVALUATE,
+        operator = GenericQueryOperators.EVALUATE,
     ) {
     override val confidence: AcceptanceStatus = UndecidedResult
 }

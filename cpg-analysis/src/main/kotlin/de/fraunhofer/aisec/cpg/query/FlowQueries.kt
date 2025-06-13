@@ -60,12 +60,14 @@ fun FulfilledAndFailedPaths.toQueryTree(
         SinglePathResult(
             value = true,
             children =
-                mutableListOf(QueryTree(value = it.nodes, operator = QueryOperators.EVALUATE)),
+                mutableListOf(
+                    QueryTree(value = it.nodes, operator = GenericQueryOperators.EVALUATE)
+                ),
             stringRepresentation =
                 "$queryType from $startNode to ${it.nodes.last()} fulfills the requirement",
             node = startNode,
             terminationReason = Success(it.nodes.last()),
-            operator = QueryOperators.EVALUATE,
+            operator = GenericQueryOperators.EVALUATE,
         )
     } +
         this.failed.map { (reason, nodePath) ->
@@ -73,7 +75,7 @@ fun FulfilledAndFailedPaths.toQueryTree(
                 value = false,
                 children =
                     mutableListOf(
-                        QueryTree(value = nodePath.nodes, operator = QueryOperators.EVALUATE)
+                        QueryTree(value = nodePath.nodes, operator = GenericQueryOperators.EVALUATE)
                             .addAssumptionDependence(nodePath)
                     ),
                 stringRepresentation =
@@ -91,7 +93,7 @@ fun FulfilledAndFailedPaths.toQueryTree(
                         // in followXUntilHit and all of its callers
                         StepsExceeded(nodePath.nodes.last())
                     },
-                operator = QueryOperators.EVALUATE,
+                operator = GenericQueryOperators.EVALUATE,
             )
         }
 }
@@ -123,7 +125,7 @@ object Must : AnalysisType() {
             stringRepresentation =
                 "$queryType from $startNode to ${evalRes.fulfilled.map { it.nodes.last() }}",
             node = startNode,
-            operator = QueryOperators.ALL,
+            operator = GenericQueryOperators.ALL,
         )
     }
 }
@@ -145,7 +147,7 @@ object May : AnalysisType() {
             stringRepresentation =
                 "$queryType from $startNode to ${evalRes.fulfilled.map { it.nodes.last() }}",
             node = startNode,
-            operator = QueryOperators.ANY,
+            operator = GenericQueryOperators.ANY,
         )
     }
 }
@@ -530,7 +532,7 @@ internal fun Node.alwaysFlowsToInternal(
                     value = noSinkIsGood && failureReason == FailureReason.PATH_ENDED,
                     children =
                         mutableListOf(
-                            QueryTree(value = path.nodes, operator = QueryOperators.EVALUATE)
+                            QueryTree(value = path.nodes, operator = GenericQueryOperators.EVALUATE)
                                 .addAssumptionDependence(path)
                         ),
                     stringRepresentation =
@@ -549,7 +551,7 @@ internal fun Node.alwaysFlowsToInternal(
                         } else {
                             StepsExceeded(nodes.last())
                         },
-                    operator = QueryOperators.EVALUATE,
+                    operator = GenericQueryOperators.EVALUATE,
                 )
             } +
                 nextEOGEvaluation.fulfilled.map {
@@ -557,7 +559,10 @@ internal fun Node.alwaysFlowsToInternal(
                         value = true,
                         children =
                             mutableListOf(
-                                QueryTree(value = it.nodes, operator = QueryOperators.EVALUATE)
+                                QueryTree(
+                                        value = it.nodes,
+                                        operator = GenericQueryOperators.EVALUATE,
+                                    )
                                     .addAssumptionDependence(it)
                             ),
                         stringRepresentation =
@@ -567,7 +572,7 @@ internal fun Node.alwaysFlowsToInternal(
                                 else "",
                         node = this,
                         terminationReason = Success(it.nodes.last()),
-                        operator = QueryOperators.EVALUATE,
+                        operator = GenericQueryOperators.EVALUATE,
                     )
                 }
     }
@@ -584,7 +589,7 @@ internal fun Node.alwaysFlowsToInternal(
             },
         node = this,
         assumptions = nodesToTrack.flatMap { it.assumptions }.toMutableSet(),
-        operator = QueryOperators.ALL,
+        operator = GenericQueryOperators.ALL,
     )
 }
 
@@ -641,6 +646,6 @@ fun Node.allNonLiteralsFlowTo(
         finalPathsChecked.all { it.value },
         finalPathsChecked.toMutableList(),
         node = this,
-        operator = QueryOperators.ALL,
+        operator = GenericQueryOperators.ALL,
     )
 }

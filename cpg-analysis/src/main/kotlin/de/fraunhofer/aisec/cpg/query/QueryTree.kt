@@ -39,26 +39,27 @@ import kotlin.uuid.Uuid
  * when evaluating a query. It helps to make the reasoning of the query more understandable to the
  * user and gives an analyst the maximum of information available.
  *
- * Numerous methods allow to evaluate the queries while keeping track of all the steps. Currently,
+ * Numerous methods allow evaluating the queries while keeping track of all the steps. Currently,
  * the following operations are supported:
- * - **eq**: Equality of two values.
- * - **ne**: Inequality of two values.
- * - **IN**: Checks if a value is contained in a [Collection]
- * - **IS**: Checks if a value implements a type ([Class]).
+ * - **[eq]**: Equality of two values.
+ * - **[ne]**: Inequality of two values.
+ * - **[IN]**: Checks if a value is contained in a [Collection]
+ * - **[IS]**: Checks if a value implements a type ([Class]).
  *
  * Additionally, some functions are available only for certain types of values.
  *
  * For boolean values:
- * - **and**: Logical and operation (&&)
- * - **or**: Logical or operation (||)
- * - **xor**: Logical exclusive or operation (xor)
- * - **implies**: Logical implication
+ * - **[and]**: Logical and operation (&&)
+ * - **[or]**: Logical or operation (||)
+ * - **[xor]**: Logical exclusive or operation (xor)
+ * - **[implies]**: Logical implication
+ * - **[not]**: Logical negation (!)
  *
  * For numeric values:
- * - **gt**: Grater than (>)
- * - **ge**: Grater than or equal (>=)
- * - **lt**: Less than (<)
- * - **le**: Less than or equal (<=)
+ * - **[gt]**: Grater than (>)
+ * - **[ge]**: Grater than or equal (>=)
+ * - **[lt]**: Less than (<)
+ * - **[le]**: Less than or equal (<=)
  */
 open class QueryTree<T>(
     value: T,
@@ -81,7 +82,7 @@ open class QueryTree<T>(
      * See [checkForSuppression] for more information.
      */
     var suppressed: Boolean = false,
-    val operator: QueryOperators,
+    val operator: QueryTreeOperators,
 ) : Comparable<QueryTree<T>>, HasAssumptions {
     /**
      * Determines if the [QueryTree.value] is acceptable after evaluating the [assumptions] which
@@ -89,122 +90,7 @@ open class QueryTree<T>(
      */
     open val confidence: AcceptanceStatus
         get() {
-            val assumptionsToUse = this.assumptions
-            return when (operator) {
-                QueryOperators.SUPPRESS -> {
-                    AcceptedResult
-                }
-                QueryOperators.EVALUATE -> {
-                    AcceptanceStatus.fromAssumptionsAndStatus(
-                        this.children.map { it.confidence },
-                        assumptionsToUse,
-                    )
-                }
-
-                // These operators require everything to be Accepted and all assumptions are
-                // accepted/ignored
-                QueryOperators.ALL -> {
-                    AcceptanceStatus.fromAssumptionsAndStatus(
-                        children.map { it.confidence },
-                        assumptionsToUse,
-                    )
-                }
-                QueryOperators.AND,
-                QueryOperators.EQ,
-                QueryOperators.NE,
-                QueryOperators.GT,
-                QueryOperators.GE,
-                QueryOperators.LT,
-                QueryOperators.LE,
-                QueryOperators.IS,
-                QueryOperators.XOR -> {
-                    AcceptanceStatus.fromAssumptionsAndStatus(
-                        children.minOf { it.confidence },
-                        assumptionsToUse,
-                    )
-                }
-
-                // These operators require only one "true" result to be Accepted. We also want all
-                // assumptions related to this requirement to be accepted/ignored.
-                QueryOperators.OR,
-                QueryOperators.ANY -> {
-                    val trueChildren = children.filter { it.value == true }
-                    val trueConfidence = trueChildren.map { it.confidence }
-                    val falseChildren = children.filter { it.value == false }
-                    val falseConfidence = falseChildren.map { it.confidence }
-                    val resultingConfidence =
-                        if (trueConfidence.isNotEmpty() && trueConfidence.max() is AcceptedResult) {
-                            AcceptedResult
-                        } else if (
-                            trueChildren.isEmpty() && falseConfidence.all { it is AcceptedResult }
-                        ) {
-                            AcceptedResult
-                        } else if (
-                            trueConfidence.isEmpty() &&
-                                falseChildren.isNotEmpty() &&
-                                falseConfidence.max() is RejectedResult
-                        ) {
-                            RejectedResult
-                        } else {
-                            UndecidedResult
-                        }
-
-                    AcceptanceStatus.fromAssumptionsAndStatus(resultingConfidence, assumptionsToUse)
-                }
-                QueryOperators.IMPLIES -> {
-                    // TODO: This is a tricky one
-                    if (children.size != 2) {
-                        throw QueryException(
-                            "The implies operator requires exactly two children, but got ${children.size}."
-                        )
-                    }
-                    val lhs = children.first()
-                    val rhs = children.last()
-                    return when {
-                        lhs.value == false && lhs.confidence is AcceptedResult -> {
-                            // If the lhs is false and accepted, we can say that the implication is
-                            // accepted.
-                            AcceptedResult
-                        }
-                        rhs.value == true && rhs.confidence is AcceptedResult -> {
-                            // If the rhs is true and accepted, we can say that the implication is
-                            // accepted.
-                            AcceptedResult
-                        }
-                        else -> {
-                            // We do not know if the implication is accepted or not
-                            UndecidedResult
-                        }
-                    }
-                }
-                QueryOperators.IN -> {
-                    if (value == true) {
-                        // TODO: The lhs must be accepted and the element matching lhs in the rhs
-                        // must be accepted too. We do not care about the rest.
-                        // Qick-fix until we have this: Everything must be accepted.
-                        AcceptanceStatus.fromAssumptionsAndStatus(
-                            setOf(children[0].confidence, children[1].confidence),
-                            assumptionsToUse,
-                        )
-                    } else {
-                        // If the value is false and not everything is of confidence accepted, we
-                        // say it's undecided.
-                        if (minOf(children[0].confidence, children[1].confidence) != AcceptedResult)
-                            UndecidedResult
-                        else
-                            AcceptanceStatus.fromAssumptionsAndStatus(
-                                minOf(children[0].confidence, children[1].confidence),
-                                assumptionsToUse,
-                            )
-                    }
-                }
-                QueryOperators.NOT -> {
-                    AcceptanceStatus.fromAssumptionsAndStatus(
-                        children[0].confidence,
-                        assumptionsToUse,
-                    )
-                }
-            }
+            return calculateConfidence()
         }
 
     /** The value of the [QueryTree] is the result of the query evaluation. */
@@ -241,6 +127,123 @@ open class QueryTree<T>(
         checkForSuppression()
     }
 
+    open fun calculateConfidence(): AcceptanceStatus {
+        val assumptionsToUse = this.assumptions
+        val operator = this.operator
+        return when (operator) {
+            GenericQueryOperators.SUPPRESS -> {
+                AcceptedResult
+            }
+            GenericQueryOperators.EVALUATE -> {
+                AcceptanceStatus.fromAssumptionsAndStatus(
+                    this.children.map { it.confidence },
+                    assumptionsToUse,
+                )
+            }
+
+            // These operators require everything to be Accepted and all assumptions are
+            // accepted/ignored
+            GenericQueryOperators.ALL -> {
+                AcceptanceStatus.fromAssumptionsAndStatus(
+                    children.map { it.confidence },
+                    assumptionsToUse,
+                )
+            }
+            BinaryOperators.AND,
+            BinaryOperators.EQ,
+            BinaryOperators.NE,
+            BinaryOperators.GT,
+            BinaryOperators.GE,
+            BinaryOperators.LT,
+            BinaryOperators.LE,
+            BinaryOperators.IS,
+            BinaryOperators.XOR -> {
+                AcceptanceStatus.fromAssumptionsAndStatus(
+                    children.minOf { it.confidence },
+                    assumptionsToUse,
+                )
+            }
+
+            // These operators require only one "true" result to be Accepted. We also want all
+            // assumptions related to this requirement to be accepted/ignored.
+            BinaryOperators.OR,
+            GenericQueryOperators.ANY -> {
+                val trueChildren = children.filter { it.value == true }
+                val trueConfidence = trueChildren.map { it.confidence }
+                val falseChildren = children.filter { it.value == false }
+                val falseConfidence = falseChildren.map { it.confidence }
+                val resultingConfidence =
+                    if (trueConfidence.isNotEmpty() && trueConfidence.max() is AcceptedResult) {
+                        AcceptedResult
+                    } else if (
+                        trueChildren.isEmpty() && falseConfidence.all { it is AcceptedResult }
+                    ) {
+                        AcceptedResult
+                    } else if (
+                        trueConfidence.isEmpty() &&
+                            falseChildren.isNotEmpty() &&
+                            falseConfidence.max() is RejectedResult
+                    ) {
+                        RejectedResult
+                    } else {
+                        UndecidedResult
+                    }
+
+                AcceptanceStatus.fromAssumptionsAndStatus(resultingConfidence, assumptionsToUse)
+            }
+            BinaryOperators.IMPLIES -> {
+                // TODO: This is a tricky one
+                if (children.size != 2) {
+                    throw QueryException(
+                        "The implies operator requires exactly two children, but got ${children.size}."
+                    )
+                }
+                val lhs = children.first()
+                val rhs = children.last()
+                return when {
+                    lhs.value == false && lhs.confidence is AcceptedResult -> {
+                        // If the lhs is false and accepted, we can say that the implication is
+                        // accepted.
+                        AcceptedResult
+                    }
+                    rhs.value == true && rhs.confidence is AcceptedResult -> {
+                        // If the rhs is true and accepted, we can say that the implication is
+                        // accepted.
+                        AcceptedResult
+                    }
+                    else -> {
+                        // We do not know if the implication is accepted or not
+                        UndecidedResult
+                    }
+                }
+            }
+            BinaryOperators.IN -> {
+                if (value == true) {
+                    // TODO: The lhs must be accepted and the element matching lhs in the rhs
+                    // must be accepted too. We do not care about the rest.
+                    // Qick-fix until we have this: Everything must be accepted.
+                    AcceptanceStatus.fromAssumptionsAndStatus(
+                        setOf(children[0].confidence, children[1].confidence),
+                        assumptionsToUse,
+                    )
+                } else {
+                    // If the value is false and not everything is of confidence accepted, we
+                    // say it's undecided.
+                    if (minOf(children[0].confidence, children[1].confidence) != AcceptedResult)
+                        UndecidedResult
+                    else
+                        AcceptanceStatus.fromAssumptionsAndStatus(
+                            minOf(children[0].confidence, children[1].confidence),
+                            assumptionsToUse,
+                        )
+                }
+            }
+            UnaryOperators.NOT -> {
+                AcceptanceStatus.fromAssumptionsAndStatus(children[0].confidence, assumptionsToUse)
+            }
+        }
+    }
+
     /**
      * This functions checks if the [QueryTree] is suppressed by the user. If it is, it sets the
      * value to `true` and creates a new [QueryTree] with the suppressed value as the only child.
@@ -267,7 +270,7 @@ open class QueryTree<T>(
                     node = node,
                     assumptions = assumptions.toMutableSet(),
                     suppressed = true,
-                    operator = QueryOperators.SUPPRESS,
+                    operator = GenericQueryOperators.SUPPRESS,
                 )
             @Suppress("UNCHECKED_CAST")
 
@@ -364,13 +367,17 @@ fun <T> T.toQueryTree(): QueryTree<T> {
         value = this,
         stringRepresentation = this.toString(),
         node = this as? Node,
-        operator = QueryOperators.EVALUATE,
+        operator = GenericQueryOperators.EVALUATE,
     )
 }
 
-enum class QueryOperators {
-    ALL,
-    ANY,
+sealed interface QueryTreeOperators
+
+enum class UnaryOperators : QueryTreeOperators {
+    NOT
+}
+
+enum class BinaryOperators : QueryTreeOperators {
     AND,
     OR,
     XOR,
@@ -383,16 +390,20 @@ enum class QueryOperators {
     LE,
     IS,
     IN,
-    NOT,
+}
+
+enum class GenericQueryOperators : QueryTreeOperators {
+    ALL,
+    ANY,
     EVALUATE,
     SUPPRESS,
 }
 
 /**
  * Checks if the value is a member of the type of [other] (or the value of the respective
- * [QueryTree]). creates [QueryTree]s for [this], [other] and the result if necessary.
+ * [QueryTree]). creates [BinaryOperationResult]s for [this], [other] and the result if necessary.
  */
-infix fun <T, S> T.IS(other: S): QueryTree<Boolean> {
+infix fun <T, S> T.IS(other: S): BinaryOperationResult<T, S> {
     val thisQt = this.toQueryTree()
     val otherQt = other.toQueryTree()
 
@@ -401,19 +412,20 @@ infix fun <T, S> T.IS(other: S): QueryTree<Boolean> {
             ?: throw IllegalArgumentException(
                 "Cannot check if ${thisQt.value} is of type ${otherQt.value}. The other value must be a Class<*>."
             )
-    return QueryTree(
+    return BinaryOperationResult(
         value = result,
-        children = mutableListOf(thisQt, otherQt),
+        lhs = thisQt,
+        rhs = otherQt,
         stringRepresentation = "${thisQt.value} is ${otherQt.value}",
-        operator = QueryOperators.IS,
+        operator = BinaryOperators.IS,
     )
 }
 
 /**
  * Checks if the value is contained in the collection [other] (or the value of the respective
- * [QueryTree]). creates [QueryTree]s for [this], [other] and the result if necessary.
+ * [QueryTree]). creates [BinaryOperationResult]s for [this], [other] and the result if necessary.
  */
-infix fun <T, S> T.IN(other: S): QueryTree<Boolean> {
+infix fun <T, S> T.IN(other: S): BinaryOperationResult<T, S> {
     val thisQt = this.toQueryTree()
     val otherQt = other.toQueryTree()
 
@@ -423,45 +435,48 @@ infix fun <T, S> T.IN(other: S): QueryTree<Boolean> {
                 "Cannot check if ${thisQt.value} is of type ${otherQt.value}. The other value must be a Collection<*>."
             )
 
-    return QueryTree(
+    return BinaryOperationResult(
         value = result,
-        children = mutableListOf(thisQt, otherQt),
+        lhs = thisQt,
+        rhs = otherQt,
         stringRepresentation = "${thisQt.value} in ${otherQt.value}",
-        operator = QueryOperators.IN,
+        operator = BinaryOperators.IN,
     )
 }
 
 /**
- * Checks for equality of two objects and creates a [QueryTree] with a value `true` if they are
- * equal.
+ * Checks for equality of two objects and creates a [BinaryOperationResult] with a value `true` if
+ * they are equal.
  */
-infix fun <T, S> T.eq(other: S): QueryTree<Boolean> {
+infix fun <T, S> T.eq(other: S): BinaryOperationResult<T, S> {
     val thisQt = this.toQueryTree()
     val otherQt = other.toQueryTree()
 
     val result = thisQt.value == otherQt.value
-    return QueryTree(
+    return BinaryOperationResult(
         value = result,
-        children = mutableListOf(thisQt, otherQt),
+        lhs = thisQt,
+        rhs = otherQt,
         stringRepresentation = "${thisQt.value} == ${otherQt.value}",
-        operator = QueryOperators.EQ,
+        operator = BinaryOperators.EQ,
     )
 }
 
 /**
- * Checks for unequality of two objects and creates a [QueryTree] with a value `true` if they are
- * unequal.
+ * Checks for unequality of two objects and creates a [BinaryOperationResult] with a value `true` if
+ * they are unequal.
  */
-infix fun <T, S> T.ne(other: S): QueryTree<Boolean> {
+infix fun <T, S> T.ne(other: S): BinaryOperationResult<T, S> {
     val thisQt = this.toQueryTree()
     val otherQt = other.toQueryTree()
 
     val result = thisQt.value != otherQt.value
-    return QueryTree(
+    return BinaryOperationResult(
         value = result,
-        children = mutableListOf(thisQt, otherQt),
+        lhs = thisQt,
+        rhs = otherQt,
         stringRepresentation = "${thisQt.value} != ${otherQt.value}",
-        operator = QueryOperators.NE,
+        operator = BinaryOperators.NE,
     )
 }
 
@@ -495,7 +510,7 @@ infix fun QueryTree<Boolean>.and(
         lhs = this,
         rhs = other,
         stringRepresentation = "${this.value} && ${other.value}",
-        operator = QueryOperators.AND,
+        operator = BinaryOperators.AND,
     )
 }
 
@@ -532,7 +547,7 @@ infix fun QueryTree<Boolean>.or(
         lhs = this,
         rhs = other,
         stringRepresentation = "${this.value} || ${other.value}",
-        operator = QueryOperators.OR,
+        operator = BinaryOperators.OR,
     )
 }
 
@@ -566,7 +581,7 @@ infix fun QueryTree<Boolean>.xor(
         lhs = this,
         rhs = other,
         stringRepresentation = "${this.value} xor ${other.value}",
-        operator = QueryOperators.XOR,
+        operator = BinaryOperators.XOR,
     )
 }
 
@@ -603,7 +618,7 @@ infix fun QueryTree<Boolean>.implies(
         lhs = this,
         rhs = other,
         stringRepresentation = "${this.value} => ${other.value}",
-        operator = QueryOperators.IMPLIES,
+        operator = BinaryOperators.IMPLIES,
     )
 }
 
@@ -617,7 +632,7 @@ infix fun QueryTree<Boolean>.implies(
         rhs = other.value,
         stringRepresentation =
             if (!this.value) "false => XYZ" else "${this.value} => ${other.value}",
-        operator = QueryOperators.IMPLIES,
+        operator = BinaryOperators.IMPLIES,
     )
 }
 
@@ -657,7 +672,7 @@ infix fun <T : Number?, S : Number?> QueryTree<T>?.gt(
         lhs = this,
         rhs = other,
         "${this?.value} > ${other?.value}",
-        operator = QueryOperators.GT,
+        operator = BinaryOperators.GT,
     )
 }
 
@@ -665,7 +680,7 @@ infix fun <T : Number?, S : Number?> QueryTree<T>?.gt(
  * Creates and compares the numeric values of two [QueryTree]s for this being "greater than or
  * equal" (>=) [other].
  */
-infix fun <T : Number?, S : Number?> S.ge(other: T): QueryTree<Boolean> {
+infix fun <T : Number?, S : Number?> T.ge(other: S): BinaryOperationResult<T, S> {
     return this.toQueryTree() ge other.toQueryTree()
 }
 
@@ -673,7 +688,7 @@ infix fun <T : Number?, S : Number?> S.ge(other: T): QueryTree<Boolean> {
  * Creates and compares the numeric values of two [QueryTree]s for this being "greater than or
  * equal" (>=) [other].
  */
-infix fun <T : Number?, S : Number?> QueryTree<S>?.ge(other: T): QueryTree<Boolean> {
+infix fun <T : Number?, S : Number?> QueryTree<T>?.ge(other: S): BinaryOperationResult<T, S> {
     return this ge other.toQueryTree()
 }
 
@@ -681,7 +696,7 @@ infix fun <T : Number?, S : Number?> QueryTree<S>?.ge(other: T): QueryTree<Boole
  * Creates and compares the numeric values of two [QueryTree]s for this being "greater than or
  * equal" (>=) [other].
  */
-infix fun <T : Number?, S : Number?> S.ge(other: QueryTree<T>?): QueryTree<Boolean> {
+infix fun <T : Number?, S : Number?> T.ge(other: QueryTree<S>?): BinaryOperationResult<T, S> {
     return this.toQueryTree() ge other
 }
 
@@ -689,15 +704,18 @@ infix fun <T : Number?, S : Number?> S.ge(other: QueryTree<T>?): QueryTree<Boole
  * Compares the numeric values of two [QueryTree]s for this being "greater than or equal" (>=)
  * [other].
  */
-infix fun <T : Number?, S : Number?> QueryTree<T>?.ge(other: QueryTree<S>?): QueryTree<Boolean> {
+infix fun <T : Number?, S : Number?> QueryTree<T>?.ge(
+    other: QueryTree<S>?
+): BinaryOperationResult<T, S> {
     val result =
         this?.value?.let { thisV -> other?.value?.let { otherV -> thisV.compareTo(otherV) >= 0 } }
             ?: false
-    return QueryTree(
+    return BinaryOperationResult(
         result,
-        listOfNotNull(this, other).toMutableList(),
+        lhs = this,
+        rhs = other,
         "${this?.value} >= ${other?.value}",
-        operator = QueryOperators.GE,
+        operator = BinaryOperators.GE,
     )
 }
 
@@ -705,7 +723,7 @@ infix fun <T : Number?, S : Number?> QueryTree<T>?.ge(other: QueryTree<S>?): Que
  * Creates and compares the numeric values of two [QueryTree]s for this being "less than" (<)
  * [other].
  */
-infix fun <T : Number?, S : Number?> S.lt(other: T): QueryTree<Boolean> {
+infix fun <T : Number?, S : Number?> T.lt(other: S): BinaryOperationResult<T, S> {
     return this.toQueryTree() lt other.toQueryTree()
 }
 
@@ -713,7 +731,7 @@ infix fun <T : Number?, S : Number?> S.lt(other: T): QueryTree<Boolean> {
  * Creates and compares the numeric values of two [QueryTree]s for this being "less than" (<)
  * [other].
  */
-infix fun <T : Number?, S : Number?> QueryTree<S>?.lt(other: T): QueryTree<Boolean> {
+infix fun <T : Number?, S : Number?> QueryTree<T>?.lt(other: S): BinaryOperationResult<T, S> {
     return this lt other.toQueryTree()
 }
 
@@ -721,20 +739,23 @@ infix fun <T : Number?, S : Number?> QueryTree<S>?.lt(other: T): QueryTree<Boole
  * Creates and compares the numeric values of two [QueryTree]s for this being "less than" (<)
  * [other].
  */
-infix fun <T : Number?, S : Number?> S.lt(other: QueryTree<T>?): QueryTree<Boolean> {
+infix fun <T : Number?, S : Number?> T.lt(other: QueryTree<S>?): BinaryOperationResult<T, S> {
     return this.toQueryTree() lt other
 }
 
 /** Compares the numeric values of two [QueryTree]s for this being "less than" (<) [other]. */
-infix fun <T : Number?, S : Number?> QueryTree<T>?.lt(other: QueryTree<S>?): QueryTree<Boolean> {
+infix fun <T : Number?, S : Number?> QueryTree<T>?.lt(
+    other: QueryTree<S>?
+): BinaryOperationResult<T, S> {
     val result =
         this?.value?.let { thisV -> other?.value?.let { otherV -> thisV.compareTo(otherV) < 0 } }
             ?: false
-    return QueryTree(
+    return BinaryOperationResult(
         result,
-        listOfNotNull(this, other).toMutableList(),
+        lhs = this,
+        rhs = other,
         "${this?.value} < ${other?.value}",
-        operator = QueryOperators.LT,
+        operator = BinaryOperators.LT,
     )
 }
 
@@ -742,7 +763,7 @@ infix fun <T : Number?, S : Number?> QueryTree<T>?.lt(other: QueryTree<S>?): Que
  * Creates and compares the numeric values of two [QueryTree]s for this being "less than or equal"
  * (<=) [other].
  */
-infix fun <T : Number?, S : Number?> S.le(other: T): QueryTree<Boolean> {
+infix fun <T : Number?, S : Number?> T.le(other: S): BinaryOperationResult<T, S> {
     return this.toQueryTree() le other.toQueryTree()
 }
 
@@ -750,7 +771,7 @@ infix fun <T : Number?, S : Number?> S.le(other: T): QueryTree<Boolean> {
  * Creates and compares the numeric values of two [QueryTree]s for this being "less than or equal"
  * (<=) [other].
  */
-infix fun <T : Number?, S : Number?> QueryTree<S>?.le(other: T): QueryTree<Boolean> {
+infix fun <T : Number?, S : Number?> QueryTree<T>?.le(other: S): BinaryOperationResult<T, S> {
     return this le other.toQueryTree()
 }
 
@@ -758,47 +779,50 @@ infix fun <T : Number?, S : Number?> QueryTree<S>?.le(other: T): QueryTree<Boole
  * Creates and compares the numeric values of two [QueryTree]s for this being "less than or equal"
  * (<=) [other].
  */
-infix fun <T : Number?, S : Number?> S.le(other: QueryTree<T>?): QueryTree<Boolean> {
+infix fun <T : Number?, S : Number?> T.le(other: QueryTree<S>?): BinaryOperationResult<T, S> {
     return this.toQueryTree() le other
 }
 
 /**
  * Compares the numeric values of two [QueryTree]s for this being "less than or equal" (=) [other].
  */
-infix fun <T : Number?, S : Number?> QueryTree<T>?.le(other: QueryTree<S>?): QueryTree<Boolean> {
+infix fun <T : Number?, S : Number?> QueryTree<T>?.le(
+    other: QueryTree<S>?
+): BinaryOperationResult<T, S> {
     val result =
         this?.value?.let { thisV -> other?.value?.let { otherV -> thisV.compareTo(otherV) <= 0 } }
             ?: false
-    return QueryTree(
+    return BinaryOperationResult(
         result,
-        listOfNotNull(this, other).toMutableList(),
+        lhs = this,
+        rhs = other,
         "${this?.value} <= ${other?.value}",
-        operator = QueryOperators.LE,
+        operator = BinaryOperators.LE,
     )
 }
 
 /** Negates the value of [arg] and returns the resulting [QueryTree]. */
-fun not(arg: QueryTree<Boolean>): QueryTree<Boolean> {
+fun not(arg: QueryTree<Boolean>): UnaryOperationResult<Boolean> {
     val result = !arg.value
-    return QueryTree(
+    return UnaryOperationResult(
         value = result,
-        children = mutableListOf(arg),
+        input = arg,
         stringRepresentation = "! ${arg.value}",
-        operator = QueryOperators.NOT,
+        operator = UnaryOperators.NOT,
     )
 }
 
 /** Negates the value of [arg] and returns the resulting [QueryTree]. */
-fun not(arg: Boolean): QueryTree<Boolean> {
+fun not(arg: Boolean): UnaryOperationResult<Boolean> {
     return not(arg.toQueryTree())
 }
 
 /**
  * This is a helper function to extract all the final nodes visited on successful [dataFlow]
  * traversals. The helper filters for successful traversals only and maps all those paths to the
- * last node (i.e. the node that made the traversal stop).
+ * last node (i.e., the node that made the traversal stop).
  *
- * Use-case to find the terminating nodes (i.e. the `SpecialNodeType` nodes) of the [dataFlow] call
+ * Use-case to find the terminating nodes (i.e., the `SpecialNodeType` nodes) of the [dataFlow] call
  * below:
  * ```
  * val specialNodes = dataFlow(foo) { it is SpecialNodeType }.successfulLastNodes()
@@ -838,7 +862,7 @@ class SinglePathResult(
     stringRepresentation: String = "",
     node: Node? = null,
     val terminationReason: TerminationReason,
-    operator: QueryOperators,
+    operator: GenericQueryOperators,
 ) :
     QueryTree<Boolean>(
         value = value,
@@ -855,15 +879,36 @@ class SinglePathResult(
  */
 class BinaryOperationResult<LhsValueType : Any?, RhsValueType : Any?>(
     value: Boolean,
-    var lhs: QueryTree<LhsValueType>?,
-    var rhs: QueryTree<RhsValueType>?,
+    val lhs: QueryTree<LhsValueType>?,
+    val rhs: QueryTree<RhsValueType>?,
     stringRepresentation: String = "",
     node: Node? = null,
-    operator: QueryOperators,
+    operator: BinaryOperators,
 ) :
     QueryTree<Boolean>(
         value = value,
         children = listOfNotNull(lhs, rhs),
+        stringRepresentation = stringRepresentation,
+        node = node,
+        assumptions = mutableSetOf(),
+        operator = operator,
+    )
+
+/**
+ * Represents the result of a unary operation on a [QueryTree]. It contains the [input] [QueryTree],
+ * the [value] of the operation, the [stringRepresentation] of the operation, the [node] that was
+ * evaluated, and the [operator] that was used for the operation.
+ */
+class UnaryOperationResult<T>(
+    value: Boolean,
+    val input: QueryTree<T>,
+    stringRepresentation: String = "",
+    node: Node? = null,
+    operator: UnaryOperators,
+) :
+    QueryTree<Boolean>(
+        value = value,
+        children = listOf(input),
         stringRepresentation = stringRepresentation,
         node = node,
         assumptions = mutableSetOf(),
@@ -895,7 +940,7 @@ fun List<QueryTree<Boolean>>.mergeWithAll(
             },
         node = node,
         assumptions = assumptions,
-        operator = QueryOperators.ALL,
+        operator = GenericQueryOperators.ALL,
     )
 }
 
@@ -919,6 +964,6 @@ fun List<QueryTree<Boolean>>.mergeWithAny(
             },
         node = node,
         assumptions = assumptions,
-        operator = QueryOperators.ANY,
+        operator = GenericQueryOperators.ANY,
     )
 }
