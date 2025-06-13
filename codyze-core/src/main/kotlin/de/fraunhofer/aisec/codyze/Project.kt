@@ -32,6 +32,7 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.boolean
 import com.github.ajalt.clikt.parameters.types.path
 import de.fraunhofer.aisec.codyze.dsl.ProjectBuilder
+import de.fraunhofer.aisec.codyze.dsl.RequirementCategoryBuilder
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
@@ -130,6 +131,7 @@ class AnalysisProject(
      */
     var librariesPath: Path? = projectDir?.resolve("libraries"),
     var requirementFunctions: Map<String, TranslationResult.() -> QueryTree<Boolean>> = emptyMap(),
+    var requirementCategories: Map<String, RequirementCategoryBuilder> = emptyMap(),
     var assumptionStatusFunctions: Map<String, () -> AssumptionStatus> = emptyMap(),
     var suppressedQueryTreeIDs: Map<(QueryTree<*>) -> Boolean, Any> = emptyMap(),
     /** The translation configuration for the project. */

@@ -296,6 +296,7 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
             name,
             projectDir = projectDir,
             requirementFunctions = requirementFunctions,
+            requirementCategories = requirementsBuilder.categoryBuilders,
             assumptionStatusFunctions =
                 assumptionsBuilder.decisionBuilder.assumptionStatusFunctions,
             suppressedQueryTreeIDs = suppressionsBuilder.suppressions,
