@@ -477,7 +477,6 @@ internal fun Node.alwaysFlowsToInternal(
         } else {
             setOf(NodeWithAssumption(this))
         }
-    var nothingFailed = true
     val allChildren = mutableListOf<QueryTree<Boolean>>()
     for (nodeToTrack in nodesToTrack) {
         val nextDFGPaths =
@@ -523,7 +522,12 @@ internal fun Node.alwaysFlowsToInternal(
         allChildren +=
             nextEOGEvaluation.failed.map { (failureReason, path) ->
                 SinglePathResult(
-                    value = false,
+                    // If we configure this function with "noSinkIsGood == true", then we only
+                    // consider paths which hit the early termination or which exceeded the steps
+                    // (though the latter is debatable).
+                    // If "noSinkIsGood == false", we consider all paths which are not fulfilled as
+                    // failed.
+                    value = noSinkIsGood && failureReason == FailureReason.PATH_ENDED,
                     children =
                         mutableListOf(
                             QueryTree(value = path.nodes, operator = QueryOperators.EVALUATE)
@@ -566,17 +570,9 @@ internal fun Node.alwaysFlowsToInternal(
                         operator = QueryOperators.EVALUATE,
                     )
                 }
-        nothingFailed =
-            nothingFailed &&
-                nextEOGEvaluation.failed.all {
-                    // If we configure this function with "noSinkIsGood == true", then we only
-                    // consider paths which hit the early termination or which exceeded the steps
-                    // (though the latter is debatable).
-                    // If "noSinkIsGood == false", we consider all paths which are not fulfilled as
-                    // failed.
-                    noSinkIsGood && it.first == FailureReason.PATH_ENDED
-                }
     }
+
+    val nothingFailed = allChildren.all { it.value }
     return QueryTree(
         value = nothingFailed,
         children = allChildren.toMutableList(),
