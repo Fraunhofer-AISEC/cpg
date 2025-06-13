@@ -92,7 +92,7 @@ class RequirementCategoryBuilder(
     var description: String? = null
 
     /** The requirements in this category. */
-    internal val requirements = mutableMapOf<String, RequirementBuilder>()
+    val requirements = mutableMapOf<String, RequirementBuilder>()
 }
 
 /** Represents a builder for a single requirement of the evaluation project. */
