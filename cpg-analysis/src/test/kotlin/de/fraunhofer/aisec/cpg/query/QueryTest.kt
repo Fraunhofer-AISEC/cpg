@@ -91,7 +91,9 @@ class QueryTest {
             result.allExtended<CallExpression>(
                 mustSatisfy = {
                     ("memcpy" eq it.name.localName) implies
-                        (lazy { it.arguments[0].size gt it.arguments[1].size })
+                        (lazy {
+                            it.arguments.getOrNull(0)?.size gt it.arguments.getOrNull(1)?.size
+                        })
                 }
             )
 

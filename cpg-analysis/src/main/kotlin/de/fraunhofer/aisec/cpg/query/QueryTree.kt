@@ -127,9 +127,17 @@ open class QueryTree<T>(
         checkForSuppression()
     }
 
+    /**
+     * Calculates the confidence of the [QueryTree] based on the [operator] and the [children] of
+     * the [QueryTree].
+     */
     open fun calculateConfidence(): AcceptanceStatus {
         val assumptionsToUse = this.assumptions
         val operator = this.operator
+        if (operator !is GenericQueryOperators) {
+            throw QueryException("The operator must be a GenericQueryOperator, but was $operator")
+        }
+
         return when (operator) {
             GenericQueryOperators.SUPPRESS -> {
                 AcceptedResult
@@ -149,24 +157,9 @@ open class QueryTree<T>(
                     assumptionsToUse,
                 )
             }
-            BinaryOperators.AND,
-            BinaryOperators.EQ,
-            BinaryOperators.NE,
-            BinaryOperators.GT,
-            BinaryOperators.GE,
-            BinaryOperators.LT,
-            BinaryOperators.LE,
-            BinaryOperators.IS,
-            BinaryOperators.XOR -> {
-                AcceptanceStatus.fromAssumptionsAndStatus(
-                    children.minOf { it.confidence },
-                    assumptionsToUse,
-                )
-            }
 
             // These operators require only one "true" result to be Accepted. We also want all
             // assumptions related to this requirement to be accepted/ignored.
-            BinaryOperators.OR,
             GenericQueryOperators.ANY -> {
                 val trueChildren = children.filter { it.value == true }
                 val trueConfidence = trueChildren.map { it.confidence }
@@ -190,56 +183,6 @@ open class QueryTree<T>(
                     }
 
                 AcceptanceStatus.fromAssumptionsAndStatus(resultingConfidence, assumptionsToUse)
-            }
-            BinaryOperators.IMPLIES -> {
-                // TODO: This is a tricky one
-                if (children.size != 2) {
-                    throw QueryException(
-                        "The implies operator requires exactly two children, but got ${children.size}."
-                    )
-                }
-                val lhs = children.first()
-                val rhs = children.last()
-                return when {
-                    lhs.value == false && lhs.confidence is AcceptedResult -> {
-                        // If the lhs is false and accepted, we can say that the implication is
-                        // accepted.
-                        AcceptedResult
-                    }
-                    rhs.value == true && rhs.confidence is AcceptedResult -> {
-                        // If the rhs is true and accepted, we can say that the implication is
-                        // accepted.
-                        AcceptedResult
-                    }
-                    else -> {
-                        // We do not know if the implication is accepted or not
-                        UndecidedResult
-                    }
-                }
-            }
-            BinaryOperators.IN -> {
-                if (value == true) {
-                    // TODO: The lhs must be accepted and the element matching lhs in the rhs
-                    // must be accepted too. We do not care about the rest.
-                    // Qick-fix until we have this: Everything must be accepted.
-                    AcceptanceStatus.fromAssumptionsAndStatus(
-                        setOf(children[0].confidence, children[1].confidence),
-                        assumptionsToUse,
-                    )
-                } else {
-                    // If the value is false and not everything is of confidence accepted, we
-                    // say it's undecided.
-                    if (minOf(children[0].confidence, children[1].confidence) != AcceptedResult)
-                        UndecidedResult
-                    else
-                        AcceptanceStatus.fromAssumptionsAndStatus(
-                            minOf(children[0].confidence, children[1].confidence),
-                            assumptionsToUse,
-                        )
-                }
-            }
-            UnaryOperators.NOT -> {
-                AcceptanceStatus.fromAssumptionsAndStatus(children[0].confidence, assumptionsToUse)
             }
         }
     }
@@ -373,10 +316,17 @@ fun <T> T.toQueryTree(): QueryTree<T> {
 
 sealed interface QueryTreeOperators
 
+/**
+ * Operators that can be used in a [UnaryOperationResult] to perform unary operations on a
+ * [QueryTree] or value.
+ */
 enum class UnaryOperators : QueryTreeOperators {
     NOT
 }
 
+/**
+ * Operators that can be used in a [BinaryOperationResult] to combine two [QueryTree]s or values.
+ */
 enum class BinaryOperators : QueryTreeOperators {
     AND,
     OR,
@@ -392,6 +342,10 @@ enum class BinaryOperators : QueryTreeOperators {
     IN,
 }
 
+/**
+ * Operators that can be used in a [QueryTree] to perform generic queries. These operators are not
+ * specific to any type of value and can be used to perform generic queries on any type of value.
+ */
 enum class GenericQueryOperators : QueryTreeOperators {
     ALL,
     ANY,
@@ -626,14 +580,7 @@ infix fun QueryTree<Boolean>.implies(
 infix fun QueryTree<Boolean>.implies(
     other: Lazy<QueryTree<Boolean>>
 ): BinaryOperationResult<Boolean, Boolean> {
-    return BinaryOperationResult(
-        !this.value || other.value.value,
-        lhs = this,
-        rhs = other.value,
-        stringRepresentation =
-            if (!this.value) "false => XYZ" else "${this.value} => ${other.value}",
-        operator = BinaryOperators.IMPLIES,
-    )
+    return this implies other.value
 }
 
 /**
@@ -849,71 +796,6 @@ data class PathEnded(override val endNode: Node) : TerminationReason
 data class StepsExceeded(override val endNode: Node) : TerminationReason
 
 data class HitEarlyTermination(override val endNode: Node) : TerminationReason
-
-/**
- * Represents a single path result of a query evaluation. It contains the [value] of the path, the
- * [children] that were evaluated to reach this path, the [stringRepresentation] of the path, the
- * [node] that was evaluated, and the [terminationReason] that explains why this path was
- * terminated.
- */
-class SinglePathResult(
-    value: Boolean,
-    children: List<QueryTree<*>> = emptyList(),
-    stringRepresentation: String = "",
-    node: Node? = null,
-    val terminationReason: TerminationReason,
-    operator: GenericQueryOperators,
-) :
-    QueryTree<Boolean>(
-        value = value,
-        children = children,
-        stringRepresentation = stringRepresentation,
-        node = node,
-        operator = operator,
-    )
-
-/**
- * Represents the result of a binary operation between two [QueryTree]s. It contains the [lhs]
- * (left-hand side) and [rhs] (right-hand side) [QueryTree]s, the [value] of the operation,
- * [stringRepresentation] of the operation, the [node] that was evaluated.
- */
-class BinaryOperationResult<LhsValueType : Any?, RhsValueType : Any?>(
-    value: Boolean,
-    val lhs: QueryTree<LhsValueType>?,
-    val rhs: QueryTree<RhsValueType>?,
-    stringRepresentation: String = "",
-    node: Node? = null,
-    operator: BinaryOperators,
-) :
-    QueryTree<Boolean>(
-        value = value,
-        children = listOfNotNull(lhs, rhs),
-        stringRepresentation = stringRepresentation,
-        node = node,
-        assumptions = mutableSetOf(),
-        operator = operator,
-    )
-
-/**
- * Represents the result of a unary operation on a [QueryTree]. It contains the [input] [QueryTree],
- * the [value] of the operation, the [stringRepresentation] of the operation, the [node] that was
- * evaluated, and the [operator] that was used for the operation.
- */
-class UnaryOperationResult<T>(
-    value: Boolean,
-    val input: QueryTree<T>,
-    stringRepresentation: String = "",
-    node: Node? = null,
-    operator: UnaryOperators,
-) :
-    QueryTree<Boolean>(
-        value = value,
-        children = listOf(input),
-        stringRepresentation = stringRepresentation,
-        node = node,
-        assumptions = mutableSetOf(),
-        operator = operator,
-    )
 
 /**
  * Exception that is thrown when a query evaluation encounters an error that cannot be recovered.
