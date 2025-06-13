@@ -60,6 +60,8 @@ object ManualAssessment : IncludeCategory
 
 object Tagging : IncludeCategory
 
+object Suppressions : IncludeCategory
+
 /** Represents a builder to include other scripts. */
 class IncludeBuilder {
     val includes: MutableMap<IncludeCategory, String> = mutableMapOf()
