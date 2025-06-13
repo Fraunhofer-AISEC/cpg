@@ -130,7 +130,7 @@ class DslTest {
                 }
             }
 
-            project { manualAssessment { ofBoolean("SEC-TARGET") { true } } }
+            project { manualAssessment { of("SEC-TARGET") { true } } }
         }
     }
 }

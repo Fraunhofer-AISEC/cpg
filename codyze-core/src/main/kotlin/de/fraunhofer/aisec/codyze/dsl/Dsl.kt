@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.passes.concepts.TagOverlaysPass
 import de.fraunhofer.aisec.cpg.passes.concepts.TaggingContext
-import de.fraunhofer.aisec.cpg.query.*
 import de.fraunhofer.aisec.cpg.query.NotYetEvaluated
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.toQueryTree
@@ -565,6 +564,7 @@ object OfBoolean : OfReturnType()
  * return a [QueryTree] that evaluates to `true` if the requirement is fulfilled.
  */
 @CodyzeDsl
+@OverloadResolutionByLambdaReturnType
 fun ManualAssessmentBuilder.of(
     id: String,
     block: TranslationResult.() -> QueryTree<Boolean>,
@@ -578,10 +578,7 @@ fun ManualAssessmentBuilder.of(
  * return a [Boolean] that evaluates to `true` if the requirement is fulfilled.
  */
 @CodyzeDsl
-fun ManualAssessmentBuilder.ofBoolean(
-    id: String,
-    block: TranslationResult.() -> Boolean,
-): OfBoolean {
+fun ManualAssessmentBuilder.of(id: String, block: TranslationResult.() -> Boolean): OfBoolean {
     assessments[id] = { block().toQueryTree() }
     return OfBoolean
 }
