@@ -136,6 +136,10 @@ open class QueryTree<T>(
                         if (trueConfidence.isNotEmpty() && trueConfidence.max() is AcceptedResult) {
                             AcceptedResult
                         } else if (
+                            trueChildren.isEmpty() && falseConfidence.all { it is AcceptedResult }
+                        ) {
+                            AcceptedResult
+                        } else if (
                             trueConfidence.isEmpty() &&
                                 falseChildren.isNotEmpty() &&
                                 falseConfidence.max() is RejectedResult
