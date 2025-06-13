@@ -208,7 +208,7 @@ open class QueryTree<T>(
         }
 
     /** The value of the [QueryTree] is the result of the query evaluation. */
-    var value = value
+    var value: T = value
         set(fieldValue) {
             field = fieldValue
 
@@ -468,66 +468,87 @@ infix fun <T, S> T.ne(other: S): QueryTree<Boolean> {
 /**
  * Performs a logical and (&&) operation between the values and creates and returns [QueryTree]s.
  */
-infix fun Boolean.and(other: Boolean): QueryTree<Boolean> {
+infix fun Boolean.and(other: Boolean): BinaryOperationResult<Boolean, Boolean> {
     return this.toQueryTree() and other.toQueryTree()
 }
 
 /**
  * Performs a logical and (&&) operation between the values and creates and returns [QueryTree]s.
  */
-infix fun Boolean.and(other: QueryTree<Boolean>): QueryTree<Boolean> {
+infix fun Boolean.and(other: QueryTree<Boolean>): BinaryOperationResult<Boolean, Boolean> {
     return this.toQueryTree() and other
 }
 
 /**
  * Performs a logical and (&&) operation between the values and creates and returns [QueryTree]s.
  */
-infix fun QueryTree<Boolean>.and(other: Boolean): QueryTree<Boolean> {
+infix fun QueryTree<Boolean>.and(other: Boolean): BinaryOperationResult<Boolean, Boolean> {
     return this and other.toQueryTree()
 }
 
 /** Performs a logical and (&&) operation between the values of two [QueryTree]s. */
-infix fun QueryTree<Boolean>.and(other: QueryTree<Boolean>): QueryTree<Boolean> {
-    return QueryTree(
+infix fun QueryTree<Boolean>.and(
+    other: QueryTree<Boolean>
+): BinaryOperationResult<Boolean, Boolean> {
+    return BinaryOperationResult(
         value = this.value && other.value,
-        children = mutableListOf(this, other),
+        lhs = this,
+        rhs = other,
         stringRepresentation = "${this.value} && ${other.value}",
         operator = QueryOperators.AND,
     )
 }
 
-/** Performs a logical or (||) operation between the values and creates and returns [QueryTree]s. */
-infix fun Boolean.or(other: Boolean): QueryTree<Boolean> {
+/**
+ * Performs a logical or (||) operation between the values and creates and returns a
+ * [BinaryOperationResult].
+ */
+infix fun Boolean.or(other: Boolean): BinaryOperationResult<Boolean, Boolean> {
     return this.toQueryTree() or other.toQueryTree()
 }
 
-/** Performs a logical or (||) operation between the values and creates and returns [QueryTree]s. */
-infix fun Boolean.or(other: QueryTree<Boolean>): QueryTree<Boolean> {
+/**
+ * Performs a logical or (||) operation between the values and creates and returns a
+ * [BinaryOperationResult].
+ */
+infix fun Boolean.or(other: QueryTree<Boolean>): BinaryOperationResult<Boolean, Boolean> {
     return this.toQueryTree() or other
 }
 
-/** Performs a logical or (||) operation between the values and creates and returns [QueryTree]s. */
-infix fun QueryTree<Boolean>.or(other: Boolean): QueryTree<Boolean> {
+/**
+ * Performs a logical or (||) operation between the values and creates and returns a
+ * [BinaryOperationResult].
+ */
+infix fun QueryTree<Boolean>.or(other: Boolean): BinaryOperationResult<Boolean, Boolean> {
     return this or other.toQueryTree()
 }
 
 /** Performs a logical or (||) operation between the values of two [QueryTree]s. */
-infix fun QueryTree<Boolean>.or(other: QueryTree<Boolean>): QueryTree<Boolean> {
-    return QueryTree(
+infix fun QueryTree<Boolean>.or(
+    other: QueryTree<Boolean>
+): BinaryOperationResult<Boolean, Boolean> {
+    return BinaryOperationResult(
         value = this.value || other.value,
-        children = mutableListOf(this, other),
+        lhs = this,
+        rhs = other,
         stringRepresentation = "${this.value} || ${other.value}",
         operator = QueryOperators.OR,
     )
 }
 
-/** Performs a logical xor operation between the values and creates and returns [QueryTree]s. */
-infix fun Boolean.xor(other: Boolean): QueryTree<Boolean> {
+/**
+ * Performs a logical xor operation between the values and creates and returns a
+ * [BinaryOperationResult].
+ */
+infix fun Boolean.xor(other: Boolean): BinaryOperationResult<Boolean, Boolean> {
     return this.toQueryTree() xor other.toQueryTree()
 }
 
-/** Performs a logical xor operation between the values and creates and returns [QueryTree]s. */
-infix fun Boolean.xor(other: QueryTree<Boolean>): QueryTree<Boolean> {
+/**
+ * Performs a logical xor operation between the values and creates and returns a
+ * [BinaryOperationResult].
+ */
+infix fun Boolean.xor(other: QueryTree<Boolean>): BinaryOperationResult<Boolean, Boolean> {
     return this.toQueryTree() xor other
 }
 
@@ -537,54 +558,63 @@ infix fun QueryTree<Boolean>.xor(other: Boolean): QueryTree<Boolean> {
 }
 
 /** Performs a logical xor operation between the values of two [QueryTree]s. */
-infix fun QueryTree<Boolean>.xor(other: QueryTree<Boolean>): QueryTree<Boolean> {
-    return QueryTree(
+infix fun QueryTree<Boolean>.xor(
+    other: QueryTree<Boolean>
+): BinaryOperationResult<Boolean, Boolean> {
+    return BinaryOperationResult(
         this.value xor other.value,
-        mutableListOf(this, other),
+        lhs = this,
+        rhs = other,
         stringRepresentation = "${this.value} xor ${other.value}",
         operator = QueryOperators.XOR,
     )
 }
 
 /**
- * Performs a logical implication (->) operation between the values and creates and returns
- * [QueryTree]s.
+ * Performs a logical implication (->) operation between the values and creates and returns a
+ * [BinaryOperationResult].
  */
-infix fun Boolean.implies(other: Boolean): QueryTree<Boolean> {
+infix fun Boolean.implies(other: Boolean): BinaryOperationResult<Boolean, Boolean> {
     return this.toQueryTree() implies other.toQueryTree()
 }
 
 /**
- * Performs a logical implication (->) operation between the values and creates and returns
- * [QueryTree]s.
+ * Performs a logical implication (->) operation between the values and creates and returns a
+ * [BinaryOperationResult].
  */
-infix fun Boolean.implies(other: QueryTree<Boolean>): QueryTree<Boolean> {
+infix fun Boolean.implies(other: QueryTree<Boolean>): BinaryOperationResult<Boolean, Boolean> {
     return this.toQueryTree() implies other
 }
 
 /**
- * Performs a logical implication (->) operation between the values and creates and returns
- * [QueryTree]s.
+ * Performs a logical implication (->) operation between the values and creates and returns a
+ * [BinaryOperationResult].
  */
-infix fun QueryTree<Boolean>.implies(other: Boolean): QueryTree<Boolean> {
+infix fun QueryTree<Boolean>.implies(other: Boolean): BinaryOperationResult<Boolean, Boolean> {
     return this implies other.toQueryTree()
 }
 
 /** Evaluates a logical implication (->) operation between the values of two [QueryTree]s. */
-infix fun QueryTree<Boolean>.implies(other: QueryTree<Boolean>): QueryTree<Boolean> {
-    return QueryTree(
+infix fun QueryTree<Boolean>.implies(
+    other: QueryTree<Boolean>
+): BinaryOperationResult<Boolean, Boolean> {
+    return BinaryOperationResult(
         !this.value || other.value,
-        mutableListOf(this, other),
+        lhs = this,
+        rhs = other,
         stringRepresentation = "${this.value} => ${other.value}",
         operator = QueryOperators.IMPLIES,
     )
 }
 
 /** Evaluates a logical implication (->) operation between the values of two [QueryTree]s. */
-infix fun QueryTree<Boolean>.implies(other: Lazy<QueryTree<Boolean>>): QueryTree<Boolean> {
-    return QueryTree(
+infix fun QueryTree<Boolean>.implies(
+    other: Lazy<QueryTree<Boolean>>
+): BinaryOperationResult<Boolean, Boolean> {
+    return BinaryOperationResult(
         !this.value || other.value.value,
-        if (!this.value) mutableListOf(this) else mutableListOf(this, other.value),
+        lhs = this,
+        rhs = other.value,
         stringRepresentation =
             if (!this.value) "false => XYZ" else "${this.value} => ${other.value}",
         operator = QueryOperators.IMPLIES,
@@ -595,7 +625,7 @@ infix fun QueryTree<Boolean>.implies(other: Lazy<QueryTree<Boolean>>): QueryTree
  * Creates and compares the numeric values of two [QueryTree]s for this being "greater than" (>)
  * [other].
  */
-infix fun <T : Number?, S : Number?> S.gt(other: T): QueryTree<Boolean> {
+infix fun <T : Number?, S : Number?> T.gt(other: S): BinaryOperationResult<T, S> {
     return this.toQueryTree() gt other.toQueryTree()
 }
 
@@ -603,7 +633,7 @@ infix fun <T : Number?, S : Number?> S.gt(other: T): QueryTree<Boolean> {
  * Creates and compares the numeric values of two [QueryTree]s for this being "greater than" (>)
  * [other].
  */
-infix fun <T : Number?, S : Number?> QueryTree<S>?.gt(other: T): QueryTree<Boolean> {
+infix fun <T : Number?, S : Number?> QueryTree<T>?.gt(other: S): BinaryOperationResult<T, S> {
     return this gt other.toQueryTree()
 }
 
@@ -611,18 +641,21 @@ infix fun <T : Number?, S : Number?> QueryTree<S>?.gt(other: T): QueryTree<Boole
  * Creates and compares the numeric values of two [QueryTree]s for this being "greater than" (>)
  * [other].
  */
-infix fun <T : Number?, S : Number?> S.gt(other: QueryTree<T>?): QueryTree<Boolean> {
+infix fun <T : Number?, S : Number?> T.gt(other: QueryTree<S>?): BinaryOperationResult<T, S> {
     return this.toQueryTree() gt other
 }
 
 /** Compares the numeric values of two [QueryTree]s for this being "greater than" (>) [other]. */
-infix fun <T : Number?, S : Number?> QueryTree<T>?.gt(other: QueryTree<S>?): QueryTree<Boolean> {
+infix fun <T : Number?, S : Number?> QueryTree<T>?.gt(
+    other: QueryTree<S>?
+): BinaryOperationResult<T, S> {
     val result =
         this?.value?.let { thisV -> other?.value?.let { otherV -> thisV.compareTo(otherV) > 0 } }
             ?: false
-    return QueryTree(
+    return BinaryOperationResult(
         result,
-        listOfNotNull(this, other).toMutableList(),
+        lhs = this,
+        rhs = other,
         "${this?.value} > ${other?.value}",
         operator = QueryOperators.GT,
     )
@@ -815,6 +848,31 @@ class SinglePathResult(
         operator = operator,
     )
 
+/**
+ * Represents the result of a binary operation between two [QueryTree]s. It contains the [lhs]
+ * (left-hand side) and [rhs] (right-hand side) [QueryTree]s, the [value] of the operation,
+ * [stringRepresentation] of the operation, the [node] that was evaluated.
+ */
+class BinaryOperationResult<LhsValueType : Any?, RhsValueType : Any?>(
+    value: Boolean,
+    var lhs: QueryTree<LhsValueType>?,
+    var rhs: QueryTree<RhsValueType>?,
+    stringRepresentation: String = "",
+    node: Node? = null,
+    operator: QueryOperators,
+) :
+    QueryTree<Boolean>(
+        value = value,
+        children = listOfNotNull(lhs, rhs),
+        stringRepresentation = stringRepresentation,
+        node = node,
+        assumptions = mutableSetOf(),
+        operator = operator,
+    )
+
+/**
+ * Exception that is thrown when a query evaluation encounters an error that cannot be recovered.
+ */
 class QueryException(override val message: String) : Exception(message)
 
 /**
