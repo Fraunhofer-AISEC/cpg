@@ -39,14 +39,14 @@ project {
             )
         }
 
-        ofBoolean("THIRD-PARTY-LIBRARY") {
+        of("THIRD-PARTY-LIBRARY") {
             /* Yes, the rumors are true. */
             true
         }
 
         of("SOMETHING-ELSE") {
             /* Hmm. I am not sure about this one. */
-            NotYetEvaluated()
+            NotYetEvaluated
         }
     }
 }
