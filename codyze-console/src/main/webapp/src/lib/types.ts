@@ -4,6 +4,7 @@ export interface AnalysisResultJSON {
   sourceDir: string;
   includeDir: string;
   findings: FindingsJSON[];
+  requirementCategories: RequirementsCategoryJSON[];
 }
 
 export interface ComponentJSON {
@@ -56,6 +57,21 @@ export interface EdgeJSON {
 export interface ConceptInfo {
   conceptName: string;
   constructorInfo: ConstructorInfo[];
+}
+
+export interface RequirementsCategoryJSON {
+  id: string;
+  name: string;
+  description: string;
+  requirements: RequirementJSON[];
+}
+
+export interface RequirementJSON {
+  id: string;
+  name: string;
+  description: string;
+  status: string;
+  categoryId: string;
 }
 
 export interface ConstructorInfo {
