@@ -21,15 +21,21 @@
       badgeColor: 'bg-red-100 text-red-800',
       icon: '✕'
     },
-    NOT_EVALUATED: {
-      bgColor: 'bg-gray-50',
-      textColor: 'text-gray-700',
-      badgeColor: 'bg-gray-100 text-gray-800',
+    REJECTED: {
+      bgColor: 'bg-orange-50',
+      textColor: 'text-orange-700',
+      badgeColor: 'bg-orange-100 text-orange-800',
+      icon: '⚠'
+    },
+    UNDECIDED: {
+      bgColor: 'bg-yellow-50',
+      textColor: 'text-yellow-700',
+      badgeColor: 'bg-yellow-100 text-yellow-800',
       icon: '?'
     }
   };
 
-  const config = $derived(statusConfig[requirement.status as keyof typeof statusConfig] || statusConfig.NOT_EVALUATED);
+  const config = $derived(statusConfig[requirement.status as keyof typeof statusConfig] || statusConfig.UNDECIDED);
 </script>
 
 <div class="rounded-lg border border-gray-200 {config.bgColor} p-4">

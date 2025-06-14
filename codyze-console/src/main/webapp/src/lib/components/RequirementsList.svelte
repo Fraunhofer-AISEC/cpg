@@ -30,9 +30,11 @@
         return 'bg-green-100 text-green-800';
       case 'VIOLATED':
         return 'bg-red-100 text-red-800';
-      case 'NOT_EVALUATED':
+      case 'REJECTED':
+        return 'bg-orange-100 text-orange-800';
+      case 'UNDECIDED':
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-yellow-100 text-yellow-800';
     }
   }
 </script>

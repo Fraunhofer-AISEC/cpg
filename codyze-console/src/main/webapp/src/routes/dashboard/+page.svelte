@@ -3,6 +3,7 @@
   import NewAnalysis from '$lib/components/NewAnalysis.svelte';
   import DashboardSection from '$lib/components/DashboardSection.svelte';
   import StatsGrid from '$lib/components/StatsGrid.svelte';
+  import RequirementsChart from '$lib/components/RequirementsChart.svelte';
   import ViolationsTable from '$lib/components/ViolationsTable.svelte';
   import { invalidate } from '$app/navigation';
 
@@ -18,9 +19,17 @@
       acc + cat.requirements.filter(r => r.status === 'FULFILLED').length, 0),
     violated: data.result.requirementCategories.reduce((acc, cat) =>
       acc + cat.requirements.filter(r => r.status === 'VIOLATED').length, 0),
-    notEvaluated: data.result.requirementCategories.reduce((acc, cat) =>
-      acc + cat.requirements.filter(r => r.status === 'NOT_EVALUATED').length, 0)
-  } : null);
+    rejected: data.result.requirementCategories.reduce((acc, cat) =>
+      acc + cat.requirements.filter(r => r.status === 'REJECTED').length, 0),
+    undecided: data.result.requirementCategories.reduce((acc, cat) =>
+      acc + cat.requirements.filter(r => r.status === 'UNDECIDED').length, 0)
+  } : {
+    total: 0,
+    fulfilled: 0,
+    violated: 0,
+    rejected: 0,
+    undecided: 0
+  });
 
   // Project overview stats
   const projectStats = $derived(data.project ? [
@@ -28,28 +37,6 @@
     { title: 'Source Directory', value: data.project.sourceDir },
     { title: 'Created', value: new Date(data.project.projectCreatedAt).toLocaleString() },
     ...(data.project.lastAnalyzedAt ? [{ title: 'Last Analyzed', value: new Date(data.project.lastAnalyzedAt).toLocaleString() }] : [])
-  ] : []);
-
-  // Requirements summary stats
-  const requirementStats = $derived(fulfillmentStats ? [
-    { title: 'Total Requirements', value: fulfillmentStats.total },
-    { 
-      title: 'Fulfilled', 
-      value: fulfillmentStats.fulfilled,
-      subtitle: `(${Math.round(fulfillmentStats.fulfilled / fulfillmentStats.total * 100) || 0}%)`,
-      variant: 'success' as const
-    },
-    { 
-      title: 'Violated', 
-      value: fulfillmentStats.violated,
-      subtitle: `(${Math.round(fulfillmentStats.violated / fulfillmentStats.total * 100) || 0}%)`,
-      variant: 'danger' as const
-    },
-    { 
-      title: 'Not Evaluated', 
-      value: fulfillmentStats.notEvaluated,
-      subtitle: `(${Math.round(fulfillmentStats.notEvaluated / fulfillmentStats.total * 100) || 0}%)`
-    }
   ] : []);
 
   // Source code summary stats
@@ -116,9 +103,14 @@
     {/if}
 
     <!-- Requirements Summary -->
-    {#if data.result?.requirementCategories && data.result.requirementCategories.length > 0 && fulfillmentStats}
+    {#if data.result?.requirementCategories && data.result.requirementCategories.length > 0}
       <DashboardSection title="Requirements Summary" actionText="View all" actionHref="/requirements">
-        <StatsGrid stats={requirementStats} />
+        <RequirementsChart 
+          fulfilled={fulfillmentStats.fulfilled}
+          violated={fulfillmentStats.violated}
+          rejected={fulfillmentStats.rejected}
+          undecided={fulfillmentStats.undecided}
+        />
       </DashboardSection>
 
       <!-- Recent Requirements -->
