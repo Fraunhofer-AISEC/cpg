@@ -2,6 +2,7 @@
   import type { AnalysisResultJSON } from '$lib/types';
   import ComponentsList from '$lib/components/ComponentsList.svelte';
   import FindingsList from '$lib/components/FindingsList.svelte';
+  import RequirementsList from '$lib/components/RequirementsList.svelte';
 
   interface Props {
     result: AnalysisResultJSON;
@@ -23,6 +24,12 @@
         {result.totalNodes}
       </p>
     </div>
+
+    {#if result.requirementCategories && result.requirementCategories.length > 0}
+      <div class="mb-6">
+        <RequirementsList requirementCategories={result.requirementCategories} />
+      </div>
+    {/if}
 
     <ComponentsList components={result.components} />
     <FindingsList findings={result.findings} />
