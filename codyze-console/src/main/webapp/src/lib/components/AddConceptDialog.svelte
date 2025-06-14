@@ -64,7 +64,7 @@
       );
     } catch (error) {
       console.error('Error adding concept:', error);
-      alert('Failed to add concept: ' + error.message);
+      alert('Failed to add concept: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   }
 </script>

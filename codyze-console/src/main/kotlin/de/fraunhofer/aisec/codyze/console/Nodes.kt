@@ -27,7 +27,10 @@
 
 package de.fraunhofer.aisec.codyze.console
 
+import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
+import de.fraunhofer.aisec.codyze.dsl.RequirementBuilder
+import de.fraunhofer.aisec.codyze.dsl.RequirementCategoryBuilder
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
@@ -38,6 +41,10 @@ import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.ConceptEntr
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.DFGEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.LocationEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
+import de.fraunhofer.aisec.cpg.query.AcceptedResult
+import de.fraunhofer.aisec.cpg.query.QueryTree
+import de.fraunhofer.aisec.cpg.query.RejectedResult
+import de.fraunhofer.aisec.cpg.query.UndecidedResult
 import io.github.detekt.sarif4k.ArtifactLocation
 import io.github.detekt.sarif4k.Result
 import java.net.URI
@@ -99,6 +106,7 @@ data class AnalysisResultJSON(
     var sourceDir: String,
     @Transient val analysisResult: AnalysisResult? = null,
     val findings: List<FindingsJSON>,
+    val requirementCategories: List<RequirementsCategoryJSON> = emptyList(),
 )
 
 /**
@@ -154,6 +162,41 @@ data class NodeJSON(
     val astChildren: List<NodeJSON>,
     val prevDFG: List<EdgeJSON> = emptyList(),
     val nextDFG: List<EdgeJSON> = emptyList(),
+)
+
+/** JSON data class for a requirement category. */
+@Serializable
+data class RequirementsCategoryJSON(
+    val id: String,
+    val name: String,
+    val description: String,
+    val requirements: List<RequirementJSON>,
+)
+
+/**
+ * JSON data class for project information separate from analysis results. This provides metadata
+ * about the analysis project.
+ */
+@Serializable
+data class AnalysisProjectJSON(
+    val name: String,
+    val sourceDir: String,
+    val includeDir: String? = null,
+    val topLevel: String? = null,
+    val projectCreatedAt: String,
+    val lastAnalyzedAt: String? = null,
+    val requirementCategories: List<RequirementsCategoryJSON> = emptyList(),
+    @Transient val project: AnalysisProject? = null,
+)
+
+/** JSON data class for a single requirement. */
+@Serializable
+data class RequirementJSON(
+    val id: String,
+    val name: String,
+    val description: String,
+    val status: String,
+    val categoryId: String,
 )
 
 /**
@@ -220,8 +263,24 @@ fun AnalysisResult.toJSON(): AnalysisResultJSON =
             analysisResult = this@toJSON,
             sourceDir = config.sourceLocations.first().absolutePath,
             findings = sarif.runs.flatMap { it.results?.map { it.toJSON() } ?: emptyList() },
+            requirementCategories =
+                project?.requirementCategoriesToJSON(this@toJSON.requirementsResults) ?: emptyList(),
         )
     }
+
+/** Converts a [AnalysisProject] into its JSON representation. */
+fun AnalysisProject.toJSON(): AnalysisProjectJSON {
+    return AnalysisProjectJSON(
+        name = this.name,
+        sourceDir = this.projectDir?.toString() ?: "",
+        includeDir = this.config.includePaths.firstOrNull()?.toString(),
+        topLevel = this.projectDir?.toString() ?: "",
+        projectCreatedAt = java.time.Instant.now().toString(),
+        lastAnalyzedAt = null,
+        requirementCategories = this.requirementCategoriesToJSON(),
+        project = this,
+    )
+}
 
 /** Converts a [TranslationUnitDeclaration] into its JSON representation. */
 context(ContextProvider)
@@ -346,4 +405,64 @@ object UuidSerializer : KSerializer<Uuid> {
     override fun deserialize(decoder: Decoder): Uuid {
         return Uuid.parse(decoder.decodeString())
     }
+}
+
+/** Converts the requirement categories of an [AnalysisProject] into their JSON representation. */
+fun AnalysisProject.requirementCategoriesToJSON(
+    requirementsResults: Map<String, QueryTree<Boolean>>? = null
+): List<RequirementsCategoryJSON> {
+    return this.requirementCategories.map { (_, categoryBuilder) ->
+        categoryBuilder.toJSON(requirementsResults)
+    }
+}
+
+/** Converts a [RequirementCategoryBuilder] into its JSON representation. */
+fun RequirementCategoryBuilder.toJSON(
+    requirementsResults: Map<String, QueryTree<Boolean>>? = null
+): RequirementsCategoryJSON {
+    return RequirementsCategoryJSON(
+        id = this.id,
+        name = this.name ?: this.id,
+        description = this.description ?: "",
+        requirements =
+            this.requirements.map { (_, reqBuilder) ->
+                reqBuilder.toJSON(this.id, requirementsResults)
+            },
+    )
+}
+
+/**
+ * Converts a [RequirementBuilder] into its JSON representation.
+ *
+ * @param categoryId The ID of the parent category, required for the JSON structure.
+ * @param requirementsResults Map containing the evaluation results for requirements, keyed by
+ *   requirement ID
+ */
+fun RequirementBuilder.toJSON(
+    categoryId: String,
+    requirementsResults: Map<String, QueryTree<Boolean>>? = null,
+): RequirementJSON {
+    val status =
+        when {
+            requirementsResults == null -> "UNDECIDED"
+            else -> {
+                val queryTree = requirementsResults[this.id]
+                when {
+                    queryTree == null -> "UNDECIDED"
+                    queryTree.confidence is RejectedResult -> "REJECTED"
+                    queryTree.confidence is UndecidedResult -> "UNDECIDED"
+                    queryTree.value == true && queryTree.confidence is AcceptedResult -> "FULFILLED"
+                    queryTree.value == false && queryTree.confidence is AcceptedResult -> "VIOLATED"
+                    else -> "UNDECIDED"
+                }
+            }
+        }
+
+    return RequirementJSON(
+        id = this.id,
+        name = this.name ?: this.id,
+        description = this.description ?: "",
+        status = status,
+        categoryId = categoryId,
+    )
 }

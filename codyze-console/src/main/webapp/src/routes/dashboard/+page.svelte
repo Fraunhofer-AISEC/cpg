@@ -1,12 +1,53 @@
 <script lang="ts">
   import type { PageProps } from './$types';
-  import AnalysisResult from '$lib/components/AnalysisResult.svelte';
   import NewAnalysis from '$lib/components/NewAnalysis.svelte';
+  import DashboardSection from '$lib/components/DashboardSection.svelte';
+  import StatsGrid from '$lib/components/StatsGrid.svelte';
+  import RequirementsChart from '$lib/components/RequirementsChart.svelte';
+  import ViolationsTable from '$lib/components/ViolationsTable.svelte';
   import { invalidate } from '$app/navigation';
 
+  // Correctly access data with $props()
   let { data }: PageProps = $props();
-  let regenerateEnabled = $state(false);
+
   let loading = $state(false);
+
+  // Calculate requirement stats with the $derived rune
+  const fulfillmentStats = $derived(data.result?.requirementCategories ? {
+    total: data.result.requirementCategories.reduce((acc, cat) => acc + cat.requirements.length, 0),
+    fulfilled: data.result.requirementCategories.reduce((acc, cat) =>
+      acc + cat.requirements.filter(r => r.status === 'FULFILLED').length, 0),
+    violated: data.result.requirementCategories.reduce((acc, cat) =>
+      acc + cat.requirements.filter(r => r.status === 'VIOLATED').length, 0),
+    rejected: data.result.requirementCategories.reduce((acc, cat) =>
+      acc + cat.requirements.filter(r => r.status === 'REJECTED').length, 0),
+    undecided: data.result.requirementCategories.reduce((acc, cat) =>
+      acc + cat.requirements.filter(r => r.status === 'UNDECIDED').length, 0)
+  } : {
+    total: 0,
+    fulfilled: 0,
+    violated: 0,
+    rejected: 0,
+    undecided: 0
+  });
+
+  // Project overview stats
+  const projectStats = $derived(data.project ? [
+    { title: 'Project Name', value: data.project.name },
+    { title: 'Source Directory', value: data.project.sourceDir },
+    { title: 'Created', value: new Date(data.project.projectCreatedAt).toLocaleString() },
+    ...(data.project.lastAnalyzedAt ? [{ title: 'Last Analyzed', value: new Date(data.project.lastAnalyzedAt).toLocaleString() }] : [])
+  ] : []);
+
+  // Source code summary stats
+  const sourceStats = $derived(data.result?.components ? [
+    { title: 'Components', value: data.result.components.length },
+    { 
+      title: 'Translation Units', 
+      value: data.result.components.reduce((acc, comp) => acc + comp.translationUnits.length, 0)
+    },
+    { title: 'Total Nodes', value: data.result.totalNodes }
+  ] : []);
 
   async function handleSubmit(
     sourceDir: string,
@@ -28,33 +69,66 @@
         throw new Error('Network response was not ok');
       }
 
-      const data = await response.json();
+      await response.json();
+
+      // Invalidate data to trigger reload of both project and result data
+      await invalidate('/api/project');
       await invalidate('/api/result');
-      console.log('Generation successful:', data);
+
     } catch (error) {
-      console.error('Error during generation:', error);
+      console.error('Error during analysis:', error);
     } finally {
       loading = false;
     }
   }
 </script>
 
-<div class="container mx-auto p-4">
-  <NewAnalysis submit={handleSubmit} {loading} />
+<div>
+  <header class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+    <p class="mt-1 text-sm text-gray-600">Overview of your analysis project</p>
+  </header>
 
-  {#if regenerateEnabled}
-    <div class="mb-6">
-      <button
-        class="mt-4 rounded bg-green-600 px-4 py-2 font-bold text-white hover:bg-green-700"
-        disabled={loading}
-      >
-        {loading ? 'Working...' : 'Re-Generate CPG'}
-      </button>
-      <p class="mt-1 text-sm text-gray-600">Re-run analysis with the current configuration</p>
+  {#if !data.project && !data.result}
+    <div class="flex items-center justify-center py-12">
+      <div class="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
+      <p class="ml-2 text-gray-700">Loading dashboard data...</p>
     </div>
-  {/if}
+  {:else}
+    <!-- Project Overview -->
+    {#if data.project}
+      <DashboardSection title="Project Overview">
+        <StatsGrid stats={projectStats} />
+      </DashboardSection>
+    {/if}
 
-  {#if data.result && data.result.components}
-    <AnalysisResult result={data.result} />
+    <!-- Requirements Summary -->
+    {#if data.result?.requirementCategories && data.result.requirementCategories.length > 0}
+      <DashboardSection title="Requirements Summary" actionText="View all" actionHref="/requirements">
+        <RequirementsChart 
+          fulfilled={fulfillmentStats.fulfilled}
+          violated={fulfillmentStats.violated}
+          rejected={fulfillmentStats.rejected}
+          undecided={fulfillmentStats.undecided}
+        />
+      </DashboardSection>
+
+      <!-- Recent Requirements -->
+      <DashboardSection title="Recent Violations">
+        <ViolationsTable categories={data.result.requirementCategories} />
+      </DashboardSection>
+    {/if}
+
+    <!-- Components Summary -->
+    {#if data.result?.components && data.result.components.length > 0}
+      <DashboardSection title="Source Code Summary" actionText="View source" actionHref="/source">
+        <StatsGrid stats={sourceStats} columns={3} />
+      </DashboardSection>
+    {/if}
+
+    <!-- Start New Analysis -->
+    <DashboardSection title="Start New Analysis">
+      <NewAnalysis submit={handleSubmit} {loading} />
+    </DashboardSection>
   {/if}
 </div>
