@@ -45,9 +45,10 @@
       {#each requirementCategories as category (category.id)}
         <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
           <!-- Category header -->
-          <div
-            class="flex cursor-pointer items-center justify-between rounded-t-lg bg-gray-50 px-4 py-3 hover:bg-gray-100"
-            on:click={() => toggleCategory(category.id)}
+          <button
+            type="button"
+            class="flex w-full cursor-pointer items-center justify-between rounded-t-lg bg-gray-50 px-4 py-3 hover:bg-gray-100"
+            onclick={() => toggleCategory(category.id)}
           >
             <div>
               <h4 class="font-medium">{category.name}</h4>
@@ -61,7 +62,7 @@
                 {expandedCategories.has(category.id) ? '▼' : '►'}
               </span>
             </div>
-          </div>
+          </button>
 
           <!-- Requirements list (expandable) -->
           {#if expandedCategories.has(category.id)}

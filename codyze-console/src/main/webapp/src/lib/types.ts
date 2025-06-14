@@ -7,6 +7,16 @@ export interface AnalysisResultJSON {
   requirementCategories: RequirementsCategoryJSON[];
 }
 
+export interface AnalysisProjectJSON {
+  name: string;
+  sourceDir: string;
+  includeDir: string | null;
+  topLevel: string | null;
+  projectCreatedAt: string;
+  lastAnalyzedAt: string | null;
+  requirementCategories: RequirementsCategoryJSON[];
+}
+
 export interface ComponentJSON {
   name: string;
   translationUnits: TranslationUnitJSON[];
