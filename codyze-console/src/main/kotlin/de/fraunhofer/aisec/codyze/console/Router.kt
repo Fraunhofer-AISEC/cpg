@@ -104,6 +104,19 @@ fun Routing.apiRoutes(service: ConsoleService) {
             }
         }
 
+        get("/project") {
+            // This endpoint returns the last project as a JSON object
+            val lastProject = service.lastProject
+            if (lastProject != null) {
+                call.respond(lastProject.toJSON())
+            } else {
+                call.respond(
+                    HttpStatusCode.NotFound,
+                    mapOf("error" to "No project has been analyzed yet"),
+                )
+            }
+        }
+
         // The endpoint to get a component by name
         get("/component/{name}") {
             val name = call.parameters["name"] ?: return@get call.respond(HttpStatusCode.BadRequest)

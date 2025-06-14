@@ -170,6 +170,22 @@ data class RequirementsCategoryJSON(
     val requirements: List<RequirementJSON>,
 )
 
+/**
+ * JSON data class for project information separate from analysis results. This provides metadata
+ * about the analysis project.
+ */
+@Serializable
+data class AnalysisProjectJSON(
+    val name: String,
+    val sourceDir: String,
+    val includeDir: String? = null,
+    val topLevel: String? = null,
+    val projectCreatedAt: String,
+    val lastAnalyzedAt: String? = null,
+    val requirementCategories: List<RequirementsCategoryJSON> = emptyList(),
+    @Transient val project: AnalysisProject? = null,
+)
+
 /** JSON data class for a single requirement. */
 @Serializable
 data class RequirementJSON(
@@ -248,6 +264,20 @@ fun AnalysisResult.toJSON(): AnalysisResultJSON =
                 project?.requirementCategoriesToJSON(this@toJSON.requirementsResults) ?: emptyList(),
         )
     }
+
+/** Converts a [AnalysisProject] into its JSON representation. */
+fun AnalysisProject.toJSON(): AnalysisProjectJSON {
+    return AnalysisProjectJSON(
+        name = this.name,
+        sourceDir = this.projectDir?.toString() ?: "",
+        includeDir = this.config.includePaths.firstOrNull()?.toString(),
+        topLevel = this.projectDir?.toString() ?: "",
+        projectCreatedAt = java.time.Instant.now().toString(),
+        lastAnalyzedAt = null,
+        requirementCategories = this.requirementCategoriesToJSON(),
+        project = this,
+    )
+}
 
 /** Converts a [TranslationUnitDeclaration] into its JSON representation. */
 context(_: ContextProvider)
