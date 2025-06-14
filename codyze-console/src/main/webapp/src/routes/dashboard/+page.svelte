@@ -1,6 +1,9 @@
 <script lang="ts">
   import type { PageProps } from './$types';
   import NewAnalysis from '$lib/components/NewAnalysis.svelte';
+  import DashboardSection from '$lib/components/DashboardSection.svelte';
+  import StatsGrid from '$lib/components/StatsGrid.svelte';
+  import ViolationsTable from '$lib/components/ViolationsTable.svelte';
   import { invalidate } from '$app/navigation';
 
   // Correctly access data with $props()
@@ -18,6 +21,46 @@
     notEvaluated: data.result.requirementCategories.reduce((acc, cat) =>
       acc + cat.requirements.filter(r => r.status === 'NOT_EVALUATED').length, 0)
   } : null);
+
+  // Project overview stats
+  const projectStats = $derived(data.project ? [
+    { title: 'Project Name', value: data.project.name },
+    { title: 'Source Directory', value: data.project.sourceDir },
+    { title: 'Created', value: new Date(data.project.projectCreatedAt).toLocaleString() },
+    ...(data.project.lastAnalyzedAt ? [{ title: 'Last Analyzed', value: new Date(data.project.lastAnalyzedAt).toLocaleString() }] : [])
+  ] : []);
+
+  // Requirements summary stats
+  const requirementStats = $derived(fulfillmentStats ? [
+    { title: 'Total Requirements', value: fulfillmentStats.total },
+    { 
+      title: 'Fulfilled', 
+      value: fulfillmentStats.fulfilled,
+      subtitle: `(${Math.round(fulfillmentStats.fulfilled / fulfillmentStats.total * 100) || 0}%)`,
+      variant: 'success' as const
+    },
+    { 
+      title: 'Violated', 
+      value: fulfillmentStats.violated,
+      subtitle: `(${Math.round(fulfillmentStats.violated / fulfillmentStats.total * 100) || 0}%)`,
+      variant: 'danger' as const
+    },
+    { 
+      title: 'Not Evaluated', 
+      value: fulfillmentStats.notEvaluated,
+      subtitle: `(${Math.round(fulfillmentStats.notEvaluated / fulfillmentStats.total * 100) || 0}%)`
+    }
+  ] : []);
+
+  // Source code summary stats
+  const sourceStats = $derived(data.result?.components ? [
+    { title: 'Components', value: data.result.components.length },
+    { 
+      title: 'Translation Units', 
+      value: data.result.components.reduce((acc, comp) => acc + comp.translationUnits.length, 0)
+    },
+    { title: 'Total Nodes', value: data.result.totalNodes }
+  ] : []);
 
   async function handleSubmit(
     sourceDir: string,
@@ -67,139 +110,33 @@
   {:else}
     <!-- Project Overview -->
     {#if data.project}
-      <div class="mb-8 rounded-lg border border-gray-200 bg-white p-6">
-        <h2 class="text-lg font-medium text-gray-900">Project Overview</h2>
-        <div class="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          <div class="rounded-md border border-gray-200 bg-gray-50 p-4">
-            <h3 class="text-xs font-medium uppercase text-gray-500">Project Name</h3>
-            <p class="mt-1 text-base font-semibold text-gray-900">{data.project.name}</p>
-          </div>
-          <div class="rounded-md border border-gray-200 bg-gray-50 p-4">
-            <h3 class="text-xs font-medium uppercase text-gray-500">Source Directory</h3>
-            <p class="mt-1 overflow-hidden text-ellipsis text-sm text-gray-700">{data.project.sourceDir}</p>
-          </div>
-          <div class="rounded-md border border-gray-200 bg-gray-50 p-4">
-            <h3 class="text-xs font-medium uppercase text-gray-500">Created</h3>
-            <p class="mt-1 text-sm text-gray-700">
-              {new Date(data.project.projectCreatedAt).toLocaleString()}
-            </p>
-          </div>
-          {#if data.project.lastAnalyzedAt}
-            <div class="rounded-md border border-gray-200 bg-gray-50 p-4">
-              <h3 class="text-xs font-medium uppercase text-gray-500">Last Analyzed</h3>
-              <p class="mt-1 text-sm text-gray-700">
-                {new Date(data.project.lastAnalyzedAt).toLocaleString()}
-              </p>
-            </div>
-          {/if}
-        </div>
-      </div>
+      <DashboardSection title="Project Overview">
+        <StatsGrid stats={projectStats} />
+      </DashboardSection>
     {/if}
 
     <!-- Requirements Summary -->
     {#if data.result?.requirementCategories && data.result.requirementCategories.length > 0 && fulfillmentStats}
-      <div class="mb-8 rounded-lg border border-gray-200 bg-white p-6">
-        <div class="flex items-center justify-between">
-          <h2 class="text-lg font-medium text-gray-900">Requirements Summary</h2>
-          <a href="/requirements" class="text-sm font-medium text-blue-600 hover:text-blue-800">View all</a>
-        </div>
-        <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div class="rounded-md border border-gray-200 bg-gray-50 p-4">
-            <h3 class="text-xs font-medium uppercase text-gray-500">Total Requirements</h3>
-            <p class="mt-1 text-lg font-semibold text-gray-900">{fulfillmentStats.total}</p>
-          </div>
-          <div class="rounded-md border border-gray-200 bg-green-50 p-4">
-            <h3 class="text-xs font-medium uppercase text-gray-500">Fulfilled</h3>
-            <p class="mt-1 text-lg font-semibold text-green-600">
-              {fulfillmentStats.fulfilled}
-              <span class="ml-1 text-xs font-normal text-gray-500">
-                ({Math.round(fulfillmentStats.fulfilled / fulfillmentStats.total * 100) || 0}%)
-              </span>
-            </p>
-          </div>
-          <div class="rounded-md border border-gray-200 bg-red-50 p-4">
-            <h3 class="text-xs font-medium uppercase text-gray-500">Violated</h3>
-            <p class="mt-1 text-lg font-semibold text-red-600">
-              {fulfillmentStats.violated}
-              <span class="ml-1 text-xs font-normal text-gray-500">
-                ({Math.round(fulfillmentStats.violated / fulfillmentStats.total * 100) || 0}%)
-              </span>
-            </p>
-          </div>
-          <div class="rounded-md border border-gray-200 bg-gray-50 p-4">
-            <h3 class="text-xs font-medium uppercase text-gray-500">Not Evaluated</h3>
-            <p class="mt-1 text-lg font-semibold text-gray-600">
-              {fulfillmentStats.notEvaluated}
-              <span class="ml-1 text-xs font-normal text-gray-500">
-                ({Math.round(fulfillmentStats.notEvaluated / fulfillmentStats.total * 100) || 0}%)
-              </span>
-            </p>
-          </div>
-        </div>
-      </div>
+      <DashboardSection title="Requirements Summary" actionText="View all" actionHref="/requirements">
+        <StatsGrid stats={requirementStats} />
+      </DashboardSection>
 
       <!-- Recent Requirements -->
-      <div class="mb-8 rounded-lg border border-gray-200 bg-white p-6">
-        <h2 class="mb-4 text-lg font-medium text-gray-900">Recent Violations</h2>
-        <div class="overflow-hidden rounded-md border border-gray-200">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Requirement</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Category</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 bg-white">
-              {#each data.result.requirementCategories as category}
-                {#each category.requirements.filter(r => r.status === 'VIOLATED').slice(0, 5) as req}
-                  <tr>
-                    <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-900">{req.name}</td>
-                    <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{category.name}</td>
-                    <td class="whitespace-nowrap px-6 py-4">
-                      <span class="inline-flex rounded-full bg-red-100 px-2 py-1 text-xs font-semibold leading-5 text-red-800">
-                        {req.status}
-                      </span>
-                    </td>
-                  </tr>
-                {/each}
-              {/each}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <DashboardSection title="Recent Violations">
+        <ViolationsTable categories={data.result.requirementCategories} />
+      </DashboardSection>
     {/if}
 
     <!-- Components Summary -->
     {#if data.result?.components && data.result.components.length > 0}
-      <div class="mb-8 rounded-lg border border-gray-200 bg-white p-6">
-        <div class="flex items-center justify-between">
-          <h2 class="text-lg font-medium text-gray-900">Source Code Summary</h2>
-          <a href="/source" class="text-sm font-medium text-blue-600 hover:text-blue-800">View source</a>
-        </div>
-        <div class="mt-4 grid gap-4 grid-cols-2 lg:grid-cols-3">
-          <div class="rounded-md border border-gray-200 bg-gray-50 p-4">
-            <h3 class="text-xs font-medium uppercase text-gray-500">Components</h3>
-            <p class="mt-1 text-lg font-semibold text-gray-900">{data.result.components.length}</p>
-          </div>
-          <div class="rounded-md border border-gray-200 bg-gray-50 p-4">
-            <h3 class="text-xs font-medium uppercase text-gray-500">Translation Units</h3>
-            <p class="mt-1 text-lg font-semibold text-gray-900">
-              {data.result.components.reduce((acc, comp) => acc + comp.translationUnits.length, 0)}
-            </p>
-          </div>
-          <div class="rounded-md border border-gray-200 bg-gray-50 p-4">
-            <h3 class="text-xs font-medium uppercase text-gray-500">Total Nodes</h3>
-            <p class="mt-1 text-lg font-semibold text-gray-900">{data.result.totalNodes}</p>
-          </div>
-        </div>
-      </div>
+      <DashboardSection title="Source Code Summary" actionText="View source" actionHref="/source">
+        <StatsGrid stats={sourceStats} columns={3} />
+      </DashboardSection>
     {/if}
 
     <!-- Start New Analysis -->
-    <div class="rounded-lg border border-gray-200 bg-white p-6">
-      <h2 class="mb-4 text-lg font-medium text-gray-900">Start New Analysis</h2>
+    <DashboardSection title="Start New Analysis">
       <NewAnalysis submit={handleSubmit} {loading} />
-    </div>
+    </DashboardSection>
   {/if}
 </div>
