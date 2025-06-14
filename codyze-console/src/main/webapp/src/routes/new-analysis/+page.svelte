@@ -1,5 +1,6 @@
 <script lang="ts">
   import NewAnalysis from '$lib/components/NewAnalysis.svelte';
+  import PageHeader from '$lib/components/PageHeader.svelte';
   import { goto, invalidateAll } from '$app/navigation';
 
   let loading = $state(false);
@@ -39,20 +40,12 @@
 </script>
 
 <div class="mx-auto max-w-4xl">
-  <header class="mb-8">
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-900">Start New Analysis</h1>
-        <p class="mt-2 text-lg text-gray-600">Configure and run a new code analysis project</p>
-      </div>
-      <a 
-        href="/dashboard" 
-        class="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-      >
-        ← Back to Dashboard
-      </a>
-    </div>
-  </header>
+  <PageHeader 
+    title="Start New Analysis" 
+    subtitle="Configure and run a new code analysis project"
+    breadcrumbText="Back to Dashboard"
+    breadcrumbHref="/dashboard"
+  />
 
   <div class="rounded-lg border border-gray-200 bg-white p-6">
     <NewAnalysis submit={handleSubmit} {loading} />

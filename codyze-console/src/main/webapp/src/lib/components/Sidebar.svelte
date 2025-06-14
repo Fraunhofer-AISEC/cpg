@@ -19,7 +19,7 @@
   const navItems = [
     { name: "Dashboard", path: "/dashboard", icon: "home" },
     { name: "Requirements", path: "/requirements", icon: "clipboard-check" },
-    { name: "Source Code", path: "/source", icon: "code" },
+    { name: "Components", path: "/components", icon: "code" },
   ];
 
   let currentPath = $derived($page.url.pathname);

@@ -54,7 +54,7 @@ import kotlin.reflect.KClass
  *   for a translation unit.
  * - GET `/api/component/{component_name}/translation-unit/{id}/overlay-nodes`: Retrieves all
  *   overlay nodes for a translation unit.
- * - GET `/api/concept-classes`: Retrieves a list of all available [Concept] classes (as Java class
+ * - GET `/api/classes/concepts`: Retrieves a list of all available [Concept] classes (as Java class
  *   names).
  * - POST `/api/concept`: Adds a concept node to the current
  *   [de.fraunhofer.aisec.codyze.AnalysisResult]

@@ -27,7 +27,7 @@
         </td>
         <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
           <a
-            href={`/component/${component.name}/translation-unit/${unit.id}`}
+            href={`/components/${component.name}/translation-unit/${unit.id}`}
             class="text-blue-600 hover:underline"
           >
             View Details

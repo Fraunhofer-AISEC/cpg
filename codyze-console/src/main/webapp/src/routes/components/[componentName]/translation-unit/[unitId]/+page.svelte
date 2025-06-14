@@ -59,79 +59,71 @@
   }
 </script>
 
-<div class="container mx-auto p-4">
-  <div class="mb-4">
-    <a href={`/component/${data.component.name}`} class="text-blue-600 hover:underline">
-      Back to Component
-    </a>
+<!-- Code display -->
+<div class="flex-1 overflow-auto">
+  <div class="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2">
+    <div class="text-sm text-gray-700">{data.translationUnit.name}</div>
+    <button
+      onclick={exportConcepts}
+      class="rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700"
+    >
+      Export Concepts
+    </button>
   </div>
-  <h1 class="mb-6 text-2xl font-bold">{data.translationUnit.name}</h1>
-  <p class="mb-4 text-gray-500">{data.translationUnit.path}</p>
-
-  <div class="relative mb-6 rounded bg-white p-2 shadow-md">
-    <div class="relative">
-      <!-- 
-      Make sure that really everything inside the code area is monospaced,
-      otherwise we have a slight offset between browsers.
-      -->
-      <div class="font-mono">
-        <Highlight language={python} code={data.translationUnit.code} let:highlighted>
-          <LineNumbers
-            {highlighted}
-            highlightedLines={line ? [parseInt(line) - 1] : []}
-            --line-number-color="gray"
-            --padding-right={0}
-            hideBorder
-          />
-        </Highlight>
-      </div>
-
-      {#if finding && line}
-        <FindingOverlay {finding} {kind} line={parseInt(line)} {lineHeight} {offsetTop} />
-      {/if}
-
-      <NodeOverlays
-        {nodes}
-        codeLines={data.translationUnit.code.split('\n')}
-        bind:highlightedNode
-        {lineHeight}
-        {charWidth}
-        {offsetTop}
-        {offsetLeft}
-        conceptGroups={data.conceptGroups}
-      />
-    </div>
-  </div>
-
-  <div class="rounded bg-white p-6 shadow-md">
-    <div class="mb-4">
-      <button
-        class={`ml-2 cursor-pointer px-4 py-2 ${
-          activeTab === 'overlayNodes' ? 'bg-blue-600 text-white' : 'bg-gray-200'
-        }`}
-        onclick={() => (activeTab = 'overlayNodes')}
-      >
-        Overlay Nodes
-      </button>
-      <button
-        class={`cursor-pointer px-4 py-2 ${activeTab === 'astNodes' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
-        onclick={() => (activeTab = 'astNodes')}
-      >
-        AST Nodes
-      </button>
-      {#if activeTab === 'overlayNodes'}<button
-          class="ml-2 cursor-pointer bg-gray-200 px-4 py-2 text-black"
-          onclick={() => exportConcepts()}
-        >
-          Export Added Concepts (.yaml)
-        </button>{/if}
+  
+  <div class="relative">
+    <div class="font-mono">
+      <Highlight language={python} code={data.translationUnit.code} let:highlighted>
+        <LineNumbers
+          {highlighted}
+          highlightedLines={line ? [parseInt(line) - 1] : []}
+          --line-number-color="gray"
+          --padding-right={0}
+          hideBorder
+        />
+      </Highlight>
     </div>
 
-    <NodeTable
-      title={tableTitle}
+    {#if finding && line}
+      <FindingOverlay {finding} {kind} line={parseInt(line)} {lineHeight} {offsetTop} />
+    {/if}
+
+    <NodeOverlays
       {nodes}
+      codeLines={data.translationUnit.code.split('\n')}
       bind:highlightedNode
-      nodeClick={(node) => console.log(node)}
+      {lineHeight}
+      {charWidth}
+      {offsetTop}
+      {offsetLeft}
+      conceptGroups={data.conceptGroups || []}
+    />
+  </div>
+</div>
+
+<!-- Node information panel -->
+<div class="w-96 border-l border-gray-200 bg-gray-50">
+  <div class="flex border-b border-gray-200 bg-white">
+    <button
+      class="flex-1 px-4 py-2 text-sm font-medium {activeTab === 'overlayNodes' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500 hover:text-gray-700'}"
+      onclick={() => activeTab = 'overlayNodes'}
+    >
+      Overlay Nodes
+    </button>
+    <button
+      class="flex-1 px-4 py-2 text-sm font-medium {activeTab === 'astNodes' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500 hover:text-gray-700'}"
+      onclick={() => activeTab = 'astNodes'}
+    >
+      AST Nodes
+    </button>
+  </div>
+  
+  <div class="h-full overflow-auto p-4">
+    <NodeTable 
+      title={tableTitle} 
+      {nodes} 
+      bind:highlightedNode 
+      nodeClick={(node) => console.log('Node clicked:', node)}
     />
   </div>
 </div>

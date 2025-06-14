@@ -3,6 +3,7 @@
   import DashboardSection from '$lib/components/DashboardSection.svelte';
   import StatsGrid from '$lib/components/StatsGrid.svelte';
   import CategorySection from '$lib/components/CategorySection.svelte';
+  import PageHeader from '$lib/components/PageHeader.svelte';
 
   // Correctly access data with $props()
   let { data }: PageProps = $props();
@@ -39,10 +40,10 @@
 </script>
 
 <div>
-  <header class="mb-6">
-    <h1 class="text-2xl font-bold text-gray-900">Requirements Analysis</h1>
-    <p class="mt-1 text-sm text-gray-600">View and manage project requirements and their fulfillment status.</p>
-  </header>
+  <PageHeader 
+    title="Requirements Analysis" 
+    subtitle="View and manage project requirements and their fulfillment status." 
+  />
 
   {#if !data.result}
     <div class="flex items-center justify-center py-12">

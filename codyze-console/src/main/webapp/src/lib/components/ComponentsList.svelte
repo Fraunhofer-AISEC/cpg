@@ -13,7 +13,7 @@
   {#each components as component (component.name)}
     <li class="py-3">
       <a
-        href={`/component/${component.name}`}
+        href={`/components/${component.name}`}
         class="text-lg font-medium text-blue-600 hover:underline"
       >
         {component.name}
