@@ -41,7 +41,10 @@ import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.ConceptEntr
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.DFGEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.LocationEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
+import de.fraunhofer.aisec.cpg.query.AcceptedResult
 import de.fraunhofer.aisec.cpg.query.QueryTree
+import de.fraunhofer.aisec.cpg.query.RejectedResult
+import de.fraunhofer.aisec.cpg.query.UndecidedResult
 import io.github.detekt.sarif4k.ArtifactLocation
 import io.github.detekt.sarif4k.Result
 import java.net.URI
@@ -440,10 +443,18 @@ fun RequirementBuilder.toJSON(
 ): RequirementJSON {
     val status =
         when {
-            requirementsResults == null -> "NOT_EVALUATED"
-            requirementsResults[this.id]?.value == true -> "FULFILLED"
-            requirementsResults[this.id]?.value == false -> "VIOLATED"
-            else -> "NOT_EVALUATED"
+            requirementsResults == null -> "UNDECIDED"
+            else -> {
+                val queryTree = requirementsResults[this.id]
+                when {
+                    queryTree == null -> "UNDECIDED"
+                    queryTree.confidence is RejectedResult -> "REJECTED"
+                    queryTree.confidence is UndecidedResult -> "UNDECIDED"
+                    queryTree.value == true && queryTree.confidence is AcceptedResult -> "FULFILLED"
+                    queryTree.value == false && queryTree.confidence is AcceptedResult -> "VIOLATED"
+                    else -> "UNDECIDED"
+                }
+            }
         }
 
     return RequirementJSON(
