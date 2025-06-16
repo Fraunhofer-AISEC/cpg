@@ -14,7 +14,7 @@
   }
 </script>
 
-<div class="rounded-lg border bg-white p-6">
+<div class="rounded-lg border border-gray-200 bg-white p-6">
   <h3 class="mb-4 text-lg font-semibold text-gray-900">Related Information</h3>
 
   <div class="space-y-4">

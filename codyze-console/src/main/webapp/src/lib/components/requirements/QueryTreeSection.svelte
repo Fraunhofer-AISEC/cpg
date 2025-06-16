@@ -48,7 +48,7 @@
   <div class="mb-8">
     <h2 class="mb-4 text-xl font-semibold text-gray-900">Query Tree Analysis</h2>
 
-    <div class="rounded-lg border bg-white p-4">
+    <div class="rounded-lg border border-gray-200 bg-white p-4">
       <div class="mb-4 text-sm text-gray-600">
         <p>
           This tree shows how the requirement was evaluated, including all logical operations and
