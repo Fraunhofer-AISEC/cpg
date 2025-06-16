@@ -225,20 +225,24 @@ export function getQueryTreeStatusConfig(queryTree: QueryTreeJSON): QueryTreeSta
 /**
  * Generates a navigation URL to jump to a specific node location in the source code viewer.
  */
-export function getNodeLocation(node: NodeJSON, referrer?: string, queryTreeNodeId?: string): string | null {
+export function getNodeLocation(
+  node: NodeJSON,
+  referrer?: string,
+  queryTreeNodeId?: string
+): string | null {
   if (!node.componentName || !node.translationUnitId || node.startLine < 0) {
     return null;
   }
-  
+
   let baseUrl = `/components/${encodeURIComponent(node.componentName)}/translation-unit/${node.translationUnitId}?line=${node.startLine}`;
-  
+
   if (referrer) {
     baseUrl += `&referrer=${encodeURIComponent(referrer)}`;
   }
-  
+
   if (queryTreeNodeId) {
     baseUrl += `&queryTreeNodeId=${encodeURIComponent(queryTreeNodeId)}`;
   }
-  
+
   return baseUrl;
 }

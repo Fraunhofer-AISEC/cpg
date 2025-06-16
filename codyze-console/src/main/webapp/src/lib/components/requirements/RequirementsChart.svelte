@@ -25,9 +25,21 @@
       <div class="space-y-4 lg:col-span-2">
         <div class="rounded-lg border border-gray-200 bg-white p-6">
           {#if chartType === 'pie'}
-            <RequirementsPieChart {fulfilled} {notFulfilled} {rejected} {undecided} {notYetEvaluated} />
+            <RequirementsPieChart
+              {fulfilled}
+              {notFulfilled}
+              {rejected}
+              {undecided}
+              {notYetEvaluated}
+            />
           {:else}
-            <RequirementsBarChart {fulfilled} {notFulfilled} {rejected} {undecided} {notYetEvaluated} />
+            <RequirementsBarChart
+              {fulfilled}
+              {notFulfilled}
+              {rejected}
+              {undecided}
+              {notYetEvaluated}
+            />
           {/if}
         </div>
 

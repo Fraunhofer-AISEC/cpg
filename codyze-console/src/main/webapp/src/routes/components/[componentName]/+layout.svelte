@@ -11,24 +11,24 @@
     const urlParams = new URLSearchParams($page.url.search);
     return urlParams.get('referrer');
   });
-  
+
   const breadcrumbText = $derived(() => {
     return referrerUrl() ? 'Back to Query Explorer' : 'Back to Components';
   });
-  
+
   const breadcrumbHref = $derived(() => {
     const referrer = referrerUrl();
     if (referrer) {
       // If we have a queryTreeNodeId, add it as targetNodeId to the referrer URL
       const urlParams = new URLSearchParams($page.url.search);
       const queryTreeNodeId = urlParams.get('queryTreeNodeId');
-      
+
       if (queryTreeNodeId) {
         const url = new URL(referrer, window?.location?.origin || 'http://localhost:3000');
         url.searchParams.set('targetNodeId', queryTreeNodeId);
         return url.pathname + url.search;
       }
-      
+
       return referrer;
     }
     return '/components';

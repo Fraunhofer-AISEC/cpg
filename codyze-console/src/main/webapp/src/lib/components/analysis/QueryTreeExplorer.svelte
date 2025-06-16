@@ -10,6 +10,7 @@
   } from '$lib/stores/queryTreeStore';
   import { getShortCallerInfo } from '$lib/utils/display';
   import QueryTreeExplorer from './QueryTreeExplorer.svelte';
+  import QueryTreeNodeValue from './QueryTreeNodeValue.svelte';
 
   interface Props {
     queryTree: QueryTreeJSON | undefined;
@@ -20,7 +21,14 @@
     baseUrl?: string; // Clean base URL for referrer without targetNodeId
   }
 
-  let { queryTree, depth = 0, context = 'analysis', targetNodeId, pathToTarget, baseUrl }: Props = $props();
+  let {
+    queryTree,
+    depth = 0,
+    context = 'analysis',
+    targetNodeId,
+    pathToTarget,
+    baseUrl
+  }: Props = $props();
 
   // Early return if queryTree is undefined
   if (!queryTree) {
@@ -35,10 +43,10 @@
   // Determine if this node should be expanded based on whether it's on the path to target
   const shouldExpand = $derived(() => {
     if (!queryTree) return false;
-    
+
     // Always expand root node
     if (depth === 0) return true;
-    
+
     // Expand if this node is on the path to the target
     return pathToTarget?.has(queryTree.id) || false;
   });
@@ -112,7 +120,7 @@
   function showToastNotification(message: string) {
     toastMessage = message;
     showToast = true;
-    
+
     // Auto-hide after 2 seconds
     setTimeout(() => {
       showToast = false;
@@ -121,22 +129,22 @@
 
   async function copyDeepLink() {
     if (!queryTree?.id || typeof window === 'undefined') return;
-    
+
     try {
       // Create URL with targetNodeId for this QueryTree node
       const url = new URL(window.location.href);
       url.searchParams.set('targetNodeId', queryTree.id);
-      
+
       // Copy to clipboard
       await navigator.clipboard.writeText(url.toString());
-      
+
       // Show success toast
       showToastNotification('Link copied to clipboard!');
     } catch (error) {
       console.error('Failed to copy deep link:', error);
       // Show error toast
       showToastNotification('Failed to copy link');
-      
+
       // Fallback: select the URL in address bar (if possible)
       try {
         const url = new URL(window.location.href);
@@ -210,7 +218,7 @@
           {#if context === 'requirements'}
             <button
               onclick={() => copyDeepLink()}
-              class="rounded bg-blue-50 px-2 py-1 text-xs text-blue-600 hover:bg-blue-100 transition-colors"
+              class="rounded bg-blue-50 px-2 py-1 text-xs text-blue-600 transition-colors hover:bg-blue-100"
               title="Copy link to this QueryTree node"
             >
               🔗 Copy Link
@@ -218,8 +226,10 @@
           {/if}
           {#if queryTree.callerInfo}
             <button
-              onclick={() => { showCallerDetails = !showCallerDetails; }}
-              class="font-mono text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+              onclick={() => {
+                showCallerDetails = !showCallerDetails;
+              }}
+              class="cursor-pointer font-mono text-xs text-blue-600 hover:text-blue-800 hover:underline"
               title="Click to {showCallerDetails ? 'hide' : 'show'} file location"
             >
               {#if showCallerDetails}
@@ -249,91 +259,25 @@
 
       <!-- Node (if present) -->
       {#if queryTree.node}
-        <div class="bg-opacity-60 mt-2 rounded border-l-2 border-purple-300 bg-purple-50 p-2 text-xs">
+        <div
+          class="bg-opacity-60 mt-2 rounded border-l-2 border-purple-300 bg-purple-50 p-2 text-xs"
+        >
           <div class="mb-2 font-medium text-purple-700">🎯 Associated Node:</div>
-          <div class="rounded bg-white bg-opacity-50 p-2">
-            <div class="flex items-center justify-between">
-              <span class="font-mono text-xs text-gray-600">{queryTree.node.type}</span>
-              <div class="flex items-center space-x-1">
-                <span class="text-xs">📍</span>
-                {#if getNodeLocation(queryTree.node, baseUrl, queryTree.id)}
-                  <a 
-                    href={getNodeLocation(queryTree.node, baseUrl, queryTree.id)} 
-                    class="font-mono text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                    title="Click to view in source code"
-                  >
-                    {#if queryTree.node.fileName}
-                      {queryTree.node.fileName}:{queryTree.node.startLine}:{queryTree.node.startColumn}
-                    {:else}
-                      {queryTree.node.startLine}:{queryTree.node.startColumn}
-                    {/if}
-                  </a>
-                {:else}
-                  <span class="font-mono text-xs text-gray-500">
-                    {#if queryTree.node.fileName}
-                      {queryTree.node.fileName}:{queryTree.node.startLine}:{queryTree.node.startColumn}
-                    {:else}
-                      {queryTree.node.startLine}:{queryTree.node.startColumn}
-                    {/if}
-                  </span>
-                {/if}
-              </div>
-            </div>
-            <div class="mt-1 font-mono text-xs">
-              <span class="font-medium">{queryTree.node.name}</span>
-            </div>
-            {#if queryTree.node.code}
-              <div class="mt-1 rounded bg-gray-100 px-1 py-0.5 font-mono text-xs text-gray-700">
-                {queryTree.node.code.trim()}
-              </div>
-            {/if}
-          </div>
+          <QueryTreeNodeValue node={queryTree.node} {baseUrl} queryTreeId={queryTree.id} />
         </div>
       {/if}
 
       <!-- Node Values (if present) -->
       {#if queryTree.nodeValues && queryTree.nodeValues.length > 0}
-        <div class="bg-opacity-60 mt-2 rounded border-l-2 border-purple-300 bg-purple-50 p-2 text-xs">
-          <div class="mb-2 font-medium text-purple-700">🔗 Found Nodes ({queryTree.nodeValues.length}):</div>
+        <div
+          class="bg-opacity-60 mt-2 rounded border-l-2 border-purple-300 bg-purple-50 p-2 text-xs"
+        >
+          <div class="mb-2 font-medium text-purple-700">
+            🔗 Found Nodes ({queryTree.nodeValues.length}):
+          </div>
           <div class="space-y-1">
             {#each queryTree.nodeValues as node}
-              <div class="rounded bg-white bg-opacity-50 p-2">
-                <div class="flex items-center justify-between">
-                  <span class="font-mono text-xs text-gray-600">{node.type}</span>
-                  <div class="flex items-center space-x-1">
-                    <span class="text-xs">📍</span>
-                    {#if getNodeLocation(node, baseUrl, queryTree?.id)}
-                      <a 
-                        href={getNodeLocation(node, baseUrl, queryTree?.id)} 
-                        class="font-mono text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                        title="Click to view in source code"
-                      >
-                        {#if node.fileName}
-                          {node.fileName}:{node.startLine}:{node.startColumn}
-                        {:else}
-                          {node.startLine}:{node.startColumn}
-                        {/if}
-                      </a>
-                    {:else}
-                      <span class="font-mono text-xs text-gray-500">
-                        {#if node.fileName}
-                          {node.fileName}:{node.startLine}:{node.startColumn}
-                        {:else}
-                          {node.startLine}:{node.startColumn}
-                        {/if}
-                      </span>
-                    {/if}
-                  </div>
-                </div>
-                <div class="mt-1 font-mono text-xs">
-                  <span class="font-medium">{node.name}</span>
-                </div>
-                {#if node.code}
-                  <div class="mt-1 rounded bg-gray-100 px-1 py-0.5 font-mono text-xs text-gray-700">
-                    {node.code.trim()}
-                  </div>
-                {/if}
-              </div>
+              <QueryTreeNodeValue {node} {baseUrl} queryTreeId={queryTree?.id} />
             {/each}
           </div>
         </div>
@@ -355,11 +299,11 @@
           </div>
         {:else}
           {#each children as child}
-            <QueryTreeExplorer 
-              queryTree={child} 
-              depth={depth + 1} 
-              {context} 
-              {targetNodeId} 
+            <QueryTreeExplorer
+              queryTree={child}
+              depth={depth + 1}
+              {context}
+              {targetNodeId}
               {pathToTarget}
               {baseUrl}
             />

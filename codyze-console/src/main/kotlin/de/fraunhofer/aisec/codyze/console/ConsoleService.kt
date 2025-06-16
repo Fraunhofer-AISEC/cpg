@@ -39,11 +39,12 @@ import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
+import de.fraunhofer.aisec.cpg.query.QueryTree
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.nio.file.Path
 import kotlin.uuid.Uuid
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 private const val AD_HOC_PROJECT_NAME = "ad-hoc"
 
@@ -62,7 +63,7 @@ class ConsoleService {
     private var newPersistedConcepts = mutableListOf<PersistedConceptEntry>()
 
     // Cache for QueryTrees to support lazy loading
-    private var queryTreeCache: Map<String, de.fraunhofer.aisec.cpg.query.QueryTree<*>> = emptyMap()
+    private var queryTreeCache: Map<String, QueryTree<*>> = emptyMap()
 
     // Cache for parent relationships to support tree expansion
     private var queryTreeParentMap: Map<String, String> = emptyMap()
@@ -137,7 +138,7 @@ class ConsoleService {
      * lazy loading of QueryTree children and builds parent relationships for tree expansion.
      */
     private fun populateQueryTreeCache(
-        requirementsResults: Map<String, de.fraunhofer.aisec.cpg.query.QueryTree<Boolean>>?
+        requirementsResults: Map<String, QueryTree<Boolean>>?
     ) {
         if (requirementsResults == null) {
             queryTreeCache = emptyMap()
@@ -145,11 +146,11 @@ class ConsoleService {
             return
         }
 
-        val cache = mutableMapOf<String, de.fraunhofer.aisec.cpg.query.QueryTree<*>>()
+        val cache = mutableMapOf<String, QueryTree<*>>()
         val parentMap = mutableMapOf<String, String>()
 
         // Recursively collect all QueryTrees and build parent relationships
-        fun collectQueryTrees(queryTree: de.fraunhofer.aisec.cpg.query.QueryTree<*>) {
+        fun collectQueryTrees(queryTree: QueryTree<*>) {
             cache[queryTree.id.toString()] = queryTree
             queryTree.children.forEach { child ->
                 parentMap[child.id.toString()] = queryTree.id.toString()

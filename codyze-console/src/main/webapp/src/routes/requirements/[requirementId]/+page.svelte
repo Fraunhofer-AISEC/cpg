@@ -43,10 +43,10 @@
   <RequirementStatusCard requirement={data.requirement} />
 
   <!-- Query Tree Section -->
-  <QueryTreeSection 
-    queryTree={data.requirement.queryTree} 
-    requirementId={data.requirement.id} 
-    targetNodeId={targetNodeId || undefined} 
+  <QueryTreeSection
+    queryTree={data.requirement.queryTree}
+    requirementId={data.requirement.id}
+    targetNodeId={targetNodeId || undefined}
   />
 
   <!-- Additional Info -->

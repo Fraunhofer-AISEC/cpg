@@ -84,7 +84,9 @@ export async function loadQueryTrees(queryTreeIds: string[]): Promise<QueryTreeJ
 /**
  * Loads a QueryTree with all its parent IDs for tree expansion
  */
-export async function loadQueryTreeWithParents(queryTreeId: string): Promise<QueryTreeWithParentsJSON | null> {
+export async function loadQueryTreeWithParents(
+  queryTreeId: string
+): Promise<QueryTreeWithParentsJSON | null> {
   try {
     const response = await fetch(`/api/querytrees/${queryTreeId}/parents`);
 
@@ -96,10 +98,10 @@ export async function loadQueryTreeWithParents(queryTreeId: string): Promise<Que
     }
 
     const result: QueryTreeWithParentsJSON = await response.json();
-    
+
     // Cache the QueryTree
     queryTreeCache.set(result.queryTree.id, result.queryTree);
-    
+
     return result;
   } catch (error) {
     console.error('Error loading QueryTree with parents:', error);
