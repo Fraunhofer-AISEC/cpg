@@ -89,6 +89,11 @@ inline fun <reified T> Node?.allChildrenWithOverlays(
     }
 }
 
+/** Checks, whether this [Node] has any overlays of type [T]. */
+inline fun <reified T : OverlayNode> Node.hasOverlay(): Boolean {
+    return this.overlays.filterIsInstance<T>().isNotEmpty()
+}
+
 /**
  * Returns a list of all [Node]s, starting from the current [Node], which are the beginning of an
  * EOG path created by the [EvaluationOrderGraphPass]. Typical examples include all top-level
@@ -264,8 +269,13 @@ data class NodePath(
     val nodes: List<Node>,
     override val assumptions: MutableSet<Assumption> = mutableSetOf(),
 ) : HasAssumptions {
+
+    /**
+     * Adds the [assumptions] attached to the [NodePath] itself and of all [Node] contained in the
+     * path.
+     */
     override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + nodes.flatMap { it.assumptions }
+        return super.collectAssumptions() + nodes.flatMap { it.collectAssumptions() }
     }
 }
 
@@ -362,8 +372,15 @@ fun Node.followEOGEdgesUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return this.followXUntilHit(
-        x = { currentNode, ctx, path ->
-            direction.pickNextStep(currentNode, scope, ctx, sensitivities = sensitivities)
+        x = { currentNode, ctx, path, loopingPaths ->
+            direction.pickNextStep(
+                currentNode,
+                scope,
+                ctx,
+                path,
+                loopingPaths,
+                sensitivities = sensitivities,
+            )
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -387,15 +404,24 @@ fun Node.followDFGEdgesUntilHit(
     direction: AnalysisDirection = Forward(GraphToFollow.DFG),
     vararg sensitivities: AnalysisSensitivity = FieldSensitive + ContextSensitive,
     scope: AnalysisScope = Interprocedural(),
+    ctx: Context = Context(steps = 0),
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return this.followXUntilHit(
-        x = { currentNode, ctx, path ->
-            direction.pickNextStep(currentNode, scope, ctx, sensitivities = sensitivities)
+        x = { currentNode, ctx, path, loopingPaths ->
+            direction.pickNextStep(
+                currentNode,
+                scope,
+                ctx,
+                path,
+                loopingPaths,
+                sensitivities = sensitivities,
+            )
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        ctx = ctx,
         earlyTermination = earlyTermination,
         predicate = predicate,
     )
@@ -412,7 +438,7 @@ fun Node.followDFGEdgesUntilHit(
 class Context(
     val indexStack: SimpleStack<IndexedDataflowGranularity> = SimpleStack(),
     val callStack: SimpleStack<CallExpression> = SimpleStack(),
-    var steps: Int,
+    var steps: Int = 0,
 ) : HasAssumptions {
 
     override val assumptions: MutableSet<Assumption> = mutableSetOf()
@@ -434,6 +460,17 @@ class Context(
 
     override fun hashCode(): Int {
         return Objects.hash(super.hashCode(), indexStack, callStack)
+
+    companion object {
+        /**
+         * Creates a new [Context] with an empty index stack and call stack given by the
+         * [CallExpression]s provided in [calls].
+         */
+        fun ofCallStack(vararg calls: CallExpression): Context {
+            return Context(
+                callStack = SimpleStack<CallExpression>().apply { calls.forEach { push(it) } }
+            )
+        }
     }
 }
 
@@ -670,7 +707,7 @@ fun Node.followNextPDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx, _ ->
+        x = { currentNode, ctx, _, loopingPaths ->
             val nextNodes = currentNode.nextPDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
@@ -701,7 +738,7 @@ fun Node.followNextCDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx, _ ->
+        x = { currentNode, ctx, _, loopingPaths ->
             val nextNodes = currentNode.nextCDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
@@ -734,7 +771,7 @@ fun Node.followPrevPDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx, _ ->
+        x = { currentNode, ctx, _, loopingPaths ->
             val nextNodes = currentNode.prevPDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll(
@@ -776,7 +813,7 @@ fun Node.followPrevCDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx, _ ->
+        x = { currentNode, ctx, _, loopingPaths ->
             val nextNodes = currentNode.prevCDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll(
@@ -810,11 +847,14 @@ fun Node.followPrevCDGUntilHit(
  * not mandatory**. If the list "failed" is empty, the path is mandatory.
  */
 fun Node.followXUntilHit(
-    x: (Node, Context, List<Node>) -> Collection<Pair<Node, Context>>,
+    x:
+        (Node, Context, List<Pair<Node, Context>>, MutableList<NodePath>) -> Collection<
+                Pair<Node, Context>
+            >,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
     continueAfterHit: Boolean = false,
-    context: Context = Context(steps = 0),
+    ctx: Context = Context(steps = 0),
     earlyTermination: (Node, Context) -> Boolean,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
@@ -826,7 +866,7 @@ fun Node.followXUntilHit(
     val loopingPaths = mutableListOf<NodePath>()
     // The list of paths where we're not done yet.
     val worklist = identitySetOf<List<Pair<Node, Context>>>()
-    worklist.add(listOf(this to context)) // We start only with the "from" node (=this)
+    worklist.add(listOf(this to ctx)) // We start only with the "from" node (=this)
 
     val alreadySeenNodes = mutableSetOf<Pair<Node, Context>>()
     // First check if the current node satisfies the predicate.
@@ -839,12 +879,12 @@ fun Node.followXUntilHit(
         val currentPath = worklist.maxBy { it.size }
         worklist.remove(currentPath)
         val currentNode = currentPath.last().first
-        var currentContext = currentPath.last().second
+        val currentContext = currentPath.last().second
         alreadySeenNodes.add(currentNode to currentContext)
         val currentPathNodes = currentPath.map { it.first }
         // The last node of the path is where we continue. We get all of its outgoing CDG edges and
         // follow them
-        val nextNodes = x(currentNode, currentContext, currentPathNodes)
+        val nextNodes = x(currentNode, currentContext, currentPath, loopingPaths)
 
         // No further nodes in the path and the path criteria are not satisfied.
         if (nextNodes.isEmpty() && collectFailedPaths) {
@@ -858,7 +898,7 @@ fun Node.followXUntilHit(
         }
 
         for ((next, newContext) in nextNodes) {
-            // Copy the path for each outgoing CDG edge and add the next node
+            // Copy the path for each outgoing edge and add the next node
             if (predicate(next)) {
                 // We ended up in the node fulfilling "predicate", so we're done for this path. Add
                 // the path to the results.
@@ -926,10 +966,7 @@ fun isNodeWithCallStackInPath(
     context: Context,
     path: Collection<Pair<Node, Context>>,
 ): Boolean {
-    return path.any {
-        it.first == node &&
-            context.callStack.top?.let { top -> top in it.second.callStack } != false
-    }
+    return path.any { it.first == node && context.callStack == it.second.callStack }
 }
 
 /**

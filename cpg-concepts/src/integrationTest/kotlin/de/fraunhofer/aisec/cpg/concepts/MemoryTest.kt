@@ -237,7 +237,6 @@ class MemoryTest {
                 concept = key,
                 connect = true,
             )
-        getSecretFromServer.prevDFG += getSecret
 
         // Cipher (encryption) concepts
         val cipher =

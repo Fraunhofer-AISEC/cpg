@@ -46,7 +46,7 @@ project {
 
         of("SOMETHING-ELSE") {
             /* Hmm. I am not sure about this one. */
-            Undecided
+            NotYetEvaluated
         }
     }
 }

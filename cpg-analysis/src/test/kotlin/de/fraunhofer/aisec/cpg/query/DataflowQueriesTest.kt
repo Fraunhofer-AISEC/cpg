@@ -764,7 +764,6 @@ class DataflowQueriesTest {
 
     @Test
     fun testValidatorDFGIfInterprocedural() {
-
         val resultIfWithBInterProc = FlowQueriesTest.validatorDataflowIfWithCall()
         val ifStartAWithBInterProc = resultIfWithBInterProc.variables["a"]
         assertNotNull(ifStartAWithBInterProc, "There's a variable \"a\" in main")

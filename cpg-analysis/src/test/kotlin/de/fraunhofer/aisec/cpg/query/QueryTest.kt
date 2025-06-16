@@ -94,7 +94,9 @@ class QueryTest {
             result.allExtended<CallExpression>(
                 mustSatisfy = {
                     ("memcpy" eq it.name.localName) implies
-                        (lazy { it.arguments[0].size gt it.arguments[1].size })
+                        (lazy {
+                            it.arguments.getOrNull(0)?.size gt it.arguments.getOrNull(1)?.size
+                        })
                 }
             )
 
@@ -723,7 +725,10 @@ class QueryTest {
             val func3 = newFunctionDeclaration("func3")
             tu.declarations += func3
 
-            val queryTree4 = tu.allExtended<FunctionDeclaration>(mustSatisfy = { QueryTree(true) })
+            val queryTree4 =
+                tu.allExtended<FunctionDeclaration>(
+                    mustSatisfy = { QueryTree(true, operator = GenericQueryOperators.EVALUATE) }
+                )
             assertNotNull(queryTree4)
             assertEquals(tu, queryTree4.node)
             assertEquals(listOf(func1, func2, func3), queryTree4.children.map { it.node })

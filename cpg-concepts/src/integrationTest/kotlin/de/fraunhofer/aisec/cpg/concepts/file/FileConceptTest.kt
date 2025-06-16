@@ -74,6 +74,14 @@ class FileConceptTest : BaseTest() {
             "Expected to find 5 operations (open, read, flags, 2 x close (one for normally exiting `with` and one for the `catch` exit)).",
         )
 
+        val fileNameLiteral = result.literals.singleOrNull { it.value == "example.txt" }
+        assertNotNull(fileNameLiteral, "Expected to find exactly one literal \"example.txt\".")
+        assertEquals(
+            fileNameLiteral,
+            file.underlyingNode,
+            "Expected the file to be connected to the string literal \"example.txt\".",
+        )
+
         val setFileFlags = fileNodes.filterIsInstance<SetFileFlags>().singleOrNull()
         assertNotNull(setFileFlags)
         assertEquals(
@@ -425,6 +433,364 @@ class FileConceptTest : BaseTest() {
             setOf("a", "b"),
             writes.map { it.file.fileName }.toSet(),
             "Expected to find two `WriteFile` nodes (to \"a\" and \"b\").",
+        )
+    }
+
+    @Test
+    fun testTempfile() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("tempfile.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        assertNotNull(result)
+
+        val allTempFiles = result.conceptNodes.filterIsInstance<File>()
+
+        assertEquals(2, allTempFiles.size, "Expected to find two temporary files")
+
+        assertTrue(
+            allTempFiles.all { it.isTempFile == FileTempFileStatus.TEMP_FILE },
+            "Expected the files to be marked as temporary files.",
+        )
+
+        assertTrue(
+            allTempFiles.all { it.deleteOnClose == true },
+            "Expected the files to be marked as \"deleted on close\".",
+        )
+
+        assertEquals( // sanity check
+            2,
+            result.operationNodes.filterIsInstance<OpenFile>().size,
+            "Expected to find two open operations.",
+        )
+
+        assertTrue(
+            allTempFiles.all { tempFile ->
+                val open =
+                    result.operationNodes.singleOrNull { it is OpenFile && it.file == tempFile }
+                assertNotNull(open, "Expected to find exactly one corresponding `OpenFile` node.")
+                executionPath(startNode = open, type = Must, predicate = { it is CloseFile }).value
+            },
+            "Expected all temporary files to be closed.",
+        )
+
+        assertTrue(
+            allTempFiles.all { tempFile ->
+                val open =
+                    result.operationNodes.singleOrNull { it is OpenFile && it.file == tempFile }
+                assertNotNull(open, "Expected to find exactly one corresponding `OpenFile` node.")
+                executionPath(startNode = open, type = Must, predicate = { it is DeleteFile })
+                    .value // TODO: ASSUMPTION: this only works with `with` because we currently
+                // only model `close` here.
+            },
+            "Expected all temporary files to be deleted.",
+        )
+
+        assertTrue(
+            allTempFiles.all { tempFile ->
+                val setPermissions = tempFile.ops.filterIsInstance<SetFileMask>().singleOrNull()
+                assertNotNull(setPermissions)
+                setPermissions.mask == 384L /* 0600 in decimal notation */
+            },
+            "Expected to find 0600 permissions for the temp files.",
+        )
+
+        assertEquals(
+            allTempFiles.size,
+            allTempFiles.map { it.fileName }.toSet().count(),
+            "Expected the temp files to have unique names.",
+        )
+    }
+
+    @Test
+    fun testTempfileInTmp() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("tempInTmp.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        assertNotNull(result)
+
+        val file = result.conceptNodes.filterIsInstance<File>().singleOrNull()
+        assertNotNull(file, "Expected to find exactly one `File` node (\"/tmp/example.txt\").")
+
+        assertTrue(
+            file.isTempFile == FileTempFileStatus.TEMP_FILE,
+            "Expected the file to be marked as a temporary file because it lives in `/tmp`.",
+        )
+
+        assertFalse(
+            file.deleteOnClose,
+            "Expected the file to not be marked as \"deleted on close\".",
+        )
+    }
+
+    @Test
+    fun testTempOrNot() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("tempOrNot.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        assertNotNull(result)
+
+        val files = result.conceptNodes.filterIsInstance<File>()
+        assertEquals(2, files.size, "Expected to find exactly two `File` nodes.")
+
+        assertEquals(
+            1,
+            files.filter { it.isTempFile == FileTempFileStatus.TEMP_FILE }.size,
+            "Expected to find one file marked as temp",
+        )
+        assertEquals(
+            1,
+            files.filter { it.isTempFile == FileTempFileStatus.NOT_A_TEMP_FILE }.size,
+            "Expected to find one file marked as not temp",
+        )
+
+        val literal =
+            result.literals.singleOrNull { it.value is String && it.value == "Hello world!" }
+        assertNotNull(literal)
+
+        assertTrue(
+            dataFlow(
+                    startNode = literal,
+                    predicate = { it is File && it.isTempFile == FileTempFileStatus.TEMP_FILE },
+                )
+                .value,
+            "Expected to find a write to the temp file.",
+        )
+        assertTrue(
+            dataFlow(
+                    startNode = literal,
+                    predicate = {
+                        it is File && it.isTempFile == FileTempFileStatus.NOT_A_TEMP_FILE
+                    },
+                )
+                .value,
+            "Expected to find a write to the non-temp file.",
+        )
+    }
+
+    @Test
+    fun testTempfilesMultiple() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("multipleTempFiles.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        assertNotNull(result)
+
+        val allTempFiles = result.conceptNodes.filterIsInstance<File>()
+
+        assertEquals(2, allTempFiles.size, "Expected to find exactly two `File` nodes.")
+
+        assertEquals(
+            allTempFiles.size,
+            allTempFiles.map { it.fileName }.toSet().count(),
+            "Expected the temp files to have unique names.",
+        )
+    }
+
+    @Test
+    fun testTempfilesGettmpdirBAD() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("tempfile_bad_gettmpdir.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        assertNotNull(result)
+
+        val file = result.conceptNodes.singleOrNull { it is File && it.fileName.contains("foo") }
+        assertIs<File>(file)
+
+        assertEquals(
+            FileTempFileStatus.TEMP_FILE,
+            file.isTempFile,
+            "Expected the file to be marked as temp.",
+        )
+    }
+
+    @Test
+    fun testTempOrNot2() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("tempOrNot2.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        assertNotNull(result)
+
+        val file = result.conceptNodes.filterIsInstance<File>()
+        // assertEquals(2, file.size, "Expected to find 2 files. One for the tempfile and one for
+        // the normal file.")
+
+        val tempFile =
+            file.singleOrNull {
+                it.isTempFile == FileTempFileStatus.TEMP_FILE && it.fileName.contains("foo")
+            }
+        assertNotNull(tempFile)
+
+        val notTempFile = file.singleOrNull { it.isTempFile == FileTempFileStatus.NOT_A_TEMP_FILE }
+        assertNotNull(notTempFile)
+
+        val barLiteral = result.literals.singleOrNull { it.value is String && it.value == "bar" }
+        assertNotNull(barLiteral)
+
+        assertTrue(
+            dataFlow(startNode = barLiteral, predicate = { it === tempFile }).value,
+            "Expected to find a dataflow from the literal \"bar\" to the temp file.",
+        )
+
+        assertTrue(
+            dataFlow(startNode = barLiteral, predicate = { it === notTempFile }).value,
+            "Expected to find a dataflow from the literal \"bar\" to the non-temp file.",
+        )
+    }
+
+    @Test
+    fun testMkstempMkdtemp() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("file_mkstemp_mkdtemp.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        assertNotNull(result)
+
+        val files = result.conceptNodes.filterIsInstance<File>()
+
+        val mkstempFile =
+            files.singleOrNull {
+                it.isTempFile == FileTempFileStatus.TEMP_FILE &&
+                    it.fileName.contains("tempfile.mkstemp")
+            }
+        assertNotNull(mkstempFile)
+
+        val stuffLiteral =
+            result.literals.singleOrNull { it.value is String && it.value == "stuff" }
+        assertNotNull(stuffLiteral)
+
+        assertTrue(
+            dataFlow(startNode = stuffLiteral, predicate = { it === mkstempFile }).value,
+            "Expected to find a dataflow from the literal \"stuff\" to the mkstemp file.",
+        )
+
+        val mkdtempFile =
+            files.singleOrNull {
+                it.isTempFile == FileTempFileStatus.TEMP_FILE &&
+                    it.fileName.contains("tempfile.mkdtemp") &&
+                    it.fileName.contains("foobarbaz")
+            }
+        assertNotNull(mkdtempFile)
+
+        val helloWorldLiteral =
+            result.literals.singleOrNull { it.value is String && it.value == "hello world!" }
+        assertNotNull(helloWorldLiteral)
+
+        assertTrue(
+            dataFlow(startNode = helloWorldLiteral, predicate = { it === mkdtempFile }).value,
+            "Expected to find a dataflow from the literal \"hello world!\" to the mkdtempFile file.",
+        )
+    }
+
+    @Test
+    fun testNoMktemp() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("file_mkstemp_mkdtemp.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        assertNotNull(result)
+
+        val files = result.conceptNodes.filterIsInstance<File>()
+        assertTrue(
+            files.none {
+                it.isTempFile == FileTempFileStatus.TEMP_FILE &&
+                    it.fileName.contains("tempfile.mktemp")
+            },
+            "Expected to find no temporary file created by `tempfile.mktemp`.",
+        )
+    }
+
+    @Test
+    fun testNoGettmpDir() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "file")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("file_mkstemp_mkdtemp.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonFileConceptPass>()
+                it.symbols(mapOf("PYTHON_PLATFORM" to "linux"))
+            }
+        assertNotNull(result)
+
+        val files = result.conceptNodes.filterIsInstance<File>()
+        assertTrue(
+            files.none {
+                it.isTempFile == FileTempFileStatus.TEMP_FILE &&
+                    it.fileName.contains("tempfile.gettempdir")
+            },
+            "Expected to find no temporary file created by `tempfile.gettempdir`.",
         )
     }
 }

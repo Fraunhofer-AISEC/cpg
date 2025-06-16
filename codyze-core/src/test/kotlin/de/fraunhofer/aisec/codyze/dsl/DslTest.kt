@@ -84,14 +84,13 @@ class DslTest {
                         }
 
                         requirement("RQ-ENCRYPTION-02") {
-                            name = "Good Encryption with some manual analysis"
+                            name = "Good Encryption or some manual analysis"
 
                             fulfilledBy {
                                 val logic =
-                                    query1() and
-                                        query2() and
+                                    (query1() and query2()) or
                                         manualAssessmentOf("THIRD-PARTY-LIBRARY")
-                                assertIs<Decision>(logic)
+                                assertIs<QueryTree<Boolean>>(logic)
                             }
                         }
 
@@ -101,7 +100,7 @@ class DslTest {
                             fulfilledBy {
                                 val logic =
                                     manualAssessmentOf("SEC-TARGET") and query1() and query2()
-                                assertIs<Decision>(logic)
+                                assertIs<QueryTree<Boolean>>(logic)
                             }
                         }
                     }
@@ -115,6 +114,19 @@ class DslTest {
                         undecided("00000000-0000-0000-0000-000000000002")
                         ignore("00000000-0000-0000-0000-000000000003")
                     }
+                }
+
+                suppressions {
+                    /**
+                     * This query tree ID needs to be suppressed because it is not relevant for the
+                     * current analysis.
+                     */
+                    queryTreeById("00000000-0000-0000-0000-000000000000" to true)
+
+                    /** All bogus queries that are not relevant for the current analysis */
+                    queryTree(
+                        { q: QueryTree<Boolean> -> q.stringRepresentation == "bogusQuery" } to true
+                    )
                 }
             }
 

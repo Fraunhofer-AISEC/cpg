@@ -27,11 +27,9 @@ package de.fraunhofer.aisec.cpg.helpers.functional
 
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
-import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice.Element
-import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import java.io.Serializable
-import java.util.IdentityHashMap
+import java.util.*
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.fold
@@ -317,24 +315,19 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
         get() = Element()
 
     override fun lub(one: Element<T>, two: Element<T>, allowModify: Boolean): Element<T> {
+        if (allowModify) {
+            one += two
+            return one
+        }
         return when (compare(one, two)) {
-            Order.LESSER ->
-                if (allowModify) {
-                    one += two
-                    one
-                } else two.duplicate()
+            Order.LESSER -> two.duplicate()
             Order.EQUAL,
             Order.GREATER -> one
             Order.UNEQUAL -> {
-                if (allowModify) {
-                    one += two
-                    one
-                } else {
-                    val result = Element<T>(one.size + two.size)
-                    result += one
-                    result += two
-                    result
-                }
+                val result = Element<T>(one.size + two.size)
+                result += one
+                result += two
+                result
             }
         }
     }
@@ -378,19 +371,78 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         }
 
         override fun compare(other: Lattice.Element): Order {
-            return when {
-                other !is Element<K, V> ->
-                    throw IllegalArgumentException(
-                        "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
-                    )
-                this === other -> Order.EQUAL
-                this.keys == other.keys &&
-                    this.entries.all { (k, v) ->
-                        other[k]?.let { v.compare(it) == Order.EQUAL } == true
-                    } -> Order.EQUAL
-                oneGETwo(this, other) -> Order.GREATER
-                oneGETwo(other, this) -> Order.LESSER
-                else -> Order.UNEQUAL
+            if (other !is Element<K, V>)
+                throw IllegalArgumentException(
+                    "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
+                )
+
+            if (this === other) return Order.EQUAL
+
+            val thisKeySetIsBiggerOrEqual = this.keys.containsAll(other.keys)
+            val otherKeySetIsBiggerOrEqual = other.keys.containsAll(this.keys)
+            if (!thisKeySetIsBiggerOrEqual && !otherKeySetIsBiggerOrEqual) {
+                // Each map has some keys that the other does not have, so the maps are unequal
+                return Order.UNEQUAL
+            }
+
+            // We can check if the entries are equal, greater or lesser
+            var someGreater = false
+            var someLesser = false
+            if (thisKeySetIsBiggerOrEqual) {
+                this.entries.forEach { (k, v) ->
+                    val otherV = other[k]
+                    if (otherV != null) {
+                        when (v.compare(otherV)) {
+                            Order.EQUAL -> {
+                                /* Nothing to do*/
+                            }
+                            Order.GREATER -> someGreater = true
+                            Order.LESSER -> someLesser = true
+                            Order.UNEQUAL -> {
+                                someGreater = true
+                                someLesser = true
+                            }
+                        }
+                    } else {
+                        someGreater = true // key is missing in other, so this is greater
+                    }
+                }
+            } else {
+                // otherKeySetIsBiggerOrEqual is true, so we can iterate over the other map and
+                // basically invert the results from above
+                other.entries.forEach { (k, v) ->
+                    val thisV = this[k]
+                    if (thisV != null) {
+                        when (v.compare(thisV)) {
+                            Order.EQUAL -> {
+                                /* Nothing to do*/
+                            }
+                            Order.GREATER -> someLesser = true
+                            Order.LESSER -> someGreater = true
+                            Order.UNEQUAL -> {
+                                someLesser = true
+                                someGreater = true
+                            }
+                        }
+                    } else {
+                        someLesser = true // key is missing in this, so this is lesser
+                    }
+                }
+            }
+            return if (!someGreater && !someLesser) {
+                // All entries are the same, so the maps are equal
+                Order.EQUAL
+            } else if (someLesser && !someGreater) {
+                // Some entries are equal, some are lesser and none are greater, so this map is
+                // lesser.
+                Order.LESSER
+            } else if (!someLesser && someGreater) {
+                // Some entries are equal, some are greater but none are lesser, so this map is
+                // greater.
+                Order.GREATER
+            } else {
+                // Some entries are greater and some are lesser, so the maps are unequal
+                Order.UNEQUAL
             }
         }
 
@@ -401,47 +453,31 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         override fun hashCode(): Int {
             return super.hashCode()
         }
-
-        companion object {
-            private fun <K, V : Lattice.Element> oneGETwo(
-                one: Element<K, V>,
-                two: Element<K, V>,
-            ): Boolean {
-                if (one === two) return true
-
-                return one.keys.size >= two.keys.size &&
-                    one.keys.containsAll(two.keys) &&
-                    one.entries.all { (k, v) ->
-                        val otherV = two[k] ?: return@all true
-                        val cmp = v.compare(otherV)
-                        cmp == Order.EQUAL || cmp == Order.GREATER
-                    }
-            }
-        }
     }
 
     override val bottom: Element<K, V>
         get() = MapLattice.Element()
 
     override fun lub(one: Element<K, V>, two: Element<K, V>, allowModify: Boolean): Element<K, V> {
+        if (allowModify) {
+            two.forEach { (k, v) ->
+                if (!one.containsKey(k)) {
+                    // This key is not in "one", so we add the value from "two" to "one"
+                    one[k] = v
+                } else {
+                    // This key already exists in "one", so we have to compute the lub of the values
+                    one[k]?.let { oneValue -> innerLattice.lub(oneValue, v, true) }
+                }
+            }
+            return one
+        }
+
         return when (val comp = compare(one, two)) {
             Order.EQUAL,
             Order.GREATER -> one
             Order.LESSER,
             Order.UNEQUAL -> {
-                if (allowModify) {
-                    // Requires identitySet and toList to avoid accidentally removing equal but not
-                    // identical keys
-                    val newKeys = two.keys.filterTo(identitySetOf()) { it !in one.keys }
-                    val existingKeys = two.keys.toList().minus(newKeys)
-                    newKeys.forEach { key -> one[key] = two[key] }
-                    existingKeys.forEach { key ->
-                        one[key]?.let { oneValue ->
-                            two[key]?.let { twoValue -> innerLattice.lub(oneValue, twoValue, true) }
-                        }
-                    }
-                    one
-                } else if (comp == Order.LESSER) {
+                if (comp == Order.LESSER) {
                     two.duplicate()
                 } else {
                     val allKeys = one.keys.toIdentitySet()
