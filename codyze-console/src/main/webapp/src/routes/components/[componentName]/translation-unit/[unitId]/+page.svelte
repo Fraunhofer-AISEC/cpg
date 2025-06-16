@@ -2,6 +2,8 @@
   import FindingOverlay from '$lib/components/FindingOverlay.svelte';
   import NodeOverlays from '$lib/components/NodeOverlays.svelte';
   import NodeTable from '$lib/components/NodeTable.svelte';
+  import TabNavigation from '$lib/components/TabNavigation.svelte';
+  import Button from '$lib/components/Button.svelte';
   import { flattenNodes } from '$lib/flatten';
   import { type NodeJSON } from '$lib/types';
   import Highlight, { LineNumbers } from 'svelte-highlight';
@@ -26,6 +28,24 @@
   );
   let tableTitle = $derived(activeTab === 'overlayNodes' ? 'Overlay Nodes' : 'AST Nodes');
   let highlightedNode = $state<NodeJSON | null>(null);
+
+  // Tab configuration
+  const tabs = $derived([
+    { 
+      id: 'overlayNodes', 
+      label: 'Overlay Nodes', 
+      count: data.overlayNodes?.length || 0 
+    },
+    { 
+      id: 'astNodes', 
+      label: 'AST Nodes', 
+      count: data.astNodes?.length || 0 
+    }
+  ]);
+
+  function handleTabChange(tabId: string) {
+    activeTab = tabId;
+  }
 
   const lineHeight = 1.5; // 24px / 16
   const charWidth = 0.60015625; // 9.6025px / 16
@@ -63,12 +83,13 @@
 <div class="flex-1 overflow-auto">
   <div class="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2">
     <div class="text-sm text-gray-700">{data.translationUnit.name}</div>
-    <button
+    <Button
+      variant="primary"
+      size="sm"
       onclick={exportConcepts}
-      class="rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700"
     >
       Export Concepts
-    </button>
+    </Button>
   </div>
   
   <div class="relative">
@@ -103,19 +124,8 @@
 
 <!-- Node information panel -->
 <div class="w-96 border-l border-gray-200 bg-gray-50">
-  <div class="flex border-b border-gray-200 bg-white">
-    <button
-      class="flex-1 px-4 py-2 text-sm font-medium {activeTab === 'overlayNodes' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500 hover:text-gray-700'}"
-      onclick={() => activeTab = 'overlayNodes'}
-    >
-      Overlay Nodes
-    </button>
-    <button
-      class="flex-1 px-4 py-2 text-sm font-medium {activeTab === 'astNodes' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500 hover:text-gray-700'}"
-      onclick={() => activeTab = 'astNodes'}
-    >
-      AST Nodes
-    </button>
+  <div class="bg-white">
+    <TabNavigation {tabs} {activeTab} onTabChange={handleTabChange} />
   </div>
   
   <div class="h-full overflow-auto p-4">

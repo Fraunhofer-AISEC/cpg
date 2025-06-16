@@ -1,4 +1,7 @@
 <script lang="ts">
+  import FormField from './FormField.svelte';
+  import Button from './Button.svelte';
+
   interface Props {
     submit: (
       sourceDir: string,
@@ -26,62 +29,45 @@
       submit(sourceDir, includeDir, topLevel, conceptsFile);
     }}
   >
-    <div class="mb-4">
-      <label for="sourceDir" class="mb-1 block text-sm font-medium text-gray-700">
-        Source Directory
-      </label>
-      <input
-        type="text"
-        id="sourceDir"
-        bind:value={sourceDir}
-        class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
-        placeholder="/path/to/source/code"
-        required
-      />
-    </div>
-    <div class="mb-4">
-      <label for="includeDir" class="mb-1 block text-sm font-medium text-gray-700">
-        Include Directory (optional)
-      </label>
-      <input
-        type="text"
-        id="includeDir"
-        bind:value={includeDir}
-        class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
-        placeholder="/path/to/source/code"
-      />
-    </div>
-    <div class="mb-4">
-      <label for="topLevel" class="mb-1 block text-sm font-medium text-gray-700">
-        Top Level Directory (optional)
-      </label>
-      <input
-        type="text"
-        id="topLevel"
-        bind:value={topLevel}
-        class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
-        placeholder="/path/to/source/code"
-      />
-    </div>
-    <div class="mb-4">
-      <label for="conceptsFile" class="mb-1 block text-sm font-medium text-gray-700">
-        Concepts File (.yaml) (optional)
-      </label>
-      <input
-        type="text"
-        id="conceptsFile"
-        bind:value={conceptsFile}
-        class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
-        placeholder="/path/to/concept-summaries.yaml"
-      />
-    </div>
-    <button
+    <FormField
+      label="Source Directory"
+      id="sourceDir"
+      placeholder="/path/to/source/code"
+      required={true}
+      bind:value={sourceDir}
+    />
+    
+    <FormField
+      label="Include Directory"
+      id="includeDir"
+      placeholder="/path/to/include/files"
+      helpText="Optional: Path to additional include files"
+      bind:value={includeDir}
+    />
+    
+    <FormField
+      label="Top Level Directory"
+      id="topLevel"
+      placeholder="/path/to/top/level"
+      helpText="Optional: Top-level directory for the project"
+      bind:value={topLevel}
+    />
+    
+    <FormField
+      label="Concepts File (.yaml)"
+      id="conceptsFile"
+      placeholder="/path/to/concept-summaries.yaml"
+      helpText="Optional: YAML file containing concept definitions"
+      bind:value={conceptsFile}
+    />
+
+    <Button
       type="submit"
       disabled={loading}
-      class="rounded bg-blue-600 px-4 py-2 font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-70"
+      {loading}
     >
-      {loading ? 'Generating...' : 'Generate CPG'}
-    </button>
+      Generate CPG
+    </Button>
   </form>
 
   {#if error}
