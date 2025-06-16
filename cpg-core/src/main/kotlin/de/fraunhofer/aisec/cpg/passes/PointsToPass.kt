@@ -130,6 +130,13 @@ fun stringToDepth(name: String): Int {
     }
 }
 
+/** clear dummys from a FunctionSummary */
+fun clearFSDummies(functionSummary: MutableMap<Node, MutableSet<FunctionDeclaration.FSEntry>>) {
+    val dummies =
+        functionSummary.filter { it.key is ReturnStatement && it.value.all { it.isDummy } }
+    dummies.keys.forEach { functionSummary.remove(it) }
+}
+
 /**
  * Resolve a MemberExpression as long as it's base no longer is a MemberExpression itself. Returns
  * the base a Name that identifies the access
@@ -344,6 +351,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         "",
                         equalLinkedHashSetOf(Pair(param, equalLinkedHashSetOf())),
                         equalLinkedHashSetOf(true),
+                        true,
                     )
                 )
                 // The prevDFG edges for the function Declaration
@@ -447,19 +455,20 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         it.value.name != param.name
                     }
                 stateEntries
-                    // See if we can find something that is different from the initial value
+                    /* See if we can find something that is different from the initial value*/
                     .filterTo(identitySetOf()) {
-                        // Filter the PMVs from this parameter
+                        /* Filter the PMVs from this parameter*/
                         !(it.value is ParameterMemoryValue &&
                             it.value.name.localName.contains("derefvalue") &&
                             it.value.name.parent == param.name)
-                        // Filter the unknownMemoryValues that weren't written to
+                        /* Filter the unknownMemoryValues that weren't written to*/
                         && !(it.value is UnknownMemoryValue && it.lastWrites.isEmpty())
                     }
                     // If so, store the information for the parameter in the FunctionSummary
                     .forEach { (value, shortFS, subAccessName, lastWrites) ->
                         // Extract the value depth from the value's localName
                         val srcValueDepth = stringToDepth(value.name.localName)
+                        clearFSDummies(node.functionSummary)
                         // Store the information in the functionSummary
                         val existingEntry =
                             node.functionSummary.computeIfAbsent(param) { mutableSetOf() }
@@ -560,7 +569,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
         // If we don't have anything to summarize, we add a dummy entry to the functionSummary
         if (node.functionSummary.isEmpty()) {
-            node.functionSummary.computeIfAbsent(ReturnStatement()) { mutableSetOf() }
+            node.functionSummary.computeIfAbsent(ReturnStatement()) {
+                mutableSetOf(
+                    FunctionDeclaration.FSEntry(srcNode = null, subAccessName = "", isDummy = true)
+                )
+            }
         }
     }
 
@@ -650,9 +663,18 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             if (arg.argumentIndex < functionDeclaration.parameters.size) {
                 // Create a DFG-Edge from the argument to the parameter's memoryValue
                 val p = functionDeclaration.parameters[arg.argumentIndex]
-                if (p.fullMemoryValues.isEmpty())
-                    initializeParameters(lattice, mutableListOf(p), doubleState, 2)
-                p.fullMemoryValues.filterIsInstance<ParameterMemoryValue>().forEach { paramVal ->
+                // First, check if we already assigned the PMV values in another function
+                var memVals = p.fullMemoryValues
+                // If this is not the case, they are still in the state
+                if (memVals.isEmpty()) {
+                    memVals = doubleState.getValues(p, p).map { it.first }.toSet()
+                    // If they are also not yet in the state, we have to calculate them
+                    if (memVals.isEmpty()) {
+                        initializeParameters(lattice, mutableListOf(p), doubleState, 2)
+                        memVals = doubleState.getValues(p, p).map { it.first }.toSet()
+                    }
+                }
+                memVals.filterIsInstance<ParameterMemoryValue>().forEach { paramVal ->
                     doubleState =
                         lattice.push(
                             doubleState,
@@ -954,7 +976,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     )
                     val newValues: MutableSet<FunctionDeclaration.FSEntry> =
                         invoke.parameters
-                            .map { FunctionDeclaration.FSEntry(0, it, 1, "") }
+                            .map { FunctionDeclaration.FSEntry(0, it, 1, "", isDummy = true) }
                             .toMutableSet()
                     invoke.functionSummary[ReturnStatement()] = newValues
                 }

@@ -568,3 +568,27 @@ LAB_0010128c:
   return status;
 }
 
+void rec_inc(int* p) {
+  *p=*p+1;
+  if (*p < 10) {
+    rec_inc(p);
+  }
+} 
+ 
+int recursion() {
+  int i=0;
+  int* p=&i;
+ 
+  printf("%d\n", i);
+  rec_inc(p);
+  printf("%d\n", i);
+}
+
+void recursion2(int param_1,int *param_2) {
+ 
+  while (*param_2 != -1) {
+    recursion2(param_2[3],(int *)param_2[4]);
+  }
+  return;
+}
+

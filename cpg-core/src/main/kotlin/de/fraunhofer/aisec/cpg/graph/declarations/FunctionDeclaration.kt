@@ -127,6 +127,9 @@ open class FunctionDeclaration :
         // We use shortFunctionSummaries to draw "short" DFG-Edges that allow us to follow DFG Paths
         // without going into functions. Not as detailed, but faster
         val properties: EqualLinkedHashSet<Any> = equalLinkedHashSetOf(),
+        // Sometimes, we need a dummy of a functionSummary, for example to avoid recursion. We
+        // indicate here if this is one
+        val isDummy: Boolean = false,
     )
 
     var functionSummary = mutableMapOf<Node, MutableSet<FSEntry>>()
