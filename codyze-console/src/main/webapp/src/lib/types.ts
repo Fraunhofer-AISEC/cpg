@@ -174,15 +174,15 @@ export function getQueryTreeStatus(queryTree: QueryTreeJSON): QueryTreeStatus {
   if (queryTree.confidence === 'RejectedResult') {
     return 'REJECTED';
   }
-  
+
   if (queryTree.confidence === 'UndecidedResult') {
     return 'UNDECIDED';
   }
-  
+
   if (queryTree.confidence === 'AcceptedResult') {
     return queryTree.value === 'true' ? 'FULFILLED' : 'VIOLATED';
   }
-  
+
   return 'UNDECIDED';
 }
 

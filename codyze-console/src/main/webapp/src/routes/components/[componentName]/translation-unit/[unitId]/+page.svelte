@@ -29,15 +29,15 @@
 
   // Tab configuration
   const tabs = $derived([
-    { 
-      id: 'overlayNodes', 
-      label: 'Overlay Nodes', 
-      count: data.overlayNodes?.length || 0 
+    {
+      id: 'overlayNodes',
+      label: 'Overlay Nodes',
+      count: data.overlayNodes?.length || 0
     },
-    { 
-      id: 'astNodes', 
-      label: 'AST Nodes', 
-      count: data.astNodes?.length || 0 
+    {
+      id: 'astNodes',
+      label: 'AST Nodes',
+      count: data.astNodes?.length || 0
     }
   ]);
 
@@ -81,15 +81,9 @@
 <div class="flex-1 overflow-auto">
   <div class="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2">
     <div class="text-sm text-gray-700">{data.translationUnit.name}</div>
-    <Button
-      variant="primary"
-      size="sm"
-      onclick={exportConcepts}
-    >
-      Export Concepts
-    </Button>
+    <Button variant="primary" size="sm" onclick={exportConcepts}>Export Concepts</Button>
   </div>
-  
+
   <div class="relative">
     <div class="font-mono">
       <Highlight language={python} code={data.translationUnit.code} let:highlighted>
@@ -125,12 +119,12 @@
   <div class="bg-white">
     <TabNavigation {tabs} {activeTab} onTabChange={handleTabChange} />
   </div>
-  
+
   <div class="h-full overflow-auto p-4">
-    <NodeTable 
-      title={tableTitle} 
-      {nodes} 
-      bind:highlightedNode 
+    <NodeTable
+      title={tableTitle}
+      {nodes}
+      bind:highlightedNode
       nodeClick={(node) => console.log('Node clicked:', node)}
     />
   </div>

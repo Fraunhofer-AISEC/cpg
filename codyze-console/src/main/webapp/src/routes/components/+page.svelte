@@ -10,19 +10,16 @@
   // Compute empty state description
   const emptyStateDescription = $derived(() => {
     if (data.components === undefined) {
-      return "Data is undefined - check if backend is running";
+      return 'Data is undefined - check if backend is running';
     } else if (Array.isArray(data.components) && data.components.length === 0) {
-      return "Components array is empty - no components in the analysis result";
+      return 'Components array is empty - no components in the analysis result';
     } else {
-      return "Unexpected data structure";
+      return 'Unexpected data structure';
     }
   });
 </script>
 
-<PageHeader 
-  title="Components" 
-  subtitle="Browse project components and source files." 
-/>
+<PageHeader title="Components" subtitle="Browse project components and source files." />
 
 <div class="space-y-6">
   {#if !data.components}

@@ -16,17 +16,17 @@ const errors = writable<Map<string, string>>(new Map());
  */
 export async function loadQueryTrees(queryTreeIds: string[]): Promise<QueryTreeJSON[]> {
   // Filter out already cached ones
-  const uncachedIds = queryTreeIds.filter(id => !queryTreeCache.has(id));
-  
+  const uncachedIds = queryTreeIds.filter((id) => !queryTreeCache.has(id));
+
   if (uncachedIds.length === 0) {
     // All are cached, return from cache
-    return queryTreeIds.map(id => queryTreeCache.get(id)!).filter(Boolean);
+    return queryTreeIds.map((id) => queryTreeCache.get(id)!).filter(Boolean);
   }
 
   // Mark all as loading
-  loadingStates.update(states => {
+  loadingStates.update((states) => {
     const newStates = new Set(states);
-    uncachedIds.forEach(id => newStates.add(id));
+    uncachedIds.forEach((id) => newStates.add(id));
     return newStates;
   });
 
@@ -34,9 +34,9 @@ export async function loadQueryTrees(queryTreeIds: string[]): Promise<QueryTreeJ
     const response = await fetch('/api/querytrees', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(uncachedIds),
+      body: JSON.stringify(uncachedIds)
     });
 
     if (!response.ok) {
@@ -44,40 +44,38 @@ export async function loadQueryTrees(queryTreeIds: string[]): Promise<QueryTreeJ
     }
 
     const queryTrees: QueryTreeJSON[] = await response.json();
-    
+
     // Cache all results
-    queryTrees.forEach(queryTree => {
+    queryTrees.forEach((queryTree) => {
       queryTreeCache.set(queryTree.id, queryTree);
     });
 
     // Clear any previous errors
-    errors.update(errorMap => {
+    errors.update((errorMap) => {
       const newMap = new Map(errorMap);
-      uncachedIds.forEach(id => newMap.delete(id));
+      uncachedIds.forEach((id) => newMap.delete(id));
       return newMap;
     });
 
     // Return all requested QueryTrees (cached + newly loaded)
-    return queryTreeIds.map(id => queryTreeCache.get(id)!).filter(Boolean);
-
+    return queryTreeIds.map((id) => queryTreeCache.get(id)!).filter(Boolean);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
+
     // Store errors for all failed IDs
-    errors.update(errorMap => {
+    errors.update((errorMap) => {
       const newMap = new Map(errorMap);
-      uncachedIds.forEach(id => newMap.set(id, errorMessage));
+      uncachedIds.forEach((id) => newMap.set(id, errorMessage));
       return newMap;
     });
 
     console.error('Failed to load QueryTrees:', error);
     return [];
-
   } finally {
-    // Remove all from loading states  
-    loadingStates.update(states => {
+    // Remove all from loading states
+    loadingStates.update((states) => {
       const newStates = new Set(states);
-      uncachedIds.forEach(id => newStates.delete(id));
+      uncachedIds.forEach((id) => newStates.delete(id));
       return newStates;
     });
   }
@@ -95,7 +93,7 @@ export function getCachedQueryTree(queryTreeId: string): QueryTreeJSON | null {
  */
 export function isQueryTreeLoading(queryTreeId: string): boolean {
   let isLoading = false;
-  loadingStates.subscribe(states => {
+  loadingStates.subscribe((states) => {
     isLoading = states.has(queryTreeId);
   })();
   return isLoading;
@@ -106,7 +104,7 @@ export function isQueryTreeLoading(queryTreeId: string): boolean {
  */
 export function getQueryTreeError(queryTreeId: string): string | null {
   let error: string | null = null;
-  errors.subscribe(errorMap => {
+  errors.subscribe((errorMap) => {
     error = errorMap.get(queryTreeId) || null;
   })();
   return error;

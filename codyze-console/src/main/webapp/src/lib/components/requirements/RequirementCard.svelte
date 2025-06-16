@@ -17,7 +17,7 @@
     },
     VIOLATED: {
       bgColor: 'bg-red-50',
-      textColor: 'text-red-700', 
+      textColor: 'text-red-700',
       badgeColor: 'bg-red-100 text-red-800',
       icon: '✕'
     },
@@ -35,27 +35,31 @@
     }
   };
 
-  const config = $derived(statusConfig[requirement.status as keyof typeof statusConfig] || statusConfig.UNDECIDED);
+  const config = $derived(
+    statusConfig[requirement.status as keyof typeof statusConfig] || statusConfig.UNDECIDED
+  );
 
   function navigateToDetail() {
     window.location.href = `/requirements/${requirement.id}`;
   }
 </script>
 
-<button 
+<button
   type="button"
   onclick={navigateToDetail}
-  class="w-full text-left rounded-lg border border-gray-200 {config.bgColor} p-4 hover:shadow-md transition-shadow cursor-pointer"
+  class="w-full rounded-lg border border-gray-200 text-left {config.bgColor} cursor-pointer p-4 transition-shadow hover:shadow-md"
 >
   <div class="flex items-start justify-between">
     <div class="flex-1">
       <div class="flex items-center gap-2">
-        <span class="flex h-6 w-6 items-center justify-center rounded-full text-sm font-medium {config.badgeColor}">
+        <span
+          class="flex h-6 w-6 items-center justify-center rounded-full text-sm font-medium {config.badgeColor}"
+        >
           {config.icon}
         </span>
         <h3 class="font-medium {config.textColor}">{requirement.name}</h3>
         {#if requirement.queryTree}
-          <span class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+          <span class="rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-700">
             Has Query Tree
           </span>
         {/if}

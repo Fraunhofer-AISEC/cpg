@@ -19,7 +19,7 @@
 
   onMount(() => {
     const total = fulfilled + violated + rejected + undecided;
-    
+
     if (total === 0) return;
 
     const ctx = canvas.getContext('2d');
@@ -29,22 +29,24 @@
       type: 'pie',
       data: {
         labels: ['Fulfilled', 'Violated', 'Rejected', 'Undecided'],
-        datasets: [{
-          data: [fulfilled, violated, rejected, undecided],
-          backgroundColor: [
-            'rgb(34, 197, 94)', // green-500 - matches fulfilled cards
-            'rgb(239, 68, 68)', // red-500 - matches violated cards  
-            'rgb(249, 115, 22)', // orange-500 - matches rejected cards
-            'rgb(234, 179, 8)', // yellow-500 - matches undecided cards
-          ],
-          borderColor: [
-            'rgb(255, 255, 255)', // white borders for clean look
-            'rgb(255, 255, 255)',
-            'rgb(255, 255, 255)', 
-            'rgb(255, 255, 255)',
-          ],
-          borderWidth: 2
-        }]
+        datasets: [
+          {
+            data: [fulfilled, violated, rejected, undecided],
+            backgroundColor: [
+              'rgb(34, 197, 94)', // green-500 - matches fulfilled cards
+              'rgb(239, 68, 68)', // red-500 - matches violated cards
+              'rgb(249, 115, 22)', // orange-500 - matches rejected cards
+              'rgb(234, 179, 8)' // yellow-500 - matches undecided cards
+            ],
+            borderColor: [
+              'rgb(255, 255, 255)', // white borders for clean look
+              'rgb(255, 255, 255)',
+              'rgb(255, 255, 255)',
+              'rgb(255, 255, 255)'
+            ],
+            borderWidth: 2
+          }
+        ]
       },
       options: {
         responsive: true,
@@ -79,7 +81,7 @@
               size: 13
             },
             callbacks: {
-              label: function(context) {
+              label: function (context) {
                 const label = context.label || '';
                 const value = context.parsed;
                 const percentage = ((value / total) * 100).toFixed(1);

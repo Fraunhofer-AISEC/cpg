@@ -26,6 +26,5 @@ export const load: PageLoad = async ({ fetch, params, parent }) => {
     .then(throwError)
     .then((res) => res.json());
 
-
   return { translationUnit, astNodes, overlayNodes, conceptGroups, component };
 };

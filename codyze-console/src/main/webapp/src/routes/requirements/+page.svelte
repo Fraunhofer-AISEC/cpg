@@ -8,39 +8,56 @@
   let { data }: PageProps = $props();
 
   // Calculate overall requirement stats
-  const overallStats = $derived(data.result?.requirementCategories ? {
-    total: data.result.requirementCategories.reduce((acc, cat) => acc + cat.requirements.length, 0),
-    fulfilled: data.result.requirementCategories.reduce((acc, cat) =>
-      acc + cat.requirements.filter(r => r.status === 'FULFILLED').length, 0),
-    violated: data.result.requirementCategories.reduce((acc, cat) =>
-      acc + cat.requirements.filter(r => r.status === 'VIOLATED').length, 0),
-    notEvaluated: data.result.requirementCategories.reduce((acc, cat) =>
-      acc + cat.requirements.filter(r => r.status === 'NOT_EVALUATED').length, 0),
-    categories: data.result.requirementCategories.length
-  } : null);
+  const overallStats = $derived(
+    data.result?.requirementCategories
+      ? {
+          total: data.result.requirementCategories.reduce(
+            (acc, cat) => acc + cat.requirements.length,
+            0
+          ),
+          fulfilled: data.result.requirementCategories.reduce(
+            (acc, cat) => acc + cat.requirements.filter((r) => r.status === 'FULFILLED').length,
+            0
+          ),
+          violated: data.result.requirementCategories.reduce(
+            (acc, cat) => acc + cat.requirements.filter((r) => r.status === 'VIOLATED').length,
+            0
+          ),
+          notEvaluated: data.result.requirementCategories.reduce(
+            (acc, cat) => acc + cat.requirements.filter((r) => r.status === 'NOT_EVALUATED').length,
+            0
+          ),
+          categories: data.result.requirementCategories.length
+        }
+      : null
+  );
 
   // Stats for the summary grid
-  const summaryStats = $derived(overallStats ? [
-    { title: 'Total Requirements', value: overallStats.total },
-    { title: 'Categories', value: overallStats.categories },
-    { 
-      title: 'Fulfilled', 
-      value: overallStats.fulfilled,
-      subtitle: `(${Math.round(overallStats.fulfilled / overallStats.total * 100) || 0}%)`,
-      variant: 'success' as const
-    },
-    { 
-      title: 'Violated', 
-      value: overallStats.violated,
-      subtitle: `(${Math.round(overallStats.violated / overallStats.total * 100) || 0}%)`,
-      variant: 'danger' as const
-    }
-  ] : []);
+  const summaryStats = $derived(
+    overallStats
+      ? [
+          { title: 'Total Requirements', value: overallStats.total },
+          { title: 'Categories', value: overallStats.categories },
+          {
+            title: 'Fulfilled',
+            value: overallStats.fulfilled,
+            subtitle: `(${Math.round((overallStats.fulfilled / overallStats.total) * 100) || 0}%)`,
+            variant: 'success' as const
+          },
+          {
+            title: 'Violated',
+            value: overallStats.violated,
+            subtitle: `(${Math.round((overallStats.violated / overallStats.total) * 100) || 0}%)`,
+            variant: 'danger' as const
+          }
+        ]
+      : []
+  );
 </script>
 
-<PageHeader 
-  title="Requirements Analysis" 
-  subtitle="View and manage project requirements and their fulfillment status." 
+<PageHeader
+  title="Requirements Analysis"
+  subtitle="View and manage project requirements and their fulfillment status."
 />
 
 <div class="space-y-6">

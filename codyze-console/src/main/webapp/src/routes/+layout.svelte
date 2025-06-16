@@ -1,10 +1,10 @@
 <script lang="ts">
-  import "../app.css";
-  import { Navbar, Sidebar } from "$lib/components/navigation";
-  import { onMount } from "svelte";
-  import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
-  import type { AnalysisProjectJSON } from "$lib/types";
+  import '../app.css';
+  import { Navbar, Sidebar } from '$lib/components/navigation';
+  import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
+  import type { AnalysisProjectJSON } from '$lib/types';
 
   let project = $state<AnalysisProjectJSON | null>(null);
   let loading = $state(true);

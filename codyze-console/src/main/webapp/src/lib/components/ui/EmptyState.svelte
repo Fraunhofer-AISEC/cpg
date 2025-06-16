@@ -8,7 +8,14 @@
     customIcon?: string; // For custom SVG content
   }
 
-  let { icon = 'document', title, description, actionText, actionHref, customIcon }: Props = $props();
+  let {
+    icon = 'document',
+    title,
+    description,
+    actionText,
+    actionHref,
+    customIcon
+  }: Props = $props();
 
   const icons = {
     document: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />`,
@@ -19,9 +26,15 @@
   };
 </script>
 
-<div class="text-center py-12">
+<div class="py-12 text-center">
   <div class="mx-auto mb-4 h-16 w-16 rounded-full bg-gray-100 p-3 text-gray-500">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      class="h-full w-full"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
       {#if icon === 'custom' && customIcon}
         {@html customIcon}
       {:else}
@@ -31,15 +44,20 @@
   </div>
   <h3 class="text-lg font-medium text-gray-900">{title}</h3>
   <p class="mt-2 text-sm text-gray-600">{description}</p>
-  
+
   {#if actionText && actionHref}
     <div class="mt-6">
-      <a 
+      <a
         href={actionHref}
-        class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
       >
-        <svg class="-ml-1 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        <svg class="mr-2 -ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 4v16m8-8H4"
+          />
         </svg>
         {actionText}
       </a>

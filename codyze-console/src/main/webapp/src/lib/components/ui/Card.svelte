@@ -8,13 +8,13 @@
     hover?: boolean;
   }
 
-  let { 
-    title, 
-    subtitle, 
-    padding = 'md', 
-    border = true, 
+  let {
+    title,
+    subtitle,
+    padding = 'md',
+    border = true,
     shadow = false,
-    hover = false 
+    hover = false
   }: Props = $props();
 
   const paddingClasses = {
@@ -24,13 +24,15 @@
   };
 </script>
 
-<div class="
+<div
+  class="
   rounded-lg bg-white
   {border ? 'border border-gray-200' : ''}
   {shadow ? 'shadow-sm' : ''}
-  {hover ? 'hover:shadow-md transition-shadow' : ''}
+  {hover ? 'transition-shadow hover:shadow-md' : ''}
   {paddingClasses[padding]}
-">
+"
+>
   {#if title || subtitle}
     <div class="mb-4">
       {#if title}
@@ -41,6 +43,6 @@
       {/if}
     </div>
   {/if}
-  
+
   <slot />
 </div>

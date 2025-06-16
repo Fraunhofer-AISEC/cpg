@@ -36,7 +36,7 @@
       required={true}
       bind:value={sourceDir}
     />
-    
+
     <FormField
       label="Include Directory"
       id="includeDir"
@@ -44,7 +44,7 @@
       helpText="Optional: Path to additional include files"
       bind:value={includeDir}
     />
-    
+
     <FormField
       label="Top Level Directory"
       id="topLevel"
@@ -52,7 +52,7 @@
       helpText="Optional: Top-level directory for the project"
       bind:value={topLevel}
     />
-    
+
     <FormField
       label="Concepts File (.yaml)"
       id="conceptsFile"
@@ -61,13 +61,7 @@
       bind:value={conceptsFile}
     />
 
-    <Button
-      type="submit"
-      disabled={loading}
-      {loading}
-    >
-      Generate CPG
-    </Button>
+    <Button type="submit" disabled={loading} {loading}>Generate CPG</Button>
   </form>
 
   {#if error}

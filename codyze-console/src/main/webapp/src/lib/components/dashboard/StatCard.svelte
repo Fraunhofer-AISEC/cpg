@@ -24,7 +24,7 @@
 </script>
 
 <div class="rounded-md border p-4 {variants[variant]}">
-  <h3 class="text-xs font-medium uppercase text-gray-500">{title}</h3>
+  <h3 class="text-xs font-medium text-gray-500 uppercase">{title}</h3>
   <p class="mt-1 text-lg font-semibold {valueColors[variant]}">
     {value}
     {#if subtitle}

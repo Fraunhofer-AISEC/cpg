@@ -57,7 +57,9 @@
               <p class="text-sm text-gray-600">{category.description}</p>
             </div>
             <div class="ml-3 text-gray-500">
-              <span class="inline-flex items-center rounded bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
+              <span
+                class="inline-flex items-center rounded bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800"
+              >
                 {category.requirements.length} requirements
               </span>
               <span class="ml-2">
@@ -73,7 +75,9 @@
                 <div class="py-3">
                   <div class="flex items-center justify-between">
                     <h5 class="font-medium">{requirement.name}</h5>
-                    <span class={`rounded px-2 py-1 text-xs font-medium ${getStatusColor(requirement.status)}`}>
+                    <span
+                      class={`rounded px-2 py-1 text-xs font-medium ${getStatusColor(requirement.status)}`}
+                    >
                       {requirement.status}
                     </span>
                   </div>

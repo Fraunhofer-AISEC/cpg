@@ -35,32 +35,39 @@
     }
   };
 
-  const config = $derived(statusConfig[requirement.status as keyof typeof statusConfig] || statusConfig.UNDECIDED);
+  const config = $derived(
+    statusConfig[requirement.status as keyof typeof statusConfig] || statusConfig.UNDECIDED
+  );
 </script>
 
-<div class="p-6 border rounded-lg {config.bgColor} border-gray-200">
+<div class="rounded-lg border p-6 {config.bgColor} border-gray-200">
   <div class="flex items-start justify-between">
     <div class="flex-1">
-      <div class="flex items-center space-x-3 mb-2">
+      <div class="mb-2 flex items-center space-x-3">
         <h1 class="text-2xl font-bold {config.textColor}">
           {requirement.name}
         </h1>
-        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {config.badgeColor}">
-          {config.icon} {requirement.status}
+        <span
+          class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {config.badgeColor}"
+        >
+          {config.icon}
+          {requirement.status}
         </span>
       </div>
-      
-      <p class="text-sm text-gray-600 mb-2">
-        <strong>ID:</strong> {requirement.id}
+
+      <p class="mb-2 text-sm text-gray-600">
+        <strong>ID:</strong>
+        {requirement.id}
       </p>
-      
-      <p class="text-sm text-gray-600 mb-4">
-        <strong>Category:</strong> {requirement.categoryId}
+
+      <p class="mb-4 text-sm text-gray-600">
+        <strong>Category:</strong>
+        {requirement.categoryId}
       </p>
-      
+
       {#if requirement.description}
         <div class="prose prose-sm max-w-none">
-          <p class="{config.textColor}">
+          <p class={config.textColor}>
             {requirement.description}
           </p>
         </div>

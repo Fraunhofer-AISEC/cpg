@@ -2,11 +2,11 @@
   import type { PageProps } from './$types';
   import { PageHeader } from '$lib/components/navigation';
   import { Button } from '$lib/components/ui';
-  import { 
-    RequirementStatusCard, 
-    QueryTreeSection, 
-    EvaluationSummaryCard, 
-    RequirementRelatedInfoCard 
+  import {
+    RequirementStatusCard,
+    QueryTreeSection,
+    EvaluationSummaryCard,
+    RequirementRelatedInfoCard
   } from '$lib/components/requirements';
   import { preloadQueryTree } from '$lib/stores/queryTreeStore';
   import { onMount } from 'svelte';
@@ -29,14 +29,9 @@
   <title>Requirement: {data.requirement.name} - CPG Console</title>
 </svelte:head>
 
-<div class="flex items-center justify-between mb-6">
-  <PageHeader 
-    title="Requirement Details"
-    subtitle="Detailed analysis of requirement evaluation"
-  />
-  <Button variant="secondary" onclick={goBack}>
-    ← Back to Requirements
-  </Button>
+<div class="mb-6 flex items-center justify-between">
+  <PageHeader title="Requirement Details" subtitle="Detailed analysis of requirement evaluation" />
+  <Button variant="secondary" onclick={goBack}>← Back to Requirements</Button>
 </div>
 
 <div class="space-y-8">
@@ -47,7 +42,7 @@
   <QueryTreeSection queryTree={data.requirement.queryTree} />
 
   <!-- Additional Info -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
     <!-- Evaluation Summary -->
     <EvaluationSummaryCard requirement={data.requirement} />
 

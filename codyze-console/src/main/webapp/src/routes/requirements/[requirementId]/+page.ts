@@ -6,7 +6,7 @@ export const load: PageLoad = async ({ fetch, params }) => {
   try {
     const response = await fetch(`/api/requirement/${params.requirementId}`).then(throwError);
     const requirement: RequirementJSON = await response.json();
-    
+
     return { requirement };
   } catch (error) {
     console.error('Error loading requirement:', error);

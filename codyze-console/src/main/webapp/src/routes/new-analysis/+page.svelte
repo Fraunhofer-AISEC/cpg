@@ -34,7 +34,6 @@
       // Invalidate all data and redirect to dashboard
       await invalidateAll();
       await goto('/dashboard');
-
     } catch (error) {
       console.error('Error during analysis:', error);
     } finally {
@@ -43,8 +42,8 @@
   }
 </script>
 
-<PageHeader 
-  title="Start New Analysis" 
+<PageHeader
+  title="Start New Analysis"
   subtitle="Configure and run a new code analysis project"
   breadcrumbText="Back to Dashboard"
   breadcrumbHref="/dashboard"

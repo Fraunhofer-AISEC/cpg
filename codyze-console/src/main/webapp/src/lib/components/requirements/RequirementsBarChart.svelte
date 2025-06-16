@@ -19,7 +19,7 @@
 
   onMount(() => {
     const total = fulfilled + violated + rejected + undecided;
-    
+
     if (total === 0) return;
 
     const ctx = canvas.getContext('2d');
@@ -29,25 +29,27 @@
       type: 'bar',
       data: {
         labels: ['Fulfilled', 'Violated', 'Rejected', 'Undecided'],
-        datasets: [{
-          label: 'Requirements',
-          data: [fulfilled, violated, rejected, undecided],
-          backgroundColor: [
-            'rgb(34, 197, 94)', // green-500 - matches fulfilled cards
-            'rgb(239, 68, 68)', // red-500 - matches violated cards
-            'rgb(249, 115, 22)', // orange-500 - matches rejected cards
-            'rgb(234, 179, 8)', // yellow-500 - matches undecided cards
-          ],
-          borderColor: [
-            'rgb(34, 197, 94)', // same as background for clean look
-            'rgb(239, 68, 68)',
-            'rgb(249, 115, 22)',
-            'rgb(234, 179, 8)',
-          ],
-          borderWidth: 0,
-          borderRadius: 6,
-          borderSkipped: false
-        }]
+        datasets: [
+          {
+            label: 'Requirements',
+            data: [fulfilled, violated, rejected, undecided],
+            backgroundColor: [
+              'rgb(34, 197, 94)', // green-500 - matches fulfilled cards
+              'rgb(239, 68, 68)', // red-500 - matches violated cards
+              'rgb(249, 115, 22)', // orange-500 - matches rejected cards
+              'rgb(234, 179, 8)' // yellow-500 - matches undecided cards
+            ],
+            borderColor: [
+              'rgb(34, 197, 94)', // same as background for clean look
+              'rgb(239, 68, 68)',
+              'rgb(249, 115, 22)',
+              'rgb(234, 179, 8)'
+            ],
+            borderWidth: 0,
+            borderRadius: 6,
+            borderSkipped: false
+          }
+        ]
       },
       options: {
         responsive: true,
@@ -108,7 +110,7 @@
               size: 13
             },
             callbacks: {
-              label: function(context) {
+              label: function (context) {
                 const label = context.label || '';
                 const value = context.parsed.y;
                 const percentage = ((value / total) * 100).toFixed(1);

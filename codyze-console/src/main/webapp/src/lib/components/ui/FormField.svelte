@@ -9,7 +9,15 @@
     value: string | undefined;
   }
 
-  let { label, id, type = 'text', placeholder, required = false, helpText, value = $bindable() }: Props = $props();
+  let {
+    label,
+    id,
+    type = 'text',
+    placeholder,
+    required = false,
+    helpText,
+    value = $bindable()
+  }: Props = $props();
 </script>
 
 <div class="mb-4">
