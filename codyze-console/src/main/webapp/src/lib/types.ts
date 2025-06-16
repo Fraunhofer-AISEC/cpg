@@ -93,11 +93,14 @@ export interface CallerInfoJSON {
 }
 
 export interface QueryTreeJSON {
+  id: string;
   value: string;
   confidence: string;
   stringRepresentation: string;
   operator: string;
-  children: QueryTreeJSON[];
+  queryTreeType: string;
+  childrenIds: string[];
+  hasChildren: boolean;
   nodeId?: string;
   callerInfo?: CallerInfoJSON;
 }

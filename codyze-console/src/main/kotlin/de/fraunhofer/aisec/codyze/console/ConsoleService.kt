@@ -61,6 +61,9 @@ class ConsoleService {
     private var newConceptNodes: Set<Concept> = emptySet()
     private var newPersistedConcepts = mutableListOf<PersistedConceptEntry>()
 
+    // Cache for QueryTrees to support lazy loading
+    private var queryTreeCache: Map<String, de.fraunhofer.aisec.cpg.query.QueryTree<*>> = emptyMap()
+
     /**
      * Analyzes the given source directory and returns the analysis result as [AnalysisResultJSON].
      */
@@ -118,9 +121,36 @@ class ConsoleService {
 
         val result = project.analyze()
 
+        // Populate QueryTree cache for lazy loading
+        populateQueryTreeCache(result.requirementsResults)
+
         val json = result.toJSON()
         this@ConsoleService.analysisResult = json
         return json
+    }
+
+    /**
+     * Populates the QueryTree cache with all QueryTrees from the analysis results. This enables
+     * lazy loading of QueryTree children.
+     */
+    private fun populateQueryTreeCache(
+        requirementsResults: Map<String, de.fraunhofer.aisec.cpg.query.QueryTree<Boolean>>?
+    ) {
+        if (requirementsResults == null) {
+            queryTreeCache = emptyMap()
+            return
+        }
+
+        val cache = mutableMapOf<String, de.fraunhofer.aisec.cpg.query.QueryTree<*>>()
+
+        // Recursively collect all QueryTrees
+        fun collectQueryTrees(queryTree: de.fraunhofer.aisec.cpg.query.QueryTree<*>) {
+            cache[queryTree.id.toString()] = queryTree
+            queryTree.children.forEach { collectQueryTrees(it) }
+        }
+
+        requirementsResults.values.forEach { collectQueryTrees(it) }
+        queryTreeCache = cache
     }
 
     /** Returns the translation result of the last analysis as [AnalysisResultJSON]. */
@@ -163,6 +193,22 @@ class ConsoleService {
             ?.requirementCategories
             ?.flatMap { it.requirements }
             ?.find { it.id == requirementId }
+    }
+
+    /** Returns the QueryTree with the given ID as [QueryTreeJSON] for lazy loading. */
+    fun getQueryTree(queryTreeId: String): QueryTreeJSON? {
+        return queryTreeCache[queryTreeId]?.toJSON()
+    }
+
+    /** Returns multiple QueryTrees by their IDs as a list of [QueryTreeJSON] for lazy loading. */
+    fun getQueryTrees(queryTreeIds: List<String>): List<QueryTreeJSON> {
+        val results =
+            queryTreeIds.mapNotNull { id ->
+                val result = queryTreeCache[id]?.toJSON()
+                result
+            }
+
+        return results
     }
 
     /**
@@ -237,6 +283,9 @@ class ConsoleService {
             val service = ConsoleService()
             service.analysisResult = result.toJSON()
             service.lastProject = result.project
+            // Populate QueryTree cache for lazy loading
+            service.populateQueryTreeCache(result.requirementsResults)
+
             return service
         }
     }

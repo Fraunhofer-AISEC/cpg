@@ -93,42 +93,8 @@ class NodesTest {
         assertEquals("AcceptedResult", json.confidence)
         assertEquals("test condition == true", json.stringRepresentation)
         assertEquals("EVALUATE", json.operator)
-        assertEquals(0, json.children.size)
+        assertEquals(0, json.childrenIds.size)
         assertNull(json.nodeId)
-    }
-
-    @Test
-    fun testQueryTreeWithChildrenToJSON() {
-        // Create a child QueryTree
-        val childTree =
-            QueryTree(
-                value = false,
-                stringRepresentation = "child condition",
-                operator = GenericQueryOperators.EVALUATE,
-            )
-
-        // Create parent QueryTree with child
-        val parentTree =
-            QueryTree(
-                value = true,
-                children = listOf(childTree),
-                stringRepresentation = "parent condition",
-                operator = GenericQueryOperators.ALL,
-            )
-
-        // Convert to JSON
-        val json = parentTree.toJSON()
-
-        // Verify parent
-        assertEquals("true", json.value)
-        assertEquals("ALL", json.operator)
-        assertEquals(1, json.children.size)
-
-        // Verify child
-        val childJson = json.children[0]
-        assertEquals("false", childJson.value)
-        assertEquals("child condition", childJson.stringRepresentation)
-        assertEquals("EVALUATE", childJson.operator)
     }
 
     @Test
@@ -158,14 +124,14 @@ class NodesTest {
         assertEquals("AcceptedResult", json.confidence)
         assertEquals("test condition == true", json.stringRepresentation)
         assertEquals("EVALUATE", json.operator)
-        assertEquals(0, json.children.size)
+        assertEquals(0, json.childrenIds.size)
         assertNull(json.nodeId)
 
         // Verify caller info
         assertNotNull(json.callerInfo)
-        assertEquals("com.example.TestClass", json.callerInfo!!.className)
-        assertEquals("testMethod", json.callerInfo!!.methodName)
-        assertEquals("TestClass.kt", json.callerInfo!!.fileName)
-        assertEquals(42, json.callerInfo!!.lineNumber)
+        assertEquals("com.example.TestClass", json.callerInfo.className)
+        assertEquals("testMethod", json.callerInfo.methodName)
+        assertEquals("TestClass.kt", json.callerInfo.fileName)
+        assertEquals(42, json.callerInfo.lineNumber)
     }
 }

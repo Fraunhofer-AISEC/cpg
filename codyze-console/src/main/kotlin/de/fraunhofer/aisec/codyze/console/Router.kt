@@ -214,11 +214,36 @@ fun Routing.apiRoutes(service: ConsoleService) {
             }
         }
 
-        /**
-         * The endpoint to export a YAML listing of all manually added [Concept]s (via `POST
-         * /concept`).
-         */
-        get("/export-concepts") { call.respond(service.exportPersistedConcepts()) }
+        // The endpoint to get a single QueryTree by ID
+        get("/querytree/{queryTreeId}") {
+            val queryTreeId =
+                call.parameters["queryTreeId"]
+                    ?: return@get call.respond(
+                        HttpStatusCode.BadRequest,
+                        mapOf("error" to "Missing QueryTree ID"),
+                    )
+
+            val queryTree = service.getQueryTree(queryTreeId)
+            if (queryTree != null) {
+                call.respond(queryTree)
+            } else {
+                call.respond(HttpStatusCode.NotFound, mapOf("error" to "QueryTree not found"))
+            }
+        }
+
+        // The endpoint to get multiple QueryTrees by IDs (batch fetch)
+        post("/querytrees") {
+            try {
+                val request = call.receive<List<String>>()
+                val queryTrees = service.getQueryTrees(request)
+                call.respond(queryTrees)
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    mapOf("error" to "Invalid request format: ${e.message}"),
+                )
+            }
+        }
     }
 }
 

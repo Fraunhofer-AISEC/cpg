@@ -3,8 +3,17 @@
   import PageHeader from '$lib/components/PageHeader.svelte';
   import QueryTreeExplorer from '$lib/components/QueryTreeExplorer.svelte';
   import Button from '$lib/components/Button.svelte';
+  import { preloadQueryTree } from '$lib/stores/queryTreeStore';
+  import { onMount } from 'svelte';
 
   let { data }: PageProps = $props();
+
+  // Preload the root QueryTree into the cache when the page loads
+  onMount(() => {
+    if (data.requirement.queryTree) {
+      preloadQueryTree(data.requirement.queryTree);
+    }
+  });
 
   // Status styling - using the same logic as QueryTree status
   const statusConfig = {
@@ -111,6 +120,9 @@
           <p class="mt-1">
             <span class="font-medium">📍 Blue sections:</span> Show where in the code each query was executed from
           </p>
+          <p class="mt-1">
+            <span class="font-medium">🔷 Blue badges:</span> Show the QueryTree type - BinaryOperationResult (operations like AND, OR), UnaryOperationResult (operations like NOT), or QueryTree (single evaluations)
+          </p>
         </div>
         
         <QueryTreeExplorer queryTree={data.requirement.queryTree} />
@@ -161,7 +173,7 @@
           <div class="flex justify-between">
             <dt class="text-sm font-medium text-gray-500">Tree Depth:</dt>
             <dd class="text-sm">
-              {data.requirement.queryTree.children && data.requirement.queryTree.children.length > 0 ? 'Has sub-evaluations' : 'Leaf evaluation'}
+              {data.requirement.queryTree.childrenIds && data.requirement.queryTree.childrenIds.length > 0 ? 'Has sub-evaluations' : 'Leaf evaluation'}
             </dd>
           </div>
         {/if}

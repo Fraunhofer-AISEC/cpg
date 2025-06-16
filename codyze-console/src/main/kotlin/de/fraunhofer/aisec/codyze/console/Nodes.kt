@@ -37,14 +37,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
-import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.ConceptEntry
-import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.DFGEntry
-import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.LocationEntry
-import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
-import de.fraunhofer.aisec.cpg.query.AcceptedResult
-import de.fraunhofer.aisec.cpg.query.QueryTree
-import de.fraunhofer.aisec.cpg.query.RejectedResult
-import de.fraunhofer.aisec.cpg.query.UndecidedResult
+import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.*
+import de.fraunhofer.aisec.cpg.query.*
 import io.github.detekt.sarif4k.ArtifactLocation
 import io.github.detekt.sarif4k.Result
 import java.net.URI
@@ -209,14 +203,18 @@ data class CallerInfoJSON(
     val lineNumber: Int,
 )
 
-/** JSON data class for a QueryTree result. */
+/** JSON data class for a QueryTree result with lazy loading support. */
 @Serializable
 data class QueryTreeJSON(
+    val id: String, // Unique identifier for this QueryTree
     val value: String, // Serialized as string to handle any type
     val confidence: String, // AcceptanceStatus as string
     val stringRepresentation: String,
     val operator: String,
-    val children: List<QueryTreeJSON> = emptyList(),
+    val queryTreeType:
+        String, // Type of QueryTree (QueryTree, BinaryOperationResult, UnaryOperationResult)
+    val childrenIds: List<String> = emptyList(), // IDs of child QueryTrees for lazy loading
+    val hasChildren: Boolean = false, // Quick check for UI expansion
     val nodeId: String? = null, // UUID of associated node, if any
     val callerInfo: CallerInfoJSON? = null, // Information about where the query was called from
 )
@@ -452,14 +450,26 @@ fun RequirementCategoryBuilder.toJSON(
     )
 }
 
-/** Converts a [QueryTree] into its JSON representation recursively. */
+/** Converts a [QueryTree] into its JSON representation with lazy loading support. */
 fun <T> QueryTree<T>.toJSON(): QueryTreeJSON {
+    // Determine the QueryTree type based on the class
+    val queryTreeType =
+        when (this) {
+            is BinaryOperationResult<*, *> -> "BinaryOperationResult"
+            is UnaryOperationResult<*> -> "UnaryOperationResult"
+            is SinglePathResult -> "SinglePathResult"
+            else -> "QueryTree"
+        }
+
     return QueryTreeJSON(
+        id = this.id.toString(),
         value = this.value.toString(),
         confidence = this.confidence.toString(),
         stringRepresentation = this.stringRepresentation,
         operator = this.operator.toString(),
-        children = this.children.map { it.toJSON() },
+        queryTreeType = queryTreeType,
+        childrenIds = this.children.map { it.id.toString() },
+        hasChildren = this.children.isNotEmpty(),
         nodeId = this.node?.id?.toString(),
         callerInfo =
             this.callerInfo?.let {

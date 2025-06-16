@@ -2,6 +2,7 @@
   import NewAnalysis from '$lib/components/NewAnalysis.svelte';
   import PageHeader from '$lib/components/PageHeader.svelte';
   import { goto, invalidateAll } from '$app/navigation';
+  import { clearQueryTreeCache } from '$lib/stores/queryTreeStore';
 
   let loading = $state(false);
 
@@ -13,6 +14,9 @@
   ) {
     loading = true;
     try {
+      // Clear QueryTree cache before starting new analysis
+      clearQueryTreeCache();
+
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: {
