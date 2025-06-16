@@ -21,8 +21,8 @@
             (acc, cat) => acc + cat.requirements.filter((r) => r.status === 'FULFILLED').length,
             0
           ),
-          violated: data.result.requirementCategories.reduce(
-            (acc, cat) => acc + cat.requirements.filter((r) => r.status === 'VIOLATED').length,
+          notFulfilled: data.result.requirementCategories.reduce(
+            (acc, cat) => acc + cat.requirements.filter((r) => r.status === 'NOT_FULFILLED').length,
             0
           ),
           rejected: data.result.requirementCategories.reduce(
@@ -42,7 +42,7 @@
       : {
           total: 0,
           fulfilled: 0,
-          violated: 0,
+          notFulfilled: 0,
           rejected: 0,
           undecided: 0,
           notYetEvaluated: 0
@@ -120,7 +120,7 @@
       >
         <RequirementsChart
           fulfilled={fulfillmentStats.fulfilled}
-          violated={fulfillmentStats.violated}
+          notFulfilled={fulfillmentStats.notFulfilled}
           rejected={fulfillmentStats.rejected}
           undecided={fulfillmentStats.undecided}
           notYetEvaluated={fulfillmentStats.notYetEvaluated}

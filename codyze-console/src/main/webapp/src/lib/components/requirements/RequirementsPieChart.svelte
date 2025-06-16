@@ -4,13 +4,13 @@
 
   interface Props {
     fulfilled: number;
-    violated: number;
+    notFulfilled: number;
     rejected: number;
     undecided: number;
     notYetEvaluated: number;
   }
 
-  let { fulfilled, violated, rejected, undecided, notYetEvaluated }: Props = $props();
+  let { fulfilled, notFulfilled, rejected, undecided, notYetEvaluated }: Props = $props();
 
   let canvas: HTMLCanvasElement;
   let chart: Chart | null = null;
@@ -20,7 +20,7 @@
 
   // Recreate chart when data structure changes to ensure colors are correct
   $effect(() => {
-    const total = fulfilled + violated + rejected + undecided + notYetEvaluated;
+    const total = fulfilled + notFulfilled + rejected + undecided + notYetEvaluated;
 
     // Destroy existing chart
     if (chart) {
@@ -36,13 +36,13 @@
     chart = new Chart(ctx, {
       type: 'pie',
       data: {
-        labels: ['Fulfilled', 'Violated', 'Rejected', 'Undecided', 'Not Yet Evaluated'],
+        labels: ['Fulfilled', 'Not Fulfilled', 'Rejected', 'Undecided', 'Not Yet Evaluated'],
         datasets: [
           {
-            data: [fulfilled, violated, rejected, undecided, notYetEvaluated],
+            data: [fulfilled, notFulfilled, rejected, undecided, notYetEvaluated],
             backgroundColor: [
               'rgb(34, 197, 94)', // green-500 - matches fulfilled cards
-              'rgb(239, 68, 68)', // red-500 - matches violated cards
+              'rgb(239, 68, 68)', // red-500 - matches not fulfilled cards
               'rgb(249, 115, 22)', // orange-500 - matches rejected cards
               'rgb(234, 179, 8)', // yellow-500 - matches undecided cards
               'rgb(107, 114, 128)' // gray-500 - matches not yet evaluated cards
@@ -88,83 +88,6 @@
   });
 
   onMount(() => {
-    const total = fulfilled + violated + rejected + undecided + notYetEvaluated;
-
-    if (total === 0) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    chart = new Chart(ctx, {
-      type: 'pie',
-      data: {
-        labels: ['Fulfilled', 'Violated', 'Rejected', 'Undecided', 'Not Yet Evaluated'],
-        datasets: [
-          {
-            data: [fulfilled, violated, rejected, undecided, notYetEvaluated],
-            backgroundColor: [
-              'rgb(34, 197, 94)', // green-500 - matches fulfilled cards
-              'rgb(239, 68, 68)', // red-500 - matches violated cards
-              'rgb(249, 115, 22)', // orange-500 - matches rejected cards
-              'rgb(234, 179, 8)', // yellow-500 - matches undecided cards
-              'rgb(107, 114, 128)' // gray-500 - matches not yet evaluated cards
-            ],
-            borderColor: [
-              'rgb(255, 255, 255)', // white borders for clean look
-              'rgb(255, 255, 255)',
-              'rgb(255, 255, 255)',
-              'rgb(255, 255, 255)',
-              'rgb(255, 255, 255)'
-            ],
-            borderWidth: 2
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: {
-              usePointStyle: true,
-              padding: 20,
-              font: {
-                size: 13,
-                family: 'Inter, ui-sans-serif, system-ui, sans-serif'
-              },
-              color: 'rgb(55, 65, 81)' // gray-700 for text
-            }
-          },
-          tooltip: {
-            backgroundColor: 'rgb(255, 255, 255)',
-            titleColor: 'rgb(17, 24, 39)',
-            bodyColor: 'rgb(55, 65, 81)',
-            borderColor: 'rgb(229, 231, 235)',
-            borderWidth: 1,
-            cornerRadius: 8,
-            titleFont: {
-              family: 'Inter, ui-sans-serif, system-ui, sans-serif',
-              size: 14,
-              weight: 600
-            },
-            bodyFont: {
-              family: 'Inter, ui-sans-serif, system-ui, sans-serif',
-              size: 13
-            },
-            callbacks: {
-              label: function (context) {
-                const label = context.label || '';
-                const value = context.parsed;
-                const percentage = ((value / total) * 100).toFixed(1);
-                return `${label}: ${value} (${percentage}%)`;
-              }
-            }
-          }
-        }
-      }
-    });
-
     return () => {
       if (chart) {
         chart.destroy();

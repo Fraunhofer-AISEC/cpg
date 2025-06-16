@@ -14,7 +14,7 @@
   const stats = $derived({
     total: category.requirements.length,
     fulfilled: category.requirements.filter((r) => r.status === 'FULFILLED').length,
-    violated: category.requirements.filter((r) => r.status === 'VIOLATED').length,
+    notFulfilled: category.requirements.filter((r) => r.status === 'NOT_FULFILLED').length,
     rejected: category.requirements.filter((r) => r.status === 'REJECTED').length,
     undecided: category.requirements.filter((r) => r.status === 'UNDECIDED').length,
     notYetEvaluated: category.requirements.filter((r) => r.status === 'NOT_YET_EVALUATED').length
@@ -46,7 +46,7 @@
       <!-- Quick stats -->
       <div class="mt-3 flex gap-4 text-xs">
         <span class="text-green-600">✓ {stats.fulfilled} fulfilled</span>
-        <span class="text-red-600">✕ {stats.violated} violated</span>
+        <span class="text-red-600">✕ {stats.notFulfilled} not fulfilled</span>
         <span class="text-orange-600">⚠ {stats.rejected} rejected</span>
         <span class="text-yellow-600">? {stats.undecided} undecided</span>
         <span class="text-blue-600">⏳ {stats.notYetEvaluated} not yet evaluated</span>

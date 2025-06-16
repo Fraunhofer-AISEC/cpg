@@ -8,12 +8,12 @@
 
   let { categories, maxRows = 5 }: Props = $props();
 
-  // Get all violated requirements, limited by maxRows
-  const violatedRequirements = $derived(
+  // Get all not fulfilled requirements, limited by maxRows
+  const notFulfilledRequirements = $derived(
     categories
       .flatMap((cat) =>
         cat.requirements
-          .filter((r) => r.status === 'VIOLATED')
+          .filter((r) => r.status === 'NOT_FULFILLED')
           .map((req) => ({ ...req, categoryName: cat.name }))
       )
       .slice(0, maxRows)
@@ -45,7 +45,7 @@
       </tr>
     </thead>
     <tbody class="divide-y divide-gray-200 bg-white">
-      {#each violatedRequirements as req}
+      {#each notFulfilledRequirements as req}
         <tr>
           <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">{req.name}</td>
           <td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500">{req.categoryName}</td>
@@ -58,7 +58,7 @@
           </td>
         </tr>
       {/each}
-      {#if violatedRequirements.length === 0}
+      {#if notFulfilledRequirements.length === 0}
         <tr>
           <td colspan="3" class="px-6 py-4 text-center text-sm text-gray-500">
             No violations found

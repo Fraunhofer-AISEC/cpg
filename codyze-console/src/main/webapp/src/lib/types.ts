@@ -114,7 +114,7 @@ export interface ConstructorInfo {
 // QueryTree status determination and styling
 export type QueryTreeStatus =
   | 'FULFILLED'
-  | 'VIOLATED'
+  | 'NOT_FULFILLED'
   | 'REJECTED'
   | 'UNDECIDED'
   | 'NOT_YET_EVALUATED'
@@ -136,7 +136,7 @@ export const queryTreeStatusConfigs: Record<QueryTreeStatus, QueryTreeStatusConf
     borderColor: 'border-green-200',
     icon: '✓'
   },
-  VIOLATED: {
+  NOT_FULFILLED: {
     bgColor: 'bg-red-50',
     textColor: 'text-red-700',
     badgeColor: 'bg-red-100 text-red-800',
@@ -193,7 +193,7 @@ export function getQueryTreeStatus(queryTree: QueryTreeJSON): QueryTreeStatus {
   }
 
   if (queryTree.confidence === 'AcceptedResult') {
-    return queryTree.value === 'true' ? 'FULFILLED' : 'VIOLATED';
+    return queryTree.value === 'true' ? 'FULFILLED' : 'NOT_FULFILLED';
   }
 
   return 'UNDECIDED';

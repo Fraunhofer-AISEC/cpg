@@ -1,5 +1,5 @@
 <script lang="ts">
-  type Status = 'FULFILLED' | 'VIOLATED' | 'REJECTED' | 'UNDECIDED' | 'NOT_YET_EVALUATED';
+  type Status = 'FULFILLED' | 'NOT_FULFILLED' | 'REJECTED' | 'UNDECIDED' | 'NOT_YET_EVALUATED';
 
   interface Props {
     status: Status;
@@ -15,7 +15,7 @@
       badgeColor: 'bg-green-100 text-green-800',
       icon: '✓'
     },
-    VIOLATED: {
+    NOT_FULFILLED: {
       badgeColor: 'bg-red-100 text-red-800',
       icon: '✕'
     },

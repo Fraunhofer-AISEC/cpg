@@ -19,8 +19,8 @@
             (acc, cat) => acc + cat.requirements.filter((r) => r.status === 'FULFILLED').length,
             0
           ),
-          violated: data.result.requirementCategories.reduce(
-            (acc, cat) => acc + cat.requirements.filter((r) => r.status === 'VIOLATED').length,
+          notFulfilled: data.result.requirementCategories.reduce(
+            (acc, cat) => acc + cat.requirements.filter((r) => r.status === 'NOT_FULFILLED').length,
             0
           ),
           rejected: data.result.requirementCategories.reduce(
@@ -54,9 +54,9 @@
             variant: 'success' as const
           },
           {
-            title: 'Violated',
-            value: overallStats.violated,
-            subtitle: `(${Math.round((overallStats.violated / overallStats.total) * 100) || 0}%)`,
+            title: 'Not Fulfilled',
+            value: overallStats.notFulfilled,
+            subtitle: `(${Math.round((overallStats.notFulfilled / overallStats.total) * 100) || 0}%)`,
             variant: 'danger' as const
           }
         ]

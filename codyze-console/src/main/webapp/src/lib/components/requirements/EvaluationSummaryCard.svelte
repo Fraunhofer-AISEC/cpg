@@ -13,7 +13,7 @@
       textColor: 'text-green-700',
       icon: '✓'
     },
-    VIOLATED: {
+    NOT_FULFILLED: {
       textColor: 'text-red-700',
       icon: '✕'
     },

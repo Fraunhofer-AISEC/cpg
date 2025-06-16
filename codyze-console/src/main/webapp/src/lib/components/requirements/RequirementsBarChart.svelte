@@ -4,13 +4,13 @@
 
   interface Props {
     fulfilled: number;
-    violated: number;
+    notFulfilled: number;
     rejected: number;
     undecided: number;
     notYetEvaluated: number;
   }
 
-  let { fulfilled, violated, rejected, undecided, notYetEvaluated }: Props = $props();
+  let { fulfilled, notFulfilled, rejected, undecided, notYetEvaluated }: Props = $props();
 
   let canvas: HTMLCanvasElement;
   let chart: Chart | null = null;
@@ -20,7 +20,7 @@
 
   // Recreate chart when data changes to ensure colors are correct
   $effect(() => {
-    const total = fulfilled + violated + rejected + undecided + notYetEvaluated;
+    const total = fulfilled + notFulfilled + rejected + undecided + notYetEvaluated;
 
     // Destroy existing chart
     if (chart) {
@@ -36,14 +36,14 @@
     chart = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: ['Fulfilled', 'Violated', 'Rejected', 'Undecided', 'Not Yet Evaluated'],
+        labels: ['Fulfilled', 'Not Fulfilled', 'Rejected', 'Undecided', 'Not Yet Evaluated'],
         datasets: [
           {
             label: 'Requirements',
-            data: [fulfilled, violated, rejected, undecided, notYetEvaluated],
+            data: [fulfilled, notFulfilled, rejected, undecided, notYetEvaluated],
             backgroundColor: [
               'rgb(34, 197, 94)', // green-500 - matches fulfilled cards
-              'rgb(239, 68, 68)', // red-500 - matches violated cards
+              'rgb(239, 68, 68)', // red-500 - matches not fulfilled cards
               'rgb(249, 115, 22)', // orange-500 - matches rejected cards
               'rgb(234, 179, 8)', // yellow-500 - matches undecided cards
               'rgb(107, 114, 128)' // gray-500 - matches not yet evaluated cards

@@ -504,7 +504,7 @@ fun RequirementBuilder.toJSON(
                     queryTree.confidence is RejectedResult -> "REJECTED"
                     queryTree.confidence is UndecidedResult -> "UNDECIDED"
                     queryTree.value && queryTree.confidence is AcceptedResult -> "FULFILLED"
-                    !queryTree.value && queryTree.confidence is AcceptedResult -> "VIOLATED"
+                    !queryTree.value && queryTree.confidence is AcceptedResult -> "NOT_FULFILLED"
                     else -> "UNDECIDED"
                 }
             }

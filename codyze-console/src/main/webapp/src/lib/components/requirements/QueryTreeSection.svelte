@@ -21,7 +21,7 @@
         </p>
         <p class="mt-1">
           <span class="font-medium">✓ Green:</span> Fulfilled (true and accepted),
-          <span class="font-medium">✕ Red:</span> Violated (false and accepted),
+          <span class="font-medium">✕ Red:</span> Not fulfilled (false and accepted),
           <span class="font-medium">⚠ Orange:</span> Rejected results,
           <span class="font-medium">? Yellow:</span> Undecided results,
           <span class="font-medium">• Gray:</span> Non-boolean values

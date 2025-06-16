@@ -15,7 +15,7 @@
       badgeColor: 'bg-green-100 text-green-800',
       icon: '✓'
     },
-    VIOLATED: {
+    NOT_FULFILLED: {
       bgColor: 'bg-red-50',
       textColor: 'text-red-700',
       badgeColor: 'bg-red-100 text-red-800',

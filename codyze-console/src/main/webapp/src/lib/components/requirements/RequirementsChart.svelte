@@ -4,17 +4,17 @@
 
   interface Props {
     fulfilled: number;
-    violated: number;
+    notFulfilled: number;
     rejected: number;
     undecided: number;
     notYetEvaluated: number;
   }
 
-  let { fulfilled, violated, rejected, undecided, notYetEvaluated }: Props = $props();
+  let { fulfilled, notFulfilled, rejected, undecided, notYetEvaluated }: Props = $props();
 
   let chartType = $state<'pie' | 'bar'>('pie');
 
-  const total = $derived(fulfilled + violated + rejected + undecided + notYetEvaluated);
+  const total = $derived(fulfilled + notFulfilled + rejected + undecided + notYetEvaluated);
 </script>
 
 <div class="space-y-4">
@@ -25,9 +25,9 @@
       <div class="space-y-4 lg:col-span-2">
         <div class="rounded-lg border border-gray-200 bg-white p-6">
           {#if chartType === 'pie'}
-            <RequirementsPieChart {fulfilled} {violated} {rejected} {undecided} {notYetEvaluated} />
+            <RequirementsPieChart {fulfilled} {notFulfilled} {rejected} {undecided} {notYetEvaluated} />
           {:else}
-            <RequirementsBarChart {fulfilled} {violated} {rejected} {undecided} {notYetEvaluated} />
+            <RequirementsBarChart {fulfilled} {notFulfilled} {rejected} {undecided} {notYetEvaluated} />
           {/if}
         </div>
 
@@ -67,9 +67,9 @@
             <div class="text-xs text-green-500">{Math.round((fulfilled / total) * 100) || 0}%</div>
           </div>
           <div class="rounded-lg border border-red-200 bg-red-50 p-3 text-center lg:p-4">
-            <div class="text-2xl font-bold text-red-700 lg:text-3xl">{violated}</div>
-            <div class="text-sm font-medium text-red-600">Violated</div>
-            <div class="text-xs text-red-500">{Math.round((violated / total) * 100) || 0}%</div>
+            <div class="text-2xl font-bold text-red-700 lg:text-3xl">{notFulfilled}</div>
+            <div class="text-sm font-medium text-red-600">Not Fulfilled</div>
+            <div class="text-xs text-red-500">{Math.round((notFulfilled / total) * 100) || 0}%</div>
           </div>
           <div class="rounded-lg border border-orange-200 bg-orange-50 p-3 text-center lg:p-4">
             <div class="text-2xl font-bold text-orange-700 lg:text-3xl">{rejected}</div>
