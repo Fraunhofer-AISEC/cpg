@@ -48,6 +48,7 @@
   let loadingChildren = $state(false);
   let loadError = $state<string | null>(null);
   let childrenLoaded = $state(false); // Track if children have been loaded
+  let showCallerDetails = $state(false); // Track if caller details should be shown
 
   // Toast notification state
   let showToast = $state(false);
@@ -215,18 +216,24 @@
               🔗 Copy Link
             </button>
           {/if}
-          {#if queryTree.nodeId}
-            <span class="font-mono text-xs text-gray-500">
-              Node: {queryTree.nodeId.slice(0, 8)}...
-            </span>
-          {/if}
           {#if queryTree.callerInfo}
-            <span class="font-mono text-xs text-blue-600">
-              📍 {getShortCallerInfo(
-                queryTree.callerInfo.className,
-                queryTree.callerInfo.methodName
-              )}
-            </span>
+            <button
+              onclick={() => { showCallerDetails = !showCallerDetails; }}
+              class="font-mono text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+              title="Click to {showCallerDetails ? 'hide' : 'show'} file location"
+            >
+              {#if showCallerDetails}
+                {getShortCallerInfo(
+                  queryTree.callerInfo.className,
+                  queryTree.callerInfo.methodName
+                )} in {queryTree.callerInfo.fileName}:{queryTree.callerInfo.lineNumber}
+              {:else}
+                {getShortCallerInfo(
+                  queryTree.callerInfo.className,
+                  queryTree.callerInfo.methodName
+                )}
+              {/if}
+            </button>
           {/if}
         </div>
       </div>
@@ -240,14 +247,46 @@
         </div>
       {/if}
 
-      <!-- Caller information -->
-      {#if queryTree.callerInfo}
-        <div class="bg-opacity-60 mt-2 rounded border-l-2 border-blue-300 bg-blue-50 p-2 text-xs">
-          <div class="flex items-center space-x-1 text-blue-700">
-            <span class="font-medium">📍 Called from:</span>
-            <span class="font-mono">
-              {queryTree.callerInfo.fileName}:{queryTree.callerInfo.lineNumber}
-            </span>
+      <!-- Node (if present) -->
+      {#if queryTree.node}
+        <div class="bg-opacity-60 mt-2 rounded border-l-2 border-purple-300 bg-purple-50 p-2 text-xs">
+          <div class="mb-2 font-medium text-purple-700">🎯 Associated Node:</div>
+          <div class="rounded bg-white bg-opacity-50 p-2">
+            <div class="flex items-center justify-between">
+              <span class="font-mono text-xs text-gray-600">{queryTree.node.type}</span>
+              <div class="flex items-center space-x-1">
+                <span class="text-xs">📍</span>
+                {#if getNodeLocation(queryTree.node, baseUrl, queryTree.id)}
+                  <a 
+                    href={getNodeLocation(queryTree.node, baseUrl, queryTree.id)} 
+                    class="font-mono text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                    title="Click to view in source code"
+                  >
+                    {#if queryTree.node.fileName}
+                      {queryTree.node.fileName}:{queryTree.node.startLine}:{queryTree.node.startColumn}
+                    {:else}
+                      {queryTree.node.startLine}:{queryTree.node.startColumn}
+                    {/if}
+                  </a>
+                {:else}
+                  <span class="font-mono text-xs text-gray-500">
+                    {#if queryTree.node.fileName}
+                      {queryTree.node.fileName}:{queryTree.node.startLine}:{queryTree.node.startColumn}
+                    {:else}
+                      {queryTree.node.startLine}:{queryTree.node.startColumn}
+                    {/if}
+                  </span>
+                {/if}
+              </div>
+            </div>
+            <div class="mt-1 font-mono text-xs">
+              <span class="font-medium">{queryTree.node.name}</span>
+            </div>
+            {#if queryTree.node.code}
+              <div class="mt-1 rounded bg-gray-100 px-1 py-0.5 font-mono text-xs text-gray-700">
+                {queryTree.node.code.trim()}
+              </div>
+            {/if}
           </div>
         </div>
       {/if}

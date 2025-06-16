@@ -106,6 +106,7 @@ export interface QueryTreeJSON {
   childrenIds: string[];
   hasChildren: boolean;
   nodeId?: string;
+  node?: NodeJSON;
   callerInfo?: CallerInfoJSON;
 }
 
