@@ -83,7 +83,7 @@ open class QueryTree<T>(
      */
     var suppressed: Boolean = false,
     val operator: QueryTreeOperators,
-    val collectCallerInfo: Boolean = false,
+    val collectCallerInfo: Boolean = true,
 ) : Comparable<QueryTree<T>>, HasAssumptions {
     /**
      * Determines if the [QueryTree.value] is acceptable after evaluating the [assumptions] which
@@ -131,11 +131,12 @@ open class QueryTree<T>(
 
     init {
         id = computeId()
-        checkForSuppression()
 
         if (collectCallerInfo) {
             callerInfo = getQueryTreeCaller()
         }
+
+        checkForSuppression()
     }
 
     /**
