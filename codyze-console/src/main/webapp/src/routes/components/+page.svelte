@@ -19,12 +19,12 @@
   });
 </script>
 
-<div class="h-full">
-  <PageHeader 
-    title="Components" 
-    subtitle="Browse project components and source files." 
-  />
+<PageHeader 
+  title="Components" 
+  subtitle="Browse project components and source files." 
+/>
 
+<div class="space-y-6">
   {#if !data.components}
     <LoadingSpinner message="Loading components..." />
   {:else if Array.isArray(data.components) && data.components.length > 0}

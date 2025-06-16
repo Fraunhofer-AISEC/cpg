@@ -38,12 +38,12 @@
   ] : []);
 </script>
 
-<div>
-  <PageHeader 
-    title="Requirements Analysis" 
-    subtitle="View and manage project requirements and their fulfillment status." 
-  />
+<PageHeader 
+  title="Requirements Analysis" 
+  subtitle="View and manage project requirements and their fulfillment status." 
+/>
 
+<div class="space-y-6">
   {#if !data.result}
     <LoadingSpinner message="Loading requirements..." />
   {:else if data.result.requirementCategories && data.result.requirementCategories.length > 0}

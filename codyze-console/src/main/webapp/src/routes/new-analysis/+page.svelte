@@ -43,15 +43,15 @@
   }
 </script>
 
-<div class="mx-auto max-w-4xl">
-  <PageHeader 
-    title="Start New Analysis" 
-    subtitle="Configure and run a new code analysis project"
-    breadcrumbText="Back to Dashboard"
-    breadcrumbHref="/dashboard"
-  />
+<PageHeader 
+  title="Start New Analysis" 
+  subtitle="Configure and run a new code analysis project"
+  breadcrumbText="Back to Dashboard"
+  breadcrumbHref="/dashboard"
+/>
 
-  <div class="rounded-lg border border-gray-200 bg-white p-6">
+<div class="space-y-6">
+  <div class="mx-auto max-w-4xl rounded-lg border border-gray-200 bg-white p-6">
     <NewAnalysis submit={handleSubmit} {loading} />
   </div>
 </div>

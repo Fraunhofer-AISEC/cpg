@@ -3,7 +3,7 @@
   import QueryTreeExplorer from '../analysis/QueryTreeExplorer.svelte';
 
   interface Props {
-    queryTree: QueryTreeJSON | null;
+    queryTree: QueryTreeJSON | undefined;
   }
 
   let { queryTree }: Props = $props();

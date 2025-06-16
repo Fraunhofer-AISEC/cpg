@@ -29,24 +29,19 @@
   <title>Requirement: {data.requirement.name} - CPG Console</title>
 </svelte:head>
 
-<div class="container mx-auto px-4 py-6">
-  <!-- Header -->
-  <div class="mb-6">
-    <div class="flex items-center justify-between">
-      <PageHeader 
-        title="Requirement Details"
-        subtitle="Detailed analysis of requirement evaluation"
-      />
-      <Button variant="secondary" onclick={goBack}>
-        ← Back to Requirements
-      </Button>
-    </div>
-  </div>
+<div class="flex items-center justify-between mb-6">
+  <PageHeader 
+    title="Requirement Details"
+    subtitle="Detailed analysis of requirement evaluation"
+  />
+  <Button variant="secondary" onclick={goBack}>
+    ← Back to Requirements
+  </Button>
+</div>
 
+<div class="space-y-8">
   <!-- Requirement Info Card -->
-  <div class="mb-8">
-    <RequirementStatusCard requirement={data.requirement} />
-  </div>
+  <RequirementStatusCard requirement={data.requirement} />
 
   <!-- Query Tree Section -->
   <QueryTreeSection queryTree={data.requirement.queryTree} />
