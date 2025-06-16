@@ -360,7 +360,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     .filter { it.first is ParameterMemoryValue }
                     .forEach { prevDFGs.add(Pair(it.first, equalLinkedHashSetOf<Any>())) }
             }
-            functionDeclaration.functionSummary[ReturnStatement()] = newEntries
+            val rets = mutableSetOf<Node>()
+            if (functionDeclaration.returns.isNotEmpty()) rets.addAll(functionDeclaration.returns)
+            else rets.add(functionDeclaration)
+            rets.forEach { ret -> functionDeclaration.functionSummary[ret] = newEntries }
             // draw a DFG-Edge from all parameters to the FunctionDeclaration
             doubleState =
                 lattice.push(
@@ -983,15 +986,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 }
             } else {
                 // Add a dummy function summary so that we don't try this every time
-                // In this dummy, all parameters point to the return
-                // TODO: This actually generates a new return statement but it's not part of the
-                // function. Wouldn't the edges better point to the FunctionDeclaration and in a
-                // case with a body, all returns flow to the FunctionDeclaration too?
+                // In this dummy, all parameters point either to returns if we have any, or the
+                // FunctionDeclaration itself
                 val newValues: MutableSet<FunctionDeclaration.FSEntry> =
                     invoke.parameters
                         .map { FunctionDeclaration.FSEntry(0, it, 1, "") }
                         .toMutableSet()
-                invoke.functionSummary[ReturnStatement()] = newValues
+                val entries = mutableSetOf<Node>()
+                if (invoke.returns.isNotEmpty()) entries.addAll(invoke.returns)
+                else entries.add(invoke)
+                entries.forEach { entry -> invoke.functionSummary[entry] = newValues }
             }
         }
         return invoke
