@@ -79,7 +79,7 @@ fun FulfilledAndFailedPaths.toQueryTree(
                             .addAssumptionDependence(nodePath)
                     ),
                 stringRepresentation =
-                    "$queryType from $startNode to ${nodePath.nodes.last()} fulfills the requirement",
+                    "$queryType from $startNode to ${nodePath.nodes.last()} does not fulfill the requirement",
                 node = startNode,
                 terminationReason =
                     if (reason == FailureReason.PATH_ENDED) {
