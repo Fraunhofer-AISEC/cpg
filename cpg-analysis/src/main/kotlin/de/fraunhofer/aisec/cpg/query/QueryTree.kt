@@ -863,3 +863,11 @@ fun List<QueryTree<Boolean>>.mergeWithAny(
         collectCallerInfo = true,
     )
 }
+
+/**
+ * A very compact string representation of a [Node] to be used in [QueryTree.stringRepresentation].
+ * It includes the class name, the name of the node, and its location if available.
+ */
+fun Node.compactToString(): String {
+    return "${this.javaClass.simpleName} '${name}'${if(location != null) {" @ $location"} else {""}}"
+}

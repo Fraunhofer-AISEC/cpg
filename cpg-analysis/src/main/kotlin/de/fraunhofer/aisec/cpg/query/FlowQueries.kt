@@ -64,7 +64,7 @@ fun FulfilledAndFailedPaths.toQueryTree(
                     QueryTree(value = it.nodes, operator = GenericQueryOperators.EVALUATE)
                 ),
             stringRepresentation =
-                "$queryType from $startNode to ${it.nodes.last()} fulfills the requirement",
+                "$queryType from ${startNode.compactToString()} to ${it.nodes.last().compactToString()} fulfills the requirement",
             node = startNode,
             terminationReason = Success(it.nodes.last()),
             operator = GenericQueryOperators.EVALUATE,
@@ -123,7 +123,7 @@ object Must : AnalysisType() {
             value = allPaths.all { it.value },
             children = allPaths.toMutableList(),
             stringRepresentation =
-                "$queryType from $startNode to ${evalRes.fulfilled.map { it.nodes.last() }}",
+                "$queryType from ${startNode.compactToString()} to ${(evalRes.fulfilled.map { it.nodes.last().compactToString() })}",
             node = startNode,
             operator = GenericQueryOperators.ALL,
             collectCallerInfo = true,
@@ -146,7 +146,7 @@ object May : AnalysisType() {
             value = allPaths.any { it.value },
             children = allPaths.toMutableList(),
             stringRepresentation =
-                "$queryType from $startNode to ${evalRes.fulfilled.map { it.nodes.last() }}",
+                "$queryType from ${startNode.compactToString()} to ${evalRes.fulfilled.map { it.nodes.last().compactToString() }}",
             node = startNode,
             operator = GenericQueryOperators.ANY,
             collectCallerInfo = true,

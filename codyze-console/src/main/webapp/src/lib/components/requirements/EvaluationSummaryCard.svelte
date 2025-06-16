@@ -48,13 +48,19 @@
       <div class="flex justify-between">
         <dt class="text-sm font-medium text-gray-500">Evaluation Result:</dt>
         <dd class="font-mono text-sm">
-          <span
-            class="{requirement.queryTree.value === 'true'
-              ? 'text-green-600'
-              : 'text-red-600'} font-semibold"
-          >
-            {requirement.queryTree.value}
-          </span>
+          {#if requirement.queryTree.nodeValues}
+            <span class="font-semibold text-purple-600">
+              {requirement.queryTree.nodeValues.length} node(s)
+            </span>
+          {:else}
+            <span
+              class="{requirement.queryTree.value === 'true'
+                ? 'text-green-600'
+                : 'text-red-600'} font-semibold"
+            >
+              {requirement.queryTree.value}
+            </span>
+          {/if}
         </dd>
       </div>
 

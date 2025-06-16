@@ -67,7 +67,9 @@ inline fun <reified T> Node.evaluateExtended(
     val nodes = this.allChildrenWithOverlays(sel)
     return nodes.map { n ->
         val res = mustSatisfy(n)
-        res.stringRepresentation = "Starting at $n: " + res.stringRepresentation
+        res.stringRepresentation =
+            "Starting at ${if(n is Node) n.compactToString() else n.toString()}: " +
+                res.stringRepresentation
         if (n is Node) {
             res.node = n
         }

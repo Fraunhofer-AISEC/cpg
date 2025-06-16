@@ -55,6 +55,8 @@ export interface NodeJSON {
   astChildren: NodeJSON[];
   prevDFG: EdgeJSON[];
   nextDFG: EdgeJSON[];
+  translationUnitId?: string;
+  componentName?: string;
 }
 
 export interface EdgeJSON {
@@ -94,7 +96,8 @@ export interface CallerInfoJSON {
 
 export interface QueryTreeJSON {
   id: string;
-  value: string;
+  value?: string;
+  nodeValues?: NodeJSON[];
   confidence: string;
   stringRepresentation: string;
   operator: string;
@@ -178,6 +181,11 @@ export const queryTreeStatusConfigs: Record<QueryTreeStatus, QueryTreeStatusConf
  * Uses the same logic as backend RequirementBuilder.toJSON()
  */
 export function getQueryTreeStatus(queryTree: QueryTreeJSON): QueryTreeStatus {
+  // Handle cases where we have nodeValues instead of a string value
+  if (queryTree.nodeValues) {
+    return 'NON_BOOLEAN';
+  }
+
   // Handle non-boolean values
   if (queryTree.value !== 'true' && queryTree.value !== 'false') {
     return 'NON_BOOLEAN';
@@ -205,4 +213,21 @@ export function getQueryTreeStatus(queryTree: QueryTreeJSON): QueryTreeStatus {
 export function getQueryTreeStatusConfig(queryTree: QueryTreeJSON): QueryTreeStatusConfig {
   const status = getQueryTreeStatus(queryTree);
   return queryTreeStatusConfigs[status];
+}
+
+/**
+ * Generates a navigation URL to jump to a specific node location in the source code viewer.
+ */
+export function getNodeLocation(node: NodeJSON, referrer?: string): string | null {
+  if (!node.componentName || !node.translationUnitId || node.startLine < 0) {
+    return null;
+  }
+  
+  const baseUrl = `/components/${encodeURIComponent(node.componentName)}/translation-unit/${node.translationUnitId}?line=${node.startLine}`;
+  
+  if (referrer) {
+    return `${baseUrl}&referrer=${encodeURIComponent(referrer)}`;
+  }
+  
+  return baseUrl;
 }

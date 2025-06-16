@@ -73,6 +73,12 @@ export const load: PageLoad = async ({ fetch }) => {
 - Use modern Svelte 5 event syntax: `onclick` instead of `on:click`
 - Use proper button elements for interactive content instead of clickable divs
 
+
+#### Building and Testing
+- Use `./gradlew :codyze-console:compileKotlin --console=plain` for checking Kotlin compilation errors in the codyze-console module from the root project directory.
+- For building the backend, use `./gradlew :codyze-console:compileKotlin --console=plain` from the root project directory.
+- Starting the backend is more complicated, please just ask me to do it.
+
 #### Known Issues & Workarounds
 - **svelte-highlight compatibility**: The current version doesn't support Svelte 5 runes mode. Consider alternatives or temporary workarounds until the package is updated.
 
@@ -129,3 +135,8 @@ export const load: PageLoad = async ({ fetch }) => {
 - Log appropriate information for debugging
 - Handle edge cases gracefully
 - Use appropriate exception types
+
+
+#### Prompt Output
+
+- I do not need a detailed summary of the changes you made. You can be brief about this.

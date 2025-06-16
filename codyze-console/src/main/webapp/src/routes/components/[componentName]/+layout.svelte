@@ -6,6 +6,29 @@
 
   let { data, children }: LayoutProps = $props();
 
+  // Check if we came from query explorer (requirements)
+  const referrer = $derived(() => {
+    const urlParams = new URLSearchParams($page.url.search);
+    return urlParams.get('referrer');
+  });
+  
+  // Dynamic breadcrumb based on referrer
+  const breadcrumbText = $derived(() => {
+    return referrer() === 'query-explorer' ? 'Back to Query Explorer' : 'Back to Components';
+  });
+  
+  const breadcrumbHref = $derived(() => {
+    if (referrer() === 'query-explorer') {
+      // Try to get the referring URL from sessionStorage, fallback to requirements page
+      if (typeof window !== 'undefined') {
+        const referringUrl = sessionStorage.getItem('queryExplorerUrl');
+        return referringUrl || '/requirements';
+      }
+      return '/requirements';
+    }
+    return '/components';
+  });
+
   // Build folder tree structure from translation units
   interface TreeNode {
     name: string;
@@ -110,8 +133,8 @@
   <PageHeader
     title={data.component.name}
     subtitle={data.component.topLevel}
-    breadcrumbText="Back to Components"
-    breadcrumbHref="/components"
+    breadcrumbText={breadcrumbText()}
+    breadcrumbHref={breadcrumbHref()}
   />
 
   <div

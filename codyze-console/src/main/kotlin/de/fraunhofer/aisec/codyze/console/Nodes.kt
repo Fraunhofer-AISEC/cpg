@@ -156,6 +156,8 @@ data class NodeJSON(
     val astChildren: List<NodeJSON>,
     val prevDFG: List<EdgeJSON> = emptyList(),
     val nextDFG: List<EdgeJSON> = emptyList(),
+    @Serializable(with = UuidSerializer::class) val translationUnitId: Uuid? = null,
+    val componentName: String? = null,
 )
 
 /** JSON data class for a requirement category. */
@@ -207,7 +209,8 @@ data class CallerInfoJSON(
 @Serializable
 data class QueryTreeJSON(
     val id: String, // Unique identifier for this QueryTree
-    val value: String, // Serialized as string to handle any type
+    val value: String? = null, // Serialized as string to handle simple types
+    val nodeValues: List<NodeJSON>? = null, // List of nodes when value is List<Node>
     val confidence: String, // AcceptanceStatus as string
     val stringRepresentation: String,
     val operator: String,
@@ -343,6 +346,30 @@ fun Node.toJSON(): NodeJSON {
         astChildren = this.astChildren.map { it.toJSON() },
         prevDFG = this.prevDFGEdges.map { it.toJSON() },
         nextDFG = this.nextDFGEdges.map { it.toJSON() },
+        translationUnitId = this.translationUnit?.id,
+        componentName = this.translationUnit?.component?.name?.toString(),
+    )
+}
+
+/**
+ * Converts a [Node] into a simplified JSON representation without astChildren, prevDFG, and
+ * nextDFG.
+ */
+fun Node.toSimplifiedJSON(): NodeJSON {
+    return NodeJSON(
+        id = this.id,
+        type = this.javaClass.simpleName,
+        startLine = location?.region?.startLine ?: -1,
+        startColumn = location?.region?.startColumn ?: -1,
+        endLine = location?.region?.endLine ?: -1,
+        endColumn = location?.region?.endColumn ?: -1,
+        code = this.code ?: "",
+        name = this.name.toString(),
+        astChildren = emptyList(),
+        prevDFG = emptyList(),
+        nextDFG = emptyList(),
+        translationUnitId = this.translationUnit?.id,
+        componentName = this.translationUnit?.component?.name?.toString(),
     )
 }
 
@@ -461,9 +488,25 @@ fun <T> QueryTree<T>.toJSON(): QueryTreeJSON {
             else -> "QueryTree"
         }
 
+    // Handle different value types
+    val (stringValue, nodeValues) =
+        when (val value = this.value) {
+            is List<*> -> {
+                // Check if it's a list of nodes
+                if (value.isNotEmpty() && value.first() is Node) {
+                    @Suppress("UNCHECKED_CAST") val nodes = value as List<Node>
+                    null to nodes.map { it.toSimplifiedJSON() }
+                } else {
+                    value.toString() to null
+                }
+            }
+            else -> value.toString() to null
+        }
+
     return QueryTreeJSON(
         id = this.id.toString(),
-        value = this.value.toString(),
+        value = stringValue,
+        nodeValues = nodeValues,
         confidence = this.confidence.toString(),
         stringRepresentation = this.stringRepresentation,
         operator = this.operator.toString(),

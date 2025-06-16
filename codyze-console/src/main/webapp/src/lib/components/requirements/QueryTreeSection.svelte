@@ -37,7 +37,7 @@
         </p>
       </div>
 
-      <QueryTreeExplorer {queryTree} />
+      <QueryTreeExplorer {queryTree} context="requirements" />
     </div>
   </div>
 {:else}

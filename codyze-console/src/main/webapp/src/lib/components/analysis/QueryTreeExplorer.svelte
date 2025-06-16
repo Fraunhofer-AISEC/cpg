@@ -1,7 +1,7 @@
 <!-- QueryTreeExplorer.svelte -->
 <script lang="ts">
   import type { QueryTreeJSON } from '$lib/types';
-  import { getQueryTreeStatusConfig, getQueryTreeStatus } from '$lib/types';
+  import { getQueryTreeStatusConfig, getQueryTreeStatus, getNodeLocation } from '$lib/types';
   import {
     loadQueryTrees,
     getCachedQueryTree,
@@ -14,9 +14,10 @@
   interface Props {
     queryTree: QueryTreeJSON | undefined;
     depth?: number;
+    context?: 'requirements' | 'analysis';
   }
 
-  let { queryTree, depth = 0 }: Props = $props();
+  let { queryTree, depth = 0, context = 'analysis' }: Props = $props();
 
   // Early return if queryTree is undefined
   if (!queryTree) {
@@ -115,7 +116,11 @@
             <div class="flex items-center space-x-1">
               <span class="text-lg">{statusConfig?.icon}</span>
               <span class="font-semibold">
-                {queryTree.value}
+                {#if queryTree.nodeValues}
+                  {queryTree.nodeValues.length} node(s)
+                {:else}
+                  {queryTree.value}
+                {/if}
               </span>
             </div>
           </div>
@@ -161,6 +166,51 @@
           </div>
         </div>
       {/if}
+
+      <!-- Node Values (if present) -->
+      {#if queryTree.nodeValues && queryTree.nodeValues.length > 0}
+        <div class="bg-opacity-60 mt-2 rounded border-l-2 border-purple-300 bg-purple-50 p-2 text-xs">
+          <div class="mb-2 font-medium text-purple-700">🔗 Found Nodes ({queryTree.nodeValues.length}):</div>
+          <div class="space-y-1">
+            {#each queryTree.nodeValues as node}
+              <div class="rounded bg-white bg-opacity-50 p-2">
+                <div class="flex items-center justify-between">
+                  <span class="font-mono text-xs text-gray-600">{node.type}</span>
+                  <div class="flex items-center space-x-1">
+                    <span class="text-xs">📍</span>
+                    {#if getNodeLocation(node, context === 'requirements' ? 'query-explorer' : undefined)}
+                      <a 
+                        href={getNodeLocation(node, context === 'requirements' ? 'query-explorer' : undefined)} 
+                        class="font-mono text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                        title="Click to view in source code"
+                        onclick={() => {
+                          if (context === 'requirements' && typeof window !== 'undefined') {
+                            sessionStorage.setItem('queryExplorerUrl', window.location.href);
+                          }
+                        }}
+                      >
+                        {node.startLine}:{node.startColumn}
+                      </a>
+                    {:else}
+                      <span class="font-mono text-xs text-gray-500">
+                        {node.startLine}:{node.startColumn}
+                      </span>
+                    {/if}
+                  </div>
+                </div>
+                <div class="mt-1 font-mono text-xs">
+                  <span class="font-medium">{node.name}</span>
+                </div>
+                {#if node.code}
+                  <div class="mt-1 rounded bg-gray-100 px-1 py-0.5 font-mono text-xs text-gray-700">
+                    {node.code.trim()}
+                  </div>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        </div>
+      {/if}
     </div>
 
     <!-- Children (lazy loaded) -->
@@ -178,7 +228,7 @@
           </div>
         {:else}
           {#each children as child}
-            <QueryTreeExplorer queryTree={child} depth={depth + 1} />
+            <QueryTreeExplorer queryTree={child} depth={depth + 1} {context} />
           {/each}
         {/if}
       </div>
