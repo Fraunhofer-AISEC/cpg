@@ -31,9 +31,12 @@ import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.query.GenericQueryOperators
+import de.fraunhofer.aisec.cpg.query.QueryTree
 import io.github.detekt.sarif4k.ArtifactLocation
 import java.io.File
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -70,5 +73,99 @@ class NodesTest {
         absolutePath = with(result) { location.absolutePath }
         assertNotNull(absolutePath)
         assertTrue(absolutePath.isAbsolute)
+    }
+
+    @Test
+    fun testQueryTreeToJSON() {
+        // Create a simple QueryTree
+        val queryTree =
+            QueryTree(
+                value = true,
+                stringRepresentation = "test condition == true",
+                operator = GenericQueryOperators.EVALUATE,
+            )
+
+        // Convert to JSON
+        val json = queryTree.toJSON()
+
+        // Verify the conversion
+        assertEquals("true", json.value)
+        assertEquals("AcceptedResult", json.confidence)
+        assertEquals("test condition == true", json.stringRepresentation)
+        assertEquals("EVALUATE", json.operator)
+        assertEquals(0, json.children.size)
+        assertNull(json.nodeId)
+    }
+
+    @Test
+    fun testQueryTreeWithChildrenToJSON() {
+        // Create a child QueryTree
+        val childTree =
+            QueryTree(
+                value = false,
+                stringRepresentation = "child condition",
+                operator = GenericQueryOperators.EVALUATE,
+            )
+
+        // Create parent QueryTree with child
+        val parentTree =
+            QueryTree(
+                value = true,
+                children = listOf(childTree),
+                stringRepresentation = "parent condition",
+                operator = GenericQueryOperators.ALL,
+            )
+
+        // Convert to JSON
+        val json = parentTree.toJSON()
+
+        // Verify parent
+        assertEquals("true", json.value)
+        assertEquals("ALL", json.operator)
+        assertEquals(1, json.children.size)
+
+        // Verify child
+        val childJson = json.children[0]
+        assertEquals("false", childJson.value)
+        assertEquals("child condition", childJson.stringRepresentation)
+        assertEquals("EVALUATE", childJson.operator)
+    }
+
+    @Test
+    fun testQueryTreeWithCallerInfoToJSON() {
+        // Create a simple QueryTree with caller info
+        val queryTree =
+            QueryTree(
+                value = true,
+                stringRepresentation = "test condition == true",
+                operator = GenericQueryOperators.EVALUATE,
+            )
+
+        // Manually set caller info (normally would be set automatically)
+        queryTree.callerInfo =
+            de.fraunhofer.aisec.cpg.query.CallerInfo(
+                className = "com.example.TestClass",
+                methodName = "testMethod",
+                fileName = "TestClass.kt",
+                lineNumber = 42,
+            )
+
+        // Convert to JSON
+        val json = queryTree.toJSON()
+
+        // Verify the conversion
+        assertEquals("true", json.value)
+        assertEquals("AcceptedResult", json.confidence)
+        assertEquals("test condition == true", json.stringRepresentation)
+        assertEquals("EVALUATE", json.operator)
+        assertEquals(0, json.children.size)
+        assertNull(json.nodeId)
+
+        // Verify caller info
+        assertNotNull(json.callerInfo)
+        assertEquals("com.example.TestClass", json.callerInfo!!.className)
+        assertEquals("testMethod", json.callerInfo!!.methodName)
+        assertEquals("TestClass.kt", json.callerInfo!!.fileName)
+        assertEquals(42, json.callerInfo!!.lineNumber)
     }
 }

@@ -36,9 +36,17 @@
   };
 
   const config = $derived(statusConfig[requirement.status as keyof typeof statusConfig] || statusConfig.UNDECIDED);
+
+  function navigateToDetail() {
+    window.location.href = `/requirements/${requirement.id}`;
+  }
 </script>
 
-<div class="rounded-lg border border-gray-200 {config.bgColor} p-4">
+<button 
+  type="button"
+  onclick={navigateToDetail}
+  class="w-full text-left rounded-lg border border-gray-200 {config.bgColor} p-4 hover:shadow-md transition-shadow cursor-pointer"
+>
   <div class="flex items-start justify-between">
     <div class="flex-1">
       <div class="flex items-center gap-2">
@@ -46,11 +54,21 @@
           {config.icon}
         </span>
         <h3 class="font-medium {config.textColor}">{requirement.name}</h3>
+        {#if requirement.queryTree}
+          <span class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+            Has Query Tree
+          </span>
+        {/if}
       </div>
       <p class="mt-2 text-sm text-gray-600">{requirement.description}</p>
     </div>
-    <span class="ml-4 inline-flex rounded-full px-2 py-1 text-xs font-semibold {config.badgeColor}">
-      {requirement.status.replace('_', ' ')}
-    </span>
+    <div class="ml-4 flex items-center space-x-2">
+      <span class="inline-flex rounded-full px-2 py-1 text-xs font-semibold {config.badgeColor}">
+        {requirement.status.replace('_', ' ')}
+      </span>
+      <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+      </svg>
+    </div>
   </div>
-</div>
+</button>

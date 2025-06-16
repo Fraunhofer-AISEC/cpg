@@ -200,6 +200,15 @@ data class RequirementJSON(
     val queryTree: QueryTreeJSON? = null,
 )
 
+/** JSON data class for caller information from QueryTree. */
+@Serializable
+data class CallerInfoJSON(
+    val className: String,
+    val methodName: String,
+    val fileName: String,
+    val lineNumber: Int,
+)
+
 /** JSON data class for a QueryTree result. */
 @Serializable
 data class QueryTreeJSON(
@@ -209,6 +218,7 @@ data class QueryTreeJSON(
     val operator: String,
     val children: List<QueryTreeJSON> = emptyList(),
     val nodeId: String? = null, // UUID of associated node, if any
+    val callerInfo: CallerInfoJSON? = null, // Information about where the query was called from
 )
 
 /**
@@ -276,7 +286,7 @@ fun AnalysisResult.toJSON(): AnalysisResultJSON =
             sourceDir = config.sourceLocations.first().absolutePath,
             findings = sarif.runs.flatMap { it.results?.map { it.toJSON() } ?: emptyList() },
             requirementCategories =
-                project?.requirementCategoriesToJSON(this@toJSON.requirementsResults) ?: emptyList(),
+                project.requirementCategoriesToJSON(this@toJSON.requirementsResults),
         )
     }
 
@@ -451,6 +461,15 @@ fun <T> QueryTree<T>.toJSON(): QueryTreeJSON {
         operator = this.operator.toString(),
         children = this.children.map { it.toJSON() },
         nodeId = this.node?.id?.toString(),
+        callerInfo =
+            this.callerInfo?.let {
+                CallerInfoJSON(
+                    className = it.className,
+                    methodName = it.methodName,
+                    fileName = it.fileName,
+                    lineNumber = it.lineNumber,
+                )
+            },
     )
 }
 
@@ -474,8 +493,8 @@ fun RequirementBuilder.toJSON(
                     queryTree == null -> "UNDECIDED"
                     queryTree.confidence is RejectedResult -> "REJECTED"
                     queryTree.confidence is UndecidedResult -> "UNDECIDED"
-                    queryTree.value == true && queryTree.confidence is AcceptedResult -> "FULFILLED"
-                    queryTree.value == false && queryTree.confidence is AcceptedResult -> "VIOLATED"
+                    queryTree.value && queryTree.confidence is AcceptedResult -> "FULFILLED"
+                    !queryTree.value && queryTree.confidence is AcceptedResult -> "VIOLATED"
                     else -> "UNDECIDED"
                 }
             }

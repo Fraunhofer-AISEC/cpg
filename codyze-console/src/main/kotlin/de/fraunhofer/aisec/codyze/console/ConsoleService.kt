@@ -159,7 +159,8 @@ class ConsoleService {
 
     /** Returns the requirement with the given ID as [RequirementJSON]. */
     fun getRequirement(requirementId: String): RequirementJSON? {
-        return analysisResult?.requirementCategories
+        return analysisResult
+            ?.requirementCategories
             ?.flatMap { it.requirements }
             ?.find { it.id == requirementId }
     }

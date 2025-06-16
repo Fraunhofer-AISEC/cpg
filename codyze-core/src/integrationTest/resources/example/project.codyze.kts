@@ -103,7 +103,8 @@ project {
  * function would not be part of the script but rather of a separate query catalog module.
  */
 fun TranslationResult.goodCryptoFunc(): QueryTree<Boolean> {
-    return allExtended<CallExpression> { it.name eq "encrypt" }
+    val q = allExtended<CallExpression> { it.name eq "encrypt" }
+    return q
 }
 
 fun TranslationResult.goodArgumentSize(): QueryTree<Boolean> {
