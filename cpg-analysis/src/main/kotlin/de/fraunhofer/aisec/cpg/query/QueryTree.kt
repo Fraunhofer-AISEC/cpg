@@ -828,9 +828,9 @@ fun List<QueryTree<Boolean>>.mergeWithAll(
         children = this.toMutableList(),
         stringRepresentation =
             if (value) {
-                "All elements has value true"
+                "All elements are true"
             } else {
-                "At least one of the elements has false"
+                "At least one of the elements is false"
             },
         node = node,
         assumptions = assumptions,
@@ -853,9 +853,9 @@ fun List<QueryTree<Boolean>>.mergeWithAny(
         children = this.toMutableList(),
         stringRepresentation =
             if (value) {
-                "At least one of the elements has value true"
+                "At least one of the elements is true"
             } else {
-                "All elements have value false"
+                "All elements are false"
             },
         node = node,
         assumptions = assumptions,
