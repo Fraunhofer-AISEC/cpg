@@ -36,12 +36,6 @@ import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.newCipher
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.newEncryptOperation
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.newGetSecret
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.newSecret
-import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.GetSecret
-import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret
-import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.newCipher
-import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.newEncryptOperation
-import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.newGetSecret
-import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.newSecret
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.DeAllocate
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.MemoryManagementMode
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.newDeallocate
