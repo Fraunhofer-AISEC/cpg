@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Cipher
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encrypt
-import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encryption
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -79,7 +79,7 @@ class TagOverlaysPassTest {
                                             tag =
                                                 tag {
                                                     each<RecordDeclaration>("Encryption").with {
-                                                        Encryption<Node>()
+                                                        Cipher()
                                                     }
                                                     each<VariableDeclaration>("key").with {
                                                         Secret()
@@ -145,7 +145,7 @@ class TagOverlaysPassTest {
         assertNotNull(encryption)
 
         val cipher = encryption.conceptNodes.singleOrNull()
-        assertIs<Encryption<Node>>(cipher)
+        assertIs<Cipher>(cipher)
 
         val key = result.variables["key"]
         assertNotNull(key)

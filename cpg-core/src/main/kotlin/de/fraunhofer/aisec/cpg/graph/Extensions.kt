@@ -460,6 +460,7 @@ class Context(
 
     override fun hashCode(): Int {
         return Objects.hash(super.hashCode(), indexStack, callStack)
+    }
 
     companion object {
         /**

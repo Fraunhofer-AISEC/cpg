@@ -120,7 +120,7 @@ class Interprocedural(val maxCallDepth: Int? = null, maxSteps: Int? = null) :
         // Summary: In case we did not yet exceed the maxSteps, we follow the edge either if it's no
         // interprocedural edge or if we follow the shortFS edges or if we follow everything but the
         // short FS edges
-       
+
         if (
             analysisDirection.edgeRequiresCallPush(currentNode, edge) &&
                 currentNode is CallExpression
@@ -273,7 +273,6 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
         return edges.mapNotNull { edge ->
             val newCtx = ctx.clone()
             if (
-
                 scope.followEdge(
                     currentNode,
                     edge,
@@ -285,7 +284,7 @@ sealed class AnalysisDirection(val graphToFollow: GraphToFollow) {
                             ((it.start as? FunctionDeclaration)?.isInferred == false ||
                                 (it.end as? FunctionDeclaration)?.isInferred == false)*/ },
                 ) &&
-                   sensitivities.all {
+                    sensitivities.all {
                         it.followEdge(currentNode, edge, newCtx, path, loopingPaths, this)
                     }
             ) {
