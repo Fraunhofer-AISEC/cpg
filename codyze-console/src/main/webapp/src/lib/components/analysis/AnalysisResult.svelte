@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { AnalysisResultJSON } from '$lib/types';
-  import ComponentsList from '$lib/components/ComponentsList.svelte';
-  import FindingsList from '$lib/components/FindingsList.svelte';
-  import RequirementsList from '$lib/components/RequirementsList.svelte';
+  import { ComponentsList } from '../dashboard';
+  import FindingsList from './FindingsList.svelte';
+  import { RequirementsList } from '../requirements';
 
   interface Props {
     result: AnalysisResultJSON;

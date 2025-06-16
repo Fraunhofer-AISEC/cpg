@@ -1,9 +1,7 @@
 <script lang="ts">
-  import FindingOverlay from '$lib/components/FindingOverlay.svelte';
-  import NodeOverlays from '$lib/components/NodeOverlays.svelte';
-  import NodeTable from '$lib/components/NodeTable.svelte';
-  import TabNavigation from '$lib/components/TabNavigation.svelte';
-  import Button from '$lib/components/Button.svelte';
+  import { FindingOverlay, NodeOverlays, NodeTable } from '$lib/components/analysis';
+  import { TabNavigation } from '$lib/components/navigation';
+  import { Button } from '$lib/components/ui';
   import { flattenNodes } from '$lib/flatten';
   import { type NodeJSON } from '$lib/types';
   import Highlight, { LineNumbers } from 'svelte-highlight';

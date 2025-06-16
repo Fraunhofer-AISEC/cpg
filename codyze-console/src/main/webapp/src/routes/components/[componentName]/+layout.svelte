@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { LayoutProps } from './$types';
   import type { TranslationUnitJSON } from '$lib/types';
-  import PageHeader from '$lib/components/PageHeader.svelte';
+  import { PageHeader } from '$lib/components/navigation';
   import { page } from '$app/stores';
 
   let { data, children }: LayoutProps = $props();

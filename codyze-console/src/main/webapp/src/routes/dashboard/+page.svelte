@@ -1,12 +1,10 @@
 <script lang="ts">
   import type { PageProps } from './$types';
-  import DashboardSection from '$lib/components/DashboardSection.svelte';
-  import StatsGrid from '$lib/components/StatsGrid.svelte';
-  import RequirementsChart from '$lib/components/RequirementsChart.svelte';
-  import ViolationsTable from '$lib/components/ViolationsTable.svelte';
-  import PageHeader from '$lib/components/PageHeader.svelte';
-  import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
-  import EmptyState from '$lib/components/EmptyState.svelte';
+  import { DashboardSection, StatsGrid } from '$lib/components/dashboard';
+  import { RequirementsChart } from '$lib/components/requirements';
+  import { ViolationsTable } from '$lib/components/analysis';
+  import { PageHeader } from '$lib/components/navigation';
+  import { LoadingSpinner, EmptyState } from '$lib/components/ui';
 
   // Correctly access data with $props()
   let { data }: PageProps = $props();

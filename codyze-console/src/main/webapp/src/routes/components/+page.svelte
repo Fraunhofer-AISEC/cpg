@@ -1,9 +1,8 @@
 <script lang="ts">
   import type { PageProps } from './$types';
-  import PageHeader from '$lib/components/PageHeader.svelte';
-  import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
-  import EmptyState from '$lib/components/EmptyState.svelte';
-  import ComponentCard from '$lib/components/ComponentCard.svelte';
+  import { PageHeader } from '$lib/components/navigation';
+  import { LoadingSpinner, EmptyState } from '$lib/components/ui';
+  import { ComponentCard } from '$lib/components/dashboard';
 
   // Get data from the load function using props
   let { data }: PageProps = $props();

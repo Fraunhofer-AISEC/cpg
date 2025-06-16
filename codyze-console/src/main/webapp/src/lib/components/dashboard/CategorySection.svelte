@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { RequirementsCategoryJSON } from '$lib/types';
-  import RequirementCard from './RequirementCard.svelte';
+  import RequirementCard from '../requirements/RequirementCard.svelte';
 
   interface Props {
     category: RequirementsCategoryJSON;

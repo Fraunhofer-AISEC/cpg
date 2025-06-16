@@ -1,10 +1,10 @@
 <script lang="ts">
   import type { FlattenedNode } from '$lib/flatten';
   import type { NodeJSON } from '$lib/types';
-  import NodeOverlay from '$lib/components/NodeOverlay.svelte';
-  import NodeTooltip from '$lib/components/NodeTooltip.svelte';
+  import NodeOverlay from './NodeOverlay.svelte';
+  import NodeTooltip from './NodeTooltip.svelte';
   import type { ConceptGroup } from '$lib/concepts';
-  import AddConceptDialog from './AddConceptDialog.svelte';
+  import AddConceptDialog from '../forms/AddConceptDialog.svelte';
 
   interface Props {
     nodes: FlattenedNode[];

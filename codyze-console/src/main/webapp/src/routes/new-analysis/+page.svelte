@@ -1,6 +1,6 @@
 <script lang="ts">
-  import NewAnalysis from '$lib/components/NewAnalysis.svelte';
-  import PageHeader from '$lib/components/PageHeader.svelte';
+  import { NewAnalysis } from '$lib/components/forms';
+  import { PageHeader } from '$lib/components/navigation';
   import { goto, invalidateAll } from '$app/navigation';
   import { clearQueryTreeCache } from '$lib/stores/queryTreeStore';
 

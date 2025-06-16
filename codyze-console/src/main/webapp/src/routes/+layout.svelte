@@ -1,7 +1,6 @@
 <script lang="ts">
   import "../app.css";
-  import Navbar from '$lib/components/Navbar.svelte';
-  import Sidebar from "$lib/components/Sidebar.svelte";
+  import { Navbar, Sidebar } from "$lib/components/navigation";
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";

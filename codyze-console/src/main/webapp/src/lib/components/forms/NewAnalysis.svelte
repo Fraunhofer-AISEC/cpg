@@ -1,6 +1,6 @@
 <script lang="ts">
-  import FormField from './FormField.svelte';
-  import Button from './Button.svelte';
+  import FormField from '../ui/FormField.svelte';
+  import Button from '../ui/Button.svelte';
 
   interface Props {
     submit: (
