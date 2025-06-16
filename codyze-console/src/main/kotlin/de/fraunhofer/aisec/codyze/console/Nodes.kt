@@ -197,6 +197,18 @@ data class RequirementJSON(
     val description: String,
     val status: String,
     val categoryId: String,
+    val queryTree: QueryTreeJSON? = null,
+)
+
+/** JSON data class for a QueryTree result. */
+@Serializable
+data class QueryTreeJSON(
+    val value: String, // Serialized as string to handle any type
+    val confidence: String, // AcceptanceStatus as string
+    val stringRepresentation: String,
+    val operator: String,
+    val children: List<QueryTreeJSON> = emptyList(),
+    val nodeId: String? = null, // UUID of associated node, if any
 )
 
 /**
@@ -430,6 +442,18 @@ fun RequirementCategoryBuilder.toJSON(
     )
 }
 
+/** Converts a [QueryTree] into its JSON representation recursively. */
+fun <T> QueryTree<T>.toJSON(): QueryTreeJSON {
+    return QueryTreeJSON(
+        value = this.value.toString(),
+        confidence = this.confidence.toString(),
+        stringRepresentation = this.stringRepresentation,
+        operator = this.operator.toString(),
+        children = this.children.map { it.toJSON() },
+        nodeId = this.node?.id?.toString(),
+    )
+}
+
 /**
  * Converts a [RequirementBuilder] into its JSON representation.
  *
@@ -441,11 +465,11 @@ fun RequirementBuilder.toJSON(
     categoryId: String,
     requirementsResults: Map<String, QueryTree<Boolean>>? = null,
 ): RequirementJSON {
+    val queryTree = requirementsResults?.get(this.id)
     val status =
         when {
             requirementsResults == null -> "UNDECIDED"
             else -> {
-                val queryTree = requirementsResults[this.id]
                 when {
                     queryTree == null -> "UNDECIDED"
                     queryTree.confidence is RejectedResult -> "REJECTED"
@@ -463,5 +487,6 @@ fun RequirementBuilder.toJSON(
         description = this.description ?: "",
         status = status,
         categoryId = categoryId,
+        queryTree = queryTree?.toJSON(),
     )
 }

@@ -197,6 +197,22 @@ fun Routing.apiRoutes(service: ConsoleService) {
             )
         }
 
+        // The endpoint to get a single requirement by ID
+        get("/requirement/{requirementId}") {
+            val requirementId = call.parameters["requirementId"] 
+                ?: return@get call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Missing requirement ID"))
+            
+            val requirement = service.getRequirement(requirementId)
+            if (requirement != null) {
+                call.respond(requirement)
+            } else {
+                call.respond(
+                    HttpStatusCode.NotFound,
+                    mapOf("error" to "Requirement not found")
+                )
+            }
+        }
+
         /**
          * The endpoint to export a YAML listing of all manually added [Concept]s (via `POST
          * /concept`).

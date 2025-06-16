@@ -82,6 +82,16 @@ export interface RequirementJSON {
   description: string;
   status: string;
   categoryId: string;
+  queryTree?: QueryTreeJSON;
+}
+
+export interface QueryTreeJSON {
+  value: string;
+  confidence: string;
+  stringRepresentation: string;
+  operator: string;
+  children: QueryTreeJSON[];
+  nodeId?: string;
 }
 
 export interface ConstructorInfo {

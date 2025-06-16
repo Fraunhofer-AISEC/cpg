@@ -157,6 +157,13 @@ class ConsoleService {
             ?.let { extractNodes(it, overlayNodes) } ?: emptyList()
     }
 
+    /** Returns the requirement with the given ID as [RequirementJSON]. */
+    fun getRequirement(requirementId: String): RequirementJSON? {
+        return analysisResult?.requirementCategories
+            ?.flatMap { it.requirements }
+            ?.find { it.id == requirementId }
+    }
+
     /**
      * Adds a new [Concept] node as an [de.fraunhofer.aisec.cpg.graph.OverlayNode] to an existing
      * node in the analysis result. The DFG edges can be configured to connect the new concept node
