@@ -126,6 +126,7 @@ object Must : AnalysisType() {
                 "$queryType from $startNode to ${evalRes.fulfilled.map { it.nodes.last() }}",
             node = startNode,
             operator = GenericQueryOperators.ALL,
+            collectCallerInfo = true,
         )
     }
 }
@@ -148,6 +149,7 @@ object May : AnalysisType() {
                 "$queryType from $startNode to ${evalRes.fulfilled.map { it.nodes.last() }}",
             node = startNode,
             operator = GenericQueryOperators.ANY,
+            collectCallerInfo = true,
         )
     }
 }

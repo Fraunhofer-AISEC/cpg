@@ -83,6 +83,7 @@ open class QueryTree<T>(
      */
     var suppressed: Boolean = false,
     val operator: QueryTreeOperators,
+    val collectCallerInfo: Boolean = false,
 ) : Comparable<QueryTree<T>>, HasAssumptions {
     /**
      * Determines if the [QueryTree.value] is acceptable after evaluating the [assumptions] which
@@ -122,9 +123,19 @@ open class QueryTree<T>(
      */
     var id: Uuid
 
+    /**
+     * The caller information of the [QueryTree]. This is useful to track where the query was
+     * executed from, especially if the [collectCallerInfo] flag is set to `true`.
+     */
+    var callerInfo: CallerInfo? = null
+
     init {
         id = computeId()
         checkForSuppression()
+
+        if (collectCallerInfo) {
+            callerInfo = getQueryTreeCaller()
+        }
     }
 
     /**
@@ -823,6 +834,7 @@ fun List<QueryTree<Boolean>>.mergeWithAll(
         node = node,
         assumptions = assumptions,
         operator = GenericQueryOperators.ALL,
+        collectCallerInfo = true,
     )
 }
 
@@ -847,5 +859,6 @@ fun List<QueryTree<Boolean>>.mergeWithAny(
         node = node,
         assumptions = assumptions,
         operator = GenericQueryOperators.ANY,
+        collectCallerInfo = true,
     )
 }
