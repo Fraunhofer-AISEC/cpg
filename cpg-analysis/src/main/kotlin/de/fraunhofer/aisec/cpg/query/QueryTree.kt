@@ -311,7 +311,7 @@ operator fun QueryTree<*>?.compareTo(other: Number): Int {
     throw QueryException("Cannot compare objects of type ${this?.value} and $other")
 }
 
-fun <T> T.toQueryTree(): QueryTree<T> {
+fun <T> T.toQueryTree(collectCallerInfo: Boolean = false): QueryTree<T> {
     if (this is QueryTree<*>) {
         @Suppress("UNCHECKED_CAST")
         return this as QueryTree<T>
@@ -322,6 +322,7 @@ fun <T> T.toQueryTree(): QueryTree<T> {
         stringRepresentation = this.toString(),
         node = this as? Node,
         operator = GenericQueryOperators.EVALUATE,
+        collectCallerInfo = collectCallerInfo,
     )
 }
 

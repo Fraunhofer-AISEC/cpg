@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { RequirementJSON } from '$lib/types';
   import Button from '../ui/Button.svelte';
+  import { getShortCallerInfo } from '$lib/utils/display';
 
   interface Props {
     requirement: RequirementJSON;
@@ -41,8 +42,10 @@
         <div class="space-y-1 text-sm text-gray-600">
           <p class="font-mono">
             <span class="font-medium">Method:</span>
-            {requirement.queryTree.callerInfo.className}.{requirement.queryTree.callerInfo
-              .methodName}()
+            {getShortCallerInfo(
+              requirement.queryTree.callerInfo.className,
+              requirement.queryTree.callerInfo.methodName
+            )}
           </p>
           <p class="font-mono">
             <span class="font-medium">Location:</span>

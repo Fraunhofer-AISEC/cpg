@@ -8,6 +8,7 @@
     isQueryTreeLoading,
     getQueryTreeError
   } from '$lib/stores/queryTreeStore';
+  import { getShortCallerInfo } from '$lib/utils/display';
   import QueryTreeExplorer from './QueryTreeExplorer.svelte';
 
   interface Props {
@@ -91,7 +92,7 @@
           {#if hasChildren}
             <button
               onclick={toggleExpanded}
-              class="hover:bg-opacity-50 rounded px-2 py-1 text-sm hover:bg-white"
+              class="rounded px-2 py-1 text-sm hover:bg-white hover:bg-opacity-50"
             >
               {isExpanded ? '▼' : '▶'}
             </button>
@@ -108,7 +109,7 @@
             <span class="rounded bg-blue-100 px-1.5 py-0.5 font-mono text-xs text-blue-700">
               {queryTree.queryTreeType}
             </span>
-            <span class="bg-opacity-60 rounded bg-white px-2 py-1 font-mono text-xs">
+            <span class="rounded bg-white bg-opacity-60 px-2 py-1 font-mono text-xs">
               {queryTree.operator}
             </span>
             <div class="flex items-center space-x-1">
@@ -121,7 +122,7 @@
         </div>
 
         <div class="flex items-center space-x-2">
-          <span class="bg-opacity-60 rounded bg-white px-2 py-1 text-xs">
+          <span class="rounded bg-white bg-opacity-60 px-2 py-1 text-xs">
             {queryTree.confidence}
           </span>
           {#if queryTree.nodeId}
@@ -131,7 +132,7 @@
           {/if}
           {#if queryTree.callerInfo}
             <span class="font-mono text-xs text-blue-600">
-              📍 {queryTree.callerInfo.className}.{queryTree.callerInfo.methodName}()
+              📍 {getShortCallerInfo(queryTree.callerInfo.className, queryTree.callerInfo.methodName)}
             </span>
           {/if}
         </div>
@@ -140,7 +141,7 @@
       <!-- String representation -->
       {#if queryTree.stringRepresentation}
         <div
-          class="bg-opacity-40 mt-2 rounded border-l-2 border-current bg-white p-2 font-mono text-sm"
+          class="mt-2 rounded border-l-2 border-current bg-white bg-opacity-40 p-2 font-mono text-sm"
         >
           {queryTree.stringRepresentation}
         </div>
@@ -148,17 +149,12 @@
 
       <!-- Caller information -->
       {#if queryTree.callerInfo}
-        <div class="bg-opacity-60 mt-2 rounded border-l-2 border-blue-300 bg-blue-50 p-2 text-xs">
+        <div class="mt-2 rounded border-l-2 border-blue-300 bg-blue-50 bg-opacity-60 p-2 text-xs">
           <div class="flex items-center space-x-1 text-blue-700">
             <span class="font-medium">📍 Called from:</span>
-            <span class="font-mono"
-              >{queryTree.callerInfo.className}.{queryTree.callerInfo.methodName}()</span
-            >
-          </div>
-          <div class="mt-1 text-blue-600">
-            <span class="font-mono"
-              >{queryTree.callerInfo.fileName}:{queryTree.callerInfo.lineNumber}</span
-            >
+            <span class="font-mono">
+              {queryTree.callerInfo.fileName}:{queryTree.callerInfo.lineNumber}
+            </span>
           </div>
         </div>
       {/if}

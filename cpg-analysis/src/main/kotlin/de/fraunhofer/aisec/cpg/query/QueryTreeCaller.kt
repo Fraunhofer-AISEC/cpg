@@ -51,7 +51,7 @@ data class CallerInfo(
 fun getQueryTreeCaller(): CallerInfo? {
     // Filter out lambda functions from the stacktrace first
     val stackTrace =
-        Thread.currentThread().stackTrace.filter { !it.methodName.contains("\$lambda") }
+        Thread.currentThread().stackTrace /*.filter { !it.methodName.contains("\$lambda") }*/
 
     // Find the index of the first reference to a query tree method from the bottom
     val flowQueriesIndex =
@@ -63,12 +63,31 @@ fun getQueryTreeCaller(): CallerInfo? {
         return null
     }
 
-    // Return the element just before the FlowQueriesKt method
-    val element = stackTrace[flowQueriesIndex + 1]
+    // Check, if the element is a lambda function, if yes, peek into the next stack trace element if
+    // that begins with the same method name, i.e., we are only inside a lambda of that function. If
+    // yes, we take this one
+    var element = stackTrace[flowQueriesIndex + 1]
+    element =
+        if (element.methodName.contains("\$lambda")) {
+            // Peek into the next element
+            val nextElement = stackTrace.getOrNull(flowQueriesIndex + 2)
+            if (nextElement != null && element.methodName.startsWith(nextElement.methodName)) {
+                nextElement
+            } else {
+                element
+            }
+        } else {
+            element
+        }
 
     return CallerInfo(
         className = element.className,
-        methodName = element.methodName,
+        methodName =
+            if (element.methodName.contains("\$lambda")) {
+                "<lambda function>"
+            } else {
+                element.methodName
+            },
         fileName = element.fileName ?: "Unknown",
         lineNumber = element.lineNumber,
     )
