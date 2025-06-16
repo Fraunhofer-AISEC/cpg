@@ -46,6 +46,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.default
 import de.fraunhofer.aisec.cpg.graph.newFunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.newParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.parseName
+import de.fraunhofer.aisec.cpg.graph.returns
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemoryAddress
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnknownMemoryValue
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -297,7 +298,8 @@ class DFGFunctionSummaries {
             val granularity =
                 if (entry.dfgType == "partial") PartialDataflowGranularity("hardcoded")
                 else default()
-            val from =
+            val destNodes: MutableSet<Node> = mutableSetOf()
+            val from: Node? =
                 if (entry.from.startsWith("param")) {
                     try {
                         val e = entry.from.split(".")
@@ -332,19 +334,8 @@ class DFGFunctionSummaries {
                         else if (e.getOrNull(1) == "address") destValueDepth = 0
                         val paramTo =
                             paramIndex?.let { functionDeclaration.parameters.getOrNull(it) }
-                        if (from != null && paramTo != null) {
-                            functionDeclaration.functionSummary
-                                .computeIfAbsent(paramTo) { identitySetOf() }
-                                .add(
-                                    FunctionDeclaration.FSEntry(
-                                        destValueDepth,
-                                        from,
-                                        srcValueDepth,
-                                        "",
-                                        equalLinkedHashSetOf(Pair(paramTo, equalLinkedHashSetOf())),
-                                        equalLinkedHashSetOf(granularity, false),
-                                    )
-                                )
+                        if (paramTo != null) {
+                            destNodes.add(paramTo)
                         }
                         paramTo
                     } catch (e: NumberFormatException) {
@@ -354,32 +345,56 @@ class DFGFunctionSummaries {
                     val receiver = (functionDeclaration as? MethodDeclaration)?.receiver
                     if (from != null) {
                         if (receiver != null) {
-                            functionDeclaration.functionSummary
-                                .computeIfAbsent(receiver) { identitySetOf() }
-                                .add(
-                                    FunctionDeclaration.FSEntry(
-                                        destValueDepth,
-                                        from,
-                                        srcValueDepth,
-                                        "",
-                                        equalLinkedHashSetOf(
-                                            Pair(functionDeclaration, equalLinkedHashSetOf())
-                                        ),
-                                        equalLinkedHashSetOf(false),
-                                    )
+                            destNodes.add(receiver)
+                            TODO() // Make sure that this makes sense
+                            /*functionDeclaration.functionSummary
+                            .computeIfAbsent(receiver) { identitySetOf() }
+                            .add(
+                                FunctionDeclaration.FSEntry(
+                                    destValueDepth,
+                                    from,
+                                    srcValueDepth,
+                                    "",
+                                    equalLinkedHashSetOf(
+                                        Pair(functionDeclaration, equalLinkedHashSetOf())
+                                    ),
+                                    equalLinkedHashSetOf(false),
                                 )
+                            )*/
                         }
                     }
                     receiver
                 } else if (entry.to == "return") {
+                    if (functionDeclaration.returns.isNotEmpty())
+                        destNodes.addAll(functionDeclaration.returns)
+                    else destNodes.add(functionDeclaration)
                     functionDeclaration
                 } else if (entry.to.startsWith("return")) {
                     val returnIndex = entry.to.removePrefix("return").toInt()
                     // TODO: It would be nice if we could model the index. Not sure how this is done
+                    destNodes.addAll(functionDeclaration.returns)
                     functionDeclaration
                 } else {
                     null
                 }
+
+            if (from != null && destNodes.isNotEmpty()) {
+                destNodes.forEach { destNode ->
+                    functionDeclaration.functionSummary
+                        .computeIfAbsent(destNode) { identitySetOf() }
+                        .add(
+                            FunctionDeclaration.FSEntry(
+                                destValueDepth,
+                                from,
+                                srcValueDepth,
+                                "",
+                                equalLinkedHashSetOf(Pair(destNode, equalLinkedHashSetOf())),
+                                equalLinkedHashSetOf(granularity, false),
+                            )
+                        )
+                }
+            }
+
             // TODO: It would make sense to model properties here. Could be the index of a return
             // value, full vs. partial flow or whatever comes to our minds in the future
             // TODO: Unsure if we still need this. We currently draw the edges between the

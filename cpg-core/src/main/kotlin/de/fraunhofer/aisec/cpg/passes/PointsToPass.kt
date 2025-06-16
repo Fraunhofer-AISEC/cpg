@@ -861,7 +861,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 currentNode.arguments[param.argumentIndex]
                             } else null
                         }
-                        is ReturnStatement -> {
+                        is ReturnStatement,
+                        is FunctionDeclaration -> {
                             currentNode
                         }
                         else -> null
