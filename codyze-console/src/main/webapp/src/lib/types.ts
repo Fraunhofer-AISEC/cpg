@@ -95,6 +95,16 @@ export interface CallerInfoJSON {
   lineNumber: number;
 }
 
+export interface AssumptionJSON {
+  id: string;
+  assumptionType: string;
+  message: string;
+  status: string;
+  nodeId?: string;
+  edgeLabel?: string;
+  assumptionScopeId?: string;
+}
+
 export interface QueryTreeJSON {
   id: string;
   value?: string;
@@ -108,6 +118,7 @@ export interface QueryTreeJSON {
   nodeId?: string;
   node?: NodeJSON;
   callerInfo?: CallerInfoJSON;
+  assumptions: AssumptionJSON[];
 }
 
 export interface QueryTreeWithParentsJSON {

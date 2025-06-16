@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.codyze.dsl.RequirementBuilder
 import de.fraunhofer.aisec.codyze.dsl.RequirementCategoryBuilder
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -206,6 +207,18 @@ data class CallerInfoJSON(
     val lineNumber: Int,
 )
 
+/** JSON data class for an assumption. */
+@Serializable
+data class AssumptionJSON(
+    @Serializable(with = UuidSerializer::class) val id: Uuid,
+    val assumptionType: String, // AssumptionType as string
+    val message: String,
+    val status: String, // AssumptionStatus as string
+    val nodeId: String? = null, // UUID of associated node, if any
+    val edgeLabel: String? = null, // Label of associated edge, if any
+    val assumptionScopeId: String? = null, // UUID of assumption scope node, if any
+)
+
 /** JSON data class for a QueryTree result with lazy loading support. */
 @Serializable
 data class QueryTreeJSON(
@@ -222,6 +235,7 @@ data class QueryTreeJSON(
     val nodeId: String? = null, // UUID of associated node, if any
     val node: NodeJSON? = null, // Full node information, if any
     val callerInfo: CallerInfoJSON? = null, // Information about where the query was called from
+    val assumptions: List<AssumptionJSON> = emptyList(), // List of assumptions for this QueryTree
 )
 
 /** JSON data class for a QueryTree with its parent IDs for tree expansion. */
@@ -375,6 +389,19 @@ fun Edge<*>.toJSON(): EdgeJSON {
     )
 }
 
+/** Converts an [Assumption] into its JSON representation. */
+fun Assumption.toJSON(): AssumptionJSON {
+    return AssumptionJSON(
+        id = this.id,
+        assumptionType = this.assumptionType.name,
+        message = this.message,
+        status = this.status.name,
+        nodeId = this.underlyingNode?.id?.toString(),
+        edgeLabel = this.edge?.labels?.firstOrNull(),
+        assumptionScopeId = this.assumptionScope?.id?.toString(),
+    )
+}
+
 /**
  * Converts a SARIF [Result] into its JSON representation. It needs a [TranslationResult] as a
  * context receiver to find the component and translation unit of the finding.
@@ -517,6 +544,7 @@ fun <T> QueryTree<T>.toJSON(): QueryTreeJSON {
                     lineNumber = it.lineNumber,
                 )
             },
+        assumptions = this.collectAssumptions().map { it.toJSON() },
     )
 }
 

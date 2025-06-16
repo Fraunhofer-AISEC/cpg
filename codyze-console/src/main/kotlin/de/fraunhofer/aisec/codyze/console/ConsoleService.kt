@@ -40,11 +40,11 @@ import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedCo
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
 import de.fraunhofer.aisec.cpg.query.QueryTree
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.nio.file.Path
 import kotlin.uuid.Uuid
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private const val AD_HOC_PROJECT_NAME = "ad-hoc"
 
@@ -137,9 +137,7 @@ class ConsoleService {
      * Populates the QueryTree cache with all QueryTrees from the analysis results. This enables
      * lazy loading of QueryTree children and builds parent relationships for tree expansion.
      */
-    private fun populateQueryTreeCache(
-        requirementsResults: Map<String, QueryTree<Boolean>>?
-    ) {
+    private fun populateQueryTreeCache(requirementsResults: Map<String, QueryTree<Boolean>>?) {
         if (requirementsResults == null) {
             queryTreeCache = emptyMap()
             queryTreeParentMap = emptyMap()

@@ -11,6 +11,7 @@
   import { getShortCallerInfo } from '$lib/utils/display';
   import QueryTreeExplorer from './QueryTreeExplorer.svelte';
   import QueryTreeNodeValue from './QueryTreeNodeValue.svelte';
+  import AssumptionsModal from '../modals/AssumptionsModal.svelte';
 
   interface Props {
     queryTree: QueryTreeJSON | undefined;
@@ -57,6 +58,7 @@
   let loadError = $state<string | null>(null);
   let childrenLoaded = $state(false); // Track if children have been loaded
   let showCallerDetails = $state(false); // Track if caller details should be shown
+  let showAssumptionsModal = $state(false); // Track if assumptions modal should be shown
 
   // Toast notification state
   let showToast = $state(false);
@@ -156,6 +158,16 @@
     }
   }
 
+  // Open assumptions modal
+  function openAssumptionsModal() {
+    showAssumptionsModal = true;
+  }
+
+  // Close assumptions modal
+  function closeAssumptionsModal() {
+    showAssumptionsModal = false;
+  }
+
   // Get status and styling configuration
   const statusConfig = $derived(queryTree ? getQueryTreeStatusConfig(queryTree) : null);
   const status = $derived(queryTree ? getQueryTreeStatus(queryTree) : null);
@@ -212,9 +224,18 @@
         </div>
 
         <div class="flex items-center space-x-2">
-          <span class="bg-opacity-60 rounded bg-white px-2 py-1 text-xs">
+          <button
+            onclick={() => openAssumptionsModal()}
+            class="bg-opacity-60 rounded bg-white px-2 py-1 text-xs transition-colors hover:bg-gray-100 cursor-pointer"
+            title="Click to view assumptions for this query tree"
+          >
             {queryTree.confidence}
-          </span>
+            {#if queryTree.assumptions && queryTree.assumptions.length > 0}
+              <span class="ml-1 text-orange-600" title="{queryTree.assumptions.length} assumption(s)">
+                ⚠
+              </span>
+            {/if}
+          </button>
           {#if context === 'requirements'}
             <button
               onclick={() => copyDeepLink()}
@@ -320,6 +341,13 @@
     {toastMessage}
   </div>
 {/if}
+
+<!-- Assumptions Modal -->
+<AssumptionsModal
+  assumptions={queryTree?.assumptions || []}
+  isOpen={showAssumptionsModal}
+  onClose={closeAssumptionsModal}
+/>
 
 <style>
   .query-tree-node {
