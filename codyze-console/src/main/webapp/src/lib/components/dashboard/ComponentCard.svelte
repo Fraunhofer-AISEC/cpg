@@ -9,7 +9,7 @@
 </script>
 
 <a
-  href="/components/{component.name}"
+  href={`/components/${component.name}`}
   class="group block rounded-lg border border-gray-200 bg-white p-6 transition-all hover:border-blue-300 hover:shadow-md"
 >
   <div class="flex items-start">

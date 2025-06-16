@@ -130,7 +130,7 @@
                 {#if node.type === 'component'}
                   <!-- Component -->
                   <a
-                    href="/components/{node.componentName}"
+                    href={`/components/${node.componentName}`}
                     class="flex w-full items-center rounded-md px-2 py-1 text-left text-sm font-semibold {node.isCurrent
                       ? 'border border-indigo-200 bg-indigo-100 text-indigo-800'
                       : 'text-indigo-700 hover:bg-indigo-50'}"
@@ -203,7 +203,7 @@
                 {:else}
                   <!-- File -->
                   <a
-                    href="/components/{data.component.name}/translation-unit/{node.unit?.id}"
+                    href={`/components/${data.component.name}/translation-unit/${node.unit?.id}`}
                     class="flex w-full items-center rounded-md px-2 py-1 text-left text-sm {currentUnitId() ===
                     node.unit?.id
                       ? 'border border-blue-200 bg-blue-50 text-blue-700'

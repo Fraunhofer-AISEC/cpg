@@ -112,7 +112,13 @@ export interface ConstructorInfo {
 }
 
 // QueryTree status determination and styling
-export type QueryTreeStatus = 'FULFILLED' | 'VIOLATED' | 'REJECTED' | 'UNDECIDED' | 'NON_BOOLEAN';
+export type QueryTreeStatus =
+  | 'FULFILLED'
+  | 'VIOLATED'
+  | 'REJECTED'
+  | 'UNDECIDED'
+  | 'NOT_YET_EVALUATED'
+  | 'NON_BOOLEAN';
 
 export interface QueryTreeStatusConfig {
   bgColor: string;
@@ -150,6 +156,13 @@ export const queryTreeStatusConfigs: Record<QueryTreeStatus, QueryTreeStatusConf
     badgeColor: 'bg-yellow-100 text-yellow-800',
     borderColor: 'border-yellow-200',
     icon: '?'
+  },
+  NOT_YET_EVALUATED: {
+    bgColor: 'bg-gray-50',
+    textColor: 'text-gray-700',
+    badgeColor: 'bg-gray-100 text-gray-800',
+    borderColor: 'border-gray-200',
+    icon: '⏳'
   },
   NON_BOOLEAN: {
     bgColor: 'bg-gray-50',

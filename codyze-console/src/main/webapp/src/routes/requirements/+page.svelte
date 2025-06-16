@@ -23,8 +23,17 @@
             (acc, cat) => acc + cat.requirements.filter((r) => r.status === 'VIOLATED').length,
             0
           ),
-          notEvaluated: data.result.requirementCategories.reduce(
-            (acc, cat) => acc + cat.requirements.filter((r) => r.status === 'NOT_EVALUATED').length,
+          rejected: data.result.requirementCategories.reduce(
+            (acc, cat) => acc + cat.requirements.filter((r) => r.status === 'REJECTED').length,
+            0
+          ),
+          undecided: data.result.requirementCategories.reduce(
+            (acc, cat) => acc + cat.requirements.filter((r) => r.status === 'UNDECIDED').length,
+            0
+          ),
+          notYetEvaluated: data.result.requirementCategories.reduce(
+            (acc, cat) =>
+              acc + cat.requirements.filter((r) => r.status === 'NOT_YET_EVALUATED').length,
             0
           ),
           categories: data.result.requirementCategories.length

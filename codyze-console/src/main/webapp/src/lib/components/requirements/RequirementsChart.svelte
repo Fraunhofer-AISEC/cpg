@@ -7,13 +7,14 @@
     violated: number;
     rejected: number;
     undecided: number;
+    notYetEvaluated: number;
   }
 
-  let { fulfilled, violated, rejected, undecided }: Props = $props();
+  let { fulfilled, violated, rejected, undecided, notYetEvaluated }: Props = $props();
 
   let chartType = $state<'pie' | 'bar'>('pie');
 
-  const total = $derived(fulfilled + violated + rejected + undecided);
+  const total = $derived(fulfilled + violated + rejected + undecided + notYetEvaluated);
 </script>
 
 <div class="space-y-4">
@@ -24,9 +25,9 @@
       <div class="space-y-4 lg:col-span-2">
         <div class="rounded-lg border border-gray-200 bg-white p-6">
           {#if chartType === 'pie'}
-            <RequirementsPieChart {fulfilled} {violated} {rejected} {undecided} />
+            <RequirementsPieChart {fulfilled} {violated} {rejected} {undecided} {notYetEvaluated} />
           {:else}
-            <RequirementsBarChart {fulfilled} {violated} {rejected} {undecided} />
+            <RequirementsBarChart {fulfilled} {violated} {rejected} {undecided} {notYetEvaluated} />
           {/if}
         </div>
 
@@ -59,7 +60,7 @@
 
       <!-- Stats summary -->
       <div class="lg:col-span-1">
-        <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-1 lg:gap-4">
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2 lg:gap-4">
           <div class="rounded-lg border border-green-200 bg-green-50 p-3 text-center lg:p-4">
             <div class="text-2xl font-bold text-green-700 lg:text-3xl">{fulfilled}</div>
             <div class="text-sm font-medium text-green-600">Fulfilled</div>
@@ -79,6 +80,15 @@
             <div class="text-2xl font-bold text-yellow-700 lg:text-3xl">{undecided}</div>
             <div class="text-sm font-medium text-yellow-600">Undecided</div>
             <div class="text-xs text-yellow-500">{Math.round((undecided / total) * 100) || 0}%</div>
+          </div>
+          <div
+            class="col-span-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-center lg:col-span-2 lg:p-4"
+          >
+            <div class="text-2xl font-bold text-gray-700 lg:text-3xl">{notYetEvaluated}</div>
+            <div class="text-sm font-medium text-gray-600">Not Yet Evaluated</div>
+            <div class="text-xs text-gray-500">
+              {Math.round((notYetEvaluated / total) * 100) || 0}%
+            </div>
           </div>
         </div>
       </div>

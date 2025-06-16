@@ -32,6 +32,11 @@
           undecided: data.result.requirementCategories.reduce(
             (acc, cat) => acc + cat.requirements.filter((r) => r.status === 'UNDECIDED').length,
             0
+          ),
+          notYetEvaluated: data.result.requirementCategories.reduce(
+            (acc, cat) =>
+              acc + cat.requirements.filter((r) => r.status === 'NOT_YET_EVALUATED').length,
+            0
           )
         }
       : {
@@ -39,7 +44,8 @@
           fulfilled: 0,
           violated: 0,
           rejected: 0,
-          undecided: 0
+          undecided: 0,
+          notYetEvaluated: 0
         }
   );
 
@@ -117,6 +123,7 @@
           violated={fulfillmentStats.violated}
           rejected={fulfillmentStats.rejected}
           undecided={fulfillmentStats.undecided}
+          notYetEvaluated={fulfillmentStats.notYetEvaluated}
         />
       </DashboardSection>
 

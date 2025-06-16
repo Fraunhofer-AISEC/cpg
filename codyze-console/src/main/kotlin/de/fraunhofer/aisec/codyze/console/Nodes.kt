@@ -497,10 +497,10 @@ fun RequirementBuilder.toJSON(
     val queryTree = requirementsResults?.get(this.id)
     val status =
         when {
-            requirementsResults == null -> "UNDECIDED"
+            requirementsResults == null -> "NOT_YET_EVALUATED"
             else -> {
                 when {
-                    queryTree == null -> "UNDECIDED"
+                    queryTree == null || queryTree is NotYetEvaluated -> "NOT_YET_EVALUATED"
                     queryTree.confidence is RejectedResult -> "REJECTED"
                     queryTree.confidence is UndecidedResult -> "UNDECIDED"
                     queryTree.value && queryTree.confidence is AcceptedResult -> "FULFILLED"
