@@ -52,6 +52,7 @@ export interface NodeJSON {
   endColumn: number;
   code: string;
   name: string;
+  fileName?: string;
   astChildren: NodeJSON[];
   prevDFG: EdgeJSON[];
   nextDFG: EdgeJSON[];
@@ -106,6 +107,11 @@ export interface QueryTreeJSON {
   hasChildren: boolean;
   nodeId?: string;
   callerInfo?: CallerInfoJSON;
+}
+
+export interface QueryTreeWithParentsJSON {
+  queryTree: QueryTreeJSON;
+  parentIds: string[];
 }
 
 export interface ConstructorInfo {
@@ -218,15 +224,19 @@ export function getQueryTreeStatusConfig(queryTree: QueryTreeJSON): QueryTreeSta
 /**
  * Generates a navigation URL to jump to a specific node location in the source code viewer.
  */
-export function getNodeLocation(node: NodeJSON, referrer?: string): string | null {
+export function getNodeLocation(node: NodeJSON, referrer?: string, queryTreeNodeId?: string): string | null {
   if (!node.componentName || !node.translationUnitId || node.startLine < 0) {
     return null;
   }
   
-  const baseUrl = `/components/${encodeURIComponent(node.componentName)}/translation-unit/${node.translationUnitId}?line=${node.startLine}`;
+  let baseUrl = `/components/${encodeURIComponent(node.componentName)}/translation-unit/${node.translationUnitId}?line=${node.startLine}`;
   
   if (referrer) {
-    return `${baseUrl}&referrer=${encodeURIComponent(referrer)}`;
+    baseUrl += `&referrer=${encodeURIComponent(referrer)}`;
+  }
+  
+  if (queryTreeNodeId) {
+    baseUrl += `&queryTreeNodeId=${encodeURIComponent(queryTreeNodeId)}`;
   }
   
   return baseUrl;

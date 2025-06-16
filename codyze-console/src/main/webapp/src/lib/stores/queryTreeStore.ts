@@ -1,6 +1,6 @@
 // QueryTree store for lazy loading and caching
 import { writable } from 'svelte/store';
-import type { QueryTreeJSON } from '$lib/types';
+import type { QueryTreeJSON, QueryTreeWithParentsJSON } from '$lib/types';
 
 // Cache for loaded QueryTrees
 const queryTreeCache = new Map<string, QueryTreeJSON>();
@@ -78,6 +78,32 @@ export async function loadQueryTrees(queryTreeIds: string[]): Promise<QueryTreeJ
       uncachedIds.forEach((id) => newStates.delete(id));
       return newStates;
     });
+  }
+}
+
+/**
+ * Loads a QueryTree with all its parent IDs for tree expansion
+ */
+export async function loadQueryTreeWithParents(queryTreeId: string): Promise<QueryTreeWithParentsJSON | null> {
+  try {
+    const response = await fetch(`/api/querytrees/${queryTreeId}/parents`);
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error(`Failed to load QueryTree with parents: ${response.statusText}`);
+    }
+
+    const result: QueryTreeWithParentsJSON = await response.json();
+    
+    // Cache the QueryTree
+    queryTreeCache.set(result.queryTree.id, result.queryTree);
+    
+    return result;
+  } catch (error) {
+    console.error('Error loading QueryTree with parents:', error);
+    throw error;
   }
 }
 

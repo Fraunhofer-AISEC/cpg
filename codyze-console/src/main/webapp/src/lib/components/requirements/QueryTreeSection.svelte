@@ -1,12 +1,47 @@
 <script lang="ts">
   import type { QueryTreeJSON } from '$lib/types';
   import QueryTreeExplorer from '../analysis/QueryTreeExplorer.svelte';
+  import { loadQueryTreeWithParents } from '$lib/stores/queryTreeStore';
+  import { onMount } from 'svelte';
+  import { page } from '$app/stores';
 
   interface Props {
     queryTree: QueryTreeJSON | undefined;
+    requirementId?: string;
+    targetNodeId?: string; // ID of a specific node to expand to
   }
 
-  let { queryTree }: Props = $props();
+  let { queryTree, requirementId, targetNodeId }: Props = $props();
+
+  let pathToTarget = $state<Set<string>>(new Set());
+  let loadingTargetPath = $state(false);
+
+  // Get clean relative URL for referrer (without targetNodeId parameter)
+  const baseUrl = $derived(() => {
+    if (typeof window === 'undefined') return '';
+    const url = new URL(window.location.href);
+    url.searchParams.delete('targetNodeId');
+    return url.pathname + url.search;
+  });
+
+  // Load the path to target node if targetNodeId is provided
+  onMount(async () => {
+    if (targetNodeId && typeof window !== 'undefined') {
+      loadingTargetPath = true;
+      try {
+        const result = await loadQueryTreeWithParents(targetNodeId);
+        if (result) {
+          // Create a set of all IDs on the path to the target
+          const pathSet = new Set([targetNodeId, ...result.parentIds]);
+          pathToTarget = pathSet;
+        }
+      } catch (error) {
+        console.error('Failed to load path to target node:', error);
+      } finally {
+        loadingTargetPath = false;
+      }
+    }
+  });
 </script>
 
 {#if queryTree}
@@ -37,7 +72,13 @@
         </p>
       </div>
 
-      <QueryTreeExplorer {queryTree} context="requirements" />
+      <QueryTreeExplorer 
+        {queryTree} 
+        context="requirements" 
+        {targetNodeId} 
+        {pathToTarget}
+        baseUrl={baseUrl()}
+      />
     </div>
   </div>
 {:else}

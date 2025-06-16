@@ -158,6 +158,7 @@ data class NodeJSON(
     val nextDFG: List<EdgeJSON> = emptyList(),
     @Serializable(with = UuidSerializer::class) val translationUnitId: Uuid? = null,
     val componentName: String? = null,
+    val fileName: String? = null,
 )
 
 /** JSON data class for a requirement category. */
@@ -220,6 +221,13 @@ data class QueryTreeJSON(
     val hasChildren: Boolean = false, // Quick check for UI expansion
     val nodeId: String? = null, // UUID of associated node, if any
     val callerInfo: CallerInfoJSON? = null, // Information about where the query was called from
+)
+
+/** JSON data class for a QueryTree with its parent IDs for tree expansion. */
+@Serializable
+data class QueryTreeWithParentsJSON(
+    val queryTree: QueryTreeJSON,
+    val parentIds: List<String> = emptyList(), // IDs of all parent QueryTrees
 )
 
 /**
@@ -333,7 +341,7 @@ fun Component.toJSON(): ComponentJSON {
 }
 
 /** Converts a [Node] into its JSON representation. */
-fun Node.toJSON(): NodeJSON {
+fun Node.toJSON(noEdges: Boolean = false): NodeJSON {
     return NodeJSON(
         id = this.id,
         type = this.javaClass.simpleName,
@@ -343,31 +351,15 @@ fun Node.toJSON(): NodeJSON {
         endColumn = location?.region?.endColumn ?: -1,
         code = this.code ?: "",
         name = this.name.toString(),
-        astChildren = this.astChildren.map { it.toJSON() },
-        prevDFG = this.prevDFGEdges.map { it.toJSON() },
-        nextDFG = this.nextDFGEdges.map { it.toJSON() },
-        translationUnitId = this.translationUnit?.id,
-        componentName = this.translationUnit?.component?.name?.toString(),
-    )
-}
-
-/**
- * Converts a [Node] into a simplified JSON representation without astChildren, prevDFG, and
- * nextDFG.
- */
-fun Node.toSimplifiedJSON(): NodeJSON {
-    return NodeJSON(
-        id = this.id,
-        type = this.javaClass.simpleName,
-        startLine = location?.region?.startLine ?: -1,
-        startColumn = location?.region?.startColumn ?: -1,
-        endLine = location?.region?.endLine ?: -1,
-        endColumn = location?.region?.endColumn ?: -1,
-        code = this.code ?: "",
-        name = this.name.toString(),
-        astChildren = emptyList(),
-        prevDFG = emptyList(),
-        nextDFG = emptyList(),
+        fileName =
+            this.location?.artifactLocation?.uri?.let { uri ->
+                // Extract filename from URI
+                val path = uri.toString()
+                path.substringAfterLast('/').substringAfterLast('\\')
+            },
+        astChildren = if (noEdges) emptyList() else this.astChildren.map { it.toJSON(noEdges) },
+        prevDFG = if (noEdges) emptyList() else this.prevDFGEdges.map { it.toJSON() },
+        nextDFG = if (noEdges) emptyList() else this.nextDFGEdges.map { it.toJSON() },
         translationUnitId = this.translationUnit?.id,
         componentName = this.translationUnit?.component?.name?.toString(),
     )
@@ -495,7 +487,7 @@ fun <T> QueryTree<T>.toJSON(): QueryTreeJSON {
                 // Check if it's a list of nodes
                 if (value.isNotEmpty() && value.first() is Node) {
                     @Suppress("UNCHECKED_CAST") val nodes = value as List<Node>
-                    null to nodes.map { it.toSimplifiedJSON() }
+                    null to nodes.map { it.toJSON(noEdges = true) }
                 } else {
                     value.toString() to null
                 }

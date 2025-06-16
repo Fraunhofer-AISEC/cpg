@@ -244,6 +244,23 @@ fun Routing.apiRoutes(service: ConsoleService) {
                 )
             }
         }
+
+        // The endpoint to get a QueryTree with its parent IDs for tree expansion
+        get("/querytrees/{queryTreeId}/parents") {
+            val queryTreeId =
+                call.parameters["queryTreeId"]
+                    ?: return@get call.respond(
+                        HttpStatusCode.BadRequest,
+                        mapOf("error" to "Missing QueryTree ID"),
+                    )
+
+            val queryTreeWithParents = service.getQueryTreeWithParents(queryTreeId)
+            if (queryTreeWithParents != null) {
+                call.respond(queryTreeWithParents)
+            } else {
+                call.respond(HttpStatusCode.NotFound, mapOf("error" to "QueryTree not found"))
+            }
+        }
     }
 }
 

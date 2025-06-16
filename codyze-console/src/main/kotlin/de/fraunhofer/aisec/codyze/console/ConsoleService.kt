@@ -64,6 +64,9 @@ class ConsoleService {
     // Cache for QueryTrees to support lazy loading
     private var queryTreeCache: Map<String, de.fraunhofer.aisec.cpg.query.QueryTree<*>> = emptyMap()
 
+    // Cache for parent relationships to support tree expansion
+    private var queryTreeParentMap: Map<String, String> = emptyMap()
+
     /**
      * Analyzes the given source directory and returns the analysis result as [AnalysisResultJSON].
      */
@@ -131,26 +134,32 @@ class ConsoleService {
 
     /**
      * Populates the QueryTree cache with all QueryTrees from the analysis results. This enables
-     * lazy loading of QueryTree children.
+     * lazy loading of QueryTree children and builds parent relationships for tree expansion.
      */
     private fun populateQueryTreeCache(
         requirementsResults: Map<String, de.fraunhofer.aisec.cpg.query.QueryTree<Boolean>>?
     ) {
         if (requirementsResults == null) {
             queryTreeCache = emptyMap()
+            queryTreeParentMap = emptyMap()
             return
         }
 
         val cache = mutableMapOf<String, de.fraunhofer.aisec.cpg.query.QueryTree<*>>()
+        val parentMap = mutableMapOf<String, String>()
 
-        // Recursively collect all QueryTrees
+        // Recursively collect all QueryTrees and build parent relationships
         fun collectQueryTrees(queryTree: de.fraunhofer.aisec.cpg.query.QueryTree<*>) {
             cache[queryTree.id.toString()] = queryTree
-            queryTree.children.forEach { collectQueryTrees(it) }
+            queryTree.children.forEach { child ->
+                parentMap[child.id.toString()] = queryTree.id.toString()
+                collectQueryTrees(child)
+            }
         }
 
         requirementsResults.values.forEach { collectQueryTrees(it) }
         queryTreeCache = cache
+        queryTreeParentMap = parentMap
     }
 
     /** Returns the translation result of the last analysis as [AnalysisResultJSON]. */
@@ -209,6 +218,27 @@ class ConsoleService {
             }
 
         return results
+    }
+
+    /** Returns a QueryTree with all its parent IDs for tree expansion. */
+    fun getQueryTreeWithParents(queryTreeId: String): QueryTreeWithParentsJSON? {
+        val queryTree = queryTreeCache[queryTreeId]?.toJSON() ?: return null
+
+        // Build the list of parent IDs by following the parent chain
+        val parentIds = mutableListOf<String>()
+        var currentId: String? = queryTreeId
+
+        while (currentId != null) {
+            val parentId = queryTreeParentMap[currentId]
+            if (parentId != null) {
+                parentIds.add(parentId)
+                currentId = parentId
+            } else {
+                currentId = null
+            }
+        }
+
+        return QueryTreeWithParentsJSON(queryTree = queryTree, parentIds = parentIds)
     }
 
     /**

@@ -76,7 +76,7 @@ export const load: PageLoad = async ({ fetch }) => {
 
 #### Building and Testing
 - Use `./gradlew :codyze-console:compileKotlin --console=plain` for checking Kotlin compilation errors in the codyze-console module from the root project directory.
-- For building the backend, use `./gradlew :codyze-console:compileKotlin --console=plain` from the root project directory.
+- Any pnpm commands, make sure you execute them in the `codyze-console/src/main/webapp` directory.
 - Starting the backend is more complicated, please just ask me to do it.
 
 #### Known Issues & Workarounds

@@ -15,9 +15,12 @@
     queryTree: QueryTreeJSON | undefined;
     depth?: number;
     context?: 'requirements' | 'analysis';
+    targetNodeId?: string; // ID of node to expand to
+    pathToTarget?: Set<string>; // Set of node IDs that are on the path to the target
+    baseUrl?: string; // Clean base URL for referrer without targetNodeId
   }
 
-  let { queryTree, depth = 0, context = 'analysis' }: Props = $props();
+  let { queryTree, depth = 0, context = 'analysis', targetNodeId, pathToTarget, baseUrl }: Props = $props();
 
   // Early return if queryTree is undefined
   if (!queryTree) {
@@ -29,16 +32,47 @@
     queryTree?.hasChildren === true && queryTree?.childrenIds && queryTree.childrenIds.length > 0
   );
 
-  let isExpanded = $state(depth === 0); // Root node expanded by default
+  // Determine if this node should be expanded based on whether it's on the path to target
+  const shouldExpand = $derived(() => {
+    if (!queryTree) return false;
+    
+    // Always expand root node
+    if (depth === 0) return true;
+    
+    // Expand if this node is on the path to the target
+    return pathToTarget?.has(queryTree.id) || false;
+  });
+
+  let isExpanded = $state(false);
   let children = $state<QueryTreeJSON[]>([]);
   let loadingChildren = $state(false);
   let loadError = $state<string | null>(null);
   let childrenLoaded = $state(false); // Track if children have been loaded
 
-  // Load children immediately if this is the root node and it has children
+  // Toast notification state
+  let showToast = $state(false);
+  let toastMessage = $state('');
+
+  // Element reference for scrolling
+  let nodeElement: HTMLDivElement | undefined = $state();
+
+  // Update expanded state when shouldExpand changes
   $effect(() => {
-    if (depth === 0 && hasChildren && !childrenLoaded && children.length === 0) {
+    isExpanded = shouldExpand();
+  });
+
+  // Load children immediately if this node should be expanded and has children
+  $effect(() => {
+    if (isExpanded && hasChildren && !childrenLoaded && children.length === 0) {
       loadChildren();
+    }
+  });
+
+  // Auto-scroll to target node when it becomes available
+  $effect(() => {
+    if (queryTree?.id === targetNodeId && nodeElement) {
+      // Jump directly to the target node
+      nodeElement.scrollIntoView({ block: 'center' });
     }
   });
 
@@ -73,6 +107,46 @@
     }
   }
 
+  // Show toast notification
+  function showToastNotification(message: string) {
+    toastMessage = message;
+    showToast = true;
+    
+    // Auto-hide after 2 seconds
+    setTimeout(() => {
+      showToast = false;
+    }, 2000);
+  }
+
+  async function copyDeepLink() {
+    if (!queryTree?.id || typeof window === 'undefined') return;
+    
+    try {
+      // Create URL with targetNodeId for this QueryTree node
+      const url = new URL(window.location.href);
+      url.searchParams.set('targetNodeId', queryTree.id);
+      
+      // Copy to clipboard
+      await navigator.clipboard.writeText(url.toString());
+      
+      // Show success toast
+      showToastNotification('Link copied to clipboard!');
+    } catch (error) {
+      console.error('Failed to copy deep link:', error);
+      // Show error toast
+      showToastNotification('Failed to copy link');
+      
+      // Fallback: select the URL in address bar (if possible)
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('targetNodeId', queryTree.id);
+        window.history.replaceState(null, '', url.toString());
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+      }
+    }
+  }
+
   // Get status and styling configuration
   const statusConfig = $derived(queryTree ? getQueryTreeStatusConfig(queryTree) : null);
   const status = $derived(queryTree ? getQueryTreeStatus(queryTree) : null);
@@ -85,6 +159,8 @@
 {:else}
   <div class="query-tree-node">
     <div
+      bind:this={nodeElement}
+      id="query-tree-node-{queryTree.id}"
       class="mb-2 rounded-lg border p-3 {statusConfig?.bgColor} {statusConfig?.textColor} {statusConfig?.borderColor}"
     >
       <!-- Node header -->
@@ -130,6 +206,15 @@
           <span class="bg-opacity-60 rounded bg-white px-2 py-1 text-xs">
             {queryTree.confidence}
           </span>
+          {#if context === 'requirements'}
+            <button
+              onclick={() => copyDeepLink()}
+              class="rounded bg-blue-50 px-2 py-1 text-xs text-blue-600 hover:bg-blue-100 transition-colors"
+              title="Copy link to this QueryTree node"
+            >
+              🔗 Copy Link
+            </button>
+          {/if}
           {#if queryTree.nodeId}
             <span class="font-mono text-xs text-gray-500">
               Node: {queryTree.nodeId.slice(0, 8)}...
@@ -178,22 +263,25 @@
                   <span class="font-mono text-xs text-gray-600">{node.type}</span>
                   <div class="flex items-center space-x-1">
                     <span class="text-xs">📍</span>
-                    {#if getNodeLocation(node, context === 'requirements' ? 'query-explorer' : undefined)}
+                    {#if getNodeLocation(node, baseUrl, queryTree?.id)}
                       <a 
-                        href={getNodeLocation(node, context === 'requirements' ? 'query-explorer' : undefined)} 
+                        href={getNodeLocation(node, baseUrl, queryTree?.id)} 
                         class="font-mono text-xs text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
                         title="Click to view in source code"
-                        onclick={() => {
-                          if (context === 'requirements' && typeof window !== 'undefined') {
-                            sessionStorage.setItem('queryExplorerUrl', window.location.href);
-                          }
-                        }}
                       >
-                        {node.startLine}:{node.startColumn}
+                        {#if node.fileName}
+                          {node.fileName}:{node.startLine}:{node.startColumn}
+                        {:else}
+                          {node.startLine}:{node.startColumn}
+                        {/if}
                       </a>
                     {:else}
                       <span class="font-mono text-xs text-gray-500">
-                        {node.startLine}:{node.startColumn}
+                        {#if node.fileName}
+                          {node.fileName}:{node.startLine}:{node.startColumn}
+                        {:else}
+                          {node.startLine}:{node.startColumn}
+                        {/if}
                       </span>
                     {/if}
                   </div>
@@ -228,11 +316,25 @@
           </div>
         {:else}
           {#each children as child}
-            <QueryTreeExplorer queryTree={child} depth={depth + 1} {context} />
+            <QueryTreeExplorer 
+              queryTree={child} 
+              depth={depth + 1} 
+              {context} 
+              {targetNodeId} 
+              {pathToTarget}
+              {baseUrl}
+            />
           {/each}
         {/if}
       </div>
     {/if}
+  </div>
+{/if}
+
+<!-- Toast Notification -->
+{#if showToast}
+  <div class="toast-notification">
+    {toastMessage}
   </div>
 {/if}
 
@@ -256,5 +358,31 @@
     width: 2px;
     height: 16px;
     background: #e5e7eb;
+  }
+
+  .toast-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #10b981;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    font-size: 14px;
+    font-weight: 500;
+    animation: slideIn 0.3s ease-out;
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
   }
 </style>

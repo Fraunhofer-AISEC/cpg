@@ -6,25 +6,30 @@
 
   let { data, children }: LayoutProps = $props();
 
-  // Check if we came from query explorer (requirements)
-  const referrer = $derived(() => {
+  // Clean breadcrumb navigation
+  const referrerUrl = $derived(() => {
     const urlParams = new URLSearchParams($page.url.search);
     return urlParams.get('referrer');
   });
   
-  // Dynamic breadcrumb based on referrer
   const breadcrumbText = $derived(() => {
-    return referrer() === 'query-explorer' ? 'Back to Query Explorer' : 'Back to Components';
+    return referrerUrl() ? 'Back to Query Explorer' : 'Back to Components';
   });
   
   const breadcrumbHref = $derived(() => {
-    if (referrer() === 'query-explorer') {
-      // Try to get the referring URL from sessionStorage, fallback to requirements page
-      if (typeof window !== 'undefined') {
-        const referringUrl = sessionStorage.getItem('queryExplorerUrl');
-        return referringUrl || '/requirements';
+    const referrer = referrerUrl();
+    if (referrer) {
+      // If we have a queryTreeNodeId, add it as targetNodeId to the referrer URL
+      const urlParams = new URLSearchParams($page.url.search);
+      const queryTreeNodeId = urlParams.get('queryTreeNodeId');
+      
+      if (queryTreeNodeId) {
+        const url = new URL(referrer, window?.location?.origin || 'http://localhost:3000');
+        url.searchParams.set('targetNodeId', queryTreeNodeId);
+        return url.pathname + url.search;
       }
-      return '/requirements';
+      
+      return referrer;
     }
     return '/components';
   });
