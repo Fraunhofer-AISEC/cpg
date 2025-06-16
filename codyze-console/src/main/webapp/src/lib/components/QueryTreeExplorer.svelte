@@ -74,7 +74,7 @@
     Error: QueryTree data is not available
   </div>
 {:else}
-  <div class="query-tree-node" style="margin-left: {depth * 16}px">
+  <div class="query-tree-node">
     <div class="border rounded-lg p-3 mb-2 {statusConfig?.bgColor} {statusConfig?.textColor} {statusConfig?.borderColor}">
       <!-- Node header -->
       <div class="flex items-center justify-between">
@@ -148,7 +148,7 @@
 
     <!-- Children (lazy loaded) -->
     {#if isExpanded && hasChildren}
-      <div class="children ml-4">
+      <div class="children">
         {#if loadingChildren}
           <div class="flex items-center space-x-2 p-2 text-sm text-gray-600">
             <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
@@ -177,6 +177,8 @@
   .children {
     border-left: 2px solid #e5e7eb;
     position: relative;
+    margin-left: 26px; /* Move line even further to the right */
+    padding-left: 24px; /* Space between line and content */
   }
   
   .children::before {
