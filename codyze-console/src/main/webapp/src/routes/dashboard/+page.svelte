@@ -5,106 +5,24 @@
   import { ViolationsTable } from '$lib/components/analysis';
   import { PageHeader } from '$lib/components/navigation';
   import { LoadingSpinner, EmptyState } from '$lib/components/ui';
+  import { calculateFulfillmentStats, calculateCombinedProjectStats } from '$lib/utils/dashboardStats';
 
   // Correctly access data with $props()
   let { data }: PageProps = $props();
 
   // Calculate requirement stats with the $derived rune
   const fulfillmentStats = $derived(
-    data.result?.requirementCategories
-      ? {
-          total: data.result.requirementCategories.reduce(
-            (acc, cat) => acc + cat.requirements.length,
-            0
-          ),
-          fulfilled: data.result.requirementCategories.reduce(
-            (acc, cat) => acc + cat.requirements.filter((r) => r.status === 'FULFILLED').length,
-            0
-          ),
-          notFulfilled: data.result.requirementCategories.reduce(
-            (acc, cat) => acc + cat.requirements.filter((r) => r.status === 'NOT_FULFILLED').length,
-            0
-          ),
-          rejected: data.result.requirementCategories.reduce(
-            (acc, cat) => acc + cat.requirements.filter((r) => r.status === 'REJECTED').length,
-            0
-          ),
-          undecided: data.result.requirementCategories.reduce(
-            (acc, cat) => acc + cat.requirements.filter((r) => r.status === 'UNDECIDED').length,
-            0
-          ),
-          notYetEvaluated: data.result.requirementCategories.reduce(
-            (acc, cat) =>
-              acc + cat.requirements.filter((r) => r.status === 'NOT_YET_EVALUATED').length,
-            0
-          )
-        }
-      : {
-          total: 0,
-          fulfilled: 0,
-          notFulfilled: 0,
-          rejected: 0,
-          undecided: 0,
-          notYetEvaluated: 0
-        }
+    calculateFulfillmentStats(data.result?.requirementCategories)
   );
 
   // Combined project and source code stats with additional metrics
-  const combinedProjectStats = $derived(() => {
-    const stats = [];
-    
-    // Project info
-    if (data.project) {
-      stats.push(
-        { title: 'Project Name', value: data.project.name },
-        { title: 'Created', value: new Date(data.project.projectCreatedAt).toLocaleString() }
-      );
-      
-      if (data.project.lastAnalyzedAt) {
-        stats.push({
-          title: 'Last Analyzed',
-          value: new Date(data.project.lastAnalyzedAt).toLocaleString()
-        });
-      }
-    }
-    
-    // Source code info with additional calculated metrics
-    if (data.result?.components) {
-      const totalTUs = data.result.components.reduce(
-        (acc, comp) => acc + comp.translationUnits.length,
-        0
-      );
-      
-      const avgTUsPerComponent = totalTUs > 0 ? 
-        Math.round((totalTUs / data.result.components.length) * 10) / 10 : 0;
-      
-      const avgNodesPerTU = totalTUs > 0 ? 
-        Math.round((data.result.totalNodes / totalTUs) * 10) / 10 : 0;
-      
-      // Find largest component
-      const largestComponent = data.result.components.reduce((max, comp) => 
-        comp.translationUnits.length > max.translationUnits.length ? comp : max
-      );
-      
-      stats.push(
-        { title: 'Components', value: data.result.components.length },
-        { title: 'Translation Units', value: totalTUs },
-        { title: 'Total Nodes', value: data.result.totalNodes.toLocaleString() },
-        { title: 'Avg TUs per Component', value: avgTUsPerComponent },
-        { title: 'Avg Nodes per TU', value: avgNodesPerTU },
-        { 
-          title: 'Largest Component', 
-          value: `${largestComponent.name} (${largestComponent.translationUnits.length} files)` 
-        }
-      );
-    }
-    
-    return stats;
-  });
+  const combinedProjectStats = $derived(
+    calculateCombinedProjectStats(data.project ?? undefined, data.result ?? undefined)
+  );
 </script>
 
 <PageHeader title="Dashboard" subtitle="Overview of your analysis project">
-  {#snippet actions()}
+  {#snippet children()}
     <a
       href="/new-analysis"
       class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
@@ -128,7 +46,7 @@
         actionText="Browse components"
         actionHref="/source"
       >
-        <StatsGrid stats={combinedProjectStats()} />
+        <StatsGrid stats={combinedProjectStats} />
       </DashboardSection>
     {/if}
 
