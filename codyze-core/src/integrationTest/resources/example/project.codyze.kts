@@ -103,15 +103,18 @@ project {
  * This is just a demo function to illustrate how to write a query. In a real-world scenario, this
  * function would not be part of the script but rather of a separate query catalog module.
  */
-fun TranslationResult.goodCryptoFunc(): QueryTree<Boolean> {
-    val q = allExtended<Secret> { dataFlow(it, predicate = { it.name.localName == "encrypt" }) }
+context(tr: TranslationResult)
+fun goodCryptoFunc(): QueryTree<Boolean> {
+    val q = tr.allExtended<Secret> { dataFlow(it, predicate = { it.name.localName == "encrypt" }) }
     return q
 }
 
-fun TranslationResult.goodArgumentSize(): QueryTree<Boolean> {
-    return allExtended<CallExpression> { it.arguments.size eq 2 }
+context(tr: TranslationResult)
+fun goodArgumentSize(): QueryTree<Boolean> {
+    return tr.allExtended<CallExpression> { it.arguments.size eq 2 }
 }
 
-fun TranslationResult.veryLongFunctionName(): QueryTree<Boolean> {
-    return allExtended<FunctionDeclaration> { it.name.localName.length gt 7 }
+context(tr: TranslationResult)
+fun veryLongFunctionName(): QueryTree<Boolean> {
+    return tr.allExtended<FunctionDeclaration> { it.name.localName.length gt 7 }
 }

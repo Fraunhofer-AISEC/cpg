@@ -60,9 +60,10 @@ project {
 }
 
 /** For each key K, if K is used in encryption or decryption, it must be deleted after use */
-fun TranslationResult.properHandlingOfKeyMaterial(): QueryTree<Boolean> {
+context(tr: TranslationResult)
+fun properHandlingOfKeyMaterial(): QueryTree<Boolean> {
     val result =
-        allExtended<CallExpression>(
+        tr.allExtended<CallExpression>(
             sel = {
                 it.name.toString() == "execute" &&
                     it.arguments[0].evaluate() in listOf("encrypt", "decrypt")

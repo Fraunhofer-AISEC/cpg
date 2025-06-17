@@ -87,7 +87,7 @@ class CodyzeScriptCompilationConfiguration :
         }
         compilerOptions(
             "-opt-in=kotlin.experimental.ExperimentalTypeInference",
-            "-Xcontext-receivers",
+            "-Xcontext-parameters",
             "-jvm-target=21",
         )
         ide { acceptedLocations(ScriptAcceptedLocation.Everywhere) }
