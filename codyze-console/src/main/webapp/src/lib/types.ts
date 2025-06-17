@@ -115,6 +115,7 @@ export interface QueryTreeJSON {
   operator: string;
   queryTreeType: string;
   childrenIds: string[];
+  childrenWithAssumptionIds: string[];
   hasChildren: boolean;
   nodeId?: string;
   node?: NodeJSON;
@@ -200,6 +201,15 @@ export const queryTreeStatusConfigs: Record<QueryTreeStatus, QueryTreeStatusConf
  * Uses the same logic as backend RequirementBuilder.toJSON()
  */
 export function getQueryTreeStatus(queryTree: QueryTreeJSON): QueryTreeStatus {
+  // First check confidence - this takes priority over value/nodeValues
+  if (queryTree.confidence === 'RejectedResult') {
+    return 'REJECTED';
+  }
+
+  if (queryTree.confidence === 'UndecidedResult') {
+    return 'UNDECIDED';
+  }
+
   // Handle cases where we have nodeValues instead of a string value
   if (queryTree.nodeValues) {
     return 'NON_BOOLEAN';
@@ -210,15 +220,7 @@ export function getQueryTreeStatus(queryTree: QueryTreeJSON): QueryTreeStatus {
     return 'NON_BOOLEAN';
   }
 
-  // Apply same logic as backend
-  if (queryTree.confidence === 'RejectedResult') {
-    return 'REJECTED';
-  }
-
-  if (queryTree.confidence === 'UndecidedResult') {
-    return 'UNDECIDED';
-  }
-
+  // For AcceptedResult, check the actual boolean value
   if (queryTree.confidence === 'AcceptedResult') {
     return queryTree.value === 'true' ? 'FULFILLED' : 'NOT_FULFILLED';
   }

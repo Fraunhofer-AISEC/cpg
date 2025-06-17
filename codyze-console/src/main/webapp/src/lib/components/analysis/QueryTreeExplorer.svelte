@@ -168,6 +168,15 @@
     showAssumptionsModal = false;
   }
 
+  // Navigate to a child QueryTree node
+  function navigateToChild(childId: string) {
+    if (!baseUrl) return;
+    
+    const url = new URL(baseUrl, window.location.origin);
+    url.searchParams.set('targetNodeId', childId);
+    window.location.href = url.toString();
+  }
+
   // Get status and styling configuration
   const statusConfig = $derived(queryTree ? getQueryTreeStatusConfig(queryTree) : null);
   const status = $derived(queryTree ? getQueryTreeStatus(queryTree) : null);
@@ -344,9 +353,12 @@
 
 <!-- Assumptions Modal -->
 <AssumptionsModal
+  queryTree={queryTree}
   assumptions={queryTree?.assumptions || []}
   isOpen={showAssumptionsModal}
   onClose={closeAssumptionsModal}
+  {baseUrl}
+  requirementId={context === 'requirements' ? baseUrl?.split('/').pop() : undefined}
 />
 
 <style>

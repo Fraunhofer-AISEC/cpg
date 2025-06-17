@@ -1,15 +1,33 @@
 <script lang="ts">
-  import type { AssumptionJSON } from '$lib/types';
+  import type { AssumptionJSON, QueryTreeJSON } from '$lib/types';
   import AssumptionCard from './AssumptionCard.svelte';
   import AssumptionHelpSection from './AssumptionHelpSection.svelte';
+  import ChildrenWithAssumptions from './ChildrenWithAssumptions.svelte';
 
   interface Props {
     assumptions: AssumptionJSON[];
+    queryTree?: QueryTreeJSON;
     isOpen: boolean;
     onClose: () => void;
+    baseUrl?: string;
+    requirementId?: string;
   }
 
-  let { assumptions, isOpen, onClose }: Props = $props();
+  let { assumptions, queryTree, isOpen, onClose, baseUrl, requirementId }: Props = $props();
+
+  // Check if result is undecided or rejected
+  const isUndecidedOrRejected = $derived(() => {
+    if (!queryTree) return false;
+    return queryTree.confidence === 'RejectedResult' || queryTree.confidence === 'UndecidedResult';
+  });
+
+  // Check if we should show children with assumptions
+  const shouldShowChildrenWithAssumptions = $derived(() => {
+    return assumptions.length === 0 && 
+           isUndecidedOrRejected() && 
+           queryTree?.childrenWithAssumptionIds && 
+           queryTree.childrenWithAssumptionIds.length > 0;
+  });
 
   // Close modal when clicking outside
   function handleBackdropClick(event: MouseEvent) {
@@ -74,7 +92,7 @@
 
       <!-- Modal Content -->
       <div class="max-h-[60vh] overflow-y-auto p-4">
-        {#if assumptions.length === 0}
+        {#if assumptions.length === 0 && !shouldShowChildrenWithAssumptions()}
           <div class="py-8 text-center text-gray-500">
             <div class="text-4xl mb-2">✅</div>
             <p class="text-lg font-medium">No Assumptions</p>
@@ -82,6 +100,21 @@
               This query tree evaluation was made without any assumptions.
             </p>
           </div>
+        {:else if shouldShowChildrenWithAssumptions()}
+          <div class="py-4 text-center text-gray-500">
+            <div class="text-4xl mb-2">🔗</div>
+            <p class="text-lg font-medium">No Direct Assumptions</p>
+            <p class="mt-1 text-sm text-gray-600">
+              This evaluation has no assumptions of its own, but the overall result is 
+              <strong>{queryTree?.confidence === 'UndecidedResult' ? 'undecided' : 'rejected'}</strong> 
+              due to assumptions made in child evaluations.
+            </p>
+          </div>
+          <ChildrenWithAssumptions 
+            childrenIds={queryTree?.childrenWithAssumptionIds || []}
+            {baseUrl}
+            {requirementId}
+          />
         {:else}
           <div class="space-y-4">
             <div class="text-sm text-gray-600 mb-4">
