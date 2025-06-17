@@ -9,6 +9,8 @@
 
   let { assumption, onCopyId }: Props = $props();
 
+  let showCopyDropdown = $state(false);
+
   // Get assumption status color
   function getAssumptionStatusColor(status: string): string {
     switch (status) {
@@ -28,7 +30,61 @@
   function getAssumptionTypeDisplay(type: string): string {
     return type.replace(/([A-Z])/g, ' $1').trim();
   }
+
+  // Copy functions
+  async function copyToClipboard(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+  }
+
+  async function copyId() {
+    await copyToClipboard(assumption.id);
+    showCopyDropdown = false;
+  }
+
+  async function copyAcceptDSL() {
+    const dsl = `project {
+    assumptions {
+        decisions {
+            accept("${assumption.id}")
+        }
+    }
+}`;
+    await copyToClipboard(dsl);
+    showCopyDropdown = false;
+  }
+
+  async function copyRejectDSL() {
+    const dsl = `project {
+    assumptions {
+        decisions {
+            reject("${assumption.id}")
+        }
+    }
+}`;
+    await copyToClipboard(dsl);
+    showCopyDropdown = false;
+  }
+
+  // Close dropdown when clicking outside
+  function handleClickOutside(event: MouseEvent) {
+    if (!event.target || !(event.target as Element).closest('.copy-dropdown-container')) {
+      showCopyDropdown = false;
+    }
+  }
 </script>
+
+<svelte:window onclick={handleClickOutside} />
 
 <div class="border rounded-lg p-4 {getAssumptionStatusColor(assumption.status)}">
   <!-- Assumption Header -->
@@ -41,16 +97,57 @@
         {getAssumptionTypeDisplay(assumption.assumptionType)}
       </span>
     </div>
-    <button
-      onclick={() => onCopyId(assumption.id)}
-      class="flex items-center space-x-1 rounded px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-colors"
-      title="Copy assumption ID"
-    >
-      <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-      </svg>
-      <span>Copy ID</span>
-    </button>
+    
+    <!-- Copy Dropdown -->
+    <div class="relative copy-dropdown-container">
+      <button
+        onclick={() => showCopyDropdown = !showCopyDropdown}
+        class="flex items-center space-x-1 rounded px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-colors"
+        title="Copy options"
+      >
+        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+        <span>Copy</span>
+        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      
+      {#if showCopyDropdown}
+        <div class="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-10 min-w-48">
+          <div class="py-1">
+            <button
+              onclick={copyId}
+              class="flex items-center w-full px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              <svg class="h-3 w-3 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c1.1 0 2 .9 2 2v1M7 7V3a1 1 0 011-1h5m-5 5a1 1 0 00-1 1v5a1 1 0 001 1h5a1 1 0 001-1V7a1 1 0 00-1-1H7z" />
+              </svg>
+              Copy ID only
+            </button>
+            <button
+              onclick={copyAcceptDSL}
+              class="flex items-center w-full px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              <svg class="h-3 w-3 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              Copy accept DSL
+            </button>
+            <button
+              onclick={copyRejectDSL}
+              class="flex items-center w-full px-3 py-2 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              <svg class="h-3 w-3 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Copy reject DSL
+            </button>
+          </div>
+        </div>
+      {/if}
+    </div>
   </div>
 
   <!-- Assumption Message -->

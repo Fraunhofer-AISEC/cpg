@@ -45,21 +45,25 @@
   });
 
   // Reactive effect to handle targetNodeId changes during navigation
-  $effect(async () => {
+  $effect(() => {
     if (targetNodeId && typeof window !== 'undefined') {
       loadingTargetPath = true;
-      try {
-        const result = await loadQueryTreeWithParents(targetNodeId);
-        if (result) {
-          // Create a set of all IDs on the path to the target
-          const pathSet = new Set([targetNodeId, ...result.parentIds]);
-          pathToTarget = pathSet;
-        }
-      } catch (error) {
-        console.error('Failed to load path to target node:', error);
-      } finally {
-        loadingTargetPath = false;
-      }
+      
+      // Handle async operation within the effect
+      loadQueryTreeWithParents(targetNodeId)
+        .then((result) => {
+          if (result) {
+            // Create a set of all IDs on the path to the target
+            const pathSet = new Set([targetNodeId, ...result.parentIds]);
+            pathToTarget = pathSet;
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to load path to target node:', error);
+        })
+        .finally(() => {
+          loadingTargetPath = false;
+        });
     } else {
       // Clear path if no target
       pathToTarget = new Set();
