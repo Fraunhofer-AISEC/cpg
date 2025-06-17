@@ -87,7 +87,7 @@ export const load: PageLoad = async ({ fetch }) => {
 #### Technologies
 - **Language**: Kotlin
 - **Build Tool**: Gradle with Kotlin DSL
-- **Testing**: JUnit 5, Mockk
+- **Testing**: JUnit 5 (using `kotlin.test` wrapper), Mockk
 - **Documentation**: KDoc
 
 #### Code Style
