@@ -69,7 +69,7 @@ fun MetadataProvider.newFunctionDeclaration(
     rawNode: Any? = null,
 ): FunctionDeclaration {
     val node = FunctionDeclaration()
-    node.applyMetadata(this@MetadataProvider, name, rawNode, localNameOnly)
+    node.applyMetadata(this, name, rawNode, localNameOnly)
 
     log(node)
     return node
@@ -127,7 +127,7 @@ fun MetadataProvider.newOperatorDeclaration(
  * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
  * prepended argument.
  */
-context(ContextProvider)
+context(provider: ContextProvider)
 @JvmOverloads
 fun MetadataProvider.newConstructorDeclaration(
     name: CharSequence?,
@@ -197,7 +197,7 @@ fun MetadataProvider.newVariableDeclaration(
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
-context(ContextProvider)
+context(provider: ContextProvider)
 @JvmOverloads
 fun LanguageProvider.newTupleDeclaration(
     elements: List<VariableDeclaration>,

@@ -55,16 +55,14 @@ class NamespaceScope(astNode: NamespaceDeclaration) : NameScope(astNode) {
     /** Virtual property for accessing [importedScopeEdges] without property edges. */
     val importedBy: MutableSet<Scope> by unwrappingIncoming(NamespaceScope::importedByEdges)
 
-    context(ContextProvider)
+    context(provider: ContextProvider)
     @Suppress("CONTEXT_RECEIVERS_DEPRECATED")
     override fun addSymbol(symbol: Symbol, declaration: Declaration) {
         super.addSymbol(symbol, declaration)
 
         // Update imported symbols of dependent scopes
         for (edge in importedByEdges) {
-            edge.declaration?.let {
-                this@ContextProvider.ctx.scopeManager.updateImportedSymbols(it)
-            }
+            edge.declaration?.let { provider.ctx.scopeManager.updateImportedSymbols(it) }
         }
     }
 }

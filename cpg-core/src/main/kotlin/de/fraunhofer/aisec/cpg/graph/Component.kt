@@ -79,9 +79,9 @@ open class Component : Node() {
      * Returns the top-level directory of this component according to
      * [TranslationConfiguration.topLevels]
      */
-    context(ContextProvider)
+    context(provider: ContextProvider)
     fun topLevel(): File? {
-        return this@ContextProvider.ctx.config.topLevels[this.name.localName]
+        return provider.ctx.config.topLevels[this.name.localName]
     }
 
     /**

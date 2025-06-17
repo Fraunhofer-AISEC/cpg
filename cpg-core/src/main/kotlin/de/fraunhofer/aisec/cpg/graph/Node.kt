@@ -392,11 +392,11 @@ abstract class Node() :
  * Works similar to [apply] but before executing [block], it enters the scope for this object and
  * afterward leaves the scope again.
  */
-context(ContextProvider)
+context(provider: ContextProvider)
 inline fun <reified T : Node> T.applyWithScope(block: T.() -> Unit): T {
     return this.apply {
-        (this@ContextProvider).ctx.scopeManager.enterScope(this)
+        (provider).ctx.scopeManager.enterScope(this)
         block()
-        (this@ContextProvider).ctx.scopeManager.leaveScope(this)
+        (provider).ctx.scopeManager.leaveScope(this)
     }
 }
