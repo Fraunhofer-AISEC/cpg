@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
 import java.util.*
+import kotlin.uuid.Uuid
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.typeconversion.Convert
 
@@ -79,7 +80,7 @@ class Assumption(
     @DoNotPersist var edge: Edge<*>? = null,
     @Relationship(value = "ASSUMPTION_SCOPE", direction = Relationship.Direction.OUTGOING)
     var assumptionScope: Node? = node,
-    var status: AssumptionStatus = AssumptionStatus.Ignored,
+    var status: AssumptionStatus = AssumptionStatus.Undecided,
 ) : OverlayNode() {
 
     init {
@@ -95,6 +96,9 @@ class Assumption(
         }
         name = Name(assumptionType.name)
         location = node?.location
+
+        // The ID should be stable now, so we can try to see if we have a pre-set status for it
+        states[id]?.let { this.status = it }
     }
 
     /**
@@ -107,7 +111,7 @@ class Assumption(
         // The underlying node is already in the hashCode of the super class implementation.
         // If the assumption is created from an edge, the edge is not null and therefore influences
         // the hashCode.
-        return Objects.hash(super.hashCode(), edge, assumptionType, message, assumptionLocation)
+        return Objects.hash(super.hashCode(), edge, assumptionType.name, message)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -118,6 +122,15 @@ class Assumption(
             assumptionType == other.assumptionType &&
             message == other.message &&
             assumptionLocation == other.assumptionLocation
+    }
+
+    companion object {
+        /**
+         * This map holds the status assigned to assumptions identified by a specific [Uuid] when
+         * being set manually. The map is empty after a new analysis and can be filled during manual
+         * evaluation of assumptions.
+         */
+        val states = mutableMapOf<Uuid, AssumptionStatus>()
     }
 }
 
@@ -287,6 +300,13 @@ enum class AssumptionType {
  * [HasAssumptions.addAssumptionDependence] or [HasAssumptions.addAssumptionDependence].
  */
 interface HasAssumptions {
+
+    /**
+     * This set only contains the assumptions that were added by invoking [assume] or
+     * [addAssumptionDependence] to this object. To gather all assumptions that are relevant for
+     * this object, call [collectAssumptions]. This is necessary as different parts of cpg
+     * construction and augmentation can add assumptions to a dependent object.
+     */
     val assumptions: MutableSet<Assumption>
 
     /**
@@ -302,8 +322,8 @@ interface HasAssumptions {
 /**
  * This function adds a new assumption to the object it is called on. If the object is a node or
  * edge. The Assumption is added as an overlaying node for presentation in the graph. The assumption
- * is also added to the [assumptions] list. In the future the [Node.id] will be deterministic across
- * functions.
+ * is also added to the [HasAssumptions.assumptions] list. In the future the [Node.id] will be
+ * deterministic across functions.
  *
  * Notes on writing the [message]: The message should specify what we assume, the condition, and
  * ideally the reason why this assumption was necessary and how it can be verified. The text should
@@ -346,8 +366,8 @@ fun <T : HasAssumptions> T.assume(
  *
  * @param haveAssumptions nodes that hold assumptions this object dependent on.
  */
-fun <T : HasAssumptions> T.addAssumptionDependence(vararg haveAssumptions: HasAssumptions): T {
-    this.assumptions.addAll(haveAssumptions.flatMap { it.collectAssumptions() })
+fun <T : HasAssumptions> T.addAssumptionDependence(vararg haveAssumptions: HasAssumptions?): T {
+    this.assumptions.addAll(haveAssumptions.flatMap { it?.collectAssumptions() ?: setOf() })
     return this
 }
 

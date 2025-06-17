@@ -58,29 +58,42 @@ fun FulfilledAndFailedPaths.toQueryTree(
 ): List<QueryTree<Boolean>> {
     return this.fulfilled.map {
         SinglePathResult(
-            true,
-            mutableListOf(QueryTree(it.nodes)),
-            "$queryType from $startNode to ${it.nodes.last()} fulfills the requirement",
-            startNode,
-            Success(it.nodes.last()),
+            value = true,
+            children =
+                mutableListOf(
+                    QueryTree(value = it.nodes, operator = GenericQueryOperators.EVALUATE)
+                ),
+            stringRepresentation =
+                "$queryType from $startNode to ${it.nodes.last()} fulfills the requirement",
+            node = startNode,
+            terminationReason = Success(it.nodes.last()),
+            operator = GenericQueryOperators.EVALUATE,
         )
     } +
         this.failed.map { (reason, nodePath) ->
             SinglePathResult(
-                false,
-                mutableListOf(QueryTree(nodePath.nodes).addAssumptionDependence(nodePath)),
-                "$queryType from $startNode to ${nodePath.nodes.last()} fulfills the requirement",
-                startNode,
-                if (reason == FailureReason.PATH_ENDED) {
-                    PathEnded(nodePath.nodes.last())
-                } else if (reason == FailureReason.HIT_EARLY_TERMINATION) {
-                    HitEarlyTermination(nodePath.nodes.last())
-                } else {
-                    // TODO: We cannot set this (yet) but it might be useful to differentiate
-                    // between "path is really at the end" or "we just stopped". Requires adaptions
-                    // in followXUntilHit and all of its callers
-                    StepsExceeded(nodePath.nodes.last())
-                },
+                value = false,
+                children =
+                    mutableListOf(
+                        QueryTree(value = nodePath.nodes, operator = GenericQueryOperators.EVALUATE)
+                            .addAssumptionDependence(nodePath)
+                    ),
+                stringRepresentation =
+                    "$queryType from $startNode to ${nodePath.nodes.last()} fulfills the requirement",
+                node = startNode,
+                terminationReason =
+                    if (reason == FailureReason.PATH_ENDED) {
+                        PathEnded(nodePath.nodes.last())
+                    } else if (reason == FailureReason.HIT_EARLY_TERMINATION) {
+                        HitEarlyTermination(nodePath.nodes.last())
+                    } else {
+                        // TODO: We cannot set this (yet) but it might be useful to differentiate
+                        // between "path is really at the end" or "we just stopped". Requires
+                        // adaptions
+                        // in followXUntilHit and all of its callers
+                        StepsExceeded(nodePath.nodes.last())
+                    },
+                operator = GenericQueryOperators.EVALUATE,
             )
         }
 }
@@ -107,10 +120,12 @@ object Must : AnalysisType() {
         val allPaths = evalRes.toQueryTree(startNode, queryType)
 
         return QueryTree(
-            evalRes.failed.isEmpty(),
-            allPaths.toMutableList(),
-            "$queryType from $startNode to ${evalRes.fulfilled.map { it.nodes.last() }}",
-            startNode,
+            value = allPaths.all { it.value },
+            children = allPaths.toMutableList(),
+            stringRepresentation =
+                "$queryType from $startNode to ${evalRes.fulfilled.map { it.nodes.last() }}",
+            node = startNode,
+            operator = GenericQueryOperators.ALL,
         )
     }
 }
@@ -127,10 +142,12 @@ object May : AnalysisType() {
         val allPaths = evalRes.toQueryTree(startNode, queryType)
 
         return QueryTree(
-            evalRes.fulfilled.isNotEmpty(),
-            allPaths.toMutableList(),
-            "$queryType from $startNode to ${evalRes.fulfilled.map { it.nodes.last() }}",
-            startNode,
+            value = allPaths.any { it.value },
+            children = allPaths.toMutableList(),
+            stringRepresentation =
+                "$queryType from $startNode to ${evalRes.fulfilled.map { it.nodes.last() }}",
+            node = startNode,
+            operator = GenericQueryOperators.ANY,
         )
     }
 }
@@ -155,6 +172,7 @@ fun dataFlow(
     type: AnalysisType = May,
     vararg sensitivities: AnalysisSensitivity = FieldSensitive + ContextSensitive,
     scope: AnalysisScope = Interprocedural(),
+    ctx: Context = Context(steps = 0),
     earlyTermination: ((Node) -> Boolean)? = null,
     predicate: (Node) -> Boolean,
 ): QueryTree<Boolean> {
@@ -176,6 +194,7 @@ fun dataFlow(
                         direction = direction,
                         sensitivities = sensitivities,
                         scope = scope,
+                        ctx = ctx,
                         earlyTermination = earlyTermination,
                         predicate = predicate,
                     )
@@ -267,8 +286,12 @@ fun dataFlowWithValidator(
 data class NodeWithAssumption(val node: Node) : HasAssumptions {
     override val assumptions: MutableSet<Assumption> = mutableSetOf()
 
+    /**
+     * Adds the [assumptions] of the current [NodeCollectionWithAssumption] and the assumptions of
+     * the node that is the result.
+     */
     override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + node.assumptions
+        return super.collectAssumptions() + node.collectAssumptions()
     }
 }
 
@@ -280,8 +303,12 @@ data class NodeWithAssumption(val node: Node) : HasAssumptions {
 data class NodeCollectionWithAssumption(val nodes: Collection<Node>) : HasAssumptions {
     override val assumptions: MutableSet<Assumption> = mutableSetOf()
 
+    /**
+     * Adds the [assumptions] of the current [NodeCollectionWithAssumption] and the assumptions of
+     * all nodes contained in the object.
+     */
     override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + nodes.flatMap { it.assumptions }
+        return super.collectAssumptions() + nodes.flatMap { it.collectAssumptions() }
     }
 }
 
@@ -452,7 +479,6 @@ internal fun Node.alwaysFlowsToInternal(
         } else {
             setOf(NodeWithAssumption(this))
         }
-    var nothingFailed = true
     val allChildren = mutableListOf<QueryTree<Boolean>>()
     for (nodeToTrack in nodesToTrack) {
         val nextDFGPaths =
@@ -498,9 +524,17 @@ internal fun Node.alwaysFlowsToInternal(
         allChildren +=
             nextEOGEvaluation.failed.map { (failureReason, path) ->
                 SinglePathResult(
-                    value = false,
+                    // If we configure this function with "noSinkIsGood == true", then we only
+                    // consider paths which hit the early termination or which exceeded the steps
+                    // (though the latter is debatable).
+                    // If "noSinkIsGood == false", we consider all paths which are not fulfilled as
+                    // failed.
+                    value = noSinkIsGood && failureReason == FailureReason.PATH_ENDED,
                     children =
-                        mutableListOf(QueryTree(value = path.nodes).addAssumptionDependence(path)),
+                        mutableListOf(
+                            QueryTree(value = path.nodes, operator = GenericQueryOperators.EVALUATE)
+                                .addAssumptionDependence(path)
+                        ),
                     stringRepresentation =
                         "The EOG path reached the end  " +
                             if (earlyTermination != null)
@@ -517,13 +551,20 @@ internal fun Node.alwaysFlowsToInternal(
                         } else {
                             StepsExceeded(nodes.last())
                         },
+                    operator = GenericQueryOperators.EVALUATE,
                 )
             } +
                 nextEOGEvaluation.fulfilled.map {
                     SinglePathResult(
                         value = true,
                         children =
-                            mutableListOf(QueryTree(value = it.nodes).addAssumptionDependence(it)),
+                            mutableListOf(
+                                QueryTree(
+                                        value = it.nodes,
+                                        operator = GenericQueryOperators.EVALUATE,
+                                    )
+                                    .addAssumptionDependence(it)
+                            ),
                         stringRepresentation =
                             "The EOG path reached the node ${it.nodes.lastOrNull()} matching the required predicate" +
                                 if (earlyTermination != null)
@@ -531,19 +572,12 @@ internal fun Node.alwaysFlowsToInternal(
                                 else "",
                         node = this,
                         terminationReason = Success(it.nodes.last()),
+                        operator = GenericQueryOperators.EVALUATE,
                     )
                 }
-        nothingFailed =
-            nothingFailed &&
-                nextEOGEvaluation.failed.all {
-                    // If we configure this function with "noSinkIsGood == true", then we only
-                    // consider paths which hit the early termination or which exceeded the steps
-                    // (though the latter is debatable).
-                    // If "noSinkIsGood == false", we consider all paths which are not fulfilled as
-                    // failed.
-                    noSinkIsGood && it.first == FailureReason.PATH_ENDED
-                }
     }
+
+    val nothingFailed = allChildren.all { it.value }
     return QueryTree(
         value = nothingFailed,
         children = allChildren.toMutableList(),
@@ -555,6 +589,7 @@ internal fun Node.alwaysFlowsToInternal(
             },
         node = this,
         assumptions = nodesToTrack.flatMap { it.assumptions }.toMutableSet(),
+        operator = GenericQueryOperators.ALL,
     )
 }
 
@@ -611,5 +646,6 @@ fun Node.allNonLiteralsFlowTo(
         finalPathsChecked.all { it.value },
         finalPathsChecked.toMutableList(),
         node = this,
+        operator = GenericQueryOperators.ALL,
     )
 }

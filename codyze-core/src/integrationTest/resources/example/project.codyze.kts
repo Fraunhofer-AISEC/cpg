@@ -25,13 +25,13 @@
  */
 package example
 
-import de.fraunhofer.aisec.codyze.dsl.and
 import de.fraunhofer.aisec.cpg.query.and
 
 include {
     AssumptionDecisions from "assumptions.codyze.kts"
     ManualAssessment from "manual.codyze.kts"
     Tagging from "tagging.codyze.kts"
+    Suppressions from "suppressions.codyze.kts"
 }
 
 project {
@@ -70,13 +70,22 @@ project {
         }
 
         category("ENCRYPTION") {
-            requirement("RQ-ENCRYPTION-01") {
+            requirement {
                 name = "Good Encryption"
 
                 fulfilledBy {
                     goodCryptoFunc() and
                         goodArgumentSize() and
                         manualAssessmentOf("THIRD-PARTY-LIBRARY")
+                }
+            }
+
+            requirement {
+                name = "Long Function Names"
+
+                fulfilledBy {
+                    val q = veryLongFunctionName()
+                    q
                 }
             }
         }

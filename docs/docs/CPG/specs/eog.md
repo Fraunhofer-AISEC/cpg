@@ -593,7 +593,7 @@ Scheme:
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["expression"]
-  child1 --EOG--> parent
+  child1 --EOG--> parent(["SynchronizedStatement"])
   parent --EOG--> child2["block"]
   child2 --EOG--> next:::outer
   parent -.-> child1

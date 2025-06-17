@@ -27,7 +27,6 @@
 
 package de.fraunhofer.aisec.cpg.graph.builder
 
-import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -38,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
+import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.executePassesInParallel
@@ -566,7 +566,6 @@ fun LanguageFrontend<*, *>.new(init: (NewExpression.() -> Unit)? = null): NewExp
     val node = newNewExpression()
     if (init != null) init(node)
 
-
     if (holder is StatementHolder) {
         holder += node
     } else if (holder is ArgumentHolder) {
@@ -808,7 +807,7 @@ fun LanguageFrontend<*, *>.elseIf(init: IfStatement.() -> Unit): IfStatement {
  * nearest enclosing [LoopStatement]. The [init] block can be used to create further sub-nodes as
  * well as configuring the created node itself.
  */
-context(stmt:LoopStatement)
+context(stmt: LoopStatement)
 fun LanguageFrontend<*, *>.loopBody(init: Block.() -> Unit): Block {
     val node = newBlock()
     init(node)
@@ -866,7 +865,7 @@ fun LanguageFrontend<*, *>.switchBody(init: Block.() -> Unit): Block {
  * the nearest enclosing [IfStatement]. The [init] block can be used to create further sub-nodes as
  * well as configuring the created node itself.
  */
-context(stmt:IfStatement)
+context(stmt: IfStatement)
 fun LanguageFrontend<*, *>.elseStmt(needsScope: Boolean = true, init: Block.() -> Unit): Block {
     val node = newBlock()
     scopeIfNecessary(needsScope, node, init)
@@ -881,7 +880,7 @@ fun LanguageFrontend<*, *>.elseStmt(needsScope: Boolean = true, init: Block.() -
  * the nearest enclosing [LoopStatement]. The [init] block can be used to create further sub-nodes
  * as well as configuring the created node itself.
  */
-context(stmt:LoopStatement)
+context(stmt: LoopStatement)
 fun LanguageFrontend<*, *>.loopElseStmt(needsScope: Boolean = true, init: Block.() -> Unit): Block {
     val node = newBlock()
     scopeIfNecessary(needsScope, node, init)
@@ -1335,19 +1334,6 @@ infix fun Expression.ge(rhs: Expression): BinaryOperator {
  * Creates a new [BinaryOperator] with a `<` [BinaryOperator.operatorCode] in the Fluent Node DSL
  * and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
  */
-context(frontend: LanguageFrontend<*, *>, holder: Holder<out Node>)
-infix fun Expression.lt(rhs: Expression): BinaryOperator {
-    val node = (frontend).newBinaryOperator("<")
-    node.lhs = this
-    node.rhs = rhs
-
-    if (holder is ArgumentHolder) {
-        holder += node
-    }
-
-    return node
-}
-
 context(frontend: LanguageFrontend<*, *>)
 infix fun Expression.lt(rhs: Expression): BinaryOperator {
     val node = (frontend).newBinaryOperator("<")
@@ -1382,8 +1368,7 @@ fun Expression.conditional(
     thenExpression: Expression,
     elseExpression: Expression,
 ): ConditionalExpression {
-    val node =
-        (frontend).newConditionalExpression(condition, thenExpression, elseExpression)
+    val node = (frontend).newConditionalExpression(condition, thenExpression, elseExpression)
 
     if (holder is StatementHolder) {
         (holder) += node

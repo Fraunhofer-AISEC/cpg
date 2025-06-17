@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Cipher
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Encrypt
-import de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption.Secret
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -99,9 +99,15 @@ class TagOverlaysPassTest {
                                                         val encryptOps =
                                                             secrets.flatMap { secret ->
                                                                 val ciphers =
-                                                                    state.values
-                                                                        .flatMap { it }
-                                                                        .filterIsInstance<Cipher>()
+                                                                    node.translationUnit
+                                                                        .allChildrenWithOverlays<
+                                                                            Cipher
+                                                                        >() +
+                                                                        state.values
+                                                                            .flatMap { it }
+                                                                            .filterIsInstance<
+                                                                                Cipher
+                                                                            >()
                                                                 ciphers.map { cipher ->
                                                                     Encrypt(
                                                                         concept = cipher,

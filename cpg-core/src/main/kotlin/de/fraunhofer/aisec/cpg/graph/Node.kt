@@ -220,7 +220,7 @@ abstract class Node() :
     @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.OUTGOING)
     var nextPDGEdges: ProgramDependences<Node> =
-        ProgramDependences<Node>(this, mirrorProperty = Node::prevPDGEdges, outgoing = false)
+        ProgramDependences<Node>(this, mirrorProperty = Node::prevPDGEdges, outgoing = true)
         protected set
 
     var nextPDG by unwrapping(Node::nextPDGEdges)
@@ -287,6 +287,14 @@ abstract class Node() :
     var overlays by unwrapping(Node::overlayEdges)
 
     /**
+     * Adds the [assumptions] attached to the [Node] and of relevant supernodes in the AST.
+     * Currently, of the [Component].
+     */
+    override fun collectAssumptions(): Set<Assumption> {
+        return super.collectAssumptions() + (component?.collectAssumptions() ?: emptySet())
+    }
+
+    /**
      * If a node should be removed from the graph, just removing it from the AST is not enough (see
      * issue #60). It will most probably be referenced somewhere via DFG or EOG edges. Thus, if it
      * needs to be disconnected completely, we will have to take care of correctly disconnecting
@@ -297,7 +305,7 @@ abstract class Node() :
      */
     fun disconnectFromGraph() {
         // Disconnect all AST children first
-        this.astChildren.forEach { it.disconnectFromGraph() }
+        astChildren.forEach { it.disconnectFromGraph() }
 
         nextDFGEdges.clear()
         prevDFGEdges.clear()
@@ -307,6 +315,12 @@ abstract class Node() :
         nextPDGEdges.clear()
         nextEOGEdges.clear()
         prevEOGEdges.clear()
+
+        if (this is OverlayNode) {
+            underlyingNodeEdge.clear()
+        }
+
+        this.overlayEdges.clear()
     }
 
     override fun toString(): String {
@@ -352,7 +366,17 @@ abstract class Node() :
      * location already when creating the node.
      */
     override fun hashCode(): Int {
-        return Objects.hash(name, location, this.javaClass)
+        return Objects.hash(name, location, this.javaClass.name)
+    }
+
+    /** Returns the starting point of the EOG outside this node and its children. */
+    open fun getStartingPrevEOG(): Collection<Node> {
+        return this.prevEOG
+    }
+
+    /** Returns the exit point of the EOG outside this node and its children. */
+    open fun getExitNextEOG(): Collection<Node> {
+        return this.nextEOG
     }
 
     companion object {

@@ -324,8 +324,7 @@ val ArtifactLocation.absolutePath: Path?
             // Otherwise, try to find the URI base (which is the name of a component) and try to
             // build an absolute path again
             else -> {
-                val componentPath =
-                    result.components[uriBaseID]?.topLevel()?.absoluteFile?.toPath()
+                val componentPath = result.components[uriBaseID]?.topLevel()?.absoluteFile?.toPath()
                 return componentPath?.resolve(uri)
             }
         }

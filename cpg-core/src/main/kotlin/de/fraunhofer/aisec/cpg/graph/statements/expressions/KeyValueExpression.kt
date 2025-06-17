@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.*
@@ -83,4 +84,8 @@ class KeyValueExpression : Expression(), ArgumentHolder {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), key, value)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.key.getStartingPrevEOG()
+    }
 }

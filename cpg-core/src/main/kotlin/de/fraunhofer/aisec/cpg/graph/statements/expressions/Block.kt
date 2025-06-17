@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
@@ -70,5 +71,9 @@ open class Block : Expression(), StatementHolder {
     /** Returns the [n]-th statement in this list of statements. */
     operator fun get(n: Int): Statement {
         return statements[n]
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.statements.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
     }
 }

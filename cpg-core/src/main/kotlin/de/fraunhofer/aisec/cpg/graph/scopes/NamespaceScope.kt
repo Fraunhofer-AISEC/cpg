@@ -62,9 +62,7 @@ class NamespaceScope(astNode: NamespaceDeclaration) : NameScope(astNode) {
 
         // Update imported symbols of dependent scopes
         for (edge in importedByEdges) {
-            edge.declaration?.let {
-                provider.ctx.scopeManager.updateImportedSymbols(it)
-            }
+            edge.declaration?.let { provider.ctx.scopeManager.updateImportedSymbols(it) }
         }
     }
 }

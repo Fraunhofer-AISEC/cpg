@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.query
 
+import de.fraunhofer.aisec.cpg.assumptions.addAssumptionDependence
 import de.fraunhofer.aisec.cpg.evaluation.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.evaluation.NumberSet
 import de.fraunhofer.aisec.cpg.evaluation.SizeEvaluator
@@ -70,7 +71,8 @@ inline fun <reified T> Node.evaluateExtended(
         if (n is Node) {
             res.node = n
         }
-        res
+        res.checkForSuppression()
+        res.addAssumptionDependence(this)
     }
 }
 
@@ -126,7 +128,13 @@ inline fun <reified T> Node.exists(
  */
 fun sizeof(n: Node?, eval: ValueEvaluator = SizeEvaluator()): QueryTree<Int> {
     // The cast could potentially go wrong, but if it's not an int, it's not really a size
-    return QueryTree(eval.evaluate(n) as? Int ?: -1, mutableListOf(), "sizeof($n)", n)
+    return QueryTree(
+        eval.evaluate(n) as? Int ?: -1,
+        mutableListOf(),
+        "sizeof($n)",
+        n,
+        operator = GenericQueryOperators.EVALUATE,
+    )
 }
 
 /**
@@ -137,10 +145,22 @@ fun sizeof(n: Node?, eval: ValueEvaluator = SizeEvaluator()): QueryTree<Int> {
 fun min(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Number> {
     val evalRes = eval.evaluate(n)
     if (evalRes is Number) {
-        return QueryTree(evalRes, mutableListOf(QueryTree(n)), "min($n)", n)
+        return QueryTree(
+            evalRes,
+            mutableListOf(QueryTree(n, operator = GenericQueryOperators.EVALUATE)),
+            "min($n)",
+            n,
+            operator = GenericQueryOperators.EVALUATE,
+        )
     }
     // Extend this when we have other evaluators.
-    return QueryTree((evalRes as? NumberSet)?.min() ?: -1, mutableListOf(), "min($n)", n)
+    return QueryTree(
+        (evalRes as? NumberSet)?.min() ?: -1,
+        mutableListOf(),
+        "min($n)",
+        n,
+        operator = GenericQueryOperators.EVALUATE,
+    )
 }
 
 /**
@@ -150,7 +170,12 @@ fun min(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Numbe
  */
 fun min(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Number> {
     var result = Long.MAX_VALUE
-    if (n == null) return QueryTree(result, mutableListOf(QueryTree(null)))
+    if (n == null)
+        return QueryTree(
+            result,
+            mutableListOf(QueryTree(null, operator = GenericQueryOperators.EVALUATE)),
+            operator = GenericQueryOperators.EVALUATE,
+        )
 
     for (node in n) {
         val evalRes = eval.evaluate(node)
@@ -161,7 +186,7 @@ fun min(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree
         }
         // Extend this when we have other evaluators.
     }
-    return QueryTree(result, mutableListOf(), "min($n)")
+    return QueryTree(result, mutableListOf(), "min($n)", operator = GenericQueryOperators.EVALUATE)
 }
 
 /**
@@ -171,7 +196,12 @@ fun min(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree
  */
 fun max(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Number> {
     var result = Long.MIN_VALUE
-    if (n == null) return QueryTree(result, mutableListOf(QueryTree(null)))
+    if (n == null)
+        return QueryTree(
+            result,
+            mutableListOf(QueryTree(null, operator = GenericQueryOperators.EVALUATE)),
+            operator = GenericQueryOperators.EVALUATE,
+        )
 
     for (node in n) {
         val evalRes = eval.evaluate(node)
@@ -182,7 +212,7 @@ fun max(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree
         }
         // Extend this when we have other evaluators.
     }
-    return QueryTree(result, mutableListOf(), "max($n)")
+    return QueryTree(result, mutableListOf(), "max($n)", operator = GenericQueryOperators.EVALUATE)
 }
 
 /**
@@ -193,15 +223,31 @@ fun max(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree
 fun max(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Number> {
     val evalRes = eval.evaluate(n)
     if (evalRes is Number) {
-        return QueryTree(evalRes, mutableListOf(QueryTree(n)), node = n)
+        return QueryTree(
+            evalRes,
+            mutableListOf(QueryTree(n, operator = GenericQueryOperators.EVALUATE)),
+            node = n,
+            operator = GenericQueryOperators.EVALUATE,
+        )
     }
     // Extend this when we have other evaluators.
-    return QueryTree((evalRes as? NumberSet)?.max() ?: -1, mutableListOf(), "max($n)", n)
+    return QueryTree(
+        (evalRes as? NumberSet)?.max() ?: -1,
+        mutableListOf(),
+        "max($n)",
+        n,
+        operator = GenericQueryOperators.EVALUATE,
+    )
 }
 
 /** Calls [ValueEvaluator.evaluate] for this expression, thus trying to resolve a constant value. */
 operator fun Expression?.invoke(): QueryTree<Any?> {
-    return QueryTree(this?.evaluate(), mutableListOf(QueryTree(this)), node = this)
+    return QueryTree(
+        this?.evaluate(),
+        mutableListOf(QueryTree(this, operator = GenericQueryOperators.EVALUATE)),
+        node = this,
+        operator = GenericQueryOperators.EVALUATE,
+    )
 }
 
 /**
@@ -219,7 +265,13 @@ fun maxSizeOfType(type: Type): QueryTree<Number> {
             "double" -> Double.MAX_VALUE
             else -> Long.MAX_VALUE
         }
-    return QueryTree(maxVal, mutableListOf(QueryTree(type)), "maxSizeOfType($type)", node = type)
+    return QueryTree(
+        maxVal,
+        mutableListOf(QueryTree(type, operator = GenericQueryOperators.EVALUATE)),
+        "maxSizeOfType($type)",
+        node = type,
+        operator = GenericQueryOperators.EVALUATE,
+    )
 }
 
 /**
@@ -237,7 +289,13 @@ fun minSizeOfType(type: Type): QueryTree<Number> {
             "double" -> Double.MIN_VALUE
             else -> Long.MIN_VALUE
         }
-    return QueryTree(maxVal, mutableListOf(QueryTree(type)), "minSizeOfType($type)", node = type)
+    return QueryTree(
+        maxVal,
+        mutableListOf(QueryTree(type, operator = GenericQueryOperators.EVALUATE)),
+        "minSizeOfType($type)",
+        node = type,
+        operator = GenericQueryOperators.EVALUATE,
+    )
 }
 
 /** The size of this expression. It uses the default argument for `eval` of [size] */
@@ -265,7 +323,13 @@ val Expression.max: QueryTree<Number>
 /** Calls [ValueEvaluator.evaluate] for this expression, thus trying to resolve a constant value. */
 val Expression.value: QueryTree<Any?>
     get() {
-        return QueryTree(evaluate(), mutableListOf(), "$this", this)
+        return QueryTree(
+            evaluate(),
+            mutableListOf(),
+            "$this",
+            this,
+            operator = GenericQueryOperators.EVALUATE,
+        )
     }
 
 /**
@@ -275,5 +339,11 @@ val Expression.value: QueryTree<Any?>
 val Expression.intValue: QueryTree<Int>?
     get() {
         val evalRes = evaluate() as? Int ?: return null
-        return QueryTree(evalRes, mutableListOf(), "$this", this)
+        return QueryTree(
+            evalRes,
+            mutableListOf(),
+            "$this",
+            this,
+            operator = GenericQueryOperators.EVALUATE,
+        )
     }

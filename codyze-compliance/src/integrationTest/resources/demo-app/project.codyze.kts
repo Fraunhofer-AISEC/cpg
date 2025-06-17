@@ -52,7 +52,7 @@ project {
             name = "Proper Handling of Key Material"
             description = "Sensitive material, such as keys are handled properly"
 
-            fulfilledBy(::properHandlingOfKeyMaterial)
+            fulfilledBy { properHandlingOfKeyMaterial() }
         }
     }
 
@@ -60,9 +60,9 @@ project {
 }
 
 /** For each key K, if K is used in encryption or decryption, it must be deleted after use */
-fun properHandlingOfKeyMaterial(tr: TranslationResult): QueryTree<Boolean> {
+fun TranslationResult.properHandlingOfKeyMaterial(): QueryTree<Boolean> {
     val result =
-        tr.allExtended<CallExpression>(
+        allExtended<CallExpression>(
             sel = {
                 it.name.toString() == "execute" &&
                     it.arguments[0].evaluate() in listOf("encrypt", "decrypt")
@@ -70,7 +70,7 @@ fun properHandlingOfKeyMaterial(tr: TranslationResult): QueryTree<Boolean> {
         ) {
             val k = it.argumentEdges["stdin"]?.end
             if (k == null) {
-                QueryTree(true)
+                QueryTree(true, operator = GenericQueryOperators.EVALUATE)
             } else {
                 executionPath(k) { to ->
                     to is DeleteExpression &&

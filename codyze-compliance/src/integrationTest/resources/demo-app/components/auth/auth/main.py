@@ -1,4 +1,4 @@
 print("Hello World")
 
-def encrypt():
+def encrypt(param: str):
     return very_good_encryption()
