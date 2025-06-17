@@ -69,6 +69,20 @@ inline fun <reified T> Node?.allChildren(
 }
 
 /**
+ * Checks, whether this [Node] has a location that matches the given parameters.
+ *
+ * @param pathSuffix The suffix of the path to match. If `null`, this is ignored.
+ * @param startLine The start line of the location to match. If `null`, this is ignored.
+ * @param endLine The end line of the location to match. If `null`, this is ignored.
+ */
+fun Node.hasLocation(pathSuffix: String?, startLine: Int?, endLine: Int?): Boolean {
+    return (pathSuffix == null ||
+        this.location?.artifactLocation?.uri?.path?.endsWith(pathSuffix) == true) &&
+        (startLine == null || this.location?.region?.startLine == startLine) &&
+        (endLine == null || this.location?.region?.endLine == endLine)
+}
+
+/**
  * Flattens the AST beginning with this node and returns all nodes of type [T]. For convenience, an
  * optional predicate function [predicate] can be supplied, which will be applied via
  * [Collection.filter]
