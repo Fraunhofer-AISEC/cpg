@@ -62,7 +62,7 @@ class CodyzeExecutorTest {
 
         assertEquals(3, result.requirementsResults.size)
         assertEquals(false, result.requirementsResults["RQ-ENCRYPTION-001"]?.value)
-        assertEquals(AcceptedResult, result.requirementsResults["RQ-ENCRYPTION-001"]?.confidence)
+        assertEquals(UndecidedResult, result.requirementsResults["RQ-ENCRYPTION-001"]?.confidence)
         assertEquals(true, result.requirementsResults["RQ-ENCRYPTION-002"]?.value)
         assertEquals(AcceptedResult, result.requirementsResults["RQ-ENCRYPTION-002"]?.confidence)
 

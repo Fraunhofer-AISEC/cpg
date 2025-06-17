@@ -5,15 +5,16 @@
   import { ViolationsTable } from '$lib/components/analysis';
   import { PageHeader } from '$lib/components/navigation';
   import { LoadingSpinner, EmptyState } from '$lib/components/ui';
-  import { calculateFulfillmentStats, calculateCombinedProjectStats } from '$lib/utils/dashboardStats';
+  import {
+    calculateFulfillmentStats,
+    calculateCombinedProjectStats
+  } from '$lib/utils/dashboardStats';
 
   // Correctly access data with $props()
   let { data }: PageProps = $props();
 
   // Calculate requirement stats with the $derived rune
-  const fulfillmentStats = $derived(
-    calculateFulfillmentStats(data.result?.requirementCategories)
-  );
+  const fulfillmentStats = $derived(calculateFulfillmentStats(data.result?.requirementCategories));
 
   // Combined project and source code stats with additional metrics
   const combinedProjectStats = $derived(
@@ -41,7 +42,7 @@
   {:else}
     <!-- Combined Project & Source Code Overview -->
     {#if data.project || (data.result?.components && data.result.components.length > 0)}
-      <DashboardSection 
+      <DashboardSection
         title="Project & Source Code Overview"
         actionText="Browse components"
         actionHref="/source"

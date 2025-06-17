@@ -21,10 +21,7 @@ export function calculateFulfillmentStats(requirementCategories?: RequirementsCa
   }
 
   return {
-    total: requirementCategories.reduce(
-      (acc, cat) => acc + cat.requirements.length,
-      0
-    ),
+    total: requirementCategories.reduce((acc, cat) => acc + cat.requirements.length, 0),
     fulfilled: requirementCategories.reduce(
       (acc, cat) => acc + cat.requirements.filter((r) => r.status === 'FULFILLED').length,
       0
@@ -42,8 +39,7 @@ export function calculateFulfillmentStats(requirementCategories?: RequirementsCa
       0
     ),
     notYetEvaluated: requirementCategories.reduce(
-      (acc, cat) =>
-        acc + cat.requirements.filter((r) => r.status === 'NOT_YET_EVALUATED').length,
+      (acc, cat) => acc + cat.requirements.filter((r) => r.status === 'NOT_YET_EVALUATED').length,
       0
     )
   };
@@ -57,14 +53,14 @@ export function calculateCombinedProjectStats(
   result?: AnalysisResultJSON
 ): StatItem[] {
   const stats: StatItem[] = [];
-  
+
   // Project info
   if (project) {
     stats.push(
       { title: 'Project Name', value: project.name },
       { title: 'Created', value: new Date(project.projectCreatedAt).toLocaleString() }
     );
-    
+
     if (project.lastAnalyzedAt) {
       stats.push({
         title: 'Last Analyzed',
@@ -72,37 +68,33 @@ export function calculateCombinedProjectStats(
       });
     }
   }
-  
+
   // Source code info with additional calculated metrics
   if (result?.components) {
-    const totalTUs = result.components.reduce(
-      (acc, comp) => acc + comp.translationUnits.length,
-      0
-    );
-    
-    const avgTUsPerComponent = totalTUs > 0 ? 
-      Math.round((totalTUs / result.components.length) * 10) / 10 : 0;
-    
-    const avgNodesPerTU = totalTUs > 0 ? 
-      Math.round((result.totalNodes / totalTUs) * 10) / 10 : 0;
-    
+    const totalTUs = result.components.reduce((acc, comp) => acc + comp.translationUnits.length, 0);
+
+    const avgTUsPerComponent =
+      totalTUs > 0 ? Math.round((totalTUs / result.components.length) * 10) / 10 : 0;
+
+    const avgNodesPerTU = totalTUs > 0 ? Math.round((result.totalNodes / totalTUs) * 10) / 10 : 0;
+
     // Find largest component
-    const largestComponent = result.components.reduce((max, comp) => 
+    const largestComponent = result.components.reduce((max, comp) =>
       comp.translationUnits.length > max.translationUnits.length ? comp : max
     );
-    
+
     stats.push(
       { title: 'Components', value: result.components.length },
       { title: 'Translation Units', value: totalTUs },
       { title: 'Total Nodes', value: result.totalNodes.toLocaleString() },
       { title: 'Avg TUs per Component', value: avgTUsPerComponent },
       { title: 'Avg Nodes per TU', value: avgNodesPerTU },
-      { 
-        title: 'Largest Component', 
-        value: `${largestComponent.name} (${largestComponent.translationUnits.length} files)` 
+      {
+        title: 'Largest Component',
+        value: `${largestComponent.name} (${largestComponent.translationUnits.length} files)`
       }
     );
   }
-  
+
   return stats;
 }
