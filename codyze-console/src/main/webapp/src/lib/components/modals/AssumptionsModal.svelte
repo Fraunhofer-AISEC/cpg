@@ -3,6 +3,7 @@
   import AssumptionCard from './AssumptionCard.svelte';
   import AssumptionHelpSection from './AssumptionHelpSection.svelte';
   import ChildrenWithAssumptions from './ChildrenWithAssumptions.svelte';
+  import ConfidencePill, { type ConfidenceType } from '$lib/components/ui/ConfidencePill.svelte';
 
   interface Props {
     assumptions: AssumptionJSON[];
@@ -101,12 +102,10 @@
             </p>
           </div>
         {:else if shouldShowChildrenWithAssumptions()}
-          <div class="py-4 text-center text-gray-500">
-            <div class="text-4xl mb-2">🔗</div>
-            <p class="text-lg font-medium">No Direct Assumptions</p>
-            <p class="mt-1 text-sm text-gray-600">
-              This evaluation has no assumptions of its own, but the overall result is 
-              <strong>{queryTree?.confidence === 'UndecidedResult' ? 'undecided' : 'rejected'}</strong> 
+          <div class="py-2 text-center">
+            <p class="text-xs text-gray-600 mb-4">
+              This evaluation has no direct assumptions, but the overall confidence is 
+              <ConfidencePill confidence={queryTree?.confidence || 'UndecidedResult'} size="sm" />
               due to assumptions made in child evaluations.
             </p>
           </div>

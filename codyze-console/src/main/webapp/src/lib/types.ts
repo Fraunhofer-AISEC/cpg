@@ -1,3 +1,5 @@
+import type { ConfidenceType } from '$lib/components/ui/ConfidencePill.svelte';
+
 export interface AnalysisResultJSON {
   components: ComponentJSON[];
   totalNodes: number;
@@ -110,7 +112,7 @@ export interface QueryTreeJSON {
   id: string;
   value?: string;
   nodeValues?: NodeJSON[];
-  confidence: string;
+  confidence: ConfidenceType;
   stringRepresentation: string;
   operator: string;
   queryTreeType: string;

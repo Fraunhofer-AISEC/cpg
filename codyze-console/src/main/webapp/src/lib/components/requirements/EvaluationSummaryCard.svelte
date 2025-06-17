@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { RequirementJSON } from '$lib/types';
+  import ConfidencePill from '$lib/components/ui/ConfidencePill.svelte';
 
   interface Props {
     requirement: RequirementJSON;
