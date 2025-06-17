@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
   import { loadQueryTrees } from '$lib/stores/queryTreeStore';
   import type { QueryTreeJSON } from '$lib/types';
@@ -9,9 +10,10 @@
     childrenIds: string[];
     baseUrl?: string;
     requirementId?: string;
+    onNavigate?: () => void; // Callback to close modal before navigation
   }
 
-  let { childrenIds, baseUrl, requirementId }: Props = $props();
+  let { childrenIds, baseUrl, requirementId, onNavigate }: Props = $props();
 
   // State for loaded query trees
   let childrenQueryTrees = $state<QueryTreeJSON[]>([]);
@@ -48,6 +50,34 @@
   function getShortId(id: string): string {
     return id.substring(0, 8);
   }
+
+  // Function to handle navigation with same-target detection
+  function handleFallbackNavigation(event: MouseEvent, childId: string) {
+    event.preventDefault();
+    
+    // Close modal if callback provided
+    if (onNavigate) {
+      onNavigate();
+    }
+    
+    // Check if we're navigating to the same targetNodeId
+    const url = new URL(getChildLink(childId));
+    const targetNodeId = url.searchParams.get('targetNodeId');
+    const currentTargetNodeId = $page.url.searchParams.get('targetNodeId');
+    
+    if (targetNodeId === currentTargetNodeId && targetNodeId) {
+      // Same target - just scroll to it without navigation
+      setTimeout(() => {
+        const element = document.querySelector(`[data-query-tree-id="${targetNodeId}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    } else {
+      // Different target - navigate normally
+      goto(getChildLink(childId));
+    }
+  }
 </script>
 
 {#if childrenIds.length > 0}
@@ -72,6 +102,7 @@
           {#each childrenIds as childId}
             <a
               href={getChildLink(childId)}
+              onclick={(e) => handleFallbackNavigation(e, childId)}
               class="flex items-center space-x-2 rounded px-3 py-2 text-left text-xs bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:border-gray-300 transition-colors w-full block"
             >
               <span class="font-mono text-gray-800">{getShortId(childId)}...</span>
@@ -87,6 +118,7 @@
             {queryTree}
             {baseUrl}
             href={getChildLink(queryTree.id)}
+            {onNavigate}
           />
         {/each}
       </div>

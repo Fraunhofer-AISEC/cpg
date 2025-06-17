@@ -82,8 +82,24 @@
   // Auto-scroll to target node when it becomes available
   $effect(() => {
     if (queryTree?.id === targetNodeId && nodeElement) {
-      // Jump directly to the target node
-      nodeElement.scrollIntoView({ block: 'center' });
+      // Use a small delay to ensure DOM is fully updated after expansion
+      setTimeout(() => {
+        if (nodeElement) {
+          nodeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
+  });
+
+  // Also scroll when pathToTarget changes and we find our target
+  $effect(() => {
+    if (queryTree?.id === targetNodeId && nodeElement && pathToTarget?.has(queryTree.id)) {
+      // Wait a bit longer for children to load and DOM to update
+      setTimeout(() => {
+        if (nodeElement) {
+          nodeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 200);
     }
   });
 
@@ -191,6 +207,7 @@
     <div
       bind:this={nodeElement}
       id="query-tree-node-{queryTree.id}"
+      data-query-tree-id={queryTree.id}
       class="mb-2 rounded-lg border p-3 {statusConfig?.bgColor} {statusConfig?.textColor} {statusConfig?.borderColor}"
     >
       <!-- Node header -->

@@ -113,6 +113,7 @@
             childrenIds={queryTree?.childrenWithAssumptionIds || []}
             {baseUrl}
             {requirementId}
+            onNavigate={onClose}
           />
         {:else}
           <div class="space-y-4">

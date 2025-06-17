@@ -4,20 +4,58 @@
   import { getShortCallerInfo } from '$lib/utils/display';
   import QueryTreeNodeValue from '$lib/components/analysis/QueryTreeNodeValue.svelte';
   import ConfidencePill from '$lib/components/ui/ConfidencePill.svelte';
+  import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
 
   interface Props {
     queryTree: QueryTreeJSON;
     baseUrl?: string;
     href: string;
+    onNavigate?: () => void; // Callback to close modal before navigation
   }
 
-  let { queryTree, baseUrl, href }: Props = $props();
+  let { queryTree, baseUrl, href, onNavigate }: Props = $props();
 
   const statusConfig = $derived(getQueryTreeStatusConfig(queryTree));
+
+  // Handle navigation with modal close
+  function handleNavigation(event: MouseEvent) {
+    event.preventDefault();
+    
+    // Close modal if callback provided
+    if (onNavigate) {
+      onNavigate();
+    }
+    
+    // Check if we're navigating to the same targetNodeId
+    const url = new URL(href);
+    const targetNodeId = url.searchParams.get('targetNodeId');
+    const currentTargetNodeId = $page.url.searchParams.get('targetNodeId');
+    
+    if (targetNodeId === currentTargetNodeId && targetNodeId) {
+      // Same target - just scroll to it without navigation
+      scrollToTargetNode(targetNodeId);
+    } else {
+      // Different target - navigate normally
+      goto(href);
+    }
+  }
+
+  // Function to scroll to a specific node
+  function scrollToTargetNode(nodeId: string) {
+    // Use a small delay to ensure modal is closed first
+    setTimeout(() => {
+      const element = document.querySelector(`[data-query-tree-id="${nodeId}"]`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+  }
 </script>
 
 <a
   {href}
+  onclick={handleNavigation}
   class="block rounded-lg border p-4 transition-all group hover:shadow-md {statusConfig.bgColor} {statusConfig.textColor} {statusConfig.borderColor}"
   title="Click to view child evaluation with assumptions"
 >
