@@ -139,12 +139,28 @@ open class QueryTree<T>(
         checkForSuppression()
     }
 
+    fun getAssumptionsOfValue(): Collection<Assumption> {
+        val value = this.value
+        if (value is HasAssumptions) {
+            return value.collectAssumptions()
+        } else if (value is Collection<*>) {
+            return value.flatMap { (it as? HasAssumptions)?.collectAssumptions() ?: setOf() }
+        } else {
+            return emptySet()
+        }
+    }
+
     /**
      * Calculates the confidence of the [QueryTree] based on the [operator] and the [children] of
      * the [QueryTree].
      */
     open fun calculateConfidence(): AcceptanceStatus {
-        val assumptionsToUse = this.assumptions
+        val assumptionsToUse =
+            if (this.children.isNotEmpty()) {
+                this.assumptions
+            } else {
+                this.collectAssumptions() + getAssumptionsOfValue()
+            }
         val operator = this.operator
         if (operator !is GenericQueryOperators) {
             throw QueryException("The operator must be a GenericQueryOperator, but was $operator")
