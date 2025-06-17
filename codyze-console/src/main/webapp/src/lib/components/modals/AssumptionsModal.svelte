@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { AssumptionJSON } from '$lib/types';
+  import QueryTreeNodeValue from '../analysis/QueryTreeNodeValue.svelte';
 
   interface Props {
     assumptions: AssumptionJSON[];
@@ -117,11 +118,16 @@
                 </div>
 
                 <!-- Assumption Details -->
-                {#if assumption.nodeId || assumption.edgeLabel || assumption.assumptionScopeId}
-                  <div class="text-xs text-gray-600 space-y-1 border-t pt-2">
-                    {#if assumption.nodeId}
+                {#if assumption.node || assumption.nodeId || assumption.edgeLabel || assumption.assumptionScopeId}
+                  <div class="text-xs text-gray-600 space-y-2 border-t pt-3">
+                    {#if assumption.node}
                       <div>
-                        <span class="font-medium">Related Node:</span>
+                        <div class="font-medium mb-1 text-purple-700">🎯 Related Node:</div>
+                        <QueryTreeNodeValue node={assumption.node} />
+                      </div>
+                    {:else if assumption.nodeId}
+                      <div>
+                        <span class="font-medium">Related Node ID:</span>
                         <span class="font-mono">{assumption.nodeId.substring(0, 8)}...</span>
                       </div>
                     {/if}

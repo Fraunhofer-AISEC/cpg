@@ -34,7 +34,13 @@ project {
     tagging {
         tag {
             each<CallExpression>("get_secret_from_server").withMultiple {
-                val secret = Secret()
+                val secret =
+                    Secret()
+                        .also { secret -> secret.location = node.location }
+                        .assume(
+                            AssumptionType.CompletenessAssumption,
+                            "We assume that the server always returns a valid secret.",
+                        )
                 listOf(GetSecret(concept = secret), secret)
             }
         }

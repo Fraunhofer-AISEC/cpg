@@ -101,6 +101,7 @@ export interface AssumptionJSON {
   message: string;
   status: string;
   nodeId?: string;
+  node?: NodeJSON; // Full node information when available
   edgeLabel?: string;
   assumptionScopeId?: string;
 }

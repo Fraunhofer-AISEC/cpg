@@ -215,6 +215,7 @@ data class AssumptionJSON(
     val message: String,
     val status: String, // AssumptionStatus as string
     val nodeId: String? = null, // UUID of associated node, if any
+    val node: NodeJSON? = null, // Full node information when available
     val edgeLabel: String? = null, // Label of associated edge, if any
     val assumptionScopeId: String? = null, // UUID of assumption scope node, if any
 )
@@ -397,6 +398,7 @@ fun Assumption.toJSON(): AssumptionJSON {
         message = this.message,
         status = this.status.name,
         nodeId = this.underlyingNode?.id?.toString(),
+        node = this.underlyingNode?.toJSON(),
         edgeLabel = this.edge?.labels?.firstOrNull(),
         assumptionScopeId = this.assumptionScope?.id?.toString(),
     )
