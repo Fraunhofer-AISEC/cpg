@@ -8,14 +8,14 @@
 
 {#if hasAssumptions}
   <div class="mt-6 border-t pt-4">
-    <h3 class="text-sm font-semibold text-gray-900 mb-2">💡 Managing Assumptions</h3>
-    <div class="text-xs text-gray-600 space-y-2">
+    <h3 class="mb-2 text-sm font-semibold text-gray-900">💡 Managing Assumptions</h3>
+    <div class="space-y-2 text-xs text-gray-600">
       <p>
-        You can accept or reject assumptions using the Codyze DSL in your project configuration.
-        Use the <strong>Copy ID</strong> button above to get the assumption ID.
+        You can accept or reject assumptions using the Codyze DSL in your project configuration. Use
+        the <strong>Copy ID</strong> button above to get the assumption ID.
       </p>
-      <div class="bg-gray-100 rounded p-3 font-mono text-xs">
-        <div class="text-gray-500 mb-1">// Example Codyze DSL configuration:</div>
+      <div class="rounded bg-gray-100 p-3 font-mono text-xs">
+        <div class="mb-1 text-gray-500">// Example Codyze DSL configuration:</div>
         <div class="text-gray-800">
           <div>project {`{`}</div>
           <div class="ml-4">assumptions {`{`}</div>
@@ -28,10 +28,9 @@
         </div>
       </div>
       <p class="text-xs">
-        Replace <code class="bg-gray-200 px-1 rounded">assumption-id-here</code>
-        with the actual assumption ID. Accepting assumptions increases
-        confidence in the result, while rejecting them rejects also the
-        evaluation results that depend on it.
+        Replace <code class="rounded bg-gray-200 px-1">assumption-id-here</code>
+        with the actual assumption ID. Accepting assumptions increases confidence in the result, while
+        rejecting them rejects also the evaluation results that depend on it.
       </p>
     </div>
   </div>

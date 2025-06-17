@@ -19,7 +19,10 @@
   // Breadcrumb items
   const breadcrumbItems = $derived([
     { label: 'Requirements', href: '/requirements' },
-    { label: data.requirement.categoryId, href: `/requirements?category=${encodeURIComponent(data.requirement.categoryId)}` },
+    {
+      label: data.requirement.categoryId,
+      href: `/requirements?category=${encodeURIComponent(data.requirement.categoryId)}`
+    },
     { label: data.requirement.name, href: `/requirements/${data.requirement.id}` }
   ]);
 
@@ -35,10 +38,10 @@
   <title>Requirement: {data.requirement.name} - CPG Console</title>
 </svelte:head>
 
-<PageHeader 
-  title="Requirement Details" 
+<PageHeader
+  title="Requirement Details"
   subtitle="Detailed analysis of requirement evaluation"
-  breadcrumbItems={breadcrumbItems}
+  {breadcrumbItems}
 >
   <BackButton fallbackHref="/requirements" fallbackText="Back to Requirements" />
 </PageHeader>

@@ -7,14 +7,15 @@
   import Highlight, { LineNumbers } from 'svelte-highlight';
   import python from 'svelte-highlight/languages/python';
   import 'svelte-highlight/styles/github.css';
+  import { page } from '$app/stores';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const line = urlParams.get('line');
-  const finding = urlParams.get('finding');
-  const kind = urlParams.get('kind');
+  // Get URL parameters reactively from SvelteKit's page store
+  const line = $derived($page.url.searchParams.get('line'));
+  const finding = $derived($page.url.searchParams.get('finding'));
+  const kind = $derived($page.url.searchParams.get('kind'));
 
   let activeTab = $state('overlayNodes');
   let nodes = $derived(
@@ -26,6 +27,7 @@
   );
   let tableTitle = $derived(activeTab === 'overlayNodes' ? 'Overlay Nodes' : 'AST Nodes');
   let highlightedNode = $state<NodeJSON | null>(null);
+  let codeContainerElement = $state<HTMLDivElement>();
 
   // Tab configuration
   const tabs = $derived([
@@ -75,10 +77,42 @@
     document.body.removeChild(anchor);
     URL.revokeObjectURL(url);
   }
+
+  // Scroll to highlighted line when line parameter changes
+  $effect(() => {
+    if (line && codeContainerElement && typeof window !== 'undefined') {
+      const lineNumber = parseInt(line);
+      console.log(`Scrolling to line ${lineNumber}`);
+
+      // Simple approach: calculate scroll position based on line height
+      setTimeout(() => {
+        // Type guard to ensure element exists
+        if (!codeContainerElement) return;
+
+        // Get line height from CSS or use default
+        const computedStyle = window.getComputedStyle(codeContainerElement);
+        const lineHeight =
+          parseFloat(computedStyle.lineHeight) || parseFloat(computedStyle.fontSize) * 1.5 || 20;
+
+        console.log(`Using line height: ${lineHeight}px`);
+
+        // Calculate scroll position (show target line near top with some context)
+        const scrollTop = Math.max(0, (lineNumber - 3) * lineHeight);
+
+        console.log(`Scrolling to position: ${scrollTop}px for line ${lineNumber}`);
+
+        // Scroll the container
+        codeContainerElement.scrollTo({
+          top: scrollTop,
+          behavior: 'smooth'
+        });
+      }, 300);
+    }
+  });
 </script>
 
 <!-- Code display -->
-<div class="flex-1 overflow-auto">
+<div class="flex-1 overflow-auto" bind:this={codeContainerElement}>
   <div class="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2">
     <div class="text-sm text-gray-700">{data.translationUnit.name}</div>
     <Button variant="primary" size="sm" onclick={exportConcepts}>Export Concepts</Button>

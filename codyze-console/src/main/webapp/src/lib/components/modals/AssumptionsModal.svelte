@@ -24,10 +24,12 @@
 
   // Check if we should show children with assumptions
   const shouldShowChildrenWithAssumptions = $derived(() => {
-    return assumptions.length === 0 && 
-           isUndecidedOrRejected() && 
-           queryTree?.childrenWithAssumptionIds && 
-           queryTree.childrenWithAssumptionIds.length > 0;
+    return (
+      assumptions.length === 0 &&
+      isUndecidedOrRejected() &&
+      queryTree?.childrenWithAssumptionIds &&
+      queryTree.childrenWithAssumptionIds.length > 0
+    );
   });
 
   // Close modal when clicking outside
@@ -86,7 +88,12 @@
           aria-label="Close modal"
         >
           <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
       </div>
@@ -95,21 +102,19 @@
       <div class="max-h-[60vh] overflow-y-auto p-4">
         {#if assumptions.length === 0 && !shouldShowChildrenWithAssumptions()}
           <div class="py-8 text-center text-gray-500">
-            <div class="text-4xl mb-2">✅</div>
+            <div class="mb-2 text-4xl">✅</div>
             <p class="text-lg font-medium">No Assumptions</p>
-            <p class="mt-1 text-sm">
-              This query tree evaluation was made without any assumptions.
-            </p>
+            <p class="mt-1 text-sm">This query tree evaluation was made without any assumptions.</p>
           </div>
         {:else if shouldShowChildrenWithAssumptions()}
           <div class="py-2 text-center">
-            <p class="text-xs text-gray-600 mb-4">
-              This evaluation has no direct assumptions, but the overall confidence is 
+            <p class="mb-4 text-xs text-gray-600">
+              This evaluation has no direct assumptions, but the overall confidence is
               <ConfidencePill confidence={queryTree?.confidence || 'UndecidedResult'} size="sm" />
               due to assumptions made in child evaluations.
             </p>
           </div>
-          <ChildrenWithAssumptions 
+          <ChildrenWithAssumptions
             childrenIds={queryTree?.childrenWithAssumptionIds || []}
             {baseUrl}
             {requirementId}
@@ -117,9 +122,10 @@
           />
         {:else}
           <div class="space-y-4">
-            <div class="text-sm text-gray-600 mb-4">
+            <div class="mb-4 text-sm text-gray-600">
               <p>
-                This query tree has <strong>{assumptions.length}</strong> assumption{assumptions.length !== 1 ? 's' : ''} 
+                This query tree has <strong>{assumptions.length}</strong>
+                assumption{assumptions.length !== 1 ? 's' : ''}
                 that were made during evaluation. These assumptions affect the confidence of the results.
               </p>
             </div>

@@ -85,7 +85,7 @@
       // Use a small delay to ensure DOM is fully updated after expansion
       setTimeout(() => {
         if (nodeElement) {
-          nodeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          nodeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       }, 100);
     }
@@ -93,11 +93,11 @@
 
   // Also scroll when pathToTarget changes and we find our target
   $effect(() => {
-    if (queryTree?.id === targetNodeId && nodeElement && pathToTarget?.has(queryTree.id)) {
+    if (queryTree?.id === targetNodeId && nodeElement && pathToTarget?.has(queryTree?.id || '')) {
       // Wait a bit longer for children to load and DOM to update
       setTimeout(() => {
         if (nodeElement) {
-          nodeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          nodeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       }, 200);
     }
@@ -187,7 +187,7 @@
   // Navigate to a child QueryTree node
   function navigateToChild(childId: string) {
     if (!baseUrl) return;
-    
+
     const url = new URL(baseUrl, window.location.origin);
     url.searchParams.set('targetNodeId', childId);
     window.location.href = url.toString();
@@ -252,12 +252,15 @@
         <div class="flex items-center space-x-2">
           <button
             onclick={() => openAssumptionsModal()}
-            class="bg-opacity-60 rounded bg-white px-2 py-1 text-xs transition-colors hover:bg-gray-100 cursor-pointer"
+            class="bg-opacity-60 cursor-pointer rounded bg-white px-2 py-1 text-xs transition-colors hover:bg-gray-100"
             title="Click to view assumptions for this query tree"
           >
             {queryTree.confidence}
             {#if queryTree.assumptions && queryTree.assumptions.length > 0}
-              <span class="ml-1 text-orange-600" title="{queryTree.assumptions.length} assumption(s)">
+              <span
+                class="ml-1 text-orange-600"
+                title="{queryTree.assumptions.length} assumption(s)"
+              >
                 ⚠
               </span>
             {/if}
@@ -370,7 +373,7 @@
 
 <!-- Assumptions Modal -->
 <AssumptionsModal
-  queryTree={queryTree}
+  {queryTree}
   assumptions={queryTree?.assumptions || []}
   isOpen={showAssumptionsModal}
   onClose={closeAssumptionsModal}

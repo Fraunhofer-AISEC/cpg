@@ -48,7 +48,7 @@
   $effect(() => {
     if (targetNodeId && typeof window !== 'undefined') {
       loadingTargetPath = true;
-      
+
       // Handle async operation within the effect
       loadQueryTreeWithParents(targetNodeId)
         .then((result) => {

@@ -7,14 +7,15 @@
     fallbackText?: string;
   }
 
-  let { fallbackHref, fallbackText = "Back" }: Props = $props();
+  let { fallbackHref, fallbackText = 'Back' }: Props = $props();
 
   let hasReferrer = $state(false);
 
   onMount(() => {
     // Check if there's a referrer and it's from the same origin
-    hasReferrer = !!(document.referrer && 
-                     new URL(document.referrer).origin === window.location.origin);
+    hasReferrer = !!(
+      document.referrer && new URL(document.referrer).origin === window.location.origin
+    );
   });
 
   function goBack() {
@@ -28,6 +29,6 @@
 
 {#if hasReferrer || fallbackHref}
   <Button variant="secondary" onclick={goBack}>
-    ← {hasReferrer ? "Back" : fallbackText}
+    ← {hasReferrer ? 'Back' : fallbackText}
   </Button>
 {/if}

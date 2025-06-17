@@ -87,10 +87,7 @@
     <DashboardSection title="Requirements by Category">
       <div class="space-y-4">
         {#each data.result.requirementCategories as category (category.id)}
-          <CategorySection 
-            {category} 
-            initialExpanded={expandedCategoryId === category.id}
-          />
+          <CategorySection {category} initialExpanded={expandedCategoryId === category.id} />
         {/each}
       </div>
     </DashboardSection>

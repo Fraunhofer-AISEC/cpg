@@ -54,23 +54,23 @@
   // Function to handle navigation with same-target detection
   function handleFallbackNavigation(event: MouseEvent, childId: string) {
     event.preventDefault();
-    
+
     // Close modal if callback provided
     if (onNavigate) {
       onNavigate();
     }
-    
+
     // Check if we're navigating to the same targetNodeId
     const url = new URL(getChildLink(childId));
     const targetNodeId = url.searchParams.get('targetNodeId');
     const currentTargetNodeId = $page.url.searchParams.get('targetNodeId');
-    
+
     if (targetNodeId === currentTargetNodeId && targetNodeId) {
       // Same target - just scroll to it without navigation
       setTimeout(() => {
         const element = document.querySelector(`[data-query-tree-id="${targetNodeId}"]`);
         if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       }, 100);
     } else {
@@ -82,28 +82,26 @@
 
 {#if childrenIds.length > 0}
   <div class="mt-4 border-t pt-4">
-    <h4 class="text-sm font-semibold text-gray-900 mb-3">🔗 Propagated from Children</h4>
-    <div class="text-xs text-gray-600 mb-3">
-      <p>
-        This result is influenced by assumptions made in the following child evaluations:
-      </p>
+    <h4 class="mb-3 text-sm font-semibold text-gray-900">🔗 Propagated from Children</h4>
+    <div class="mb-3 text-xs text-gray-600">
+      <p>This result is influenced by assumptions made in the following child evaluations:</p>
     </div>
-    
+
     {#if loading}
       <div class="flex items-center justify-center py-4">
-        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+        <div class="h-5 w-5 animate-spin rounded-full border-b-2 border-blue-600"></div>
         <span class="ml-2 text-sm text-gray-600">Loading child evaluations...</span>
       </div>
     {:else if error}
-      <div class="py-4 text-center text-red-600 text-sm">
+      <div class="py-4 text-center text-sm text-red-600">
         <p>⚠️ {error}</p>
         <p class="mt-2 text-gray-600">Showing child IDs only:</p>
-        <div class="space-y-2 mt-2">
+        <div class="mt-2 space-y-2">
           {#each childrenIds as childId}
             <a
               href={getChildLink(childId)}
               onclick={(e) => handleFallbackNavigation(e, childId)}
-              class="flex items-center space-x-2 rounded px-3 py-2 text-left text-xs bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:border-gray-300 transition-colors w-full block"
+              class="block flex w-full items-center space-x-2 rounded border border-gray-200 bg-gray-50 px-3 py-2 text-left text-xs transition-colors hover:border-gray-300 hover:bg-gray-100"
             >
               <span class="font-mono text-gray-800">{getShortId(childId)}...</span>
               <span class="text-gray-600">View evaluation</span>
@@ -114,7 +112,7 @@
     {:else}
       <div class="space-y-3">
         {#each childrenQueryTrees as queryTree (queryTree.id)}
-          <ChildQueryTreeItem 
+          <ChildQueryTreeItem
             {queryTree}
             {baseUrl}
             href={getChildLink(queryTree.id)}
@@ -123,7 +121,7 @@
         {/each}
       </div>
     {/if}
-    
+
     <div class="mt-3 text-xs text-gray-500">
       <p>
         💡 <strong>Tip:</strong> Click on any child evaluation above to navigate to it and see its assumptions.
