@@ -304,17 +304,20 @@ interface HasAssumptions {
     /**
      * This set only contains the assumptions that were added by invoking [assume] or
      * [addAssumptionDependence] to this object. To gather all assumptions that are relevant for
-     * this object, call [collectAssumptions]. This is necessary as different parts of cpg
+     * this object, call [relevantAssumptions]. This is necessary as different parts of cpg
      * construction and augmentation can add assumptions to a dependent object.
      */
     val assumptions: MutableSet<Assumption>
 
     /**
-     * This is function is used to collect all assumptions stored in the [HasAssumptions] object and
-     * its contained objects that can have assumptions. While this default implementation is simple,
-     * composite [HasAssumptions] objects should return the assumptions of the contained objects.
+     * This is function is used to collect all assumptions that are "relevant" for this
+     * [HasAssumptions] object.
+     *
+     * In the default implementation, it simply returns the [assumptions] set. But more complex
+     * implementations might also include assumptions from other objects that this object depends
+     * on, or that are relevant for the analysis of this object.
      */
-    fun collectAssumptions(): Set<Assumption> {
+    fun relevantAssumptions(): Set<Assumption> {
         return assumptions.toSet()
     }
 }
@@ -367,7 +370,7 @@ fun <T : HasAssumptions> T.assume(
  * @param haveAssumptions nodes that hold assumptions this object dependent on.
  */
 fun <T : HasAssumptions> T.addAssumptionDependence(vararg haveAssumptions: HasAssumptions?): T {
-    this.assumptions.addAll(haveAssumptions.flatMap { it?.collectAssumptions() ?: setOf() })
+    this.assumptions.addAll(haveAssumptions.flatMap { it?.relevantAssumptions() ?: setOf() })
     return this
 }
 

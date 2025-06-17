@@ -290,8 +290,8 @@ abstract class Node() :
      * Adds the [assumptions] attached to the [Node] and of relevant supernodes in the AST.
      * Currently, of the [Component].
      */
-    override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + (component?.collectAssumptions() ?: emptySet())
+    override fun relevantAssumptions(): Set<Assumption> {
+        return super.relevantAssumptions() + (component?.relevantAssumptions() ?: emptySet())
     }
 
     /**

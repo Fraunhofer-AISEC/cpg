@@ -288,8 +288,8 @@ data class NodePath(
      * Adds the [assumptions] attached to the [NodePath] itself and of all [Node] contained in the
      * path.
      */
-    override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + nodes.flatMap { it.collectAssumptions() }
+    override fun relevantAssumptions(): Set<Assumption> {
+        return super.relevantAssumptions() + nodes.flatMap { it.relevantAssumptions() }
     }
 }
 

@@ -292,8 +292,8 @@ data class NodeWithAssumption(val node: Node) : HasAssumptions {
      * Adds the [assumptions] of the current [NodeCollectionWithAssumption] and the assumptions of
      * the node that is the result.
      */
-    override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + node.collectAssumptions()
+    override fun relevantAssumptions(): Set<Assumption> {
+        return super.relevantAssumptions() + node.relevantAssumptions()
     }
 }
 
@@ -309,8 +309,8 @@ data class NodeCollectionWithAssumption(val nodes: Collection<Node>) : HasAssump
      * Adds the [assumptions] of the current [NodeCollectionWithAssumption] and the assumptions of
      * all nodes contained in the object.
      */
-    override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + nodes.flatMap { it.collectAssumptions() }
+    override fun relevantAssumptions(): Set<Assumption> {
+        return super.relevantAssumptions() + nodes.flatMap { it.relevantAssumptions() }
     }
 }
 

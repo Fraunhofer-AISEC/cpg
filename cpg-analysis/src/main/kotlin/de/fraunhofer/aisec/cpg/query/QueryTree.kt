@@ -139,28 +139,12 @@ open class QueryTree<T>(
         checkForSuppression()
     }
 
-    fun getAssumptionsOfValue(): Collection<Assumption> {
-        val value = this.value
-        if (value is HasAssumptions) {
-            return value.collectAssumptions()
-        } else if (value is Collection<*>) {
-            return value.flatMap { (it as? HasAssumptions)?.collectAssumptions() ?: setOf() }
-        } else {
-            return emptySet()
-        }
-    }
-
     /**
      * Calculates the confidence of the [QueryTree] based on the [operator] and the [children] of
      * the [QueryTree].
      */
     open fun calculateConfidence(): AcceptanceStatus {
-        val assumptionsToUse =
-            if (this.children.isNotEmpty()) {
-                this.assumptions
-            } else {
-                this.collectAssumptions() + getAssumptionsOfValue()
-            }
+        val assumptionsToUse = this.relevantAssumptions()
         val operator = this.operator
         if (operator !is GenericQueryOperators) {
             throw QueryException("The operator must be a GenericQueryOperator, but was $operator")
@@ -312,8 +296,27 @@ open class QueryTree<T>(
      * Adds the [assumptions] attached to the [QueryTree] itself and of all sub [QueryTree]s that
      * were declared as children.
      */
-    override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + children.flatMap { it.collectAssumptions() }.toSet()
+    override fun relevantAssumptions(): Set<Assumption> {
+        return this.assumptions +
+            if (this.children.isEmpty()) {
+                // If there are no children, we collect the assumptions from the value
+                // This is useful for cases where the value itself is a HasAssumptions
+                // or a Collection of HasAssumptions
+                val value = this.value
+                when (value) {
+                    is HasAssumptions -> {
+                        value.relevantAssumptions()
+                    }
+                    is Collection<*> -> {
+                        value.flatMap { (it as? HasAssumptions)?.relevantAssumptions() ?: setOf() }
+                    }
+                    else -> {
+                        emptySet()
+                    }
+                }
+            } else {
+                setOf()
+            }
     }
 
     companion object {
@@ -887,4 +890,30 @@ fun List<QueryTree<Boolean>>.mergeWithAny(
  */
 fun Node.compactToString(): String {
     return "${this.javaClass.simpleName} '${name}'${if(location != null) {" @ $location"} else {""}}"
+}
+
+/**
+ * Returns a list of all children of the [QueryTree] and its descendants and maps them using the
+ * [map] function.
+ */
+fun <T> QueryTree<*>.mapAllChildren(
+    filter: (QueryTree<*>) -> Boolean = { true },
+    map: (QueryTree<*>) -> T,
+): List<T> {
+    val result = mutableListOf<T>()
+    val queue = LinkedList<QueryTree<*>>()
+    queue.add(this)
+
+    while (queue.isNotEmpty()) {
+        val current = queue.poll()
+
+        if (filter(current)) {
+            // If the current node matches the filter, map it and add to the result
+            result.add(map(current))
+        }
+
+        queue.addAll(current.children)
+    }
+
+    return result
 }

@@ -232,6 +232,8 @@ data class QueryTreeJSON(
     val queryTreeType:
         String, // Type of QueryTree (QueryTree, BinaryOperationResult, UnaryOperationResult)
     val childrenIds: List<String> = emptyList(), // IDs of child QueryTrees for lazy loading
+    val childrenWithAssumptionIds: List<String> =
+        emptyList<String>(), // IDs of child QueryTrees with assumptions
     val hasChildren: Boolean = false, // Quick check for UI expansion
     val nodeId: String? = null, // UUID of associated node, if any
     val node: NodeJSON? = null, // Full node information, if any
@@ -534,6 +536,10 @@ fun <T> QueryTree<T>.toJSON(): QueryTreeJSON {
         operator = this.operator.toString(),
         queryTreeType = queryTreeType,
         childrenIds = this.children.map { it.id.toString() },
+        childrenWithAssumptionIds =
+            this.mapAllChildren(filter = { it.relevantAssumptions().isNotEmpty() }) {
+                it.id.toString()
+            },
         hasChildren = this.children.isNotEmpty(),
         nodeId = this.node?.id?.toString(),
         node = this.node?.toJSON(noEdges = true),
@@ -546,7 +552,7 @@ fun <T> QueryTree<T>.toJSON(): QueryTreeJSON {
                     lineNumber = it.lineNumber,
                 )
             },
-        assumptions = this.collectAssumptions().map { it.toJSON() },
+        assumptions = this.relevantAssumptions().map { it.toJSON() },
     )
 }
 
