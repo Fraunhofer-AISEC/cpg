@@ -71,7 +71,8 @@ inline fun <reified T> Node?.allChildren(
 /**
  * Checks, whether this [Node] has a location that matches the given parameters.
  *
- * @param pathSuffix The suffix of the path to match. If `null`, this is ignored.
+ * @param pathSuffix The suffix of the path to match. The check is performed by [String.endsWith],
+ *   so there are no specific requirements on the format. If `null`, this is ignored.
  * @param startLine The start line of the location to match. If `null`, this is ignored.
  * @param endLine The end line of the location to match. If `null`, this is ignored.
  */
