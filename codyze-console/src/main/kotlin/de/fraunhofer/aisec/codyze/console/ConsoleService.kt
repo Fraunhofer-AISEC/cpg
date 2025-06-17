@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
+import de.fraunhofer.aisec.cpg.query.QueryTree
 import java.io.File
 import java.nio.file.Path
 import kotlin.uuid.Uuid
@@ -60,6 +61,12 @@ class ConsoleService {
 
     private var newConceptNodes: Set<Concept> = emptySet()
     private var newPersistedConcepts = mutableListOf<PersistedConceptEntry>()
+
+    // Cache for QueryTrees to support lazy loading
+    private var queryTreeCache: Map<String, QueryTree<*>> = emptyMap()
+
+    // Cache for parent relationships to support tree expansion
+    private var queryTreeParentMap: Map<String, String> = emptyMap()
 
     /**
      * Analyzes the given source directory and returns the analysis result as [AnalysisResultJSON].
@@ -118,9 +125,40 @@ class ConsoleService {
 
         val result = project.analyze()
 
+        // Populate QueryTree cache for lazy loading
+        populateQueryTreeCache(result.requirementsResults)
+
         val json = result.toJSON()
         this@ConsoleService.analysisResult = json
         return json
+    }
+
+    /**
+     * Populates the QueryTree cache with all QueryTrees from the analysis results. This enables
+     * lazy loading of QueryTree children and builds parent relationships for tree expansion.
+     */
+    private fun populateQueryTreeCache(requirementsResults: Map<String, QueryTree<Boolean>>?) {
+        if (requirementsResults == null) {
+            queryTreeCache = emptyMap()
+            queryTreeParentMap = emptyMap()
+            return
+        }
+
+        val cache = mutableMapOf<String, QueryTree<*>>()
+        val parentMap = mutableMapOf<String, String>()
+
+        // Recursively collect all QueryTrees and build parent relationships
+        fun collectQueryTrees(queryTree: QueryTree<*>) {
+            cache[queryTree.id.toString()] = queryTree
+            queryTree.children.forEach { child ->
+                parentMap[child.id.toString()] = queryTree.id.toString()
+                collectQueryTrees(child)
+            }
+        }
+
+        requirementsResults.values.forEach { collectQueryTrees(it) }
+        queryTreeCache = cache
+        queryTreeParentMap = parentMap
     }
 
     /** Returns the translation result of the last analysis as [AnalysisResultJSON]. */
@@ -155,6 +193,51 @@ class ConsoleService {
             ?.find { it.id == Uuid.parse(id) }
             ?.cpgTU
             ?.let { extractNodes(it, overlayNodes) } ?: emptyList()
+    }
+
+    /** Returns the requirement with the given ID as [RequirementJSON]. */
+    fun getRequirement(requirementId: String): RequirementJSON? {
+        return analysisResult
+            ?.requirementCategories
+            ?.flatMap { it.requirements }
+            ?.find { it.id == requirementId }
+    }
+
+    /** Returns the QueryTree with the given ID as [QueryTreeJSON] for lazy loading. */
+    fun getQueryTree(queryTreeId: String): QueryTreeJSON? {
+        return queryTreeCache[queryTreeId]?.toJSON()
+    }
+
+    /** Returns multiple QueryTrees by their IDs as a list of [QueryTreeJSON] for lazy loading. */
+    fun getQueryTrees(queryTreeIds: List<String>): List<QueryTreeJSON> {
+        val results =
+            queryTreeIds.mapNotNull { id ->
+                val result = queryTreeCache[id]?.toJSON()
+                result
+            }
+
+        return results
+    }
+
+    /** Returns a QueryTree with all its parent IDs for tree expansion. */
+    fun getQueryTreeWithParents(queryTreeId: String): QueryTreeWithParentsJSON? {
+        val queryTree = queryTreeCache[queryTreeId]?.toJSON() ?: return null
+
+        // Build the list of parent IDs by following the parent chain
+        val parentIds = mutableListOf<String>()
+        var currentId: String? = queryTreeId
+
+        while (currentId != null) {
+            val parentId = queryTreeParentMap[currentId]
+            if (parentId != null) {
+                parentIds.add(parentId)
+                currentId = parentId
+            } else {
+                currentId = null
+            }
+        }
+
+        return QueryTreeWithParentsJSON(queryTree = queryTree, parentIds = parentIds)
     }
 
     /**
@@ -229,6 +312,9 @@ class ConsoleService {
             val service = ConsoleService()
             service.analysisResult = result.toJSON()
             service.lastProject = result.project
+            // Populate QueryTree cache for lazy loading
+            service.populateQueryTreeCache(result.requirementsResults)
+
             return service
         }
     }

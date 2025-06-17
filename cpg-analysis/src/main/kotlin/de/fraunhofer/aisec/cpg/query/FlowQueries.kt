@@ -64,7 +64,7 @@ fun FulfilledAndFailedPaths.toQueryTree(
                     QueryTree(value = it.nodes, operator = GenericQueryOperators.EVALUATE)
                 ),
             stringRepresentation =
-                "$queryType from $startNode to ${it.nodes.last()} fulfills the requirement",
+                "$queryType from ${startNode.compactToString()} to ${it.nodes.last().compactToString()} fulfills the requirement",
             node = startNode,
             terminationReason = Success(it.nodes.last()),
             operator = GenericQueryOperators.EVALUATE,
@@ -79,7 +79,7 @@ fun FulfilledAndFailedPaths.toQueryTree(
                             .addAssumptionDependence(nodePath)
                     ),
                 stringRepresentation =
-                    "$queryType from $startNode to ${nodePath.nodes.last()} fulfills the requirement",
+                    "$queryType from $startNode to ${nodePath.nodes.last()} does not fulfill the requirement",
                 node = startNode,
                 terminationReason =
                     if (reason == FailureReason.PATH_ENDED) {
@@ -123,9 +123,10 @@ object Must : AnalysisType() {
             value = allPaths.all { it.value },
             children = allPaths.toMutableList(),
             stringRepresentation =
-                "$queryType from $startNode to ${evalRes.fulfilled.map { it.nodes.last() }}",
+                "$queryType from ${startNode.compactToString()} to ${(evalRes.fulfilled.map { it.nodes.last().compactToString() })}",
             node = startNode,
             operator = GenericQueryOperators.ALL,
+            collectCallerInfo = true,
         )
     }
 }
@@ -145,9 +146,10 @@ object May : AnalysisType() {
             value = allPaths.any { it.value },
             children = allPaths.toMutableList(),
             stringRepresentation =
-                "$queryType from $startNode to ${evalRes.fulfilled.map { it.nodes.last() }}",
+                "$queryType from ${startNode.compactToString()} to ${evalRes.fulfilled.map { it.nodes.last().compactToString() }}",
             node = startNode,
             operator = GenericQueryOperators.ANY,
+            collectCallerInfo = true,
         )
     }
 }
@@ -290,8 +292,8 @@ data class NodeWithAssumption(val node: Node) : HasAssumptions {
      * Adds the [assumptions] of the current [NodeCollectionWithAssumption] and the assumptions of
      * the node that is the result.
      */
-    override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + node.collectAssumptions()
+    override fun relevantAssumptions(): Set<Assumption> {
+        return super.relevantAssumptions() + node.relevantAssumptions()
     }
 }
 
@@ -307,8 +309,8 @@ data class NodeCollectionWithAssumption(val nodes: Collection<Node>) : HasAssump
      * Adds the [assumptions] of the current [NodeCollectionWithAssumption] and the assumptions of
      * all nodes contained in the object.
      */
-    override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + nodes.flatMap { it.collectAssumptions() }
+    override fun relevantAssumptions(): Set<Assumption> {
+        return super.relevantAssumptions() + nodes.flatMap { it.relevantAssumptions() }
     }
 }
 

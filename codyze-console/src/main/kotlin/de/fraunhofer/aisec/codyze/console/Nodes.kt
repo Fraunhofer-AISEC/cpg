@@ -27,17 +27,19 @@
 
 package de.fraunhofer.aisec.codyze.console
 
+import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
+import de.fraunhofer.aisec.codyze.dsl.RequirementBuilder
+import de.fraunhofer.aisec.codyze.dsl.RequirementCategoryBuilder
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
-import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.ConceptEntry
-import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.DFGEntry
-import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.LocationEntry
-import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
+import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.*
+import de.fraunhofer.aisec.cpg.query.*
 import io.github.detekt.sarif4k.ArtifactLocation
 import io.github.detekt.sarif4k.Result
 import java.net.URI
@@ -99,6 +101,7 @@ data class AnalysisResultJSON(
     var sourceDir: String,
     @Transient val analysisResult: AnalysisResult? = null,
     val findings: List<FindingsJSON>,
+    val requirementCategories: List<RequirementsCategoryJSON> = emptyList(),
 )
 
 /**
@@ -154,6 +157,95 @@ data class NodeJSON(
     val astChildren: List<NodeJSON>,
     val prevDFG: List<EdgeJSON> = emptyList(),
     val nextDFG: List<EdgeJSON> = emptyList(),
+    @Serializable(with = UuidSerializer::class) val translationUnitId: Uuid? = null,
+    val componentName: String? = null,
+    val fileName: String? = null,
+)
+
+/** JSON data class for a requirement category. */
+@Serializable
+data class RequirementsCategoryJSON(
+    val id: String,
+    val name: String,
+    val description: String,
+    val requirements: List<RequirementJSON>,
+)
+
+/**
+ * JSON data class for project information separate from analysis results. This provides metadata
+ * about the analysis project.
+ */
+@Serializable
+data class AnalysisProjectJSON(
+    val name: String,
+    val sourceDir: String,
+    val includeDir: String? = null,
+    val topLevel: String? = null,
+    val projectCreatedAt: String,
+    val lastAnalyzedAt: String? = null,
+    val requirementCategories: List<RequirementsCategoryJSON> = emptyList(),
+    @Transient val project: AnalysisProject? = null,
+)
+
+/** JSON data class for a single requirement. */
+@Serializable
+data class RequirementJSON(
+    val id: String,
+    val name: String,
+    val description: String,
+    val status: String,
+    val categoryId: String,
+    val queryTree: QueryTreeJSON? = null,
+)
+
+/** JSON data class for caller information from QueryTree. */
+@Serializable
+data class CallerInfoJSON(
+    val className: String,
+    val methodName: String,
+    val fileName: String,
+    val lineNumber: Int,
+)
+
+/** JSON data class for an assumption. */
+@Serializable
+data class AssumptionJSON(
+    @Serializable(with = UuidSerializer::class) val id: Uuid,
+    val assumptionType: String, // AssumptionType as string
+    val message: String,
+    val status: String, // AssumptionStatus as string
+    val nodeId: String? = null, // UUID of associated node, if any
+    val node: NodeJSON? = null, // Full node information when available
+    val edgeLabel: String? = null, // Label of associated edge, if any
+    val assumptionScopeId: String? = null, // UUID of assumption scope node, if any
+)
+
+/** JSON data class for a QueryTree result with lazy loading support. */
+@Serializable
+data class QueryTreeJSON(
+    val id: String, // Unique identifier for this QueryTree
+    val value: String? = null, // Serialized as string to handle simple types
+    val nodeValues: List<NodeJSON>? = null, // List of nodes when value is List<Node>
+    val confidence: String, // AcceptanceStatus as string
+    val stringRepresentation: String,
+    val operator: String,
+    val queryTreeType:
+        String, // Type of QueryTree (QueryTree, BinaryOperationResult, UnaryOperationResult)
+    val childrenIds: List<String> = emptyList(), // IDs of child QueryTrees for lazy loading
+    val childrenWithAssumptionIds: List<String> =
+        emptyList<String>(), // IDs of child QueryTrees with assumptions
+    val hasChildren: Boolean = false, // Quick check for UI expansion
+    val nodeId: String? = null, // UUID of associated node, if any
+    val node: NodeJSON? = null, // Full node information, if any
+    val callerInfo: CallerInfoJSON? = null, // Information about where the query was called from
+    val assumptions: List<AssumptionJSON> = emptyList(), // List of assumptions for this QueryTree
+)
+
+/** JSON data class for a QueryTree with its parent IDs for tree expansion. */
+@Serializable
+data class QueryTreeWithParentsJSON(
+    val queryTree: QueryTreeJSON,
+    val parentIds: List<String> = emptyList(), // IDs of all parent QueryTrees
 )
 
 /**
@@ -220,8 +312,24 @@ fun AnalysisResult.toJSON(): AnalysisResultJSON =
             analysisResult = this@toJSON,
             sourceDir = config.sourceLocations.first().absolutePath,
             findings = sarif.runs.flatMap { it.results?.map { it.toJSON() } ?: emptyList() },
+            requirementCategories =
+                project.requirementCategoriesToJSON(this@toJSON.requirementsResults),
         )
     }
+
+/** Converts a [AnalysisProject] into its JSON representation. */
+fun AnalysisProject.toJSON(): AnalysisProjectJSON {
+    return AnalysisProjectJSON(
+        name = this.name,
+        sourceDir = this.projectDir?.toString() ?: "",
+        includeDir = this.config.includePaths.firstOrNull()?.toString(),
+        topLevel = this.projectDir?.toString() ?: "",
+        projectCreatedAt = java.time.Instant.now().toString(),
+        lastAnalyzedAt = null,
+        requirementCategories = this.requirementCategoriesToJSON(),
+        project = this,
+    )
+}
 
 /** Converts a [TranslationUnitDeclaration] into its JSON representation. */
 context(_: ContextProvider)
@@ -251,7 +359,7 @@ fun Component.toJSON(): ComponentJSON {
 }
 
 /** Converts a [Node] into its JSON representation. */
-fun Node.toJSON(): NodeJSON {
+fun Node.toJSON(noEdges: Boolean = false): NodeJSON {
     return NodeJSON(
         id = this.id,
         type = this.javaClass.simpleName,
@@ -261,9 +369,17 @@ fun Node.toJSON(): NodeJSON {
         endColumn = location?.region?.endColumn ?: -1,
         code = this.code ?: "",
         name = this.name.toString(),
-        astChildren = this.astChildren.map { it.toJSON() },
-        prevDFG = this.prevDFGEdges.map { it.toJSON() },
-        nextDFG = this.nextDFGEdges.map { it.toJSON() },
+        fileName =
+            this.location?.artifactLocation?.uri?.let { uri ->
+                // Extract filename from URI
+                val path = uri.toString()
+                path.substringAfterLast('/').substringAfterLast('\\')
+            },
+        astChildren = if (noEdges) emptyList() else this.astChildren.map { it.toJSON() },
+        prevDFG = if (noEdges) emptyList() else this.prevDFGEdges.map { it.toJSON() },
+        nextDFG = if (noEdges) emptyList() else this.nextDFGEdges.map { it.toJSON() },
+        translationUnitId = this.translationUnit?.id,
+        componentName = this.component?.name?.toString(),
     )
 }
 
@@ -273,6 +389,20 @@ fun Edge<*>.toJSON(): EdgeJSON {
         label = this.labels.firstOrNull() ?: "",
         start = this.start.id,
         end = this.end.id,
+    )
+}
+
+/** Converts an [Assumption] into its JSON representation. */
+fun Assumption.toJSON(): AssumptionJSON {
+    return AssumptionJSON(
+        id = this.id,
+        assumptionType = this.assumptionType.name,
+        message = this.message,
+        status = this.status.name,
+        nodeId = this.underlyingNode?.id?.toString(),
+        node = this.underlyingNode?.toJSON(),
+        edgeLabel = this.edge?.labels?.firstOrNull(),
+        assumptionScopeId = this.assumptionScope?.id?.toString(),
     )
 }
 
@@ -345,4 +475,120 @@ object UuidSerializer : KSerializer<Uuid> {
     override fun deserialize(decoder: Decoder): Uuid {
         return Uuid.parse(decoder.decodeString())
     }
+}
+
+/** Converts the requirement categories of an [AnalysisProject] into their JSON representation. */
+fun AnalysisProject.requirementCategoriesToJSON(
+    requirementsResults: Map<String, QueryTree<Boolean>>? = null
+): List<RequirementsCategoryJSON> {
+    return this.requirementCategories.map { (_, categoryBuilder) ->
+        categoryBuilder.toJSON(requirementsResults)
+    }
+}
+
+/** Converts a [RequirementCategoryBuilder] into its JSON representation. */
+fun RequirementCategoryBuilder.toJSON(
+    requirementsResults: Map<String, QueryTree<Boolean>>? = null
+): RequirementsCategoryJSON {
+    return RequirementsCategoryJSON(
+        id = this.id,
+        name = this.name ?: this.id,
+        description = this.description ?: "",
+        requirements =
+            this.requirements.map { (_, reqBuilder) ->
+                reqBuilder.toJSON(this.id, requirementsResults)
+            },
+    )
+}
+
+/** Converts a [QueryTree] into its JSON representation with lazy loading support. */
+fun <T> QueryTree<T>.toJSON(): QueryTreeJSON {
+    // Determine the QueryTree type based on the class
+    val queryTreeType =
+        when (this) {
+            is BinaryOperationResult<*, *> -> "BinaryOperationResult"
+            is UnaryOperationResult<*> -> "UnaryOperationResult"
+            is SinglePathResult -> "SinglePathResult"
+            else -> "QueryTree"
+        }
+
+    // Handle different value types
+    val (stringValue, nodeValues) =
+        when (val value = this.value) {
+            is List<*> -> {
+                // Check if it's a list of nodes
+                if (value.isNotEmpty() && value.first() is Node) {
+                    @Suppress("UNCHECKED_CAST") val nodes = value as List<Node>
+                    null to nodes.map { it.toJSON(noEdges = true) }
+                } else {
+                    value.toString() to null
+                }
+            }
+            else -> value.toString() to null
+        }
+
+    return QueryTreeJSON(
+        id = this.id.toString(),
+        value = stringValue,
+        nodeValues = nodeValues,
+        confidence = this.confidence.toString(),
+        stringRepresentation = this.stringRepresentation,
+        operator = this.operator.toString(),
+        queryTreeType = queryTreeType,
+        childrenIds = this.children.map { it.id.toString() },
+        childrenWithAssumptionIds =
+            this.mapAllChildren(filter = { it.relevantAssumptions().isNotEmpty() }) {
+                it.id.toString()
+            },
+        hasChildren = this.children.isNotEmpty(),
+        nodeId = this.node?.id?.toString(),
+        node = this.node?.toJSON(noEdges = true),
+        callerInfo =
+            this.callerInfo?.let {
+                CallerInfoJSON(
+                    className = it.className,
+                    methodName = it.methodName,
+                    fileName = it.fileName,
+                    lineNumber = it.lineNumber,
+                )
+            },
+        assumptions = this.relevantAssumptions().map { it.toJSON() },
+    )
+}
+
+/**
+ * Converts a [RequirementBuilder] into its JSON representation.
+ *
+ * @param categoryId The ID of the parent category, required for the JSON structure.
+ * @param requirementsResults Map containing the evaluation results for requirements, keyed by
+ *   requirement ID
+ */
+fun RequirementBuilder.toJSON(
+    categoryId: String,
+    requirementsResults: Map<String, QueryTree<Boolean>>? = null,
+): RequirementJSON {
+    val queryTree = requirementsResults?.get(this.id)
+    val status =
+        when {
+            requirementsResults == null -> "NOT_YET_EVALUATED"
+            else -> {
+                when {
+                    queryTree == null || queryTree is NotYetEvaluated -> "NOT_YET_EVALUATED"
+                    queryTree.confidence is RejectedResult -> "REJECTED"
+                    queryTree.confidence is UndecidedResult -> "UNDECIDED"
+                    queryTree.value && queryTree.confidence is AcceptedResult -> "FULFILLED"
+                    !queryTree.value && queryTree.confidence is AcceptedResult -> "NOT_FULFILLED"
+                    else -> "UNDECIDED"
+                }
+            }
+        }
+
+    return RequirementJSON(
+        id = this.id,
+        name = this.name ?: this.id,
+        description = this.description ?: "",
+        status = status,
+        categoryId = categoryId,
+        queryTree = queryTree?.toJSON(),
+    )
 }

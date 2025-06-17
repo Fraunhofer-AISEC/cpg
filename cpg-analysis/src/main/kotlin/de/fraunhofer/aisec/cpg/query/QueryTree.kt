@@ -83,6 +83,7 @@ open class QueryTree<T>(
      */
     var suppressed: Boolean = false,
     val operator: QueryTreeOperators,
+    val collectCallerInfo: Boolean = true,
 ) : Comparable<QueryTree<T>>, HasAssumptions {
     /**
      * Determines if the [QueryTree.value] is acceptable after evaluating the [assumptions] which
@@ -122,8 +123,19 @@ open class QueryTree<T>(
      */
     var id: Uuid
 
+    /**
+     * The caller information of the [QueryTree]. This is useful to track where the query was
+     * executed from, especially if the [collectCallerInfo] flag is set to `true`.
+     */
+    var callerInfo: CallerInfo? = null
+
     init {
         id = computeId()
+
+        if (collectCallerInfo) {
+            callerInfo = getQueryTreeCaller()
+        }
+
         checkForSuppression()
     }
 
@@ -132,7 +144,7 @@ open class QueryTree<T>(
      * the [QueryTree].
      */
     open fun calculateConfidence(): AcceptanceStatus {
-        val assumptionsToUse = this.assumptions
+        val assumptionsToUse = this.relevantAssumptions()
         val operator = this.operator
         if (operator !is GenericQueryOperators) {
             throw QueryException("The operator must be a GenericQueryOperator, but was $operator")
@@ -284,8 +296,27 @@ open class QueryTree<T>(
      * Adds the [assumptions] attached to the [QueryTree] itself and of all sub [QueryTree]s that
      * were declared as children.
      */
-    override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + children.flatMap { it.collectAssumptions() }.toSet()
+    override fun relevantAssumptions(): Set<Assumption> {
+        return this.assumptions +
+            if (this.children.isEmpty()) {
+                // If there are no children, we collect the assumptions from the value
+                // This is useful for cases where the value itself is a HasAssumptions
+                // or a Collection of HasAssumptions
+                val value = this.value
+                when (value) {
+                    is HasAssumptions -> {
+                        value.relevantAssumptions()
+                    }
+                    is Collection<*> -> {
+                        value.flatMap { (it as? HasAssumptions)?.relevantAssumptions() ?: setOf() }
+                    }
+                    else -> {
+                        emptySet()
+                    }
+                }
+            } else {
+                setOf()
+            }
     }
 
     companion object {
@@ -300,7 +331,7 @@ operator fun QueryTree<*>?.compareTo(other: Number): Int {
     throw QueryException("Cannot compare objects of type ${this?.value} and $other")
 }
 
-fun <T> T.toQueryTree(): QueryTree<T> {
+fun <T> T.toQueryTree(collectCallerInfo: Boolean = false): QueryTree<T> {
     if (this is QueryTree<*>) {
         @Suppress("UNCHECKED_CAST")
         return this as QueryTree<T>
@@ -311,6 +342,7 @@ fun <T> T.toQueryTree(): QueryTree<T> {
         stringRepresentation = this.toString(),
         node = this as? Node,
         operator = GenericQueryOperators.EVALUATE,
+        collectCallerInfo = collectCallerInfo,
     )
 }
 
@@ -816,13 +848,14 @@ fun List<QueryTree<Boolean>>.mergeWithAll(
         children = this.toMutableList(),
         stringRepresentation =
             if (value) {
-                "All elements has value true"
+                "All elements are true"
             } else {
-                "At least one of the elements has false"
+                "At least one of the elements is false"
             },
         node = node,
         assumptions = assumptions,
         operator = GenericQueryOperators.ALL,
+        collectCallerInfo = true,
     )
 }
 
@@ -840,12 +873,47 @@ fun List<QueryTree<Boolean>>.mergeWithAny(
         children = this.toMutableList(),
         stringRepresentation =
             if (value) {
-                "At least one of the elements has value true"
+                "At least one of the elements is true"
             } else {
-                "All elements have value false"
+                "All elements are false"
             },
         node = node,
         assumptions = assumptions,
         operator = GenericQueryOperators.ANY,
+        collectCallerInfo = true,
     )
+}
+
+/**
+ * A very compact string representation of a [Node] to be used in [QueryTree.stringRepresentation].
+ * It includes the class name, the name of the node, and its location if available.
+ */
+fun Node.compactToString(): String {
+    return "${this.javaClass.simpleName} '${name}'${if(location != null) {" @ $location"} else {""}}"
+}
+
+/**
+ * Returns a list of all children of the [QueryTree] and its descendants and maps them using the
+ * [map] function.
+ */
+fun <T> QueryTree<*>.mapAllChildren(
+    filter: (QueryTree<*>) -> Boolean = { true },
+    map: (QueryTree<*>) -> T,
+): List<T> {
+    val result = mutableListOf<T>()
+    val queue = LinkedList<QueryTree<*>>()
+    queue.add(this)
+
+    while (queue.isNotEmpty()) {
+        val current = queue.poll()
+
+        if (filter(current)) {
+            // If the current node matches the filter, map it and add to the result
+            result.add(map(current))
+        }
+
+        queue.addAll(current.children)
+    }
+
+    return result
 }

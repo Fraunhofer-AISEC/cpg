@@ -582,6 +582,6 @@ fun ManualAssessmentBuilder.of(
  */
 @CodyzeDsl
 fun ManualAssessmentBuilder.of(id: String, block: TranslationResult.() -> Boolean): OfBoolean {
-    assessments[id] = { block().toQueryTree() }
+    assessments[id] = { block().toQueryTree(collectCallerInfo = true) }
     return OfBoolean
 }

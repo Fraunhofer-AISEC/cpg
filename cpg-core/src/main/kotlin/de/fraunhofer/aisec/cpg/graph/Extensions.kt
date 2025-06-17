@@ -288,8 +288,8 @@ data class NodePath(
      * Adds the [assumptions] attached to the [NodePath] itself and of all [Node] contained in the
      * path.
      */
-    override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + nodes.flatMap { it.collectAssumptions() }
+    override fun relevantAssumptions(): Set<Assumption> {
+        return super.relevantAssumptions() + nodes.flatMap { it.relevantAssumptions() }
     }
 }
 
@@ -1256,7 +1256,6 @@ val Node?.assigns: List<AssignExpression>
 inline fun <reified T : Node> Node.firstParentOrNull(
     noinline predicate: ((T) -> Boolean)? = null
 ): T? {
-
     // start at searchNodes parent
     var node = this.astParent
 
@@ -1463,23 +1462,49 @@ fun Expression?.unwrapReference(): Reference? {
     }
 }
 
-/** Returns the [TranslationUnitDeclaration] where this node is located in. */
+/**
+ * Returns the [TranslationUnitDeclaration] where this node is located in.
+ *
+ * If this is an [OverlayNode], we start searching in the [OverlayNode.underlyingNode].
+ */
 val Node.translationUnit: TranslationUnitDeclaration?
     get() {
         return this as? TranslationUnitDeclaration
-            ?: firstParentOrNull<TranslationUnitDeclaration>()
+            ?: if (this is OverlayNode) {
+                this.underlyingNode?.firstParentOrNull<TranslationUnitDeclaration>()
+            } else {
+                this.firstParentOrNull<TranslationUnitDeclaration>()
+            }
     }
 
-/** Returns the [TranslationResult] where this node is located in. */
+/**
+ * Returns the [TranslationResult] where this node is located in.
+ *
+ * If this is an [OverlayNode], we start searching in the [OverlayNode.underlyingNode].
+ */
 val Node.translationResult: TranslationResult?
     get() {
-        return this as? TranslationResult ?: firstParentOrNull<TranslationResult>()
+        return this as? TranslationResult
+            ?: if (this is OverlayNode) {
+                this.underlyingNode?.firstParentOrNull<TranslationResult>()
+            } else {
+                this.firstParentOrNull<TranslationResult>()
+            }
     }
 
-/** Returns the [Component] where this node is located in. */
+/**
+ * Returns the [Component] where this node is located in.
+ *
+ * If this is an [OverlayNode], we start searching in the [OverlayNode.underlyingNode].
+ */
 val Node.component: Component?
     get() {
-        return this as? Component ?: firstParentOrNull<Component>()
+        return this as? Component
+            ?: if (this is OverlayNode) {
+                this.underlyingNode?.firstParentOrNull<Component>()
+            } else {
+                this.firstParentOrNull<Component>()
+            }
     }
 
 /**

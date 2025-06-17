@@ -25,6 +25,9 @@
  */
 package example
 
+import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.query.and
 
 include {
@@ -92,4 +95,26 @@ project {
     }
 
     assumptions { assume { "We assume that everything is fine." } }
+}
+
+/**
+ * Checks if the function calls to "encrypt" are used correctly.
+ *
+ * This is just a demo function to illustrate how to write a query. In a real-world scenario, this
+ * function would not be part of the script but rather of a separate query catalog module.
+ */
+context(tr: TranslationResult)
+fun goodCryptoFunc(): QueryTree<Boolean> {
+    val q = tr.allExtended<Secret> { dataFlow(it, predicate = { it.name.localName == "encrypt" }) }
+    return q
+}
+
+context(tr: TranslationResult)
+fun goodArgumentSize(): QueryTree<Boolean> {
+    return tr.allExtended<CallExpression> { it.arguments.size eq 2 }
+}
+
+context(tr: TranslationResult)
+fun veryLongFunctionName(): QueryTree<Boolean> {
+    return tr.allExtended<FunctionDeclaration> { it.name.localName.length gt 7 }
 }
