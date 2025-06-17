@@ -1,14 +1,30 @@
 <script lang="ts">
   import type { RequirementsCategoryJSON } from '$lib/types';
   import RequirementCard from '../requirements/RequirementCard.svelte';
+  import { onMount } from 'svelte';
 
   interface Props {
     category: RequirementsCategoryJSON;
+    initialExpanded?: boolean;
   }
 
-  let { category }: Props = $props();
+  let { category, initialExpanded = false }: Props = $props();
 
-  let isExpanded = $state(false);
+  let isExpanded = $state(initialExpanded);
+
+  // Expand if initialExpanded changes
+  $effect(() => {
+    if (initialExpanded) {
+      isExpanded = true;
+      // Scroll to this category after a short delay to allow for rendering
+      setTimeout(() => {
+        const element = document.getElementById(`category-${category.id}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    }
+  });
 
   // Calculate category stats
   const stats = $derived({
@@ -25,7 +41,7 @@
   );
 </script>
 
-<div class="overflow-hidden rounded-lg border border-gray-200 bg-white">
+<div id="category-{category.id}" class="overflow-hidden rounded-lg border border-gray-200 bg-white">
   <!-- Category Header -->
   <button
     type="button"
