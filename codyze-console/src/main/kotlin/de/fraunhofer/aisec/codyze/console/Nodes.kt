@@ -373,11 +373,11 @@ fun Node.toJSON(noEdges: Boolean = false): NodeJSON {
                 val path = uri.toString()
                 path.substringAfterLast('/').substringAfterLast('\\')
             },
-        astChildren = if (noEdges) emptyList() else this.astChildren.map { it.toJSON(noEdges) },
+        astChildren = if (noEdges) emptyList() else this.astChildren.map { it.toJSON() },
         prevDFG = if (noEdges) emptyList() else this.prevDFGEdges.map { it.toJSON() },
         nextDFG = if (noEdges) emptyList() else this.nextDFGEdges.map { it.toJSON() },
         translationUnitId = this.translationUnit?.id,
-        componentName = this.translationUnit?.component?.name?.toString(),
+        componentName = this.component?.name?.toString(),
     )
 }
 

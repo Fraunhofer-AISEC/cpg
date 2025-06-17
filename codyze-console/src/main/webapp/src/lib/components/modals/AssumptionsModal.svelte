@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { AssumptionJSON } from '$lib/types';
-  import QueryTreeNodeValue from '../analysis/QueryTreeNodeValue.svelte';
+  import AssumptionCard from './AssumptionCard.svelte';
+  import AssumptionHelpSection from './AssumptionHelpSection.svelte';
 
   interface Props {
     assumptions: AssumptionJSON[];
@@ -9,26 +10,6 @@
   }
 
   let { assumptions, isOpen, onClose }: Props = $props();
-
-  // Get assumption status color
-  function getAssumptionStatusColor(status: string): string {
-    switch (status) {
-      case 'Accepted':
-        return 'text-green-700 bg-green-50 border-green-200';
-      case 'Rejected':
-        return 'text-red-700 bg-red-50 border-red-200';
-      case 'Ignored':
-        return 'text-gray-700 bg-gray-50 border-gray-200';
-      case 'Undecided':
-      default:
-        return 'text-yellow-700 bg-yellow-50 border-yellow-200';
-    }
-  }
-
-  // Get assumption type display name
-  function getAssumptionTypeDisplay(type: string): string {
-    return type.replace(/([A-Z])/g, ' $1').trim();
-  }
 
   // Close modal when clicking outside
   function handleBackdropClick(event: MouseEvent) {
@@ -43,13 +24,30 @@
       onClose();
     }
   }
+
+  // Copy assumption ID to clipboard
+  async function copyAssumptionId(id: string) {
+    try {
+      await navigator.clipboard.writeText(id);
+      // You could add a toast notification here if you have one
+    } catch (err) {
+      console.error('Failed to copy assumption ID:', err);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = id;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+  }
 </script>
 
 <svelte:window onkeydown={handleKeyDown} />
 
 {#if isOpen}
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+    class="fixed inset-0 z-50 flex items-center justify-center backdrop-blur backdrop-brightness-75"
     onclick={handleBackdropClick}
     onkeydown={handleKeyDown}
     role="dialog"
@@ -94,61 +92,12 @@
             </div>
 
             {#each assumptions as assumption (assumption.id)}
-              <div class="border rounded-lg p-4 {getAssumptionStatusColor(assumption.status)}">
-                <!-- Assumption Header -->
-                <div class="flex items-start justify-between mb-2">
-                  <div class="flex items-center space-x-2">
-                    <span class="text-xs font-medium px-2 py-1 rounded border {getAssumptionStatusColor(assumption.status)}">
-                      {assumption.status}
-                    </span>
-                    <span class="text-xs text-gray-600">
-                      {getAssumptionTypeDisplay(assumption.assumptionType)}
-                    </span>
-                  </div>
-                  <span class="text-xs font-mono text-gray-500">
-                    {assumption.id.substring(0, 8)}...
-                  </span>
-                </div>
-
-                <!-- Assumption Message -->
-                <div class="mb-3">
-                  <p class="text-sm leading-relaxed">
-                    {assumption.message}
-                  </p>
-                </div>
-
-                <!-- Assumption Details -->
-                {#if assumption.node || assumption.nodeId || assumption.edgeLabel || assumption.assumptionScopeId}
-                  <div class="text-xs text-gray-600 space-y-2 border-t pt-3">
-                    {#if assumption.node}
-                      <div>
-                        <div class="font-medium mb-1 text-purple-700">🎯 Related Node:</div>
-                        <QueryTreeNodeValue node={assumption.node} />
-                      </div>
-                    {:else if assumption.nodeId}
-                      <div>
-                        <span class="font-medium">Related Node ID:</span>
-                        <span class="font-mono">{assumption.nodeId.substring(0, 8)}...</span>
-                      </div>
-                    {/if}
-                    {#if assumption.edgeLabel}
-                      <div>
-                        <span class="font-medium">Related Edge:</span>
-                        <span class="font-mono">{assumption.edgeLabel}</span>
-                      </div>
-                    {/if}
-                    {#if assumption.assumptionScopeId}
-                      <div>
-                        <span class="font-medium">Scope:</span>
-                        <span class="font-mono">{assumption.assumptionScopeId.substring(0, 8)}...</span>
-                      </div>
-                    {/if}
-                  </div>
-                {/if}
-              </div>
+              <AssumptionCard {assumption} onCopyId={copyAssumptionId} />
             {/each}
           </div>
         {/if}
+
+        <AssumptionHelpSection hasAssumptions={assumptions.length > 0} />
       </div>
 
       <!-- Modal Footer -->
