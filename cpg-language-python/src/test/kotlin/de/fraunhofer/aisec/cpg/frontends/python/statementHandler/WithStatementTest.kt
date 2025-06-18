@@ -28,8 +28,9 @@ package de.fraunhofer.aisec.cpg.frontends.python.statementHandler
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.python.PythonHandler
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.functions
+import de.fraunhofer.aisec.cpg.graph.refs
 import de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.statements.EmptyStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
@@ -80,6 +81,12 @@ class WithStatementTest : BaseTest() {
             result.statements.filterIsInstance<Block>().filter {
                 it.astParent is NamespaceDeclaration
             }
+
+        val ref = result.refs["contextManager_00000000-11a2-7efe-0000-000070667f40"]
+        assertNotNull(
+            ref,
+            "Expected to find a reference to the context manager with a deterministic ID.",
+        )
 
         val blockStmt = blockStmts.firstOrNull()
         assertNotNull(blockStmt)
