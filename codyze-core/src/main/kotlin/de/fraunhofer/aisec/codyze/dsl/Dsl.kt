@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.codyze.CodyzeScript
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.passes.concepts.TagOverlaysPass
@@ -127,7 +128,7 @@ class AssumptionsBuilder {
     internal val decisionBuilder = DecisionBuilder()
 
     class DecisionBuilder {
-        val assumptionStatusFunctions = mutableMapOf<String, () -> AssumptionStatus>()
+        val assumptionStatusFunctions = mutableMapOf<(Assumption) -> Boolean, AssumptionStatus>()
     }
 }
 
@@ -509,7 +510,20 @@ fun AssumptionsBuilder.decisions(block: AssumptionsBuilder.DecisionBuilder.() ->
  */
 @CodyzeDsl
 fun AssumptionsBuilder.DecisionBuilder.accept(uuid: String) {
-    assumptionStatusFunctions += uuid to { AssumptionStatus.Accepted }
+    assumptionStatusFunctions[{ it.id == Uuid.parse(uuid) }] = AssumptionStatus.Accepted
+}
+
+/**
+ * Describes that the assumption with the given [uuid] was assessed and considered as
+ * acceptable/valid.
+ *
+ * @param uuid The UUID of the assumption must be provided in string in the format
+ *   "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", where each 'x' is a hexadecimal digit, either lowercase
+ *   or uppercase.
+ */
+@CodyzeDsl
+fun AssumptionsBuilder.DecisionBuilder.accept(filter: (Assumption) -> Boolean) {
+    assumptionStatusFunctions[filter] = AssumptionStatus.Accepted
 }
 
 /**
@@ -522,7 +536,7 @@ fun AssumptionsBuilder.DecisionBuilder.accept(uuid: String) {
  */
 @CodyzeDsl
 fun AssumptionsBuilder.DecisionBuilder.reject(uuid: String) {
-    assumptionStatusFunctions += uuid to { AssumptionStatus.Rejected }
+    assumptionStatusFunctions[{ it.id == Uuid.parse(uuid) }] = AssumptionStatus.Rejected
 }
 
 /**
@@ -534,7 +548,7 @@ fun AssumptionsBuilder.DecisionBuilder.reject(uuid: String) {
  */
 @CodyzeDsl
 fun AssumptionsBuilder.DecisionBuilder.undecided(uuid: String) {
-    assumptionStatusFunctions += uuid to { AssumptionStatus.Undecided }
+    assumptionStatusFunctions[{ it.id == Uuid.parse(uuid) }] = AssumptionStatus.Undecided
 }
 
 /**
@@ -547,7 +561,7 @@ fun AssumptionsBuilder.DecisionBuilder.undecided(uuid: String) {
  */
 @CodyzeDsl
 fun AssumptionsBuilder.DecisionBuilder.ignore(uuid: String) {
-    assumptionStatusFunctions += uuid to { AssumptionStatus.Ignored }
+    assumptionStatusFunctions[{ it.id == Uuid.parse(uuid) }] = AssumptionStatus.Ignored
 }
 
 /** Describes the manual assessments. */

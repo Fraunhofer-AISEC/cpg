@@ -45,7 +45,6 @@ import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.isDirectory
-import kotlin.uuid.Uuid
 
 /** Options common to all subcommands dealing projects. */
 class ProjectOptions : OptionGroup("Project Options") {
@@ -132,7 +131,7 @@ class AnalysisProject(
     var librariesPath: Path? = projectDir?.resolve("libraries"),
     var requirementFunctions: Map<String, TranslationResult.() -> QueryTree<Boolean>> = emptyMap(),
     var requirementCategories: Map<String, RequirementCategoryBuilder> = emptyMap(),
-    var assumptionStatusFunctions: Map<String, () -> AssumptionStatus> = emptyMap(),
+    var assumptionStatusFunctions: Map<(Assumption) -> Boolean, AssumptionStatus> = emptyMap(),
     var suppressedQueryTreeIDs: Map<(QueryTree<*>) -> Boolean, Any> = emptyMap(),
     /** The translation configuration for the project. */
     var config: TranslationConfiguration,
@@ -147,10 +146,8 @@ class AnalysisProject(
 
     /** Analyzes the project and returns the result. */
     fun analyze(): AnalysisResult {
-        // Propagate assumption status into a translation result
-        assumptionStatusFunctions.forEach { (uuid, func) ->
-            Assumption.states[Uuid.parse(uuid)] = func()
-        }
+        // Propagate assumption status
+        assumptionStatusFunctions.forEach { (key, status) -> Assumption.states[key] = status }
 
         // Propagate suppressed query tree IDs into translation result
         QueryTree.suppressions += suppressedQueryTreeIDs
