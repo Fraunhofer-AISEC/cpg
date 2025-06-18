@@ -131,7 +131,7 @@ class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
         return listOf(
             newFile(
                     underlyingNode = callExpression,
-                    fileName = "tempfile.gettempdir(${UUID.randomUUID()})", // Unique name to avoid
+                    fileName = "tempfile.gettempdir(${callExpression.id})", // Unique name to avoid
                     // collisions
                     connect = false,
                 )
