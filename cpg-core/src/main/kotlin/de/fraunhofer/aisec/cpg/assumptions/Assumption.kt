@@ -162,11 +162,6 @@ enum class AssumptionStatus {
      * decided state, assumptions are shown.
      */
     Accepted,
-    /**
-     * User or Algorithm: Patterns(Paths) depending on the assumption are returned, results have a
-     * decided state, assumptions are not shown.
-     */
-    Ignored,
 }
 
 /**

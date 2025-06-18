@@ -52,10 +52,7 @@ sealed class AcceptanceStatus : Comparable<AcceptanceStatus> {
         ): AcceptanceStatus {
             return when {
                 statuses.all { it is AcceptedResult } &&
-                    assumptions.all {
-                        it.status == AssumptionStatus.Accepted ||
-                            it.status == AssumptionStatus.Ignored
-                    } -> AcceptedResult
+                    assumptions.all { it.status == AssumptionStatus.Accepted } -> AcceptedResult
                 statuses.any { it is RejectedResult } ||
                     assumptions.any { it.status == AssumptionStatus.Rejected } -> RejectedResult
                 statuses.any { it is UndecidedResult } ||

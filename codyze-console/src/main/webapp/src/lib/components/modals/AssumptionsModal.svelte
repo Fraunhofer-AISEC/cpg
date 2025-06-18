@@ -38,7 +38,6 @@
   const shouldShowChildrenWithAssumptions = $derived(() => {
     return (
       uniqueAssumptions().length === 0 &&
-      isUndecidedOrRejected() &&
       queryTree?.childrenWithAssumptionIds &&
       Object.keys(queryTree.childrenWithAssumptionIds).length > 0
     );
@@ -121,7 +120,7 @@
         {:else if shouldShowChildrenWithAssumptions()}
           <div class="py-2 text-center">
             <p class="mb-4 text-xs text-gray-600">
-              This evaluation has no direct assumptions, but the overall confidence is
+              This evaluation has no direct assumptions, the overall confidence is
               <ConfidencePill confidence={queryTree?.confidence || 'UndecidedResult'} size="sm" />
               due to assumptions made in child evaluations.
             </p>
