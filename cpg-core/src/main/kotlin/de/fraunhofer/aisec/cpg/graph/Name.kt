@@ -52,13 +52,15 @@ class Name(
 
     companion object {
         /**
-         * Creates a random name starting with a prefix plus a random UUID (version 4). The Name is
-         * prefixed by [prefix], followed by a separator character [separatorChar] and finalized by
-         * a random UUID ("-" separators also replaced with [separatorChar]).
+         * Creates a temporary name starting with a prefix plus a UUID (version 4) seeded by the
+         * hash code of [prefix] and [seed]. The Name is prefixed by [prefix], followed by a
+         * separator character [separatorChar] and finalized by the UUID ("-" separators also
+         * replaced with [separatorChar]).
          */
-        fun random(prefix: String, separatorChar: Char = '_'): Name {
-            val randomPart = Uuid.random().toString().replace('-', separatorChar)
-            return Name(localName = prefix + separatorChar + randomPart)
+        fun temporary(prefix: String, separatorChar: Char = '_', vararg seed: Node): Name {
+            val uuid =
+                Uuid.fromLongs(prefix.hashCode().toLong(), seed.sumOf { it.hashCode().toLong() })
+            return Name(localName = prefix + separatorChar + uuid)
         }
     }
 
