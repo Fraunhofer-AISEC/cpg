@@ -141,18 +141,35 @@
     }
   }
 
-  // Get assumption type display info
-  function getAssumptionTypeInfo(assumptionType: string) {
-    switch (assumptionType) {
-      case 'EDGE_LABEL':
-        return { icon: '🔗', label: 'Edge Label' };
-      case 'NODE_TYPE':
-        return { icon: '📝', label: 'Node Type' };
-      case 'VALUE':
-        return { icon: '💰', label: 'Value' };
+  // Get assumption status color classes
+  function getAssumptionStatusColor(status: string): string {
+    switch (status) {
+      case 'Accepted':
+        return 'bg-green-50 border-green-200';
+      case 'Rejected':
+        return 'bg-red-50 border-red-200';
+      case 'Undecided':
       default:
-        return { icon: '❓', label: assumptionType };
+        return 'bg-yellow-50 border-yellow-200';
     }
+  }
+
+  // Get assumption status badge color classes
+  function getAssumptionStatusBadgeColor(status: string): string {
+    switch (status) {
+      case 'Accepted':
+        return 'bg-green-100 text-green-800';
+      case 'Rejected':
+        return 'bg-red-100 text-red-800';
+      case 'Undecided':
+      default:
+        return 'bg-yellow-100 text-yellow-800';
+    }
+  }
+
+  // Get assumption type display name
+  function getAssumptionTypeDisplay(type: string): string {
+    return type.replace(/([A-Z])/g, ' $1').trim();
   }
 </script>
 
@@ -197,34 +214,45 @@
     {:else}
       <div class="space-y-4">
         {#each assumptionGroups as group (group.assumptionId)}
-          <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <div class="rounded-lg border p-4 {group.assumption ? getAssumptionStatusColor(group.assumption.status) : 'border-gray-200 bg-gray-50'}">
             <!-- Assumption Header -->
             <div class="mb-3 border-b border-gray-200 pb-2">
-              <div class="flex items-center space-x-2">
-                {#if group.assumption}
-                  {@const typeInfo = getAssumptionTypeInfo(group.assumption.assumptionType)}
-                  <span class="text-lg">{typeInfo.icon}</span>
-                  <div class="flex-1">
-                    <div class="text-sm font-medium text-gray-900">
-                      {typeInfo.label} Assumption
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                  {#if group.assumption}
+                    <div class="flex-1">
+                      <div class="flex items-center space-x-2">
+                        <div class="text-sm font-medium text-gray-900">
+                          Assumption
+                        </div>
+                        <span class="text-xs text-gray-600">
+                          {getAssumptionTypeDisplay(group.assumption.assumptionType)}
+                        </span>
+                      </div>
+                      <div class="text-xs text-gray-600">
+                        {group.assumption.message}
+                      </div>
                     </div>
-                    <div class="text-xs text-gray-600">
-                      {group.assumption.message}
+                  {:else}
+                    <div class="flex-1">
+                      <div class="text-sm font-medium text-gray-900">
+                        Assumption
+                      </div>
+                      <div class="text-xs text-gray-600 font-mono">
+                        ID: {getShortId(group.assumptionId)}...
+                      </div>
                     </div>
+                  {/if}
+                </div>
+                <div class="flex items-center space-x-2">
+                  {#if group.assumption}
+                    <span class="rounded-full px-2 py-1 text-xs font-medium {getAssumptionStatusBadgeColor(group.assumption.status)}">
+                      {group.assumption.status}
+                    </span>
+                  {/if}
+                  <div class="text-xs text-gray-500">
+                    {group.childrenIds.length} child{group.childrenIds.length !== 1 ? 'ren' : ''}
                   </div>
-                {:else}
-                  <span class="text-lg">❓</span>
-                  <div class="flex-1">
-                    <div class="text-sm font-medium text-gray-900">
-                      Assumption
-                    </div>
-                    <div class="text-xs text-gray-600 font-mono">
-                      ID: {getShortId(group.assumptionId)}...
-                    </div>
-                  </div>
-                {/if}
-                <div class="text-xs text-gray-500">
-                  {group.childrenIds.length} child{group.childrenIds.length !== 1 ? 'ren' : ''}
                 </div>
               </div>
             </div>
