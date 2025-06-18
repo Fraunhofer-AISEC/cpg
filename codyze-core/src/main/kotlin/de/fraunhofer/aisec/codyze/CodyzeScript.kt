@@ -86,6 +86,8 @@ class CodyzeScriptCompilationConfiguration :
             updateClasspath(cp)
         }
         compilerOptions(
+            "-opt-in=kotlin.RequiresOptIn",
+            "-opt-in=kotlin.uuid.ExperimentalUuidApi",
             "-opt-in=kotlin.experimental.ExperimentalTypeInference",
             "-Xcontext-parameters",
             "-jvm-target=21",
