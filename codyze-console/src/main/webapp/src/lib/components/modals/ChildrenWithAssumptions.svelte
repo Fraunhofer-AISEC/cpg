@@ -249,7 +249,7 @@
               </div>
             {:else}
               <div class="space-y-2">
-                {#each group.loadedChildren as queryTree (`${group.assumptionId}-${queryTree.id}`)}
+                {#each group.loadedChildren as queryTree (queryTree.id)}
                   <ChildQueryTreeItem
                     {queryTree}
                     {baseUrl}
