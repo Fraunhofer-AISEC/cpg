@@ -506,7 +506,7 @@ fun RequirementCategoryBuilder.toJSON(
  * list of child QueryTree IDs that have that assumption.
  */
 fun <T> QueryTree<T>.getChildrenGroupedByAssumptions(): Map<String, List<String>> {
-    val result = mutableMapOf<String, MutableList<String>>()
+    val result = mutableMapOf<String, MutableSet<String>>()
 
     // Get all children with assumptions
     val childrenWithAssumptions =
@@ -517,11 +517,12 @@ fun <T> QueryTree<T>.getChildrenGroupedByAssumptions(): Map<String, List<String>
         val childId = child.id.toString()
         for (assumption in child.relevantAssumptions()) {
             val assumptionId = assumption.id.toString()
-            result.getOrPut(assumptionId) { mutableListOf() }.add(childId)
+            result.getOrPut(assumptionId) { mutableSetOf() }.add(childId)
         }
     }
 
-    return result
+    // Convert sets to lists for the return type
+    return result.mapValues { it.value.toList() }
 }
 
 /** Converts a [QueryTree] into its JSON representation with lazy loading support. */

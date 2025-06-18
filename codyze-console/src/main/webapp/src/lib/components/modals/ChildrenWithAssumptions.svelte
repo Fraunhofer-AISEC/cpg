@@ -52,11 +52,11 @@
       loading = true;
       globalError = null;
 
-      // Initialize assumption groups
+      // Initialize assumption groups with deduplication
       assumptionGroups = Object.entries(childrenWithAssumptionIds).map(([assumptionId, childrenIds]) => ({
         assumptionId,
         assumption: undefined, // Will be populated when we load the first child
-        childrenIds,
+        childrenIds: [...new Set(childrenIds)], // Deduplicate children IDs
         loadedChildren: [],
         loadedCount: 0,
         loading: false,
@@ -249,7 +249,7 @@
               </div>
             {:else}
               <div class="space-y-2">
-                {#each group.loadedChildren as queryTree (queryTree.id)}
+                {#each group.loadedChildren as queryTree (`${group.assumptionId}-${queryTree.id}`)}
                   <ChildQueryTreeItem
                     {queryTree}
                     {baseUrl}
