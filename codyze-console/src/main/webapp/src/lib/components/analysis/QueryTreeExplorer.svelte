@@ -128,8 +128,24 @@
     loadError = null;
 
     try {
-      // Load initial batch
-      const initialBatch = queryTree.childrenIds.slice(0, BATCH_SIZE);
+      let batchSize = BATCH_SIZE;
+
+      // If we're on the path to target and have a targetNodeId, load enough children to include the target
+      if (pathToTarget?.has(queryTree.id) && targetNodeId) {
+        // Find any child that might be on the path to target
+        const childOnPath = queryTree.childrenIds.find((childId) => pathToTarget?.has(childId));
+        if (childOnPath) {
+          const childIndex = queryTree.childrenIds.indexOf(childOnPath);
+          // Load at least enough to include this child (plus one more batch for buffer)
+          batchSize = Math.max(BATCH_SIZE, childIndex + 1 + BATCH_SIZE);
+        }
+      }
+
+      // Load initial batch (potentially larger if target is deep)
+      const initialBatch = queryTree.childrenIds.slice(
+        0,
+        Math.min(batchSize, queryTree.childrenIds.length)
+      );
       const loadedChildren = await loadQueryTrees(initialBatch);
       children = loadedChildren;
       loadedCount = initialBatch.length;
@@ -386,17 +402,19 @@
               {baseUrl}
             />
           {/each}
-          
+
           <!-- Load more button or completion message -->
           {#if queryTree?.childrenIds && loadedCount < queryTree.childrenIds.length}
-            <div class="ml-6 mt-4 text-center">
+            <div class="mt-4 ml-6 text-center">
               <button
                 onclick={loadMoreChildren}
                 disabled={loadingMore}
-                class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {#if loadingMore}
-                  <div class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-gray-600"></div>
+                  <div
+                    class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-gray-600"
+                  ></div>
                   Loading...
                 {:else}
                   Load more children ({loadedCount} of {queryTree.childrenIds.length} loaded)
@@ -404,7 +422,7 @@
               </button>
             </div>
           {:else if queryTree?.childrenIds && queryTree.childrenIds.length > BATCH_SIZE}
-            <div class="ml-6 mt-4 text-center text-sm text-gray-600">
+            <div class="mt-4 ml-6 text-center text-sm text-gray-600">
               All {queryTree.childrenIds.length} children loaded
             </div>
           {/if}

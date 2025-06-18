@@ -34,7 +34,7 @@ export async function loadQueryTrees(queryTreeIds: string[]): Promise<QueryTreeJ
     // Chunk IDs into batches of maximum 1000
     const MAX_BATCH_SIZE = 1000;
     const chunks: string[][] = [];
-    
+
     for (let i = 0; i < uncachedIds.length; i += MAX_BATCH_SIZE) {
       chunks.push(uncachedIds.slice(i, i + MAX_BATCH_SIZE));
     }
@@ -58,7 +58,7 @@ export async function loadQueryTrees(queryTreeIds: string[]): Promise<QueryTreeJ
 
     // Wait for all chunks to complete
     const chunkResults = await Promise.all(chunkPromises);
-    
+
     // Flatten all results
     const queryTrees: QueryTreeJSON[] = chunkResults.flat();
 

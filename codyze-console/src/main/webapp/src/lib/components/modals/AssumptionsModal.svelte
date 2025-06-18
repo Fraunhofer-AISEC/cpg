@@ -19,7 +19,7 @@
   // Filter out duplicate assumptions based on ID
   const uniqueAssumptions = $derived(() => {
     const seen = new Set<string>();
-    return assumptions.filter(assumption => {
+    return assumptions.filter((assumption) => {
       if (seen.has(assumption.id)) {
         return false;
       }
@@ -142,7 +142,11 @@
               </p>
               {#if assumptions.length > uniqueAssumptions().length}
                 <p class="mt-2 text-xs text-orange-600">
-                  Note: {assumptions.length - uniqueAssumptions().length} duplicate assumption{assumptions.length - uniqueAssumptions().length !== 1 ? 's were' : ' was'} filtered out.
+                  Note: {assumptions.length - uniqueAssumptions().length} duplicate assumption{assumptions.length -
+                    uniqueAssumptions().length !==
+                  1
+                    ? 's were'
+                    : ' was'} filtered out.
                 </p>
               {/if}
             </div>

@@ -19,7 +19,7 @@
   let childrenQueryTrees = $state<QueryTreeJSON[]>([]);
   let loading = $state(true);
   let error = $state<string | null>(null);
-  
+
   // Pagination state
   const BATCH_SIZE = 10;
   let loadedCount = $state(0);
@@ -35,7 +35,7 @@
     try {
       loading = true;
       error = null;
-      
+
       // Load initial batch
       const initialBatch = childrenIds.slice(0, BATCH_SIZE);
       childrenQueryTrees = await loadQueryTrees(initialBatch);
@@ -147,14 +147,14 @@
           />
         {/each}
       </div>
-      
+
       <!-- Load more button or completion message -->
       {#if loadedCount < childrenIds.length}
         <div class="mt-4 text-center">
           <button
             onclick={loadMoreChildren}
             disabled={loadingMore}
-            class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
           >
             {#if loadingMore}
               <div class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-gray-600"></div>
