@@ -551,19 +551,6 @@ fun AssumptionsBuilder.DecisionBuilder.undecided(uuid: String) {
     assumptionStatusFunctions[{ it.id == Uuid.parse(uuid) }] = AssumptionStatus.Undecided
 }
 
-/**
- * Describes that the assumption with the given [uuid] was assessed and can be ignored in this
- * evaluation project.
- *
- * @param uuid The UUID of the assumption must be provided in string in the format
- *   "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", where each 'x' is a hexadecimal digit, either lowercase
- *   or uppercase.
- */
-@CodyzeDsl
-fun AssumptionsBuilder.DecisionBuilder.ignore(uuid: String) {
-    assumptionStatusFunctions[{ it.id == Uuid.parse(uuid) }] = AssumptionStatus.Ignored
-}
-
 /** Describes the manual assessments. */
 @CodyzeDsl
 fun ProjectBuilder.manualAssessment(block: ManualAssessmentBuilder.() -> Unit) {

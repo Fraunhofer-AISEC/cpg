@@ -12,7 +12,7 @@ const loadingStates = writable<Set<string>>(new Set());
 const errors = writable<Map<string, string>>(new Map());
 
 /**
- * Loads multiple QueryTrees by IDs using batch API
+ * Loads multiple QueryTrees by IDs using batch API with chunking for large requests
  */
 export async function loadQueryTrees(queryTreeIds: string[]): Promise<QueryTreeJSON[]> {
   // Filter out already cached ones
@@ -31,19 +31,36 @@ export async function loadQueryTrees(queryTreeIds: string[]): Promise<QueryTreeJ
   });
 
   try {
-    const response = await fetch('/api/querytrees', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(uncachedIds)
-    });
+    // Chunk IDs into batches of maximum 1000
+    const MAX_BATCH_SIZE = 1000;
+    const chunks: string[][] = [];
 
-    if (!response.ok) {
-      throw new Error(`Failed to load QueryTrees: ${response.statusText}`);
+    for (let i = 0; i < uncachedIds.length; i += MAX_BATCH_SIZE) {
+      chunks.push(uncachedIds.slice(i, i + MAX_BATCH_SIZE));
     }
 
-    const queryTrees: QueryTreeJSON[] = await response.json();
+    // Make parallel requests for all chunks
+    const chunkPromises = chunks.map(async (chunk) => {
+      const response = await fetch('/api/querytrees', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(chunk)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to load QueryTrees chunk: ${response.statusText}`);
+      }
+
+      return response.json() as Promise<QueryTreeJSON[]>;
+    });
+
+    // Wait for all chunks to complete
+    const chunkResults = await Promise.all(chunkPromises);
+
+    // Flatten all results
+    const queryTrees: QueryTreeJSON[] = chunkResults.flat();
 
     // Cache all results
     queryTrees.forEach((queryTree) => {
