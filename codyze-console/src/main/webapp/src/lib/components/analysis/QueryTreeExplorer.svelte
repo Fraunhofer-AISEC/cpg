@@ -60,6 +60,11 @@
   let showCallerDetails = $state(false); // Track if caller details should be shown
   let showAssumptionsModal = $state(false); // Track if assumptions modal should be shown
 
+  // Progressive loading state
+  const BATCH_SIZE = 10;
+  let loadedCount = $state(0);
+  let loadingMore = $state(false);
+
   // Toast notification state
   let showToast = $state(false);
   let toastMessage = $state('');
@@ -123,14 +128,37 @@
     loadError = null;
 
     try {
-      const loadedChildren = await loadQueryTrees(queryTree.childrenIds);
+      // Load initial batch
+      const initialBatch = queryTree.childrenIds.slice(0, BATCH_SIZE);
+      const loadedChildren = await loadQueryTrees(initialBatch);
       children = loadedChildren;
+      loadedCount = initialBatch.length;
       childrenLoaded = true; // Mark as loaded to prevent re-loading
     } catch (error) {
       loadError = error instanceof Error ? error.message : 'Failed to load children';
       console.error('Failed to load QueryTree children:', error);
     } finally {
       loadingChildren = false;
+    }
+  }
+
+  // Function to load more children
+  async function loadMoreChildren() {
+    if (!queryTree?.childrenIds || loadingMore || loadedCount >= queryTree.childrenIds.length) {
+      return;
+    }
+
+    try {
+      loadingMore = true;
+      const nextBatch = queryTree.childrenIds.slice(loadedCount, loadedCount + BATCH_SIZE);
+      const newChildren = await loadQueryTrees(nextBatch);
+      children = [...children, ...newChildren];
+      loadedCount += nextBatch.length;
+    } catch (error) {
+      loadError = error instanceof Error ? error.message : 'Failed to load more children';
+      console.error('Failed to load more QueryTree children:', error);
+    } finally {
+      loadingMore = false;
     }
   }
 
@@ -358,6 +386,28 @@
               {baseUrl}
             />
           {/each}
+          
+          <!-- Load more button or completion message -->
+          {#if queryTree?.childrenIds && loadedCount < queryTree.childrenIds.length}
+            <div class="ml-6 mt-4 text-center">
+              <button
+                onclick={loadMoreChildren}
+                disabled={loadingMore}
+                class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {#if loadingMore}
+                  <div class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-gray-600"></div>
+                  Loading...
+                {:else}
+                  Load more children ({loadedCount} of {queryTree.childrenIds.length} loaded)
+                {/if}
+              </button>
+            </div>
+          {:else if queryTree?.childrenIds && queryTree.childrenIds.length > BATCH_SIZE}
+            <div class="ml-6 mt-4 text-center text-sm text-gray-600">
+              All {queryTree.childrenIds.length} children loaded
+            </div>
+          {/if}
         {/if}
       </div>
     {/if}
