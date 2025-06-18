@@ -65,6 +65,11 @@
   let loadedCount = $state(0);
   let loadingMore = $state(false);
 
+  // Node values progressive loading state
+  const NODE_VALUES_BATCH_SIZE = 10;
+  let displayedNodeCount = $state(NODE_VALUES_BATCH_SIZE);
+  let showingAllNodes = $state(false);
+
   // Toast notification state
   let showToast = $state(false);
   let toastMessage = $state('');
@@ -81,6 +86,14 @@
   $effect(() => {
     if (isExpanded && hasChildren && !childrenLoaded && children.length === 0) {
       loadChildren();
+    }
+  });
+
+  // Reset node values display count when queryTree changes
+  $effect(() => {
+    if (queryTree) {
+      displayedNodeCount = NODE_VALUES_BATCH_SIZE;
+      showingAllNodes = false;
     }
   });
 
@@ -176,6 +189,26 @@
     } finally {
       loadingMore = false;
     }
+  }
+
+  // Function to load more node values for display
+  function loadMoreNodes() {
+    if (!queryTree?.nodeValues) return;
+    
+    const newCount = Math.min(displayedNodeCount + NODE_VALUES_BATCH_SIZE, queryTree.nodeValues.length);
+    displayedNodeCount = newCount;
+    
+    if (newCount >= queryTree.nodeValues.length) {
+      showingAllNodes = true;
+    }
+  }
+
+  // Function to show all node values at once
+  function showAllNodes() {
+    if (!queryTree?.nodeValues) return;
+    
+    displayedNodeCount = queryTree.nodeValues.length;
+    showingAllNodes = true;
   }
 
   // Show toast notification
@@ -370,10 +403,34 @@
             🔗 Found Nodes ({queryTree.nodeValues.length}):
           </div>
           <div class="space-y-1">
-            {#each queryTree.nodeValues as node}
+            {#each queryTree.nodeValues.slice(0, displayedNodeCount) as node}
               <QueryTreeNodeValue {node} {baseUrl} queryTreeId={queryTree?.id} />
             {/each}
           </div>
+          
+          <!-- Load more button for node values -->
+          {#if displayedNodeCount < queryTree.nodeValues.length}
+            <div class="mt-3 flex justify-center space-x-2">
+              <button
+                onclick={loadMoreNodes}
+                class="inline-flex items-center rounded-md border border-purple-300 bg-purple-50 px-3 py-1.5 text-xs font-medium text-purple-700 shadow-sm hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+              >
+                Show more ({displayedNodeCount} of {queryTree.nodeValues.length})
+              </button>
+              {#if queryTree.nodeValues.length - displayedNodeCount > NODE_VALUES_BATCH_SIZE}
+                <button
+                  onclick={showAllNodes}
+                  class="inline-flex items-center rounded-md border border-purple-300 bg-purple-50 px-3 py-1.5 text-xs font-medium text-purple-700 shadow-sm hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                >
+                  Show all {queryTree.nodeValues.length}
+                </button>
+              {/if}
+            </div>
+          {:else if queryTree.nodeValues.length > NODE_VALUES_BATCH_SIZE && showingAllNodes}
+            <div class="mt-3 text-center text-xs text-purple-600">
+              All {queryTree.nodeValues.length} nodes shown
+            </div>
+          {/if}
         </div>
       {/if}
     </div>
