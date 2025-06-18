@@ -40,7 +40,7 @@
       uniqueAssumptions().length === 0 &&
       isUndecidedOrRejected() &&
       queryTree?.childrenWithAssumptionIds &&
-      queryTree.childrenWithAssumptionIds.length > 0
+      Object.keys(queryTree.childrenWithAssumptionIds).length > 0
     );
   });
 
@@ -127,7 +127,7 @@
             </p>
           </div>
           <ChildrenWithAssumptions
-            childrenIds={queryTree?.childrenWithAssumptionIds || []}
+            childrenWithAssumptionIds={queryTree?.childrenWithAssumptionIds || {}}
             {baseUrl}
             {requirementId}
             onNavigate={onClose}

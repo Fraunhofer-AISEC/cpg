@@ -232,8 +232,8 @@ data class QueryTreeJSON(
     val queryTreeType:
         String, // Type of QueryTree (QueryTree, BinaryOperationResult, UnaryOperationResult)
     val childrenIds: List<String> = emptyList(), // IDs of child QueryTrees for lazy loading
-    val childrenWithAssumptionIds: List<String> =
-        emptyList(), // IDs of child QueryTrees with assumptions
+    val childrenWithAssumptionIds: Map<String, List<String>> =
+        emptyMap(), // Map from assumption ID to list of child QueryTree IDs with that assumption
     val hasChildren: Boolean = false, // Quick check for UI expansion
     val nodeId: String? = null, // UUID of associated node, if any
     val node: NodeJSON? = null, // Full node information, if any
@@ -501,6 +501,29 @@ fun RequirementCategoryBuilder.toJSON(
     )
 }
 
+/**
+ * Groups all children with assumptions by their assumption IDs. Returns a map from assumption ID to
+ * list of child QueryTree IDs that have that assumption.
+ */
+fun <T> QueryTree<T>.getChildrenGroupedByAssumptions(): Map<String, List<String>> {
+    val result = mutableMapOf<String, MutableList<String>>()
+
+    // Get all children with assumptions
+    val childrenWithAssumptions =
+        this.mapAllChildren(filter = { it.relevantAssumptions().isNotEmpty() }) { it }
+
+    // Group by assumption ID
+    for (child in childrenWithAssumptions) {
+        val childId = child.id.toString()
+        for (assumption in child.relevantAssumptions()) {
+            val assumptionId = assumption.id.toString()
+            result.getOrPut(assumptionId) { mutableListOf() }.add(childId)
+        }
+    }
+
+    return result
+}
+
 /** Converts a [QueryTree] into its JSON representation with lazy loading support. */
 fun <T> QueryTree<T>.toJSON(): QueryTreeJSON {
     // Determine the QueryTree type based on the class
@@ -536,10 +559,7 @@ fun <T> QueryTree<T>.toJSON(): QueryTreeJSON {
         operator = this.operator.toString(),
         queryTreeType = queryTreeType,
         childrenIds = this.children.map { it.id.toString() },
-        childrenWithAssumptionIds =
-            this.mapAllChildren(filter = { it.relevantAssumptions().isNotEmpty() }) {
-                it.id.toString()
-            },
+        childrenWithAssumptionIds = this.getChildrenGroupedByAssumptions(),
         hasChildren = this.children.isNotEmpty(),
         nodeId = this.node?.id?.toString(),
         node = this.node?.toJSON(noEdges = true),

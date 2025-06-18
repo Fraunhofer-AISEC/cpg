@@ -117,7 +117,7 @@ export interface QueryTreeJSON {
   operator: string;
   queryTreeType: string;
   childrenIds: string[];
-  childrenWithAssumptionIds: string[];
+  childrenWithAssumptionIds: Record<string, string[]>;
   hasChildren: boolean;
   nodeId?: string;
   node?: NodeJSON;
