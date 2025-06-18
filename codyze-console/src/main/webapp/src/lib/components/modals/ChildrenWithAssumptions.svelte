@@ -19,6 +19,11 @@
   let childrenQueryTrees = $state<QueryTreeJSON[]>([]);
   let loading = $state(true);
   let error = $state<string | null>(null);
+  
+  // Pagination state
+  const BATCH_SIZE = 10;
+  let loadedCount = $state(0);
+  let loadingMore = $state(false);
 
   // Load query tree data on mount
   onMount(async () => {
@@ -30,7 +35,11 @@
     try {
       loading = true;
       error = null;
-      childrenQueryTrees = await loadQueryTrees(childrenIds);
+      
+      // Load initial batch
+      const initialBatch = childrenIds.slice(0, BATCH_SIZE);
+      childrenQueryTrees = await loadQueryTrees(initialBatch);
+      loadedCount = initialBatch.length;
     } catch (err) {
       console.error('Failed to load children query trees:', err);
       error = 'Failed to load child evaluation details';
@@ -38,6 +47,24 @@
       loading = false;
     }
   });
+
+  // Function to load more children
+  async function loadMoreChildren() {
+    if (loadingMore || loadedCount >= childrenIds.length) return;
+
+    try {
+      loadingMore = true;
+      const nextBatch = childrenIds.slice(loadedCount, loadedCount + BATCH_SIZE);
+      const newQueryTrees = await loadQueryTrees(nextBatch);
+      childrenQueryTrees = [...childrenQueryTrees, ...newQueryTrees];
+      loadedCount += nextBatch.length;
+    } catch (err) {
+      console.error('Failed to load more children:', err);
+      error = 'Failed to load additional child evaluations';
+    } finally {
+      loadingMore = false;
+    }
+  }
 
   function getChildLink(childId: string): string {
     // Use baseUrl if provided, otherwise use current page
@@ -120,6 +147,28 @@
           />
         {/each}
       </div>
+      
+      <!-- Load more button or completion message -->
+      {#if loadedCount < childrenIds.length}
+        <div class="mt-4 text-center">
+          <button
+            onclick={loadMoreChildren}
+            disabled={loadingMore}
+            class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {#if loadingMore}
+              <div class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-gray-600"></div>
+              Loading...
+            {:else}
+              Load more children ({loadedCount} of {childrenIds.length} loaded)
+            {/if}
+          </button>
+        </div>
+      {:else if childrenIds.length > BATCH_SIZE}
+        <div class="mt-4 text-center text-sm text-gray-600">
+          All {childrenIds.length} children loaded
+        </div>
+      {/if}
     {/if}
 
     <div class="mt-3 text-xs text-gray-500">
