@@ -210,7 +210,7 @@ data class CallerInfoJSON(
 /** JSON data class for an assumption. */
 @Serializable
 data class AssumptionJSON(
-    @Serializable(with = UuidSerializer::class) val id: Uuid,
+    val id: String,
     val assumptionType: String, // AssumptionType as string
     val message: String,
     val status: String, // AssumptionStatus as string
@@ -233,12 +233,12 @@ data class QueryTreeJSON(
         String, // Type of QueryTree (QueryTree, BinaryOperationResult, UnaryOperationResult)
     val childrenIds: List<String> = emptyList(), // IDs of child QueryTrees for lazy loading
     val childrenWithAssumptionIds: List<String> =
-        emptyList<String>(), // IDs of child QueryTrees with assumptions
+        emptyList(), // IDs of child QueryTrees with assumptions
     val hasChildren: Boolean = false, // Quick check for UI expansion
     val nodeId: String? = null, // UUID of associated node, if any
     val node: NodeJSON? = null, // Full node information, if any
     val callerInfo: CallerInfoJSON? = null, // Information about where the query was called from
-    val assumptions: List<AssumptionJSON> = emptyList(), // List of assumptions for this QueryTree
+    val assumptions: Set<AssumptionJSON> = emptySet(), // List of assumptions for this QueryTree
 )
 
 /** JSON data class for a QueryTree with its parent IDs for tree expansion. */
@@ -395,7 +395,7 @@ fun Edge<*>.toJSON(): EdgeJSON {
 /** Converts an [Assumption] into its JSON representation. */
 fun Assumption.toJSON(): AssumptionJSON {
     return AssumptionJSON(
-        id = this.id,
+        id = this.id.toString(),
         assumptionType = this.assumptionType.name,
         message = this.message,
         status = this.status.name,
@@ -552,7 +552,7 @@ fun <T> QueryTree<T>.toJSON(): QueryTreeJSON {
                     lineNumber = it.lineNumber,
                 )
             },
-        assumptions = this.relevantAssumptions().map { it.toJSON() },
+        assumptions = this.relevantAssumptions().map { it.toJSON() }.toSet(),
     )
 }
 

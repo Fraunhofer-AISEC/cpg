@@ -16,6 +16,18 @@
 
   let { assumptions, queryTree, isOpen, onClose, baseUrl, requirementId }: Props = $props();
 
+  // Filter out duplicate assumptions based on ID
+  const uniqueAssumptions = $derived(() => {
+    const seen = new Set<string>();
+    return assumptions.filter(assumption => {
+      if (seen.has(assumption.id)) {
+        return false;
+      }
+      seen.add(assumption.id);
+      return true;
+    });
+  });
+
   // Check if result is undecided or rejected
   const isUndecidedOrRejected = $derived(() => {
     if (!queryTree) return false;
@@ -25,7 +37,7 @@
   // Check if we should show children with assumptions
   const shouldShowChildrenWithAssumptions = $derived(() => {
     return (
-      assumptions.length === 0 &&
+      uniqueAssumptions().length === 0 &&
       isUndecidedOrRejected() &&
       queryTree?.childrenWithAssumptionIds &&
       queryTree.childrenWithAssumptionIds.length > 0
@@ -100,7 +112,7 @@
 
       <!-- Modal Content -->
       <div class="max-h-[60vh] overflow-y-auto p-4">
-        {#if assumptions.length === 0 && !shouldShowChildrenWithAssumptions()}
+        {#if uniqueAssumptions().length === 0 && !shouldShowChildrenWithAssumptions()}
           <div class="py-8 text-center text-gray-500">
             <div class="mb-2 text-4xl">✅</div>
             <p class="text-lg font-medium">No Assumptions</p>
@@ -124,19 +136,24 @@
           <div class="space-y-4">
             <div class="mb-4 text-sm text-gray-600">
               <p>
-                This query tree has <strong>{assumptions.length}</strong>
-                assumption{assumptions.length !== 1 ? 's' : ''}
+                This query tree has <strong>{uniqueAssumptions().length}</strong>
+                assumption{uniqueAssumptions().length !== 1 ? 's' : ''}
                 that were made during evaluation. These assumptions affect the confidence of the results.
               </p>
+              {#if assumptions.length > uniqueAssumptions().length}
+                <p class="mt-2 text-xs text-orange-600">
+                  Note: {assumptions.length - uniqueAssumptions().length} duplicate assumption{assumptions.length - uniqueAssumptions().length !== 1 ? 's were' : ' was'} filtered out.
+                </p>
+              {/if}
             </div>
 
-            {#each assumptions as assumption (assumption.id)}
+            {#each uniqueAssumptions() as assumption (assumption.id)}
               <AssumptionCard {assumption} onCopyId={copyAssumptionId} />
             {/each}
           </div>
         {/if}
 
-        <AssumptionHelpSection hasAssumptions={assumptions.length > 0} />
+        <AssumptionHelpSection hasAssumptions={uniqueAssumptions().length > 0} />
       </div>
 
       <!-- Modal Footer -->
