@@ -1,6 +1,6 @@
 [versions]
 kotlin = "2.1.20"
-kotlinx-json = "1.8.0"
+kotlinx-json = "1.8.1"
 neo4j = "4.0.10"
 neo4j5 = "5.28.2"
 log4j = "2.24.0"
@@ -38,8 +38,9 @@ neo4j-ogm-bolt-driver = { module = "org.neo4j:neo4j-ogm-bolt-driver", version.re
 neo4j-driver = { module = "org.neo4j.driver:neo4j-java-driver", version.ref = "neo4j5"}
 
 javaparser = { module = "com.github.javaparser:javaparser-symbol-solver-core", version = "3.26.4"}
-jackson = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version = "2.18.0"}
-jacksonyml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version = "2.18.0"}
+jackson = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version = "2.19.0"}
+jacksonyml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version = "2.19.0"}
+kotlin-reflection = { module = "org.jetbrains.kotlin:kotlin-reflection", version.ref = "kotlin" }
 eclipse-runtime = { module = "org.eclipse.platform:org.eclipse.core.runtime", version = "3.33.0"}
 osgi-service = { module = "org.osgi:org.osgi.service.prefs", version = "1.1.2"}
 icu4j = { module = "com.ibm.icu:icu4j", version = "77.1"}
