@@ -43,7 +43,7 @@ class DeleteExpression : Expression() {
 
     override fun hashCode() = Objects.hash(super.hashCode(), operands)
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.operands.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.operands.firstOrNull()?.startingPrevEOG() ?: this.prevEOG
     }
 }

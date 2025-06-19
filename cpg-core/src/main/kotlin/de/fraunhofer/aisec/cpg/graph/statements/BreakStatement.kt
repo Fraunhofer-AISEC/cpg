@@ -45,7 +45,7 @@ class BreakStatement : Statement() {
 
     override fun hashCode() = Objects.hash(super.hashCode(), label)
 
-    override fun getStartingPrevEOG(): Collection<Node> {
+    override fun startingPrevEOG(): Collection<Node> {
         return this.prevEOG
     }
 }

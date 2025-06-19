@@ -92,9 +92,9 @@ class ThrowExpression : Expression(), ArgumentHolder {
             .toString()
     }
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.exception?.getStartingPrevEOG()
-            ?: this.parentException?.getStartingPrevEOG()
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.exception?.startingPrevEOG()
+            ?: this.parentException?.startingPrevEOG()
             ?: this.prevEOG
     }
 }

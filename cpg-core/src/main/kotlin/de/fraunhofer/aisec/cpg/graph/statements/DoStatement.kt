@@ -77,13 +77,13 @@ class DoStatement : LoopStatement(), ArgumentHolder {
 
     override fun hashCode() = Objects.hash(super.hashCode(), condition)
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return statement?.getStartingPrevEOG()?.filter { it != this }
-            ?: condition?.getStartingPrevEOG()
+    override fun startingPrevEOG(): Collection<Node> {
+        return statement?.startingPrevEOG()?.filter { it != this }
+            ?: condition?.startingPrevEOG()
             ?: this.prevEOG
     }
 
-    override fun getExitNextEOG(): Collection<Node> {
+    override fun exitNextEOG(): Collection<Node> {
         return this.nextEOG.filter { it !in statement.allChildren<Node> { true } }
     }
 }

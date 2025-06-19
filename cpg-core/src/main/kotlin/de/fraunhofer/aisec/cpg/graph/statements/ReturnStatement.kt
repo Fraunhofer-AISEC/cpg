@@ -102,11 +102,11 @@ class ReturnStatement : Statement(), ArgumentHolder {
 
     override fun hashCode() = Objects.hash(super.hashCode(), returnValues)
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.returnValue?.getStartingPrevEOG() ?: this.prevEOG
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.returnValue?.startingPrevEOG() ?: this.prevEOG
     }
 
-    override fun getExitNextEOG(): Collection<Node> {
+    override fun exitNextEOG(): Collection<Node> {
         return setOf()
     }
 }

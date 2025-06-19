@@ -73,7 +73,7 @@ open class Block : Expression(), StatementHolder {
         return statements[n]
     }
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.statements.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.statements.firstOrNull()?.startingPrevEOG() ?: this.prevEOG
     }
 }

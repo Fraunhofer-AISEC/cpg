@@ -76,9 +76,9 @@ class NewArrayExpression : Expression(), HasInitializer {
 
     override fun hashCode() = Objects.hash(super.hashCode(), initializer, dimensions)
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.dimensions.firstOrNull()?.getStartingPrevEOG()
-            ?: this.initializer?.getStartingPrevEOG()
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.dimensions.firstOrNull()?.startingPrevEOG()
+            ?: this.initializer?.startingPrevEOG()
             ?: this.prevEOG
     }
 }

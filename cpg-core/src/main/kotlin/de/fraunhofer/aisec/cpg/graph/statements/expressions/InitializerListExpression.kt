@@ -129,8 +129,8 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
         return Objects.hash(super.hashCode(), initializerEdges.size)
     }
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return initializers.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
+    override fun startingPrevEOG(): Collection<Node> {
+        return initializers.firstOrNull()?.startingPrevEOG() ?: this.prevEOG
     }
 
     override var access = AccessValues.READ

@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
-import kotlin.collections.plus
 import org.neo4j.ogm.annotation.Relationship
 
 /**
@@ -84,14 +83,14 @@ class SwitchStatement : Statement(), BranchingNode {
             statement,
         )
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.initializerStatement?.getStartingPrevEOG()
-            ?: this.selector?.getStartingPrevEOG()
-            ?: this.selectorDeclaration?.getStartingPrevEOG()
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.initializerStatement?.startingPrevEOG()
+            ?: this.selector?.startingPrevEOG()
+            ?: this.selectorDeclaration?.startingPrevEOG()
             ?: this.prevEOG
     }
 
-    override fun getExitNextEOG(): Collection<Node> {
-        return this.statement?.getExitNextEOG() ?: this.nextEOG
+    override fun exitNextEOG(): Collection<Node> {
+        return this.statement?.exitNextEOG() ?: this.nextEOG
     }
 }

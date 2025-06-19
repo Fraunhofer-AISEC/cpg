@@ -64,7 +64,7 @@ class NewExpression : Expression(), HasInitializer {
 
     override fun hashCode() = Objects.hash(super.hashCode(), initializer)
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.initializer?.getStartingPrevEOG() ?: this.prevEOG
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.initializer?.startingPrevEOG() ?: this.prevEOG
     }
 }

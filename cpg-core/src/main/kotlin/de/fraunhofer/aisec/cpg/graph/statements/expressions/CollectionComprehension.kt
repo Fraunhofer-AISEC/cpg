@@ -116,9 +116,9 @@ class CollectionComprehension : Expression(), ArgumentHolder {
         return this.statement == expression || expression in this.comprehensionExpressions
     }
 
-    override fun getStartingPrevEOG(): Collection<Node> {
+    override fun startingPrevEOG(): Collection<Node> {
         val allChildren = this.allChildren<Node> { true }
-        return comprehensionExpressions.firstOrNull()?.getStartingPrevEOG()?.filter {
+        return comprehensionExpressions.firstOrNull()?.startingPrevEOG()?.filter {
             it !in allChildren
         } ?: setOf()
     }

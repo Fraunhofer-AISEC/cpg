@@ -54,7 +54,7 @@ class ExpressionList : Expression() {
         return Objects.hash(super.hashCode(), expressions)
     }
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.expressions.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.expressions.firstOrNull()?.startingPrevEOG() ?: this.prevEOG
     }
 }

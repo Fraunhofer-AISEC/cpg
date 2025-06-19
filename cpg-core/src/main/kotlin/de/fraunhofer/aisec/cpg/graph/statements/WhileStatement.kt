@@ -86,14 +86,14 @@ class WhileStatement : LoopStatement(), BranchingNode, ArgumentHolder {
 
     override fun hashCode() = Objects.hash(super.hashCode(), conditionDeclaration, condition)
 
-    override fun getStartingPrevEOG(): Collection<Node> {
+    override fun startingPrevEOG(): Collection<Node> {
         val astChildren = this.allChildren<Node> { true }
-        return condition?.getStartingPrevEOG()?.filter { it !in astChildren }
-            ?: conditionDeclaration?.getStartingPrevEOG()
+        return condition?.startingPrevEOG()?.filter { it !in astChildren }
+            ?: conditionDeclaration?.startingPrevEOG()
             ?: setOf()
     }
 
-    override fun getExitNextEOG(): Collection<Node> {
+    override fun exitNextEOG(): Collection<Node> {
         return this.nextEOG.filter { it !in statement.allChildren<Node> { true } }
     }
 }

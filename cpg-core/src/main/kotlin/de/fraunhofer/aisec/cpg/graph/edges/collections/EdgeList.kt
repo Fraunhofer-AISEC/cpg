@@ -25,11 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edges.collections
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo
+import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import java.util.function.Predicate
 
 /** This class extends a list of edges. This allows us to use lists of edges more conveniently. */
+@JsonIdentityInfo(generator = ObjectIdGenerators.UUIDGenerator::class, property = "@id")
 abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     override var thisRef: Node,
     override var init: (start: Node, end: NodeType) -> EdgeType,

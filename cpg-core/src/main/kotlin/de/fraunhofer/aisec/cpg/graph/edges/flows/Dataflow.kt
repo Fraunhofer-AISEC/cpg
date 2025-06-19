@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edges.flows
 
-import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
@@ -150,9 +149,7 @@ open class Dataflow(
     start: Node,
     end: Node,
     /** The granularity of this dataflow. */
-    @Convert(DataflowGranularityConverter::class)
-    @JsonIgnore
-    var granularity: Granularity = default(),
+    @Convert(DataflowGranularityConverter::class) var granularity: Granularity = default(),
 ) : ProgramDependence(start, end, DependenceType.DATA) {
     override var labels = super.labels.plus("DFG")
 

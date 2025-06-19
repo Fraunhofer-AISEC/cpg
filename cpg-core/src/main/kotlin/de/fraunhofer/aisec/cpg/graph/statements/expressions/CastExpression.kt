@@ -122,8 +122,8 @@ class CastExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
             this.expression.access = value
         }
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.expression.getStartingPrevEOG()
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.expression.startingPrevEOG()
     }
 
     companion object {

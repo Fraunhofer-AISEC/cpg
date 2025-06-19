@@ -25,7 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends
 
-import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonIdentityInfo
+import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
@@ -98,6 +99,7 @@ data class ImplicitCast(override var depthDistance: Int) : CastResult(depthDista
  * the [Node.language] property.
  */
 @Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+@JsonIdentityInfo(generator = ObjectIdGenerators.UUIDGenerator::class, property = "@id")
 abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
 
     /** The file extensions without the dot */
@@ -111,12 +113,11 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     abstract val frontend: KClass<out T>
 
     /** The primitive type names of this language. */
-    @get:JsonIgnore
     val primitiveTypeNames: Set<String>
         get() = builtInTypes.keys
 
     /** The built-in types of this language. */
-    @get:JsonIgnore abstract val builtInTypes: Map<String, Type>
+    abstract val builtInTypes: Map<String, Type>
 
     /** The access modifiers of this programming language */
     open val accessModifiers: Set<String>

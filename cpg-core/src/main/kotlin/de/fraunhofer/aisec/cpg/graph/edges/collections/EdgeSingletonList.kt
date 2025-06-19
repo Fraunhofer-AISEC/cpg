@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edges.collections
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo
+import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import kotlin.reflect.KProperty
@@ -36,6 +38,7 @@ import org.neo4j.ogm.annotation.Transient
  *
  * Therefore, we need to wrap the edge in a list with a single element.
  */
+@JsonIdentityInfo(generator = ObjectIdGenerators.UUIDGenerator::class, property = "@id")
 open class EdgeSingletonList<
     NodeType : Node,
     NullableNodeType : NodeType?,

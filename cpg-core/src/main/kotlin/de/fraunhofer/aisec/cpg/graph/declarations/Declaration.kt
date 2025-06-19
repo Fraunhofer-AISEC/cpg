@@ -47,11 +47,11 @@ abstract class Declaration : Node() {
             return this.name.localName
         }
 
-    override fun getExitNextEOG(): Collection<Node> {
+    override fun exitNextEOG(): Collection<Node> {
         return setOf()
     }
 
-    override fun getStartingPrevEOG(): Collection<Node> {
+    override fun startingPrevEOG(): Collection<Node> {
         return setOf()
     }
 }

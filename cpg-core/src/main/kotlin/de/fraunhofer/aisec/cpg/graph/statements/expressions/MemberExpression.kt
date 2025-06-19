@@ -110,7 +110,7 @@ class MemberExpression : Reference(), HasOverloadedOperation, ArgumentHolder, Ha
         this.name = base.type.root.name.fqn(name.localName)
     }
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.base.getStartingPrevEOG()
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.base.startingPrevEOG()
     }
 }

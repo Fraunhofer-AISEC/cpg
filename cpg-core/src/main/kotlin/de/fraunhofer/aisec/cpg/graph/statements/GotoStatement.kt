@@ -53,7 +53,7 @@ class GotoStatement : Statement() {
             .toString()
     }
 
-    override fun getStartingPrevEOG(): Collection<Node> {
+    override fun startingPrevEOG(): Collection<Node> {
         return this.prevEOG
     }
 }

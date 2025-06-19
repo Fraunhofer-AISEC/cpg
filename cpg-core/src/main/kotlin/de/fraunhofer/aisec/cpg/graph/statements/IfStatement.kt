@@ -115,16 +115,16 @@ class IfStatement : Statement(), BranchingNode, ArgumentHolder {
             elseStatement,
         )
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return initializerStatement?.getStartingPrevEOG()
-            ?: condition?.getStartingPrevEOG()
-            ?: conditionDeclaration?.getStartingPrevEOG()
+    override fun startingPrevEOG(): Collection<Node> {
+        return initializerStatement?.startingPrevEOG()
+            ?: condition?.startingPrevEOG()
+            ?: conditionDeclaration?.startingPrevEOG()
             ?: this.prevEOG
     }
 
-    override fun getExitNextEOG(): Collection<Node> {
-        return ((this.thenStatement?.getExitNextEOG() ?: setOf()) +
-                (this.elseStatement?.getExitNextEOG() ?: this.nextEOG))
+    override fun exitNextEOG(): Collection<Node> {
+        return ((this.thenStatement?.exitNextEOG() ?: setOf()) +
+                (this.elseStatement?.exitNextEOG() ?: this.nextEOG))
             .ifEmpty { this.nextEOG }
     }
 }

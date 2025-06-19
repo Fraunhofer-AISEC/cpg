@@ -94,10 +94,10 @@ class TryStatement : Statement() {
     override fun hashCode() =
         Objects.hash(super.hashCode(), resources, tryBlock, finallyBlock, catchClauses, elseBlock)
 
-    override fun getStartingPrevEOG(): Collection<Node> {
-        return this.resources.firstOrNull()?.getStartingPrevEOG()
-            ?: this.tryBlock?.getStartingPrevEOG()
-            ?: this.finallyBlock?.getStartingPrevEOG()
+    override fun startingPrevEOG(): Collection<Node> {
+        return this.resources.firstOrNull()?.startingPrevEOG()
+            ?: this.tryBlock?.startingPrevEOG()
+            ?: this.finallyBlock?.startingPrevEOG()
             ?: this.prevEOG
     }
 }
