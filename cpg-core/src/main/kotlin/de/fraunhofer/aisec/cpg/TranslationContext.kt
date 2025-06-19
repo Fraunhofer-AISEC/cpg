@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo
+import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import de.fraunhofer.aisec.cpg.TranslationManager.AdditionalSource
 import de.fraunhofer.aisec.cpg.TranslationManager.Companion.log
 import de.fraunhofer.aisec.cpg.frontends.Language
@@ -38,7 +40,9 @@ import java.io.File
  * translation process.
  */
 @DoNotPersist
+@JsonIdentityInfo(generator = ObjectIdGenerators.UUIDGenerator::class, property = "@id")
 open class TranslationContext(
+
     /** The configuration for this translation. */
     val config: TranslationConfiguration = TranslationConfiguration.builder().build(),
 

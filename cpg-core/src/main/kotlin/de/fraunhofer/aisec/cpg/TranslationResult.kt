@@ -27,6 +27,8 @@
 
 package de.fraunhofer.aisec.cpg
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo
+import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
@@ -56,6 +58,7 @@ import org.neo4j.ogm.annotation.Transient
  * The global (intermediate) result of the translation. A [LanguageFrontend] will initially populate
  * it and a [Pass] can extend it.
  */
+@JsonIdentityInfo(generator = ObjectIdGenerators.UUIDGenerator::class, property = "@id")
 class TranslationResult(
     /** A reference to our [TranslationManager]. */
     private val translationManager: TranslationManager,

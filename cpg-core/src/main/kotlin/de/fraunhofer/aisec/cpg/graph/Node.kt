@@ -28,7 +28,9 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import com.fasterxml.jackson.annotation.JsonBackReference
+import com.fasterxml.jackson.annotation.JsonIdentityInfo
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
@@ -65,6 +67,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /** The base class for all graph objects that are going to be persisted in the database. */
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator::class, property = "id")
 abstract class Node() :
     IVisitable<Node>,
     Persistable,
@@ -88,7 +91,6 @@ abstract class Node() :
      * [LanguageProvider] at the time when the node is created.
      */
     @Relationship(value = "LANGUAGE", direction = Relationship.Direction.OUTGOING)
-    @JsonBackReference
     override var language: Language<*> = UnknownLanguage
 
     /**
@@ -101,7 +103,6 @@ abstract class Node() :
      * class would be a [RecordScope] pointing to the [RecordDeclaration].
      */
     @Relationship(value = "SCOPE", direction = Relationship.Direction.OUTGOING)
-    @JsonBackReference
     override var scope: Scope? = null
 
     /** Optional comment of this node. */
@@ -133,7 +134,7 @@ abstract class Node() :
         ControlDependences(this, mirrorProperty = Node::prevCDGEdges, outgoing = true)
         protected set
 
-    var nextCDG by unwrapping(Node::nextCDGEdges)
+    @get:JsonIgnore var nextCDG by unwrapping(Node::nextCDGEdges)
 
     /**
      * The nodes which dominate this node via the control-flow, i.e., the parents of the Control
@@ -145,7 +146,7 @@ abstract class Node() :
         ControlDependences<Node>(this, mirrorProperty = Node::nextCDGEdges, outgoing = false)
         protected set
 
-    var prevCDG by unwrapping(Node::prevCDGEdges)
+    @get:JsonIgnore var prevCDG by unwrapping(Node::prevCDGEdges)
 
     /**
      * Virtual property to return a list of the node's children. Uses the [SubgraphWalker] to
@@ -157,18 +158,22 @@ abstract class Node() :
      * For Neo4J OGM, this relationship will be automatically filled by a pre-save event before OGM
      * persistence. Therefore, this property is a `var` and not a `val`.
      */
-    @Relationship("AST")
     @JsonIgnore
+    @Relationship("AST")
     var astChildren: List<Node> = listOf()
         get() = SubgraphWalker.getAstChildren(this)
 
-    @DoNotPersist @Transient var astParent: Node? = null
+    @DoNotPersist @Transient @JsonBackReference var astParent: Node? = null
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
-    @PopulatedByPass(EvaluationOrderGraphPass::class) var prevEOG by unwrapping(Node::prevEOGEdges)
+    @PopulatedByPass(EvaluationOrderGraphPass::class)
+    @get:JsonIgnore
+    var prevEOG by unwrapping(Node::prevEOGEdges)
 
     /** Virtual property for accessing [nextEOGEdges] without property edges. */
-    @PopulatedByPass(EvaluationOrderGraphPass::class) var nextEOG by unwrapping(Node::nextEOGEdges)
+    @PopulatedByPass(EvaluationOrderGraphPass::class)
+    @get:JsonIgnore
+    var nextEOG by unwrapping(Node::nextEOGEdges)
 
     /** Incoming data flow edges */
     @Relationship(value = "DFG", direction = Relationship.Direction.INCOMING)
@@ -179,6 +184,7 @@ abstract class Node() :
 
     /** Virtual property for accessing [prevDFGEdges] without property edges. */
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @get:JsonIgnore
     var prevDFG by unwrapping(Node::prevDFGEdges)
 
     /**
@@ -187,6 +193,7 @@ abstract class Node() :
      */
     @DoNotPersist
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @get:JsonIgnore
     val prevFullDFG: List<Node>
         get() {
             return prevDFGEdges
@@ -203,6 +210,7 @@ abstract class Node() :
 
     /** Virtual property for accessing [nextDFGEdges] without property edges. */
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @get:JsonIgnore
     var nextDFG by unwrapping(Node::nextDFGEdges)
 
     /**
@@ -211,6 +219,7 @@ abstract class Node() :
      */
     @DoNotPersist
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @get:JsonIgnore
     val nextFullDFG: List<Node>
         get() {
             return nextDFGEdges.filter { it.granularity is FullDataflowGranularity }.map { it.end }
@@ -223,7 +232,7 @@ abstract class Node() :
         ProgramDependences<Node>(this, mirrorProperty = Node::prevPDGEdges, outgoing = false)
         protected set
 
-    var nextPDG by unwrapping(Node::nextPDGEdges)
+    @get:JsonIgnore var nextPDG by unwrapping(Node::nextPDGEdges)
 
     /** Incoming Program Dependence Edges. */
     @PopulatedByPass(ProgramDependenceGraphPass::class)
@@ -232,7 +241,7 @@ abstract class Node() :
         ProgramDependences<Node>(this, mirrorProperty = Node::nextPDGEdges, outgoing = false)
         protected set
 
-    var prevPDG by unwrapping(Node::prevPDGEdges)
+    @get:JsonIgnore var prevPDG by unwrapping(Node::prevPDGEdges)
 
     @DoNotPersist override val assumptions: MutableSet<Assumption> = mutableSetOf()
 
@@ -370,12 +379,12 @@ abstract class Node() :
     }
 
     /** Returns the starting point of the EOG outside this node and its children. */
-    open fun getStartingPrevEOG(): Collection<Node> {
+    open fun startingPrevEOG(): Collection<Node> {
         return this.prevEOG
     }
 
     /** Returns the exit point of the EOG outside this node and its children. */
-    open fun getExitNextEOG(): Collection<Node> {
+    open fun exitNextEOG(): Collection<Node> {
         return this.nextEOG
     }
 
