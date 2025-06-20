@@ -107,6 +107,7 @@ private constructor(
      * passes. It can either be filled with the [Builder.replacePass] or by using the [ReplacePass]
      * annotation on a [LanguageFrontend].
      */
+    @JsonIgnore
     val replacedPasses:
         Map<Pair<KClass<out Pass<out Node>>, KClass<out Language<*>>>, KClass<out Pass<out Node>>>,
     /** This list contains the files with function summaries which should be considered. */
