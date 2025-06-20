@@ -59,7 +59,7 @@ fun MetadataProvider.newTranslationUnitDeclaration(
     // machines.
     val relativeName =
         if (path.isAbsolute) {
-            val topLevel = provider.ctx.currentComponent?.topLevel() ?: path.parent.toFile()
+            val topLevel = path.topLevel
             path.toFile().relativeToOrNull(topLevel)?.toString() ?: path.fileName?.toString()
         } else {
             name

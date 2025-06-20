@@ -42,7 +42,9 @@ import de.fraunhofer.aisec.cpg.passes.inference.IsImplicitProvider
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
+import java.io.File
 import java.net.URI
+import java.nio.file.Path
 import org.slf4j.LoggerFactory
 
 object NodeBuilder {
@@ -392,3 +394,30 @@ private fun <AstNode> Node.setCodeAndLocation(
     }
     this.location = provider.locationOf(rawNode)
 }
+
+/**
+ * This function tries to find the top-level file for a given [Path]. It first checks if the current
+ * component has a top-level file, then checks if the path is part of any configured include paths,
+ * and finally returns the parent directory of the path as a fallback.
+ */
+context(provider: ContextProvider)
+val Path.topLevel: File
+    get() {
+        // First, try to see if the current component has a top-level
+        val topLevel = provider.ctx.currentComponent?.topLevel()
+        if (topLevel != null) {
+            return topLevel
+        }
+
+        // Otherwise, we can try to see if the path is from a specified include
+        val includes = provider.ctx.config.includePaths
+        for (include in includes) {
+            if (startsWith(include)) {
+                // If the path starts with the include, we can return the include as top-level
+                return include.toFile()
+            }
+        }
+
+        // If no top-level was found, we return the path's parent as a file
+        return parent.toFile()
+    }
