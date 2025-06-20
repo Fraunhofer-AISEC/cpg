@@ -76,7 +76,7 @@ fun LanguageFrontend<*, *>.translationUnit(
     name: CharSequence = Node.EMPTY_NAME,
     init: TranslationUnitDeclaration.() -> Unit,
 ): TranslationUnitDeclaration {
-    val node = newTranslationUnitDeclaration(name)
+    val node = with(this) { newTranslationUnitDeclaration(name) }
 
     scopeManager.resetToGlobal(node)
     init(node)

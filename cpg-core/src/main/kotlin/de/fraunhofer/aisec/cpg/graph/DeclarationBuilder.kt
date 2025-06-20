@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import kotlin.io.path.Path
 
 /**
  * Creates a new [TranslationUnitDeclaration]. This is the top-most [Node] that a [LanguageFrontend]
@@ -45,12 +46,26 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
  * argument.
  */
 @JvmOverloads
+context(provider: ContextProvider)
 fun MetadataProvider.newTranslationUnitDeclaration(
-    name: CharSequence?,
+    name: CharSequence,
     rawNode: Any? = null,
 ): TranslationUnitDeclaration {
     val node = TranslationUnitDeclaration()
-    node.applyMetadata(this, name, rawNode, true)
+    val path = Path(name.toString())
+
+    // We must avoid absolute path names as name for the translation unit, as this
+    // specific to the analysis machine and therefore make node IDs not comparable across
+    // machines.
+    val relativeName =
+        if (path.isAbsolute) {
+            val topLevel = provider.ctx.currentComponent?.topLevel() ?: path.parent.toFile()
+            path.toFile().relativeToOrNull(topLevel)?.toString() ?: path.fileName?.toString()
+        } else {
+            name
+        }
+
+    node.applyMetadata(this, relativeName, rawNode, true)
 
     log(node)
     return node
