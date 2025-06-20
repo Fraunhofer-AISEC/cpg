@@ -162,7 +162,7 @@ abstract class Node() :
     var astChildren: List<Node> = listOf()
         get() = SubgraphWalker.getAstChildren(this)
 
-    @DoNotPersist @Transient var astParent: Node? = null
+    @DoNotPersist @Transient @JsonIgnore var astParent: Node? = null
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class) var prevEOG by unwrapping(Node::prevEOGEdges)
