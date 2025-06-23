@@ -535,6 +535,30 @@ class SimpleStack<T> {
     operator fun contains(elem: T): Boolean {
         return deque.contains(elem)
     }
+
+    /** Hack: Check if the items in the deque repeat themselves */
+    fun isLoop(): Boolean {
+        if (this.deque.isEmpty()) return false
+        val first = this.deque.removeFirst()
+        var current: T? = null
+        val pattern = mutableListOf(first)
+        var containsLoop = true
+
+        // Pop elements until we determine the pattern
+        while (current != first) {
+            if (this.deque.isEmpty()) return false
+            if (this.deque.first() == first) break
+            // We have a small loop over a single element
+            if (current != first) current = this.deque.removeFirst()
+            pattern.add(current)
+        }
+        // Now let's check if the pattern happens again
+        pattern.forEach {
+            if (this.deque.isEmpty()) return false
+            if (it != this.deque.removeFirst()) containsLoop = false
+        }
+        return containsLoop
+    }
 }
 
 /**
@@ -921,6 +945,15 @@ fun Node.followXUntilHit(
             // with the next step to the worklist.
             if (
                 !isNodeWithCallStackInPath(next, newContext, currentPath) &&
+                    // A hack that tries to ensure that we are not running in circles: Watch out if
+                    // the top of the newContext and the currentPath callStack are the same and not
+                    // null, this could indicate a loop
+                    // However, if the newContext and the currentPath last's callStack are the same,
+                    // it should be fine I guess
+                    !newContext.callStack.clone().isLoop() &&
+                    (newContext.callStack.top != currentPath.last().second.callStack.top ||
+                        newContext.callStack.top == null ||
+                        newContext.callStack == currentPath.last().second.callStack) &&
                     (findAllPossiblePaths ||
                         (!isNodeWithCallStackInPath(next, newContext, alreadySeenNodes) &&
                             worklist.none { isNodeWithCallStackInPath(next, newContext, it) }))
