@@ -1030,6 +1030,7 @@ fun LanguageFrontend<*, *>.ref(
 ): Reference {
     val node = newReference(name)
     node.type = type
+    node.code = name.toString()
 
     if (init != null) {
         init(node)
@@ -1242,8 +1243,8 @@ fun reference(input: Expression): UnaryOperator {
 }
 
 /**
- * Creates a new [UnaryOperator] with a `--` [UnaryOperator.operatorCode] in the Fluent Node DSL and
- * adds it to the nearest enclosing [StatementHolder].
+ * Creates a new [UnaryOperator] with a `--` postfix [UnaryOperator.operatorCode] in the Fluent Node
+ * DSL and adds it to the nearest enclosing [StatementHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: Holder<out Statement>)
 operator fun Expression.dec(): UnaryOperator {
@@ -1258,8 +1259,8 @@ operator fun Expression.dec(): UnaryOperator {
 }
 
 /**
- * Creates a new [UnaryOperator] with a `++` [UnaryOperator.operatorCode] in the Fluent Node DSL and
- * invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
+ * Creates a new [UnaryOperator] with a `++` postfix [UnaryOperator.operatorCode] in the Fluent Node
+ * DSL and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: Holder<out Statement>)
 operator fun Expression.inc(): UnaryOperator {
@@ -1268,6 +1269,38 @@ operator fun Expression.inc(): UnaryOperator {
 
     if (holder is StatementHolder) {
         holder += node
+    }
+
+    return node
+}
+
+/**
+ * Creates a new [UnaryOperator] with a `--` prefix [UnaryOperator.operatorCode] in the Fluent Node
+ * DSL and adds it to the nearest enclosing [StatementHolder].
+ */
+context(LanguageFrontend<*, *>, Holder<out Statement>)
+fun Expression.decPrefix(): UnaryOperator {
+    val node = (this@LanguageFrontend).newUnaryOperator("--", false, true)
+    node.input = this
+
+    if (this@Holder is StatementHolder) {
+        this@Holder += node
+    }
+
+    return node
+}
+
+/**
+ * Creates a new [UnaryOperator] with a `++` prefix [UnaryOperator.operatorCode] in the Fluent Node
+ * DSL and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
+ */
+context(LanguageFrontend<*, *>, Holder<out Statement>)
+fun Expression.incPrefix(): UnaryOperator {
+    val node = (this@LanguageFrontend).newUnaryOperator("++", false, true)
+    node.input = this
+
+    if (this@Holder is StatementHolder) {
+        this@Holder += node
     }
 
     return node
@@ -1420,6 +1453,66 @@ infix fun Expression.assignPlus(rhs: Expression): AssignExpression {
 
     if (holder is StatementHolder) {
         holder += node
+    }
+
+    return node
+}
+
+/**
+ * Creates a new [AssignExpression] with a `-=` [AssignExpression.operatorCode] in the Fluent Node
+ * DSL and adds it to the nearest enclosing [StatementHolder].
+ */
+context(LanguageFrontend<*, *>, Holder<out Node>)
+infix fun Expression.assignMinus(rhs: Expression): AssignExpression {
+    val node = (this@LanguageFrontend).newAssignExpression("-=", listOf(this), listOf(rhs))
+
+    if (this@Holder is StatementHolder) {
+        this@Holder += node
+    }
+
+    return node
+}
+
+/**
+ * Creates a new [AssignExpression] with a `*=` [AssignExpression.operatorCode] in the Fluent Node
+ * DSL and adds it to the nearest enclosing [StatementHolder].
+ */
+context(LanguageFrontend<*, *>, Holder<out Node>)
+infix fun Expression.assignMult(rhs: Expression): AssignExpression {
+    val node = (this@LanguageFrontend).newAssignExpression("*=", listOf(this), listOf(rhs))
+
+    if (this@Holder is StatementHolder) {
+        this@Holder += node
+    }
+
+    return node
+}
+
+/**
+ * Creates a new [AssignExpression] with a `/=` [AssignExpression.operatorCode] in the Fluent Node
+ * DSL and adds it to the nearest enclosing [StatementHolder].
+ */
+context(LanguageFrontend<*, *>, Holder<out Node>)
+infix fun Expression.assignDiv(rhs: Expression): AssignExpression {
+    val node = (this@LanguageFrontend).newAssignExpression("/=", listOf(this), listOf(rhs))
+
+    if (this@Holder is StatementHolder) {
+        this@Holder += node
+    }
+
+    return node
+}
+
+/**
+ * Creates a new [AssignExpression] with a `%=` [AssignExpression.operatorCode] in the Fluent Node
+ * DSL and adds it to the nearest enclosing [StatementHolder].
+ */
+context(LanguageFrontend<*, *>, Holder<out Node>)
+infix fun Expression.assignMod(rhs: Expression): AssignExpression {
+    val node = (this@LanguageFrontend).newAssignExpression("%=", listOf(this), listOf(rhs))
+
+    if (this@Holder is StatementHolder) {
+        this@Holder += node
     }
 
     return node
