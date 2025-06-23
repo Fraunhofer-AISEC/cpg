@@ -30,6 +30,7 @@ package de.fraunhofer.aisec.cpg.graph
 import com.fasterxml.jackson.annotation.JsonBackReference
 import com.fasterxml.jackson.annotation.JsonIdentityInfo
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
@@ -67,7 +68,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /** The base class for all graph objects that are going to be persisted in the database. */
-@JsonIdentityInfo(generator = ObjectIdGenerators.UUIDGenerator::class, property = "@id")
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator::class, property = "id")
 abstract class Node() :
     IVisitable<Node>,
     Persistable,
@@ -268,14 +269,17 @@ abstract class Node() :
      * [Node.hashCode]. In this sense, it is definitely deterministic and reproducible, however, in
      * theory it is not completely unique, as collisions within [Node.hashCode] could occur.
      */
-    val id: Uuid
-        get() {
-            val parent =
+    @get:JsonProperty("id")
+    @set:JsonProperty("id")
+    var id: Uuid
+        get() =
+            Uuid.fromLongs(
                 astParent?.id?.toLongs { mostSignificantBits, leastSignificantBits ->
                     leastSignificantBits
-                }
-            return Uuid.fromLongs(parent ?: 0, hashCode().toLong())
-        }
+                } ?: 0,
+                hashCode().toLong(),
+            )
+        private set(value) {}
 
     /** Index of the argument if this node is used in a function call or parameter list. */
     var argumentIndex = 0
