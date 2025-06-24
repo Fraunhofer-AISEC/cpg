@@ -43,6 +43,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
     Handler<Expression, Value, JVMLanguageFrontend>(::ProblemExpression, frontend) {
 
     init {
+        map.put(JCaughtExceptionRef::class.java) { handleExceptionRef(it as JCaughtExceptionRef) }
         map.put(Local::class.java) { handleLocal(it as Local) }
         map.put(JavaLocal::class.java) { handleLocal(it as Local) }
         map.put(JThisRef::class.java) { handleThisRef(it as JThisRef) }
@@ -116,6 +117,12 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         map.put(StringConstant::class.java) { handleStringConstant(it as StringConstant) }
         map.put(NullConstant::class.java) { handleNullConstant(it as NullConstant) }
         map.put(ClassConstant::class.java) { handleClassConstant(it as ClassConstant) }
+    }
+
+    private fun handleExceptionRef(exceptionRef: JCaughtExceptionRef): Expression {
+        return newReference(name = "@caughtexception").apply {
+            this.type = frontend.typeOf(exceptionRef.type)
+        }
     }
 
     private fun handleLocal(local: Local): Expression {
