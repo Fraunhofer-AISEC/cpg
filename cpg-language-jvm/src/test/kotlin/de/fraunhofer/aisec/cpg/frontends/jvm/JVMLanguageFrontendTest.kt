@@ -189,6 +189,25 @@ class JVMLanguageFrontendTest {
         tu.methods.forEach { println(it.code) }
     }
 
+    @Ignore
+    @Test
+    fun testHelloWorldApk() {
+        // This will be our classpath
+        val topLevel = Path.of("src", "test", "resources", "apk", "HelloWorld")
+        val tu =
+            analyzeAndGetFirstTU(
+                // In case of a jar, the jar is directly used as a class path
+                listOf(topLevel.resolve("app-debug.apk").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<JVMLanguage>()
+            }
+        assertNotNull(tu)
+        assertEquals(0, tu.problems.size)
+        tu.methods.forEach { println(it.code) }
+    }
+
     @Test
     fun testInheritanceClass() {
         // This will be our classpath

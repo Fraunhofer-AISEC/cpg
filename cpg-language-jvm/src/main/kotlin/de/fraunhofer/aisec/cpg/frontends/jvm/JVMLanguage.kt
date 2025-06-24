@@ -31,7 +31,7 @@ import kotlin.reflect.KClass
 
 class JVMLanguage : Language<JVMLanguageFrontend>() {
     override val fileExtensions: List<String>
-        get() = listOf("class", "java", "jimple", "jar")
+        get() = listOf("class", "java", "jimple", "jar", "apk")
 
     override val namespaceDelimiter: String
         get() = "."
