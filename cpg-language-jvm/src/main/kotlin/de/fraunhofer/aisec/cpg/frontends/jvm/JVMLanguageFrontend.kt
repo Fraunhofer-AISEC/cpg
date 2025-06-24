@@ -35,18 +35,27 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
+import sootup.apk.frontend.ApkAnalysisInputLocation
+import sootup.apk.frontend.DexBodyInterceptors
 import sootup.core.model.Body
 import sootup.core.model.SootMethod
 import sootup.core.model.SourceType
 import sootup.core.types.ArrayType
 import sootup.core.types.UnknownType
 import sootup.core.util.printer.NormalStmtPrinter
-import sootup.java.bytecode.inputlocation.JavaClassPathAnalysisInputLocation
-import sootup.java.core.interceptors.*
+import sootup.interceptors.Aggregator
+import sootup.interceptors.CastAndReturnInliner
+import sootup.interceptors.CopyPropagator
+import sootup.interceptors.EmptySwitchEliminator
+import sootup.interceptors.LocalNameStandardizer
+import sootup.interceptors.NopEliminator
+import sootup.interceptors.TypeAssigner
+import sootup.interceptors.UnreachableCodeEliminator
+import sootup.java.bytecode.frontend.inputlocation.JavaClassPathAnalysisInputLocation
 import sootup.java.core.views.JavaView
-import sootup.java.sourcecode.inputlocation.JavaSourcePathAnalysisInputLocation
-import sootup.jimple.parser.JimpleAnalysisInputLocation
-import sootup.jimple.parser.JimpleView
+import sootup.java.frontend.inputlocation.JavaSourcePathAnalysisInputLocation
+import sootup.jimple.frontend.JimpleAnalysisInputLocation
+import sootup.jimple.frontend.JimpleView
 
 typealias SootType = sootup.core.types.Type
 
@@ -120,6 +129,15 @@ class JVMLanguageFrontend(
                         )
                     )
                 }
+                "apk" -> {
+                    val apkAnalysis =
+                        ApkAnalysisInputLocation(
+                            file.toPath(),
+                            "",
+                            DexBodyInterceptors.Default.bodyInterceptors(),
+                        )
+                    JavaView(apkAnalysis)
+                }
                 "jimple" -> {
                     JimpleView(
                         JimpleAnalysisInputLocation(ctx.currentComponent?.topLevel()?.toPath()!!)
@@ -173,8 +191,13 @@ class JVMLanguageFrontend(
     }
 
     override fun codeOf(astNode: Any): String? {
+
         if (astNode is SootMethod && astNode.isConcrete) {
-            return astNode.body.toString()
+            try {
+                return astNode.body.toString()
+            } catch (_: IllegalArgumentException) {
+                // Do nothing
+            }
         }
         // We do not really have a source anyway. maybe in jimple?
         return ""
