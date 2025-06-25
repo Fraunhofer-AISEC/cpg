@@ -113,8 +113,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // Expressions
             is CollectionComprehension -> handleCollectionComprehension(node)
             is ComprehensionExpression -> handleComprehensionExpression(node)
-            //            is CallExpression -> handleCallExpression(node,
-            // inferDfgForUnresolvedSymbols)
+            // is CallExpression -> handleCallExpression(node, inferDfgForUnresolvedSymbols)
             is CastExpression -> handleCastExpression(node)
             is BinaryOperator -> handleBinaryOp(node, parent)
             // The PointsToPass will draw the DFG Edges for these
@@ -122,7 +121,6 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // is Reference -> handleReference(node)
             is PointerReference -> handlePointerReference(node)
             is PointerDereference -> handlePointerDereference(node)
-            is VariableDeclaration -> handleVariableDeclaration(node)
             // is SubscriptExpression -> handleSubscriptExpression(node)
             is NewArrayExpression -> handleNewArrayExpression(node)
             is ConditionalExpression -> handleConditionalExpression(node)
@@ -146,6 +144,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is FieldDeclaration -> handleFieldDeclaration(node)
             is FunctionDeclaration -> handleFunctionDeclaration(node, functionSummaries)
             is TupleDeclaration -> handleTupleDeclaration(node)
+            is VariableDeclaration -> handleVariableDeclaration(node)
         }
     }
 
