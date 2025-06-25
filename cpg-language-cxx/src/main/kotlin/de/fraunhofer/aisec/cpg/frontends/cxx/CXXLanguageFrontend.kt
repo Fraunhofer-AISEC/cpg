@@ -39,11 +39,8 @@ import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.CommentMatcher
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.CXXExtraPass
-import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.DynamicInvokeResolver
-import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
-import de.fraunhofer.aisec.cpg.passes.configuration.ReplacePass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
@@ -84,16 +81,6 @@ import org.slf4j.LoggerFactory
  */
 @RegisterExtraPass(DynamicInvokeResolver::class)
 @RegisterExtraPass(CXXExtraPass::class)
-@ReplacePass(
-    lang = CLanguage::class,
-    old = ControlFlowSensitiveDFGPass::class,
-    with = PointsToPass::class,
-)
-@ReplacePass(
-    lang = CPPLanguage::class,
-    old = ControlFlowSensitiveDFGPass::class,
-    with = PointsToPass::class,
-)
 open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLanguageFrontend>) :
     LanguageFrontend<IASTNode, IASTTypeId>(ctx, language) {
 
