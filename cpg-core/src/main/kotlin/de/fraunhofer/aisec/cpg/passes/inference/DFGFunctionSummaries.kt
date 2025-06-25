@@ -116,15 +116,13 @@ class DFGFunctionSummaries {
             contextProvider.newFunctionDeclaration(language.parseName(declEntry.methodName))
         declEntry.signature?.forEachIndexed { i, typeName ->
             val type =
-                if (contextProvider.ctx.typeManager.typeExists(typeName) == true) {
+                if (contextProvider.ctx.typeManager.typeExists(typeName)) {
                     contextProvider.ctx.typeManager.lookupResolvedType(typeName)
                 } else {
-                    var type = ObjectType(typeName, listOf(), false, language)
+                    val type = ObjectType(typeName, listOf(), false, language)
                     // Apply our usual metadata, such as scope, code, location, if we have any. Make
-                    // sure only
-                    // to refer by the local name because we will treat types as sort of references
-                    // when
-                    // creating them and resolve them later.
+                    // sure only to refer by the local name because we will treat types as sort of
+                    // references when creating them and resolve them later.
                     type.applyMetadata(contextProvider, typeName, doNotPrependNamespace = true)
 
                     // Piping it through register type will ensure that we know the type and can
@@ -243,17 +241,16 @@ class DFGFunctionSummaries {
                     typeManager.lookupResolvedType(it1, language = language)
                 } ?: language.unknownType()
 
-            var mostPreciseType =
+            val mostPreciseType =
                 uniqueTypes
-                    .map { Pair(it, language?.tryCast(targetType, it)) }
-                    .sortedBy { it.second?.depthDistance }
-                    .firstOrNull()
+                    .map { Pair(it, language.tryCast(targetType, it)) }
+                    .minByOrNull { it.second.depthDistance }
                     ?.first
 
-            var mostPreciseClassEntries =
+            val mostPreciseClassEntries =
                 typeEntryList.filter { it.first == mostPreciseType }.map { it.second }
 
-            var signatureResults =
+            val signatureResults =
                 mostPreciseClassEntries
                     .map {
                         Pair(
@@ -309,17 +306,14 @@ class DFGFunctionSummaries {
                             if (e.getOrNull(1) == "deref") srcValueDepth = 2
                             foo
                         } else null
-                    } catch (e: NumberFormatException) {
+                    } catch (_: NumberFormatException) {
                         null
                     }
                 } else if (entry.from.startsWith("NewMemoryAddress")) {
                     val memAddrName = Name(entry.from, functionDeclaration.name)
                     functionDeclarationToMemAddrMap
-                        .computeIfAbsent(
-                            functionDeclaration,
-                            { mutableMapOf<Name, MemoryAddress>() },
-                        )
-                        .computeIfAbsent(memAddrName, { MemoryAddress(memAddrName) })
+                        .computeIfAbsent(functionDeclaration) { mutableMapOf() }
+                        .computeIfAbsent(memAddrName) { MemoryAddress(memAddrName) }
                 } else if (entry.from == "base") {
                     (functionDeclaration as? MethodDeclaration)?.receiver
                 } else {
@@ -338,7 +332,7 @@ class DFGFunctionSummaries {
                             destNodes.add(paramTo)
                         }
                         paramTo
-                    } catch (e: NumberFormatException) {
+                    } catch (_: NumberFormatException) {
                         null
                     }
                 } else if (entry.to == "base") {
