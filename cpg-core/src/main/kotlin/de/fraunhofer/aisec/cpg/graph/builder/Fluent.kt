@@ -1142,17 +1142,17 @@ operator fun Expression.unaryMinus(): UnaryOperator {
  * Creates a new [PointerReference] in the Fluent Node DSL and invokes [ArgumentHolder.addArgument]
  * of the nearest enclosing [ArgumentHolder].
  */
-context(LanguageFrontend<*, *>, ArgumentHolder)
+context(frontend: LanguageFrontend<*, *>, argHolder: ArgumentHolder)
 fun Expression.pointerReference(): PointerReference {
-    val node = (this@LanguageFrontend).newPointerReference(this.name.localName)
+    val node = frontend.newPointerReference(this.name.localName)
     node.input = this
 
-    (this@ArgumentHolder) += node
+    argHolder += node
 
     // We need to do a little trick here. Because of the evaluation order, lhs and rhs might also
     // been added to the argument holders arguments (and we do not want that). However, we cannot
     // prevent it, so we need to remove them again
-    (this@ArgumentHolder) -= node.input
+    argHolder -= node.input
 
     return node
 }
