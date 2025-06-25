@@ -340,7 +340,7 @@ class DFGFunctionSummaries {
                     if (from != null) {
                         if (receiver != null) {
                             destNodes.add(receiver)
-                            TODO() // Make sure that this makes sense
+                            // TODO Make sure that this makes sense
                             /*functionDeclaration.functionSummary
                             .computeIfAbsent(receiver) { identitySetOf() }
                             .add(
