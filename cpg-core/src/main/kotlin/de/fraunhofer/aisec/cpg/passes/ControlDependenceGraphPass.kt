@@ -54,8 +54,8 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
     class Configuration(
         /**
          * This specifies the maximum complexity (as calculated per
-         * [Statement.cyclomaticComplexity]) a [FunctionDeclaration] must have in order to be
-         * considered.
+         * [de.fraunhofer.aisec.cpg.graph.statements.Statement.cyclomaticComplexity]) a
+         * [FunctionDeclaration] must have in order to be considered.
          */
         var maxComplexity: Int? = null
     ) : PassConfiguration()
@@ -92,7 +92,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         log.info("[CDG] Analyzing function ${startNode.name}. Complexity: $c")
 
         val prevEOGState =
-            PrevEOGState(innerLattice = PrevEOGLattice(innerLattice = PowersetLattice<Node>()))
+            PrevEOGState(innerLattice = PrevEOGLattice(innerLattice = PowersetLattice()))
 
         // Maps nodes to their "cdg parent" (i.e. the dominator) and also has the information
         // through which path it is reached. If all outgoing paths of the node's dominator result in
@@ -110,7 +110,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         val executionTime = measureTimeMillis {
             finalState = prevEOGState.iterateEOG(startNode.nextEOGEdges, startState, ::transfer)
         }
-        log.trace("CDG Done iterating EOG for ${startNode.name}. Time: $executionTime")
+        log.info("[CDG] Done iterating EOG for {}. Generating the edges now.", startNode.name)
 
         val branchingNodeConditionals = getBranchingNodeConditions(startNode)
 
@@ -127,7 +127,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             val dominatorsList =
                 dominatorPaths.entries.map { (k, v) -> Pair(k, v.toMutableSet()) }.toMutableList()
 
-            dominatorPaths.entries.forEach { (dominator, paths) ->
+            dominatorPaths.entries.forEach { (dominator, _) ->
                 // Check if the dominator and this node share a common dominator. That one should be
                 // removed from the current list.
                 val dominatorDominators = finalState[dominator]
