@@ -59,16 +59,21 @@ import org.neo4j.ogm.annotation.Transient
  * it and a [Pass] can extend it.
  */
 @JsonIdentityInfo(generator = ObjectIdGenerators.UUIDGenerator::class, property = "@id")
-class TranslationResult(
+class TranslationResult() : Node(), StatisticsHolder, ContextProvider {
+
+    constructor(translationManager: TranslationManager, finalCtx: TranslationContext) : this() {
+        this.translationManager = translationManager
+        this.finalCtx = finalCtx
+    }
+
     /** A reference to our [TranslationManager]. */
-    private val translationManager: TranslationManager,
+    private lateinit var translationManager: TranslationManager
     /**
      * The final [TranslationContext] of this translation result. Currently, for parallel
      * processing, we are creating one translation context for each parsed file (containing a
      * dedicated [ScopeManager] each). This property will contain the final, merged context.
      */
-    var finalCtx: TranslationContext,
-) : Node(), StatisticsHolder, ContextProvider {
+    lateinit var finalCtx: TranslationContext
 
     @Relationship("COMPONENTS") val componentEdges = astEdgesOf<Component>()
     /**

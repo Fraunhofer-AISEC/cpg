@@ -25,15 +25,21 @@
  */
 package de.fraunhofer.aisec.cpg.persistence
 
+import com.fasterxml.jackson.annotation.JacksonInject
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.core.JsonStreamContext
 import com.fasterxml.jackson.core.StreamWriteConstraints
 import com.fasterxml.jackson.databind.*
+import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer
+import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.ser.BeanSerializerModifier
 import com.fasterxml.jackson.databind.ser.std.BeanSerializerBase
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.Node
 
 class DepthLimitingSerializer<T>(
     private val delegate: JsonSerializer<T>,
@@ -74,6 +80,35 @@ class DepthLimitingModifier(private val maxDepth: Int) : BeanSerializerModifier(
     }
 }
 
+class NodeRegistry {
+    private val nodes = mutableMapOf<String, Node>()
+
+    fun register(node: Node) = nodes.put(node.id.toString(), node)
+
+    fun lookup(id: String): Node? = nodes[id]
+}
+
+class NodeKeyDeserializer(@JacksonInject val registry: NodeRegistry) : KeyDeserializer() {
+    override fun deserializeKey(key: String, ctxt: DeserializationContext): Any {
+        return registry.lookup(key)
+            ?: throw IllegalStateException("Node with id='$key' not registered")
+    }
+}
+
+class NodeDelegatingDeserializer(delegate: JsonDeserializer<*>, val registry: NodeRegistry) :
+    StdDeserializer<Node>(Node::class.java) {
+
+    private val delegatee: JsonDeserializer<*> = delegate
+
+    override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Node {
+        @Suppress("UNCHECKED_CAST") val node = delegatee.deserialize(p, ctxt) as Node
+        registry.register(node)
+        return node
+    }
+
+    override fun isCachable(): Boolean = true
+}
+
 fun serializeToJson(translationResult: TranslationResult): String {
     val factory =
         JsonFactory.builder()
@@ -100,6 +135,40 @@ fun serializeToJson(translationResult: TranslationResult): String {
 }
 
 fun deserializeFromJson(json: String): TranslationResult {
-    val objectMapper = ObjectMapper()
+    val registry = NodeRegistry()
+
+    val module =
+        SimpleModule().apply {
+            setDeserializerModifier(
+                object : BeanDeserializerModifier() {
+                    override fun modifyDeserializer(
+                        config: DeserializationConfig,
+                        desc: BeanDescription,
+                        deserializer: JsonDeserializer<*>,
+                    ): JsonDeserializer<*> {
+                        return if (Node::class.java.isAssignableFrom(desc.beanClass)) {
+                            NodeDelegatingDeserializer(deserializer, registry)
+                        } else {
+                            deserializer
+                        }
+                    }
+                }
+            )
+        }
+
+    val objectMapper =
+        ObjectMapper().apply {
+            registerModule(module)
+
+            // Allow injection of the registry instance
+            setInjectableValues(InjectableValues.Std().addValue(NodeRegistry::class.java, registry))
+
+            // Register the deserializer so Jackson knows to use it
+            registerModule(
+                SimpleModule().apply {
+                    addKeyDeserializer(Node::class.java, NodeKeyDeserializer(registry))
+                }
+            )
+        }
     return objectMapper.readValue(json, TranslationResult::class.java)
 }
