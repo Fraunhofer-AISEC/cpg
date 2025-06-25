@@ -1,60 +1,87 @@
 <script lang="ts">
   import type { PageProps } from './$types';
-  import AnalysisResult from '$lib/components/AnalysisResult.svelte';
-  import NewAnalysis from '$lib/components/NewAnalysis.svelte';
-  import { invalidate } from '$app/navigation';
+  import { DashboardSection, StatsGrid } from '$lib/components/dashboard';
+  import { RequirementsChart } from '$lib/components/requirements';
+  import { ViolationsTable } from '$lib/components/analysis';
+  import { PageHeader } from '$lib/components/navigation';
+  import { LoadingSpinner, EmptyState } from '$lib/components/ui';
+  import {
+    calculateFulfillmentStats,
+    calculateCombinedProjectStats
+  } from '$lib/utils/dashboardStats';
 
+  // Correctly access data with $props()
   let { data }: PageProps = $props();
-  let regenerateEnabled = $state(false);
-  let loading = $state(false);
 
-  async function handleSubmit(
-    sourceDir: string,
-    includeDir?: string,
-    topLevel?: string,
-    conceptSummaries?: string
-  ) {
-    loading = true;
-    try {
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ sourceDir, includeDir, topLevel, conceptSummaries })
-      });
+  // Calculate requirement stats with the $derived rune
+  const fulfillmentStats = $derived(calculateFulfillmentStats(data.result?.requirementCategories));
 
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-
-      const data = await response.json();
-      await invalidate('/api/result');
-      console.log('Generation successful:', data);
-    } catch (error) {
-      console.error('Error during generation:', error);
-    } finally {
-      loading = false;
-    }
-  }
+  // Combined project and source code stats with additional metrics
+  const combinedProjectStats = $derived(
+    calculateCombinedProjectStats(data.project ?? undefined, data.result ?? undefined)
+  );
 </script>
 
-<div class="container mx-auto p-4">
-  <NewAnalysis submit={handleSubmit} {loading} />
+<PageHeader title="Dashboard" subtitle="Overview of your analysis project">
+  {#snippet children()}
+    <a
+      href="/new-analysis"
+      class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
+    >
+      <svg class="mr-2 -ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+      </svg>
+      New Project
+    </a>
+  {/snippet}
+</PageHeader>
 
-  {#if regenerateEnabled}
-    <div class="mb-6">
-      <button
-        class="mt-4 rounded bg-green-600 px-4 py-2 font-bold text-white hover:bg-green-700"
-        disabled={loading}
+<div class="space-y-6">
+  {#if !data.project && !data.result}
+    <LoadingSpinner message="Loading dashboard data..." />
+  {:else}
+    <!-- Combined Project & Source Code Overview -->
+    {#if data.project || (data.result?.components && data.result.components.length > 0)}
+      <DashboardSection
+        title="Project & Source Code Overview"
+        actionText="Browse components"
+        actionHref="/source"
       >
-        {loading ? 'Working...' : 'Re-Generate CPG'}
-      </button>
-      <p class="mt-1 text-sm text-gray-600">Re-run analysis with the current configuration</p>
-    </div>
-  {/if}
+        <StatsGrid stats={combinedProjectStats} />
+      </DashboardSection>
+    {/if}
 
-  {#if data.result && data.result.components}
-    <AnalysisResult result={data.result} />
+    <!-- Requirements Summary -->
+    {#if data.result?.requirementCategories && data.result.requirementCategories.length > 0}
+      <DashboardSection
+        title="Requirements Summary"
+        actionText="View all"
+        actionHref="/requirements"
+      >
+        <RequirementsChart
+          fulfilled={fulfillmentStats.fulfilled}
+          notFulfilled={fulfillmentStats.notFulfilled}
+          rejected={fulfillmentStats.rejected}
+          undecided={fulfillmentStats.undecided}
+          notYetEvaluated={fulfillmentStats.notYetEvaluated}
+        />
+      </DashboardSection>
+
+      <!-- Recent Requirements -->
+      <DashboardSection title="Recent Violations">
+        <ViolationsTable categories={data.result.requirementCategories} />
+      </DashboardSection>
+    {/if}
+
+    <!-- Empty state for new users -->
+    {#if !data.project && !data.result}
+      <EmptyState
+        icon="chart"
+        title="No projects yet"
+        description="Get started by creating your first analysis project."
+        actionText="Create New Project"
+        actionHref="/new-analysis"
+      />
+    {/if}
   {/if}
 </div>

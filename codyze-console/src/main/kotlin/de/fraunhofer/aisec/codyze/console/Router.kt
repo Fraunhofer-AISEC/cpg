@@ -54,7 +54,7 @@ import kotlin.reflect.KClass
  *   for a translation unit.
  * - GET `/api/component/{component_name}/translation-unit/{id}/overlay-nodes`: Retrieves all
  *   overlay nodes for a translation unit.
- * - GET `/api/concept-classes`: Retrieves a list of all available [Concept] classes (as Java class
+ * - GET `/api/classes/concepts`: Retrieves a list of all available [Concept] classes (as Java class
  *   names).
  * - POST `/api/concept`: Adds a concept node to the current
  *   [de.fraunhofer.aisec.codyze.AnalysisResult]
@@ -100,6 +100,19 @@ fun Routing.apiRoutes(service: ConsoleService) {
                 call.respond(
                     HttpStatusCode.NotFound,
                     mapOf("error" to "No CPG has been generated yet"),
+                )
+            }
+        }
+
+        get("/project") {
+            // This endpoint returns the last project as a JSON object
+            val lastProject = service.lastProject
+            if (lastProject != null) {
+                call.respond(lastProject.toJSON())
+            } else {
+                call.respond(
+                    HttpStatusCode.NotFound,
+                    mapOf("error" to "No project has been analyzed yet"),
                 )
             }
         }
@@ -184,11 +197,70 @@ fun Routing.apiRoutes(service: ConsoleService) {
             )
         }
 
-        /**
-         * The endpoint to export a YAML listing of all manually added [Concept]s (via `POST
-         * /concept`).
-         */
-        get("/export-concepts") { call.respond(service.exportPersistedConcepts()) }
+        // The endpoint to get a single requirement by ID
+        get("/requirement/{requirementId}") {
+            val requirementId =
+                call.parameters["requirementId"]
+                    ?: return@get call.respond(
+                        HttpStatusCode.BadRequest,
+                        mapOf("error" to "Missing requirement ID"),
+                    )
+
+            val requirement = service.getRequirement(requirementId)
+            if (requirement != null) {
+                call.respond(requirement)
+            } else {
+                call.respond(HttpStatusCode.NotFound, mapOf("error" to "Requirement not found"))
+            }
+        }
+
+        // The endpoint to get a single QueryTree by ID
+        get("/querytree/{queryTreeId}") {
+            val queryTreeId =
+                call.parameters["queryTreeId"]
+                    ?: return@get call.respond(
+                        HttpStatusCode.BadRequest,
+                        mapOf("error" to "Missing QueryTree ID"),
+                    )
+
+            val queryTree = service.getQueryTree(queryTreeId)
+            if (queryTree != null) {
+                call.respond(queryTree)
+            } else {
+                call.respond(HttpStatusCode.NotFound, mapOf("error" to "QueryTree not found"))
+            }
+        }
+
+        // The endpoint to get multiple QueryTrees by IDs (batch fetch)
+        post("/querytrees") {
+            try {
+                val request = call.receive<List<String>>()
+                val queryTrees = service.getQueryTrees(request)
+                call.respond(queryTrees)
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    mapOf("error" to "Invalid request format: ${e.message}"),
+                )
+            }
+        }
+
+        // The endpoint to get a QueryTree with its parent IDs for tree expansion
+        get("/querytrees/{queryTreeId}/parents") {
+            val queryTreeId =
+                call.parameters["queryTreeId"]
+                    ?: return@get call.respond(
+                        HttpStatusCode.BadRequest,
+                        mapOf("error" to "Missing QueryTree ID"),
+                    )
+
+            val queryTreeWithParents = service.getQueryTreeWithParents(queryTreeId)
+            if (queryTreeWithParents != null) {
+                call.respond(queryTreeWithParents)
+            } else {
+                call.respond(HttpStatusCode.NotFound, mapOf("error" to "QueryTree not found"))
+            }
+        }
     }
 }
 

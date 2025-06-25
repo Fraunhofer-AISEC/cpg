@@ -202,7 +202,7 @@ open class CPPLanguage() :
         return CastNotPossible
     }
 
-    context(ContextProvider)
+    context(_: ContextProvider)
     override fun bestViableResolution(
         result: CallResolutionResult
     ): Pair<Set<FunctionDeclaration>, CallResolutionResult.SuccessKind> {

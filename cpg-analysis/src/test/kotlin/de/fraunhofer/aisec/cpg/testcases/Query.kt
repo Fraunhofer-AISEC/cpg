@@ -422,7 +422,7 @@ class Query {
                                     forInitializer {
                                         declareVar("i", t("int")) { literal(0, t("int")) }
                                     }
-                                    forCondition { ref("i") le literal(4, t("int")) }
+                                    forCondition { ref("i") lt literal(5, t("int")) }
                                     forIteration { ref("i").incNoContext() }
                                 }
 
@@ -484,7 +484,7 @@ class Query {
                                     forInitializer {
                                         declareVar("i", t("int")) { literal(0, t("int")) }
                                     }
-                                    forCondition { ref("i") le literal(4, t("int")) }
+                                    forCondition { ref("i") lt literal(5, t("int")) }
                                     forIteration { ref("i").incNoContext() }
                                 }
 

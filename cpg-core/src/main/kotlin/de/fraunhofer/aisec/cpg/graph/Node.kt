@@ -162,7 +162,7 @@ abstract class Node() :
     var astChildren: List<Node> = listOf()
         get() = SubgraphWalker.getAstChildren(this)
 
-    @DoNotPersist @Transient var astParent: Node? = null
+    @DoNotPersist @Transient @JsonIgnore var astParent: Node? = null
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class) var prevEOG by unwrapping(Node::prevEOGEdges)
@@ -319,8 +319,8 @@ abstract class Node() :
      * Adds the [assumptions] attached to the [Node] and of relevant supernodes in the AST.
      * Currently, of the [Component].
      */
-    override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + (component?.collectAssumptions() ?: emptySet())
+    override fun relevantAssumptions(): Set<Assumption> {
+        return super.relevantAssumptions() + (component?.relevantAssumptions() ?: emptySet())
     }
 
     /**
@@ -421,11 +421,11 @@ abstract class Node() :
  * Works similar to [apply] but before executing [block], it enters the scope for this object and
  * afterward leaves the scope again.
  */
-context(ContextProvider)
+context(provider: ContextProvider)
 inline fun <reified T : Node> T.applyWithScope(block: T.() -> Unit): T {
     return this.apply {
-        (this@ContextProvider).ctx.scopeManager.enterScope(this)
+        (provider).ctx.scopeManager.enterScope(this)
         block()
-        (this@ContextProvider).ctx.scopeManager.leaveScope(this)
+        (provider).ctx.scopeManager.leaveScope(this)
     }
 }

@@ -35,16 +35,15 @@ import kotlin.io.path.Path
 import kotlin.test.Test
 import kotlin.test.assertIs
 
-@Suppress("CONTEXT_RECEIVERS_DEPRECATED")
 class DslTest {
-    context(TranslationResult)
+    context(result: TranslationResult)
     fun query1(): QueryTree<Boolean> {
-        return allExtended<CallExpression> { it.name eq "encrypt" }
+        return result.allExtended<CallExpression> { it.name eq "encrypt" }
     }
 
-    context(TranslationResult)
+    context(result: TranslationResult)
     fun query2(): QueryTree<Boolean> {
-        return allExtended<CallExpression> { it.arguments.size eq 2 }
+        return result.allExtended<CallExpression> { it.arguments.size eq 2 }
     }
 
     object Mock : CodyzeScript(projectBuilder = ProjectBuilder(projectDir = Path(".")))
@@ -112,7 +111,6 @@ class DslTest {
                         accept("00000000-0000-0000-0000-000000000000")
                         reject("00000000-0000-0000-0000-000000000001")
                         undecided("00000000-0000-0000-0000-000000000002")
-                        ignore("00000000-0000-0000-0000-000000000003")
                     }
                 }
 

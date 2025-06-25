@@ -70,6 +70,21 @@ inline fun <reified T> Node?.allChildren(
 }
 
 /**
+ * Checks, whether this [Node] has a location that matches the given parameters.
+ *
+ * @param pathSuffix The suffix of the path to match. The check is performed by [String.endsWith],
+ *   so there are no specific requirements on the format. If `null`, this is ignored.
+ * @param startLine The start line of the location to match. If `null`, this is ignored.
+ * @param endLine The end line of the location to match. If `null`, this is ignored.
+ */
+fun Node.hasLocation(pathSuffix: String?, startLine: Int?, endLine: Int?): Boolean {
+    return (pathSuffix == null ||
+        this.location?.artifactLocation?.uri?.path?.endsWith(pathSuffix) == true) &&
+        (startLine == null || this.location?.region?.startLine == startLine) &&
+        (endLine == null || this.location?.region?.endLine == endLine)
+}
+
+/**
  * Flattens the AST beginning with this node and returns all nodes of type [T]. For convenience, an
  * optional predicate function [predicate] can be supplied, which will be applied via
  * [Collection.filter]
@@ -274,8 +289,8 @@ data class NodePath(
      * Adds the [assumptions] attached to the [NodePath] itself and of all [Node] contained in the
      * path.
      */
-    override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + nodes.flatMap { it.collectAssumptions() }
+    override fun relevantAssumptions(): Set<Assumption> {
+        return super.relevantAssumptions() + nodes.flatMap { it.relevantAssumptions() }
     }
 }
 
@@ -1286,7 +1301,6 @@ val Node?.assigns: List<AssignExpression>
 inline fun <reified T : Node> Node.firstParentOrNull(
     noinline predicate: ((T) -> Boolean)? = null
 ): T? {
-
     // start at searchNodes parent
     var node = this.astParent
 
@@ -1492,23 +1506,49 @@ fun Expression?.unwrapReference(): Reference? {
     }
 }
 
-/** Returns the [TranslationUnitDeclaration] where this node is located in. */
+/**
+ * Returns the [TranslationUnitDeclaration] where this node is located in.
+ *
+ * If this is an [OverlayNode], we start searching in the [OverlayNode.underlyingNode].
+ */
 val Node.translationUnit: TranslationUnitDeclaration?
     get() {
         return this as? TranslationUnitDeclaration
-            ?: firstParentOrNull<TranslationUnitDeclaration>()
+            ?: if (this is OverlayNode) {
+                this.underlyingNode?.firstParentOrNull<TranslationUnitDeclaration>()
+            } else {
+                this.firstParentOrNull<TranslationUnitDeclaration>()
+            }
     }
 
-/** Returns the [TranslationResult] where this node is located in. */
+/**
+ * Returns the [TranslationResult] where this node is located in.
+ *
+ * If this is an [OverlayNode], we start searching in the [OverlayNode.underlyingNode].
+ */
 val Node.translationResult: TranslationResult?
     get() {
-        return this as? TranslationResult ?: firstParentOrNull<TranslationResult>()
+        return this as? TranslationResult
+            ?: if (this is OverlayNode) {
+                this.underlyingNode?.firstParentOrNull<TranslationResult>()
+            } else {
+                this.firstParentOrNull<TranslationResult>()
+            }
     }
 
-/** Returns the [Component] where this node is located in. */
+/**
+ * Returns the [Component] where this node is located in.
+ *
+ * If this is an [OverlayNode], we start searching in the [OverlayNode.underlyingNode].
+ */
 val Node.component: Component?
     get() {
-        return this as? Component ?: firstParentOrNull<Component>()
+        return this as? Component
+            ?: if (this is OverlayNode) {
+                this.underlyingNode?.firstParentOrNull<Component>()
+            } else {
+                this.firstParentOrNull<Component>()
+            }
     }
 
 /**

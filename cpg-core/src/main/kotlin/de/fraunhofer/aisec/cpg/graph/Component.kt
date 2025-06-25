@@ -71,7 +71,7 @@ open class Component : Node() {
      * In contrast to other Nodes we do not add the assumptions collected over the component because
      * we are already the component.
      */
-    override fun collectAssumptions(): Set<Assumption> {
+    override fun relevantAssumptions(): Set<Assumption> {
         return assumptions.toSet()
     }
 
@@ -79,9 +79,9 @@ open class Component : Node() {
      * Returns the top-level directory of this component according to
      * [TranslationConfiguration.topLevels]
      */
-    context(ContextProvider)
+    context(provider: ContextProvider)
     fun topLevel(): File? {
-        return this@ContextProvider.ctx.config.topLevels[this.name.localName]
+        return provider.ctx.config.topLevels[this.name.localName]
     }
 
     /**

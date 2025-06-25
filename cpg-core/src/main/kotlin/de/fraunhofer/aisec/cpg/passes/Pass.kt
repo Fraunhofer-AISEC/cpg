@@ -588,7 +588,7 @@ inline fun <reified T : Pass<*>> Node.markDirty() {
  * Mark the node as clean from the invoked pass. This is used to mark nodes that have been analyzed
  * and do not need to be re-analyzed anymore. The pass is specified by the context parameter.
  */
-context(Pass<*>)
+context(pass: Pass<*>)
 fun Node.markClean() {
-    translationResult?.markClean(this, this@Pass::class)
+    translationResult?.markClean(this, pass::class)
 }

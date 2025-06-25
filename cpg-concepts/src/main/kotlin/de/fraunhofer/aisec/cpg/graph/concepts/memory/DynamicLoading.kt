@@ -97,7 +97,7 @@ open class LoadLibrary(
         os = os,
     ) {
 
-    context(ContextProvider)
+    context(_: ContextProvider)
     /** Looks up symbol candidates for [symbol] in the [LoadLibrary.what]. */
     fun findSymbol(symbol: Symbol?): List<Declaration> {
         if (symbol == null) {

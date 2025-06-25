@@ -171,7 +171,10 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
             val base = callee.base
             val fulfilledPaths: List<NodePath> =
                 base
-                    .followPrevFullDFGEdgesUntilHit(collectFailedPaths = false) {
+                    .followPrevFullDFGEdgesUntilHit(
+                        collectFailedPaths = false,
+                        findAllPossiblePaths = false,
+                    ) {
                         it.overlays.any { overlay ->
                             overlay is LogGet
                         } // we are logging for a node which has a [LogGet] attached to it

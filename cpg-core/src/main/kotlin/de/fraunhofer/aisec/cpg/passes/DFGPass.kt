@@ -310,7 +310,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 node.variable.variables.lastOrNull()?.prevDFGEdges += iterable
                 node.assume(
                     AssumptionType.AmbiguityAssumption,
-                    "We assume that the last VariableDeclaration in the statement kept in \"variable\" is the variable we care about in the ForEachStatement if there is no DeclarationStatement related to $node.\n\n" +
+                    "We assume that the last VariableDeclaration in the statement kept in \"variable\" is the variable we care about in the ForEachStatement if there is no DeclarationStatement related to the iterable.\n\n" +
                         "To verify this assumption, we need to check if the last VariableDeclaration of the variable is indeed the one where we assign the iterable's elements to.",
                 )
             }

@@ -47,6 +47,7 @@ class BinaryOperationResult<LhsValueType : Any?, RhsValueType : Any?>(
         node = node,
         assumptions = mutableSetOf(),
         operator = operator,
+        collectCallerInfo = true,
     ) {
 
     override fun calculateConfidence(): AcceptanceStatus {
