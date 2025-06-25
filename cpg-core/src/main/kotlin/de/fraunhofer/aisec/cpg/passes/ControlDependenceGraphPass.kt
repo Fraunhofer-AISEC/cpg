@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.cyclomaticComplexity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.statements.DoStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
@@ -102,6 +103,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                 startState,
                 startNode,
                 PrevEOGLatticeElement(startNode to PowersetLattice.Element(startNode)),
+                true,
             )
         log.trace("Iterating EOG of {}", startNode)
         var finalState: PrevEOGStateElement
@@ -239,6 +241,7 @@ fun transfer(
     if (
         currentStart is BranchingNode ||
             currentStart is ComprehensionExpression ||
+            currentStart is DoStatement ||
             currentStart.astParent is
                 ComprehensionExpression && // TODO: May be simplified when resolving issue 2027
                 currentStart == (currentStart.astParent as ComprehensionExpression).iterable
@@ -253,8 +256,8 @@ fun transfer(
 
         val map = PrevEOGLatticeElement(currentStart to PowersetLattice.Element(currentEnd))
 
-        val newPath = lattice.innerLattice.lub(map, prevPathLattice, false)
-        newState = lattice.push(newState, currentEnd, newPath)
+        val newPath = lattice.innerLattice.lub(map, prevPathLattice, true)
+        newState = lattice.push(newState, currentEnd, newPath, true)
     } else {
         // We did not start in a branching node, so for the next node, we have the same path
         // (last branching + first end node) as for the start node of this edge.
@@ -264,7 +267,7 @@ fun transfer(
         val state =
             newState[currentStart]?.let { PrevEOGLatticeElement(it) }
                 ?: PrevEOGLatticeElement(currentStart to PowersetLattice.Element(currentEnd))
-        newState = lattice.push(newState, currentEnd, state)
+        newState = lattice.push(newState, currentEnd, state, true)
     }
     return newState
 }
@@ -287,6 +290,7 @@ private fun EvaluationOrder.isConditionalBranch(): Boolean {
         true
     } else
         (this.start is IfStatement ||
+            this.start is DoStatement ||
             this.start is ComprehensionExpression ||
             (this.start.astParent is ComprehensionExpression &&
                 this.start == (this.start.astParent as ComprehensionExpression).iterable) ||
@@ -336,6 +340,7 @@ fun PrevEOGState.push(
     currentElement: PrevEOGStateElement,
     newNode: Node,
     newEOGLattice: PrevEOGLatticeElement,
+    allowModify: Boolean,
 ): PrevEOGStateElement {
-    return this.lub(currentElement, PrevEOGStateElement(newNode to newEOGLattice), true)
+    return this.lub(currentElement, PrevEOGStateElement(newNode to newEOGLattice), allowModify)
 }
