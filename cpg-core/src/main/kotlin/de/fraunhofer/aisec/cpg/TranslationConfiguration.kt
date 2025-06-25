@@ -569,7 +569,7 @@ private constructor(
             registerPass<DynamicInvokeResolver>()
             registerPass<EvaluationOrderGraphPass>() // creates EOG
             registerPass<TypeResolver>()
-            registerPass<PointsToPass>()
+            registerPass<ControlFlowSensitiveDFGPass>()
             registerPass<ResolveCallExpressionAmbiguityPass>()
             registerPass<ResolveMemberExpressionAmbiguityPass>()
             useDefaultPasses = true
