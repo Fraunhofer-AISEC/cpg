@@ -229,7 +229,7 @@ open class FunctionDeclaration :
     /** This returns a simple heuristic for the complexity of a function declaration. */
     val complexity: Int
         get() {
-            return this.body?.cyclomaticComplexity ?: 0
+            return this.body?.cyclomaticComplexity(0) ?: 0
         }
 
     override val secondaryTypes: List<Type>
@@ -273,49 +273,42 @@ open class FunctionDeclaration :
 }
 
 /** This is a very basic implementation of Cyclomatic Complexity. */
-val Statement.cyclomaticComplexity: Int
-    get() {
-        var i = 0
-        for (stmt in (this as? StatementHolder)?.statements ?: listOf(this)) {
-            when (stmt) {
-                is ForEachStatement -> {
-                    // add one and include the children
-                    i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
-                }
-                is ForStatement -> {
-                    // add one and include the children
-                    i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
-                }
-                is IfStatement -> {
-                    // add one for each branch (and include the children)
-                    stmt.thenStatement?.let { i += it.cyclomaticComplexity + 1 }
-                    stmt.elseStatement?.let { i += it.cyclomaticComplexity + 1 }
-                }
-                is SwitchStatement -> {
-                    // forward it to the block containing the case statements
-                    stmt.statement?.let { i += it.cyclomaticComplexity }
-                }
-                is CaseStatement -> {
-                    // add one for each branch (and include the children)
-                    stmt.caseExpression?.let { i += it.cyclomaticComplexity }
-                }
-                is DoStatement -> {
-                    // add one for the do statement (and include the children)
-                    i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
-                }
-                is WhileStatement -> {
-                    // add one for the while statement (and include the children)
-                    i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
-                }
-                is GotoStatement -> {
-                    // add one
-                    i++
-                }
-                is StatementHolder -> {
-                    i += stmt.cyclomaticComplexity
-                }
+fun Statement.cyclomaticComplexity(depth: Int = 1): Int {
+    var i = 0
+    for (stmt in (this as? StatementHolder)?.statements ?: listOf(this)) {
+        when (stmt) {
+            is ForEachStatement,
+            is ForStatement -> {
+                // add one and include the children
+                i += depth * ((stmt.statement?.cyclomaticComplexity(depth + 1) ?: 0) + 1)
+            }
+            is IfStatement -> {
+                // add one for each branch (and include the children)
+                stmt.thenStatement?.let { i += depth * (it.cyclomaticComplexity(depth + 1) + 1) }
+                stmt.elseStatement?.let { i += depth * (it.cyclomaticComplexity(depth + 1) + 1) }
+            }
+            is SwitchStatement -> {
+                // forward it to the block containing the case statements
+                stmt.statement?.let { i += depth * it.cyclomaticComplexity(depth + 1) }
+            }
+            is CaseStatement -> {
+                // add one for each branch (and include the children)
+                stmt.caseExpression?.let { i += depth * it.cyclomaticComplexity(depth + 1) }
+            }
+            is DoStatement,
+            is WhileStatement -> {
+                // add one for the do statement (and include the children)
+                i += depth * ((stmt.statement?.cyclomaticComplexity(depth + 1) ?: 0) + 1)
+            }
+            is GotoStatement -> {
+                // add one
+                i += depth
+            }
+            is StatementHolder -> {
+                i += depth * stmt.cyclomaticComplexity(depth)
             }
         }
-
-        return i
     }
+
+    return i
+}

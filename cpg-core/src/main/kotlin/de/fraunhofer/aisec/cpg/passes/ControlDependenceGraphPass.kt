@@ -82,7 +82,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             return
         }
         val max = passConfig<Configuration>()?.maxComplexity
-        val c = startNode.body?.cyclomaticComplexity ?: 0
+        val c = startNode.body?.cyclomaticComplexity() ?: 0
         if (max != null && c > max) {
             log.info(
                 "Ignoring function ${startNode.name} because its complexity (${c}) is greater than the configured maximum (${max})"
