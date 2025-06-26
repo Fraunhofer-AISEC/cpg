@@ -111,7 +111,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             )
         log.trace("Iterating EOG of {}", startNode)
         var finalState: PrevEOGStateElement
-        val executionTime = measureTimeMillis {
+        val eogIterationTime = measureTimeMillis {
             finalState = prevEOGState.iterateEOG(startNode.nextEOGEdges, startState, ::transfer)
         }
         log.info("[CDG] Done iterating EOG for {}. Generating the edges now.", startNode.name)
@@ -126,55 +126,67 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             }
         }
 
-        // Collect the information, identify merge points, etc. This is not really efficient yet :(
-        for ((node, dominatorPaths) in finalState) {
-            val dominatorsList =
-                dominatorPaths.entries.map { (k, v) -> Pair(k, v.toMutableSet()) }.toMutableList()
+        val afterworkTime = measureTimeMillis {
+            // Collect the information, identify merge points, etc. This is not really efficient yet
+            // :(
+            for ((node, dominatorPaths) in finalState) {
+                val dominatorsList =
+                    dominatorPaths.entries
+                        .map { (k, v) -> Pair(k, v.toMutableSet()) }
+                        .toMutableList()
 
-            dominatorPaths.entries.forEach { (dominator, _) ->
-                // Check if the dominator and this node share a common dominator. That one should be
-                // removed from the current list.
-                val dominatorDominators = finalState[dominator]
-                dominatorsList.removeIf { (k, v) ->
-                    dominatorDominators?.any { k == it.key && v == it.value } == true
-                }
-            }
-
-            if (dominatorsList.isEmpty()) {
-                // No dominators left, so we add the start node.
-                dominatorsList.add(startNode to mutableSetOf(startNode))
-            }
-
-            // We have all the dominators of this node and potentially traversed the graph
-            // "upwards". Add the CDG edges
-            dominatorsList
-                .filter { (k, _) -> k != node }
-                .forEach { (k, v) ->
-                    val branchesSet =
-                        k.nextEOGEdges
-                            .filter { edge -> edge.end in v }
-                            .mapNotNull { it.branch }
-                            .toSet()
-
-                    node.prevCDGEdges.add(k) {
-                        branches =
-                            when {
-                                branchesSet.isNotEmpty() -> {
-                                    branchesSet
-                                }
-                                k is IfStatement &&
-                                    (branchingNodeConditionals[k]?.size ?: 0) >
-                                        1 -> { // Note: branchesSet must be empty here The if
-                                    // statement has only a then branch but there's a way
-                                    // to "jump out" of this branch. In this case, we
-                                    // want to set the false property here.
-                                    setOf(false)
-                                }
-                                else -> setOf()
-                            }
+                dominatorPaths.entries.forEach { (dominator, _) ->
+                    // Check if the dominator and this node share a common dominator. That one
+                    // should be
+                    // removed from the current list.
+                    val dominatorDominators = finalState[dominator]
+                    dominatorsList.removeIf { (k, v) ->
+                        dominatorDominators?.any { k == it.key && v == it.value } == true
                     }
                 }
+
+                if (dominatorsList.isEmpty()) {
+                    // No dominators left, so we add the start node.
+                    dominatorsList.add(startNode to mutableSetOf(startNode))
+                }
+
+                // We have all the dominators of this node and potentially traversed the graph
+                // "upwards". Add the CDG edges
+                dominatorsList
+                    .filter { (k, _) -> k != node }
+                    .forEach { (k, v) ->
+                        val branchesSet =
+                            k.nextEOGEdges
+                                .filter { edge -> edge.end in v }
+                                .mapNotNull { it.branch }
+                                .toSet()
+
+                        node.prevCDGEdges.add(k) {
+                            branches =
+                                when {
+                                    branchesSet.isNotEmpty() -> {
+                                        branchesSet
+                                    }
+
+                                    k is IfStatement &&
+                                        (branchingNodeConditionals[k]?.size ?: 0) >
+                                            1 -> { // Note: branchesSet must be empty here The if
+                                        // statement has only a then branch but there's a way
+                                        // to "jump out" of this branch. In this case, we
+                                        // want to set the false property here.
+                                        setOf(false)
+                                    }
+
+                                    else -> setOf()
+                                }
+                        }
+                    }
+            }
         }
+
+        log.info(
+            "[CDG] Done evaluating function ${startNode.name}. Complexity: $c; eogIterationTime: $eogIterationTime; afterworkTime: $afterworkTime"
+        )
     }
 
     /*
