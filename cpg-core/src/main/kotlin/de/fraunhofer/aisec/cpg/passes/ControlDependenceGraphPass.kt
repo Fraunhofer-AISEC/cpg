@@ -43,6 +43,8 @@ import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import java.text.NumberFormat
+import java.util.Locale
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.system.measureTimeMillis
@@ -85,11 +87,13 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         val c = startNode.body?.cyclomaticComplexity() ?: 0
         if (max != null && c > max) {
             log.info(
-                "Ignoring function ${startNode.name} because its complexity (${c}) is greater than the configured maximum (${max})"
+                "Ignoring function ${startNode.name} because its complexity (${NumberFormat.getNumberInstance(Locale.US).format(c)}) is greater than the configured maximum (${max})"
             )
             return
         }
-        log.info("[CDG] Analyzing function ${startNode.name}. Complexity: $c")
+        log.info(
+            "[CDG] Analyzing function ${startNode.name}. Complexity: ${NumberFormat.getNumberInstance(Locale.US).format(c)}"
+        )
 
         val prevEOGState =
             PrevEOGState(innerLattice = PrevEOGLattice(innerLattice = PowersetLattice()))

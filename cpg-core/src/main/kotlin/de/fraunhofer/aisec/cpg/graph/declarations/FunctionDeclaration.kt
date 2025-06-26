@@ -227,9 +227,9 @@ open class FunctionDeclaration :
         }
 
     /** This returns a simple heuristic for the complexity of a function declaration. */
-    val complexity: Int
+    val complexity: Long
         get() {
-            return this.body?.cyclomaticComplexity(0) ?: 0
+            return this.body?.cyclomaticComplexity(0) ?: 0L
         }
 
     override val secondaryTypes: List<Type>
@@ -273,8 +273,8 @@ open class FunctionDeclaration :
 }
 
 /** This is a very basic implementation of Cyclomatic Complexity. */
-fun Statement.cyclomaticComplexity(depth: Int = 1): Int {
-    var i = 0
+fun Statement.cyclomaticComplexity(depth: Int = 1): Long {
+    var i: Long = 0
     for (stmt in (this as? StatementHolder)?.statements ?: listOf(this)) {
         when (stmt) {
             is ForEachStatement,

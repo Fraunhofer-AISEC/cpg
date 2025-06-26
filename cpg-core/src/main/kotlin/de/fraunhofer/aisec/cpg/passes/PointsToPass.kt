@@ -42,6 +42,8 @@ import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import java.text.NumberFormat
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.Pair
 import kotlin.collections.filter
@@ -224,14 +226,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val c = node.body?.cyclomaticComplexity() ?: 0
         if (max != null && c > max) {
             log.info(
-                "Ignoring function ${node.name} because its complexity (${c}) is greater than the configured maximum (${max})"
+                "Ignoring function ${node.name} because its complexity (${NumberFormat.getNumberInstance(Locale.US).format(c)}) is greater than the configured maximum (${max})"
             )
             // Add an empty function Summary so that we don't try again
             node.functionSummary.computeIfAbsent(ReturnStatement()) { mutableSetOf() }
             return
         }
 
-        log.info("Analyzing function ${node.name}. Complexity: $c")
+        log.info(
+            "Analyzing function ${node.name}. Complexity: ${NumberFormat.getNumberInstance(Locale.US).format(c)}"
+        )
 
         val lattice =
             PointsToState(
