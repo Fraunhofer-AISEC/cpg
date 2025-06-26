@@ -279,33 +279,33 @@ fun Statement.cyclomaticComplexity(depth: Int = 1): Long {
         when (stmt) {
             is ForEachStatement,
             is ForStatement -> {
-                // add one and include the children
+                // add the depth and include the children
                 i += depth * ((stmt.statement?.cyclomaticComplexity(depth + 1) ?: 0) + 1)
             }
             is IfStatement -> {
-                // add one for each branch (and include the children)
-                stmt.thenStatement?.let { i += depth * (it.cyclomaticComplexity(depth + 1) + 1) }
-                stmt.elseStatement?.let { i += depth * (it.cyclomaticComplexity(depth + 1) + 1) }
+                // add the depth for each branch (and include the children)
+                stmt.thenStatement?.let { i += depth + it.cyclomaticComplexity(depth + 1) }
+                stmt.elseStatement?.let { i += depth + it.cyclomaticComplexity(depth + 1) }
             }
             is SwitchStatement -> {
                 // forward it to the block containing the case statements
-                stmt.statement?.let { i += depth * it.cyclomaticComplexity(depth + 1) }
+                stmt.statement?.let { i += depth + it.cyclomaticComplexity(depth + 1) }
             }
             is CaseStatement -> {
-                // add one for each branch (and include the children)
-                stmt.caseExpression?.let { i += depth * it.cyclomaticComplexity(depth + 1) }
+                // add the depth for each branch (and include the children)
+                stmt.caseExpression?.let { i += depth + it.cyclomaticComplexity(depth + 1) }
             }
             is DoStatement,
             is WhileStatement -> {
                 // add one for the do statement (and include the children)
-                i += depth * ((stmt.statement?.cyclomaticComplexity(depth + 1) ?: 0) + 1)
+                i += depth + ((stmt.statement?.cyclomaticComplexity(depth + 1) ?: 0))
             }
             is GotoStatement -> {
-                // add one
+                // add the depth
                 i += depth
             }
             is StatementHolder -> {
-                i += depth * stmt.cyclomaticComplexity(depth)
+                i += depth + stmt.cyclomaticComplexity(depth + 1)
             }
         }
     }
