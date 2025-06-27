@@ -169,7 +169,7 @@ private fun isGlobal(node: Node): Boolean {
 
 // We also need a place to store the derefs of global variables. The Boolean indicates if this is a
 // value stored for a short function Summary
-var globalDerefs = mutableMapOf<Node, IdentitySet<Pair<Node, Boolean>>>()
+var globalDerefs = mutableMapOf<Node, PowersetLattice.Element<Pair<Node, Boolean>>>()
 
 @DependsOn(SymbolResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
@@ -1022,7 +1022,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     it.propertySet.any { it is PartialDataflowGranularity<*> },
                 )
             }
-        val lastWrites: IdentitySet<Pair<Node, EqualLinkedHashSet<Any>>> = identitySetOf()
+        val lastWrites = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
         val destinations = identitySetOf<Node>()
 
         values.forEach { value ->
@@ -1418,7 +1418,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val destinationsAddresses =
                 destinations.flatMapTo(IdentitySet()) { doubleState.getAddresses(it, it) }
             val lastWrites =
-                destinations.mapTo(IdentitySet()) { Pair(it, equalLinkedHashSetOf<Any>(false)) }
+                destinations.mapTo(PowersetLattice.Element()) {
+                    Pair(it, equalLinkedHashSetOf<Any>(false))
+                }
             doubleState =
                 doubleState.updateValues(
                     lattice,
@@ -1834,26 +1836,26 @@ data class fetchElementFromDeclarationStateEntry(
     val value: Node,
     val shortFS: Boolean,
     val subAccessName: String,
-    val lastWrites: IdentitySet<Pair<Node, EqualLinkedHashSet<Any>>>,
+    val lastWrites: PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
 )
 
 /** Fetch the address for `node` from the GeneralState */
 fun PointsToStateElement.fetchAddressFromGeneralState(node: Node): IdentitySet<Node> {
-    return this.generalState[node]?.first ?: identitySetOf()
+    return this.generalState[node]?.first ?: PowersetLattice.Element()
 }
 
 /** Fetch the value for `node` from the GeneralState */
 fun PointsToStateElement.fetchValueFromGeneralState(
     node: Node
-): IdentitySet<Pair<Node, EqualLinkedHashSet<Any>>> {
-    return this.generalState[node]?.second ?: identitySetOf()
+): PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>> {
+    return this.generalState[node]?.second ?: PowersetLattice.Element()
 }
 
 /** Fetch the lastWrite for `node` from the GeneralState */
 fun PointsToStateElement.fetchLastWriteFromGeneralState(
     node: Node
-): IdentitySet<Pair<Node, EqualLinkedHashSet<Any>>> {
-    return this.generalState[node]?.third ?: identitySetOf()
+): PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>> {
+    return this.generalState[node]?.third ?: PowersetLattice.Element()
 }
 
 /**
@@ -1872,7 +1874,14 @@ fun PointsToStateElement.fetchValueFromDeclarationState(
         val element = globalDerefs[node]
         if (element != null)
             element.map {
-                ret.add(fetchElementFromDeclarationStateEntry(it.first, false, "", identitySetOf()))
+                ret.add(
+                    fetchElementFromDeclarationStateEntry(
+                        it.first,
+                        false,
+                        "",
+                        PowersetLattice.Element(),
+                    )
+                )
             }
         else {
             val newName = getNodeName(node)
@@ -1881,8 +1890,15 @@ fun PointsToStateElement.fetchValueFromDeclarationState(
                     UnknownMemoryValue(newName, true)
                 }
             // TODO: Check if the boolean should be true sometimes
-            globalDerefs[node] = identitySetOf(Pair(newEntry, false))
-            ret.add(fetchElementFromDeclarationStateEntry(newEntry, false, "", identitySetOf()))
+            globalDerefs[node] = PowersetLattice.Element(Pair(newEntry, false))
+            ret.add(
+                fetchElementFromDeclarationStateEntry(
+                    newEntry,
+                    false,
+                    "",
+                    PowersetLattice.Element(),
+                )
+            )
         }
     } else {
 
@@ -1912,7 +1928,14 @@ fun PointsToStateElement.fetchValueFromDeclarationState(
             ) {
                 newElements?.add(newPair)
             }
-            ret.add(fetchElementFromDeclarationStateEntry(newEntry, false, "", identitySetOf()))
+            ret.add(
+                fetchElementFromDeclarationStateEntry(
+                    newEntry,
+                    false,
+                    "",
+                    PowersetLattice.Element(),
+                )
+            )
         } else
             elements.map {
                 ret.add(
@@ -1920,7 +1943,7 @@ fun PointsToStateElement.fetchValueFromDeclarationState(
                         it.first,
                         it.second,
                         "",
-                        this.declarationsState[node]?.third ?: identitySetOf(),
+                        this.declarationsState[node]?.third ?: PowersetLattice.Element(),
                     )
                 )
             }
@@ -1943,7 +1966,8 @@ fun PointsToStateElement.fetchValueFromDeclarationState(
                                     it.first,
                                     it.second,
                                     field.name.localName,
-                                    this.declarationsState[field]?.third ?: identitySetOf(),
+                                    this.declarationsState[field]?.third
+                                        ?: PowersetLattice.Element(),
                                 )
                             )
                         }
@@ -2061,14 +2085,19 @@ fun PointsToStateElement.getLastWrites(
     }
 }
 
-fun PointsToStateElement.getValues(node: Node, startNode: Node): IdentitySet<Pair<Node, Boolean>> {
+fun PointsToStateElement.getValues(
+    node: Node,
+    startNode: Node,
+): PowersetLattice.Element<Pair<Node, Boolean>> {
     return when (node) {
         is PointerReference -> {
             /*
              * For PointerReferences, the value is the address of the input
              * For example, the value of `&i` is the address of `i`
              */
-            fetchAddressFromGeneralState(node.input).mapTo(IdentitySet()) { Pair(it, false) }
+            fetchAddressFromGeneralState(node.input).mapTo(PowersetLattice.Element()) {
+                Pair(it, false)
+            }
             //            this.getAddresses(node.input, startNode).mapTo(IdentitySet()) { Pair(it,
             // false) }
         }
@@ -2077,12 +2106,12 @@ fun PointsToStateElement.getValues(node: Node, startNode: Node): IdentitySet<Pai
              * Then we look up the current value at this MemoryAddress
              */
             val inputVals = this.fetchValueFromGeneralState(node.input).map { it.first }
-            val retVal = identitySetOf<Pair<Node, Boolean>>()
+            val retVal = PowersetLattice.Element<Pair<Node, Boolean>>()
             /* If the node is not the same as the startNode, we should have already assigned a value, so we fetch it from the generalstate */
             if (node != startNode && node !in startNode.astChildren)
                 inputVals.forEach {
                     retVal.addAll(
-                        fetchValueFromGeneralState(it).mapTo(IdentitySet()) {
+                        fetchValueFromGeneralState(it).mapTo(PowersetLattice.Element()) {
                             Pair(it.first, true in it.second)
                         }
                     )
@@ -2090,7 +2119,9 @@ fun PointsToStateElement.getValues(node: Node, startNode: Node): IdentitySet<Pai
             else {
                 inputVals.forEach { input ->
                     retVal.addAll(
-                        fetchValueFromDeclarationState(input, true).map {
+                        fetchValueFromDeclarationState(input, true).mapTo(
+                            PowersetLattice.Element()
+                        ) {
                             Pair(it.value, it.shortFS)
                         }
                     )
@@ -2108,18 +2139,20 @@ fun PointsToStateElement.getValues(node: Node, startNode: Node): IdentitySet<Pai
                 .flatMap { fetchValueFromDeclarationState(it) }
                 .map { it.value }
                 //                .toIdentitySet()
-                .mapTo(IdentitySet()) { Pair(it, false) }
+                .mapTo(PowersetLattice.Element()) { Pair(it, false) }
         }
         is MemoryAddress,
         is CallExpression -> {
-            fetchValueFromDeclarationState(node).mapTo(IdentitySet()) { Pair(it.value, it.shortFS) }
+            fetchValueFromDeclarationState(node).mapTo(PowersetLattice.Element()) {
+                Pair(it.value, it.shortFS)
+            }
         }
         is MemberExpression -> {
             val (base, fieldName) = resolveMemberExpression(node)
             val baseAddresses = getAddresses(base, startNode)
             val fieldAddresses = fetchFieldAddresses(baseAddresses, fieldName)
             if (fieldAddresses.isNotEmpty()) {
-                val retVal = identitySetOf<Pair<Node, Boolean>>()
+                val retVal = PowersetLattice.Element<Pair<Node, Boolean>>()
                 fieldAddresses.forEach { fa ->
                     if (hasDeclarationStateEntry(fa)) {
                         fetchValueFromDeclarationState(fa).map {
@@ -2138,7 +2171,7 @@ fun PointsToStateElement.getValues(node: Node, startNode: Node): IdentitySet<Pai
                 return retVal
             } else {
                 val newName = Name(getNodeName(node).localName, base.name)
-                identitySetOf(
+                PowersetLattice.Element(
                     Pair(
                         nodesCreatingUnknownValues.computeIfAbsent(Pair(node, newName)) {
                             UnknownMemoryValue(newName)
@@ -2151,12 +2184,12 @@ fun PointsToStateElement.getValues(node: Node, startNode: Node): IdentitySet<Pai
         is Reference -> {
             /* If the node is not the same as the startNode, we should have already assigned a value to the reference, so we fetch it from the generalstate */
             if (node != startNode && node !in startNode.astChildren)
-                return fetchValueFromGeneralState(node).mapTo(IdentitySet()) {
+                return fetchValueFromGeneralState(node).mapTo(PowersetLattice.Element()) {
                     Pair(it.first, true in it.second)
                 }
 
             /* Otherwise, we have to look up the last value written to the reference's declaration. */
-            val retVals = identitySetOf<Pair<Node, Boolean>>()
+            val retVals = PowersetLattice.Element<Pair<Node, Boolean>>()
             this.getAddresses(node, startNode).forEach { addr ->
                 // For globals fetch the values from the globalDeref map
                 if (isGlobal(node))
@@ -2186,9 +2219,11 @@ fun PointsToStateElement.getValues(node: Node, startNode: Node): IdentitySet<Pai
             this.getValues(node.expression, startNode)
         }
         is SubscriptExpression -> {
-            this.getAddresses(node, startNode).flatMap { this.getValues(it, it) }.toIdentitySet()
+            this.getAddresses(node, startNode).flatMapTo(PowersetLattice.Element()) {
+                this.getValues(it, it)
+            }
         }
-        else -> identitySetOf(Pair(node, false))
+        else -> PowersetLattice.Element(Pair(node, false))
     }
 }
 
@@ -2299,10 +2334,10 @@ fun PointsToStateElement.getNestedValues(
     fetchFields: Boolean = false,
     onlyFetchExistingEntries: Boolean = false,
     excludeShortFSValues: Boolean = false,
-): IdentitySet<Pair<Node, Boolean>> {
-    if (nestingDepth == -1) return identitySetOf(Pair(node, false))
+): PowersetLattice.Element<Pair<Node, Boolean>> {
+    if (nestingDepth == -1) return PowersetLattice.Element(Pair(node, false))
     if (nestingDepth == 0)
-        return this.getAddresses(node, node).mapTo(IdentitySet()) { Pair(it, false) }
+        return this.getAddresses(node, node).mapTo(PowersetLattice.Element()) { Pair(it, false) }
     var ret =
         if (
             node !is PointerReference &&
@@ -2311,14 +2346,16 @@ fun PointsToStateElement.getNestedValues(
                     this.hasDeclarationStateEntry(addr, excludeShortFSValues)
                 }
         )
-            identitySetOf()
+            PowersetLattice.Element()
         else
-            getValues(node, node).filterTo(IdentitySet()) { /*it.second != excludeShortFSValues*/
+            getValues(node, node).filterTo(
+                PowersetLattice.Element()
+            ) { /*it.second != excludeShortFSValues*/
                 if (excludeShortFSValues) !it.second else true
             }
     for (i in 1..<nestingDepth) {
         ret =
-            ret.filterTo(identitySetOf()) {
+            ret.filterTo(PowersetLattice.Element()) {
                     if (onlyFetchExistingEntries)
                         this.hasDeclarationStateEntry(it.first, excludeShortFSValues)
                     else true
@@ -2326,7 +2363,7 @@ fun PointsToStateElement.getNestedValues(
                 .flatMap {
                     this.fetchValueFromDeclarationState(it.first, fetchFields, excludeShortFSValues)
                 }
-                .mapTo(IdentitySet()) { Pair(it.value, it.shortFS) }
+                .mapTo(PowersetLattice.Element()) { Pair(it.value, it.shortFS) }
     }
     return ret
 }
@@ -2381,7 +2418,7 @@ fun PointsToStateElement.updateValues(
     destinations: IdentitySet<Node>,
     // Node and short FS yes or no
     destinationAddresses: IdentitySet<Node>,
-    lastWrites: IdentitySet<Pair<Node, EqualLinkedHashSet<Any>>>,
+    lastWrites: PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
 ): PointsToStateElement {
     var doubleState = doubleState
 
@@ -2393,18 +2430,17 @@ fun PointsToStateElement.updateValues(
 
             // If we want to update the State with exactly the same elements as are already in the
             // state, we do nothing in order not to confuse the iterateEOG function
-            val newSources: IdentitySet<Pair<Node, Boolean>> =
+            val newSources: PowersetLattice.Element<Pair<Node, Boolean>> =
                 sources
-                    .mapTo(IdentitySet()) { triple ->
+                    .mapTo(PowersetLattice.Element()) { triple ->
                         val existingPair =
                             this.declarationsState[destAddr]?.second?.firstOrNull {
                                 it.first === triple.first && it.second == triple.second
                             }
                         existingPair ?: Pair(triple.first, triple.second)
                     }
-                    .filterTo(IdentitySet()) { it.first != null }
-                    .map { Pair(it.first!!, it.second) }
-                    .toIdentitySet()
+                    .filterTo(PowersetLattice.Element()) { it.first != null }
+                    .mapTo(PowersetLattice.Element()) { Pair(it.first!!, it.second) }
 
             // Check if we have any full writes
             val fullSourcesExist = sources.any { !it.third }
@@ -2414,7 +2450,7 @@ fun PointsToStateElement.updateValues(
             lastWrites.mapTo(IdentitySet()) { Pair(it, false) }*/
             // If we already have exactly this value in the state for the prevDFGs, we take that in
             // order not to confuse the iterateEOG function
-            val prevDFG = identitySetOf<Pair<Node, EqualLinkedHashSet<Any>>>()
+            val prevDFG = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
             lastWrites.forEach { lw ->
                 val existingEntries =
                     doubleState.declarationsState[destAddr]?.third?.filter { entry ->
