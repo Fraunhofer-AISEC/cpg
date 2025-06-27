@@ -342,7 +342,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // function. Wouldn't the edges better point to the FunctionDeclaration and in a
             // case with a body, all returns flow to the FunctionDeclaration too?
             // TODO: Also add possible dereference values to the input?
-            val prevDFGs = identitySetOf<Pair<Node, EqualLinkedHashSet<Any>>>()
+            val prevDFGs = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
             val newEntries =
                 mutableSetOf(FunctionDeclaration.FSEntry(0, functionDeclaration, 1, ""))
             functionDeclaration.parameters.forEach { param ->
@@ -449,7 +449,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             // "derefdereferences"
             values
                 .filterTo(identitySetOf()) { doubleState.hasDeclarationStateEntry(it) }
-                .flatMap { doubleState.getValues(it, it).mapTo(IdentitySet()) { it.first } }
+                .flatMap {
+                    doubleState.getValues(it, it).mapTo(PowersetLattice.Element()) { it.first }
+                }
                 .forEach { value ->
                     if (doubleState.hasDeclarationStateEntry(value)) indexes.add(Pair(value, 3))
                 }
@@ -457,13 +459,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             indexes.forEach { (index, dstValueDepth) ->
                 val stateEntries =
                     doubleState.fetchValueFromDeclarationState(index, true, true).filterTo(
-                        identitySetOf()
+                        PowersetLattice.Element()
                     ) {
                         it.value.name != param.name
                     }
                 stateEntries
                     /* See if we can find something that is different from the initial value*/
-                    .filterTo(identitySetOf()) {
+                    .filterTo(PowersetLattice.Element()) {
                         /* Filter the PMVs from this parameter*/
                         !(it.value is ParameterMemoryValue &&
                             it.value.name.localName.contains("derefvalue") &&
@@ -712,7 +714,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     (arg.type as? PointerType)?.pointerOrigin ==
                                         PointerType.PointerOrigin.ARRAY
                                 )
-                                    identitySetOf(Pair(arg, true))
+                                    PowersetLattice.Element(Pair(arg, true))
                                 else
                                     doubleState.getNestedValues(
                                         arg,
@@ -795,10 +797,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             .forEach { (derefderefValue, _) ->
                                                 val lastDerefDerefWrites =
                                                     argDerefVals
-                                                        .flatMapTo(IdentitySet()) {
+                                                        .flatMapTo(PowersetLattice.Element()) {
                                                             doubleState.getLastWrites(it)
                                                         }
-                                                        .mapTo(IdentitySet()) {
+                                                        .mapTo(PowersetLattice.Element()) {
                                                             Pair(
                                                                 it.first,
                                                                 equalLinkedHashSetOf<Any>(
@@ -1015,7 +1017,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // A triple: the sourceNode, a flag if this is a shortFS, and a flag if this is a
         // partialWrite
         val sources =
-            values.mapTo(IdentitySet()) {
+            values.mapTo(PowersetLattice.Element()) {
                 Triple(
                     it.srcNode,
                     true in it.propertySet,
@@ -1229,15 +1231,15 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 destinationAddresses.filterNotNull().forEach { d ->
                     val currentSet = mapDstToSrc.computeIfAbsent(d) { identitySetOf() }
                     val newSet =
-                        if (srcValueDepth == 0) identitySetOf(Pair(srcNode, shortFS))
+                        if (srcValueDepth == 0) PowersetLattice.Element(Pair(srcNode, shortFS))
                         else
                             srcNode?.let {
                                 doubleState.getNestedValues(it, srcValueDepth).mapTo(
-                                    IdentitySet()
+                                    PowersetLattice.Element()
                                 ) {
                                     Pair(it.first, shortFS)
                                 }
-                            } ?: identitySetOf(Pair(srcNode, shortFS))
+                            } ?: PowersetLattice.Element(Pair(srcNode, shortFS))
 
                     newSet.forEach { pair ->
                         if (
@@ -1389,7 +1391,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 GeneralStateEntryElement(
                     PowersetLattice.Element(doubleState.getAddresses(currentNode, currentNode)),
                     PowersetLattice.Element(
-                        doubleState.getValues(currentNode, currentNode).mapTo(IdentitySet()) {
+                        doubleState.getValues(currentNode, currentNode).mapTo(
+                            PowersetLattice.Element()
+                        ) {
                             Pair(it.first, equalLinkedHashSetOf())
                         }
                     ),
@@ -1411,7 +1415,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
          */
         if (currentNode.lhs.size == 1 && currentNode.rhs.size == 1) {
             val sources =
-                currentNode.rhs.flatMapTo(IdentitySet<Triple<Node?, Boolean, Boolean>>()) {
+                currentNode.rhs.flatMapTo(
+                    PowersetLattice.Element<Triple<Node?, Boolean, Boolean>>()
+                ) {
                     doubleState.getValues(it, it).map { Triple(it.first, it.second, false) }
                 }
             val destinations: IdentitySet<Node> = currentNode.lhs.toIdentitySet()
@@ -1586,7 +1592,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         else -> handleExpression(lattice, ini, doubleState)
                     }
                 values.addAll(
-                    doubleState.getValues(ini, ini).mapTo(IdentitySet()) {
+                    doubleState.getValues(ini, ini).mapTo(PowersetLattice.Element()) {
                         Pair(it.first, equalLinkedHashSetOf())
                     }
                 )
@@ -1613,7 +1619,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     DeclarationStateEntryElement(
                         PowersetLattice.Element(addresses),
                         PowersetLattice.Element(
-                            values.mapTo(IdentitySet()) { Pair(it.first, false) }
+                            values.mapTo(PowersetLattice.Element()) { Pair(it.first, false) }
                         ),
                         PowersetLattice.Element(Pair(currentNode, equalLinkedHashSetOf<Any>(false))),
                     ),
@@ -2098,8 +2104,6 @@ fun PointsToStateElement.getValues(
             fetchAddressFromGeneralState(node.input).mapTo(PowersetLattice.Element()) {
                 Pair(it, false)
             }
-            //            this.getAddresses(node.input, startNode).mapTo(IdentitySet()) { Pair(it,
-            // false) }
         }
         is PointerDereference -> {
             /* To find the value for PointerDereferences, we first fetch the values form its input from the generalstate, which is probably a MemoryAddress
@@ -2138,7 +2142,6 @@ fun PointsToStateElement.getValues(
             node.memoryAddresses
                 .flatMap { fetchValueFromDeclarationState(it) }
                 .map { it.value }
-                //                .toIdentitySet()
                 .mapTo(PowersetLattice.Element()) { Pair(it, false) }
         }
         is MemoryAddress,
@@ -2414,7 +2417,7 @@ fun PointsToStateElement.fetchFieldAddresses(
 fun PointsToStateElement.updateValues(
     lattice: PointsToState,
     doubleState: PointsToStateElement,
-    sources: IdentitySet<Triple<Node?, Boolean, Boolean>>,
+    sources: PowersetLattice.Element<Triple<Node?, Boolean, Boolean>>,
     destinations: IdentitySet<Node>,
     // Node and short FS yes or no
     destinationAddresses: IdentitySet<Node>,
@@ -2506,7 +2509,7 @@ fun PointsToStateElement.updateValues(
                         PowersetLattice.Element(
                             sources
                                 .filter { it.first != null }
-                                .mapTo(IdentitySet()) {
+                                .mapTo(PowersetLattice.Element()) {
                                     Pair(it.first!!, equalLinkedHashSetOf(it.second))
                                 }
                         ),
