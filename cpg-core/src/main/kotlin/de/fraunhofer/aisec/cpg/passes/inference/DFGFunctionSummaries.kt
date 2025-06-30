@@ -52,6 +52,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnknownMemoryValue
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.equalLinkedHashSetOf
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.matchesSignature
@@ -382,7 +383,7 @@ class DFGFunctionSummaries {
                                 from,
                                 srcValueDepth,
                                 "",
-                                equalLinkedHashSetOf(Pair(destNode, equalLinkedHashSetOf())),
+                                PowersetLattice.Element(Pair(destNode, equalLinkedHashSetOf())),
                                 equalLinkedHashSetOf(granularity, false),
                             )
                         )

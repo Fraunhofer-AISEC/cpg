@@ -43,6 +43,7 @@ import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.functional.EqualLinkedHashSet
+import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.equalLinkedHashSetOf
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.*
@@ -121,8 +122,10 @@ open class FunctionDeclaration :
         val srcValueDepth: Int = 1, // 0: Address, 1: Value, 2: DerefValue, 3:
         val subAccessName: String,
         // Node which a set of possible properties, such as a callingcontext
-        val lastWrites: EqualLinkedHashSet<Pair<Node, EqualLinkedHashSet<Any>>> =
-            equalLinkedHashSetOf(),
+        val lastWrites: PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>> =
+            PowersetLattice.Element(),
+        //        val lastWrites: EqualLinkedHashSet<Pair<Node, EqualLinkedHashSet<Any>>> =
+        //            equalLinkedHashSetOf(),
         // Additional properties such the granularity or the shortFS
         // We use shortFunctionSummaries to draw "short" DFG-Edges that allow us to follow DFG Paths
         // without going into functions. Not as detailed, but faster

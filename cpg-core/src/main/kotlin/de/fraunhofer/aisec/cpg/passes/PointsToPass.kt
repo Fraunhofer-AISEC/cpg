@@ -353,7 +353,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         null,
                         1,
                         "",
-                        equalLinkedHashSetOf(Pair(param, equalLinkedHashSetOf())),
+                        PowersetLattice.Element(Pair(param, equalLinkedHashSetOf())),
                         equalLinkedHashSetOf(true),
                         true,
                     )
@@ -484,7 +484,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         val filteredLastWrites =
                             lastWrites
                                 // for shortFS,only use these, and for !shortFS, only those
-                                .filterTo(EqualLinkedHashSet()) { shortFS in it.second }
+                                .filterTo(PowersetLattice.Element()) { shortFS in it.second }
                         existingEntry.add(
                             FunctionDeclaration.FSEntry(
                                 dstValueDepth,
@@ -497,16 +497,35 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         )
                         // Additionally, we store this as a shortFunctionSummary were the Function
                         // writes to the parameter
-                        existingEntry.add(
-                            FunctionDeclaration.FSEntry(
-                                dstValueDepth,
-                                node,
-                                0,
-                                subAccessName,
-                                equalLinkedHashSetOf(Pair(node, equalLinkedHashSetOf())),
-                                equalLinkedHashSetOf(true),
-                            )
+                        // Fadd doesn't recognize if the entry already exists b/c it compares the
+                        // hashes
+                        // so we do that manually
+                        if (
+                            existingEntry.none {
+                                it.destValueDepth == dstValueDepth &&
+                                    it.srcNode == node &&
+                                    it.srcValueDepth == 0 &&
+                                    it.subAccessName == subAccessName &&
+                                    it.lastWrites ==
+                                        PowersetLattice.Element<Pair<*, *>>(
+                                            Pair<Node, EqualLinkedHashSet<*>>(
+                                                node,
+                                                equalLinkedHashSetOf<Any>(),
+                                            )
+                                        ) &&
+                                    it.properties == equalLinkedHashSetOf(true)
+                            }
                         )
+                            existingEntry.add(
+                                FunctionDeclaration.FSEntry(
+                                    dstValueDepth,
+                                    node,
+                                    0,
+                                    subAccessName,
+                                    PowersetLattice.Element(Pair(node, equalLinkedHashSetOf())),
+                                    equalLinkedHashSetOf(true),
+                                )
+                            )
                         val propertySet = identitySetOf<Any>(true)
                         if (subAccessName != "")
                             propertySet.add(FieldDeclaration().apply { name = Name(subAccessName) })
@@ -562,7 +581,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                 matchingDeclarations,
                                                 stringToDepth(sourceParamValue.name.localName),
                                                 subAccessName,
-                                                equalLinkedHashSetOf(
+                                                PowersetLattice.Element(
                                                     Pair(
                                                         matchingDeclarations,
                                                         equalLinkedHashSetOf(),
@@ -645,7 +664,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     it.first,
                                     1,
                                     "",
-                                    equalLinkedHashSetOf(Pair(parentFD, equalLinkedHashSetOf())),
+                                    PowersetLattice.Element(Pair(parentFD, equalLinkedHashSetOf())),
                                     equalLinkedHashSetOf(false),
                                 )
                             }
@@ -746,12 +765,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         (arg.type as? PointerType)?.pointerOrigin ==
                                             PointerType.PointerOrigin.ARRAY
                                     )
-                                        equalLinkedHashSetOf<Pair<Node, EqualLinkedHashSet<Any>>>(
+                                        PowersetLattice.Element<
+                                            Pair<Node, EqualLinkedHashSet<Any>>
+                                        >(
                                             Pair(arg, equalLinkedHashSetOf(callingContext, false))
                                         )
                                     else {
                                         doubleState.getLastWrites(argVal).mapTo(
-                                            equalLinkedHashSetOf()
+                                            PowersetLattice.Element()
                                         ) {
                                             Pair(
                                                 it.first,
@@ -769,7 +790,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         GeneralStateEntryElement(
                                             PowersetLattice.Element(/*paramVal*/ ),
                                             PowersetLattice.Element(
-                                                argDerefVals.mapTo(EqualLinkedHashSet()) {
+                                                argDerefVals.mapTo(PowersetLattice.Element()) {
                                                     Pair(it, equalLinkedHashSetOf())
                                                 }
                                             ),
@@ -837,7 +858,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     data class MapDstToSrcEntry(
         val srcNode: Node?,
-        val lastWrites: EqualLinkedHashSet<Pair<Node, EqualLinkedHashSet<Any>>>,
+        val lastWrites: PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
         val propertySet: EqualLinkedHashSet<Any>,
         val dst: IdentitySet<Node> = identitySetOf(),
     )
@@ -943,12 +964,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     }
 
     private fun calculatePrevDFGs(
-        lastWrites: EqualLinkedHashSet<Pair<Node, EqualLinkedHashSet<Any>>>,
+        lastWrites: PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
         shortFS: Boolean,
         currentNode: CallExpression,
         invoke: FunctionDeclaration,
-    ): EqualLinkedHashSet<Pair<Node, EqualLinkedHashSet<Any>>> {
-        val ret = equalLinkedHashSetOf<Pair<Node, EqualLinkedHashSet<Any>>>()
+    ): PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>> {
+        val ret = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
         // If we have nothing, the last write is probably the functionDeclaration
         if (lastWrites.isEmpty()) ret.add(Pair(invoke, equalLinkedHashSetOf()))
         lastWrites.forEach { (lw, properties) ->
@@ -1108,7 +1129,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         param: Node,
         propertySet: EqualLinkedHashSet<Any>,
         currentNode: CallExpression,
-        lastWrites: EqualLinkedHashSet<Pair<Node, EqualLinkedHashSet<Any>>>,
+        lastWrites: PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
     ): MutableMap<Node, IdentitySet<MapDstToSrcEntry>> {
         var doubleState = doubleState
         when (srcNode) {
@@ -1544,7 +1565,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     GeneralStateEntryElement(
                         PowersetLattice.Element(addresses),
                         PowersetLattice.Element(
-                            values.mapTo(EqualLinkedHashSet()) { Pair(it, equalLinkedHashSetOf()) }
+                            values.mapTo(PowersetLattice.Element()) {
+                                Pair(it, equalLinkedHashSetOf())
+                            }
                         ),
                         PowersetLattice.Element(prevDFGs),
                     ),
@@ -1679,14 +1702,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 GeneralStateEntryElement(
                                     PowersetLattice.Element(addresses),
                                     PowersetLattice.Element(Pair(pmv, equalLinkedHashSetOf())),
-                                    PowersetLattice.Element(
-                                        /*identitySetOf(
-                                            Pair<Node, EqualLinkedHashSet<Any>>(
-                                                pmv,
-                                                equalLinkedHashSetOf(false),
-                                            )
-                                        )*/
-                                    ),
+                                    PowersetLattice.Element(),
                                 ),
                             )
                     } else {
@@ -1987,7 +2003,7 @@ fun PointsToStateElement.fetchValueFromDeclarationState(
 
 fun PointsToStateElement.getLastWrites(
     node: Node
-): EqualLinkedHashSet<Pair<Node, EqualLinkedHashSet<Any>>> {
+): PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>> {
     if (isGlobal(node)) {
         return when (node) {
             //            is PointerReference -> { TODO()}
@@ -1995,7 +2011,7 @@ fun PointsToStateElement.getLastWrites(
                 // We overapproximate here: For memberExpressions, we ignore the field and only
                 // consider the base
                 val (base, _) = resolveMemberExpression(node)
-                equalLinkedHashSetOf(
+                PowersetLattice.Element(
                     Pair<Node, EqualLinkedHashSet<Any>>(
                         (base as? Reference)?.refersTo ?: base,
                         equalLinkedHashSetOf(),
@@ -2003,13 +2019,13 @@ fun PointsToStateElement.getLastWrites(
                 )
             }
             is Reference ->
-                equalLinkedHashSetOf(
+                PowersetLattice.Element(
                     Pair<Node, EqualLinkedHashSet<Any>>(
                         node.refersTo ?: node,
                         equalLinkedHashSetOf(),
                     )
                 )
-            else -> equalLinkedHashSetOf(Pair(node, equalLinkedHashSetOf()))
+            else -> PowersetLattice.Element(Pair(node, equalLinkedHashSetOf()))
         }
     }
     return when (node) {
@@ -2017,18 +2033,20 @@ fun PointsToStateElement.getLastWrites(
             // TODO: Handle other input types (e.g. SubscriptExpression, MemberExpression)
             // For pointerReferences, we take the memoryAddress of the refersTo
             return (node.input as? Reference)?.refersTo?.memoryAddresses?.mapTo(
-                EqualLinkedHashSet()
+                PowersetLattice.Element()
             ) {
                 Pair<Node, EqualLinkedHashSet<Any>>(it, equalLinkedHashSetOf())
-            } ?: equalLinkedHashSetOf(Pair(node, equalLinkedHashSetOf()))
+            } ?: PowersetLattice.Element(Pair(node, equalLinkedHashSetOf()))
         }
         is PointerDereference -> {
-            val ret = equalLinkedHashSetOf<Pair<Node, EqualLinkedHashSet<Any>>>()
+            val ret = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
             this.getAddresses(node, node).forEach { addr ->
                 val lastWrite = this.declarationsState[addr]?.third
                 // Usually, we should have a lastwrite, so we take that
                 if (lastWrite?.isNotEmpty() == true)
-                    lastWrite.mapTo(IdentitySet()) { ret.add(Pair(it.first, it.second)) }
+                    lastWrite.mapTo(PowersetLattice.Element()) {
+                        ret.add(Pair(it.first, it.second))
+                    }
                 // However, there might be cases were we don't yet have written to the dereferenced
                 // value, in this case we return an UnknownMemoryValue
                 else {
@@ -2049,10 +2067,10 @@ fun PointsToStateElement.getLastWrites(
             // For SubScriptExpressions, we additionally check if the partial write matches
             val partial = getNodeName(node.subscriptExpression)
             this.getAddresses(node, node)
-                .filterTo(equalLinkedHashSetOf()) {
+                .filterTo(PowersetLattice.Element()) {
                     this.declarationsState[it]?.third?.isNotEmpty() == true
                 }
-                .flatMapTo(EqualLinkedHashSet()) {
+                .flatMapTo(PowersetLattice.Element()) {
                     this.declarationsState[it]?.third?.mapNotNull {
                         Pair(
                             it.first,
@@ -2062,7 +2080,7 @@ fun PointsToStateElement.getLastWrites(
                                     it.partialTarget.name.localName == partial.localName)
                             },
                         )
-                    } ?: setOf()
+                    } ?: PowersetLattice.Element()
                 }
         }
         is ParameterMemoryValue -> {
@@ -2070,22 +2088,22 @@ fun PointsToStateElement.getLastWrites(
             // If not, it's the deref value itself.
             val entries = this.declarationsState[node]?.third
             if (entries?.isNotEmpty() == true)
-                return entries.mapTo(EqualLinkedHashSet()) {
+                return entries.mapTo(PowersetLattice.Element()) {
                     Pair(it.first, equalLinkedHashSetOf())
                 }
             else
                 return node.memoryValues
                     .filter { it.name.localName == "deref" + node.name.localName }
-                    .mapTo(EqualLinkedHashSet()) { Pair(it, equalLinkedHashSetOf()) }
+                    .mapTo(PowersetLattice.Element()) { Pair(it, equalLinkedHashSetOf()) }
         }
         else ->
             // For the rest, we read the declarationState to determine when the memoryAddress of the
             // node was last written to
             this.getAddresses(node, node)
-                .filterTo(equalLinkedHashSetOf()) {
+                .filterTo(PowersetLattice.Element()) {
                     this.declarationsState[it]?.third?.isNotEmpty() == true
                 }
-                .flatMapTo(EqualLinkedHashSet()) {
+                .flatMapTo(PowersetLattice.Element()) {
                     this.declarationsState[it]?.third?.map { Pair(it.first, it.second) } ?: setOf()
                 }
     }
