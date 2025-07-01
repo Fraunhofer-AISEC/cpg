@@ -139,7 +139,7 @@ interface Lattice<T : Lattice.Element> {
         transformation: (Lattice<T>, EvaluationOrder, T) -> T,
     ): T {
         val globalState = IdentityHashMap<EvaluationOrder, T>()
-        val finalState: T = this.bottom
+        var finalState: T = this.bottom
         for (startEdge in startEdges) {
             globalState[startEdge] = startState
         }
@@ -197,7 +197,7 @@ interface Lattice<T : Lattice.Element> {
             }
 
             if (nextEdge.end.nextEOGEdges.isEmpty() || edgesList.isEmpty()) {
-                this.lub(finalState, newState, true)
+                finalState = this.lub(finalState, newState, false)
             }
         }
 

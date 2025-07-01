@@ -36,8 +36,8 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.printEOG
 import de.fraunhofer.aisec.cpg.graph.statements.DoStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.statements.LoopStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ComprehensionExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
@@ -45,6 +45,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
+import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass.BasicBlock
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -74,25 +75,38 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
     class BasicBlock(
         val ingoingEOGEdges: MutableSet<EvaluationOrder> = mutableSetOf(),
         val outgoingEOGEdges: MutableSet<EvaluationOrder> = mutableSetOf(),
-        val nodes: MutableSet<Node> = mutableSetOf<Node>(),
+        val nodes: MutableList<Node> = mutableListOf<Node>(),
         var startNode: Node,
-        var endNode: Node? = null,
     ) : Node() {
+        val endNode: Node?
+            get() = nodes.lastOrNull()
+
+        val branchingNode: Node?
+            get() =
+                if (
+                    endNode is BranchingNode ||
+                        endNode is LoopStatement ||
+                        endNode is ComprehensionExpression
+                ) {
+                    endNode as Node
+                } else null
+
         override var location: PhysicalLocation? = null
             get() {
                 return PhysicalLocation(
                     uri = startNode.location?.artifactLocation?.uri ?: URI(""),
                     region =
                         Region(
-                            startLine = startNode.location?.region?.startLine ?: -1,
-                            startColumn = startNode.location?.region?.startColumn ?: -1,
-                            endLine =
-                                endNode?.location?.region?.endLine
-                                    ?: startNode.location?.region?.endLine
+                            startLine =
+                                nodes.mapNotNull { it.location?.region?.startLine }.minOrNull()
                                     ?: -1,
+                            startColumn =
+                                nodes.mapNotNull { it.location?.region?.startColumn }.minOrNull()
+                                    ?: -1,
+                            endLine =
+                                nodes.mapNotNull { it.location?.region?.endLine }.maxOrNull() ?: -1,
                             endColumn =
-                                endNode?.location?.region?.endColumn
-                                    ?: startNode.location?.region?.endColumn
+                                nodes.mapNotNull { it.location?.region?.endColumn }.maxOrNull()
                                     ?: -1,
                         ),
                 )
@@ -138,12 +152,11 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                 continue
             }
 
-            if (currentStartNode.prevEOG.size > 1) {
+            if (currentStartNode.prevEOG.size > 1 && currentStartNode != basicBlock.startNode) {
                 // If the currentStartNode is reachable from multiple paths, it starts a new basic
                 // block. currentStartNode is part of the new basic block, so we add it after this
                 // if statement.
                 // Set the end node of the old basic block to the last node on the path
-                basicBlock.endNode = reachingEOGEdge?.start
                 basicBlock =
                     BasicBlock(startNode = currentStartNode).apply {
                         ingoingEOGEdges.addAll(currentStartNode.prevEOGEdges)
@@ -182,7 +195,6 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                 // basic block. We already generate this here. But currentStartNode is still part of
                 // the current basic block, so we add it before this if statement.
                 basicBlock.outgoingEOGEdges.addAll(nextRelevantEOGEdges)
-                basicBlock.endNode = currentStartNode
                 worklist.addAll(
                     nextRelevantEOGEdges.mapNotNull {
                         if (it.end in alreadySeen) {
@@ -217,8 +229,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                 val nextEdge = nextRelevantEOGEdges.single()
                 worklist.add(Triple(nextEdge.end, nextEdge, basicBlock))
             } else {
-                // List is empty, so we only set the end node.
-                basicBlock.endNode = currentStartNode
+                // List is empty, nothing to do.
             }
         }
         return firstBB to allBasicBlocks
@@ -257,7 +268,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         )
 
         val prevEOGState =
-            PrevEOGState(innerLattice = PrevEOGLattice(innerLattice = PowersetLattice<Node>()))
+            PrevEOGState(innerLattice = PrevEOGLattice(innerLattice = PowersetLattice()))
 
         // Maps nodes to their "cdg parent" (i.e. the dominator) and also has the information
         // through which path it is reached. If all outgoing paths of the node's dominator result in
@@ -267,7 +278,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             prevEOGState.push(
                 startState,
                 firstBasicBlock,
-                PrevEOGLatticeElement(firstBasicBlock to PowersetLattice.Element(firstBasicBlock)),
+                PrevEOGLatticeElement(startNode to PowersetLattice.Element(startNode)),
                 true,
             )
         log.trace("Iterating EOG of {}", firstBasicBlock)
@@ -275,7 +286,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             prevEOGState.iterateEOG(firstBasicBlock.nextEOGEdges, startState, ::transfer)
         log.info("[CDG] Done iterating EOG for {}. Generating the edges now.", startNode.name)
 
-        val branchingNodeConditionals = getBranchingNodeConditions(startNode)
+        val branchingNodeConditionals = getBranchingNodeConditions(startNode, basicBlocks)
 
         // Collect the information, identify merge points, etc. This is not really efficient yet :(
         for ((node, dominatorPaths) in finalState) {
@@ -285,7 +296,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             val conditionKeys =
                 dominatorPaths.entries
                     .filter { (k, _) ->
-                        (k as? BranchingNode)?.branchedBy == node ||
+                        (k as? BranchingNode)?.branchedBy == node.branchingNode ||
                             node in
                                 ((k as? BranchingNode)?.branchedBy?.allChildren<Node>() ?: listOf())
                     }
@@ -295,7 +306,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                 // somehow put in the CDG of the surrounding statement (e.g. the loop) but we don't
                 // want this. Move it one layer up.
                 for (k1 in conditionKeys) {
-                    dominatorsList.removeIf { k1 == it.first }
+                    // dominatorsList.removeIf { k1 == it.first }
                     finalState[k1]?.forEach { (newK, newV) ->
                         val entry = dominatorsList.firstOrNull { it.first == newK }
                         entry?.let {
@@ -315,7 +326,8 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                     // We are reachable from all the branches of a branching node. Add this parent
                     // to the worklist or update an existing entry. Also consider already existing
                     // entries in finalDominators list and update it (if necessary)
-                    val newDominatorMap = finalState[k]
+                    val newDominatorMap =
+                        finalState.entries.singleOrNull { k in it.key.nodes }?.value
                     newDominatorMap?.forEach { (newK, newV) ->
                         when {
                             dominatorsList.any { it.first == newK } -> {
@@ -363,7 +375,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             // We have all the dominators of this node and potentially traversed the graph
             // "upwards". Add the CDG edges
             finalDominators
-                .filter { (k, _) -> k != node }
+                .filter { (k, _) -> k != node && k != node.branchingNode }
                 .forEach { (k, v) ->
                     val branchesSet =
                         k.nextEOGEdges
@@ -371,22 +383,26 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                             .mapNotNull { it.branch }
                             .toSet()
 
-                    node.prevCDGEdges.add(k) {
-                        branches =
-                            when {
-                                branchesSet.isNotEmpty() -> {
-                                    branchesSet
+                    node.nodes.forEach { bbNode ->
+                        bbNode.prevCDGEdges.add(k) {
+                            branches =
+                                when {
+                                    branchesSet.isNotEmpty() -> {
+                                        branchesSet
+                                    }
+
+                                    k is IfStatement &&
+                                        (branchingNodeConditionals[k]?.size ?: 0) >
+                                            1 -> { // Note: branchesSet must be empty here The if
+                                        // statement has only a then branch but there's a way
+                                        // to "jump out" of this branch. In this case, we
+                                        // want to set the false property here.
+                                        setOf(false)
+                                    }
+
+                                    else -> setOf()
                                 }
-                                k is IfStatement &&
-                                    (branchingNodeConditionals[k]?.size ?: 0) >
-                                        1 -> { // Note: branchesSet must be empty here The if
-                                    // statement has only a then branch but there's a way
-                                    // to "jump out" of this branch. In this case, we
-                                    // want to set the false property here.
-                                    setOf(false)
-                                }
-                                else -> setOf()
-                            }
+                        }
                     }
                 }
         }
@@ -400,33 +416,35 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
      *
      * This method collects the merging points. It also includes the function declaration itself.
      */
-    private fun getBranchingNodeConditions(functionDeclaration: FunctionDeclaration) =
+    private fun getBranchingNodeConditions(
+        functionDeclaration: FunctionDeclaration,
+        allBasicBlocks: Collection<BasicBlock>,
+    ) =
         mapOf(
             // For the function declaration, there's only the path through the function declaration
             // itself.
             Pair(functionDeclaration, setOf(functionDeclaration)),
-            *(functionDeclaration.allChildren<BranchingNode>() +
-                    functionDeclaration.allChildren<CollectionComprehension>() +
-                    functionDeclaration.allChildren<
-                        ComprehensionExpression
-                    >()) // TODO: May be simplified when resolving issue 2027
-                .filterIsInstance<Node>()
-                .map { branchingNode ->
-                    val mergingPoints =
-                        if (branchingNode.nextEOGEdges.any { !it.isConditionalBranch() }) {
-                            // There's an unconditional path (case 1), so when reaching this branch,
-                            // we're done. Collect all (=1) unconditional branches.
-                            branchingNode.nextEOGEdges
-                                .filter { !it.isConditionalBranch() }
-                                .map { it.end }
-                                .toSet()
-                        } else {
-                            // All branches are executed based on some condition (case 2), so we
-                            // collect all these branches.
-                            branchingNode.nextEOGEdges.map { it.end }.toSet()
-                        }
-                    // Map this branching node to its merging points
-                    Pair(branchingNode, mergingPoints)
+            *allBasicBlocks
+                .mapNotNull {
+                    it.branchingNode?.let { branchingNode ->
+                        val mergingPoints =
+                            if (branchingNode.nextEOGEdges.any { !it.isConditionalBranch() }) {
+                                // There's an unconditional path (case 1), so when reaching this
+                                // branch, we're done. Collect all (=1) unconditional branches.
+                                branchingNode.nextEOGEdges
+                                    .filter { !it.isConditionalBranch() }
+                                    .map { it.end }
+                                    .toSet()
+                            } else {
+                                // All branches are executed based on some condition (case 2), so we
+                                // collect all these branches.
+                                branchingNode.nextEOGEdges.map { it.end }.toSet()
+                            }
+                        branchingNode to
+                            mergingPoints.mapNotNull {
+                                allBasicBlocks.singleOrNull { bb -> it == bb.startNode }
+                            }
+                    }
                 }
                 .toTypedArray(),
         )
@@ -452,42 +470,34 @@ fun transfer(
     val lattice = lattice as? PrevEOGState ?: return currentState
     var newState = currentState
 
-    val currentStart = currentEdge.start
-    val currentEnd = currentEdge.end
+    val currentStart =
+        currentEdge.start as? BasicBlock
+            ?: throw IllegalArgumentException(
+                "Current edge start must be a BasicBlock, but was ${currentEdge.start}"
+            )
+    val currentEnd =
+        currentEdge.end as? BasicBlock
+            ?: throw IllegalArgumentException(
+                "Current edge end must be a BasicBlock, but was ${currentEdge.end}"
+            )
 
     // Check if we start in a branching node and if this edge leads to the conditional
     // branch. In this case, the next node will move "one layer downwards" in the CDG.
-    /*if (
-            currentStart is BranchingNode ||
-                currentStart is ComprehensionExpression ||
-                currentStart is DoStatement ||
-                currentStart.astParent is
-                    ComprehensionExpression && // TODO: May be simplified when resolving issue 2027
-                    currentStart == (currentStart.astParent as ComprehensionExpression).iterable
-    <<<<<<< Updated upstream
-        ) { // && currentEdge.isConditionalBranch()) {
-            // We start in a branching node and end in one of the branches, so we have the
-            // following state:
-            // for the branching node "start", we have a path through "end".
-            val prevPathLattice =
-                newState[currentStart]
-                    ?.filter { (k, _) -> k == currentStart }
-                    ?.let { PrevEOGLatticeElement(it) } ?: PrevEOGLatticeElement()
-    =======
-        ) { // && currentEdge.isConditionalBranch()) {*/
-    // We start in a branching node and end in one of the branches, so we have the
-    // following state:
-    // for the branching node "start", we have a path through "end".
-    val prevPathLattice =
-        newState[currentStart]
-            ?.filter { (k, _) -> k != currentStart }
-            ?.let { PrevEOGLatticeElement(it) } ?: PrevEOGLatticeElement()
+    val branchingNode = currentStart.branchingNode
+    if (branchingNode != null) {
+        // We start in a branching node and end in one of the branches, so we have thes
+        // following state:
+        // for the branching node "start", we have a path through "end".
+        val prevPathLattice =
+            newState[currentStart]
+                ?.filter { (k, _) -> k != branchingNode }
+                ?.let { PrevEOGLatticeElement(it) } ?: PrevEOGLatticeElement()
 
-    val map = PrevEOGLatticeElement(currentStart to PowersetLattice.Element(currentEnd))
+        val map = PrevEOGLatticeElement(branchingNode to PowersetLattice.Element(currentEnd))
 
-    val newPath = lattice.innerLattice.lub(map, prevPathLattice, true)
-    newState = lattice.push(newState, currentEnd, newPath, true)
-    /* } else {
+        val newPath = lattice.innerLattice.lub(map, prevPathLattice, true)
+        newState = lattice.push(newState, currentEnd, newPath, true)
+    } else {
         // We did not start in a branching node, so for the next node, we have the same path
         // (last branching + first end node) as for the start node of this edge.
         // If there is no state for the start node (most likely, this is the case for the
@@ -497,7 +507,7 @@ fun transfer(
             newState[currentStart]?.let { PrevEOGLatticeElement(it) }
                 ?: PrevEOGLatticeElement(currentStart to PowersetLattice.Element(currentEnd))
         newState = lattice.push(newState, currentEnd, state, true)
-    }*/
+    }
     return newState
 }
 
@@ -515,20 +525,19 @@ fun transfer(
  * "false" branch).
  */
 private fun EvaluationOrder.isConditionalBranch(): Boolean {
+    val startNode = (this.start as? ControlDependenceGraphPass.BasicBlock)?.endNode ?: this.start
     return if (branch == true) {
         true
     } else
-        (this.start is IfStatement ||
-            this.start is DoStatement ||
-            this.start is ComprehensionExpression ||
-            (this.start.astParent is ComprehensionExpression &&
-                this.start == (this.start.astParent as ComprehensionExpression).iterable) ||
-            this.start is ConditionalExpression ||
-            this.start is ShortCircuitOperator) && branch == false ||
-            (this.start is IfStatement &&
-                !(this.start as IfStatement).allBranchesFromMyThenBranchGoThrough(
-                    (this.start as IfStatement).nextUnconditionalNode
-                ))
+        (startNode is IfStatement ||
+            startNode is DoStatement ||
+            startNode is ComprehensionExpression ||
+            (startNode.astParent is ComprehensionExpression &&
+                startNode == (startNode.astParent as ComprehensionExpression).iterable) ||
+            startNode is ConditionalExpression ||
+            startNode is ShortCircuitOperator) && branch == false ||
+            (startNode is IfStatement &&
+                !startNode.allBranchesFromMyThenBranchGoThrough(startNode.nextUnconditionalNode))
 }
 
 private val IfStatement.nextUnconditionalNode: Node?
@@ -561,13 +570,13 @@ typealias PrevEOGLatticeElement = MapLattice.Element<Node, PowersetLattice.Eleme
 
 typealias PrevEOGLattice = MapLattice<Node, PowersetLattice.Element<Node>>
 
-typealias PrevEOGStateElement = MapLattice.Element<Node, PrevEOGLatticeElement>
+typealias PrevEOGStateElement = MapLattice.Element<BasicBlock, PrevEOGLatticeElement>
 
-typealias PrevEOGState = MapLattice<Node, PrevEOGLatticeElement>
+typealias PrevEOGState = MapLattice<BasicBlock, PrevEOGLatticeElement>
 
 fun PrevEOGState.push(
     currentElement: PrevEOGStateElement,
-    newNode: Node,
+    newNode: BasicBlock,
     newEOGLattice: PrevEOGLatticeElement,
     allowModify: Boolean,
 ): PrevEOGStateElement {
