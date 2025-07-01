@@ -62,7 +62,7 @@ class SizeEvaluator : ValueEvaluator() {
             // For a literal, we can just take its value, and we are finished
             is Literal<*> -> if (node.value is String) (node.value as String).length else node.value
             is SubscriptExpression -> evaluate(node.arrayExpression)
-            is BinaryOperator -> super.evaluate(node)
+            is BinaryOperator -> ValueEvaluator().evaluate(node)
             else -> cannotEvaluate(node, this)
         }
     }
