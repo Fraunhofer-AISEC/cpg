@@ -517,14 +517,13 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                         }
 
                         declaration.initializer = initializer
-                    } else {
+                    } else if (declarator is CASTArrayDeclarator) {
                         val initializer =
                             newNewArrayExpression(ctx).apply {
                                 this.dimensions +=
-                                    (declarator as? CASTArrayDeclarator)
-                                        ?.arrayModifiers
-                                        ?.mapNotNull { frontend.expressionHandler.handle(it) }
-                                        ?: emptyList()
+                                    declarator.arrayModifiers?.mapNotNull {
+                                        frontend.expressionHandler.handle(it)
+                                    } ?: emptyList()
                             }
                         declaration.initializer = initializer
                     }

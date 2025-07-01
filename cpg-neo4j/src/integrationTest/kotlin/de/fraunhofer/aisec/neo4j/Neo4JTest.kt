@@ -30,7 +30,6 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import java.math.BigInteger
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -38,7 +37,6 @@ import kotlin.test.assertNotNull
 
 class Neo4JTest {
     @Test
-    @Ignore
     fun testPush() {
         val (application, result) = createTranslationResult()
 
