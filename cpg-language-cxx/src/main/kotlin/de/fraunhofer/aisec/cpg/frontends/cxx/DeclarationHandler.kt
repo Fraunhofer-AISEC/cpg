@@ -37,11 +37,11 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util
+import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTInclusionNode
 import org.eclipse.cdt.internal.core.dom.parser.c.CASTArrayDeclarator
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
-import java.util.function.Supplier
 
 /**
  * This class is a [CXXHandler] which takes care of translating C/C++
