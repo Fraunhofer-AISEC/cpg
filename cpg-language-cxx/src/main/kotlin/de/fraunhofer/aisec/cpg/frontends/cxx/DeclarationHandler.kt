@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit.IDependencyTree.IASTInclusionNode
+import org.eclipse.cdt.internal.core.dom.parser.c.CASTArrayDeclarator
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
 /**
@@ -502,8 +503,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                     }
 
                     // Parse the initializer, if we have one
-                    declarator.initializer?.let {
-                        val initializer = frontend.initializerHandler.handle(it)
+                    if (declarator.initializer != null) {
+                        val initializer = frontend.initializerHandler.handle(declarator.initializer)
                         when {
                             // We need to set a resolution "helper" for function pointers, so that a
                             // reference to this declaration can resolve the function pointer (using
@@ -515,6 +516,16 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                             }
                         }
 
+                        declaration.initializer = initializer
+                    } else {
+                        val initializer =
+                            newNewArrayExpression(ctx).apply {
+                                this.dimensions +=
+                                    (declarator as? CASTArrayDeclarator)
+                                        ?.arrayModifiers
+                                        ?.mapNotNull { frontend.expressionHandler.handle(it) }
+                                        ?: emptyList()
+                            }
                         declaration.initializer = initializer
                     }
                 }
