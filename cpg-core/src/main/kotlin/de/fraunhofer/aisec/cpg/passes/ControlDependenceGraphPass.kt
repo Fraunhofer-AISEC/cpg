@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.cyclomaticComplexity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.printEOG
 import de.fraunhofer.aisec.cpg.graph.statements.DoStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.LoopStatement
@@ -260,11 +259,11 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             return
         }
 
+        log.trace("Creating CDG for {} with complexity {}", startNode.name, c)
+
         val (firstBasicBlock, basicBlocks, nodeToBBMap) = collectBasicBlocks(startNode)
 
-        log.info(
-            "[CDG] Retrieved network of BBs for ${startNode.name}:\n${basicBlocks.first().printEOG(maxConnections = 150)}"
-        )
+        log.trace("Retrieved network of BBs for {}", startNode.name)
 
         val prevEOGState =
             PrevEOGState(innerLattice = PrevEOGLattice(innerLattice = PowersetLattice()))
@@ -284,7 +283,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         log.trace("Iterating EOG of {}", firstBasicBlock)
         val finalState =
             prevEOGState.iterateEOG(firstBasicBlock.nextEOGEdges, startState, ::transfer)
-        log.info("[CDG] Done iterating EOG for {}. Generating the edges now.", startNode.name)
+        log.trace("Done iterating EOG for {}. Generating the edges now.", startNode.name)
 
         // branchingNodeConditionals is a map organized as follows:
         //   BranchingNode -> Set of BasicBlocks where, if we visited all of these, the
