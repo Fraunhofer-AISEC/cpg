@@ -44,7 +44,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
-import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass.BasicBlock
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -62,8 +61,8 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
     class Configuration(
         /**
          * This specifies the maximum complexity (as calculated per
-         * [Statement.cyclomaticComplexity]) a [FunctionDeclaration] must have in order to be
-         * considered.
+         * [de.fraunhofer.aisec.cpg.graph.statements.Statement.cyclomaticComplexity]) a
+         * [FunctionDeclaration] must have in order to be considered.
          */
         var maxComplexity: Int? = null
     ) : PassConfiguration()
@@ -129,7 +128,9 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         }
     }
 
-    fun collectBasicBlocks(startNode: Node): Pair<BasicBlock, Collection<BasicBlock>> {
+    fun collectBasicBlocks(
+        startNode: Node
+    ): Triple<BasicBlock, Collection<BasicBlock>, Map<Node, BasicBlock>> {
         val allBasicBlocks = mutableSetOf<BasicBlock>()
         val firstBB = BasicBlock(startNode = startNode)
         allBasicBlocks.add(firstBB)
@@ -140,9 +141,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         val alreadySeen = IdentityHashMap<Node, BasicBlock>()
 
         while (worklist.isNotEmpty()) {
-            var (
-                currentStartNode: Node, reachingEOGEdge: EvaluationOrder?, basicBlock: BasicBlock) =
-                worklist.removeFirst()
+            var (currentStartNode, reachingEOGEdge, basicBlock) = worklist.removeFirst()
             // If we have already seen this node, we can skip it.
             if (currentStartNode in alreadySeen) {
                 val oldBB = alreadySeen[currentStartNode]
@@ -232,7 +231,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                 // List is empty, nothing to do.
             }
         }
-        return firstBB to allBasicBlocks
+        return Triple(firstBB, allBasicBlocks, alreadySeen)
     }
 
     /**
@@ -261,7 +260,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             return
         }
 
-        val (firstBasicBlock, basicBlocks) = collectBasicBlocks(startNode)
+        val (firstBasicBlock, basicBlocks, nodeToBBMap) = collectBasicBlocks(startNode)
 
         log.info(
             "[CDG] Retrieved network of BBs for ${startNode.name}:\n${basicBlocks.first().printEOG(maxConnections = 150)}"
@@ -271,14 +270,15 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             PrevEOGState(innerLattice = PrevEOGLattice(innerLattice = PowersetLattice()))
 
         // Maps nodes to their "cdg parent" (i.e. the dominator) and also has the information
-        // through which path it is reached. If all outgoing paths of the node's dominator result in
-        // the node, we use the dominator's state instead (i.e., we move the node one layer upwards)
+        // through which path it is reached. If all outgoing paths of the basicBlock's dominator
+        // result in the basicBlock, we use the dominator's state instead (i.e., we move the
+        // basicBlock one layer upwards)
         var startState: PrevEOGStateElement = prevEOGState.bottom
         startState =
             prevEOGState.push(
                 startState,
                 firstBasicBlock,
-                PrevEOGLatticeElement(startNode to PowersetLattice.Element(startNode)),
+                PrevEOGLatticeElement(startNode to PowersetLattice.Element(firstBasicBlock)),
                 true,
             )
         log.trace("Iterating EOG of {}", firstBasicBlock)
@@ -286,113 +286,75 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             prevEOGState.iterateEOG(firstBasicBlock.nextEOGEdges, startState, ::transfer)
         log.info("[CDG] Done iterating EOG for {}. Generating the edges now.", startNode.name)
 
-        val branchingNodeConditionals = getBranchingNodeConditions(startNode, basicBlocks)
+        // branchingNodeConditionals is a map organized as follows:
+        //   BranchingNode -> Set of BasicBlocks where, if we visited all of these, the
+        //      branchingNode does not dominate us anymore (we are after the merge point).
+        val branchingNodeConditionals =
+            getBranchingNodeConditions(startNode, basicBlocks, nodeToBBMap)
+
+        // final state is a map organized as follows:
+        //   BasicBlock -> Map<Node, Set<BasicBlock>> with
+        //    branchingNode -> Set of BasicBlocks taken right after the branchingNode.
 
         // Collect the information, identify merge points, etc. This is not really efficient yet :(
-        for ((node, dominatorPaths) in finalState) {
-            val dominatorsList =
+        for ((basicBlock, dominatorPaths) in finalState) {
+            var finalDominators =
                 dominatorPaths.entries.map { (k, v) -> Pair(k, v.toMutableSet()) }.toMutableList()
-            val finalDominators = mutableListOf<Pair<Node, MutableSet<Node>>>()
-            val conditionKeys =
-                dominatorPaths.entries
-                    .filter { (k, _) ->
-                        (k as? BranchingNode)?.branchedBy == node.branchingNode ||
-                            node in
-                                ((k as? BranchingNode)?.branchedBy?.allChildren<Node>() ?: listOf())
-                    }
-                    .map { (k, _) -> k }
-            if (conditionKeys.isNotEmpty()) {
-                // The node is part of the condition. For loops, it happens that these nodes are
-                // somehow put in the CDG of the surrounding statement (e.g. the loop) but we don't
-                // want this. Move it one layer up.
-                for (k1 in conditionKeys) {
-                    // dominatorsList.removeIf { k1 == it.first }
-                    finalState[k1]?.forEach { (newK, newV) ->
-                        val entry = dominatorsList.firstOrNull { it.first == newK }
-                        entry?.let {
-                            dominatorsList.remove(entry)
-                            val update = entry.second.addAll(newV)
-                            if (update) dominatorsList.add(entry) else finalDominators.add(entry)
-                        } ?: dominatorsList.add(Pair(newK, newV.toMutableSet()))
-                    }
-                }
-            }
-            val alreadySeen = mutableSetOf<Pair<Node, Set<Node>>>()
 
-            while (dominatorsList.isNotEmpty()) {
-                val (k, v) = dominatorsList.removeFirst()
-                alreadySeen.add(Pair(k, v))
-                if (k != startNode && v.containsAll(branchingNodeConditionals[k] ?: setOf())) {
-                    // We are reachable from all the branches of a branching node. Add this parent
-                    // to the worklist or update an existing entry. Also consider already existing
-                    // entries in finalDominators list and update it (if necessary)
-                    val newDominatorMap =
-                        finalState.entries.singleOrNull { k in it.key.nodes }?.value
-                    newDominatorMap?.forEach { (newK, newV) ->
-                        when {
-                            dominatorsList.any { it.first == newK } -> {
-                                // Entry exists => update it
-                                dominatorsList.first { it.first == newK }.second.addAll(newV)
-                            }
-                            finalDominators.any { it.first == newK } -> {
-                                // Entry in final dominators => Delete it and add it to the worklist
-                                // (but only if something changed)
-                                val entry = finalDominators.first { it.first == newK }
-                                finalDominators.remove(entry)
-                                val update = entry.second.addAll(newV)
-                                if (
-                                    update &&
-                                        alreadySeen.none {
-                                            it.first == entry.first &&
-                                                it.second.containsAll(entry.second)
-                                        }
-                                )
-                                    dominatorsList.add(entry)
-                                else finalDominators.add(entry)
-                            }
-                            alreadySeen.none {
-                                it.first == newK && it.second.containsAll(newV)
-                            } -> {
-                                // We don't have an entry yet => add a new one
-                                val newEntry = Pair(newK, newV.toIdentitySet())
-                                dominatorsList.add(newEntry)
-                            }
-                            else -> {
-                                // Not sure what to do, there seems to be a cycle but this entry is
-                                // not in finalDominators for some reason. Add to finalDominators
-                                // now.
-                                finalDominators.add(Pair(newK, newV.toIdentitySet()))
-                            }
-                        }
-                    }
-                } else {
-                    // Node is not reachable from all branches => k dominates node. Add to
-                    // finalDominators.
-                    finalDominators.add(Pair(k, v))
-                }
+            // Remove all entries where the basicBlock is reachable through all branches of a
+            // branchingNode.
+            finalDominators.removeIf {
+                branchingNodeConditionals[it.first]?.let { elements ->
+                    it.second.containsAll(elements)
+                } == true
             }
+            // Remove all entries where the basicBlock is reachable through its own branchingNode.
+            // This indicates a loop, and this part seems to be in the unconditional part executed
+            // before the loop starts (e.g., this affects all nodes in the condition)
+            finalDominators.removeIf { basicBlock.branchingNode == it.first }
+            // Try to remove transitive relationships, i.e., if a basicBlock is in our dominators
+            // but also dominates one of our (remaining) dominators, we remove it.
+            val transitiveDominators =
+                finalDominators
+                    .mapNotNull {
+                        // Get the dominator of this dominator
+                        val transitiveBB = nodeToBBMap[it.first]
+                        transitiveBB
+                            ?.let { finalState[it] }
+                            ?.entries
+                            ?.mapNotNull { (k, v) ->
+                                if (k != transitiveBB.branchingNode) k to v else null
+                            }
+                    }
+                    .flatten()
+            finalDominators = finalDominators.minus(transitiveDominators).toMutableList()
 
-            // We have all the dominators of this node and potentially traversed the graph
-            // "upwards". Add the CDG edges
-            finalDominators
-                .filter { (k, _) -> k != node && k != node.branchingNode }
-                .forEach { (k, v) ->
+            // After deleting a bunch of stuff, we have two options: 1) there are no dominators
+            // left, and we assign the function declaration, or 2) there is one or multiple
+            // dominators left.
+            if (finalDominators.isEmpty()) {
+                basicBlock.nodes.forEach { it.prevCDG += startNode }
+            } else {
+                // We have one or multiple dominators left.
+                finalDominators.forEach { (finalDominator, reachingBB) ->
+                    // Which branches are relevant for the CDG edge? We compute this by checking
+                    // which branch properties are set between the dominator and reachingBB.
                     val branchesSet =
-                        k.nextEOGEdges
-                            .filter { edge -> edge.end in v }
+                        finalDominator.nextEOGEdges
+                            .filter { edge -> edge.end in reachingBB.flatMap { it.nodes } }
                             .mapNotNull { it.branch }
                             .toSet()
 
-                    node.nodes.forEach { bbNode ->
-                        bbNode.prevCDGEdges.add(k) {
+                    basicBlock.nodes.forEach { node ->
+                        node.prevCDGEdges.add(finalDominator) {
                             branches =
                                 when {
                                     branchesSet.isNotEmpty() -> {
                                         branchesSet
                                     }
 
-                                    k is IfStatement &&
-                                        (branchingNodeConditionals[k]?.size ?: 0) >
+                                    finalDominator is IfStatement &&
+                                        (branchingNodeConditionals[finalDominator]?.size ?: 0) >
                                             1 -> { // Note: branchesSet must be empty here The if
                                         // statement has only a then branch but there's a way
                                         // to "jump out" of this branch. In this case, we
@@ -405,6 +367,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                         }
                     }
                 }
+            }
         }
     }
 
@@ -419,11 +382,12 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
     private fun getBranchingNodeConditions(
         functionDeclaration: FunctionDeclaration,
         allBasicBlocks: Collection<BasicBlock>,
+        nodeToBBMap: Map<Node, BasicBlock>,
     ) =
         mapOf(
             // For the function declaration, there's only the path through the function declaration
             // itself.
-            Pair(functionDeclaration, setOf(functionDeclaration)),
+            Pair(functionDeclaration, setOfNotNull(nodeToBBMap[functionDeclaration])),
             *allBasicBlocks
                 .mapNotNull {
                     it.branchingNode?.let { branchingNode ->
@@ -440,10 +404,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                                 // collect all these branches.
                                 branchingNode.nextEOGEdges.map { it.end }.toSet()
                             }
-                        branchingNode to
-                            mergingPoints.mapNotNull {
-                                allBasicBlocks.singleOrNull { bb -> it == bb.startNode }
-                            }
+                        branchingNode to mergingPoints.mapNotNull { nodeToBBMap[it] }
                     }
                 }
                 .toTypedArray(),
@@ -566,9 +527,9 @@ private fun IfStatement.allBranchesFromMyThenBranchGoThrough(node: Node?): Boole
     return true
 }
 
-typealias PrevEOGLatticeElement = MapLattice.Element<Node, PowersetLattice.Element<Node>>
+typealias PrevEOGLatticeElement = MapLattice.Element<Node, PowersetLattice.Element<BasicBlock>>
 
-typealias PrevEOGLattice = MapLattice<Node, PowersetLattice.Element<Node>>
+typealias PrevEOGLattice = MapLattice<Node, PowersetLattice.Element<BasicBlock>>
 
 typealias PrevEOGStateElement = MapLattice.Element<BasicBlock, PrevEOGLatticeElement>
 
