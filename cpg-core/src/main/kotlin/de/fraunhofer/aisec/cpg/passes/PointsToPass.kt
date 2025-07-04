@@ -134,9 +134,10 @@ fun stringToDepth(name: String): Int {
 
 /** clear dummys from a FunctionSummary */
 fun clearFSDummies(functionSummary: MutableMap<Node, MutableSet<FunctionDeclaration.FSEntry>>) {
-    val dummies =
-        functionSummary.filter { it.key is ReturnStatement && it.value.all { it.isDummy } }
-    dummies.keys.forEach { functionSummary.remove(it) }
+    functionSummary
+        .filter { (it.key as? Literal<*>)?.value == "dummy" }
+        .keys
+        .forEach { functionSummary.remove(it) }
 }
 
 /**
@@ -195,7 +196,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     // For recursive creation of FunctionSummaries, we have to make sure that we don't run in
     // circles. Therefore, we store the chain of FunctionDeclarations we currently analyse
-    private val functionSummaryAnalysisChain = mutableSetOf<FunctionDeclaration>()
+    private val functionSummaryAnalysisChain = mutableListOf<FunctionDeclaration>()
 
     override fun cleanup() {
         // Nothing to do
@@ -338,9 +339,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         if (functionDeclaration.functionSummary.isEmpty()) {
             // Add a dummy function summary so that we don't try this every time
             // In this dummy, all parameters point to the return
-            // TODO: This actually generates a new return statement but it's not part of the
-            // function. Wouldn't the edges better point to the FunctionDeclaration and in a
-            // case with a body, all returns flow to the FunctionDeclaration too?
             // TODO: Also add possible dereference values to the input?
             val prevDFGs = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
             val newEntries =
@@ -597,11 +595,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
         // If we don't have anything to summarize, we add a dummy entry to the functionSummary
         if (node.functionSummary.isEmpty()) {
-            node.functionSummary.computeIfAbsent(ReturnStatement()) {
-                mutableSetOf(
-                    FunctionDeclaration.FSEntry(srcNode = null, subAccessName = "", isDummy = true)
-                )
-            }
+            node.functionSummary[newLiteral("dummy")] = mutableSetOf()
         }
     }
 
@@ -686,7 +680,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         doubleState: PointsToStateElement,
     ): PointsToStateElement {
         var doubleState = doubleState
-        var callingContext = CallingContextIn(mutableListOf(callExpression))
+        var callingContext =
+            CallingContextIn(
+                mutableListOf(callExpression)
+            ) // TODO: Indicate somehow if this has already been done?
         callExpression.arguments.forEach { arg ->
             if (arg.argumentIndex < functionDeclaration.parameters.size) {
                 // Create a DFG-Edge from the argument to the parameter's memoryValue
@@ -1003,13 +1000,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     functionSummaryAnalysisChain.addAll(summaryCopy)
                 } else {
                     log.error(
-                        "Cannot calculate functionSummary for $invoke as it's recursively called. callChain: $functionSummaryAnalysisChain"
+                        "Cannot calculate functionSummary for ${invoke.name.localName} as it's recursively called. callChain: ${functionSummaryAnalysisChain.map{it.name.localName}}"
                     )
-                    val newValues: MutableSet<FunctionDeclaration.FSEntry> =
-                        invoke.parameters
-                            .map { FunctionDeclaration.FSEntry(0, it, 1, "", isDummy = true) }
-                            .toMutableSet()
-                    invoke.functionSummary[ReturnStatement()] = newValues
+                    invoke.functionSummary[newLiteral("dummy")] = mutableSetOf()
                 }
             } else {
                 // Add a dummy function summary so that we don't try this every time
@@ -2100,9 +2093,9 @@ fun PointsToStateElement.getLastWrites(
             // For the rest, we read the declarationState to determine when the memoryAddress of the
             // node was last written to
             this.getAddresses(node, node)
-                .filterTo(PowersetLattice.Element()) {
+                /*                .filterTo(PowersetLattice.Element()) {
                     this.declarationsState[it]?.third?.isNotEmpty() == true
-                }
+                }*/
                 .flatMapTo(PowersetLattice.Element()) {
                     this.declarationsState[it]?.third?.map { Pair(it.first, it.second) } ?: setOf()
                 }
