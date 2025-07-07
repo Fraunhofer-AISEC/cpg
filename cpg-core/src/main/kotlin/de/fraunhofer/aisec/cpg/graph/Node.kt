@@ -32,6 +32,7 @@ import com.fasterxml.jackson.annotation.JsonIdentityInfo
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.ObjectIdGenerators
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
@@ -79,7 +80,9 @@ abstract class Node() :
     HasAssumptions {
 
     /** This property holds the full name using our new [Name] class. */
-    @Convert(NameConverter::class) override var name: Name = Name(EMPTY_NAME)
+    @JsonDeserialize(using = NameConverter::class)
+    @Convert(NameConverter::class)
+    override var name: Name = Name(EMPTY_NAME)
 
     /**
      * Original code snippet of this node. Most nodes will have a corresponding "code", but in cases

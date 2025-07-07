@@ -103,7 +103,7 @@ private constructor(
      * files will be excluded from being parsed and processed in the CPG. The blocklist entries
      * always take priority over those in the whitelist.
      */
-    val includeBlocklist: List<Path>,
+    @JsonIgnore val includeBlocklist: List<Path>,
     passes: List<List<KClass<out Pass<out Node>>>>,
     /**
      * This map offers the possibility to replace certain passes for specific languages with other
@@ -204,7 +204,7 @@ private constructor(
     /** This sub configuration object holds all information about inference and smart-guessing. */
     val inferenceConfiguration: InferenceConfiguration
 
-    val passConfigurations: Map<KClass<out Pass<*>>, PassConfiguration>
+    @JsonIgnore val passConfigurations: Map<KClass<out Pass<*>>, PassConfiguration>
 
     init {
         this.registeredPasses = passes

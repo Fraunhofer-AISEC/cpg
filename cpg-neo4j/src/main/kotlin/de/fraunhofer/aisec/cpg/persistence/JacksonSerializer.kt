@@ -26,14 +26,13 @@
 package de.fraunhofer.aisec.cpg.persistence
 
 import com.fasterxml.jackson.annotation.JacksonInject
-import com.fasterxml.jackson.core.JsonFactory
-import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.core.JsonStreamContext
-import com.fasterxml.jackson.core.StreamWriteConstraints
+import com.fasterxml.jackson.core.*
 import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
+import com.fasterxml.jackson.databind.deser.ContextualDeserializer
+import com.fasterxml.jackson.databind.deser.ResolvableDeserializer
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
+import com.fasterxml.jackson.databind.module.SimpleKeyDeserializers
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.ser.BeanSerializerModifier
 import com.fasterxml.jackson.databind.ser.std.BeanSerializerBase
@@ -90,18 +89,70 @@ class NodeRegistry {
 
 class NodeKeyDeserializer(@JacksonInject val registry: NodeRegistry) : KeyDeserializer() {
     override fun deserializeKey(key: String, ctxt: DeserializationContext): Any {
+        println("Is this ever executed? $key")
         return registry.lookup(key)
             ?: throw IllegalStateException("Node with id='$key' not registered")
     }
 }
 
-class NodeDelegatingDeserializer(delegate: JsonDeserializer<*>, val registry: NodeRegistry) :
+class NodeKeyDeserializers(@JacksonInject val registry: NodeRegistry) : SimpleKeyDeserializers() {
+    override fun findKeyDeserializer(
+        type: JavaType,
+        config: DeserializationConfig,
+        beanDesc: BeanDescription?,
+    ): KeyDeserializer? {
+        val raw = type.rawClass
+        return if (Node::class.java.isAssignableFrom(raw)) {
+            NodeKeyDeserializer(registry)
+        } else {
+            null
+        }
+    }
+}
+
+/*class NodeDelegatingDeserializer(delegate: JsonDeserializer<*>, val registry: NodeRegistry) :
     StdDeserializer<Node>(Node::class.java) {
 
     private val delegatee: JsonDeserializer<*> = delegate
 
     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Node {
         @Suppress("UNCHECKED_CAST") val node = delegatee.deserialize(p, ctxt) as Node
+        registry.register(node)
+        return node
+    }
+
+    override fun isCachable(): Boolean = true
+}*/
+
+class NodeDelegatingDeserializer(
+    private var delegate: JsonDeserializer<*>,
+    private val registry: NodeRegistry,
+) : StdDeserializer<Node>(Node::class.java), ResolvableDeserializer, ContextualDeserializer {
+
+    // Ensure delegate is fully initialized
+    override fun resolve(ctxt: DeserializationContext) {
+        if (delegate is ResolvableDeserializer) {
+            (delegate as ResolvableDeserializer).resolve(ctxt)
+        }
+    }
+
+    // Handle contextual setup for nested properties
+    override fun createContextual(
+        ctxt: DeserializationContext,
+        property: BeanProperty?,
+    ): JsonDeserializer<*> {
+        val contextualDelegate =
+            if (delegate is ContextualDeserializer) {
+                (delegate as ContextualDeserializer).createContextual(ctxt, property)
+            } else {
+                delegate
+            }
+        return NodeDelegatingDeserializer(contextualDelegate, registry)
+    }
+
+    // Register node after delegating actual deserialization
+    override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Node {
+        @Suppress("UNCHECKED_CAST") val node = delegate.deserialize(p, ctxt) as Node
         registry.register(node)
         return node
     }
@@ -166,7 +217,15 @@ fun deserializeFromJson(json: String): TranslationResult {
             // Register the deserializer so Jackson knows to use it
             registerModule(
                 SimpleModule().apply {
+                    /*
                     addKeyDeserializer(Node::class.java, NodeKeyDeserializer(registry))
+                    addKeyDeserializer(
+                        FunctionDeclaration::class.java,
+                        NodeKeyDeserializer(registry),
+                    )
+                    addKeyDeserializer(ValueDeclaration::class.java, NodeKeyDeserializer(registry))
+                    */
+                    setKeyDeserializers(NodeKeyDeserializers(registry))
                 }
             )
         }
