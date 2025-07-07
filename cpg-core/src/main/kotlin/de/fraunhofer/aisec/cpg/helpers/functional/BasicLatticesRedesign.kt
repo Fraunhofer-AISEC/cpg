@@ -161,12 +161,32 @@ interface Lattice<T : Lattice.Element> {
         for (startEdge in startEdges) {
             globalState[startEdge] = startState
         }
-        val edgesList = mutableListOf<EvaluationOrder>()
-        startEdges.forEach { edgesList.add(it) }
+        val currentBBEdgesList = mutableListOf<EvaluationOrder>()
+        val potentialNextBBEdgesList = mutableListOf<EvaluationOrder>()
+        val mergePointsEdgesList = mutableListOf<EvaluationOrder>()
+        startEdges.forEach { potentialNextBBEdgesList.add(it) }
 
-        while (edgesList.isNotEmpty()) {
-            val nextEdge = edgesList.first()
-            edgesList.removeFirst()
+        while (
+            currentBBEdgesList.isNotEmpty() ||
+                potentialNextBBEdgesList.isNotEmpty() ||
+                mergePointsEdgesList.isNotEmpty()
+        ) {
+            val nextEdge =
+                if (currentBBEdgesList.isNotEmpty()) {
+                    // If we have edges in the current basic block, we take these. We prefer to
+                    // finish with the whole Basic Block before moving somewhere else.
+                    currentBBEdgesList.removeFirst()
+                } else if (potentialNextBBEdgesList.isNotEmpty()) {
+                    // If we have points splitting up the EOG, we prefer to process these before
+                    // merging the EOG again. This is to hopefully reduce the number of merges that
+                    // we have to compute and that we hopefully reduce the number of re-processing
+                    // the same basic blocks.
+                    potentialNextBBEdgesList.removeFirst()
+                } else {
+                    // We have a merge point, we try to process this after having processed all
+                    // branches leading there.
+                    mergePointsEdgesList.removeFirst()
+                }
 
             // Compute the effects of "nextEdge" on the state by applying the transformation to its
             // state.
@@ -208,16 +228,37 @@ interface Lattice<T : Lattice.Element> {
                     } ?: newState)
                 globalState[it] = newGlobalIt
                 if (
-                    it !in edgesList &&
+                    it !in currentBBEdgesList &&
+                        it !in potentialNextBBEdgesList &&
+                        it !in mergePointsEdgesList &&
                         (isNoBranchingPoint ||
                             oldGlobalIt == null ||
                             newGlobalIt.compare(oldGlobalIt) == Order.GREATER)
                 ) {
-                    edgesList.add(0, it)
+                    if (nextEdge.end.nextEOGEdges.size > 1) {
+                        // If we have multiple next edges, we add this edge to the list of edges of
+                        // a next basic block.
+                        // We will process these after the current basic block has been processed
+                        // (probably very soon).
+                        potentialNextBBEdgesList.add(0, it)
+                    } else if (it.end.prevEOGEdges.size > 1) {
+                        // This edge brings us to a merge point, so we add it to the list of merge
+                        // points.
+                        mergePointsEdgesList.add(0, it)
+                    } else {
+                        // If we have only one next edge, we add it to the current basic block edges
+                        // list.
+                        currentBBEdgesList.add(0, it)
+                    }
                 }
             }
 
-            if (nextEdge.end.nextEOGEdges.isEmpty() || edgesList.isEmpty()) {
+            if (
+                nextEdge.end.nextEOGEdges.isEmpty() ||
+                    (currentBBEdgesList.isEmpty() &&
+                        potentialNextBBEdgesList.isEmpty() &&
+                        mergePointsEdgesList.isEmpty())
+            ) {
                 finalState = this.lub(finalState, newState, false)
             }
         }
