@@ -25,13 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.auth
 
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-
 /**
  * Represents an abstract concept of request context. This usually holds the contextual information
  * of a specific HTTP request.
- *
- * @param underlyingNode The underlying CPG node.
  */
-open class RequestContext(underlyingNode: Node? = null) : Concept(underlyingNode = underlyingNode)
+data class RequestContext(
+    val requestId: String,
+    val method: String,
+    val path: String,
+    val headers: Map<String, String> = emptyMap(),
+)

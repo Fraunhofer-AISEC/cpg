@@ -25,42 +25,30 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.simple
 
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-
 /**
- * This file demonstrates how simpler concepts and operations could be created with the improvements
- * to enable easier data class conversion in specific cases.
- *
- * While full inheritance from OverlayNode prevents true data classes, the improvements make it
- * easier to work with concepts and operations that have simple additional fields.
+ * This file demonstrates true data classes for concepts and operations by removing the
+ * underlyingNode parameter completely. This enables the use of Kotlin data classes with automatic
+ * equals/hashCode/toString/copy implementations.
  */
 
-// Example of a concept with additional properties that could benefit from data class patterns
-// Before: Would need manual equals/hashCode implementation
-// After: With concept properties as constructor params, simpler patterns become possible
-class SimpleConceptWithData(underlyingNode: Node? = null, val additionalData: String) :
-    Concept(underlyingNode) {
-    // Before the improvement: Manual equals/hashCode would be needed here
-    // After: The base class handles the basic equality, and for simple cases
-    // like this, users might be able to avoid manual implementations in some scenarios
-}
+// Example of a simple data class concept - no underlyingNode, just pure data
+data class SimpleDataConcept(val name: String, val value: Int)
 
-// Example of an operation with additional properties
-// With the concept parameter now being a constructor property, this becomes cleaner
-class SimpleOperationWithData(
-    underlyingNode: Node? = null,
-    concept: Concept,
-    val operationData: String,
-) : Operation(underlyingNode, concept) {
-    // Before: Manual equals/hashCode implementation would be required
-    // After: With concept as a constructor property, the base implementation is more robust
-    // Users still need manual equals/hashCode for additional fields, but the foundation is better
-}
+// Example of a data class concept with multiple properties
+data class UserConcept(val userId: String, val username: String, val email: String)
 
-// For very simple cases with no additional fields, the base implementations may suffice:
-class VerySimpleConcept(underlyingNode: Node? = null) : Concept(underlyingNode)
+// Example of a data class concept for configuration
+data class ConfigConcept(val key: String, val value: String, val environment: String)
 
-class VerySimpleOperation(underlyingNode: Node? = null, concept: Concept) :
-    Operation(underlyingNode, concept)
+// Example of a data class operation that works on concepts
+data class ReadOperation(val concept: SimpleDataConcept, val timestamp: Long)
+
+// Example of a data class operation with additional metadata
+data class WriteOperation(val concept: UserConcept, val data: String, val operationType: String)
+
+// Example of a data class operation for database interactions
+data class DatabaseOperation(
+    val concept: ConfigConcept,
+    val query: String,
+    val parameters: Map<String, Any>,
+)
