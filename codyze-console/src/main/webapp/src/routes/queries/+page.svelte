@@ -2,7 +2,23 @@
   import { onMount } from 'svelte';
   import { PageHeader } from '$lib/components/navigation';
 
-  let scriptCode = $state('// Enter your Kotlin query script here\n// Example:\n// result.allExtended<CallExpression>({ it.name.localName == "malloc" }) {\n//   sizeof(it.arguments[0]) gt const(1024)\n// }');
+  let scriptCode = $state(`// Examples of supported query patterns:
+// Basic node counting:
+result.nodes.size
+
+// Function analysis:
+result.allChildren<FunctionDeclaration>().size
+
+// Call expression analysis:
+result.allChildren<CallExpression>().size
+
+// Filter for specific calls (e.g., malloc):
+result.allChildren<CallExpression>().filter { it.name.localName == "malloc" }.size
+
+// Variable declarations:
+result.allChildren<VariableDeclaration>().size
+
+// Try entering one of the examples above`);
   let queryResult = $state('');
   let isExecuting = $state(false);
   let error = $state<string | null>(null);
@@ -49,7 +65,8 @@
     <div class="px-6 py-4">
       <h2 class="text-lg font-medium text-gray-900">Kotlin Query Script</h2>
       <p class="mt-1 text-sm text-gray-500">
-        Write a Kotlin script to query the current translation result. The result is available as the 'result' variable.
+        Write a query to analyze the current translation result. The result is available as the 'result' variable.
+        This initial version supports basic query patterns - full Kotlin scripting support is coming soon.
       </p>
     </div>
     
