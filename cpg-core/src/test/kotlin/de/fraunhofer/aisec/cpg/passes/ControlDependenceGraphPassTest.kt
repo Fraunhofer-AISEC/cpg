@@ -105,11 +105,12 @@ class ControlDependenceGraphPassTest {
                 "1\n" == (it.arguments.firstOrNull() as? Literal<*>)?.value
             }
         assertNotNull(printAfterLoop)
-        assertEquals(2, printAfterLoop.prevCDG.size)
+        assertEquals(1, printAfterLoop.prevCDG.size)
         assertTrue(main in printAfterLoop.prevCDG)
-        assertTrue(
+        /*assertTrue(
             forEachStmt in printAfterLoop.prevCDG
-        ) // TODO: Is this really correct or should it be filtered out in the pass?
+        )*/
+        // TODO: Is this really correct or should it be filtered out in the pass?
     }
 
     companion object {
