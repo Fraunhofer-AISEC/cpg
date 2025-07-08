@@ -23,10 +23,31 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.auth
+package de.fraunhofer.aisec.cpg.graph.concepts.simple
 
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
-/** Represents an abstract concept of `authorization`. */
-data class Authorization(val authorizationId: String, val permissions: Set<String> = emptySet()) :
+/**
+ * A simple data class concept that demonstrates the improved data class support. This concept
+ * inherits from Concept and benefits from all data class features.
+ */
+data class SimpleDataConcept(
+    val conceptId: String,
+    val description: String = "Default description",
+) : Concept()
+
+/** A simple data class operation that works with SimpleDataConcept. */
+data class SimpleDataOperation(val operationId: String, override val concept: SimpleDataConcept) :
+    Operation(concept = concept)
+
+/** Example user-specific concept using data class functionality. */
+data class UserConcept(
+    val userId: String,
+    val username: String,
+    val roles: Set<String> = emptySet(),
+) : Concept()
+
+/** Example configuration concept using data class functionality. */
+data class ConfigConcept(val configName: String, val settings: Map<String, Any> = emptyMap()) :
     Concept()

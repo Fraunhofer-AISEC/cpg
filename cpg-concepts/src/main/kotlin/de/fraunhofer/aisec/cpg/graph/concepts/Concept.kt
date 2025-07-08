@@ -36,7 +36,9 @@ import de.fraunhofer.aisec.cpg.graph.OverlayNode
  */
 abstract class Concept(underlyingNode: Node? = null) : OverlayNode() {
     init {
-        this.underlyingNode = underlyingNode
+        if (underlyingNode != null) {
+            this.underlyingNode = underlyingNode
+        }
         this::class.simpleName?.let { name = Name(it) }
     }
 

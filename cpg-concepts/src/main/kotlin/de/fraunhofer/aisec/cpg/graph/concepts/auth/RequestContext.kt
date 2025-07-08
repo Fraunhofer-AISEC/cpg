@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.auth
 
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+
 /**
  * Represents an abstract concept of request context. This usually holds the contextual information
  * of a specific HTTP request.
@@ -34,4 +36,4 @@ data class RequestContext(
     val method: String,
     val path: String,
     val headers: Map<String, String> = emptyMap(),
-)
+) : Concept()

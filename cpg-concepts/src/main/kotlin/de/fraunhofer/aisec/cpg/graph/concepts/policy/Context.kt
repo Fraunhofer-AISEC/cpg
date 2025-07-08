@@ -25,8 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.policy
 
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+
 /**
  * Represents a context in which a policy is applied. Typically, a context contains information
  * about a user or some other form of identity (e.g. a [Principal]).
  */
-data class Context(val contextId: String = "default")
+data class Context(val contextId: String = "default") : Concept()
