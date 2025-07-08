@@ -937,7 +937,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     mapDstToSrc,
                                     destinationAddresses,
                                     destinations,
-                                    srcNode,
+                                    // To ensure that we have a unique Node, we take the
+                                    // callExpression if the FS said the srcNode is the
+                                    // FunctionDeclaration
+                                    if (srcNode is FunctionDeclaration) currentNode else srcNode,
                                     shortFS,
                                     srcValueDepth,
                                     param,
