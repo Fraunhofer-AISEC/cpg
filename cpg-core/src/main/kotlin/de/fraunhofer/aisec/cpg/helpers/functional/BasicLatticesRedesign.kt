@@ -235,16 +235,16 @@ interface Lattice<T : Lattice.Element> {
                             oldGlobalIt == null ||
                             newGlobalIt.compare(oldGlobalIt) == Order.GREATER)
                 ) {
-                    if (nextEdge.end.nextEOGEdges.size > 1) {
+                    if (it.start.prevEOGEdges.size > 1) {
+                        // This edge brings us to a merge point, so we add it to the list of merge
+                        // points.
+                        mergePointsEdgesList.add(0, it)
+                    } else if (nextEdge.end.nextEOGEdges.size > 1) {
                         // If we have multiple next edges, we add this edge to the list of edges of
                         // a next basic block.
                         // We will process these after the current basic block has been processed
                         // (probably very soon).
                         potentialNextBBEdgesList.add(0, it)
-                    } else if (it.end.prevEOGEdges.size > 1) {
-                        // This edge brings us to a merge point, so we add it to the list of merge
-                        // points.
-                        mergePointsEdgesList.add(0, it)
                     } else {
                         // If we have only one next edge, we add it to the current basic block edges
                         // list.
