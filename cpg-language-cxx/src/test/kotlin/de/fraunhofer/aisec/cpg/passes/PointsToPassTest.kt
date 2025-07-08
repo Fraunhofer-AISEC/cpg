@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import java.io.File
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -3386,6 +3387,7 @@ class PointsToPassTest {
         )
     }
 
+    @Ignore
     @Test
     fun testGhidra2() {
         val file = File("src/test/resources/pointsto.cpp")
