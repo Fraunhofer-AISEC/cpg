@@ -1,0 +1,10 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+@plugin '@tailwindcss/typography';
+
+@theme {
+  --font-sans: InterVariable, sans-serif;
+  --font-mono: 'Noto Sans Mono', monospace;
+  --font-sans--font-feature-settings: 'cv11', 'ss01';
+  --font-sans--font-variation-settings: 'opsz' 24;
+}

@@ -33,10 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.types.HasType.TypeObserver
  * This interfaces is an extension of [MutableCollection] that holds specific functions for the
  * collection of [Edge] edges.
  */
-interface EdgeCollection<
-    NodeType : Node,
-    EdgeType : Edge<NodeType>,
-> : MutableCollection<EdgeType> {
+interface EdgeCollection<NodeType : Node, EdgeType : Edge<NodeType>> : MutableCollection<EdgeType> {
     var thisRef: Node
     var init: (start: Node, end: NodeType) -> EdgeType
     var outgoing: Boolean
@@ -86,7 +83,7 @@ interface EdgeCollection<
     fun add(
         target: NodeType,
         init: ((Node, NodeType) -> EdgeType) = this.init,
-        builder: (EdgeType.() -> Unit)? = null
+        builder: (EdgeType.() -> Unit)? = null,
     ): Boolean {
         val edge = createEdge(target, init, this.outgoing, builder)
 
@@ -169,12 +166,12 @@ interface EdgeCollection<
 internal fun <
     NodeType : Node,
     EdgeType : Edge<NodeType>,
-    CollectionType : MutableCollection<NodeType>
+    CollectionType : MutableCollection<NodeType>,
 > internalToNodeCollection(
     edges: EdgeCollection<NodeType, EdgeType>,
     outgoing: Boolean = true,
     predicate: ((EdgeType) -> Boolean)? = null,
-    createCollection: () -> CollectionType
+    createCollection: () -> CollectionType,
 ): CollectionType {
     val unwrapped = createCollection()
     for (edge in edges) {

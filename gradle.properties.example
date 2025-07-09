@@ -9,3 +9,4 @@ enableLLVMFrontend=true
 enableTypeScriptFrontend=true
 enableRubyFrontend=true
 enableJVMFrontend=true
+enableINIFrontend=true

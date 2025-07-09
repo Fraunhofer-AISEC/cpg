@@ -103,7 +103,7 @@ class DeclarationTest {
         val fields = myStruct.fields
         assertEquals(
             listOf("MyField", "OtherStruct", "EvenAnotherStruct"),
-            fields.map { it.name.localName }
+            fields.map { it.name.localName },
         )
 
         var methods = myStruct.methods
@@ -229,6 +229,7 @@ class DeclarationTest {
         val ef = main.allChildren<TupleDeclaration> { it.name.toString() == "(e,f)" }.firstOrNull()
         assertNotNull(ef)
         assertIs<CallExpression>(ef.initializer)
+        assertEquals(ef, e.astParent)
 
         // The next two variables are using a short assignment, therefore they do not have an
         // initializer, but we can use the firstAssignment function
@@ -258,7 +259,7 @@ class DeclarationTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("type_constraints.go").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<GoLanguage>()
             }
@@ -274,13 +275,13 @@ class DeclarationTest {
     @Test
     fun testConst() {
         val topLevel = Path.of("src", "test", "resources", "golang")
-        val tu =
-            analyzeAndGetFirstTU(listOf(topLevel.resolve("const.go").toFile()), topLevel, true) {
+        val result =
+            analyze(listOf(topLevel.resolve("const.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
             }
-        assertNotNull(tu)
+        assertNotNull(result)
 
-        with(tu) {
+        with(result) {
             val values =
                 mapOf(
                     "zeroShift" to Pair(0, assertResolvedType("int")),
@@ -303,7 +304,7 @@ class DeclarationTest {
                     "onehundredandfive" to Pair(105, assertResolvedType("int")),
                 )
             values.forEach {
-                val variable = tu.variables[it.key]
+                val variable = variables[it.key]
                 assertNotNull(variable, "variable \"${it.key}\" not found")
                 assertEquals(it.value.first, variable.evaluate(), "${it.key} does not match")
                 assertEquals(it.value.second, variable.type, "${it.key} has the wrong type")
@@ -317,12 +318,9 @@ class DeclarationTest {
         val topLevel = Path.of("src", "test", "resources", "golang")
         val result =
             analyze(
-                listOf(
-                    topLevel.resolve("importalias.go").toFile(),
-                    stdLib.resolve("fmt").toFile(),
-                ),
+                listOf(topLevel.resolve("importalias.go").toFile(), stdLib.resolve("fmt").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<GoLanguage>()
                 it.includePath(stdLib)
@@ -357,7 +355,7 @@ class DeclarationTest {
                     topLevel.resolve("srv.go").toFile(),
                 ),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<GoLanguage>()
             }

@@ -29,9 +29,18 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 
 class StringType(
     typeName: CharSequence = "",
-    language: Language<*>? = null,
-    generics: List<Type> = listOf()
-) : ObjectType(typeName, generics, false, language) {
+    language: Language<*>,
+    generics: List<Type> = listOf(),
+    primitive: Boolean = false,
+    mutable: Boolean = false,
+) :
+    ObjectType(
+        typeName = typeName,
+        generics = generics,
+        primitive = primitive,
+        mutable = mutable,
+        language = language,
+    ) {
 
     init {
         // Built-in types are always resolved

@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
-import de.fraunhofer.aisec.cpg.passes.inference.startInference
 
 /**
  * This pass takes care of several things that we need to clean up, once all translation units are
@@ -111,9 +110,8 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
 
         walker = SubgraphWalker.ScopedWalker(scopeManager)
-        walker.registerHandler { _, _, node ->
+        walker.registerHandler { node ->
             when (node) {
-                is ImportDeclaration -> handleImportDeclaration(node)
                 is RecordDeclaration -> handleRecordDeclaration(node)
                 is AssignExpression -> handleAssign(node)
                 is ForEachStatement -> handleForEachStatement(node)
@@ -156,7 +154,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         for (method in record.embeddedStructs.flatMap { it.methods }) {
             // Add it to the scope, but do NOT add it to the underlying AST field (methods),
             // otherwise we would duplicate the method in the AST
-            scopeManager.addDeclaration(method, addToAST = false)
+            scopeManager.addDeclaration(method)
         }
 
         scopeManager.leaveScope(record)
@@ -217,16 +215,16 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    private fun addBuiltInFunction(func: FunctionDeclaration) {
+    private fun TranslationUnitDeclaration.addBuiltInFunction(func: FunctionDeclaration) {
         func.type =
-            typeManager.registerType(
-                FunctionType(
-                    funcTypeName(func.signatureTypes, func.returnTypes),
-                    func.signatureTypes,
-                    func.returnTypes
-                )
+            FunctionType(
+                funcTypeName(func.signatureTypes, func.returnTypes),
+                func.signatureTypes,
+                func.returnTypes,
+                func.language,
             )
         scopeManager.addDeclaration(func)
+        this.declarations += func
     }
 
     /**
@@ -348,9 +346,9 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // Loop through the target variables (left-hand side)
         for ((idx, expr) in assign.lhs.withIndex()) {
             if (expr is Reference) {
-                // And try to resolve it
-                val ref = scopeManager.resolveReference(expr)
-                if (ref == null) {
+                // And try to resolve it as a variable
+                val ref = scopeManager.lookupSymbolByNodeNameOfType<VariableDeclaration>(expr)
+                if (ref.isEmpty()) {
                     // We need to implicitly declare it, if it's not declared before.
                     val decl = newVariableDeclaration(expr.name, expr.autoType())
                     decl.language = expr.language
@@ -365,41 +363,11 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                         assign.rhs[idx].registerTypeObserver(InitializerTypePropagation(decl))
                     }
 
-                    assign.declarations += decl
-
                     // Add it to the scope, so other assignments / references can "see" it.
                     scopeManager.addDeclaration(decl)
+                    assign.declarations += decl
                 }
             }
-        }
-    }
-
-    /**
-     * This function gets called for every [IncludeDeclaration] (which in Go imports a whole
-     * package) and checks, if we need to infer a [NamespaceDeclaration] for this particular
-     * include.
-     */
-    // TODO: Somehow, this gets called twice?!
-    private fun handleImportDeclaration(import: ImportDeclaration) {
-        // If the namespace is included as _, we can ignore it, as its only included as a runtime
-        // dependency
-        if (import.name.localName == "_") {
-            return
-        }
-
-        // Try to see if we already know about this namespace somehow
-        val namespace =
-            scopeManager.lookupSymbolByName(import.name, null).filter {
-                it is NamespaceDeclaration && it.path == import.importURL
-            }
-
-        // If not, we can infer a namespace declaration, so we can bundle all inferred function
-        // declarations in there
-        if (namespace.isEmpty()) {
-            scopeManager.globalScope
-                ?.astNode
-                ?.startInference(ctx)
-                ?.inferNamespaceDeclaration(import.name, import.importURL, import)
         }
     }
 

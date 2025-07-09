@@ -23,43 +23,112 @@
  *                    \______/ \__|       \______/
  *
  */
-import com.github.gradle.node.npm.task.NpmTask
+
+import io.github.masch0212.deno.RunDenoTask
 
 plugins {
     id("cpg.frontend-conventions")
-    alias(libs.plugins.node)
+    alias(libs.plugins.deno)
 }
 
-publishing {
-    publications {
-        named<MavenPublication>("cpg-language-typescript") {
-            pom {
-                artifactId = "cpg-language-typescript"
-                name.set("Code Property Graph - JavaScript/TypeScript Frontend")
-                description.set("A JavaScript/TypeScript language frontend for the CPG")
-            }
-        }
+mavenPublishing {
+    pom {
+        name.set("Code Property Graph - JavaScript/TypeScript Frontend")
+        description.set("A JavaScript/TypeScript language frontend for the CPG")
     }
 }
 
-node {
-    download.set(findProperty("nodeDownload")?.toString()?.toBoolean() ?: false)
-    version.set("20.11.1")
-    nodeProjectDir.set(file("${project.projectDir.resolve("src/main/nodejs")}"))
-}
+val compileWindowsX8664 =
+    tasks.register<RunDenoTask>("compileWindowsX8664") {
+        dependsOn(tasks.installDeno)
+        command(
+            "compile",
+            "-E",
+            "-R",
+            "--target",
+            "x86_64-pc-windows-msvc",
+            "-o",
+            "build/resources/main/typescript/parser-windows-x86_64",
+            "src/main/typescript/src/parser.ts",
+        )
+        outputs.dir("build/resources/main/typescript")
+        outputs.cacheIf { true }
+    }
 
-val npmBuild by tasks.registering(NpmTask::class) {
-    inputs.file("src/main/nodejs/package.json").withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.file("src/main/nodejs/package-lock.json").withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.dir("src/main/nodejs/src").withPathSensitivity(PathSensitivity.RELATIVE)
-    outputs.dir("build/resources/main/nodejs")
-    outputs.cacheIf { true }
+val compileMacOSX8664 =
+    tasks.register<RunDenoTask>("compileMacOSX8664") {
+        dependsOn(tasks.installDeno)
+        command(
+            "compile",
+            "-E",
+            "-R",
+            "--target",
+            "x86_64-apple-darwin",
+            "-o",
+            "build/resources/main/typescript/parser-macos-x86_64",
+            "src/main/typescript/src/parser.ts",
+        )
+        outputs.dir("build/resources/main/typescript")
+        outputs.cacheIf { true }
+    }
 
-    workingDir.set(file("src/main/nodejs"))
-    npmCommand.set(listOf("run", "bundle"))
-    dependsOn(tasks.getByName("npmInstall"))
-}
+val compileMacOSAarch64 =
+    tasks.register<RunDenoTask>("compileMacOSAarch64") {
+        dependsOn(tasks.installDeno)
+        command(
+            "compile",
+            "-E",
+            "-R",
+            "--target",
+            "aarch64-apple-darwin",
+            "-o",
+            "build/resources/main/typescript/parser-macos-aarch64",
+            "src/main/typescript/src/parser.ts",
+        )
+        outputs.dir("build/resources/main/typescript")
+        outputs.cacheIf { true }
+    }
+
+val compileLinuxX8664 =
+    tasks.register<RunDenoTask>("compileLinuxX8664") {
+        dependsOn(tasks.installDeno)
+        command(
+            "compile",
+            "-E",
+            "-R",
+            "--target",
+            "x86_64-unknown-linux-gnu",
+            "-o",
+            "build/resources/main/typescript/parser-linux-x86_64",
+            "src/main/typescript/src/parser.ts",
+        )
+        outputs.dir("build/resources/main/typescript")
+        outputs.cacheIf { true }
+    }
+
+val compileLinuxAarch64 =
+    tasks.register<RunDenoTask>("compileLinuxAarch64") {
+        dependsOn(tasks.installDeno)
+        command(
+            "compile",
+            "-E",
+            "-R",
+            "--target",
+            "aarch64-unknown-linux-gnu",
+            "-o",
+            "build/resources/main/typescript/parser-linux-aarch64",
+            "src/main/typescript/src/parser.ts",
+        )
+        outputs.dir("build/resources/main/typescript")
+        outputs.cacheIf { true }
+    }
 
 tasks.processResources {
-    dependsOn(npmBuild)
+    dependsOn(
+        compileWindowsX8664,
+        compileMacOSX8664,
+        compileMacOSAarch64,
+        compileLinuxX8664,
+        compileLinuxAarch64,
+    )
 }

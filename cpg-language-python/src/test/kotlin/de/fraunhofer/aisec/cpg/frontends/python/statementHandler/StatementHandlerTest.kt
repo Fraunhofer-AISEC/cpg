@@ -26,15 +26,14 @@
 package de.fraunhofer.aisec.cpg.frontends.python.statementHandler
 
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.frontends.python.*
+import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.test.*
-import de.fraunhofer.aisec.cpg.test.analyze
-import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
-import de.fraunhofer.aisec.cpg.test.assertResolvedType
 import java.nio.file.Path
 import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll
@@ -106,18 +105,18 @@ class StatementHandlerTest : BaseTest() {
         // All entries to the else block must come from the try block
         assertTrue(
             Util.eogConnect(
-                n = tryAll.elseBlock,
-                en = Util.Edge.ENTRIES,
-                refs = listOf(tryAll.tryBlock)
+                startNode = tryAll.elseBlock,
+                edgeDirection = Util.Edge.ENTRIES,
+                endNodes = listOf(tryAll.tryBlock),
             )
         )
 
         // All exits from the else block must go to the entries of the non-empty finals block
         assertTrue(
             Util.eogConnect(
-                n = tryAll.elseBlock,
-                en = Util.Edge.EXITS,
-                refs = listOf(tryAll.finallyBlock)
+                startNode = tryAll.elseBlock,
+                edgeDirection = Util.Edge.EXITS,
+                endNodes = listOf(tryAll.finallyBlock),
             )
         )
     }
@@ -195,7 +194,7 @@ class StatementHandlerTest : BaseTest() {
 
         // Test for `del a`
         val deleteStmt1 = deleteExpressions[0]
-        assertEquals(0, deleteStmt1.operands.size)
+        assertEquals(1, deleteStmt1.operands.size)
         assertEquals(1, deleteStmt1.additionalProblems.size)
 
         // Test for `del my_list[2]`
@@ -212,7 +211,7 @@ class StatementHandlerTest : BaseTest() {
 
         // Test for `del obj.d`
         val deleteStmt4 = deleteExpressions[3]
-        assertEquals(0, deleteStmt4.operands.size)
+        assertEquals(1, deleteStmt4.operands.size)
         assertEquals(1, deleteStmt4.additionalProblems.size)
     }
 
@@ -223,12 +222,12 @@ class StatementHandlerTest : BaseTest() {
             // type comments
             val a = result.refs["a"]
             assertNotNull(a)
-            assertEquals(assertResolvedType("int"), a.type)
+            assertContains(a.assignedTypes, assertResolvedType("int"))
 
             // type annotation
             val b = result.refs["b"]
             assertNotNull(b)
-            assertEquals(assertResolvedType("str"), b.type)
+            assertContains(b.assignedTypes, assertResolvedType("str"))
         }
     }
 
@@ -245,21 +244,16 @@ class StatementHandlerTest : BaseTest() {
         // Our scopes do not match 1:1 to python scopes, but rather the python "global" scope is a
         // name space with the name of the file and the function scope is a block scope of the
         // function body
-        var pythonGlobalScope = result.finalCtx.scopeManager.lookupScope(file.nameWithoutExtension)
+        var pythonGlobalScope =
+            result.finalCtx.scopeManager.lookupScope(Name(file.nameWithoutExtension))
 
         var globalC = cVariables.firstOrNull { it.scope == pythonGlobalScope }
         assertNotNull(globalC)
 
-        var localC1 =
-            cVariables.firstOrNull {
-                it.scope?.astNode?.astParent?.name?.localName == "local_write"
-            }
+        var localC1 = cVariables.firstOrNull { it.scope?.astNode?.name?.localName == "local_write" }
         assertNotNull(localC1)
 
-        var localC2 =
-            cVariables.firstOrNull {
-                it.scope?.astNode?.astParent?.name?.localName == "error_write"
-            }
+        var localC2 = cVariables.firstOrNull { it.scope?.astNode?.name?.localName == "error_write" }
         assertNotNull(localC2)
 
         // In global_write, all references should point to global c

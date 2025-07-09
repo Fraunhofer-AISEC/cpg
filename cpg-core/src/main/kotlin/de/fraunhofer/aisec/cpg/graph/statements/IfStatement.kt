@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
+import kotlin.collections.ifEmpty
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
@@ -111,6 +112,19 @@ class IfStatement : Statement(), BranchingNode, ArgumentHolder {
             conditionDeclaration,
             condition,
             thenStatement,
-            elseStatement
+            elseStatement,
         )
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return initializerStatement?.getStartingPrevEOG()
+            ?: condition?.getStartingPrevEOG()
+            ?: conditionDeclaration?.getStartingPrevEOG()
+            ?: this.prevEOG
+    }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return ((this.thenStatement?.getExitNextEOG() ?: setOf()) +
+                (this.elseStatement?.getExitNextEOG() ?: this.nextEOG))
+            .ifEmpty { this.nextEOG }
+    }
 }

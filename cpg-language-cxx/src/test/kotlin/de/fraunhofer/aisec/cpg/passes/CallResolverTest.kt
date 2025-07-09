@@ -92,7 +92,7 @@ class CallResolverTest : BaseTest() {
         intType: Type,
         stringType: Type,
         methods: Collection<FunctionDeclaration>,
-        calls: Collection<CallExpression>
+        calls: Collection<CallExpression>,
     ) {
         val signatures = listOf(listOf(), listOf(intType, intType), listOf(intType, stringType))
         for (signature in signatures) {
@@ -133,7 +133,7 @@ class CallResolverTest : BaseTest() {
         assertEquals<List<FunctionDeclaration>>(listOf(originalMethod), overridingMethod.overrides)
         assertEquals<List<FunctionDeclaration>>(
             listOf(overridingMethod),
-            originalMethod.overriddenBy
+            originalMethod.overriddenBy,
         )
     }
 
@@ -176,7 +176,7 @@ class CallResolverTest : BaseTest() {
                         .toFile()
                 ),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -211,10 +211,10 @@ class CallResolverTest : BaseTest() {
             analyze(
                 listOf(
                     Path.of(topLevel.toString(), "implicitcast", "ambiguouscall.cpp").toFile(),
-                    Path.of(topLevel.toString(), "implicitcast", "implicitcast.cpp").toFile()
+                    Path.of(topLevel.toString(), "implicitcast", "implicitcast.cpp").toFile(),
                 ),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -260,7 +260,7 @@ class CallResolverTest : BaseTest() {
                     Path.of(topLevel.toString(), "defaultargs", "defaultInDeclaration.cpp").toFile()
                 ),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -344,7 +344,7 @@ class CallResolverTest : BaseTest() {
                     Path.of(topLevel.toString(), "defaultargs", "defaultInDefinition.cpp").toFile()
                 ),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -410,7 +410,7 @@ class CallResolverTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "defaultargs", "partialDefaults.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -482,7 +482,7 @@ class CallResolverTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "defaultargs", "defaultInMethod.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -526,7 +526,7 @@ class CallResolverTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "cxxprioresolution", "undefined.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -546,7 +546,7 @@ class CallResolverTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "cxxprioresolution", "defined.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -562,12 +562,12 @@ class CallResolverTest : BaseTest() {
 
     private fun testScopedFunctionResolutionFunctionGlobal(
         result: TranslationResult,
-        calls: List<CallExpression>
+        calls: List<CallExpression>,
     ) {
         val fh =
             findByUniquePredicate(
                 calls,
-                Predicate { c: CallExpression -> c.location!!.region.startLine == 4 }
+                Predicate { c: CallExpression -> c.location!!.region.startLine == 4 },
             )
         val literal7 = findByUniquePredicate(result.literals) { it.value == 7 }
         assertEquals(1, fh.invokes.size)
@@ -583,12 +583,12 @@ class CallResolverTest : BaseTest() {
 
     private fun testScopedFunctionResolutionRedeclaration(
         result: TranslationResult,
-        calls: List<CallExpression>
+        calls: List<CallExpression>,
     ) {
         val fm1 =
             findByUniquePredicate(
                 calls,
-                Predicate { c: CallExpression -> c.location!!.region.startLine == 8 }
+                Predicate { c: CallExpression -> c.location!!.region.startLine == 8 },
             )
         assertEquals(1, fm1.invokes.size)
         assertEquals(1, fm1.arguments.size)
@@ -597,7 +597,7 @@ class CallResolverTest : BaseTest() {
         val fm2 =
             findByUniquePredicate(
                 calls,
-                Predicate { c: CallExpression -> c.location!!.region.startLine == 10 }
+                Predicate { c: CallExpression -> c.location!!.region.startLine == 10 },
             )
         val literal5 = findByUniquePredicate(result.literals) { it.value == 5 }
         assertEquals(1, fm2.invokes.size)
@@ -612,7 +612,7 @@ class CallResolverTest : BaseTest() {
 
     private fun testScopedFunctionResolutionAfterRedeclaration(
         result: TranslationResult,
-        calls: List<CallExpression>
+        calls: List<CallExpression>,
     ) {
         val fn = findByUniquePredicate(calls, Predicate { it.location?.region?.startLine == 13 })
         val literal7 = findByUniquePredicate(result.literals) { it.value == 7 }
@@ -636,12 +636,12 @@ class CallResolverTest : BaseTest() {
                     Path.of(
                             topLevel.toString(),
                             "cxxprioresolution",
-                            "scopedResolutionWithDefaults.cpp"
+                            "scopedResolutionWithDefaults.cpp",
                         )
                         .toFile()
                 ),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -661,12 +661,12 @@ class CallResolverTest : BaseTest() {
                             topLevel.toString(),
                             "cxxprioresolution",
                             "methodresolution",
-                            "overloadedresolution.cpp"
+                            "overloadedresolution.cpp",
                         )
                         .toFile()
                 ),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -709,12 +709,12 @@ class CallResolverTest : BaseTest() {
                             topLevel.toString(),
                             "cxxprioresolution",
                             "methodresolution",
-                            "overloadnoresolution.cpp"
+                            "overloadnoresolution.cpp",
                         )
                         .toFile()
                 ),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
                 it.inferenceConfiguration(InferenceConfiguration.builder().enabled(false).build())
@@ -747,6 +747,26 @@ class CallResolverTest : BaseTest() {
         val declarations = tu.declarations.filterIsInstance<FunctionDeclaration>()
         assertNotNull(declarations)
         assertEquals(2, declarations.size)
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testEOGSymbolResolver() {
+        val result =
+            analyze(
+                listOf(Path.of(topLevel.toString(), "symbols.cpp").toFile()),
+                topLevel,
+                usePasses = true,
+            ) {
+                it.configurePass<SymbolResolver>(
+                    SymbolResolver.Configuration(experimentalEOGWorklist = true)
+                )
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(result)
+
+        result.refs.forEach { assertNotNull(it.refersTo) }
+        result.calls.forEach { assertTrue(it.invokes.isNotEmpty()) }
     }
 
     companion object {

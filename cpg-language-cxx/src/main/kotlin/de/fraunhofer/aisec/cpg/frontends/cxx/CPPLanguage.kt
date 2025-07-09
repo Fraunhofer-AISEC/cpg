@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.SignatureMatches
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -47,7 +48,8 @@ import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
 /** The C++ language. */
-open class CPPLanguage :
+@Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+open class CPPLanguage() :
     CLanguage(),
     HasDefaultArguments,
     HasTemplates,
@@ -130,7 +132,7 @@ open class CPPLanguage :
                 IntegerType("unsigned long long int", 64, this, NumericType.Modifier.UNSIGNED),
 
             // Boolean type
-            "bool" to BooleanType("bool"),
+            "bool" to BooleanType("bool", language = this),
 
             // Character types
             "signed char" to IntegerType("signed char", 8, this, NumericType.Modifier.SIGNED),
@@ -168,7 +170,7 @@ open class CPPLanguage :
         type: Type,
         targetType: Type,
         hint: HasType?,
-        targetHint: HasType?
+        targetHint: HasType?,
     ): CastResult {
         val match = super.tryCast(type, targetType, hint, targetHint)
         if (match != CastNotPossible) {
@@ -200,6 +202,7 @@ open class CPPLanguage :
         return CastNotPossible
     }
 
+    context(_: ContextProvider)
     override fun bestViableResolution(
         result: CallResolutionResult
     ): Pair<Set<FunctionDeclaration>, CallResolutionResult.SuccessKind> {
@@ -241,10 +244,10 @@ open class CPPLanguage :
         applyInference: Boolean,
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration?,
-        needsExactMatch: Boolean
+        needsExactMatch: Boolean,
     ): Pair<Boolean, List<FunctionDeclaration>> {
         val instantiationCandidates =
-            ctx.scopeManager.resolveFunctionTemplateDeclaration(templateCall)
+            ctx.scopeManager.lookupSymbolByNodeNameOfType<FunctionTemplateDeclaration>(templateCall)
         for (functionTemplateDeclaration in instantiationCandidates) {
             val initializationType =
                 mutableMapOf<Node?, TemplateDeclaration.TemplateInitialization?>()
@@ -262,7 +265,7 @@ open class CPPLanguage :
                         templateCall,
                         initializationType,
                         orderedInitializationSignature,
-                        explicitInstantiation
+                        explicitInstantiation,
                     )
                 val function = functionTemplateDeclaration.realization[0]
                 if (
@@ -274,11 +277,11 @@ open class CPPLanguage :
                                 getParameterizedSignaturesFromInitialization(
                                     initializationSignature
                                 ),
-                                initializationSignature
+                                initializationSignature,
                             ),
                             templateCall,
                             explicitInstantiation,
-                            needsExactMatch
+                            needsExactMatch,
                         )
                 ) {
                     // Valid Target -> Apply invocation
@@ -289,7 +292,7 @@ open class CPPLanguage :
                             function,
                             initializationSignature,
                             initializationType,
-                            orderedInitializationSignature
+                            orderedInitializationSignature,
                         )
                     return Pair(true, candidates)
                 }

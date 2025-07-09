@@ -41,6 +41,11 @@ class EdgesTest {
 
             assertEquals(1, record.methods.size)
             assertEquals(method, record.methods.firstOrNull())
+
+            assertEquals(
+                "RecordDeclaration[name=myRecord,location=<null>,name=myRecord,kind=class,superTypeDeclarations=[],fields=[],methods=[MethodDeclaration[name=myFunc,location=<null>,parameters=[]]],constructors=[],records=[]]",
+                record.toString(),
+            )
         }
     }
 }

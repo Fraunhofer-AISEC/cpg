@@ -45,14 +45,14 @@ internal class StaticImportsTest : BaseTest() {
                 listOf(
                     // we want JavaParser to analyze both files so that resolving works
                     topLevel.resolve("single/A.java").toFile(),
-                    topLevel.resolve("single/B.java").toFile()
+                    topLevel.resolve("single/B.java").toFile(),
                 ),
                 // we need to specify the root of the folder so that the JavaParser correctly
                 // resolve the package
                 topLevel,
-                true
+                true,
             ) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
         val methods = result.methods
         val test = findByUniqueName(methods, "test")
@@ -83,7 +83,7 @@ internal class StaticImportsTest : BaseTest() {
     fun testAsteriskImport() {
         val result =
             analyze("java", topLevel.resolve("asterisk"), true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
         val methods = result.methods
         val main = methods["main", SearchModifier.UNIQUE]
@@ -101,7 +101,7 @@ internal class StaticImportsTest : BaseTest() {
                     val bs = methods { it.name.localName == "b" && it.isStatic }
                     assertEquals(
                         call.invokes.toList(),
-                        bs { it.matchesSignature(call.signature) != IncompatibleSignature }
+                        bs { it.matchesSignature(call.signature) != IncompatibleSignature },
                     )
                 }
                 "nonStatic" -> {
@@ -112,17 +112,19 @@ internal class StaticImportsTest : BaseTest() {
             }
         }
         val testFields = a.fields
-        val staticField = findByUniqueName(testFields, "staticField")
-        val nonStaticField = findByUniqueName(testFields, "nonStaticField")
+        val staticField = a.fields["staticField"]
+        val inferredNonStaticField = b.fields["nonStaticField"]
+        assertNotNull(staticField)
+        assertNotNull(inferredNonStaticField)
         assertTrue(staticField.modifiers.contains("static"))
-        assertFalse(nonStaticField.modifiers.contains("static"))
+        assertFalse(inferredNonStaticField.modifiers.contains("static"))
 
-        val declaredReferences = main.allChildren<MemberExpression>()
+        val declaredReferences = main.refs
         val usage = findByUniqueName(declaredReferences, "staticField")
-        assertEquals(staticField, usage.refersTo)
+        assertRefersTo(usage, staticField)
 
         val nonStatic = findByUniqueName(declaredReferences, "nonStaticField")
-        assertNotEquals(nonStaticField, nonStatic.refersTo)
-        assertTrue(nonStatic.refersTo!!.isInferred)
+        assertRefersTo(nonStatic, inferredNonStaticField)
+        assertTrue(nonStatic.refersTo?.isInferred == true)
     }
 }

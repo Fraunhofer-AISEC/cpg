@@ -35,6 +35,7 @@ import org.neo4j.ogm.annotation.Transient
  * An intelligent [MutableList] wrapper around an [EdgeList] which supports iterating, adding and
  * removing [Node] elements.
  */
+@Suppress("EqualsOrHashCode")
 class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     var list: EdgeList<NodeType, EdgeType>
 ) : UnwrappedEdgeCollection<NodeType, EdgeType>(list), MutableList<NodeType> {
@@ -56,7 +57,7 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     }
 
     override fun removeAt(index: Int): NodeType {
-        var edge = list.removeAt(index)
+        val edge = list.removeAt(index)
         return if (list.outgoing) {
             edge.end
         } else {
@@ -70,7 +71,12 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     }
 
     override fun subList(fromIndex: Int, toIndex: Int): MutableList<NodeType> {
-        TODO("Not yet implemented")
+        return if (list.outgoing) {
+            list.subList(fromIndex, toIndex).map { it.end }.toMutableList()
+        } else {
+            @Suppress("UNCHECKED_CAST")
+            list.subList(fromIndex, toIndex).map { it.start as NodeType }.toMutableList()
+        }
     }
 
     override fun get(index: Int): NodeType {
@@ -103,9 +109,8 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
         return -1
     }
 
-    inner class ListIterator(
-        var edgeIterator: MutableListIterator<EdgeType>,
-    ) : MutableListIterator<NodeType> {
+    inner class ListIterator(var edgeIterator: MutableListIterator<EdgeType>) :
+        MutableListIterator<NodeType> {
         override fun add(element: NodeType) {
             edgeIterator.add(list.createEdge(element, list.init, list.outgoing))
         }
@@ -186,9 +191,7 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
      * persisted in the graph database.
      */
     @Transient
-    inner class Delegate<
-        ThisType : Node,
-    >() {
+    inner class Delegate<ThisType : Node>() {
         operator fun getValue(thisRef: ThisType, property: KProperty<*>): MutableList<NodeType> {
             return this@UnwrappedEdgeList
         }
@@ -198,10 +201,41 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
         }
     }
 
+    /**
+     * Similar to [Delegate] but this employs dark voodoo magic to make an incoming list available
+     * as delegate. This is a little bit dangerous because we need to cast the unwrapped listed to
+     * the incoming type. The originating reason for this is that an [Edge] only has a generic type
+     * parameter for the [Edge.end] property, but not for the [Edge.start] property. This is why we
+     * need to cast the underlying [Edge.start] property to the incoming type.
+     */
+    @Transient
+    inner class IncomingDelegate<ThisType : Node, IncomingType>() {
+        operator fun getValue(
+            thisRef: ThisType,
+            property: KProperty<*>,
+        ): MutableList<IncomingType> {
+            @Suppress("UNCHECKED_CAST")
+            return this@UnwrappedEdgeList as MutableList<IncomingType>
+        }
+
+        operator fun setValue(
+            thisRef: ThisType,
+            property: KProperty<*>,
+            value: List<IncomingType>,
+        ) {
+            @Suppress("UNCHECKED_CAST")
+            this@UnwrappedEdgeList.resetTo(value as Collection<NodeType>)
+        }
+    }
+
     operator fun <ThisType : Node> provideDelegate(
         thisRef: ThisType,
-        prop: KProperty<*>
+        prop: KProperty<*>,
     ): Delegate<ThisType> {
         return Delegate()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return other is List<*> && this.iterator().asSequence().toList() == other
     }
 }

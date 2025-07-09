@@ -70,7 +70,7 @@ internal class VariableResolverJavaTest : BaseTest() {
         assertUsageOfMemberAndBase(
             callParamMap["func3_external_instance_varName"],
             externalClassInstance,
-            externVarName
+            externVarName,
         )
     }
 
@@ -79,7 +79,7 @@ internal class VariableResolverJavaTest : BaseTest() {
         assertUsageOfMemberAndBase(
             callParamMap["func3_external_static_staticVarName"],
             externalClass,
-            externStaticVarName
+            externStaticVarName,
         )
     }
 
@@ -88,7 +88,7 @@ internal class VariableResolverJavaTest : BaseTest() {
         assertUsageOfMemberAndBase(
             callParamMap["func4_external_static_staticVarName"],
             externalClass,
-            externStaticVarName
+            externStaticVarName,
         )
     }
 
@@ -97,7 +97,7 @@ internal class VariableResolverJavaTest : BaseTest() {
         assertUsageOfMemberAndBase(
             callParamMap["func1_inner_imp_this_varName"],
             function1Receiver,
-            innerVarName
+            innerVarName,
         )
     }
 
@@ -106,7 +106,7 @@ internal class VariableResolverJavaTest : BaseTest() {
         assertUsageOfMemberAndBase(
             callParamMap["func1_outer_this_varName"],
             implicitOuterThis,
-            outerVarName
+            outerVarName,
         )
     }
 
@@ -115,7 +115,7 @@ internal class VariableResolverJavaTest : BaseTest() {
         assertUsageOfMemberAndBase(
             callParamMap["func1_outer_static_staticVarName"],
             outerClass,
-            outerStaticVarName
+            outerStaticVarName,
         )
     }
 
@@ -123,7 +123,7 @@ internal class VariableResolverJavaTest : BaseTest() {
     fun testParamVarNameInInnerClass() {
         assertUsageOf(
             callParamMap["func2_inner_param_varName"],
-            innerFunction2.parameters["varName"]
+            innerFunction2.parameters["varName"],
         )
     }
 
@@ -132,7 +132,7 @@ internal class VariableResolverJavaTest : BaseTest() {
         assertUsageOfMemberAndBase(
             callParamMap["func2_inner_this_varName"],
             function2Receiver,
-            innerVarName
+            innerVarName,
         )
     }
 
@@ -182,10 +182,10 @@ internal class VariableResolverJavaTest : BaseTest() {
             val fileNames =
                 listOf(
                         topLevel.resolve("ScopeVariables.java"),
-                        topLevel.resolve("ExternalClass.java")
+                        topLevel.resolve("ExternalClass.java"),
                     )
                     .map(Path::toFile)
-            val result = analyze(fileNames, topLevel, true) { it.registerLanguage(JavaLanguage()) }
+            val result = analyze(fileNames, topLevel, true) { it.registerLanguage<JavaLanguage>() }
 
             val calls = result.calls { it.name.localName == "printLog" }
             val records = result.records

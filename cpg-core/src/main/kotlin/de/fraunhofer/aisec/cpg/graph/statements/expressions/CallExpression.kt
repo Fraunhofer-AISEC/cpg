@@ -47,14 +47,23 @@ import org.neo4j.ogm.annotation.Relationship
  * and is connected via the INVOKES edge to its [FunctionDeclaration].
  */
 open class CallExpression :
-    Expression(), HasOverloadedOperation, HasType.TypeObserver, ArgumentHolder {
+    Expression(),
+    HasOverloadedOperation,
+    HasType.TypeObserver,
+    ArgumentHolder,
+    HasSecondaryTypeEdge {
     /**
      * Connection to its [FunctionDeclaration]. This will be populated by the [SymbolResolver]. This
      * will have an effect on the [type]
      */
     @PopulatedByPass(SymbolResolver::class)
     @Relationship(value = "INVOKES", direction = Relationship.Direction.OUTGOING)
-    var invokeEdges = Invokes<FunctionDeclaration>(this)
+    var invokeEdges: Invokes<FunctionDeclaration> =
+        Invokes<FunctionDeclaration>(
+            this,
+            mirrorProperty = FunctionDeclaration::calledByEdges,
+            outgoing = true,
+        )
         protected set
 
     /**
@@ -181,7 +190,7 @@ open class CallExpression :
     @JvmOverloads
     fun addTemplateParameter(
         templateParam: Node,
-        templateInitialization: TemplateInitialization? = TemplateInitialization.EXPLICIT
+        templateInitialization: TemplateInitialization? = TemplateInitialization.EXPLICIT,
     ) {
         if (templateParam is Expression || templateParam is Type) {
             if (templateArgumentEdges == null) {
@@ -195,7 +204,7 @@ open class CallExpression :
 
     fun updateTemplateParameters(
         initializationType: Map<Node?, TemplateInitialization?>,
-        orderedInitializationSignature: List<Node>
+        orderedInitializationSignature: List<Node>,
     ) {
         if (templateArgumentEdges == null) {
             templateArgumentEdges = TemplateArguments(this)
@@ -216,7 +225,7 @@ open class CallExpression :
                 instantiation =
                     initializationType.getOrDefault(
                         orderedInitializationSignature[i],
-                        TemplateInitialization.UNKNOWN
+                        TemplateInitialization.UNKNOWN,
                     )
             }
         }
@@ -245,7 +254,15 @@ open class CallExpression :
     }
 
     override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
-        // Nothing to do
+        // Propagate assigned func types from the function declaration to the call expression
+        val assignedFuncTypes = assignedTypes.filterIsInstance<FunctionType>()
+        assignedFuncTypes.forEach {
+            if (it.returnTypes.size == 1) {
+                addAssignedType(it.returnTypes.single())
+            } else if (it.returnTypes.size > 1) {
+                addAssignedType(TupleType(it.returnTypes))
+            }
+        }
     }
 
     override fun toString(): String {
@@ -281,4 +298,13 @@ open class CallExpression :
     // TODO: Not sure if we can add the template, templateParameters, templateInstantiation fields
     //  here
     override fun hashCode() = Objects.hash(super.hashCode(), arguments)
+
+    override val secondaryTypes: List<Type>
+        get() = signature
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return if (this.callee is ProblemExpression)
+            this.arguments.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
+        else this.callee.getStartingPrevEOG()
+    }
 }

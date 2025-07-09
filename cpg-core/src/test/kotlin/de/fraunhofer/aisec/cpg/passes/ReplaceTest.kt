@@ -39,7 +39,7 @@ class ReplaceTest {
     @ReplacePass(EvaluationOrderGraphPass::class, ReplaceTestLanguage::class, ReplacedPass::class)
     class ReplaceTestLanguageFrontend : TestLanguageFrontend()
 
-    class ReplaceTestLanguage : TestLanguage() {
+    class ReplaceTestLanguage() : TestLanguage() {
         override val frontend: KClass<out TestLanguageFrontend>
             get() = ReplaceTestLanguageFrontend::class
 
@@ -54,11 +54,12 @@ class ReplaceTest {
     fun testReplaceAnnotation() {
         val config =
             TranslationConfiguration.builder().registerLanguage<ReplaceTestLanguage>().build()
+        val ctx = TranslationContext(config)
 
         assertContains(config.replacedPasses.values, ReplacedPass::class)
         assertContains(
             config.replacedPasses.keys,
-            Pair(EvaluationOrderGraphPass::class, ReplaceTestLanguage::class)
+            Pair(EvaluationOrderGraphPass::class, ReplaceTestLanguage::class),
         )
 
         val cls =
@@ -73,11 +74,12 @@ class ReplaceTest {
                 .replacePass<EvaluationOrderGraphPass, StructTestLanguage, ReplacedPass>()
                 .replacePass<EvaluationOrderGraphPass, ReplaceTestLanguage, ReplacedPass>()
                 .build()
+        val ctx = TranslationContext(config)
 
         assertContains(config.replacedPasses.values, ReplacedPass::class)
         assertContains(
             config.replacedPasses.keys,
-            Pair(EvaluationOrderGraphPass::class, StructTestLanguage::class)
+            Pair(EvaluationOrderGraphPass::class, StructTestLanguage::class),
         )
 
         var cls = checkForReplacement(EvaluationOrderGraphPass::class, TestLanguage(), config)

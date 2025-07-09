@@ -26,21 +26,28 @@
 package de.fraunhofer.aisec.cpg.graph.scopes
 
 import com.fasterxml.jackson.annotation.JsonBackReference
+import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.frontends.HasBuiltins
+import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.Node.Companion.TO_STRING_STYLE
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.Import
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.Imports
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.LookupScopeStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
+import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.GeneratedValue
-import org.neo4j.ogm.annotation.Id
 import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
-import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /**
  * A symbol is a simple, local name. It is valid within the scope that declares it and all of its
@@ -54,21 +61,16 @@ typealias SymbolMap = MutableMap<Symbol, MutableList<Declaration>>
  * Represent semantic scopes in the language. Depending on the language scopes can have visibility
  * restriction and can act as namespaces to avoid name collisions.
  */
+@Suppress("CONTEXT_RECEIVERS_DEPRECATED")
 @NodeEntity
-abstract class Scope(
+sealed class Scope(
     @Relationship(value = "SCOPE", direction = Relationship.Direction.INCOMING)
     @JsonBackReference
     open var astNode: Node?
-) {
-
-    /** Required field for object graph mapping. It contains the scope id. */
-    @Id @GeneratedValue var id: Long? = null
+) : Node() {
 
     /** FQN Name currently valid */
     var scopedName: String? = null
-
-    /** The real new name */
-    @Convert(NameConverter::class) var name: Name? = null
 
     /**
      * Scopes are nested and therefore have a parent child relationship, this two members will help
@@ -88,9 +90,24 @@ abstract class Scope(
     @Transient var symbols: SymbolMap = mutableMapOf()
 
     /**
-     * A list of [ImportDeclaration] nodes that have [ImportDeclaration.wildcardImport] set to true.
+     * A list of [ImportDeclaration] nodes that have an
+     * [ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE] import style ("wildcard" import).
      */
     @Transient var wildcardImports: MutableSet<ImportDeclaration> = mutableSetOf()
+
+    /**
+     * This set of edges is used to store [Import] edges that denotes foreign [NamespaceScope]
+     * information that is imported into this scope. The edge holds information about the "style" of
+     * the import (see [ImportStyle]) and the [ImportDeclaration] that is responsible for this. The
+     * property is populated by the [ImportResolver].
+     */
+    @Relationship(value = "IMPORTS_SCOPE", direction = Relationship.Direction.OUTGOING)
+    @PopulatedByPass(ImportResolver::class)
+    val importedScopeEdges =
+        Imports(this, mirrorProperty = NamespaceScope::importedByEdges, outgoing = true)
+
+    /** Virtual property for accessing [importedScopeEdges] without property edges. */
+    val importedScopes by unwrapping(Scope::importedScopeEdges)
 
     /**
      * In some languages, the lookup scope of a symbol that is being resolved (e.g. of a
@@ -102,9 +119,27 @@ abstract class Scope(
      */
     @Transient var predefinedLookupScopes: MutableMap<Symbol, LookupScopeStatement> = mutableMapOf()
 
+    /**
+     * A map of typedefs keyed by their alias name. This is still needed as a bridge until we
+     * completely redesign the alias / typedef system.
+     */
+    @Transient val typedefs = mutableMapOf<Name, TypedefDeclaration>()
+
+    /**
+     * Adds a [typedef] declaration to the scope. This is used to store typedefs in the scope, so
+     * that they can be resolved later on.
+     */
+    fun addTypedef(typedef: TypedefDeclaration) {
+        typedefs[typedef.alias.name] = typedef
+    }
+
     /** Adds a [declaration] with the defined [symbol]. */
-    fun addSymbol(symbol: Symbol, declaration: Declaration) {
-        if (declaration is ImportDeclaration && declaration.wildcardImport) {
+    context(provider: ContextProvider)
+    open fun addSymbol(symbol: Symbol, declaration: Declaration) {
+        if (
+            declaration is ImportDeclaration &&
+                declaration.style == ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE
+        ) {
             // Because a wildcard import does not really have a valid "symbol", we store it in a
             // separate list
             wildcardImports += declaration
@@ -119,31 +154,33 @@ abstract class Scope(
      * can be used for additional filtering.
      *
      * By default, the lookup algorithm will go to the [Scope.parent] if no match was found in the
-     * current scope. This behaviour can be turned off with [thisScopeOnly]. This is useful for
+     * current scope. This behaviour can be turned off with [qualifiedLookup]. This is useful for
      * qualified lookups, where we want to stay in our lookup-scope.
      *
+     * We need to consider the language trait [HasImplicitReceiver] here as well. If the language
+     * requires explicit member access, we must not consider symbols from record scopes unless we
+     * are in a qualified lookup.
+     *
      * @param symbol the symbol to lookup
-     * @param thisScopeOnly whether we should stay in the current scope for lookup or traverse to
-     *   its parents if no match was found.
+     * @param qualifiedLookup whether the lookup is looked to a specific namespace, and we therefore
+     *   should stay in the current scope for lookup. If the lookup is unqualified we traverse the
+     *   current scopes parents if no match was found.
      * @param replaceImports whether any symbols pointing to [ImportDeclaration.importedSymbols] or
      *   wildcards should be replaced with their actual nodes
      * @param predicate An optional predicate which should be used in the lookup.
      */
+    context(provider: ContextProvider)
     fun lookupSymbol(
         symbol: Symbol,
-        thisScopeOnly: Boolean = false,
+        languageOnly: Language<*>? = null,
+        qualifiedLookup: Boolean = false,
         replaceImports: Boolean = true,
-        predicate: ((Declaration) -> Boolean)? = null
+        predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
         // First, try to look for the symbol in the current scope (unless we have a predefined
         // search scope). In the latter case we also need to restrict the lookup to the search scope
         var modifiedScoped = this.predefinedLookupScopes[symbol]?.targetScope
-        var scope: Scope? =
-            if (modifiedScoped != null) {
-                modifiedScoped
-            } else {
-                this
-            }
+        var scope: Scope? = modifiedScoped ?: this
 
         var list: MutableList<Declaration>? = null
 
@@ -163,9 +200,14 @@ abstract class Scope(
                 list.replaceImports(symbol)
             }
 
+            // Filter according to the language
+            if (languageOnly != null) {
+                list.removeIf { it.language != languageOnly }
+            }
+
             // Filter the list according to the predicate, if we have any
             if (predicate != null) {
-                list = list.filter(predicate).toMutableList()
+                list.removeIf { !predicate.invoke(it) }
             }
 
             // If we have a hit, we can break the loop
@@ -173,12 +215,47 @@ abstract class Scope(
                 break
             }
 
-            // If we do not have a hit, we can go up one scope, unless thisScopeOnly is set to true
+            // If we do not have a hit, we can go up one scope, unless [qualifiedLookup] is set to
+            // true
             // (or we had a modified scope)
-            if (thisScopeOnly || modifiedScoped != null) {
-                break
-            } else {
-                scope = scope.parent
+            scope =
+                if (qualifiedLookup || modifiedScoped != null) {
+                    break
+                } else {
+                    // If our language needs explicit lookup for fields (and other class members),
+                    // we need to skip record scopes unless we are in a qualified lookup
+                    if (languageOnly !is HasImplicitReceiver && scope.parent is RecordScope) {
+                        scope.firstScopeParentOrNull { it !is RecordScope }
+                    } else {
+                        // Otherwise, we can just go to the next parent
+                        scope.parent
+                    }
+                }
+        }
+
+        // If the symbol was still not resolved, and we are performing an unqualified resolution, we
+        // search in the
+        // language's builtins scope for the symbol
+        val scopeManager = provider.ctx.scopeManager
+        if (list.isNullOrEmpty() && !qualifiedLookup && languageOnly is HasBuiltins) {
+            // If the language has builtins we can search there for the symbol
+            val builtinsNamespace = languageOnly.builtinsNamespace
+            // Retrieve the builtins scope from the builtins namespace
+            val builtinsScope = scopeManager.lookupScope(builtinsNamespace)
+            if (builtinsScope != null) {
+                // Obviously we don't want to search in the builtins scope if we already failed
+                // finding the symbol in the builtins scope
+                if (builtinsScope != this) {
+                    list =
+                        builtinsScope
+                            .lookupSymbol(
+                                symbol,
+                                languageOnly = languageOnly,
+                                replaceImports = replaceImports,
+                                predicate = predicate,
+                            )
+                            .toMutableList()
+                }
             }
         }
 
@@ -187,14 +264,6 @@ abstract class Scope(
 
     fun addLabelStatement(labelStatement: LabelStatement) {
         labelStatement.label?.let { labelStatements[it] = labelStatement }
-    }
-
-    fun isBreakable(): Boolean {
-        return this is LoopScope || this is SwitchScope
-    }
-
-    fun isContinuable(): Boolean {
-        return this is LoopScope
     }
 
     override fun equals(other: Any?): Boolean {
@@ -209,7 +278,7 @@ abstract class Scope(
 
     override fun hashCode(): Int {
         var result = astNode?.hashCode() ?: 0
-        result = 31 * result + (name?.hashCode() ?: 0)
+        result = 31 * result + name.hashCode()
         return result
     }
 
@@ -231,18 +300,11 @@ abstract class Scope(
     override fun toString(): String {
         val builder = ToStringBuilder(this, TO_STRING_STYLE)
 
-        if (name?.isNotEmpty() == true) {
+        if (name.isNotEmpty() == true) {
             builder.append("name", name)
         }
 
         return builder.toString()
-    }
-
-    fun addSymbols(other: MutableMap<Symbol, MutableSet<Declaration>>) {
-        for ((key, value) in other.entries) {
-            val list = this.symbols.computeIfAbsent(key) { mutableListOf() }
-            list += value
-        }
     }
 }
 

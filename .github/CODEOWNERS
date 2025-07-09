@@ -17,7 +17,21 @@ cpg-language-cxx        @peckto
 cpg-language-llvm       @KuechA
 cpg-analysis            @KuechA
 
+*.java                  @konradweiss
+cpg-language-java       @konradweiss
+
+cpg-language-jvm        @oxisto
+
+cpg-language-ruby       @oxisto
+
 cpg-neo4j               @peckto
 
 build.gradle.kts        @oxisto
 .github                 @oxisto
+
+cpg-language-ini        @maximiliankaul
+
+cpg-concepts            @maximiliankaul
+
+codyze                  @fwendland
+codyze-compliance       @fwendland @oxisto

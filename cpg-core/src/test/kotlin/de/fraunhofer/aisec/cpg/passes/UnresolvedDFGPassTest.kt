@@ -25,11 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.GraphExamples.Companion.testFrontend
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
@@ -56,7 +56,7 @@ class UnresolvedDFGPassTest {
         assertEquals(2, callWithParam.prevDFG.size)
         assertEquals(
             osDecl,
-            callWithParam.prevDFG.filterIsInstance<Reference>().firstOrNull()?.refersTo
+            callWithParam.prevDFG.filterIsInstance<Reference>().firstOrNull()?.refersTo,
         )
         assertEquals(4, callWithParam.prevDFG.filterIsInstance<Literal<*>>().firstOrNull()?.value)
 
@@ -108,7 +108,7 @@ class UnresolvedDFGPassTest {
         assertEquals(1, getMethod1.prevDFG.size)
         assertEquals(
             osDecl,
-            (getMethod1.prevDFG.singleOrNull()?.prevDFG?.singleOrNull() as? Reference)?.refersTo
+            (getMethod1.prevDFG.singleOrNull()?.prevDFG?.singleOrNull() as? Reference)?.refersTo,
         )
 
         // Flow from base and argument to return value
@@ -121,7 +121,7 @@ class UnresolvedDFGPassTest {
         val callWithParamArgs = getMethod2.prevDFG.flatMap { it.prevDFG }
         assertEquals(
             osDecl,
-            callWithParamArgs.filterIsInstance<Reference>().firstOrNull()?.refersTo
+            callWithParamArgs.filterIsInstance<Reference>().firstOrNull()?.refersTo,
         )
         assertEquals(4, callWithParamArgs.filterIsInstance<Literal<*>>().firstOrNull()?.value)
 
@@ -137,12 +137,12 @@ class UnresolvedDFGPassTest {
 
         fun getDfgUnresolvedCalls(
             inferUnresolved: Boolean,
-            inferFunctions: Boolean
+            inferFunctions: Boolean,
         ): TranslationResult {
             val config =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .inferenceConfiguration(
                         InferenceConfiguration.builder()
                             .inferDfgForUnresolvedCalls(inferUnresolved)

@@ -25,15 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.ruby
 
-import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import kotlin.reflect.KClass
 
 /** The Ruby Language */
-class RubyLanguage() :
+class RubyLanguage :
     Language<RubyLanguageFrontend>(),
     HasDefaultArguments,
     HasClasses,
@@ -57,7 +57,7 @@ class RubyLanguage() :
             "String" to StringType("String", this),
             // The bit width of Booleans is not defined in the specification and
             // implementation-dependant
-            "Boolean" to BooleanType("Boolean", null, this, NumericType.Modifier.NOT_APPLICABLE)
+            "Boolean" to BooleanType("Boolean", null, this, NumericType.Modifier.NOT_APPLICABLE),
         )
 
     override val compoundAssignmentOperators =
@@ -72,13 +72,12 @@ class RubyLanguage() :
             ">>=", // Right shift assignment
             "&=", // Bitwise AND assignment
             "|=", // Bitwise OR assignment
-            "^=" // Bitwise XOR assignment
+            "^=", // Bitwise XOR assignment
         )
 
-    override fun handleSuperExpression(
+    override fun SymbolResolver.handleSuperExpression(
         memberExpression: MemberExpression,
         curClass: RecordDeclaration,
-        scopeManager: ScopeManager
     ): Boolean {
         TODO("Not yet implemented")
     }

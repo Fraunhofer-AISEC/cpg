@@ -41,7 +41,8 @@ open class CLanguage :
     HasQualifier,
     HasElaboratedTypeSpecifier,
     HasShortCircuitOperators,
-    HasGlobalVariables {
+    HasGlobalVariables,
+    HasGlobalFunctions {
     override val fileExtensions = listOf("c", "h")
     override val namespaceDelimiter = "::"
     @Transient override val frontend: KClass<out CXXLanguageFrontend> = CXXLanguageFrontend::class
@@ -111,7 +112,7 @@ open class CLanguage :
         type: Type,
         targetType: Type,
         hint: HasType?,
-        targetHint: HasType?
+        targetHint: HasType?,
     ): CastResult {
         val match = super.tryCast(type, targetType, hint, targetHint)
         if (match != CastNotPossible) {

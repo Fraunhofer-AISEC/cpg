@@ -46,7 +46,7 @@ class Schema {
         val labels: Set<String>,
         val childLabels: Set<String>,
         val relationships: Set<SchemaRelationship>,
-        val properties: Set<SchemaProperty>
+        val properties: Set<SchemaProperty>,
     )
 
     /**
@@ -64,16 +64,12 @@ class Schema {
      * Key-value pair defining a node property and if the property was inherited from a parent node
      * entity type or newly introduced in this node entity.
      */
-    data class SchemaProperty(
-        val name: String,
-        val valueType: String,
-        val inherited: Boolean,
-    )
+    data class SchemaProperty(val name: String, val valueType: String, val inherited: Boolean)
 
     /** Output format of the CPG Schema description. */
     enum class Format {
         MARKDOWN,
-        JSON
+        JSON,
     }
 
     private val styling =
@@ -165,7 +161,7 @@ class Schema {
                     entity
                         .directSubclasses()
                         .filter { it in entities }
-                        .distinct() // Filter out duplicates
+                        .distinct(), // Filter out duplicates
                 )
         }
 
@@ -259,7 +255,7 @@ class Schema {
     private fun completeSchema(
         relCanHave: MutableMap<String, Set<Pair<String, String>>>,
         hierarchy: MutableMap<ClassInfo, Pair<ClassInfo?, List<ClassInfo>>>,
-        root: ClassInfo
+        root: ClassInfo,
     ) {
         hierarchy[root]?.second?.forEach { completeSchema(relCanHave, hierarchy, it) }
 
@@ -275,7 +271,7 @@ class Schema {
                                 classInfo.neo4jName() ?: classInfo.underlyingClass.simpleName]
                                 ?: setOf()
                         }
-                        ?.toSet() ?: setOf()
+                        ?.toSet() ?: setOf(),
                 )
             }
     }
@@ -325,7 +321,7 @@ class Schema {
                     out.print(
                         getBoxWithClass(
                             "superclassLabel",
-                            "[${toLabel(it)}](#${toAnchorLink("e"+toLabel(it))})"
+                            "[${toLabel(it)}](#${toAnchorLink("e"+toLabel(it))})",
                         )
                     )
                 }
@@ -344,7 +340,7 @@ class Schema {
                         out.print(
                             getBoxWithClass(
                                 "child",
-                                "[${toLabel(classInfo)}](#${toAnchorLink("e"+toLabel(classInfo))})"
+                                "[${toLabel(classInfo)}](#${toAnchorLink("e"+toLabel(classInfo))})",
                             )
                         )
                     }
@@ -360,7 +356,7 @@ class Schema {
                 out.print(
                     getBoxWithClass(
                         "relationship",
-                        "[${it.second}](#${ toLabel(classInfo) + it.second})"
+                        "[${it.second}](#${ toLabel(classInfo) + it.second})",
                     )
                 )
             }
@@ -384,7 +380,7 @@ class Schema {
                     out.println(
                         getBoxWithClass(
                             "inherited-relationship",
-                            "[${inherited.second}](#${toConcatName(toLabel(baseClass) + inherited.second)})"
+                            "[${inherited.second}](#${toConcatName(toLabel(baseClass) + inherited.second)})",
                         )
                     )
                 }
@@ -492,8 +488,8 @@ class Schema {
                 labels,
                 childLabels,
                 relationships,
-                properties
-            )
+                properties,
+            ),
         )
 
         return entityNodes
@@ -597,7 +593,7 @@ class Schema {
     private fun printRelationshipsToMarkdown(
         classInfo: ClassInfo,
         relationshipLabel: Pair<String, String>,
-        out: PrintWriter
+        out: PrintWriter,
     ) {
         val fieldInfo: FieldInfo = classInfo.getFieldInfo(relationshipLabel.first)
         val targetInfo = getTargetInfo(fieldInfo)
@@ -615,7 +611,7 @@ class Schema {
     private fun relationshipToJson(
         classInfo: ClassInfo,
         relationshipLabel: Pair<String, String>,
-        inherited: Boolean
+        inherited: Boolean,
     ): SchemaRelationship {
         val fieldInfo: FieldInfo = classInfo.getFieldInfo(relationshipLabel.first)
         val targetInfo = getTargetInfo(fieldInfo)
@@ -624,7 +620,7 @@ class Schema {
             relationshipLabel.second,
             toLabel(classInfo),
             multiplicity,
-            inherited
+            inherited,
         )
     }
 }

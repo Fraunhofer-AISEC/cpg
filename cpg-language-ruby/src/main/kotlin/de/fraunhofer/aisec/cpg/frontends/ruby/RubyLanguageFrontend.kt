@@ -39,8 +39,8 @@ import org.jruby.ast.RootNode
 import org.jruby.parser.Parser
 import org.jruby.parser.ParserConfiguration
 
-class RubyLanguageFrontend(language: RubyLanguage, ctx: TranslationContext) :
-    LanguageFrontend<org.jruby.ast.Node, org.jruby.ast.Node>(language, ctx) {
+class RubyLanguageFrontend(ctx: TranslationContext, language: RubyLanguage) :
+    LanguageFrontend<org.jruby.ast.Node, org.jruby.ast.Node>(ctx, language) {
     val declarationHandler: DeclarationHandler = DeclarationHandler(this)
     val expressionHandler: ExpressionHandler = ExpressionHandler(this)
     val statementHandler: StatementHandler = StatementHandler(this)
@@ -54,7 +54,7 @@ class RubyLanguageFrontend(language: RubyLanguage, ctx: TranslationContext) :
                 file.path,
                 file.inputStream(),
                 null,
-                ParserConfiguration(ruby, 0, false, true, false)
+                ParserConfiguration(ruby, 0, false, true, false),
             ) as RootNode
 
         return handleRootNode(node)
@@ -69,6 +69,7 @@ class RubyLanguageFrontend(language: RubyLanguage, ctx: TranslationContext) :
         if (node.bodyNode is MethodDefNode) {
             val decl = declarationHandler.handle(node.bodyNode)
             scopeManager.addDeclaration(decl)
+            tu.declarations += decl
         } else if (node.bodyNode is BlockNode) {
             // Otherwise, we need to loop over the block
             val block = node.bodyNode as BlockNode
@@ -76,6 +77,7 @@ class RubyLanguageFrontend(language: RubyLanguage, ctx: TranslationContext) :
                 if (innerNode is MethodDefNode) {
                     val decl = declarationHandler.handle(innerNode)
                     scopeManager.addDeclaration(decl)
+                    tu.declarations += decl
                 } else {
                     val stmt = statementHandler.handle(innerNode)
                     tu += stmt

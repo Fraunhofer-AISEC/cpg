@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.graph.HasInitializer
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
@@ -38,14 +40,14 @@ import org.neo4j.ogm.annotation.Relationship
  * combination with a [VariableDeclaration].
  */
 // TODO Merge and/or refactor with new Expression
-class NewArrayExpression : Expression() {
+class NewArrayExpression : Expression(), HasInitializer {
     @Relationship("INITIALIZER") var initializerEdge = astOptionalEdgeOf<Expression>()
 
     /**
      * The initializer of the expression, if present. Many languages, such as Java, either specify
      * [dimensions] or an initializer.
      */
-    var initializer by unwrapping(NewArrayExpression::initializerEdge)
+    override var initializer by unwrapping(NewArrayExpression::initializerEdge)
 
     /**
      * Specifies the dimensions of the array that is to be created. Many languages, such as Java,
@@ -73,4 +75,10 @@ class NewArrayExpression : Expression() {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), initializer, dimensions)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.dimensions.firstOrNull()?.getStartingPrevEOG()
+            ?: this.initializer?.getStartingPrevEOG()
+            ?: this.prevEOG
+    }
 }

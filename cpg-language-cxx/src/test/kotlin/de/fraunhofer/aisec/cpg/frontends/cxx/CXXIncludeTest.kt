@@ -260,4 +260,47 @@ internal class CXXIncludeTest : BaseTest() {
         assertEquals(2, tu.methods.size)
         assertEquals(1, tu.methods.filterIsInstance<ConstructorDeclaration>().size)
     }
+
+    @Test
+    @Throws(Exception::class)
+    fun testUnityBuild() {
+        val file = File("src/test/resources/include.cpp")
+        val tus =
+            analyzeWithBuilder(
+                TranslationConfiguration.builder()
+                    .sourceLocations(listOf(file))
+                    .loadIncludes(true)
+                    .useUnityBuild(true)
+                    .debugParser(true)
+                    .registerLanguage<CPPLanguage>()
+                    .failOnError(true)
+            )
+        assertNotNull(tus)
+
+        val tu = tus.firstOrNull()
+        assertNotNull(tu)
+        assertFalse(tu.records.isEmpty())
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testUnityBuildWithComponent() {
+        val file = File("src/test/resources/include.cpp")
+        val tus =
+            analyzeWithBuilder(
+                TranslationConfiguration.builder()
+                    .sourceLocations(listOf(file))
+                    .topLevel(file.parentFile)
+                    .loadIncludes(true)
+                    .useUnityBuild(true)
+                    .debugParser(true)
+                    .registerLanguage<CPPLanguage>()
+                    .failOnError(true)
+            )
+        assertNotNull(tus)
+
+        val tu = tus.firstOrNull()
+        assertNotNull(tu)
+        assertFalse(tu.records.isEmpty())
+    }
 }

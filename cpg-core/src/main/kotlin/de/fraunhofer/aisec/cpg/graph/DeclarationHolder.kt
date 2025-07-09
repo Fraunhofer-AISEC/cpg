@@ -65,7 +65,7 @@ interface DeclarationHolder {
     fun <T : Node, P : Edge<T>> addIfNotContains(
         collection: EdgeList<T, out P>,
         declaration: T,
-        outgoing: Boolean
+        outgoing: Boolean,
     ) {
         var contains = false
         for (element in collection) {

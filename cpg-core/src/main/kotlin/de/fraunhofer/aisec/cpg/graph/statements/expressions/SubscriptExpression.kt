@@ -39,11 +39,18 @@ import org.neo4j.ogm.annotation.Relationship
  * overload operators thus changing semantics of array access.
  */
 class SubscriptExpression : Expression(), HasBase, HasType.TypeObserver, ArgumentHolder {
+    override var access = AccessValues.READ
+        set(value) {
+            field = value
+            // Do not propagate the access value to the array expression
+            // arrayExpression.access = value
+        }
+
     @Relationship("ARRAY_EXPRESSION")
     var arrayExpressionEdge =
         astEdgeOf<Expression>(
             of = ProblemExpression("could not parse array expression"),
-            onChanged = ::exchangeTypeObserver
+            onChanged = ::exchangeTypeObserverWithoutAccessPropagation,
         )
     /** The array on which the access is happening. This is most likely a [Reference]. */
     var arrayExpression by unwrapping(SubscriptExpression::arrayExpressionEdge)
@@ -129,4 +136,8 @@ class SubscriptExpression : Expression(), HasBase, HasType.TypeObserver, Argumen
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), arrayExpression, subscriptExpression)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.arrayExpression.getStartingPrevEOG()
+    }
 }

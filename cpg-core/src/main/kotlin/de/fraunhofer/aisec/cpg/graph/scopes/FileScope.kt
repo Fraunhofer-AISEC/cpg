@@ -33,4 +33,4 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
  *
  * The only supported AST node is a [TranslationUnitDeclaration].
  */
-class FileScope(astNode: TranslationUnitDeclaration?) : Scope(astNode)
+class FileScope(astNode: TranslationUnitDeclaration) : Scope(astNode)

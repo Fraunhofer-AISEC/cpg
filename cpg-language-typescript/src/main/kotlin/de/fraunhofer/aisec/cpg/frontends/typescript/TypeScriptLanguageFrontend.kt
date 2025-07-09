@@ -48,18 +48,18 @@ import java.nio.file.StandardCopyOption
 /**
  * This language frontend adds experimental support for TypeScript. It is definitely not feature
  * complete, but can be used to parse simple typescript snippets through the official typescript
- * parser written in TypeScript / nodejs. It includes a simple nodejs script that invokes this
- * parser in `src/main/nodejs`. It basically dumps the AST in a JSON structure on stdout and this
- * input is parsed by this frontend.
+ * parser written in TypeScript. It includes a simple binary (built by deno) that invokes this
+ * parser. It basically dumps the AST in a JSON structure on stdout and this input is parsed by this
+ * frontend.
  *
  * Because TypeScript is a strict super-set of JavaScript, this frontend can also be used to parse
  * JavaScript. However, this is not properly tested. Furthermore, the official TypeScript parser
  * also has built-in support for React dialects TSX and JSX.
  */
 class TypeScriptLanguageFrontend(
+    ctx: TranslationContext,
     language: Language<TypeScriptLanguageFrontend>,
-    ctx: TranslationContext
-) : LanguageFrontend<TypeScriptNode, TypeScriptNode>(language, ctx) {
+) : LanguageFrontend<TypeScriptNode, TypeScriptNode>(ctx, language) {
 
     val declarationHandler = DeclarationHandler(this)
     val statementHandler = StatementHandler(this)
@@ -71,20 +71,35 @@ class TypeScriptLanguageFrontend(
     private val mapper = jacksonObjectMapper()
 
     companion object {
-        private val parserFile: File = createTempFile("parser", ".js")
+        private val parserFile: File = createTempFile("parser", "")
 
         init {
-            val link = this::class.java.getResourceAsStream("/nodejs/parser.js")
+            val arch = System.getProperty("os.arch")
+            val os: String =
+                when {
+                    System.getProperty("os.name").startsWith("Mac") -> {
+                        "macos"
+                    }
+                    System.getProperty("os.name").startsWith("Linux") -> {
+                        "linux"
+                    }
+                    else -> {
+                        "windows"
+                    }
+                }
+
+            val link = this::class.java.getResourceAsStream("/typescript/parser-$os-$arch")
             link?.use {
                 log.info(
-                    "Extracting parser.js out of resources to {}",
-                    parserFile.absoluteFile.toPath()
+                    "Extracting parser out of resources to {}",
+                    parserFile.absoluteFile.toPath(),
                 )
                 Files.copy(
                     it,
                     parserFile.absoluteFile.toPath(),
-                    StandardCopyOption.REPLACE_EXISTING
+                    StandardCopyOption.REPLACE_EXISTING,
                 )
+                parserFile.setExecutable(true)
             }
         }
     }
@@ -93,11 +108,10 @@ class TypeScriptLanguageFrontend(
         // Necessary to not read file contents several times
         currentFileContent = file.readText()
         if (!parserFile.exists()) {
-            throw TranslationException("parser.js not found @ ${parserFile.absolutePath}")
+            throw TranslationException("parser not found @ ${parserFile.absolutePath}")
         }
 
-        val p =
-            Runtime.getRuntime().exec(arrayOf("node", parserFile.absolutePath, file.absolutePath))
+        val p = Runtime.getRuntime().exec(arrayOf(parserFile.absolutePath, file.absolutePath))
 
         val node = mapper.readValue(p.inputStream, TypeScriptNode::class.java)
 
@@ -145,7 +159,7 @@ class TypeScriptLanguageFrontend(
                 FrontendUtils.matchCommentToNode(
                     comment,
                     commentRegion ?: translationUnit.location?.region ?: Region(),
-                    translationUnit
+                    translationUnit,
                 )
             }
         }
@@ -191,7 +205,7 @@ class TypeScriptLanguageFrontend(
                     end - start,
                     start,
                     startLine,
-                    endLine
+                    endLine,
                 )
             }
         return region
@@ -243,7 +257,7 @@ class TypeScriptNode(
     var type: String,
     var children: List<TypeScriptNode>?,
     var location: Location,
-    var code: String?
+    var code: String?,
 ) {
     /** Returns the first child node, that represent a type, if it exists. */
     val typeChildNode: TypeScriptNode?

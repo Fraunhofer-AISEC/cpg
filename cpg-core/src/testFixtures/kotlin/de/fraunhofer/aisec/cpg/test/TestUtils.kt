@@ -29,10 +29,13 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
-import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
+import de.fraunhofer.aisec.cpg.graph.LanguageProvider
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.test.TestUtils.ENFORCE_MEMBER_EXPRESSION
@@ -43,16 +46,9 @@ import java.nio.file.Path
 import java.util.function.Consumer
 import java.util.function.Predicate
 import java.util.stream.Collectors
-import kotlin.collections.filter
-import kotlin.collections.first
-import kotlin.collections.firstOrNull
-import kotlin.collections.flatMap
-import kotlin.collections.isNotEmpty
-import kotlin.collections.joinToString
-import kotlin.jvm.Throws
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 import kotlin.test.*
-import kotlin.text.endsWith
-import kotlin.toString
 
 object TestUtils {
 
@@ -109,13 +105,12 @@ fun analyze(
     fileExtension: String?,
     topLevel: Path,
     usePasses: Boolean,
-    configModifier: Consumer<TranslationConfiguration.Builder>? = null
+    configModifier: Consumer<TranslationConfiguration.Builder>? = null,
 ): TranslationResult {
     val files =
         Files.walk(topLevel, Int.MAX_VALUE)
-            .map(Path::toFile)
-            .filter { it.isFile }
-            .filter { it.name.endsWith(fileExtension!!) }
+            .map { it.toFile() }
+            .filter { it.isFile && (fileExtension == null || it.name.endsWith(fileExtension)) }
             .sorted()
             .collect(Collectors.toList())
     return analyze(files, topLevel, usePasses, configModifier)
@@ -136,7 +131,7 @@ fun analyze(
     files: List<File>,
     topLevel: Path,
     usePasses: Boolean,
-    configModifier: Consumer<TranslationConfiguration.Builder>? = null
+    configModifier: Consumer<TranslationConfiguration.Builder>? = null,
 ): TranslationResult {
     val builder =
         TranslationConfiguration.builder()
@@ -180,7 +175,7 @@ fun analyzeAndGetFirstTU(
     files: List<File>,
     topLevel: Path,
     usePasses: Boolean,
-    configModifier: Consumer<TranslationConfiguration.Builder>? = null
+    configModifier: Consumer<TranslationConfiguration.Builder>? = null,
 ): TranslationUnitDeclaration {
     val result = analyze(files, topLevel, usePasses, configModifier)
     return result.components.flatMap { it.translationUnits }.first()
@@ -191,18 +186,19 @@ fun analyzeWithCompilationDatabase(
     jsonCompilationDatabase: File,
     usePasses: Boolean,
     filterComponents: List<String>? = null,
-    configModifier: Consumer<TranslationConfiguration.Builder>? = null
+    configModifier: Consumer<TranslationConfiguration.Builder>? = null,
 ): TranslationResult {
-    return analyze(
-        listOf(),
-        jsonCompilationDatabase.parentFile.toPath().toAbsolutePath(),
-        usePasses
-    ) {
+    val top = jsonCompilationDatabase.parentFile.toPath().toAbsolutePath()
+    return analyze(listOf(), top, usePasses) {
         val db = CompilationDatabase.fromFile(jsonCompilationDatabase, filterComponents)
         if (db.isNotEmpty()) {
             it.useCompilationDatabase(db)
             @Suppress("UNCHECKED_CAST")
             it.softwareComponents(db.components as MutableMap<String, List<File>>)
+            // We need to set the top level for all components as well, since the compilation
+            // database might
+            // have relative paths based on our "top" location
+            it.topLevels(db.components.map { Pair(it.key, top.toFile()) }.toMap())
             configModifier?.accept(it)
         }
         configModifier?.accept(it)
@@ -229,9 +225,18 @@ fun compareLineFromLocationIfExists(n: Node, startLine: Boolean, toCompare: Int)
 }
 
 /** Asserts, that the expression given in [expression] refers to the expected declaration [b]. */
-fun assertRefersTo(expression: Expression?, b: Declaration?) {
+fun assertRefersTo(expression: Expression?, b: Declaration?, message: String? = null) {
     if (expression is Reference) {
-        assertEquals(b, (expression as Reference?)?.refersTo)
+        assertEquals(b, (expression as Reference?)?.refersTo, message)
+    } else {
+        fail("not a reference")
+    }
+}
+
+/** Asserts, that the expression given in [expression] does not refer to the declaration [b]. */
+fun assertNotRefersTo(expression: Expression?, b: Declaration?, message: String? = null) {
+    if (expression is Reference) {
+        assertNotEquals(b, (expression as Reference?)?.refersTo, message)
     } else {
         fail("not a reference")
     }
@@ -241,9 +246,9 @@ fun assertRefersTo(expression: Expression?, b: Declaration?) {
  * Asserts, that the call expression given in [call] refers to the expected function declaration
  * [func].
  */
-fun assertInvokes(call: CallExpression?, func: FunctionDeclaration?) {
+fun assertInvokes(call: CallExpression?, func: FunctionDeclaration?, message: String? = null) {
     assertNotNull(call)
-    assertContains(call.invokes, func)
+    assertContains(call.invokes, func, message)
 }
 
 /**
@@ -286,7 +291,7 @@ fun assertUsageOf(usingNode: Node?, usedNode: Node?) {
 fun assertUsageOfMemberAndBase(usingNode: Node?, usedBase: Node?, usedMember: Declaration?) {
     assertNotNull(usingNode)
     if (usingNode !is MemberExpression && !ENFORCE_MEMBER_EXPRESSION) {
-        // Assumtion here is that the target of the member portion of the expression and not the
+        // Assumption here is that the target of the member portion of the expression and not the
         // base is resolved
         assertUsageOf(usingNode, usedMember)
     } else {
@@ -301,7 +306,7 @@ fun assertUsageOfMemberAndBase(usingNode: Node?, usedBase: Node?, usedMember: De
 }
 
 fun assertFullName(fqn: String, node: Node?, message: String? = null) {
-    assertNotNull(node)
+    assertNotNull(node, message)
     assertEquals(fqn, node.name.toString(), message)
 }
 
@@ -311,14 +316,22 @@ fun assertLocalName(localName: String, node: Node?, message: String? = null) {
 }
 
 /**
- * Asserts that a) the expression in [expr] is a [Literal] and b) that it's value is equal to
- * [expected].
+ * Asserts that
+ * - the expression in [expr] is a [Literal] and
+ * - that it's value is equal to [expected].
+ *
+ * Guarantees that [expr] is not null if the assertion on the value succeeds.
  */
+@OptIn(ExperimentalContracts::class)
 fun <T : Any?> assertLiteralValue(expected: T, expr: Expression?, message: String? = null) {
+    contract {
+        returns() implies (expr != null)
+    } // the not-null contract holds as the call to `assertIs` is not accepting `null`
     assertEquals(expected, assertIs<Literal<T>>(expr).value, message)
 }
 
-fun ContextProvider.assertResolvedType(fqn: String, generics: List<Type>? = null): Type {
-    var type = ctx?.typeManager?.lookupResolvedType(fqn, generics)
+fun ContextProvider.assertResolvedType(fqn: String): Type {
+    var type =
+        ctx.typeManager.lookupResolvedType(fqn, language = (this as? LanguageProvider)?.language)
     return assertNotNull(type)
 }

@@ -68,7 +68,7 @@ class CallResolverTest : BaseTest() {
         intType: Type,
         stringType: Type,
         methods: Collection<FunctionDeclaration>,
-        calls: Collection<CallExpression>
+        calls: Collection<CallExpression>,
     ) {
         val signatures = listOf(listOf(), listOf(intType, intType), listOf(intType, stringType))
         for (signature in signatures) {
@@ -108,7 +108,7 @@ class CallResolverTest : BaseTest() {
         assertEquals<List<FunctionDeclaration>>(listOf(originalMethod), overridingMethod.overrides)
         assertEquals<List<FunctionDeclaration>>(
             listOf(overridingMethod),
-            originalMethod.overriddenBy
+            originalMethod.overriddenBy,
         )
     }
 
@@ -117,7 +117,7 @@ class CallResolverTest : BaseTest() {
     fun testJava() {
         val result =
             analyze("java", topLevel, true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
                 it.inferenceConfiguration(
                     InferenceConfiguration.builder().inferRecords(false).build()
                 )

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.newTupleDeclaration
@@ -64,10 +65,9 @@ import de.fraunhofer.aisec.cpg.graph.types.TupleType
 class TupleDeclaration : VariableDeclaration() {
     /** The list of elements in this tuple. */
     var elementEdges =
-        astEdgesOf<VariableDeclaration>(
-            onAdd = { registerTypeObserver(it.end) },
-            onRemove = { unregisterTypeObserver(it.end) }
-        )
+        astEdgesOf<VariableDeclaration>(onAdd = { registerTypeObserver(it.end) }) {
+            unregisterTypeObserver(it.end)
+        }
     var elements by unwrapping(TupleDeclaration::elementEdges)
 
     override var name: Name
@@ -78,5 +78,9 @@ class TupleDeclaration : VariableDeclaration() {
         this.elements += element
         // Make sure we inform the new element about our type changes
         registerTypeObserver(element)
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.initializer?.getStartingPrevEOG() ?: setOf()
     }
 }

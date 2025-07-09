@@ -77,7 +77,7 @@ fun applyTemplateInstantiation(
     function: FunctionDeclaration,
     initializationSignature: Map<Declaration?, Node?>,
     initializationType: Map<Node?, TemplateDeclaration.TemplateInitialization?>,
-    orderedInitializationSignature: Map<Declaration, Int>
+    orderedInitializationSignature: Map<Declaration, Int>,
 ): List<FunctionDeclaration> {
     val templateInstantiationParameters =
         mutableListOf<Node>(*orderedInitializationSignature.keys.toTypedArray())
@@ -155,7 +155,6 @@ fun signatureWithImplicitCastTransformation(
         val funcType = functionSignature[i]
         if (callType?.isPrimitive == true && funcType.isPrimitive && callType != funcType) {
             val implicitCast = CastExpression()
-            implicitCast.ctx = call.ctx
             implicitCast.isImplicit = true
             implicitCast.castType = funcType
             implicitCast.language = funcType.language
@@ -216,7 +215,7 @@ fun getTemplateInitializationSignature(
     templateCall: CallExpression,
     instantiationType: MutableMap<Node?, TemplateDeclaration.TemplateInitialization?>,
     orderedInitializationSignature: MutableMap<Declaration, Int>,
-    explicitInstantiated: MutableList<ParameterizedType>
+    explicitInstantiated: MutableList<ParameterizedType>,
 ): Map<Declaration?, Node?>? {
     // Construct Signature
     val signature =
@@ -225,7 +224,7 @@ fun getTemplateInitializationSignature(
             templateCall,
             instantiationType,
             orderedInitializationSignature,
-            explicitInstantiated
+            explicitInstantiated,
         ) ?: return null
     val parameterizedTypeResolution = getParameterizedSignaturesFromInitialization(signature)
 
@@ -277,7 +276,7 @@ fun constructTemplateInitializationSignatureFromTemplateParameters(
     templateCall: CallExpression,
     instantiationType: MutableMap<Node?, TemplateDeclaration.TemplateInitialization?>,
     orderedInitializationSignature: MutableMap<Declaration, Int>,
-    explicitInstantiated: MutableList<ParameterizedType>
+    explicitInstantiated: MutableList<ParameterizedType>,
 ): MutableMap<Declaration?, Node?>? {
     val instantiationSignature: MutableMap<Declaration?, Node?> = HashMap()
     for (i in functionTemplateDeclaration.parameters.indices) {
@@ -302,7 +301,7 @@ fun constructTemplateInitializationSignatureFromTemplateParameters(
                 i,
                 instantiationSignature,
                 instantiationType,
-                orderedInitializationSignature
+                orderedInitializationSignature,
             )
         }
     }
@@ -351,17 +350,14 @@ fun handleImplicitTemplateParameter(
     index: Int,
     instantiationSignature: MutableMap<Declaration?, Node?>,
     instantiationType: MutableMap<Node?, TemplateDeclaration.TemplateInitialization?>,
-    orderedInitializationSignature: MutableMap<Declaration, Int>
+    orderedInitializationSignature: MutableMap<Declaration, Int>,
 ) {
     if ((functionTemplateDeclaration.parameters[index] as HasDefault<*>).default != null) {
         // If we have a default we fill it in
         var defaultNode = (functionTemplateDeclaration.parameters[index] as HasDefault<*>).default
         if (defaultNode is Type) {
             defaultNode =
-                functionTemplateDeclaration.newTypeExpression(
-                    defaultNode.name,
-                    defaultNode,
-                )
+                functionTemplateDeclaration.newTypeExpression(defaultNode.name, defaultNode)
             defaultNode.isImplicit = true
         }
         instantiationSignature[functionTemplateDeclaration.parameters[index]] = defaultNode
@@ -389,7 +385,7 @@ fun handleImplicitTemplateParameter(
 fun getCallSignature(
     function: FunctionDeclaration,
     parameterizedTypeResolution: Map<ParameterizedType, TypeParameterDeclaration>,
-    initializationSignature: Map<Declaration?, Node?>
+    initializationSignature: Map<Declaration?, Node?>,
 ): List<Type> {
     val templateCallSignature = mutableListOf<Type>()
     for (argument in function.parameters) {
@@ -399,7 +395,7 @@ fun getCallSignature(
                     function.language,
                     parameterizedTypeResolution,
                     argument.type,
-                    initializationSignature
+                    initializationSignature,
                 )
             )
         } else {
@@ -423,7 +419,7 @@ fun checkArgumentValidity(
     functionDeclarationSignature: List<Type>,
     templateCallExpression: CallExpression,
     explicitInstantiation: List<ParameterizedType>,
-    needsExactMatch: Boolean
+    needsExactMatch: Boolean,
 ): Boolean {
     // We need to keep track of the original (template) arguments and double-check that we are not
     // casting two parameterized types into two different arguments
@@ -438,7 +434,7 @@ fun checkArgumentValidity(
             functionDeclaration.defaultParameters
                 .subList(
                     callArguments.size,
-                    functionDeclaration.defaultParameters.size
+                    functionDeclaration.defaultParameters.size,
                 ) // TODO: Could be replaced with functionDeclaration.parameters.size
                 .filterNotNull()
         ) // Extend by defaults
@@ -451,7 +447,7 @@ fun checkArgumentValidity(
                 callArgument.type.tryCast(
                     functionDeclarationSignature[i],
                     hint = callArgument,
-                    targetHint = functionDeclaration.parameters[i]
+                    targetHint = functionDeclaration.parameters[i],
                 ) == CastNotPossible
             if (
                 notMatches &&

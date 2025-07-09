@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.helpers
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.io.File
 import java.nio.file.Path
 import java.time.Duration
@@ -36,6 +38,7 @@ import java.util.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+@DoNotPersist
 class BenchmarkResults(val entries: List<List<Any>>) {
 
     val json: String
@@ -69,7 +72,12 @@ interface StatisticsHolder {
                     listOf("Number of files translated", translatedFiles.size),
                     listOf(
                         "Translated file(s)",
-                        translatedFiles.map { relativeOrAbsolute(Path.of(it), config.topLevel) }
+                        translatedFiles.map {
+                            relativeOrAbsolute(
+                                Path.of(it),
+                                config.topLevels[DEFAULT_APPLICATION_NAME],
+                            )
+                        },
                     ),
                 )
 
@@ -85,17 +93,20 @@ interface StatisticsHolder {
 
 /**
  * Prints a table of values and headers in Markdown format. Table columns are automatically adjusted
- * to the longest column.
+ * to the longest column, with a maximum width of 80 characters. Longer content is truncated with
+ * `...`.
  */
 fun printMarkdown(table: List<List<Any>>, headers: List<String>) {
     val lengths = IntArray(headers.size)
+    val maxColumnLength = 80 // Maximum column width
 
-    // first, we need to calculate the longest column per line
+    // first, we need to calculate the longest column per line, capped at maxColumnLength
     for (row in table) {
         for (i in row.indices) {
             val value = row[i].toString()
-            if (value.length > lengths[i]) {
-                lengths[i] = value.length
+            val effectiveLength = minOf(value.length, maxColumnLength)
+            if (effectiveLength > lengths[i]) {
+                lengths[i] = effectiveLength
             }
         }
     }
@@ -103,7 +114,18 @@ fun printMarkdown(table: List<List<Any>>, headers: List<String>) {
     // table header
     val dash = lengths.joinToString(" | ", "| ", " |") { ("-".repeat(it)) }
     var i = 0
-    val header = headers.joinToString(" | ", "| ", " |") { it.padEnd(lengths[i++]) }
+    val header =
+        headers.joinToString(" | ", "| ", " |") {
+            val headerText = it
+            val effectiveLength = minOf(headerText.length, lengths[i])
+            val truncated =
+                if (headerText.length > effectiveLength) {
+                    headerText.substring(0, effectiveLength - 3) + "..."
+                } else {
+                    headerText
+                }
+            truncated.padEnd(lengths[i++])
+        }
 
     println()
     println(header)
@@ -112,7 +134,18 @@ fun printMarkdown(table: List<List<Any>>, headers: List<String>) {
     for (row in table) {
         var rowIndex = 0
         // TODO: Add pretty printing for objects (e.g. List, Map)
-        val line = row.joinToString(" | ", "| ", " |") { it.toString().padEnd(lengths[rowIndex++]) }
+        val line =
+            row.joinToString(" | ", "| ", " |") {
+                val value = it.toString()
+                val effectiveLength = minOf(value.length, lengths[rowIndex])
+                val truncated =
+                    if (value.length > effectiveLength) {
+                        value.substring(0, effectiveLength - 3) + "..."
+                    } else {
+                        value
+                    }
+                truncated.padEnd(lengths[rowIndex++])
+            }
         println(line)
     }
 
@@ -142,7 +175,7 @@ constructor(
     c: Class<*>,
     message: String,
     debug: Boolean = false,
-    holder: StatisticsHolder? = null
+    holder: StatisticsHolder? = null,
 ) : MeasurementHolder(c, message, debug, holder) {
 
     private val start: Instant
@@ -175,6 +208,7 @@ constructor(
     }
 }
 
+@DoNotPersist
 /** Represents some kind of measurements, e.g., on the performance or problems. */
 open class MeasurementHolder
 @JvmOverloads
@@ -186,7 +220,7 @@ constructor(
     /** Changes the level used for log output. */
     protected var debug: Boolean = false,
     /** The class which should be updated if the value measured by this benchmark changed. */
-    protected var holder: StatisticsHolder? = null
+    protected var holder: StatisticsHolder? = null,
 ) {
 
     val caller: String
@@ -215,7 +249,7 @@ constructor(
     @JvmOverloads
     open fun addMeasurement(
         measurementKey: String? = null,
-        measurementValue: String? = null
+        measurementValue: String? = null,
     ): Any? {
         if (measurementKey == null || measurementValue == null) return null
 

@@ -27,6 +27,9 @@ package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -39,7 +42,7 @@ import org.neo4j.ogm.annotation.Relationship
  * that declares variables, can change them in an iteration statement and is executed until the
  * condition evaluates to false.
  */
-class ForStatement : LoopStatement(), BranchingNode {
+class ForStatement : LoopStatement(), BranchingNode, StatementHolder {
 
     @Relationship("INITIALIZER_STATEMENT")
     var initializerStatementEdge = astOptionalEdgeOf<Statement>()
@@ -57,6 +60,21 @@ class ForStatement : LoopStatement(), BranchingNode {
 
     override val branchedBy: Node?
         get() = condition ?: conditionDeclaration
+
+    override var statementEdges: AstEdges<Statement, AstEdge<Statement>>
+        get() {
+            val statements = astEdgesOf<Statement>()
+            statements += initializerStatementEdge
+            statements += iterationStatementEdge
+            statements += statementEdge
+            statements += elseStatementEdge
+            return statements
+        }
+        set(_) {
+            // Nothing to do here
+        }
+
+    override var statements by unwrapping(ForStatement::statementEdges)
 
     override fun toString() =
         ToStringBuilder(this, TO_STRING_STYLE)
@@ -87,7 +105,19 @@ class ForStatement : LoopStatement(), BranchingNode {
             this.condition,
             this.initializerStatement,
             this.conditionDeclaration,
-            this.iterationStatement
+            this.iterationStatement,
         )
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        val astChildren = this.allChildren<Node> { true }
+        return initializerStatement?.getStartingPrevEOG()
+            ?: this.condition?.getStartingPrevEOG()?.filter { it !in astChildren }
+            ?: this.conditionDeclaration?.getStartingPrevEOG()?.filter { it !in astChildren }
+            ?: this.prevEOG
+    }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return this.nextEOG.filter { it !in statement.allChildren<Node> { true } }
     }
 }

@@ -93,7 +93,7 @@ class FrontendHelperTest {
         assertTrue(constructorAssignment.comment?.contains(comment5) == true)
         assertNull(constructor.comment)
 
-        val mainMethod = classDeclaration.declarations[1] as MethodDeclaration
+        val mainMethod = classDeclaration.declarations[2] as MethodDeclaration
         assertNull(mainMethod.comment)
         val forLoop = (mainMethod.body as Block).statements[0] as ForStatement
         forLoop.comment = null
@@ -102,7 +102,7 @@ class FrontendHelperTest {
         FrontendUtils.matchCommentToNode(comment6, Region(15, 14, 15, 22), tu)
         assertEquals(
             comment6,
-            forLoop.comment
+            forLoop.comment,
         ) // It doesn't put the whole comment, only the part that amtches
 
         // TODO IMHO the comment "i decl" should belong to the declaration statement of i. But

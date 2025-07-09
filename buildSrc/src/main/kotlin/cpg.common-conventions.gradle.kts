@@ -1,19 +1,18 @@
+import org.gradle.accessors.dm.LibrariesForLibs
+import org.gradle.api.services.BuildServiceParameters.None
 import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.gradle.api.services.BuildService;
-import org.gradle.api.services.BuildServiceParameters;
-import org.gradle.api.services.BuildServiceParameters.None;
 
 plugins {
     id("cpg.formatting-conventions")
 
     `java-library`
+    `jvm-test-suite`
     jacoco
     signing
-    `maven-publish`
     kotlin("jvm")
+    kotlin("plugin.serialization")
     id("org.jetbrains.dokka")
-    id("org.jetbrains.kotlinx.kover")
 }
 
 java {
@@ -53,114 +52,105 @@ val javadocJar by tasks.registering(Jar::class) {
     from(dokkaHtml.outputDirectory)
 }
 
-publishing {
-    publications {
-        create<MavenPublication>(name) {
-            artifact(javadocJar)
-            from(components["java"])
+//
+// common compilation configuration
+//
+// specify Java & Kotlin JVM version
+kotlin {
+    jvmToolchain(21)
+}
 
-            pom {
-                url.set("https://github.com/Fraunhofer-AISEC/cpg")
-                licenses {
-                    license {
-                        name.set("The Apache License, Version 2.0")
-                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+tasks.withType<KotlinCompile> {
+    compilerOptions {
+        freeCompilerArgs = listOf(
+            "-opt-in=kotlin.RequiresOptIn",
+            "-opt-in=kotlin.uuid.ExperimentalUuidApi",
+            "-opt-in=kotlin.experimental.ExperimentalTypeInference",
+            "-Xcontext-parameters",
+        )
+    }
+}
+
+// Configure our test suites
+@Suppress("UnstableApiUsage")
+testing {
+    suites {
+        // The default unit-test suite
+        val test by getting(JvmTestSuite::class) {
+            useJUnitJupiter()
+            targets {
+                all {
+                    testTask.configure {
+                        maxHeapSize = "4048m"
+                        reports {
+                            junitXml.apply {
+                                isOutputPerTestCase = false
+                            }
+                        }
                     }
                 }
-                developers {
-                    developer {
-                        id.set("oxisto")
-                        organization.set("Fraunhofer AISEC")
-                        organizationUrl.set("https://www.aisec.fraunhofer.de")
+            }
+        }
+
+        // Our integration tests
+        val integrationTest by registering(JvmTestSuite::class) {
+            description = "Runs the integration tests"
+            dependencies {
+                implementation(project())
+                implementation(testFixtures(project(":cpg-core")))
+            }
+
+            // For legacy reasons we also include the unit-test resources in the integration tests,
+            // because some of them are shared
+            sources {
+                resources {
+                    srcDirs("src/test/resources")
+                }
+            }
+
+            targets {
+                all {
+                    testTask.configure {
+                        maxHeapSize = "4048m"
                     }
                 }
-                scm {
-                    connection.set("scm:git:git://github.com:Fraunhofer-AISEC/cpg.git")
-                    developerConnection.set("scm:git:ssh://github.com:Fraunhofer-AISEC/cpg.git")
-                    url.set("https://github.com/Fraunhofer-AISEC/cpg")
+            }
+        }
+
+        // Our performance tests
+        val performanceTest by registering(JvmTestSuite::class) {
+            description = "Runs the performance tests"
+            dependencies {
+                implementation(project())
+                implementation(testFixtures(project(":cpg-core")))
+            }
+
+            targets {
+                all {
+                    testTask.configure {
+                        // do not parallelize tests within the task
+                        maxParallelForks = 1
+                        // make sure that several performance tests (e.g. in different frontends) also do NOT run in parallel
+                        usesService(serialExecutionService)
+                    }
                 }
             }
         }
     }
 }
 
-signing {
-    val signingKey: String? by project
-    val signingPassword: String? by project
-
-    useInMemoryPgpKeys(signingKey, signingPassword)
-
-    setRequired({
-        gradle.taskGraph.hasTask("publish")
-    })
-
-    sign(publishing.publications[name])
-}
-
-//
-// common compilation configuration
-//
-// specify Java & Kotlin JVM version
-kotlin {
-    jvmToolchain(17)
-}
-
-tasks.withType<KotlinCompile> {
-    compilerOptions {
-        freeCompilerArgs = listOf("-opt-in=kotlin.RequiresOptIn", "-opt-in=kotlin.uuid.ExperimentalUuidApi", "-Xcontext-receivers")
-    }
-}
-
-//
-// common testing configuration
-//
-tasks.test {
-    useJUnitPlatform() {
-        excludeTags("integration")
-        excludeTags("performance")
-    }
-
-    maxHeapSize = "4048m"
-}
-
-val integrationTest = tasks.register<Test>("integrationTest") {
-    description = "Runs integration tests."
-    group = "verification"
-    useJUnitPlatform() {
-        includeTags("integration")
-    }
-
-    maxHeapSize = "4048m"
-
-    shouldRunAfter(tasks.test)
-}
-
-val performanceTest = tasks.register<Test>("performanceTest") {
-    description = "Runs performance tests."
-    group = "verification"
-    useJUnitPlatform() {
-        includeTags("performance")
-    }
-
-    maxHeapSize = "4048m"
-
-    // do not parallelize tests within the task
-    maxParallelForks = 1
-    // make sure that several performance tests (e.g. in different frontends) also do NOT run in parallel
-    usesService(serialExecutionService)
-}
-
 // A build service that ensures serial execution of a group of tasks
-abstract class SerialExecutionService : BuildService<BuildServiceParameters.None>
+abstract class SerialExecutionService : BuildService<None>
 val serialExecutionService =
     gradle.sharedServices.registerIfAbsent("serialExecution", SerialExecutionService::class.java) {
         this.maxParallelUsages.set(1)
     }
 
-kover {
-    currentProject {
-        instrumentation {
-            disabledForTestTasks.add("performanceTest")
-        }
-    }
+// Common dependencies that we need for all modules
+val libs = the<LibrariesForLibs>()  // necessary to be able to use the version catalog in buildSrc
+dependencies {
+    implementation(libs.apache.commons.lang3)
+    implementation(libs.neo4j.ogm.core)
+    implementation(libs.jackson)
 }
+

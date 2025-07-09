@@ -61,7 +61,7 @@ class CXXDeclarationTest {
             analyze(
                 listOf(topLevel.resolve("foo.c"), topLevel.resolve("bar.c")),
                 topLevel.toPath(),
-                true
+                true,
             ) {
                 it.registerLanguage<CLanguage>()
                 it.includePath("src/test/resources/c/foobar/std")
@@ -89,7 +89,7 @@ class CXXDeclarationTest {
             analyze(
                 listOf(topLevel.resolve("foo.c"), topLevel.resolve("bar.c")),
                 topLevel.toPath(),
-                true
+                true,
             ) {
                 it.registerLanguage<CLanguage>()
             }
@@ -279,28 +279,72 @@ class CXXDeclarationTest {
             }
         assertNotNull(result)
 
-        var proxy = result.records["Proxy"]
+        val proxy = result.records["Proxy"]
         assertNotNull(proxy)
 
-        var op = proxy.operators["operator->"]
+        val op = proxy.operators["operator->"]
         assertNotNull(op)
 
-        var data = result.records["Data"]
+        val data = result.records["Data"]
         assertNotNull(data)
 
-        var size = data.fields["size"]
+        val size = data.fields["size"]
         assertNotNull(size)
 
         val p = result.refs["p"]
         assertNotNull(p)
         assertEquals(proxy.toType(), p.type)
 
-        var sizeRef = result.memberExpressions["size"]
+        val sizeRef = result.memberExpressions["size"]
         assertNotNull(sizeRef)
         assertRefersTo(sizeRef, size)
 
         // we should now have an implicit call to our operator in-between "p" and "size"
         val opCall = sizeRef.base
+        assertNotNull(opCall)
+        assertIs<OperatorCallExpression>(opCall)
+        assertEquals(p, opCall.base)
+        assertInvokes(opCall, op)
+    }
+
+    @Test
+    fun testCallExpressionOperator() {
+        val file = File("src/test/resources/cxx/operators/call_expression.cpp")
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+            }
+        assertNotNull(result)
+
+        val proxy = result.records["Proxy"]
+        assertNotNull(proxy)
+
+        val funcBar = proxy.functions["bar"]
+        assertNotNull(funcBar)
+
+        val op = proxy.operators["operator->"]
+        assertNotNull(op)
+
+        val data = result.records["Data"]
+        assertNotNull(data)
+
+        val funcFoo = data.functions["foo"]
+        assertNotNull(funcFoo)
+
+        val p = result.refs["p"]
+        assertNotNull(p)
+        assertEquals(proxy.toType(), p.type)
+
+        val funcFooRef = result.memberExpressions["foo"]
+        assertNotNull(funcFooRef)
+        assertRefersTo(funcFooRef, funcFoo)
+
+        val funcBarRef = result.memberExpressions["bar"]
+        assertNotNull(funcBarRef)
+        assertRefersTo(funcBarRef, funcBar)
+
+        // we should now have an implicit call to our operator in-between "p" and "foo"
+        val opCall = funcFooRef.base
         assertNotNull(opCall)
         assertIs<OperatorCallExpression>(opCall)
         assertEquals(p, opCall.base)

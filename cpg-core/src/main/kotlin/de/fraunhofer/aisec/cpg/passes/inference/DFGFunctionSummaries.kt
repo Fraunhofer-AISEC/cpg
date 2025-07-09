@@ -31,17 +31,16 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.IncompatibleSignature
-import de.fraunhofer.aisec.cpg.ancestors
+import de.fraunhofer.aisec.cpg.SignatureMatches
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
-import de.fraunhofer.aisec.cpg.graph.ContextProvider
-import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.matchesSignature
+import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.tryCast
 import java.io.File
 import org.slf4j.Logger
@@ -49,8 +48,9 @@ import org.slf4j.LoggerFactory
 
 /**
  * If the user of the library registers one or multiple DFG-function summary files (via
- * [Builder.registerFunctionSummaries]), this class is responsible for parsing the files, caching
- * the result and adding the respective DFG summaries to the [FunctionDeclaration].
+ * [TranslationConfiguration.Builder.registerFunctionSummaries]), this class is responsible for
+ * parsing the files, caching the result and adding the respective DFG summaries to the
+ * [FunctionDeclaration].
  */
 class DFGFunctionSummaries {
     private constructor()
@@ -94,7 +94,7 @@ class DFGFunctionSummaries {
      * Adds the DFG edges to the [functionDeclaration] depending on the function summaries which are
      * kept in this object. If no suitable entry was found, this method returns `false`.
      */
-    fun addFlowsToFunctionDeclaration(functionDeclaration: FunctionDeclaration): Boolean {
+    fun DFGPass.addFlowsToFunctionDeclaration(functionDeclaration: FunctionDeclaration): Boolean {
         val dfgEntries = findFunctionDeclarationEntry(functionDeclaration) ?: return false
         applyDfgEntryToFunctionDeclaration(functionDeclaration, dfgEntries)
         return true
@@ -114,12 +114,13 @@ class DFGFunctionSummaries {
      * This method returns the list of [DFGEntry] for the "best match" or `null` if no entry
      * matches.
      */
-    private fun findFunctionDeclarationEntry(functionDecl: FunctionDeclaration): List<DFGEntry>? {
+    private fun DFGPass.findFunctionDeclarationEntry(
+        functionDecl: FunctionDeclaration
+    ): List<DFGEntry>? {
         if (functionToDFGEntryMap.isEmpty()) return null
 
-        val provider = functionDecl
         val language = functionDecl.language
-        val languageName = language?.javaClass?.name
+        val languageName = language.javaClass.name
         val methodName = functionDecl.name
 
         // The language and the method name have to match. If a signature is specified, it also has
@@ -131,7 +132,12 @@ class DFGFunctionSummaries {
                     // Split the name if we have a FQN
                     val entryMethodName = language.parseName(it.methodName)
                     val entryRecord =
-                        entryMethodName.parent?.let { provider.lookupType(entryMethodName.parent) }
+                        entryMethodName.parent?.let {
+                            typeManager.lookupResolvedType(
+                                entryMethodName.parent,
+                                language = language,
+                            )
+                        }
                     methodName.lastPartsMatch(
                         entryMethodName.localName
                     ) && // The local name has to match
@@ -148,7 +154,10 @@ class DFGFunctionSummaries {
                         (it.signature == null ||
                             functionDecl.matchesSignature(
                                 it.signature.map { signatureType ->
-                                    provider.lookupType(signatureType)
+                                    typeManager.lookupResolvedType(
+                                        signatureType,
+                                        language = language,
+                                    ) ?: functionDecl.unknownType()
                                 }
                             ) != IncompatibleSignature)
                 } else {
@@ -161,7 +170,7 @@ class DFGFunctionSummaries {
             matchingEntries.size,
             functionDecl.name,
             functionDecl.signatureTypes.map(Node::name),
-            functionDecl.scope
+            functionDecl.scope,
         )
 
         return if (matchingEntries.size == 1) {
@@ -184,57 +193,50 @@ class DFGFunctionSummaries {
                     .map {
                         Pair(
                             language.parseName(it.methodName).parent?.let { it1 ->
-                                functionDecl.objectType(it1)
-                            },
-                            it
+                                typeManager.lookupResolvedType(it1, language = language)
+                            } ?: language.unknownType(),
+                            it,
                         )
                     }
-            var mostPreciseClassEntries = mutableListOf<FunctionDeclarationEntry>()
-            var mostPreciseType = typeEntryList.first().first
-            var superTypes = mostPreciseType?.ancestors?.map { it.type } ?: setOf()
-            for (typeEntry in typeEntryList) {
-                if (typeEntry.first == mostPreciseType) {
-                    mostPreciseClassEntries.add(typeEntry.second)
-                } else if (typeEntry.first in superTypes) {
-                    mostPreciseClassEntries.clear()
-                    mostPreciseClassEntries.add(typeEntry.second)
-                    mostPreciseType = typeEntry.first
-                    superTypes = mostPreciseType?.ancestors?.map { it.type } ?: setOf()
-                }
-            }
-            val maxSignature = mostPreciseClassEntries.mapNotNull { it.signature?.size }.max()
-            if (mostPreciseClassEntries.size > 1) {
-                mostPreciseClassEntries =
-                    mostPreciseClassEntries
-                        .filter { it.signature?.size == maxSignature }
-                        .toMutableList()
-            }
-            // Filter parameter types. We start with parameter 0 and continue. Let's hope we remove
-            // some entries here.
-            var argIndex = 0
-            while (mostPreciseClassEntries.size > 1 && argIndex < maxSignature) {
-                mostPreciseType =
-                    mostPreciseClassEntries.first().signature?.get(argIndex)?.let {
-                        functionDecl.objectType(it)
+            val uniqueTypes = typeEntryList.map { it.first }.distinct()
+            val targetType =
+                language.parseName(functionDecl.name).parent?.let { it1 ->
+                    typeManager.lookupResolvedType(it1, language = language)
+                } ?: language.unknownType()
+
+            var mostPreciseType =
+                uniqueTypes
+                    .map { Pair(it, language?.tryCast(targetType, it)) }
+                    .sortedBy { it.second?.depthDistance }
+                    .firstOrNull()
+                    ?.first
+
+            var mostPreciseClassEntries =
+                typeEntryList.filter { it.first == mostPreciseType }.map { it.second }
+
+            var signatureResults =
+                mostPreciseClassEntries
+                    .map {
+                        Pair(
+                            it,
+                            functionDecl.matchesSignature(
+                                it.signature?.map {
+                                    typeManager.lookupResolvedType(it, language = language)
+                                        ?: language.unknownType()
+                                } ?: listOf()
+                            ),
+                        )
                     }
-                superTypes = mostPreciseType?.ancestors?.map { it.type } ?: setOf()
-                val newMostPrecise = mutableListOf<FunctionDeclarationEntry>()
-                for (entry in mostPreciseClassEntries) {
-                    val currentType =
-                        entry.signature?.get(argIndex)?.let { functionDecl.objectType(it) }
-                    if (currentType == mostPreciseType) {
-                        newMostPrecise.add(entry)
-                    } else if (currentType in superTypes) {
-                        newMostPrecise.clear()
-                        newMostPrecise.add(entry)
-                        mostPreciseType = currentType
-                        superTypes = mostPreciseType?.ancestors?.map { it.type } ?: setOf()
-                    }
-                }
-                argIndex++
-                mostPreciseClassEntries = newMostPrecise
-            }
-            functionToDFGEntryMap[mostPreciseClassEntries.first()]
+                    .filter { it.second is SignatureMatches }
+                    .associate { it }
+
+            val rankings = signatureResults.entries.map { Pair(it.value.ranking, it.key) }
+
+            // Find the best (lowest) rank and find functions with the specific rank
+            val bestRanking = rankings.minBy { it.first }.first
+            val list = rankings.filter { it.first == bestRanking }.map { it.second }
+
+            functionToDFGEntryMap[list.first()]
         } else {
             null
         }
@@ -246,7 +248,7 @@ class DFGFunctionSummaries {
      */
     private fun applyDfgEntryToFunctionDeclaration(
         functionDeclaration: FunctionDeclaration,
-        dfgEntries: List<DFGEntry>
+        dfgEntries: List<DFGEntry>,
     ) {
         for (entry in dfgEntries) {
             val from =
@@ -309,7 +311,7 @@ class DFGFunctionSummaries {
      */
     private data class DataflowEntry(
         val functionDeclaration: FunctionDeclarationEntry,
-        val dataFlows: List<DFGEntry>
+        val dataFlows: List<DFGEntry>,
     )
 
     /**
@@ -325,7 +327,7 @@ class DFGFunctionSummaries {
          * parameter. This is optional and if not specified, we perform the matching only based on
          * the [methodName].
          */
-        val signature: List<String>? = null
+        val signature: List<String>? = null,
     )
 
     /** Represents a data flow entry. */
@@ -343,7 +345,7 @@ class DFGFunctionSummaries {
          * A property which can give us more information. Currently, it's ignored, but it would make
          * sense to add e.g. partial flows based on PR 1421.
          */
-        val dfgType: String
+        val dfgType: String,
     )
 
     companion object {
@@ -355,20 +357,5 @@ class DFGFunctionSummaries {
         }
 
         val log: Logger = LoggerFactory.getLogger(DFGFunctionSummaries::class.java)
-    }
-
-    fun ContextProvider.lookupType(fqn: CharSequence): Type {
-        // Try to look up the type from the specified FQN string
-        var type =
-            ctx?.typeManager?.lookupResolvedType(
-                fqn.toString(),
-                language = (this as? LanguageProvider)?.language
-            )
-        return if (type == null) {
-            log.warn("Could not find specified type $fqn. Using UnknownType")
-            this.unknownType()
-        } else {
-            type
-        }
     }
 }

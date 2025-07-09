@@ -23,25 +23,17 @@
  *                    \______/ \__|       \______/
  *
  */
-import com.github.gradle.node.npm.task.NpmTask
 
 plugins {
     id("cpg.frontend-conventions")
     alias(libs.plugins.node)
 }
 
-publishing {
-    publications {
-        named<MavenPublication>("cpg-language-ruby") {
-            pom {
-                artifactId = "cpg-language-ruby"
-                name.set("Code Property Graph - Ruby")
-                description.set("A Ruby language frontend for the CPG")
-            }
-        }
+mavenPublishing {
+    pom {
+        name.set("Code Property Graph - Ruby")
+        description.set("A Ruby language frontend for the CPG")
     }
 }
 
-dependencies {
-    implementation(libs.jruby)
-}
+dependencies { implementation(libs.jruby) }

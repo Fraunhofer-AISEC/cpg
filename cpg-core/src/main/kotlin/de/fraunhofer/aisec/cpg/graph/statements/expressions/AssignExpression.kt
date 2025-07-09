@@ -71,23 +71,22 @@ class AssignExpression :
                     base = base.base as? MemberExpression
                 }
 
-                if (isSimpleAssignment) {
-                    (end as? Reference)?.access = AccessValues.WRITE
-                } else {
-                    (end as? Reference)?.access = AccessValues.READWRITE
-                }
+                end.access =
+                    if (isSimpleAssignment) {
+                        AccessValues.WRITE
+                    } else {
+                        AccessValues.READWRITE
+                    }
             }
         )
     var lhs by unwrapping(AssignExpression::lhsEdges)
 
     @Relationship("RHS")
-
     /** The expressions on the right-hand side. */
     var rhsEdges =
-        astEdgesOf<Expression>(
-            onAdd = { it.end.registerTypeObserver(this) },
-            onRemove = { it.end.unregisterTypeObserver(this) },
-        )
+        astEdgesOf<Expression>(onAdd = { it.end.registerTypeObserver(this) }) {
+            it.end.unregisterTypeObserver(this)
+        }
     var rhs by unwrapping(AssignExpression::rhsEdges)
 
     /**
@@ -112,7 +111,7 @@ class AssignExpression :
      */
     val isCompoundAssignment: Boolean
         get() {
-            return operatorCode in (language?.compoundAssignmentOperators ?: setOf())
+            return operatorCode in language.compoundAssignmentOperators
         }
 
     /**
@@ -122,7 +121,7 @@ class AssignExpression :
      */
     val isSimpleAssignment: Boolean
         get() {
-            return operatorCode in (language?.simpleAssignmentOperators ?: setOf())
+            return operatorCode in language.simpleAssignmentOperators
         }
 
     @Relationship("DECLARATIONS") var declarationEdges = astEdgesOf<VariableDeclaration>()
@@ -252,5 +251,12 @@ class AssignExpression :
 
     override fun hasArgument(expression: Expression): Boolean {
         return expression in lhs || expression in rhs
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.declarations.firstOrNull()?.getStartingPrevEOG()
+            ?: this.lhs.firstOrNull()?.getStartingPrevEOG()
+            ?: this.rhs.firstOrNull()?.getStartingPrevEOG()
+            ?: this.prevEOG
     }
 }

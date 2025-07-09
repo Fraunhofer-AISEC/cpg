@@ -53,7 +53,7 @@ class FrontendUtils {
             nodeLength: Int,
             nodeOffset: Int,
             startingLineNumber: Int,
-            endingLineNumber: Int
+            endingLineNumber: Int,
         ): Region? {
             // Get start column by stepping backwards from begin of node to first occurrence of
             // '\n'
@@ -64,7 +64,7 @@ class FrontendUtils {
                     LOGGER.warn(
                         "Requested index {} exceeds length of translation unit code ({})",
                         i,
-                        fileContent.length
+                        fileContent.length,
                     )
                     return null
                 }
@@ -162,7 +162,7 @@ class FrontendUtils {
                     .sortedWith(
                         compareBy(
                             { it.location?.region?.startLine ?: 0 },
-                            { it.location?.region?.startColumn ?: 0 }
+                            { it.location?.region?.startColumn ?: 0 },
                         )
                     )
                     .firstOrNull()
@@ -183,7 +183,7 @@ class FrontendUtils {
                         .sortedWith(
                             compareBy(
                                 { it.location?.region?.endLine ?: 0 },
-                                { it.location?.region?.endColumn ?: 0 }
+                                { it.location?.region?.endColumn ?: 0 },
                             )
                         )
                         .lastOrNull()

@@ -8,8 +8,8 @@ We aim to keep semantic versioning in mind and try to release a new major versio
 
 | Version | Supported          |
 |---------| ------------------ |
-| 8.x.x   | :white_check_mark: |
-| < 8.0.0 | :x:                |
+| 9.x.x   | :white_check_mark: |
+| < 9.0.0 | :x:                |
 
 ## Reporting a Vulnerability
 

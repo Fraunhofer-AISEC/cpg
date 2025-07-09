@@ -25,9 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
@@ -45,41 +47,63 @@ import java.nio.file.Path
 import jep.python.PyObject
 import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.pathString
-import kotlin.io.path.relativeToOrNull
 import kotlin.math.min
 
+/**
+ * The [LanguageFrontend] for Python. It uses the JEP library to interact with Python's AST.
+ *
+ * It requires the Python interpreter (and the JEP library) to be installed on the system. The
+ * frontend registers two additional passes.
+ *
+ * ## Adding dynamic variable declarations
+ *
+ * The [PythonAddDeclarationsPass] adds dynamic declarations to the CPG. Python does not have the
+ * concept of a "declaration", but rather values are assigned to variables and internally variable
+ * are represented by a dictionary. This pass adds a declaration for each variable that is assigned
+ * a value (on the first assignment).
+ */
 @RegisterExtraPass(PythonAddDeclarationsPass::class)
-class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend<Python.AST.AST, Python.AST.AST?>(language, ctx) {
-    private val lineSeparator = '\n' // TODO
+@SupportsParallelParsing(false) // https://github.com/Fraunhofer-AISEC/cpg/issues/2026
+class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonLanguageFrontend>) :
+    LanguageFrontend<Python.AST.AST, Python.AST.AST?>(ctx, language) {
+    val lineSeparator = "\n" // TODO
     private val tokenTypeIndex = 0
     private val jep = JepSingleton // configure Jep
 
-    // val declarationHandler = DeclarationHandler(this)
-    // val specificationHandler = SpecificationHandler(this)
+    internal val declarationHandler = DeclarationHandler(this)
     internal var statementHandler = StatementHandler(this)
     internal var expressionHandler = ExpressionHandler(this)
 
     /**
-     * fileContent contains the whole file can be stored as a class field because the CPG creates a
+     * fileContent contains the whole file ca be stored as a class field because the CPG creates a
      * new [PythonLanguageFrontend] instance per file.
      */
     private lateinit var fileContent: String
     private lateinit var uri: URI
+    private var lastLineNumber: Int = -1
+    private var lastColumnLength: Int = -1
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
         fileContent = file.readText(Charsets.UTF_8)
         uri = file.toURI()
 
+        // Extract the file length for later usage
+        val fileAsLines = fileContent.lines()
+        lastLineNumber = fileAsLines.size
+        lastColumnLength = fileAsLines.lastOrNull()?.length ?: -1
+
         jep.getInterp().use {
             it.set("content", fileContent)
             it.set("filename", file.absolutePath)
             it.exec("import ast")
+            it.exec("import sys")
             it.exec("parsed = ast.parse(content, filename=filename, type_comments=True)")
 
             val pyAST = it.getValue("parsed") as PyObject
+
             val tud = pythonASTtoCPG(pyAST, file.toPath())
+            populateSystemInformation(config, tud)
 
             if (config.matchCommentsToNodes) {
                 it.exec("import tokenize")
@@ -96,6 +120,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                     (it.getValue("tokenList") as? ArrayList<*>) ?: TODO("Cannot get tokens of $it")
                 addCommentsToCPG(tud, pyTokens, pyCommentCode)
             }
+
             return tud
         }
     }
@@ -103,7 +128,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
     private fun addCommentsToCPG(
         tud: TranslationUnitDeclaration,
         pyTokens: ArrayList<*>,
-        pyCommentCode: Long
+        pyCommentCode: Long,
     ) {
         val commentMatcher = CommentMatcher()
         for (token in pyTokens) {
@@ -126,9 +151,9 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                             startLine.toInt(),
                             (startCol + 1).toInt(),
                             endLine.toInt(),
-                            (endCol + 1).toInt()
+                            (endCol + 1).toInt(),
                         ),
-                        tud
+                        tud,
                     )
                 }
             }
@@ -143,12 +168,41 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
     override fun typeOf(type: Python.AST.AST?): Type {
         return when (type) {
             null -> {
-                // No type information -> we return an autoType to infer things magically
-                autoType()
+                // No type information -> we return a dynamic type to infer things magically
+                dynamicType()
             }
+
             is Python.AST.Name -> {
                 this.typeOf(type.id)
             }
+
+            is Python.AST.Attribute -> {
+                var type = type
+                val names = mutableListOf<String>()
+
+                // Traverse nested attributes (e.g., `modules.a.Foobar`)
+                while (type is Python.AST.Attribute) {
+                    names.add(type.attr)
+                    val typeValue = type.value
+                    if (typeValue is Python.AST.Name) {
+                        names.add(typeValue.id)
+                        break
+                    }
+                    type = type.value
+                }
+                if (names.isNotEmpty()) {
+                    // As the AST provides attributes from outermost to innermost,
+                    // we need to reconstruct the Name hierarchy in reverse order.
+                    val parsedNames =
+                        names.foldRight(null as Name?) { child, parent ->
+                            Name(localName = child, parent = parent)
+                        }
+                    objectType(parsedNames ?: return unknownType())
+                } else {
+                    unknownType()
+                }
+            }
+
             else -> {
                 // The AST supplied us with some kind of type information, but we could not parse
                 // it, so we need to return the unknown type.
@@ -191,7 +245,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 lines = removeExtraAtEnd(location, lines)
                 lines = fixStartColumn(location, lines)
 
-                lines.joinToString(separator = lineSeparator.toString())
+                lines.joinToString(separator = lineSeparator)
             } else {
                 null
             }
@@ -208,7 +262,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 
     private fun fixStartColumn(
         location: PhysicalLocation,
-        lines: MutableList<String>
+        lines: MutableList<String>,
     ): MutableList<String> {
         for (idx in lines.indices) {
             // -1 to equalize for +1 in sarif
@@ -222,7 +276,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 
     private fun removeExtraAtEnd(
         location: PhysicalLocation,
-        lines: MutableList<String>
+        lines: MutableList<String>,
     ): MutableList<String> {
         val lastLineIdx = lines.lastIndex
         val lastLineLength = lines[lastLineIdx].length
@@ -243,7 +297,7 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                     endLine = astNode.end_lineno,
                     startColumn = astNode.col_offset + 1,
                     endColumn = astNode.end_col_offset + 1,
-                )
+                ),
             )
         } else {
             null
@@ -255,21 +309,36 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
     }
 
     private fun pythonASTtoCPG(pyAST: PyObject, path: Path): TranslationUnitDeclaration {
-        var topLevel = config.topLevel ?: path.parent.toFile()
+        var topLevel = ctx.currentComponent?.topLevel() ?: path.parent.toFile()
 
         val pythonASTModule =
             fromPython(pyAST) as? Python.AST.Module
                 ?: TODO(
                     "Python ast of type ${fromPython(pyAST).javaClass} is not supported yet"
-                ) // could be one of "ast.{Module,Interactive,Expression,FunctionType}
+                ) // could be one of ast.{Module,Interactive,Expression,FunctionType}
 
-        val tud = newTranslationUnitDeclaration(path.toString(), rawNode = pythonASTModule)
+        val tud =
+            newTranslationUnitDeclaration(path.toString(), rawNode = pythonASTModule).apply {
+                this.location =
+                    PhysicalLocation(
+                        uri = uri,
+                        region =
+                            Region(
+                                startLine = 1,
+                                startColumn = 1,
+                                endLine = lastLineNumber,
+                                endColumn = lastColumnLength,
+                            ),
+                    )
+            }
         scopeManager.resetToGlobal(tud)
 
         // We need to resolve the path relative to the top level to get the full module identifier
         // with packages. Note: in reality, only directories that have __init__.py file present are
-        // actually packages, but we skip this for now
-        var relative = path.relativeToOrNull(topLevel.toPath())
+        // actually packages, but we skip this for now. Since we are dealing with potentially
+        // relative paths, we need to canonicalize both paths.
+        var relative =
+            path.toFile().canonicalFile.relativeToOrNull(topLevel.canonicalFile)?.toPath()
         var module = path.nameWithoutExtension
         var modulePaths = (relative?.parent?.pathString?.split("/") ?: listOf()) + module
 
@@ -285,20 +354,41 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
                 // However, in reality, the symbols are actually available in foo.bar as well as in
                 // foo.bar.__init__, although the latter is practically not used, and therefore we
                 // do not support it because major workarounds would be needed.
-                if (path == "__init__") {
+                if (path == PythonLanguage.IDENTIFIER_INIT) {
                     previous
                 } else {
                     val nsd = newNamespaceDeclaration(fqn, rawNode = pythonASTModule)
                     nsd.path = relative?.parent?.pathString + "/" + module
                     scopeManager.addDeclaration(nsd)
+
+                    // Add the namespace to the parent namespace -- or the translation unit, if it
+                    // is the top one
+                    val holder = previous ?: tud
+                    holder.addDeclaration(nsd)
+
                     scopeManager.enterScope(nsd)
                     nsd
                 }
             }
 
-        if (lastNamespace != null) {
+        // THe parsed body is added to the identified namespace it belongs to, or in case such a
+        // namespace does not exist,
+        // e.g. __init__ at root level, the results of the translation are added to the translation
+        // unit.
+        (lastNamespace ?: tud).let {
             for (stmt in pythonASTModule.body) {
-                lastNamespace.statements += statementHandler.handle(stmt)
+                when (stmt) {
+                    // In order to be as compatible as possible with existing languages, we try to
+                    // add declarations directly to the class
+                    is Python.AST.Def -> {
+                        val decl = declarationHandler.handle(stmt)
+                        scopeManager.addDeclaration(decl)
+                        it.addDeclaration(decl)
+                    }
+                    // All other statements are added to the (static) statements block of the
+                    // namespace.
+                    else -> it.statements += statementHandler.handle(stmt)
+                }
             }
         }
 
@@ -333,6 +423,45 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
             is Python.AST.USub -> "-"
         }
 }
+
+/**
+ * Returns the version info from the [TranslationConfiguration] as [VersionInfo] or `null` if it was
+ * not specified.
+ */
+val TranslationConfiguration.versionInfo: VersionInfo?
+    get() {
+        // We need to populate the version info "in-order", to ensure that we do not
+        // set the micro version if minor and major are not set, i.e., there must not be a
+        // "gap" in the granularity of version numbers
+        return this.symbols["PYTHON_VERSION_MAJOR"]?.toLong()?.let { major ->
+            val minor = this.symbols["PYTHON_VERSION_MINOR"]?.toLong()
+            val micro = if (minor != null) this.symbols["PYTHON_VERSION_MICRO"]?.toLong() else null
+            VersionInfo(major, minor, micro)
+        }
+    }
+
+/**
+ * Populate system information from defined symbols that represent our environment. We add it as an
+ * overlay node to our [TranslationUnitDeclaration].
+ */
+fun populateSystemInformation(
+    config: TranslationConfiguration,
+    tu: TranslationUnitDeclaration,
+): SystemInformation {
+    var sysInfo =
+        SystemInformation(
+            platform = config.symbols["PYTHON_PLATFORM"],
+            versionInfo = config.versionInfo,
+        )
+    sysInfo.underlyingNode = tu
+    return sysInfo
+}
+
+/** Returns the system information overlay node from the [TranslationUnitDeclaration]. */
+val TranslationUnitDeclaration.sysInfo: SystemInformation?
+    get() {
+        return this.overlays.firstOrNull { it is SystemInformation } as? SystemInformation
+    }
 
 /**
  * This function maps Python's `ast` objects to out internal [Python] representation.

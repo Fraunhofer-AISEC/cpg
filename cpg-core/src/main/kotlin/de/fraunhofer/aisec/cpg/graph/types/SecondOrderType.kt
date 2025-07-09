@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+/** Second-order types are generic container types (e.g., List, Set, Map) or pointer types. */
 interface SecondOrderType {
     var elementType: Type
 

@@ -39,7 +39,9 @@ internal class TypeTests : BaseTest() {
     @Throws(Exception::class)
     fun testParameterizedTypes() {
         val topLevel = Path.of("src", "test", "resources", "types")
-        val result = analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
+        val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
+        val language = result.finalCtx.availableLanguage<JavaLanguage>()
+        assertNotNull(language)
 
         // Check Parameterized
         val recordDeclarations = result.records
@@ -65,8 +67,8 @@ internal class TypeTests : BaseTest() {
         // Return Type of get Method
         val methodDeclarationGet = findByUniqueName(methodDeclarations, "get")
         assertEquals(
-            FunctionType("get()T", listOf(), listOf(typeT), JavaLanguage()),
-            methodDeclarationGet.type
+            FunctionType("get()T", listOf(), listOf(typeT), language),
+            methodDeclarationGet.type,
         )
     }
 
@@ -74,7 +76,7 @@ internal class TypeTests : BaseTest() {
     @Throws(Exception::class)
     fun graphTest() {
         val topLevel = Path.of("src", "test", "resources", "types")
-        val result = analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
+        val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
         val variables = result.allChildren<ObjectType>()
         val recordDeclarations = result.records
 
@@ -110,19 +112,21 @@ internal class TypeTests : BaseTest() {
     @Test
     fun testCommonTypeTestJava() {
         val topLevel = Path.of("src", "test", "resources", "compiling", "hierarchy")
-        val result = analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
-        val root = assertNotNull(result.records["multistep.Root"]).toType()
-        val level0 = assertNotNull(result.records["multistep.Level0"]).toType()
-        val level1 = assertNotNull(result.records["multistep.Level1"]).toType()
-        val level1b = assertNotNull(result.records["multistep.Level1B"]).toType()
-        val level2 = assertNotNull(result.records["multistep.Level2"]).toType()
-        val unrelated = assertNotNull(result.records["multistep.Unrelated"]).toType()
-        println(
-            result.finalCtx.typeManager.firstOrderTypes
-                .filter { it.typeName == "multistep.Root" }
-                .map { it.superTypes }
-        )
-        getCommonTypeTestGeneral(root, level0, level1, level1b, level2, unrelated)
+        val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
+        with(result) {
+            val root = assertResolvedType("multistep.Root")
+            val level0 = assertResolvedType("multistep.Level0")
+            val level1 = assertResolvedType("multistep.Level1")
+            val level1b = assertResolvedType("multistep.Level1B")
+            val level2 = assertResolvedType("multistep.Level2")
+            val unrelated = assertResolvedType("multistep.Unrelated")
+            println(
+                result.finalCtx.typeManager.resolvedTypes
+                    .filter { it.typeName == "multistep.Root" }
+                    .map { it.superTypes }
+            )
+            getCommonTypeTestGeneral(root, level0, level1, level1b, level2, unrelated)
+        }
     }
 
     private fun getCommonTypeTestGeneral(
@@ -131,7 +135,7 @@ internal class TypeTests : BaseTest() {
         level1: Type,
         level1b: Type,
         level2: Type,
-        unrelated: Type
+        unrelated: Type,
     ) {
         /*
         Type hierarchy:
@@ -169,7 +173,11 @@ internal class TypeTests : BaseTest() {
 
         // Check unrelated type behavior: No common root class
         for (t in listOf(root, level0, level1, level1b, level2)) {
-            assertFullName("java.lang.Object", setOf(unrelated, t).commonType)
+            assertFullName(
+                "java.lang.Object",
+                setOf(unrelated, t).commonType,
+                "${t.typeName} and ${unrelated.typeName} do not have a common type (java.lang.Object) which they should",
+            )
         }
     }
 }

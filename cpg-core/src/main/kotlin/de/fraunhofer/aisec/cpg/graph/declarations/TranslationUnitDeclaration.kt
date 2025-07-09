@@ -26,10 +26,10 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -43,14 +43,12 @@ class TranslationUnitDeclaration :
     override val declarations by unwrapping(TranslationUnitDeclaration::declarationEdges)
 
     /** A list of includes within this unit. */
-    @Relationship(value = "INCLUDES", direction = Relationship.Direction.OUTGOING)
-    val includeEdges = astEdgesOf<IncludeDeclaration>()
-    val includes by unwrapping(TranslationUnitDeclaration::includeEdges)
+    val includes
+        get() = declarations.filterIsInstance<IncludeDeclaration>()
 
     /** A list of namespaces within this unit. */
-    @Relationship(value = "NAMESPACES", direction = Relationship.Direction.OUTGOING)
-    val namespaceEdges = astEdgesOf<NamespaceDeclaration>()
-    val namespaces by unwrapping(TranslationUnitDeclaration::namespaceEdges)
+    val namespaces
+        get() = declarations.filterIsInstance<NamespaceDeclaration>()
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
@@ -58,22 +56,16 @@ class TranslationUnitDeclaration :
     override var statements by unwrapping(TranslationUnitDeclaration::statementEdges)
 
     override fun addDeclaration(declaration: Declaration) {
-        if (declaration is IncludeDeclaration) {
-            addIfNotContains(includeEdges, declaration)
-        } else if (declaration is NamespaceDeclaration) {
-            addIfNotContains(namespaceEdges, declaration)
-        }
         addIfNotContains(declarationEdges, declaration)
     }
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
             .append("declarations", declarationEdges)
-            .append("includes", includeEdges)
-            .append("namespaces", namespaceEdges)
             .toString()
     }
 
+    @DoNotPersist
     override val eogStarters: List<Node>
         get() {
             val list = mutableListOf<Node>()
@@ -88,16 +80,8 @@ class TranslationUnitDeclaration :
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is TranslationUnitDeclaration) return false
-        // TODO: This statement doesn't make sense to me. The declarationsPropertyEdge comparison is
-        // more strict than the propertyEqualsList() isn't it?
-        return super.equals(other) &&
-            declarations == other.declarations &&
-            propertyEqualsList(declarationEdges, other.declarationEdges) &&
-            includes == other.includes &&
-            propertyEqualsList(includeEdges, other.includeEdges) &&
-            namespaces == other.namespaces &&
-            propertyEqualsList(namespaceEdges, other.namespaceEdges)
+        return super.equals(other) && declarations == other.declarations
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), includes, namespaces, declarations)
+    override fun hashCode() = Objects.hash(super.hashCode(), declarations)
 }

@@ -73,7 +73,7 @@ open class DFAOrderEvaluator(
     val nodeToRelevantMethod: Map<Node, Set<String>>,
     val consideredResetNodes: Set<Node> = emptySet(),
     val thisPositionOfNode: Map<Node, Int> = mapOf(),
-    val eliminateUnreachableCode: Boolean = true
+    val eliminateUnreachableCode: Boolean = true,
 ) {
     private val nodeToEOGPathSet = mutableMapOf<Node, MutableSet<String>>()
     private val log: Logger = LoggerFactory.getLogger(DFAOrderEvaluator::class.java)
@@ -182,7 +182,7 @@ open class DFAOrderEvaluator(
                             actionAcceptingTermination(
                                 base,
                                 dfa,
-                                interproceduralFlows[base] == true
+                                interproceduralFlows[base] == true,
                             )
                         } else if (dfa.currentState?.isStart == true) {
                             // nothing to do here, we just want to continue with the next nodes in
@@ -191,7 +191,7 @@ open class DFAOrderEvaluator(
                             actionNonAcceptingTermination(
                                 base,
                                 dfa,
-                                interproceduralFlows[base] == true
+                                interproceduralFlows[base] == true,
                             )
                             isValidOrder = false
                         }
@@ -226,7 +226,7 @@ open class DFAOrderEvaluator(
                             actionMissingTransitionForNode(
                                 node,
                                 baseToFSM.computeIfAbsent(baseAndOp.first) { dfa.deepCopy() },
-                                interproceduralFlows[baseAndOp.first] == true
+                                interproceduralFlows[baseAndOp.first] == true,
                             )
                             wrongBases.add(baseAndOp.first)
                             isValidOrder = false
@@ -335,7 +335,7 @@ open class DFAOrderEvaluator(
     private fun getBaseAndOpOfNode(
         node: CallExpression,
         eogPath: String,
-        interproceduralFlows: MutableMap<String, Boolean>
+        interproceduralFlows: MutableMap<String, Boolean>,
     ): Pair<String, Set<String>>? {
         // The "base" node, on which the DFA is based on. Ideally, this is a variable declaration in
         // the end.
@@ -427,7 +427,7 @@ open class DFAOrderEvaluator(
         eogPath: String,
         baseToFSM: MutableMap<String, DFA>,
         seenStates: Set<Pair<Node, String>>,
-        interproceduralFlows: MutableMap<String, Boolean>
+        interproceduralFlows: MutableMap<String, Boolean>,
     ): List<Node> {
         val outNodes = mutableListOf<Node>()
         outNodes +=
@@ -449,7 +449,7 @@ open class DFAOrderEvaluator(
             if (stateOfNext in seenStates) {
                 log.debug(
                     "Node/FSM state already visited: {}. Remove from next nodes.",
-                    stateOfNext
+                    stateOfNext,
                 )
                 outNodes.removeAt(0)
             }
@@ -459,7 +459,7 @@ open class DFAOrderEvaluator(
                 eogPath,
                 baseToFSM,
                 seenStates,
-                interproceduralFlows
+                interproceduralFlows,
             )
         }
         return outNodes
@@ -475,7 +475,7 @@ open class DFAOrderEvaluator(
         eogPath: String,
         baseToFSM: MutableMap<String, DFA>,
         seenStates: Set<Pair<Node, String>>,
-        interproceduralFlows: MutableMap<String, Boolean>
+        interproceduralFlows: MutableMap<String, Boolean>,
     ) {
         val newBases = mutableMapOf<String, DFA>()
         // Remove all the entries from baseToFSM which are now replaced with multiple new ones.
@@ -498,7 +498,7 @@ open class DFAOrderEvaluator(
             if (stateOfNext in seenStates) {
                 log.debug(
                     "Node/FSM state already visited: {}. Remove from next nodes.",
-                    stateOfNext
+                    stateOfNext,
                 )
                 outNodes.removeAt(i)
             } else {

@@ -28,18 +28,12 @@ plugins {
     id("cpg.library-conventions")
 }
 
-publishing {
-    publications {
-        named<MavenPublication>("cpg-core") {
-            pom {
-                artifactId = "cpg-core"
-                name.set("Code Property Graph - Core")
-                description.set("A simple library to extract a code property graph out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed.")
-            }
-
-            suppressPomMetadataWarningsFor("testFixturesApiElements")
-            suppressPomMetadataWarningsFor("testFixturesRuntimeElements")
-        }
+mavenPublishing {
+    pom {
+        name.set("Code Property Graph - Core")
+        description.set(
+            "A simple library to extract a code property graph out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed."
+        )
     }
 }
 
@@ -52,17 +46,16 @@ tasks.test {
 }
 
 dependencies {
-    api(libs.apache.commons.lang3)
-    api(libs.neo4j.ogm.core)
-    api(libs.jackson)
+    api(libs.slf4j.api)
 
     implementation(libs.bundles.log4j)
     implementation(libs.kotlin.reflect)
-
     implementation(libs.jacksonyml)
 
     testImplementation(libs.junit.params)
 
-    testFixturesApi(libs.kotlin.test.junit5)  // somehow just using testFixturesApi(kotlin("test")) does not work for testFixtures
+    testFixturesApi(
+        libs.kotlin.test.junit5
+    ) // somehow just using testFixturesApi(kotlin("test")) does not work for testFixtures
     testFixturesApi(libs.mockito)
 }

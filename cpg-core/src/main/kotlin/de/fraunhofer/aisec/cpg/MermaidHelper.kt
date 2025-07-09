@@ -50,6 +50,7 @@ private fun mermaidPassName(pass: KClass<out Pass<*>>): String {
         else -> pass.simpleName ?: UNKNOWN_PASS
     }
 }
+
 /**
  * Builds a markdown representation of a pass dependency graph, based on
  * [Mermaid](https://mermaid.js.org) syntax.

@@ -204,7 +204,7 @@ class PassOrderingHelper {
 
         log.info(
             "Passes after enforcing order: {}",
-            result.map { list -> list.map { it.simpleName } }
+            result.map { list -> list.map { it.simpleName } },
         )
         return result
     }

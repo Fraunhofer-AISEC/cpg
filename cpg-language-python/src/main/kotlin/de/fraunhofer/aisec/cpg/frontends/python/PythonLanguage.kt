@@ -25,26 +25,41 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
-import de.fraunhofer.aisec.cpg.graph.autoType
+import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
+import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import java.io.File
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
+import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /** The Python language. */
 class PythonLanguage :
     Language<PythonLanguageFrontend>(),
     HasShortCircuitOperators,
     HasOperatorOverloading,
-    HasFunctionStyleConstruction {
+    HasFunctionStyleConstruction,
+    HasMemberExpressionAmbiguity,
+    HasBuiltins,
+    HasDefaultArguments {
     override val fileExtensions = listOf("py", "pyi")
     override val namespaceDelimiter = "."
+    @Convert(value = SimpleNameConverter::class)
+    override val builtinsNamespace: Name = Name("builtins")
+    override val builtinsFileCandidates = nameToLanguageFiles(builtinsNamespace)
+
     @Transient
     override val frontend: KClass<out PythonLanguageFrontend> = PythonLanguageFrontend::class
     override val conjunctiveOperators = listOf("and")
@@ -118,56 +133,176 @@ class PythonLanguage :
     @Transient
     override val builtInTypes =
         mapOf(
-            "bool" to BooleanType("bool", language = this),
+            "bool" to BooleanType(typeName = "bool", language = this),
             "int" to
                 IntegerType(
-                    "int",
-                    Integer.MAX_VALUE,
-                    this,
-                    NumericType.Modifier.NOT_APPLICABLE
+                    typeName = "int",
+                    bitWidth = Integer.MAX_VALUE,
+                    language = this,
+                    modifier = NumericType.Modifier.NOT_APPLICABLE,
                 ), // Unlimited precision
             "float" to
                 FloatingPointType(
-                    "float",
-                    32,
-                    this,
-                    NumericType.Modifier.NOT_APPLICABLE
+                    typeName = "float",
+                    bitWidth = 32,
+                    language = this,
+                    modifier = NumericType.Modifier.NOT_APPLICABLE,
                 ), // This depends on the implementation
             "complex" to
                 NumericType(
-                    "complex",
-                    null,
-                    this,
-                    NumericType.Modifier.NOT_APPLICABLE
+                    typeName = "complex",
+                    bitWidth = null,
+                    language = this,
+                    modifier = NumericType.Modifier.NOT_APPLICABLE,
                 ), // It's two floats
-            "str" to StringType("str", this, listOf())
+            "str" to
+                StringType(
+                    typeName = "str",
+                    language = this,
+                    generics = listOf(),
+                    primitive = false,
+                    mutable = false,
+                ),
+            "list" to
+                ListType(
+                    typeName = "list",
+                    elementType =
+                        ObjectType(
+                            typeName = "object",
+                            generics = listOf(),
+                            primitive = false,
+                            mutable = true,
+                            language = this,
+                        ),
+                    language = this,
+                ),
+            "tuple" to
+                ListType(
+                    typeName = "tuple",
+                    elementType =
+                        ObjectType(
+                            typeName = "object",
+                            generics = listOf(),
+                            primitive = false,
+                            mutable = true,
+                            language = this,
+                        ),
+                    language = this,
+                    primitive = true,
+                ),
+            "dict" to
+                MapType(
+                    typeName = "dict",
+                    elementType =
+                        ObjectType(
+                            typeName = "object",
+                            generics = listOf(),
+                            primitive = false,
+                            mutable = true,
+                            language = this,
+                        ),
+                    language = this,
+                ),
+            "set" to
+                SetType(
+                    typeName = "set",
+                    elementType =
+                        ObjectType(
+                            typeName = "object",
+                            generics = listOf(),
+                            primitive = false,
+                            mutable = true,
+                            language = this,
+                        ),
+                    language = this,
+                ),
         )
 
-    override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
-        val autoType = autoType()
-        if (
-            operation.operatorCode == "/" &&
-                operation.lhs.type is NumericType &&
-                operation.rhs.type is NumericType
-        ) {
-            // In Python, the / operation automatically casts the result to a float
-            return getSimpleTypeOf("float") ?: autoType
-        } else if (
-            operation.operatorCode == "//" &&
-                operation.lhs.type is NumericType &&
-                operation.rhs.type is NumericType
-        ) {
-            return if (operation.lhs.type is IntegerType && operation.rhs.type is IntegerType) {
-                // In Python, the // operation keeps the type as an int if both inputs are integers
-                // or casts it to a float otherwise.
-                getSimpleTypeOf("int") ?: autoType
-            } else {
-                getSimpleTypeOf("float") ?: autoType
+    @DoNotPersist
+    override val evaluator: ValueEvaluator
+        get() = PythonValueEvaluator()
+
+    override fun propagateTypeOfBinaryOperation(
+        operatorCode: String?,
+        lhsType: Type,
+        rhsType: Type,
+        hint: BinaryOperator?,
+    ): Type {
+        when {
+            operatorCode == "/" && lhsType is NumericType && rhsType is NumericType -> {
+                // In Python, the / operation automatically casts the result to a float
+                return primitiveType("float")
             }
+            operatorCode == "*" && lhsType is StringType && rhsType is NumericType -> {
+                return lhsType
+            }
+            operatorCode == "//" && lhsType is NumericType && rhsType is NumericType -> {
+                return if (lhsType is IntegerType && rhsType is IntegerType) {
+                    // In Python, the // operation keeps the type as an int if both inputs are
+                    // integers
+                    // or casts it to a float otherwise.
+                    primitiveType("int")
+                } else {
+                    primitiveType("float")
+                }
+            }
+
+            // The rest behaves like other languages
+            else ->
+                return super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
+        }
+    }
+
+    override fun tryCast(
+        type: Type,
+        targetType: Type,
+        hint: HasType?,
+        targetHint: HasType?,
+    ): CastResult {
+        // Parameters in python do not have a static type. Therefore, we need to match for all types
+        // when trying to cast one type to the type of a function parameter at *runtime*
+        if (targetHint is ParameterDeclaration) {
+            // However, if we find type hints, we at least want to issue a warning if the types
+            // would not match
+            if (hint != null && targetType !is UnknownType && targetType !is AutoType) {
+                val match = super.tryCast(type, targetType, hint, targetHint)
+                if (match == CastNotPossible) {
+                    warnWithFileLocation(
+                        hint as Node,
+                        log,
+                        "Argument type of call to {} ({}) does not match type annotation on the function parameter ({}), but since Python does have runtime checks, we ignore this",
+                        hint.astParent?.name,
+                        type.name,
+                        targetType.name,
+                    )
+                }
+            }
+
+            return DirectMatch
         }
 
-        // The rest behaves like other languages
-        return super.propagateTypeOfBinaryOperation(operation)
+        return super.tryCast(type, targetType, hint, targetHint)
+    }
+
+    /**
+     * Returns the files that can represent the given name. This includes all possible file
+     * extensions and the name plus the `__init__` identifier, as this is the name for declaration
+     * files if the namespace has sub-namespaces.
+     */
+    fun nameToLanguageFiles(name: Name): Set<File> {
+        val filesForNamespace =
+            fileExtensions
+                .flatMap { extension ->
+                    setOf(name, Name(IDENTIFIER_INIT, name)).map {
+                        File(
+                            it.toString().replace(language.namespaceDelimiter, File.separator) +
+                                "." +
+                                extension
+                        )
+                    }
+                }
+                .toMutableSet()
+        return filesForNamespace
     }
 
     companion object {
@@ -184,5 +319,11 @@ class PythonLanguage :
          * later in call resolving.
          */
         const val MODIFIER_KEYWORD_ONLY_ARGUMENT = "kwonlyarg"
+
+        /**
+         * The initialization identifier of python, used for constructors and as name for module
+         * initialization.
+         */
+        const val IDENTIFIER_INIT = "__init__"
     }
 }

@@ -29,17 +29,31 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Invokes
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.edges.unwrappingIncoming
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.types.DynamicType
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.buildSignature
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
+import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the declaration or definition of a function. */
-open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStarterHolder {
+open class FunctionDeclaration :
+    ValueDeclaration(),
+    DeclarationHolder,
+    EOGStarterHolder,
+    HasType.TypeObserver,
+    HasSecondaryTypeEdge {
     @Relationship("BODY") var bodyEdge = astOptionalEdgeOf<Statement>()
     /** The function body. Usually a [Block]. */
     var body by unwrapping(FunctionDeclaration::bodyEdge)
@@ -58,6 +72,18 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
 
     @Relationship(value = "OVERRIDES", direction = Relationship.Direction.OUTGOING)
     val overrides = mutableListOf<FunctionDeclaration>()
+
+    /**
+     * The mirror property for [CallExpression.invokeEdges]. This holds all incoming [Invokes] edges
+     * from [CallExpression] nodes to this function.
+     */
+    @Relationship(value = "INVOKES", direction = Relationship.Direction.INCOMING)
+    val calledByEdges: Invokes<FunctionDeclaration> =
+        Invokes<FunctionDeclaration>(this, CallExpression::invokeEdges, outgoing = false)
+
+    /** Virtual property for accessing [calledByEdges] without property edges. */
+    val calledBy: MutableList<CallExpression> by
+        unwrappingIncoming(FunctionDeclaration::calledByEdges)
 
     /** The list of return types. The default is an empty list. */
     var returnTypes = listOf<Type>()
@@ -81,18 +107,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
     }
 
     val signature: String
-        get() =
-            name.localName +
-                parameters.joinToString(COMMA + WHITESPACE, BRACKET_LEFT, BRACKET_RIGHT) {
-                    it.type.typeName
-                } +
-                (if (returnTypes.size == 1) {
-                    returnTypes.first().typeName
-                } else {
-                    returnTypes.joinToString(COMMA + WHITESPACE, BRACKET_LEFT, BRACKET_RIGHT) {
-                        it.typeName
-                    }
-                })
+        get() = buildSignature(this, returnTypes)
 
     fun isOverrideCandidate(other: FunctionDeclaration): Boolean {
         return other.name.localName == name.localName &&
@@ -134,16 +149,6 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
             return parameters.map { it.default }
         }
 
-    val defaultParameterSignature: List<Type> // TODO: What's this property?
-        get() =
-            parameters.map {
-                if (it.default != null) {
-                    it.type
-                } else {
-                    unknownType()
-                }
-            }
-
     val signatureTypes: List<Type>
         get() = parameters.map { it.type }
 
@@ -154,6 +159,7 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
             .toString()
     }
 
+    @DoNotPersist
     override val eogStarters: List<Node>
         get() = listOfNotNull(this)
 
@@ -179,11 +185,11 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
         }
     }
 
+    @DoNotPersist
     override val declarations: List<Declaration>
         get() {
             val list = ArrayList<Declaration>()
             list.addAll(parameters)
-            list.addAll(records)
             return list
         }
 
@@ -192,6 +198,38 @@ open class FunctionDeclaration : ValueDeclaration(), DeclarationHolder, EOGStart
         get() {
             return this.body?.cyclomaticComplexity ?: 0
         }
+
+    override val secondaryTypes: List<Type>
+        get() = returnTypes + throwsTypes + signatureTypes
+
+    override fun typeChanged(newType: Type, src: HasType) {
+        // We cannot really change the "type" of a function declaration, we want to stick to the
+        // assigned type
+    }
+
+    override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
+        // We want to propagate the assigned types to the return type of the function and adjust the
+        // function's type accordingly, but we only do this for dynamic types. And we only support
+        // one return type for now.
+        if (returnTypes.singleOrNull() !is DynamicType) {
+            return
+        }
+
+        // Build new function types out of our function declaration and the assigned types
+        var returnFuncTypes =
+            assignedTypes.map { computeType(this, returnTypes = listOf(it)) }.toSet()
+
+        // And assign it us
+        addAssignedTypes(returnFuncTypes)
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return setOf()
+    }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return setOf()
+    }
 
     companion object {
         const val WHITESPACE = " "

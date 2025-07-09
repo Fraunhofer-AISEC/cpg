@@ -21,3 +21,6 @@ logs
 *.log
 
 gradle.properties
+LibrariesTest.kt
+findings.json
+

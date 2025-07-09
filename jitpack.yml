@@ -1,6 +1,0 @@
-jdk:
-  - openjdk17
-install:
-  - export PATH="$PATH:$HOME/go/bin"
-  - cp gradle.properties.example gradle.properties
-  - ./gradlew build -xtest -xperformanceTest -xintegrationTest -Pgroup=com.github.Fraunhofer-AISEC -PnodeDownload=true -PenableJavaFrontend=true -PenableGoFrontend=true -PenablePythonFrontend=true -PenableLLVMFrontend=true -PenableTypeScriptFrontend=false publishToMavenLocal

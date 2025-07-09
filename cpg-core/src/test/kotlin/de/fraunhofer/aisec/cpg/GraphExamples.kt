@@ -25,13 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.frontends.ClassTestLanguage
 import de.fraunhofer.aisec.cpg.frontends.StructTestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
-import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.autoType
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.newInitializerListExpression
-import de.fraunhofer.aisec.cpg.graph.newUnaryOperator
 import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin.POINTER
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -44,7 +44,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -71,7 +71,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -114,7 +114,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -157,7 +157,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -166,30 +166,36 @@ class GraphExamples {
                         record("someRecord") {
                             method("func") {
                                 body {
-                                    forStmt(
-                                        initializer = declare { variable("a") },
-                                        condition = literal(true, t("bool")),
-                                        iteration = newUnaryOperator("++", true, false),
-                                        elseStmt = call("elseCall")
-                                    ) {
-                                        ifStmt {
-                                            condition { literal(true, t("bool")) }
-                                            thenStmt { breakStmt() }
+                                    forStmt {
+                                        loopBody {
+                                            ifStmt {
+                                                condition { literal(true, t("bool")) }
+                                                thenStmt { breakStmt() }
+                                            }
+                                            call("postIf")
                                         }
-                                        call("postIf")
+                                        forInitializer {
+                                            declareVar("a", t("int")) { literal(0, t("int")) }
+                                        }
+                                        forCondition { literal(true, t("bool")) }
+                                        forIteration { ref("a").inc() }
+                                        loopElseStmt { call("elseCall") }
                                     }
                                     call("postFor")
-                                    forStmt(
-                                        initializer = declare { variable("a") },
-                                        condition = literal(true, t("bool")),
-                                        iteration = newUnaryOperator("++", true, false),
-                                        elseStmt = call("elseCall")
-                                    ) {
-                                        ifStmt {
-                                            condition { literal(true, t("bool")) }
-                                            thenStmt { breakStmt() }
+                                    forStmt {
+                                        loopBody {
+                                            ifStmt {
+                                                condition { literal(true, t("bool")) }
+                                                thenStmt { breakStmt() }
+                                            }
+                                            call("postIf")
                                         }
-                                        call("postIf")
+                                        forInitializer {
+                                            declareVar("a", t("int")) { literal(0, t("int")) }
+                                        }
+                                        forCondition { literal(true, t("bool")) }
+                                        forIteration { ref("a").inc() }
+                                        loopElseStmt { call("elseCall") }
                                     }
                                 }
                             }
@@ -202,7 +208,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -243,17 +249,45 @@ class GraphExamples {
                 }
             }
 
-        fun testFrontend(config: TranslationConfiguration): TestLanguageFrontend {
-            val ctx = TranslationContext(config, ScopeManager(), TypeManager())
-            val language = config.languages.filterIsInstance<TestLanguage>().first()
-            return TestLanguageFrontend(language.namespaceDelimiter, language, ctx)
-        }
+        fun getNestedComprehensionExpressions(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage<TestLanguage>()
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("whileWithBreakAndElse.py") {
+                        record("someRecord") {
+                            method("func") {
+                                body {
+                                    call("preComprehensions")
+                                    listComp {
+                                        ref("i")
+                                        compExpr {
+                                            ref("i")
+                                            ref("someIterable")
+                                        }
+                                        compExpr {
+                                            ref("j")
+                                            ref("i")
+                                            ref("j") gt literal(5, t("int"))
+                                        }
+                                    }
+                                    call("postComprehensions")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
         fun getInferenceRecordPtr(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(StructTestLanguage("."))
+                    .registerLanguage<StructTestLanguage>()
                     .inferenceConfiguration(
                         InferenceConfiguration.builder().inferRecords(true).build()
                     )
@@ -270,7 +304,7 @@ class GraphExamples {
                                 member("next", ref("node"), "->") assign ref("node")
                                 memberCall(
                                     "dump",
-                                    ref("node")
+                                    ref("node"),
                                 ) // TODO: Do we have to encode the "->" here?
                                 returnStmt { isImplicit = true }
                             }
@@ -283,7 +317,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(StructTestLanguage("."))
+                    .registerLanguage<StructTestLanguage>()
                     .inferenceConfiguration(
                         InferenceConfiguration.builder().inferRecords(true).build()
                     )
@@ -305,11 +339,111 @@ class GraphExamples {
                 }
             }
 
+        fun getInferenceBinaryOperatorReturnType(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage<StructTestLanguage>()
+                    .inferenceConfiguration(
+                        InferenceConfiguration.builder()
+                            .inferRecords(true)
+                            .inferReturnTypes(true)
+                            .build()
+                    )
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("test.python") {
+                        function("foo", t("int")) {
+                            body {
+                                declare { variable("a") }
+                                declare { variable("b") }
+                                ref("a") assign { call("bar") + literal(2, t("int")) }
+                                ref("b") assign { literal(2L, t("long")) + call("baz") }
+                            }
+                        }
+                    }
+                }
+            }
+
+        fun getInferenceTupleReturnType(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage<StructTestLanguage>()
+                    .inferenceConfiguration(
+                        InferenceConfiguration.builder()
+                            .inferRecords(true)
+                            .inferReturnTypes(true)
+                            .build()
+                    )
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("test.python") {
+                        function("foo", returnTypes = listOf(t("Foo"), t("Bar"))) {
+                            body { returnStmt { call("bar") } }
+                        }
+                    }
+                }
+            }
+
+        fun getInferenceUnaryOperatorReturnType(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage<StructTestLanguage>()
+                    .inferenceConfiguration(
+                        InferenceConfiguration.builder()
+                            .inferRecords(true)
+                            .inferReturnTypes(true)
+                            .build()
+                    )
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("Test.java") {
+                        record("Test") { method("foo") { body { returnStmt { -call("bar") } } } }
+                    }
+                }
+            }
+
+        fun getInferenceNestedNamespace(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage<ClassTestLanguage>()
+                    .inferenceConfiguration(
+                        InferenceConfiguration.builder()
+                            .inferRecords(true)
+                            .inferNamespaces(true)
+                            .build()
+                    )
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("Test.java") {
+                        record("Test") {
+                            method("foo") {
+                                body {
+                                    declare { variable("node", t("java.lang.String")) }
+                                    returnStmt { isImplicit = true }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
         fun getVariables(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -360,7 +494,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -382,7 +516,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -404,7 +538,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -420,7 +554,7 @@ class GraphExamples {
                                     location =
                                         PhysicalLocation(
                                             URI("conditional_expression.cpp"),
-                                            Region(5, 3, 5, 4)
+                                            Region(5, 3, 5, 4),
                                         )
                                 } assign
                                     {
@@ -429,44 +563,44 @@ class GraphExamples {
                                                 location =
                                                     PhysicalLocation(
                                                         URI("conditional_expression.cpp"),
-                                                        Region(5, 7, 5, 8)
+                                                        Region(5, 7, 5, 8),
                                                     )
                                             } eq
                                                 ref("b") {
                                                     location =
                                                         PhysicalLocation(
                                                             URI("conditional_expression.cpp"),
-                                                            Region(5, 12, 5, 13)
+                                                            Region(5, 12, 5, 13),
                                                         )
                                                 },
                                             ref("b") {
                                                 location =
                                                     PhysicalLocation(
                                                         URI("conditional_expression.cpp"),
-                                                        Region(5, 16, 5, 17)
+                                                        Region(5, 16, 5, 17),
                                                     )
                                             } assignAsExpr { literal(2, t("int")) },
                                             ref("b") {
                                                 location =
                                                     PhysicalLocation(
                                                         URI("conditional_expression.cpp"),
-                                                        Region(5, 23, 5, 24)
+                                                        Region(5, 23, 5, 24),
                                                     )
-                                            } assignAsExpr { literal(3, t("int")) }
+                                            } assignAsExpr { literal(3, t("int")) },
                                         )
                                     }
                                 ref("a") {
                                     location =
                                         PhysicalLocation(
                                             URI("conditional_expression.cpp"),
-                                            Region(6, 3, 6, 4)
+                                            Region(6, 3, 6, 4),
                                         )
                                 } assign
                                     ref("b") {
                                         location =
                                             PhysicalLocation(
                                                 URI("conditional_expression.cpp"),
-                                                Region(6, 7, 6, 8)
+                                                Region(6, 7, 6, 8),
                                             )
                                     }
                                 returnStmt { isImplicit = true }
@@ -480,7 +614,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -566,7 +700,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -579,7 +713,7 @@ class GraphExamples {
                                 receiver =
                                     newVariableDeclaration(
                                         "this",
-                                        t("ControlFlowSensitiveDFGIfMerge")
+                                        t("ControlFlowSensitiveDFGIfMerge"),
                                     )
                                 body { returnStmt { isImplicit = true } }
                             }
@@ -587,7 +721,7 @@ class GraphExamples {
                                 receiver =
                                     newVariableDeclaration(
                                         "this",
-                                        t("ControlFlowSensitiveDFGIfMerge")
+                                        t("ControlFlowSensitiveDFGIfMerge"),
                                     )
                                 param("args", t("int[]"))
                                 body {
@@ -602,8 +736,8 @@ class GraphExamples {
                                                 "println",
                                                 member(
                                                     "out",
-                                                    ref("System") { isStaticAccess = true }
-                                                )
+                                                    ref("System") { isStaticAccess = true },
+                                                ),
                                             ) {
                                                 ref("a")
                                             }
@@ -638,7 +772,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -650,7 +784,7 @@ class GraphExamples {
                                 receiver =
                                     newVariableDeclaration(
                                         "this",
-                                        t("ControlFlowSesitiveDFGSwitch")
+                                        t("ControlFlowSesitiveDFGSwitch"),
                                     )
                                 body {
                                     declare {
@@ -664,7 +798,7 @@ class GraphExamples {
                                                 location =
                                                     PhysicalLocation(
                                                         URI("ControlFlowSesitiveDFGSwitch.java"),
-                                                        Region(8, 9, 8, 10)
+                                                        Region(8, 9, 8, 10),
                                                     )
                                             } assign literal(10, t("int"))
                                             breakStmt()
@@ -673,7 +807,7 @@ class GraphExamples {
                                                 location =
                                                     PhysicalLocation(
                                                         URI("ControlFlowSesitiveDFGSwitch.java"),
-                                                        Region(11, 9, 11, 10)
+                                                        Region(11, 9, 11, 10),
                                                     )
                                             } assign literal(11, t("int"))
                                             breakStmt()
@@ -682,7 +816,7 @@ class GraphExamples {
                                                 location =
                                                     PhysicalLocation(
                                                         URI("ControlFlowSesitiveDFGSwitch.java"),
-                                                        Region(14, 9, 14, 10)
+                                                        Region(14, 9, 14, 10),
                                                     )
                                             } assign literal(12, t("int"))
                                             default()
@@ -690,8 +824,8 @@ class GraphExamples {
                                                 "println",
                                                 member(
                                                     "out",
-                                                    ref("System") { isStaticAccess = true }
-                                                )
+                                                    ref("System") { isStaticAccess = true },
+                                                ),
                                             ) {
                                                 ref("a")
                                             }
@@ -712,7 +846,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -724,7 +858,7 @@ class GraphExamples {
                                 receiver =
                                     newVariableDeclaration(
                                         "this",
-                                        t("ControlFlowSensitiveDFGIfNoMerge")
+                                        t("ControlFlowSensitiveDFGIfNoMerge"),
                                     )
                                 body {
                                     declare { variable("a", t("int")) { literal(1, t("int")) } }
@@ -750,7 +884,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -787,8 +921,8 @@ class GraphExamples {
                                                                         "out",
                                                                         ref("System") {
                                                                             isStaticAccess = true
-                                                                        }
-                                                                    )
+                                                                        },
+                                                                    ),
                                                                 ) {
                                                                     ref("a")
                                                                 }
@@ -803,8 +937,8 @@ class GraphExamples {
                                                     "println",
                                                     member(
                                                         "out",
-                                                        ref("System") { isStaticAccess = true }
-                                                    )
+                                                        ref("System") { isStaticAccess = true },
+                                                    ),
                                                 ) {
                                                     ref("a")
                                                 }
@@ -815,7 +949,7 @@ class GraphExamples {
 
                                     memberCall(
                                         "println",
-                                        member("out", ref("System") { isStaticAccess = true })
+                                        member("out", ref("System") { isStaticAccess = true }),
                                     ) {
                                         ref("a")
                                     }
@@ -831,7 +965,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -858,8 +992,8 @@ class GraphExamples {
                                                         "println",
                                                         member(
                                                             "out",
-                                                            ref("System") { isStaticAccess = true }
-                                                        )
+                                                            ref("System") { isStaticAccess = true },
+                                                        ),
                                                     ) {
                                                         ref("a")
                                                     }
@@ -882,7 +1016,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -908,7 +1042,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -927,7 +1061,7 @@ class GraphExamples {
                                                 location =
                                                     PhysicalLocation(
                                                         URI("ReturnTest.java"),
-                                                        Region(5, 13, 5, 21)
+                                                        Region(5, 13, 5, 21),
                                                     )
                                             }
                                         }
@@ -937,7 +1071,7 @@ class GraphExamples {
                                                 location =
                                                     PhysicalLocation(
                                                         URI("ReturnTest.java"),
-                                                        Region(7, 13, 7, 21)
+                                                        Region(7, 13, 7, 21),
                                                     )
                                             }
                                         }
@@ -954,7 +1088,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -972,7 +1106,7 @@ class GraphExamples {
                                     body {
                                         memberCall(
                                             "println",
-                                            member("out", ref("System") { isStaticAccess = true })
+                                            member("out", ref("System") { isStaticAccess = true }),
                                         ) {
                                             literal("Hello world")
                                         }
@@ -981,7 +1115,7 @@ class GraphExamples {
                                             condition {
                                                 memberCall(
                                                     "currentTimeMillis",
-                                                    ref("System") { isStaticAccess = true }
+                                                    ref("System") { isStaticAccess = true },
                                                 ) gt literal(0)
                                             }
                                             thenStmt { ref("x") assign { ref("x") + literal(1) } }
@@ -1001,7 +1135,7 @@ class GraphExamples {
                 TranslationConfiguration.builder()
                     .defaultPasses()
                     .useParallelPasses(true)
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -1032,7 +1166,7 @@ class GraphExamples {
                                 body {
                                     memberCall(
                                         "println",
-                                        member("out", ref("System") { isStaticAccess = true })
+                                        member("out", ref("System") { isStaticAccess = true }),
                                     ) {
                                         ref("s")
                                     }
@@ -1064,7 +1198,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -1089,7 +1223,7 @@ class GraphExamples {
                                 body {
                                     memberCall(
                                         "println",
-                                        member("out", ref("System") { isStaticAccess = true })
+                                        member("out", ref("System") { isStaticAccess = true }),
                                     ) {
                                         call("this.toString")
                                     }
@@ -1180,7 +1314,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -1238,7 +1372,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -1309,7 +1443,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -1324,7 +1458,7 @@ class GraphExamples {
 
                                 member(
                                         "field",
-                                        member("in", ref("o", makeMagic = false).line(13)).line(13)
+                                        member("in", ref("o", makeMagic = false).line(13)).line(13),
                                     )
                                     .line(13) assign literal(1)
 
@@ -1332,7 +1466,7 @@ class GraphExamples {
                                         member(
                                                 "field",
                                                 member("in", ref("o", makeMagic = false).line(15))
-                                                    .line(15)
+                                                    .line(15),
                                             )
                                             .line(15)
                                     }
@@ -1347,7 +1481,7 @@ class GraphExamples {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {

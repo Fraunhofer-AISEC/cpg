@@ -26,22 +26,58 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
-import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.ancestors
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
-import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.*
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.DynamicType
+import de.fraunhofer.aisec.cpg.graph.types.ListType
+import de.fraunhofer.aisec.cpg.graph.types.MapType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.SetType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.sarif.Region
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
-import kotlin.math.pow
 import kotlin.test.*
 
 class PythonFrontendTest : BaseTest() {
+
+    @Test
+    fun testNodeID() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+
+        val tu1 =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("fields.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu1)
+        val myClass1 = tu1.records["fields.MyClass"]
+        assertNotNull(myClass1)
+
+        val tu2 =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("fields.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu2)
+        val myClass2 = tu2.records["fields.MyClass"]
+        assertNotNull(myClass2)
+        assertEquals(
+            myClass1.id,
+            myClass2.id,
+            "Expecting the same ID for the same class across two different analysis runs",
+        )
+    }
 
     @Test
     fun test1740EndlessCDG() {
@@ -50,7 +86,7 @@ class PythonFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("1740_endless_cdg_loop.py").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<ControlDependenceGraphPass>()
@@ -65,7 +101,7 @@ class PythonFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("nested_functions.py").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<PythonLanguage>()
             }
@@ -88,13 +124,13 @@ class PythonFrontendTest : BaseTest() {
     @Test
     fun testLiteral() {
         val topLevel = Path.of("src", "test", "resources", "python")
-        val tu =
-            analyzeAndGetFirstTU(listOf(topLevel.resolve("literal.py").toFile()), topLevel, true) {
+        val result =
+            analyze(listOf(topLevel.resolve("literal.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
-        assertNotNull(tu)
-        with(tu) {
-            val p = tu.namespaces["literal"]
+        assertNotNull(result)
+        with(result) {
+            val p = namespaces["literal"]
             assertNotNull(p)
             assertLocalName("literal", p)
 
@@ -181,7 +217,7 @@ class PythonFrontendTest : BaseTest() {
         val s = bar.parameters.firstOrNull()
         assertNotNull(s)
         assertLocalName("s", s)
-        assertEquals(tu.primitiveType("str"), s.type)
+        assertContains(s.assignedTypes, tu.primitiveType("str"))
 
         assertLocalName("bar", bar)
 
@@ -284,7 +320,7 @@ class PythonFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("simple_class.py").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<PythonLanguage>()
             }
@@ -315,6 +351,7 @@ class PythonFrontendTest : BaseTest() {
         assertIs<AssignExpression>(s1)
         val s2 = body.statements[1]
         assertIs<MemberCallExpression>(s2)
+        s2.arguments.forEach { assertEquals(s2, it.astParent) }
 
         val c1 = s1.declarations.firstOrNull()
         assertNotNull(c1)
@@ -323,6 +360,7 @@ class PythonFrontendTest : BaseTest() {
         assertIs<ConstructExpression>(ctor)
         assertEquals(ctor.constructor, cls.constructors.firstOrNull())
         assertFullName("simple_class.SomeClass", c1.type)
+        ctor.arguments.forEach { assertEquals(ctor, it.astParent) }
 
         assertRefersTo(s2.base, c1)
         assertEquals(1, s2.invokes.size)
@@ -386,7 +424,7 @@ class PythonFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("class_fields.py").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<PythonLanguage>()
             }
@@ -437,9 +475,8 @@ class PythonFrontendTest : BaseTest() {
 
         val barBaz = methBarBody.statements[1]
         assertIs<AssignExpression>(barBaz)
-        val barBazInner = barBaz.declarations[0]
+        val barBazInner = recordFoo.fields("baz").firstOrNull()
         assertIs<FieldDeclaration>(barBazInner)
-        assertLocalName("baz", barBazInner)
         assertNotNull(barBazInner.firstAssignment)
     }
 
@@ -450,7 +487,7 @@ class PythonFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("class_self.py").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<PythonLanguage>()
             }
@@ -493,7 +530,7 @@ class PythonFrontendTest : BaseTest() {
         assertIs<Block>(barBody)
         val barBodyFirstStmt = barBody.statements[0]
         assertIs<AssignExpression>(barBodyFirstStmt)
-        val someVarDeclaration = barBodyFirstStmt.declarations.firstOrNull()
+        val someVarDeclaration = recordFoo.variables.firstOrNull()
         assertIs<FieldDeclaration>(someVarDeclaration)
         assertLocalName("somevar", someVarDeclaration)
         assertRefersTo(someVarDeclaration.firstAssignment, i)
@@ -520,7 +557,7 @@ class PythonFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("class_type_annotations.py").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<PythonLanguage>()
             }
@@ -537,9 +574,10 @@ class PythonFrontendTest : BaseTest() {
         val fromOther = tu.functions["from_other"]
         assertNotNull(fromOther)
 
-        val paramType = fromOther.parameters.firstOrNull()?.type
-        assertNotNull(paramType)
-        assertEquals(other.toType(), paramType)
+        val param = fromOther.parameters.firstOrNull()
+        assertNotNull(param)
+        assertIs<DynamicType>(param.type)
+        assertContains(param.assignedTypes, other.toType())
     }
 
     @Test
@@ -549,7 +587,7 @@ class PythonFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("class_ctor.py").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<PythonLanguage>()
             }
@@ -569,7 +607,7 @@ class PythonFrontendTest : BaseTest() {
         val foobar = recordFoo.methods[0]
         assertNotNull(foobar)
 
-        assertLocalName("__init__", fooCtor)
+        assertLocalName(PythonLanguage.IDENTIFIER_INIT, fooCtor)
         assertLocalName("foobar", foobar)
 
         val bar = p.functions["bar"]
@@ -735,13 +773,22 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(classFieldDeclaredInFunction)
         assertNull(classFieldNoInitializer.initializer)
 
-        val localClassFieldNoInitializer = methBar.variables["classFieldNoInitializer"]
+        val localClassFieldNoInitializer =
+            methBar.variables[
+                    { it.name.localName == "classFieldNoInitializer" && it !is FieldDeclaration }]
         assertNotNull(localClassFieldNoInitializer)
 
-        val localClassFieldWithInit = methBar.variables["classFieldWithInit"]
+        val localClassFieldWithInit =
+            methBar.variables[
+                    { it.name.localName == "classFieldWithInit" && it !is FieldDeclaration }]
         assertNotNull(localClassFieldNoInitializer)
 
-        val localClassFieldDeclaredInFunction = methBar.variables["classFieldDeclaredInFunction"]
+        val localClassFieldDeclaredInFunction =
+            methBar.variables[
+                    {
+                        it.name.localName == "classFieldDeclaredInFunction" &&
+                            it !is FieldDeclaration
+                    }]
         assertNotNull(localClassFieldNoInitializer)
 
         // classFieldNoInitializer = classFieldWithInit
@@ -757,9 +804,8 @@ class PythonFrontendTest : BaseTest() {
         // self.classFieldDeclaredInFunction = 456
         val barStmt0 = barBody.statements[0]
         assertIs<AssignExpression>(barStmt0)
-        val decl0 = barStmt0.declarations[0]
+        val decl0 = clsFoo.fields("classFieldDeclaredInFunction").firstOrNull()
         assertIs<FieldDeclaration>(decl0)
-        assertLocalName("classFieldDeclaredInFunction", decl0)
         assertNotNull(decl0.firstAssignment)
 
         // self.classFieldNoInitializer = 789
@@ -828,7 +874,7 @@ class PythonFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("multi_level_mem_call.py").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<PythonLanguage>()
             }
@@ -906,11 +952,11 @@ class PythonFrontendTest : BaseTest() {
 
         assertEquals(
             5,
-            p.variables.size
+            p.variables.size,
         ) // including one dummy variable introduced for the loop var
         assertEquals(
             4,
-            p.variables.filter { !it.name.localName.contains(PythonHandler.LOOP_VAR_PREFIX) }.size
+            p.variables.filter { !it.name.localName.contains(PythonHandler.LOOP_VAR_PREFIX) }.size,
         )
         assertEquals(2, p.statements.size)
 
@@ -931,7 +977,7 @@ class PythonFrontendTest : BaseTest() {
         val forVariable = forStmt.variable
         assertIs<Reference>(forVariable)
         val forVarDecl =
-            p.declarations.firstOrNull {
+            forStmt.declarations.firstOrNull {
                 it.name.localName.contains((PythonHandler.LOOP_VAR_PREFIX))
             }
         assertNotNull(forVarDecl)
@@ -1063,10 +1109,7 @@ class PythonFrontendTest : BaseTest() {
 
         val functions = commentedNodes.filterIsInstance<FunctionDeclaration>()
         assertEquals(1, functions.size)
-        assertEquals(
-            "# a function",
-            functions.firstOrNull()?.comment,
-        )
+        assertEquals("# a function", functions.firstOrNull()?.comment)
 
         val literals = commentedNodes.filterIsInstance<Literal<String>>()
         assertEquals(1, literals.size)
@@ -1099,7 +1142,7 @@ class PythonFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("annotations.py").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<PythonLanguage>().matchCommentsToNodes(true)
             }
@@ -1107,8 +1150,8 @@ class PythonFrontendTest : BaseTest() {
 
         val annotations = tu.allChildren<Annotation>()
         assertEquals(
-            listOf("app.route", "some.otherannotation", "annotations.other_func"),
-            annotations.map { it.name.toString() }
+            listOf("app.route", "some.otherannotation", "other_func"),
+            annotations.map { it.name.toString() },
         )
     }
 
@@ -1300,7 +1343,7 @@ class PythonFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("datatypes.py").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<PythonLanguage>()
             }
@@ -1312,25 +1355,25 @@ class PythonFrontendTest : BaseTest() {
         assertIs<AssignExpression>(aStmt)
         val aStmtRhs = aStmt.rhs.singleOrNull()
         assertIs<InitializerListExpression>(aStmtRhs)
-        assertEquals("list", aStmtRhs.type.name.localName)
+        assertIs<ListType>(aStmtRhs.type)
 
         val bStmt = namespace.statements[1]
         assertIs<AssignExpression>(bStmt)
         val bStmtRhs = bStmt.rhs.singleOrNull()
         assertIs<InitializerListExpression>(bStmtRhs)
-        assertEquals("set", bStmtRhs.type.name.localName)
+        assertIs<SetType>(bStmtRhs.type)
 
         val cStmt = namespace.statements[2]
         assertIs<AssignExpression>(cStmt)
         val cStmtRhs = cStmt.rhs.singleOrNull()
         assertIs<InitializerListExpression>(cStmtRhs)
-        assertEquals("tuple", cStmtRhs.type.name.localName)
+        assertIs<ListType>(cStmtRhs.type)
 
         val dStmt = namespace.statements[3]
         assertIs<AssignExpression>(dStmt)
         val dStmtRhs = dStmt.rhs.singleOrNull()
         assertIs<InitializerListExpression>(dStmtRhs)
-        assertEquals("dict", dStmtRhs.type.name.localName)
+        assertIs<MapType>(dStmtRhs.type)
 
         val fourthStmt = namespace.statements[4]
         assertIs<AssignExpression>(fourthStmt)
@@ -1377,13 +1420,7 @@ class PythonFrontendTest : BaseTest() {
     fun testSimpleImport() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
-            analyze(
-                listOf(
-                    topLevel.resolve("simple_import.py").toFile(),
-                ),
-                topLevel,
-                true
-            ) {
+            analyze(listOf(topLevel.resolve("simple_import.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
@@ -1403,11 +1440,26 @@ class PythonFrontendTest : BaseTest() {
                     topLevel.resolve("main.py").toFile(),
                 ),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
+
+        // import a
+        val importA = result.imports["a"]
+        assertNotNull(importA)
+        assertEquals(ImportStyle.IMPORT_NAMESPACE, importA.style)
+        assertContains(
+            assertNotNull(importA.scope?.importedScopes),
+            assertNotNull(result.finalCtx.scopeManager.lookupScope(Name("a"))),
+        )
+
+        // from c import *
+        val importC = result.imports["c"]
+        assertNotNull(importC)
+        assertEquals(ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE, importC.style)
+        // assertEquals(result.namespaces["c"], importC.importedFrom)
 
         val aFunc = result.functions["a.func"]
         assertNotNull(aFunc)
@@ -1418,19 +1470,16 @@ class PythonFrontendTest : BaseTest() {
         val cCompletelyDifferentFunc = result.functions["c.completely_different_func"]
         assertNotNull(cCompletelyDifferentFunc)
 
-        var call = result.calls["a.func"]
+        var calls = result.calls("a.func")
+        assertEquals(2, calls.size)
+
+        var call = calls.firstOrNull()
         assertNotNull(call)
         assertInvokes(call, aFunc)
 
-        call = result.calls["a_func"]
-        assertNotNull(call)
-        assertInvokes(call, aFunc)
+        assertTrue(call.isImported)
 
-        call =
-            result.calls[
-                    { // we need to do select it this way otherwise we will also match "a.func"
-                        it.name.toString() == "func"
-                    }]
+        call = result.calls["b.func"]
         assertNotNull(call)
         assertInvokes(call, bFunc)
 
@@ -1438,22 +1487,52 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(call)
         assertInvokes(call, cCompletelyDifferentFunc)
 
-        call = result.calls["different.completely_different_func"]
+        call = result.calls["c.completely_different_func"]
         assertNotNull(call)
         assertInvokes(call, cCompletelyDifferentFunc)
+        assertTrue(call.isImported)
+    }
+
+    @Test
+    fun testImportsWithoutDependencySource() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("import_no_src.py").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+
+        val barCalls = tu.calls("bar")
+        assertEquals(2, barCalls.size)
+        barCalls.forEach { barCall ->
+            assertIs<CallExpression>(barCall)
+            assertTrue(barCall.isImported)
+        }
+
+        val bazCall = tu.calls["baz"]
+        assertNull(
+            bazCall,
+            "We should not have a baz() call anymore, since it should be harmonized",
+        )
+
+        val fooCall = tu.calls["foo"]
+        assertIs<CallExpression>(fooCall)
+        assertTrue(fooCall.isImported)
+
+        val foo3Call = tu.calls["foo3"]
+        assertIs<CallExpression>(foo3Call)
+        assertTrue(foo3Call.isImported)
     }
 
     @Test
     fun testInterfaceStubs() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
-            analyze(
-                listOf(
-                    topLevel.resolve("complex_class.pyi").toFile(),
-                ),
-                topLevel,
-                true
-            ) {
+            analyze(listOf(topLevel.resolve("complex_class.pyi").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
@@ -1465,7 +1544,10 @@ class PythonFrontendTest : BaseTest() {
             assertNotNull(bar)
 
             assertEquals(assertResolvedType("int"), bar.returnTypes.singleOrNull())
-            assertEquals(assertResolvedType("int"), bar.parameters.firstOrNull()?.type)
+
+            val param = bar.parameters.firstOrNull()
+            assertNotNull(param)
+            assertContains(param.assignedTypes, assertResolvedType("int"))
             assertEquals(assertResolvedType("complex_class.Foo"), bar.receiver?.type)
         }
     }
@@ -1474,13 +1556,7 @@ class PythonFrontendTest : BaseTest() {
     fun testNamedExpression() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
-            analyze(
-                listOf(
-                    topLevel.resolve("named_expressions.py").toFile(),
-                ),
-                topLevel,
-                true
-            ) {
+            analyze(listOf(topLevel.resolve("named_expressions.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
         val namedExpression = result.functions["named_expression"]
@@ -1553,7 +1629,7 @@ class PythonFrontendTest : BaseTest() {
                 "foobar.config",
                 "foobar.implementation",
                 "foobar.implementation.internal_bar",
-                "foobar.implementation.internal_foo"
+                "foobar.implementation.internal_foo",
             )
         assertEquals(expected, result.namespaces.map { it.name.toString() }.distinct().toSet())
 
@@ -1586,21 +1662,323 @@ class PythonFrontendTest : BaseTest() {
         }
     }
 
-    class PythonValueEvaluator : ValueEvaluator() {
-        override fun computeBinaryOpEffect(
-            lhsValue: Any?,
-            rhsValue: Any?,
-            has: HasOperatorCode?,
-        ): Any? {
-            return if (has?.operatorCode == "**") {
-                when {
-                    lhsValue is Number && rhsValue is Number ->
-                        lhsValue.toDouble().pow(rhsValue.toDouble())
-                    else -> cannotEvaluate(has as Node, this)
-                }
-            } else {
-                super.computeBinaryOpEffect(lhsValue, rhsValue, has)
+    @Test
+    fun testImportTest() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("import_test.py").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
             }
-        }
+        assertNotNull(tu)
+
+        val refs = tu.refs
+        refs.forEach { assertIsNot<MemberExpression>(it, "{${it.name}} is a member expression") }
+        assertEquals(
+            setOf("a", "b", "pkg.module.foo", "pkg.another_module.foo"),
+            refs.map { it.name.toString() }.toSet(),
+        )
+
+        val imports = tu.imports
+        assertEquals(
+            setOf("pkg", "pkg.module", "pkg.another_module"),
+            imports.map { it.name.toString() }.toSet(),
+        )
+    }
+
+    @Test
+    fun testImportVsMember() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(listOf(topLevel.resolve("import_vs_member.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        val pkg = result.namespaces["pkg"]
+        assertNotNull(pkg)
+        assertTrue(pkg.isInferred)
+
+        val pkgThirdModule = result.namespaces["pkg.third_module"]
+        assertNotNull(pkgThirdModule)
+        assertTrue(pkg.isInferred)
+
+        val pkgFunction = result.functions["pkg.function"]
+        assertNotNull(pkgFunction)
+        assertTrue(pkg.isInferred)
+
+        val anotherPkg = result.namespaces["another_pkg"]
+        assertNotNull(anotherPkg)
+        assertTrue(pkg.isInferred)
+
+        val refs = result.refs
+
+        // All reference except the .field access should be reference and not a member expression
+        refs.filter { it.name.localName != "field" }.forEach { assertIsNot<MemberExpression>(it) }
+
+        assertEquals(
+            listOf("pkg.function", "another_pkg.function", "another_pkg.function", "pkg.function"),
+            result.calls.map { it.name.toString() },
+        )
+
+        assertEquals(
+            listOf(
+                // this is the default parameter of foo
+                "pkg.some_variable",
+                // lhs
+                "a",
+                // rhs, ME
+                "UNKNOWN.field",
+                // rhs, base of ME
+                "pkg.some_variable",
+                // lhs
+                "b",
+                // rhs
+                "pkg.function",
+                // lhs
+                "c",
+                // rhs
+                "another_pkg.function",
+                // lhs
+                "d",
+                // rhs
+                "another_pkg.function",
+                // lhs
+                "e",
+                // rhs
+                "pkg.third_module.variable",
+                // lhs
+                "f",
+                // rhs
+                "pkg.function",
+            ),
+            refs.map { it.name.toString() },
+        )
+    }
+
+    @Test
+    fun testFunctionResolution() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("foobar.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+
+        // ensure, we have four functions and no inferred ones
+        val functions = tu.functions
+        assertEquals(4, functions.size)
+
+        val inferred = functions.filter { it.isInferred }
+        assertTrue(inferred.isEmpty())
+    }
+
+    @Test
+    fun testMultiComponent() {
+        val projectRoot = Path.of("src", "test", "resources", "python", "big-project")
+
+        val config =
+            TranslationConfiguration.builder()
+                .softwareComponents(
+                    mutableMapOf(
+                        "component1" to listOf(projectRoot.resolve("component1").toFile()),
+                        "component2" to listOf(projectRoot.resolve("component2").toFile()),
+                        "stdlib" to listOf(projectRoot.resolve("stdlib").toFile()),
+                    )
+                )
+                .topLevels(
+                    mapOf(
+                        "component1" to projectRoot.resolve("component1").toFile(),
+                        "component2" to projectRoot.resolve("component2").toFile(),
+                        "stdlib" to projectRoot.resolve("stdlib").toFile(),
+                    )
+                )
+                .loadIncludes(true)
+                .disableCleanup()
+                .debugParser(true)
+                .failOnError(true)
+                .useParallelFrontends(true)
+                .defaultPasses()
+                .registerLanguage<PythonLanguage>()
+                .build()
+
+        val result = TranslationManager.builder().config(config).build().analyze().get()
+        assertEquals(3, result.components.size)
+
+        val stdlib = result.components["stdlib"]
+        assertNotNull(stdlib)
+        assertEquals(listOf("os"), stdlib.namespaces.map { it.name.toString() })
+        val osName = stdlib.namespaces["os"].variables["name"]
+        assertNotNull(osName)
+
+        val component1 = result.components["component1"]
+        assertNotNull(component1)
+        assertEquals(
+            listOf("mypackage", "mypackage.module"),
+            component1.namespaces.map { it.name.toString() },
+        )
+        val a = component1.variables["a"]
+        assertNotNull(a)
+        assertRefersTo(a.firstAssignment, osName)
+
+        val component2 = result.components["component2"]
+        assertNotNull(component2)
+        assertEquals(
+            listOf("otherpackage", "otherpackage.module"),
+            component2.namespaces.map { it.name.toString() },
+        )
+        val c = component2.variables["c"]
+        assertNotNull(c)
+        assertRefersTo(c.firstAssignment, a)
+
+        val fooCall = component2.calls["foo"]
+        assertNotNull(fooCall)
+
+        val barArgument = fooCall.argumentEdges["bar"]?.end
+        assertNotNull(barArgument)
+    }
+
+    @Test
+    fun testVariableInference() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("variable_inference.py").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(tu)
+
+        val someClass = tu.records["SomeClass"]
+        assertNotNull(someClass)
+
+        val fieldX = someClass.fields["x"]
+        assertNotNull(fieldX)
+
+        val method = tu.functions["method"]
+        assertNotNull(method)
+        // method has a local variables "b".
+        val variableB = method.variables["b"]
+        assertNotNull(variableB)
+        assertIsNot<FieldDeclaration>(variableB)
+        assertEquals(1, someClass.fields.size)
+
+        val someClass2 = tu.records["SomeClass2"]
+        assertNotNull(someClass2)
+        val staticMethod = tu.functions["static_method"]
+        assertNotNull(staticMethod)
+        // static_method has two local variables which are "b" and "x"
+        assertEquals(2, staticMethod.variables.filter { it !is FieldDeclaration }.size)
+        assertEquals(setOf("b", "x"), staticMethod.variables.map { it.name.localName }.toSet())
+        assertTrue(someClass2.fields.isEmpty())
+
+        // There is no field called "b" in the result.
+        assertNull(tu.fields["b"])
+
+        val foo = tu.functions["foo"]
+        assertNotNull(foo)
+        val refersTo = foo.refs("fooA").map { it.refersTo }
+        refersTo.forEach { refersTo -> assertIs<ParameterDeclaration>(refersTo) }
+    }
+
+    @Test
+    fun testSuperclassImportFullPath() {
+        val topLevel = Path.of("src", "test")
+        val result =
+            analyze(
+                listOf(
+                    topLevel
+                        .resolve("resources/python/superclasses/superclass_import_full_path.py")
+                        .toFile(),
+                    topLevel.resolve("resources/python/superclasses/superclass.py").toFile(),
+                ),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        val clsBase = result.records["base"]
+        assertNotNull(clsBase)
+
+        val clsSuper = clsBase.superClasses.firstOrNull()
+        assertNotNull(clsSuper)
+        assertIs<ObjectType>(clsSuper)
+
+        val expectedSuper = result.records["Foobar"]
+        assertNotNull(expectedSuper)
+        assertEquals(expectedSuper, clsSuper.recordDeclaration)
+    }
+
+    @Test
+    fun testSuperclassImportModuleAlias() {
+        val topLevel = Path.of("src", "test")
+        val result =
+            analyze(
+                listOf(
+                    topLevel
+                        .resolve("resources/python/superclasses/superclass_import_module_alias.py")
+                        .toFile(),
+                    topLevel.resolve("resources/python/superclasses/superclass.py").toFile(),
+                ),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        val clsBase = result.records["base"]
+        assertNotNull(clsBase)
+
+        val clsSuper = clsBase.superClasses.firstOrNull()
+        assertNotNull(clsSuper)
+        assertIs<ObjectType>(clsSuper)
+
+        val expectedSuper = result.records["Foobar"]
+        assertNotNull(expectedSuper)
+        assertEquals(expectedSuper, clsSuper.recordDeclaration)
+    }
+
+    @Test
+    fun testSuperclassIncorrect() {
+        val topLevel = Path.of("src", "test")
+        val result =
+            analyze(
+                listOf(topLevel.resolve("resources/python/superclasses/incorrect.py").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        var myClass = result.finalCtx.typeManager.resolvedTypes["MyClass"]
+        assertNotNull(myClass)
+        assertNotNull(myClass.ancestors)
+    }
+
+    @Test
+    fun testNestedReplace() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(listOf(topLevel.resolve("nested_replace.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        val functionCall = result.calls["function"]
+        assertNotNull(functionCall)
+
+        val anotherFunctionCall = result.mcalls["another_function"]
+        assertNotNull(anotherFunctionCall)
+        assertNotNull(anotherFunctionCall.astParent)
+        assertSame(functionCall, anotherFunctionCall.astParent)
     }
 }

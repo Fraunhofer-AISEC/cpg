@@ -34,6 +34,7 @@ import org.neo4j.ogm.annotation.Transient
  * An intelligent [MutableSet] wrapper around an [EdgeSet] which supports iterating, adding and
  * removing [Node] elements.
  */
+@Suppress("EqualsOrHashCode")
 class UnwrappedEdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
     var set: EdgeSet<NodeType, EdgeType>
 ) : UnwrappedEdgeCollection<NodeType, EdgeType>(set), MutableSet<NodeType> {
@@ -49,9 +50,7 @@ class UnwrappedEdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
 
     /** See [UnwrappedEdgeList.Delegate], but as a [MutableSet] instead of [MutableList]. */
     @Transient
-    inner class Delegate<
-        ThisType : Node,
-    >() {
+    inner class Delegate<ThisType : Node>() {
         operator fun getValue(thisRef: ThisType, property: KProperty<*>): MutableSet<NodeType> {
             return this@UnwrappedEdgeSet
         }
@@ -61,10 +60,27 @@ class UnwrappedEdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
         }
     }
 
+    /** See [UnwrappedEdgeList.IncomingDelegate], but as a [MutableSet] instead of [MutableList]. */
+    @Transient
+    inner class IncomingDelegate<ThisType : Node, IncomingType>() {
+        operator fun getValue(thisRef: ThisType, property: KProperty<*>): MutableSet<IncomingType> {
+            @Suppress("UNCHECKED_CAST")
+            return this@UnwrappedEdgeSet as MutableSet<IncomingType>
+        }
+
+        operator fun setValue(thisRef: ThisType, property: KProperty<*>, value: Set<IncomingType>) {
+            @Suppress("UNCHECKED_CAST") this@UnwrappedEdgeSet.resetTo(value as Collection<NodeType>)
+        }
+    }
+
     operator fun <ThisType : Node> provideDelegate(
         thisRef: ThisType,
-        prop: KProperty<*>
+        prop: KProperty<*>,
     ): Delegate<ThisType> {
         return Delegate()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return other is Set<*> && this.iterator().asSequence().toSet() == other
     }
 }

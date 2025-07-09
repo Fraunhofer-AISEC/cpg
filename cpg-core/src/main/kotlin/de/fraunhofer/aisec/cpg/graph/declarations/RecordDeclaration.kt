@@ -31,15 +31,22 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
+import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
 /** Represents a C++ union/struct/class or Java class */
 open class RecordDeclaration :
-    Declaration(), DeclarationHolder, StatementHolder, EOGStarterHolder, DeclaresType {
+    Declaration(),
+    DeclarationHolder,
+    StatementHolder,
+    EOGStarterHolder,
+    DeclaresType,
+    HasSecondaryTypeEdge {
     /** The kind, i.e. struct, class, union or enum. */
     var kind: String? = null
 
@@ -120,6 +127,7 @@ open class RecordDeclaration :
         templateEdges.removeIf { it.end == templateDeclaration }
     }
 
+    @DoNotPersist
     override val declarations: List<Declaration>
         get() {
             val list = ArrayList<Declaration>()
@@ -162,6 +170,7 @@ open class RecordDeclaration :
             .toString()
     }
 
+    @DoNotPersist
     override val eogStarters: List<Node>
         get() {
             val list = mutableListOf<Node>()
@@ -222,4 +231,7 @@ open class RecordDeclaration :
 
     override val declaredType: Type
         get() = toType()
+
+    override val secondaryTypes: List<Type>
+        get() = superTypes
 }

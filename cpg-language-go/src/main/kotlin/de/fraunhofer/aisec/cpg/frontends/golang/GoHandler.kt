@@ -29,14 +29,14 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
+import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.function.Supplier
 
 abstract class GoHandler<ResultNode : Node?, HandlerNode : GoStandardLibrary.Ast.Node>(
     configConstructor: Supplier<ResultNode?>,
-    lang: GoLanguageFrontend
+    lang: GoLanguageFrontend,
 ) : Handler<ResultNode?, HandlerNode, GoLanguageFrontend>(configConstructor, lang) {
     /**
      * We intentionally override the logic of [Handler.handle] because we do not want the map-based
@@ -70,7 +70,7 @@ abstract class GoHandler<ResultNode : Node?, HandlerNode : GoStandardLibrary.Ast
             frontend,
             node,
             log,
-            "Parsing of type $name is not supported (yet)"
+            "Parsing of type $name is not supported (yet)",
         )
 
         val cpgNode = this.configConstructor.get()
@@ -100,7 +100,8 @@ abstract class GoHandler<ResultNode : Node?, HandlerNode : GoStandardLibrary.Ast
             val namespace =
                 frontend.scopeManager
                     .filterScopes {
-                        it is NameScope && (it.astNode as? NamespaceDeclaration)?.path == filename
+                        it is NamespaceScope &&
+                            (it.astNode as? NamespaceDeclaration)?.path == filename
                     }
                     .firstOrNull()
                     ?.astNode as? NamespaceDeclaration

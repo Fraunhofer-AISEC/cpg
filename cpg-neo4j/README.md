@@ -4,7 +4,14 @@ A simple tool to export a *code property graph* to a neo4j database.
 
 ## Requirements
 
-The application requires Java 17 or higher.
+The application requires Java 21.
+
+Please make sure, that the [APOC](https://neo4j.com/labs/apoc/) plugin is enabled on your neo4j server. It is used in mass-creating nodes and relationships.
+
+For example using docker:
+```
+docker run -p 7474:7474 -p 7687:7687 -d -e NEO4J_AUTH=neo4j/password -e NEO4JLABS_PLUGINS='["apoc"]' neo4j:5
+```
 
 ## Build
 
@@ -19,16 +26,19 @@ Please remember to adjust the `gradle.properties` before building the project.
 ## Usage
 
 ```
-./build/install/cpg-neo4j/bin/cpg-neo4j  [--infer-nodes] [--load-includes] [--no-default-passes]
+./build/install/cpg-neo4j/bin/cpg-neo4j [--infer-nodes] [--load-includes] [--no-default-passes]
                     [--no-neo4j] [--no-purge-db] [--print-benchmark]
-                    [--use-unity-build] [--benchmark-json=<benchmarkJson>]
+                    [--schema-json] [--schema-markdown] [--use-unity-build]
+                    [--benchmark-json=<benchmarkJson>]
                     [--custom-pass-list=<customPasses>]
                     [--export-json=<exportJsonFile>] [--host=<host>]
                     [--includes-file=<includesFile>]
+                    [--max-complexity-cf-dfg=<maxComplexity>]
                     [--password=<neo4jPassword>] [--port=<port>]
                     [--save-depth=<depth>] [--top-level=<topLevel>]
-                    [--user=<neo4jUsername>] ([<files>...] | -S=<String=String>
-                    [-S=<String=String>]... |
+                    [--user=<neo4jUsername>]
+                    [--exclusion-patterns=<exclusionPatterns>]... ([<files>...]
+                    | -S=<String=String> [-S=<String=String>]... |
                     --json-compilation-database=<jsonCompilationDatabase> |
                     --list-passes)
       [<files>...]           The paths to analyze. If module support is
@@ -37,11 +47,14 @@ Please remember to adjust the `gradle.properties` before building the project.
       --benchmark-json=<benchmarkJson>
                              Save benchmark results to json file
       --custom-pass-list=<customPasses>
-                             Add custom list of passes (includes
-                               --no-default-passes) which is passed as a
-                               comma-separated list; give either pass name if
-                               pass is in list, or its FQDN (e.g.
+                             Add custom list of passes (might be used
+                               additional to --no-default-passes) which is
+                               passed as a comma-separated list; give either
+                               pass name if pass is in list, or its FQDN (e.g.
                                --custom-pass-list=DFGPass,CallResolver)
+      --exclusion-patterns=<exclusionPatterns>
+                             Configures an exclusion pattern for files or
+                               directories that should not be parsed
       --export-json=<exportJsonFile>
                              Export cpg as json
       --host=<host>          Set the host of the neo4j Database (default:
@@ -53,6 +66,11 @@ Please remember to adjust the `gradle.properties` before building the project.
                              The path to an optional a JSON compilation database
       --list-passes          Prints the list available passes
       --load-includes        Enable TranslationConfiguration option loadIncludes
+      --max-complexity-cf-dfg=<maxComplexity>
+                             Performance optimisation: Limit the
+                               ControlFlowSensitiveDFGPass to functions with a
+                               complexity less than what is specified here. -1
+                               (default) means no limit is used.
       --no-default-passes    Do not register default passes [used for debugging]
       --no-neo4j             Do not push cpg into neo4j [used for debugging]
       --no-purge-db          Do no purge neo4j database before pushing the cpg
@@ -69,6 +87,8 @@ Please remember to adjust the `gradle.properties` before building the project.
       --save-depth=<depth>   Performance optimisation: Limit recursion depth
                                form neo4j OGM when leaving the AST. -1
                                (default) means no limit is used.
+      --schema-json          Print the CPGs nodes and edges that they can have.
+      --schema-markdown      Print the CPGs nodes and edges that they can have.
       --top-level=<topLevel> Set top level directory of project structure.
                                Default: Largest common path of all source files
       --use-unity-build      Enable unity build mode for C++ (requires
@@ -97,12 +117,3 @@ $ build/install/cpg-neo4j/bin/cpg-neo4j --export-json cpg-export.json --no-neo4j
 
 To export the cpg from a neo4j database, you can use the neo4j `apoc` plugin.
 There it's also possible to export only parts of the graph.
-
-## Known issues:
-
-- While importing sufficiently large projects with the parameter <code>--save-depth=-1</code> 
-        a <code>java.lang.StackOverflowError</code> may occur.
-    - This error could be solved by increasing the stack size with the JavaVM option: <code>-Xss4m</code>
-    - Otherwise the depth must be limited (e.g. 3 or 5)
-
-- While pushing a constant value larger than 2^63 - 1 a <code>java.lang.IllegalArgumentException</code> occurs.

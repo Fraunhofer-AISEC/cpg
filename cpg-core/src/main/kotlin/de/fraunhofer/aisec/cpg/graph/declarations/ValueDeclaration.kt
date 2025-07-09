@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Usages
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -34,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
@@ -42,13 +44,15 @@ import org.neo4j.ogm.annotation.Relationship
 @NodeEntity
 abstract class ValueDeclaration : Declaration(), HasType, HasAliases {
 
+    @DoNotPersist override var observerEnabled: Boolean = true
+
     override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
 
-    override var language: Language<*>? = null
+    override var language: Language<*> = UnknownLanguage
         set(value) {
             // We need to adjust an eventual unknown type, once we know the language
             field = value
-            if (value != null && type is UnknownType) {
+            if (type is UnknownType) {
                 type = UnknownType.getUnknownType(value)
             }
         }

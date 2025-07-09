@@ -174,7 +174,7 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                         importables.putIfAbsent(t.name.toString(), t)
                     }
                 }
-            }
+            },
         )
     }
 }

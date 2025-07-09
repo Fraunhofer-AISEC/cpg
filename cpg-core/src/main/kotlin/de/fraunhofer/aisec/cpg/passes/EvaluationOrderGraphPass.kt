@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
-import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -46,7 +45,12 @@ import java.util.*
 import org.slf4j.LoggerFactory
 
 /**
- * Creates an Evaluation Order Graph (EOG) based on AST.
+ * Creates an Evaluation Order Graph (EOG) based on the CPG's version of the AST. The expected
+ * outcomes are specified in the
+ * [Specification](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog).
+ *
+ * Note: If you changed this file, make sure the specification is still in-line with the
+ * implementation. If you support new nodes, add a section to the specification.
  *
  * An EOG is an intra-procedural directed graph whose vertices are executable AST nodes and edges
  * connect them in the order they would be executed when running the program.
@@ -84,8 +88,7 @@ import org.slf4j.LoggerFactory
 @Suppress("MemberVisibilityCanBePrivate")
 open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
-    protected val map = mutableMapOf<Class<out Node>, (Node) -> Unit>()
-    protected var currentPredecessors = mutableListOf<Node>()
+    var currentPredecessors = mutableListOf<Node>()
     protected var nextEdgeBranch: Boolean? = null
 
     /**
@@ -99,7 +102,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     /**
      * This maps nodes that have to handle [BreakStatement]s and [ContinueStatement]s, i.e.
      * [LoopStatement]s and [SwitchStatement]s to the EOG exits of the node they have to handle. An
-     * entry will only be created if the statement was identified to handle the above mentioned
+     * entry will only be created if the statement was identified to handle the above-mentioned
      * control flow statements.
      */
     val nodesWithContinuesAndBreaks = mutableMapOf<Node, MutableList<Node>>()
@@ -110,86 +113,11 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * Implemented as listener to connect nodes when the goto appears before the label.
      */
     protected val processedListener = ProcessedListener()
-
     /**
      * Stores all nodes currently handled to add them to the processedListener even if a sub node is
      * the next target of an EOG edge.
      */
     protected val intermediateNodes = mutableListOf<Node>()
-
-    init {
-        map[IncludeDeclaration::class.java] = { doNothing() }
-        map[TranslationUnitDeclaration::class.java] = {
-            handleTranslationUnitDeclaration(it as TranslationUnitDeclaration)
-        }
-        map[NamespaceDeclaration::class.java] = {
-            handleNamespaceDeclaration(it as NamespaceDeclaration)
-        }
-        map[RecordDeclaration::class.java] = { handleRecordDeclaration(it as RecordDeclaration) }
-        map[FunctionDeclaration::class.java] = {
-            handleFunctionDeclaration(it as FunctionDeclaration)
-        }
-        map[TupleDeclaration::class.java] = { handleTupleDeclaration(it as TupleDeclaration) }
-        map[VariableDeclaration::class.java] = {
-            handleVariableDeclaration(it as VariableDeclaration)
-        }
-        map[CallExpression::class.java] = { handleCallExpression(it as CallExpression) }
-        map[MemberExpression::class.java] = { handleMemberExpression(it as MemberExpression) }
-        map[SubscriptExpression::class.java] = {
-            handleSubscriptExpression(it as SubscriptExpression)
-        }
-        map[NewArrayExpression::class.java] = { handleNewArrayExpression(it as NewArrayExpression) }
-        map[RangeExpression::class.java] = { handleRangeExpression(it as RangeExpression) }
-        map[DeclarationStatement::class.java] = {
-            handleDeclarationStatement(it as DeclarationStatement)
-        }
-        map[ReturnStatement::class.java] = { handleReturnStatement(it as ReturnStatement) }
-        map[BinaryOperator::class.java] = { handleBinaryOperator(it as BinaryOperator) }
-        map[AssignExpression::class.java] = { handleAssignExpression(it as AssignExpression) }
-        map[UnaryOperator::class.java] = { handleUnaryOperator(it as UnaryOperator) }
-        map[Block::class.java] = { handleBlock(it as Block) }
-        map[IfStatement::class.java] = { handleIfStatement(it as IfStatement) }
-        map[AssertStatement::class.java] = { handleAssertStatement(it as AssertStatement) }
-        map[WhileStatement::class.java] = { handleWhileStatement(it as WhileStatement) }
-        map[DoStatement::class.java] = { handleDoStatement(it as DoStatement) }
-        map[ForStatement::class.java] = { handleForStatement(it as ForStatement) }
-        map[ForEachStatement::class.java] = { handleForEachStatement(it as ForEachStatement) }
-        map[TypeExpression::class.java] = { handleTypeExpression(it as TypeExpression) }
-        map[TryStatement::class.java] = { handleTryStatement(it as TryStatement) }
-        map[ContinueStatement::class.java] = { handleContinueStatement(it as ContinueStatement) }
-        map[DeleteExpression::class.java] = { handleDeleteExpression(it as DeleteExpression) }
-        map[BreakStatement::class.java] = { handleBreakStatement(it as BreakStatement) }
-        map[SwitchStatement::class.java] = { handleSwitchStatement(it as SwitchStatement) }
-        map[LabelStatement::class.java] = { handleLabelStatement(it as LabelStatement) }
-        map[GotoStatement::class.java] = { handleGotoStatement(it as GotoStatement) }
-        map[CaseStatement::class.java] = { handleCaseStatement(it as CaseStatement) }
-        map[SynchronizedStatement::class.java] = {
-            handleSynchronizedStatement(it as SynchronizedStatement)
-        }
-        map[NewExpression::class.java] = { handleNewExpression(it as NewExpression) }
-        map[KeyValueExpression::class.java] = { handleKeyValueExpression(it as KeyValueExpression) }
-        map[CastExpression::class.java] = { handleCastExpression(it as CastExpression) }
-        map[ExpressionList::class.java] = { handleExpressionList(it as ExpressionList) }
-        map[ConditionalExpression::class.java] = {
-            handleConditionalExpression(it as ConditionalExpression)
-        }
-        map[InitializerListExpression::class.java] = {
-            handleInitializerListExpression(it as InitializerListExpression)
-        }
-        map[ConstructExpression::class.java] = {
-            handleConstructExpression(it as ConstructExpression)
-        }
-        map[EmptyStatement::class.java] = { handleDefault(it as EmptyStatement) }
-        map[Literal::class.java] = { handleDefault(it) }
-        map[DefaultStatement::class.java] = { handleDefault(it) }
-        map[TypeIdExpression::class.java] = { handleDefault(it) }
-        map[Reference::class.java] = { handleDefault(it) }
-        map[LambdaExpression::class.java] = { handleLambdaExpression(it as LambdaExpression) }
-        map[LookupScopeStatement::class.java] = {
-            handleLookupScopeStatement(it as LookupScopeStatement)
-        }
-        map[ThrowStatement::class.java] = { handleThrowStatement(it as ThrowStatement) }
-    }
 
     protected fun doNothing() {
         // Nothing to do for this node type
@@ -239,6 +167,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
     }
 
+    /**
+     * See
+     * [Specification for StatementHolder](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#statementholder)
+     */
     protected fun handleTranslationUnitDeclaration(node: TranslationUnitDeclaration) {
         handleStatementHolder(node as StatementHolder)
 
@@ -250,6 +182,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         processedListener.clearProcessed()
     }
 
+    /**
+     * See
+     * [Specification for StatementHolder](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#statementholder)
+     */
     protected fun handleNamespaceDeclaration(node: NamespaceDeclaration) {
         handleStatementHolder(node)
 
@@ -261,18 +197,30 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         processedListener.clearProcessed()
     }
 
+    /**
+     * See
+     * [Specification for VariableDeclaration](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#variabledeclaration)
+     */
     protected fun handleVariableDeclaration(node: VariableDeclaration) {
         attachToEOG(node)
         // analyze the initializer
         handleEOG(node.initializer)
     }
 
+    /**
+     * See
+     * [Specification for TupleDeclaration](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#tupledeclaration)
+     */
     protected fun handleTupleDeclaration(node: TupleDeclaration) {
         attachToEOG(node)
         // analyze the initializer
         handleEOG(node.initializer)
     }
 
+    /**
+     * See
+     * [Specification for StatementHolder](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#statementholder)
+     */
     protected open fun handleRecordDeclaration(node: RecordDeclaration) {
         handleStatementHolder(node)
         currentPredecessors.clear()
@@ -290,13 +238,17 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
     }
 
+    /**
+     * See
+     * [Specification for StatementHolder](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#statementholder)
+     */
     protected fun handleStatementHolder(statementHolder: StatementHolder) {
         // separate code into static and non-static parts as they are executed in different moments,
         // although they can be placed in the same enclosing declaration.
         val code = statementHolder.statements
 
-        val nonStaticCode = code.filter { (it as? Block)?.isStaticBlock == false }
-        val staticCode = code.filter { it !in nonStaticCode }
+        val staticCode = code.filter { (it as? Block)?.isStaticBlock == true }
+        val nonStaticCode = code.filter { it !in staticCode }
 
         attachToEOG(statementHolder as Node)
         for (staticStatement in staticCode) {
@@ -310,6 +262,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         currentPredecessors.clear()
     }
 
+    /**
+     * See
+     * [Specification for LambdaExpression](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#lambdaexpression)
+     */
     protected fun handleLambdaExpression(node: LambdaExpression) {
         val tmpCurrentEOG = currentPredecessors.toMutableList()
         val tmpCurrentProperties = nextEdgeBranch
@@ -332,6 +288,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         attachToEOG(node)
     }
 
+    /**
+     * See
+     * [Specification for FunctionDeclaration](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#functiondeclaration)
+     */
     protected open fun handleFunctionDeclaration(node: FunctionDeclaration) {
         // reset EOG
         currentPredecessors.clear()
@@ -379,41 +339,150 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * custom adaptation of control flow behavior when handling nodes that influence control flow,
      * e.g. [LoopStatement]s or [BreakStatement].
      */
-    protected fun handleEOG(node: Node?) {
+    fun handleEOG(node: Node?) {
         if (node == null) {
-            // nothing to do
             return
         }
-
         intermediateNodes.add(node)
-        var toHandle: Class<*> = node.javaClass
-        var callable = map[toHandle]
-        while (callable == null) {
-            toHandle = toHandle.superclass
-            callable = map[toHandle]
-            if (toHandle == Node::class.java || !Node::class.java.isAssignableFrom(toHandle)) break
-        }
-        if (callable != null) {
-            callable(node)
-        } else {
-            LOGGER.info("Parsing of type ${node.javaClass} is not supported (yet)")
+
+        when (node) {
+            is TranslationUnitDeclaration -> handleTranslationUnitDeclaration(node)
+            is NamespaceDeclaration -> handleNamespaceDeclaration(node)
+            is RecordDeclaration -> handleRecordDeclaration(node)
+            is FunctionDeclaration -> handleFunctionDeclaration(node)
+            is TupleDeclaration -> handleTupleDeclaration(node)
+            is VariableDeclaration -> handleVariableDeclaration(node)
+            is ConstructExpression -> handleConstructExpression(node)
+            is CallExpression -> handleCallExpression(node)
+            is MemberExpression -> handleMemberExpression(node)
+            is SubscriptExpression -> handleSubscriptExpression(node)
+            is NewArrayExpression -> handleNewArrayExpression(node)
+            is RangeExpression -> handleRangeExpression(node)
+            is DeclarationStatement -> handleDeclarationStatement(node)
+            is ReturnStatement -> handleReturnStatement(node)
+            is BinaryOperator -> handleBinaryOperator(node)
+            is AssignExpression -> handleAssignExpression(node)
+            is UnaryOperator -> handleUnaryOperator(node)
+            is Block -> handleBlock(node)
+            is IfStatement -> handleIfStatement(node)
+            is AssertStatement -> handleAssertStatement(node)
+            is WhileStatement -> handleWhileStatement(node)
+            is DoStatement -> handleDoStatement(node)
+            is ForStatement -> handleForStatement(node)
+            is ForEachStatement -> handleForEachStatement(node)
+            is TypeExpression -> handleTypeExpression(node)
+            is TryStatement -> handleTryStatement(node)
+            is ContinueStatement -> handleContinueStatement(node)
+            is DeleteExpression -> handleDeleteExpression(node)
+            is BreakStatement -> handleBreakStatement(node)
+            is SwitchStatement -> handleSwitchStatement(node)
+            is LabelStatement -> handleLabelStatement(node)
+            is GotoStatement -> handleGotoStatement(node)
+            is CaseStatement -> handleCaseStatement(node)
+            is SynchronizedStatement -> handleSynchronizedStatement(node)
+            is NewExpression -> handleNewExpression(node)
+            is KeyValueExpression -> handleKeyValueExpression(node)
+            is CastExpression -> handleCastExpression(node)
+            is ExpressionList -> handleExpressionList(node)
+            is ConditionalExpression -> handleConditionalExpression(node)
+            is InitializerListExpression -> handleInitializerListExpression(node)
+            is CollectionComprehension -> handleCollectionComprehension(node)
+            is ComprehensionExpression -> handleComprehensionExpression(node)
+            is LambdaExpression -> handleLambdaExpression(node)
+            is LookupScopeStatement -> handleLookupScopeStatement(node)
+            is ThrowExpression -> handleThrowExpression(node)
+            // For templates, we will just handle the declarations and not the realizations (for
+            // now)
+            is TemplateDeclaration -> handleTemplate(node)
+            // These nodes will be added to the eog graph but no children will be handled
+            is EmptyStatement -> handleDefault(node)
+            is Literal<*> -> handleDefault(node)
+            is DefaultStatement -> handleDefault(node)
+            is TypeIdExpression -> handleDefault(node)
+            is Reference -> handleDefault(node)
+            is ImportDeclaration -> handleDefault(node)
+            // These nodes are not added to the EOG
+            is IncludeDeclaration -> doNothing()
+            else -> LOGGER.info("Parsing of type ${node.javaClass} is not supported (yet)")
         }
     }
 
+    protected fun handleTemplate(template: TemplateDeclaration) {
+        // Handle the declarations
+        for (decl in template.declarations) {
+            handleEOG(decl)
+        }
+
+        // Finally the template itself
+        attachToEOG(template)
+    }
+
     /**
-     * Default handler for nodes. The node is simply attacked to the EOG and the ast subtree is
+     * Default handler for nodes. The node is simply attached to the EOG and the ast subtree is
      * ignored.
      */
     protected fun handleDefault(node: Node) {
         attachToEOG(node)
     }
 
+    /**
+     * See
+     * [Specification for EmptyStatement](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#emptystatement)
+     */
+    private fun handleEmptyStatement(node: EmptyStatement) {
+        attachToEOG(node)
+    }
+
+    /**
+     * See
+     * [Specification for Literal](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#literal)
+     */
+    private fun handleLiteral(node: Literal<*>) {
+        attachToEOG(node)
+    }
+
+    /**
+     * See
+     * [Specification for DefaultStatement](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#defaultstatement)
+     */
+    private fun handleDefaultStatement(node: DefaultStatement) {
+        attachToEOG(node)
+    }
+
+    /**
+     * See
+     * [Specification for TypeIdExpression](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#typeidexpression)
+     */
+    private fun handleTypeIdExpression(node: TypeIdExpression) {
+        attachToEOG(node)
+    }
+
+    /**
+     * See
+     * [Specification for Reference](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#reference)
+     */
+    private fun handleReference(node: Reference) {
+        attachToEOG(node)
+    }
+
+    /**
+     * See
+     * [Specification for IncludeDeclaration](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#includedeclaration)
+     */
+    protected fun handleIncludeDeclaration() {
+        doNothing()
+    }
+
+    /**
+     * See
+     * [Specification for CallExpression](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#callexpression)
+     */
     protected fun handleCallExpression(node: CallExpression) {
         // Todo add call as throwexpression to outer scope of call can throw (which is trivial to
         // find out for java, but impossible for c++)
 
         // evaluate the call target first, optional base should be the callee or in its subtree
-        node.callee?.let { handleEOG(it) }
+        handleEOG(node.callee)
 
         // then the arguments
         for (arg in node.arguments) {
@@ -423,11 +492,19 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         attachToEOG(node)
     }
 
+    /**
+     * See
+     * [Specification for MemberExpression](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#memberexpression)
+     */
     protected fun handleMemberExpression(node: MemberExpression) {
         handleEOG(node.base)
         attachToEOG(node)
     }
 
+    /**
+     * See
+     * [Specification for SubscriptExpression](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#subscriptexpression)
+     */
     protected fun handleSubscriptExpression(node: SubscriptExpression) {
         // Connect according to evaluation order, first the array reference, then the contained
         // index.
@@ -436,6 +513,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         attachToEOG(node)
     }
 
+    /**
+     * See
+     * [Specification for NewArrayExpression](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#newarrayexpression)
+     */
     protected fun handleNewArrayExpression(node: NewArrayExpression) {
         for (dimension in node.dimensions) {
             handleEOG(dimension)
@@ -444,6 +525,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         attachToEOG(node)
     }
 
+    /**
+     * See
+     * [Specification for RangeExpression](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#rangeexpression)
+     */
     protected fun handleRangeExpression(node: RangeExpression) {
         handleEOG(node.floor)
         handleEOG(node.ceiling)
@@ -451,10 +536,16 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         attachToEOG(node)
     }
 
+    /**
+     * See
+     * [Specification for DeclarationStatement](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#declarationexpression)
+     */
     protected fun handleDeclarationStatement(node: DeclarationStatement) {
         // loop through declarations
         for (declaration in node.declarations) {
-            if (declaration is VariableDeclaration) {
+            if (declaration is ImportDeclaration) {
+                handleEOG(declaration)
+            } else if (declaration is VariableDeclaration) {
                 // analyze the initializers if there is one
                 handleEOG(declaration)
             } else if (declaration is FunctionDeclaration) {
@@ -476,6 +567,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         attachToEOG(node)
     }
 
+    /**
+     * See
+     * [Specification for ReturnStatement](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#returnstatement)
+     */
     protected fun handleReturnStatement(node: ReturnStatement) {
         // analyze the return value
         handleEOG(node.returnValue)
@@ -483,19 +578,22 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // push the statement itself
         attachToEOG(node)
 
-        // reset the state afterwards, we're done with this function
+        // reset the state afterward, we're done with this function
         currentPredecessors.clear()
     }
 
+    /**
+     * See
+     * [Specification for BinaryOperator](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#binaryoperator)
+     */
     protected fun handleBinaryOperator(node: BinaryOperator) {
         handleEOG(node.lhs)
         val lang = node.language
         // Two operators that don't evaluate the second operator if the first evaluates to a certain
         // value. If the language has the trait of short-circuit evaluation, we check if the
-        // operatorCode is amongst the operators that leed such an evaluation.
+        // operatorCode is amongst the operators that lead to such an evaluation.
         if (
-            lang != null &&
-                lang is HasShortCircuitOperators &&
+            lang is HasShortCircuitOperators &&
                 (lang.conjunctiveOperators.contains(node.operatorCode) ||
                     lang.disjunctiveOperators.contains(node.operatorCode))
         ) {
@@ -509,7 +607,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             handleEOG(node.rhs)
             attachToEOG(node)
             setCurrentEOGs(shortCircuitNodes)
-            // Inverted property to assigne false when true was assigned above.
+            // Inverted property to assign false when true was assigned above.
             nextEdgeBranch = !lang.conjunctiveOperators.contains(node.operatorCode)
         } else {
             handleEOG(node.rhs)
@@ -517,6 +615,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         attachToEOG(node)
     }
 
+    /**
+     * See
+     * [Specification for AssignExpression](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#assignexpression)
+     */
     protected fun handleAssignExpression(node: AssignExpression) {
         for (declaration in node.declarations) {
             handleEOG(declaration)
@@ -536,6 +638,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         attachToEOG(node)
     }
 
+    /**
+     * See [Specification for Block](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#block)
+     */
     protected fun handleBlock(node: Block) {
 
         // analyze the contained statements
@@ -545,54 +650,19 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         attachToEOG(node)
     }
 
-    protected fun handleUnaryOperator(node: UnaryOperator) {
-        // TODO(oxisto): These operator codes are highly language specific and might be more suited
-        //  to be handled differently (see https://github.com/Fraunhofer-AISEC/cpg/issues/1161)
-        if (node.operatorCode == "throw") {
-            handleThrowOperator(node, node.input.type, node.input)
-        } else {
-            handleUnspecificUnaryOperator(node)
-        }
-    }
-
     /**
-     * Generates the EOG for a [node] which represents a statement/expression which throws an
-     * exception. Since some languages may accept different inputs to a throw statement (typically
-     * 1, sometimes 2, 0 is also possible), we have collect these in [inputs]. The input which is
-     * evaluated first, must be the first item in the vararg! Any `null` object in `inputs` will be
-     * filtered. We connect the throw statement internally, i.e., the inputs are evaluated from
-     * index 0 to n and then the whole node is evaluated.
+     * See
+     * [Specification for UnaryOperator](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#unaryoperator)
      */
-    protected fun handleThrowOperator(node: Node, throwType: Type?, vararg inputs: Expression?) {
-        inputs.filterNotNull().forEach { handleEOG(it) }
-        attachToEOG(node)
-
-        if (throwType != null) {
-            // Here, we identify the encapsulating ast node that can handle or relay a throw
-            val handlingOrRelayingParent =
-                node.firstParentOrNull { parent ->
-                    parent is TryStatement || parent is FunctionDeclaration
-                }
-            if (handlingOrRelayingParent != null) {
-                val throwByTypeMap =
-                    nodesToInternalThrows.getOrPut(handlingOrRelayingParent) { mutableMapOf() }
-                val throwEOGExits = throwByTypeMap.getOrPut(throwType) { mutableListOf() }
-                throwEOGExits.addAll(currentPredecessors.toMutableList())
-            } else {
-                LOGGER.error(
-                    "Cannot attach throw to a parent node, throw is neither in a try statement nor in a relaying function."
-                )
-            }
-        }
-        // After a throw, the eog is not progressing in the following ast subtrees
-        currentPredecessors.clear()
+    protected fun handleUnaryOperator(node: UnaryOperator) {
+        handleUnspecificUnaryOperator(node)
     }
 
     /**
      * This function handles all regular unary operators that do not receive any special handling
      * (such as [handleThrowOperator]). This gives language frontends a chance to override this
-     * function using [ReplacePass], handle specific operators on their own and delegate the rest to
-     * this function.
+     * function using [de.fraunhofer.aisec.cpg.passes.configuration.ReplacePass], handle specific
+     * operators on their own and delegate the rest to this function.
      */
     protected open fun handleUnspecificUnaryOperator(node: UnaryOperator) {
         val input = node.input
@@ -601,6 +671,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         attachToEOG(node)
     }
 
+    /**
+     * See
+     * [Specification fir AssertStatement](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#assertstatement)
+     */
     protected fun handleAssertStatement(node: AssertStatement) {
         handleEOG(node.condition)
         val openConditionEOGs = currentPredecessors.toMutableList()
@@ -609,10 +683,18 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         attachToEOG(node)
     }
 
+    /**
+     * See
+     * [Specification for TypeExpression](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#typeexpression)
+     */
     protected fun handleTypeExpression(node: TypeExpression) {
         attachToEOG(node)
     }
 
+    /**
+     * See
+     * [Specification for TryStatement](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#trystatement)
+     */
     protected fun handleTryStatement(node: TryStatement) {
 
         node.resources.forEach { handleEOG(it) }
@@ -632,8 +714,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                     currentPredecessors.addAll(eogEdges)
                 } else if (throwType.tryCast(catchParam.type) != CastNotPossible) {
                     // If the thrown type can be cast to the type of the catch clause, a valid
-                    // handling of the
-                    // throw can be assumed
+                    // handling of the throw can be assumed
                     currentPredecessors.addAll(eogEdges)
                     toRemove.add(throwType)
                 }
@@ -645,8 +726,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
 
         // We need to handle the else block after the catch clauses, as the else could contain a
-        // throw itself
-        // that should not be caught be the catch clauses.
+        // throw itself that should not be caught be the catch clauses.
         if (node.elseBlock != null) {
             currentPredecessors.clear()
             currentPredecessors.addAll(tmpEOGNodes)
@@ -679,7 +759,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
         // Forwards all open and uncaught throwing nodes to the outer scope that may handle them
         val outerCatchingNode =
-            node.firstParentOrNull { parent -> parent is TryStatement || parent is LoopStatement }
+            node.firstParentOrNull<Node> { parent ->
+                parent is TryStatement || parent is LoopStatement
+            }
         if (outerCatchingNode != null) {
             // Forwarding is done by merging the currently associated throws to a type with the new
             // throws based on their type
@@ -691,14 +773,17 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             }
         }
         // To Avoid edges out of the try or finally block to the next regular statement if the try
-        // can not be exited
-        // without a throw
+        // can not be exited without a throw
         if (!canTerminateExceptionfree) {
             currentPredecessors.clear()
         }
         attachToEOG(node)
     }
 
+    /**
+     * See
+     * [Specification for ContinueStatement](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#continuestatement)
+     */
     protected fun handleContinueStatement(node: ContinueStatement) {
         attachToEOG(node)
         val label = node.label
@@ -706,8 +791,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             if (label == null) {
                 node.firstParentOrNull { it.isContinuable() }
             } else {
-                // If a label was specified, the continue is associated to a node explicitly labeled
-                // with the same label
+                // If a label was specified, the continue statement is associated to a node
+                // explicitly labeled with the same label
                 getLabeledASTNode(node, label)
             }
         if (continuableNode != null) {
@@ -723,6 +808,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         currentPredecessors.clear()
     }
 
+    /**
+     * See
+     * [Specification for DeleteExpression](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#deleteexpression)
+     */
     protected fun handleDeleteExpression(node: DeleteExpression) {
         for (operand in node.operands) {
             handleEOG(operand)
@@ -730,6 +819,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         attachToEOG(node)
     }
 
+    /**
+     * See
+     * [Specification for BreakStatement](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#breakstatement)
+     */
     protected fun handleBreakStatement(node: BreakStatement) {
         attachToEOG(node)
         val label = node.label
@@ -750,11 +843,19 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         currentPredecessors.clear()
     }
 
+    /**
+     * See
+     * [Specification for LabelStatement](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#labelstatement)
+     */
     protected fun handleLabelStatement(node: LabelStatement) {
         node.scope?.addLabelStatement(node)
         handleEOG(node.subStatement)
     }
 
+    /**
+     * See
+     * [Specification for GotoStatement](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#gotostatement)
+     */
     protected fun handleGotoStatement(node: GotoStatement) {
         attachToEOG(node)
         node.targetLabel?.let {
@@ -763,27 +864,47 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         currentPredecessors.clear()
     }
 
+    /**
+     * See
+     * [Specification for CaseStatement](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#casestatement)
+     */
     protected fun handleCaseStatement(node: CaseStatement) {
         handleEOG(node.caseExpression)
         attachToEOG(node)
     }
 
+    /**
+     * See
+     * [Specification for NewExpression](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#newexpression)
+     */
     protected fun handleNewExpression(node: NewExpression) {
         handleEOG(node.initializer)
         attachToEOG(node)
     }
 
+    /**
+     * See
+     * [Specification for KeyValueExpression](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#keyvalueexpression)
+     */
     protected fun handleKeyValueExpression(node: KeyValueExpression) {
         handleEOG(node.key)
         handleEOG(node.value)
         attachToEOG(node)
     }
 
+    /**
+     * See
+     * [Specification for CastExpression](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#castexpression)
+     */
     protected fun handleCastExpression(node: CastExpression) {
         handleEOG(node.expression)
         attachToEOG(node)
     }
 
+    /**
+     * See
+     * [Specification for ExpressionList](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#expressionlist)
+     */
     protected fun handleExpressionList(node: ExpressionList) {
         for (expr in node.expressions) {
             handleEOG(expr)
@@ -791,6 +912,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         attachToEOG(node)
     }
 
+    /**
+     * See
+     * [Specification for InitializerListExpression](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#initializerlistexpression)
+     */
     protected fun handleInitializerListExpression(node: InitializerListExpression) {
         // first the arguments
         for (inits in node.initializers) {
@@ -799,6 +924,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         attachToEOG(node)
     }
 
+    /**
+     * See
+     * [Specification for ConstructExpression](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#constructexpression)
+     */
     protected fun handleConstructExpression(node: ConstructExpression) {
         // first the arguments
         for (arg in node.arguments) {
@@ -856,7 +985,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * Connects the current EOG leaf nodes to the last stacked node, e.g. loop head, and removes the
      * nodes.
      *
-     * @param loopScope the loop scope
+     * @param loopStatement the loop statement
      */
     protected fun handleContainedBreaksAndContinues(loopStatement: LoopStatement) {
         // Breaks are connected to the NEXT EOG node and therefore temporarily stored after the loop
@@ -888,32 +1017,37 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     /**
-     * Builds an EOG edge from prev to next. 'eogDirection' defines how the node instances save the
-     * references constituting the edge. 'FORWARD': only the nodes nextEOG member contains
-     * references, an points to the next nodes. 'BACKWARD': only the nodes prevEOG member contains
-     * references and points to the previous nodes. 'BIDIRECTIONAL': nextEOG and prevEOG contain
-     * references and point to the previous and the next nodes.
+     * Builds an EOG edge from prev to next. And returns the edge that was created.
      *
      * @param prev the previous node
      * @param next the next node
      */
-    protected fun addEOGEdge(prev: Node, next: Node) {
+    protected fun addEOGEdge(prev: Node, next: Node): EvaluationOrder {
         val propertyEdge = EvaluationOrder(prev, next, unreachable = false)
         propertyEdge.branch = nextEdgeBranch
 
         prev.nextEOGEdges += propertyEdge
+        return propertyEdge
     }
 
     protected fun addMultipleIncomingEOGEdges(prevs: List<Node>, next: Node) {
         prevs.forEach { prev -> addEOGEdge(prev, next) }
     }
 
+    /**
+     * See
+     * [Specification for SynchronizedStatement](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#synchronizedstatement)
+     */
     protected fun handleSynchronizedStatement(node: SynchronizedStatement) {
         handleEOG(node.expression)
         attachToEOG(node)
         handleEOG(node.block)
     }
 
+    /**
+     * See
+     * [Specification for ConditionalExpression](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#conditionalexpression)
+     */
     protected fun handleConditionalExpression(node: ConditionalExpression) {
         val openBranchNodes = mutableListOf<Node>()
         handleEOG(node.condition)
@@ -930,6 +1064,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         setCurrentEOGs(openBranchNodes)
     }
 
+    /**
+     * See
+     * [Specification for DoStatement](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#dostatement)
+     */
     protected fun handleDoStatement(node: DoStatement) {
         handleEOG(node.statement)
         handleEOG(node.condition)
@@ -943,6 +1081,72 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         handleContainedBreaksAndContinues(node)
     }
 
+    /**
+     * See
+     * [Specification for ComprehensionExpression](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#comprehensionexpression)
+     */
+    private fun handleComprehensionExpression(node: ComprehensionExpression) {
+        handleEOG(node.iterable)
+        // When the iterable contains another element, the variable is evaluated with the
+        // nextElement. Therefore, we add a "true" edge.
+        nextEdgeBranch = true
+        handleEOG(node.variable)
+        handleEOG(node.predicate)
+        attachToEOG(node)
+
+        // If the conditions evaluated to false, we need to retrieve the next element, therefore
+        // evaluating the iterable
+        drawEOGToEntriesOf(currentPredecessors, node.iterable, branchLabel = false)
+
+        // If an element was found that fulfills the condition, we move forward
+        nextEdgeBranch = true
+    }
+
+    /**
+     * See
+     * [Specification for CollectionComprehension](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#collectioncomprehension)
+     */
+    private fun handleCollectionComprehension(node: CollectionComprehension) {
+        // Process the comprehension expressions from 0 to n and connect the EOG of i to i+1.
+        var prevComprehensionExpression: ComprehensionExpression? = null
+        var noMoreElementsInCollection = listOf<Node>()
+        node.comprehensionExpressions.forEach {
+            handleEOG(it)
+
+            val noMoreElements = SubgraphWalker.getEOGPathEdges(it.iterable).exits
+
+            // [ComprehensionExpression] yields no more elements => EOG:false
+            val prevComp = prevComprehensionExpression
+            if (prevComp == null) {
+                // We handle the EOG:false edges of the outermost comprehensionExpression later,
+                // they continue the
+                // path of execution when no more elements are yielded
+                noMoreElementsInCollection = noMoreElements
+            } else {
+                drawEOGToEntriesOf(noMoreElements, prevComp.iterable, branchLabel = false)
+            }
+            prevComprehensionExpression = it
+
+            // [ComprehensionExpression] yields and element => EOG:true
+            nextEdgeBranch = true
+        }
+
+        handleEOG(node.statement)
+        // After evaluating the statement we
+        node.comprehensionExpressions.last().let {
+            drawEOGToEntriesOf(currentPredecessors, it.iterable)
+        }
+        currentPredecessors.clear()
+        currentPredecessors.addAll(noMoreElementsInCollection)
+        nextEdgeBranch =
+            false // This path is followed when the comprehensions yield no more elements
+        attachToEOG(node)
+    }
+
+    /**
+     * See
+     * [Specification for ForEachStatement](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#foreachstatement)
+     */
     protected fun handleForEachStatement(node: ForEachStatement) {
         handleEOG(node.iterable)
         handleEOG(node.variable)
@@ -960,6 +1164,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         nextEdgeBranch = false
     }
 
+    /**
+     * See
+     * [Specification for ForStatement](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#forstatement)
+     */
     protected fun handleForStatement(node: ForStatement) {
         handleEOG(node.initializerStatement)
         handleEOG(node.conditionDeclaration)
@@ -981,6 +1189,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         nextEdgeBranch = false
     }
 
+    /**
+     * See
+     * [Specification for IfStatement](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#ifstatement)
+     */
     protected fun handleIfStatement(node: IfStatement) {
         val openBranchNodes = mutableListOf<Node>()
         handleEOG(node.initializerStatement)
@@ -1002,6 +1214,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         setCurrentEOGs(openBranchNodes)
     }
 
+    /**
+     * See
+     * [Specification for SwitchStatement](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#switchstatement)
+     */
     protected fun handleSwitchStatement(node: SwitchStatement) {
         handleEOG(node.initializerStatement)
         handleEOG(node.selectorDeclaration)
@@ -1026,7 +1242,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // If we do not have default statement, we also need to put the switch statement into the
         // currentPredecessors, otherwise we will completely ignore everything that is "beyond" the
         // switch statement
-        if (compound.statements.filter { it is DefaultStatement }.isEmpty()) {
+        if (compound.statements.none { it is DefaultStatement }) {
             currentPredecessors.add(node)
         }
 
@@ -1034,6 +1250,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         currentPredecessors.addAll(nodesWithContinuesAndBreaks[node] ?: mutableListOf())
     }
 
+    /**
+     * See
+     * [Specification for WhileStatement](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#whilestatement)
+     */
     protected fun handleWhileStatement(node: WhileStatement) {
         handleEOG(node.conditionDeclaration)
         handleEOG(node.condition)
@@ -1051,6 +1271,10 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         handleContainedBreaksAndContinues(node)
     }
 
+    /**
+     * See
+     * [Specification for LookupScopeStatement](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#lookupScopestatement)
+     */
     private fun handleLookupScopeStatement(stmt: LookupScopeStatement) {
         // Include the node as part of the EOG itself, but we do not need to go into any children or
         // properties here
@@ -1067,14 +1291,56 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         return null
     }
 
-    /** Calls [handleThrowOperator]. */
-    protected fun handleThrowStatement(statement: ThrowStatement) {
+    /**
+     * Calls [handleThrowOperator].
+     *
+     * See
+     * [Specification for ThrowExpression](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#throwexpression)
+     */
+    protected fun handleThrowExpression(throwExpression: ThrowExpression) {
         handleThrowOperator(
-            statement,
-            statement.exception?.type,
-            statement.exception,
-            statement.parentException
+            throwExpression,
+            throwExpression.exception?.type,
+            throwExpression.exception,
+            throwExpression.parentException,
         )
+    }
+
+    /**
+     * Generates the EOG for a [throwExpression] which represents a statement/expression which
+     * throws an exception. Since some languages may accept different inputs to a throw statement
+     * (typically 1, sometimes 2, 0 is also possible), we have collect these in [inputs]. The input
+     * which is evaluated first, must be the first item in the vararg! Any `null` object in `inputs`
+     * will be filtered. We connect the throw statement internally, i.e., the inputs are evaluated
+     * from index 0 to n and then the whole node is evaluated.
+     */
+    protected fun handleThrowOperator(
+        throwExpression: Node,
+        throwType: Type?,
+        vararg inputs: Expression?,
+    ) {
+        inputs.filterNotNull().forEach { handleEOG(it) }
+        attachToEOG(throwExpression)
+
+        if (throwType != null) {
+            // Here, we identify the encapsulating ast node that can handle or relay a throw
+            val handlingOrRelayingParent =
+                throwExpression.firstParentOrNull<Node> { parent ->
+                    parent is TryStatement || parent is FunctionDeclaration
+                }
+            if (handlingOrRelayingParent != null) {
+                val throwByTypeMap =
+                    nodesToInternalThrows.getOrPut(handlingOrRelayingParent) { mutableMapOf() }
+                val throwEOGExits = throwByTypeMap.getOrPut(throwType) { mutableListOf() }
+                throwEOGExits.addAll(currentPredecessors.toMutableList())
+            } else {
+                LOGGER.error(
+                    "Cannot attach throw to a parent node, throw is neither in a try statement nor in a relaying function."
+                )
+            }
+        }
+        // After a throw, the eog is not progressing in the following ast subtrees
+        currentPredecessors.clear()
     }
 
     companion object {
@@ -1097,7 +1363,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 val toProcess = workList[0]
                 workList.remove(toProcess)
                 passedBy.add(toProcess)
-                if (toProcess is FunctionDeclaration) {
+                if (toProcess is EOGStarterHolder) {
                     return true
                 }
                 for (pred in toProcess.prevEOG) {
@@ -1172,7 +1438,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 else -> {
                     LOGGER.error(
                         "Currently the component {} does not have a defined loop start.",
-                        this?.javaClass
+                        this.javaClass,
                     )
                     ArrayList()
                 }
@@ -1195,7 +1461,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
                 else -> {
                     LOGGER.error(
                         "Currently the component {} does not have defined conditions",
-                        this.javaClass
+                        this.javaClass,
                     )
                     mutableListOf()
                 }
@@ -1217,5 +1483,14 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             is LoopStatement -> true
             else -> false
         }
+    }
+
+    fun drawEOGToEntriesOf(from: List<Node>, toEntriesOf: Node?, branchLabel: Boolean? = null) {
+        val tmpBranchLabel = nextEdgeBranch
+        branchLabel?.let { nextEdgeBranch = it }
+        SubgraphWalker.getEOGPathEdges(toEntriesOf).entries.forEach { entrance ->
+            addMultipleIncomingEOGEdges(from, entrance)
+        }
+        nextEdgeBranch = tmpBranchLabel
     }
 }

@@ -25,43 +25,43 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
-import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.LookupScopeStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.newBlock
+import de.fraunhofer.aisec.cpg.graph.newLookupScopeStatement
+import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class ScopeTest {
     @Test
     fun testLookup() {
-        // some mock variable declarations, global and local
-        var globalA = VariableDeclaration()
-        globalA.name = Name("a")
-        var localA = VariableDeclaration()
-        localA.name = Name("a")
+        with(TestLanguageFrontend()) {
+            // some mock variable declarations, global and local
+            var globalA = newVariableDeclaration("a")
+            var localA = newVariableDeclaration("a")
 
-        // two scopes, global and local
-        val globalScope = GlobalScope()
-        globalScope.addSymbol("a", globalA)
-        val scope = BlockScope(Block())
-        scope.parent = globalScope
-        scope.addSymbol("a", localA)
+            // two scopes, global and local
+            val globalScope = GlobalScope()
+            globalScope.addSymbol("a", globalA)
+            val scope = LocalScope(newBlock())
+            scope.parent = globalScope
+            scope.addSymbol("a", localA)
 
-        // if we try to resolve "a" now, this should point to the local A since we start there and
-        // move upwards
-        var result = scope.lookupSymbol("a")
-        assertEquals(listOf(localA), result)
+            // if we try to resolve "a" now, this should point to the local A since we start there
+            // and
+            // move upwards
+            var result = scope.lookupSymbol("a")
+            assertEquals(listOf(localA), result)
 
-        // now, we pretend to have a lookup scope modifier for a symbol, e.g. through "global" in
-        // Python
-        var stmt = LookupScopeStatement()
-        stmt.targetScope = globalScope
-        stmt.symbols = listOf("a")
-        scope.predefinedLookupScopes["a"] = stmt
+            // now, we pretend to have a lookup scope modifier for a symbol, e.g. through "global"
+            // in
+            // Python
+            var stmt = newLookupScopeStatement(listOf("a"), targetScope = globalScope)
+            scope.predefinedLookupScopes["a"] = stmt
 
-        // let's try the lookup again, this time it should point to the global A
-        result = scope.lookupSymbol("a")
-        assertEquals(listOf(globalA), result)
+            // let's try the lookup again, this time it should point to the global A
+            result = scope.lookupSymbol("a")
+            assertEquals(listOf(globalA), result)
+        }
     }
 }

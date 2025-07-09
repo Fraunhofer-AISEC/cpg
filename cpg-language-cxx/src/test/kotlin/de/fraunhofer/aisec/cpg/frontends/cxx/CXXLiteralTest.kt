@@ -59,7 +59,7 @@ internal class CXXLiteralTest : BaseTest() {
             BigInteger.valueOf(0),
             tu.primitiveType("unsigned long long int"),
             funcDecl,
-            "l_unsigned_long_long_with_suffix"
+            "l_unsigned_long_long_with_suffix",
         )
     }
 
@@ -84,25 +84,25 @@ internal class CXXLiteralTest : BaseTest() {
             9223372036854775807L,
             tu.primitiveType("long long int"),
             funcDecl,
-            "l_long_long_with_suffix"
+            "l_long_long_with_suffix",
         )
         assertLiteral(
             BigInteger("9223372036854775809"),
             tu.primitiveType("unsigned long int"),
             funcDecl,
-            "l_unsigned_long_with_suffix"
+            "l_unsigned_long_with_suffix",
         )
         assertLiteral(
             BigInteger("9223372036854775808"),
             tu.primitiveType("unsigned long long int"),
             funcDecl,
-            "l_long_long_implicit"
+            "l_long_long_implicit",
         )
         assertLiteral(
             BigInteger("9223372036854775809"),
             tu.primitiveType("unsigned long long int"),
             funcDecl,
-            "l_unsigned_long_long_with_suffix"
+            "l_unsigned_long_long_with_suffix",
         )
     }
 
@@ -125,7 +125,7 @@ internal class CXXLiteralTest : BaseTest() {
             BigInteger.valueOf(42),
             tu.primitiveType("unsigned long long int"),
             funcDecl,
-            "l_unsigned_long_long_with_suffix"
+            "l_unsigned_long_long_with_suffix",
         )
     }
 
@@ -149,7 +149,7 @@ internal class CXXLiteralTest : BaseTest() {
             BigInteger.valueOf(42),
             tu.primitiveType("unsigned long long int"),
             funcDecl,
-            "l_unsigned_long_long_with_suffix"
+            "l_unsigned_long_long_with_suffix",
         )
     }
 
@@ -178,21 +178,21 @@ internal class CXXLiteralTest : BaseTest() {
         assertNotNull(b)
         assertEquals(
             2147483648L,
-            (b.getInitializerAs(UnaryOperator::class.java)?.input as Literal<*>).value
+            (b.getInitializerAs(UnaryOperator::class.java)?.input as Literal<*>).value,
         )
 
         val c = funcDecl.variables["c"]
         assertNotNull(c)
         assertEquals(
             2147483649L,
-            (c.getInitializerAs(UnaryOperator::class.java)?.input as Literal<*>).value
+            (c.getInitializerAs(UnaryOperator::class.java)?.input as Literal<*>).value,
         )
 
         val d = funcDecl.variables["d"]
         assertNotNull(d)
         assertEquals(
             BigInteger("9223372036854775808"),
-            (d.getInitializerAs(UnaryOperator::class.java)?.input as Literal<*>).value
+            (d.getInitializerAs(UnaryOperator::class.java)?.input as Literal<*>).value,
         )
     }
 
@@ -230,7 +230,7 @@ internal class CXXLiteralTest : BaseTest() {
         expectedValue: Any,
         expectedType: Type,
         functionDeclaration: FunctionDeclaration,
-        name: String
+        name: String,
     ) {
         val variableDeclaration = functionDeclaration.variables[name]
         assertNotNull(variableDeclaration)

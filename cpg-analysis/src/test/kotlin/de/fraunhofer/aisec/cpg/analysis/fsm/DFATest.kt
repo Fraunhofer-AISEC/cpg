@@ -55,7 +55,7 @@ class DFATest {
 
         assertFailsWith<IllegalArgumentException>(
             message = "The empty String is a reserved op for DFAs.",
-            block = { DFA(setOf(q1, q2)) }
+            block = { DFA(setOf(q1, q2)) },
         )
     }
 
@@ -70,7 +70,7 @@ class DFATest {
 
         assertFailsWith<IllegalArgumentException>(
             message = "A DFA state must not contain EPSILON edges!",
-            block = { DFA(setOf(q1, q2)) }
+            block = { DFA(setOf(q1, q2)) },
         )
     }
 
@@ -89,7 +89,7 @@ class DFATest {
         assertFailsWith<IllegalArgumentException>(
             message =
                 "State already has an outgoing edge with the same label but a different target!",
-            block = { DFA(setOf(q1, q2)) }
+            block = { DFA(setOf(q1, q2)) },
         )
     }
 
@@ -111,9 +111,9 @@ class DFATest {
             block = {
                 dfa.addEdge(
                     q1,
-                    Edge(op = NFA.EPSILON, nextState = q1)
+                    Edge(op = NFA.EPSILON, nextState = q1),
                 ) // invalid because a DFA must not contain epsilon edges
-            }
+            },
         )
     }
 
@@ -134,7 +134,7 @@ class DFATest {
                 q1.addEdge(
                     Edge(op = NFA.EPSILON, nextState = q1)
                 ) // invalid because a DFA state must not contain epsilon edges
-            }
+            },
         )
     }
 }

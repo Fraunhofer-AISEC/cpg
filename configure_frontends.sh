@@ -60,3 +60,5 @@ answerRuby=$(ask "Do you want to enable the Ruby frontend? (currently $(getPrope
 setProperty "enableRubyFrontend" $answerRuby
 answerJVM=$(ask "Do you want to enable the JVM frontend? (currently $(getProperty "enableJVMFrontend"))")
 setProperty "enableJVMFrontend" $answerJVM
+answerINI=$(ask "Do you want to enable the INI frontend? (currently $(getProperty "enableINIFrontend"))")
+setProperty "enableINIFrontend" $answerINI

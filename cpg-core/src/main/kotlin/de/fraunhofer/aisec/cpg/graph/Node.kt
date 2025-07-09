@@ -23,54 +23,56 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.graph
 
 import com.fasterxml.jackson.annotation.JsonBackReference
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.PopulatedByPass
-import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.TypeManager
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
+import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edges.*
+import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
-import de.fraunhofer.aisec.cpg.graph.edges.flows.ControlDependences
-import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
-import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrders
-import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.edges.flows.ProgramDependences
-import de.fraunhofer.aisec.cpg.graph.scopes.*
+import de.fraunhofer.aisec.cpg.graph.edges.flows.*
+import de.fraunhofer.aisec.cpg.graph.edges.overlay.Overlays
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
 import de.fraunhofer.aisec.cpg.passes.*
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
+import kotlin.uuid.Uuid
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
-import org.neo4j.ogm.annotation.*
+import org.neo4j.ogm.annotation.GeneratedValue
+import org.neo4j.ogm.annotation.Id
+import org.neo4j.ogm.annotation.Relationship
+import org.neo4j.ogm.annotation.Transient
 import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /** The base class for all graph objects that are going to be persisted in the database. */
-abstract class Node :
+abstract class Node() :
     IVisitable<Node>,
     Persistable,
     LanguageProvider,
     ScopeProvider,
-    ContextProvider,
     HasNameAndLocation,
-    HasScope {
-    /**
-     * Because we are updating type information in the properties of the node, we need a reference
-     * to managers such as the [TypeManager] instance which is responsible for this particular node.
-     * All managers are bundled in [TranslationContext]. It is set in [Node.applyMetadata] when a
-     * [ContextProvider] is provided.
-     */
-    @get:JsonIgnore @Transient override var ctx: TranslationContext? = null
+    HasScope,
+    HasAssumptions {
 
     /** This property holds the full name using our new [Name] class. */
     @Convert(NameConverter::class) override var name: Name = Name(EMPTY_NAME)
@@ -87,7 +89,7 @@ abstract class Node :
      */
     @Relationship(value = "LANGUAGE", direction = Relationship.Direction.OUTGOING)
     @JsonBackReference
-    override var language: Language<*>? = null
+    override var language: Language<*> = UnknownLanguage
 
     /**
      * The scope this node "lives" in / in which it is defined. This property is set in
@@ -106,12 +108,6 @@ abstract class Node :
     var comment: String? = null
 
     @Convert(LocationConverter::class) override var location: PhysicalLocation? = null
-
-    /**
-     * Name of the containing file. It can be null for artificially created nodes or if just
-     * analyzing snippets of code without an associated file name.
-     */
-    @PopulatedByPass(FilenameMapper::class) var file: String? = null
 
     /** Incoming control flow edges. */
     @Relationship(value = "EOG", direction = Relationship.Direction.INCOMING)
@@ -166,7 +162,7 @@ abstract class Node :
     var astChildren: List<Node> = listOf()
         get() = SubgraphWalker.getAstChildren(this)
 
-    @Transient var astParent: Node? = null
+    @DoNotPersist @Transient @JsonIgnore var astParent: Node? = null
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class) var prevEOG by unwrapping(Node::prevEOGEdges)
@@ -189,6 +185,7 @@ abstract class Node :
      * Virtual property for accessing [nextDFGEdges] that have a
      * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
      */
+    @DoNotPersist
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     val prevFullDFG: List<Node>
         get() {
@@ -212,6 +209,7 @@ abstract class Node :
      * Virtual property for accessing [nextDFGEdges] that have a
      * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
      */
+    @DoNotPersist
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     val nextFullDFG: List<Node>
         get() {
@@ -222,7 +220,7 @@ abstract class Node :
     @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.OUTGOING)
     var nextPDGEdges: ProgramDependences<Node> =
-        ProgramDependences<Node>(this, mirrorProperty = Node::prevPDGEdges, outgoing = false)
+        ProgramDependences<Node>(this, mirrorProperty = Node::prevPDGEdges, outgoing = true)
         protected set
 
     var nextPDG by unwrapping(Node::nextPDGEdges)
@@ -234,7 +232,9 @@ abstract class Node :
         ProgramDependences<Node>(this, mirrorProperty = Node::nextPDGEdges, outgoing = false)
         protected set
 
-    var prevPDG by unwrapping(Node::prevDFGEdges)
+    var prevPDG by unwrapping(Node::prevPDGEdges)
+
+    @DoNotPersist override val assumptions: MutableSet<Assumption> = mutableSetOf()
 
     /**
      * If a node is marked as being inferred, it means that it was created artificially and does not
@@ -252,7 +252,21 @@ abstract class Node :
     var isImplicit = false
 
     /** Required field for object graph mapping. It contains the node id. */
-    @Id @GeneratedValue var id: Long? = null
+    @DoNotPersist @Id @GeneratedValue var legacyId: Long? = null
+
+    /**
+     * A (more or less) unique identifier for this node. It is a [Uuid] derived from
+     * [Node.hashCode]. In this sense, it is definitely deterministic and reproducible, however, in
+     * theory it is not completely unique, as collisions within [Node.hashCode] could occur.
+     */
+    val id: Uuid
+        get() {
+            val parent =
+                astParent?.id?.toLongs { mostSignificantBits, leastSignificantBits ->
+                    leastSignificantBits
+                }
+            return Uuid.fromLongs(parent ?: 0, hashCode().toLong())
+        }
 
     /** Index of the argument if this node is used in a function call or parameter list. */
     var argumentIndex = 0
@@ -267,6 +281,19 @@ abstract class Node :
      */
     val additionalProblems: MutableSet<ProblemNode> = mutableSetOf()
 
+    @Relationship(value = "OVERLAY", direction = Relationship.Direction.OUTGOING)
+    val overlayEdges: Overlays =
+        Overlays(this, mirrorProperty = OverlayNode::underlyingNodeEdge, outgoing = true)
+    var overlays by unwrapping(Node::overlayEdges)
+
+    /**
+     * Adds the [assumptions] attached to the [Node] and of relevant supernodes in the AST.
+     * Currently, of the [Component].
+     */
+    override fun relevantAssumptions(): Set<Assumption> {
+        return super.relevantAssumptions() + (component?.relevantAssumptions() ?: emptySet())
+    }
+
     /**
      * If a node should be removed from the graph, just removing it from the AST is not enough (see
      * issue #60). It will most probably be referenced somewhere via DFG or EOG edges. Thus, if it
@@ -277,6 +304,9 @@ abstract class Node :
      * further children that have no alternative connection paths to the rest of the graph.
      */
     fun disconnectFromGraph() {
+        // Disconnect all AST children first
+        astChildren.forEach { it.disconnectFromGraph() }
+
         nextDFGEdges.clear()
         prevDFGEdges.clear()
         prevCDGEdges.clear()
@@ -285,6 +315,12 @@ abstract class Node :
         nextPDGEdges.clear()
         nextEOGEdges.clear()
         prevEOGEdges.clear()
+
+        if (this is OverlayNode) {
+            underlyingNodeEdge.clear()
+        }
+
+        this.overlayEdges.clear()
     }
 
     override fun toString(): String {
@@ -313,12 +349,6 @@ abstract class Node :
                 code == other.code &&
                 comment == other.comment &&
                 location == other.location &&
-                // We need to exclude "file" here, because in C++ the same header node can be
-                // imported in two different files and in this case, the "file" property will be
-                // different. Since want to squash those equal nodes, we will only consider all the
-                // other attributes, including "location" (which contains the *original* file
-                // location in the header file), but not "file".
-                // file == other.file &&
                 isImplicit == other.isImplicit
     }
 
@@ -336,7 +366,17 @@ abstract class Node :
      * location already when creating the node.
      */
     override fun hashCode(): Int {
-        return Objects.hash(name, location, this.javaClass)
+        return Objects.hash(name, location, this.javaClass.name)
+    }
+
+    /** Returns the starting point of the EOG outside this node and its children. */
+    open fun getStartingPrevEOG(): Collection<Node> {
+        return this.prevEOG
+    }
+
+    /** Returns the exit point of the EOG outside this node and its children. */
+    open fun getExitNextEOG(): Collection<Node> {
+        return this.nextEOG
     }
 
     companion object {
@@ -345,5 +385,18 @@ abstract class Node :
         @JvmStatic protected val log: Logger = LoggerFactory.getLogger(Node::class.java)
 
         const val EMPTY_NAME = ""
+    }
+}
+
+/**
+ * Works similar to [apply] but before executing [block], it enters the scope for this object and
+ * afterward leaves the scope again.
+ */
+context(provider: ContextProvider)
+inline fun <reified T : Node> T.applyWithScope(block: T.() -> Unit): T {
+    return this.apply {
+        (provider).ctx.scopeManager.enterScope(this)
+        block()
+        (provider).ctx.scopeManager.leaveScope(this)
     }
 }

@@ -45,7 +45,7 @@ internal class FunctionPointerTest : BaseTest() {
     @Throws(Exception::class)
     private fun analyze(
         language: String,
-        configModifier: Consumer<TranslationConfiguration.Builder>? = null
+        configModifier: Consumer<TranslationConfiguration.Builder>? = null,
     ): TranslationResult {
         val topLevel = Path.of("src", "test", "resources", "functionPointers")
 

@@ -66,7 +66,7 @@ class AssignExpressionTest {
                         val func =
                             function(
                                 "func",
-                                returnTypes = listOf(objectType("MyClass"), objectType("error"))
+                                returnTypes = listOf(objectType("MyClass"), objectType("error")),
                             )
 
                         function("main") {

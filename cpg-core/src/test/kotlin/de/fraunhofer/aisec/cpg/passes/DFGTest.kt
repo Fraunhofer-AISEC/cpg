@@ -392,12 +392,9 @@ class DFGTest {
         assertTrue(literal2.nextDFG.contains(a2))
         assertEquals(
             1,
-            a2.nextDFG.size
+            a2.nextDFG.size,
         ) // Outgoing DFG Edges only to the Reference in the assignment to b
-        assertEquals(
-            b.initializer!!,
-            a2.nextDFG.first(),
-        )
+        assertEquals(b.initializer!!, a2.nextDFG.first())
 
         val refersTo = a2.getRefersToAs(VariableDeclaration::class.java)
         assertNotNull(refersTo)

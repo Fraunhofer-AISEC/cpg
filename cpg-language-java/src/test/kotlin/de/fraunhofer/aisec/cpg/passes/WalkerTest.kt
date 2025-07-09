@@ -60,10 +60,8 @@ class WalkerTest {
         val visitedNodes = mutableSetOf<Node>()
 
         walker.strategy = Strategy::EOG_FORWARD
-        walker.registerHandler { _, _, node ->
-            if (node != null) {
-                assertTrue(visitedNodes.add(node), "Visited node $node multiple times")
-            }
+        walker.registerHandler { node ->
+            assertTrue(visitedNodes.add(node), "Visited node $node multiple times")
         }
 
         for (tu in result.components.flatMap { it.translationUnits }) {

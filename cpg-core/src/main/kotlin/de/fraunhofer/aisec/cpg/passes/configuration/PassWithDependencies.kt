@@ -37,5 +37,5 @@ data class PassWithDependencies(
     /** the pass itself */
     val passClass: KClass<out Pass<*>>,
     /** currently unsatisfied dependencies (soft / hard / [ExecuteBefore] from other passes) */
-    val dependenciesRemaining: MutableSet<KClass<out Pass<*>>>
+    val dependenciesRemaining: MutableSet<KClass<out Pass<*>>>,
 )

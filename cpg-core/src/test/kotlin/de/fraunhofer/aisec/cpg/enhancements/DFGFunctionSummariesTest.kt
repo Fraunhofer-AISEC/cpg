@@ -25,18 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.enhancements
 
-import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
-import de.fraunhofer.aisec.cpg.graph.functions
-import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
@@ -68,10 +66,10 @@ class DFGFunctionSummariesTest {
     @Test
     fun testMatching() {
         val code =
-            GraphExamples.testFrontend(
+            testFrontend(
                     TranslationConfiguration.builder()
                         .defaultPasses()
-                        .registerLanguage(TestLanguage("."))
+                        .registerLanguage<TestLanguage>()
                         .registerFunctionSummaries(File("src/test/resources/function-dfg2.yml"))
                         .inferenceConfiguration(
                             InferenceConfiguration.builder()
@@ -84,46 +82,33 @@ class DFGFunctionSummariesTest {
                 .build {
                     translationResult {
                         translationUnit("DfgInferredCall.c") {
+                            namespace("test") {
+                                // We need three types with a type hierarchy.
+                                val objectType = t("test.Object")
+                                val listType = t("test.List")
+                                var recordDecl =
+                                    startInference(ctx)?.inferRecordDeclaration(listType)
+                                listType.recordDeclaration = recordDecl
+                                recordDecl?.addSuperClass(objectType)
+                                listType.superTypes.add(objectType)
+
+                                val specialListType = t("test.SpecialList")
+                                recordDecl =
+                                    startInference(ctx)?.inferRecordDeclaration(specialListType)
+                                specialListType.recordDeclaration = recordDecl
+                                recordDecl?.addSuperClass(listType)
+                                specialListType.superTypes.add(listType)
+
+                                val verySpecialListType = t("test.VerySpecialList")
+                                recordDecl =
+                                    startInference(ctx)?.inferRecordDeclaration(verySpecialListType)
+                                verySpecialListType.recordDeclaration = recordDecl
+                                recordDecl?.addSuperClass(specialListType)
+                                verySpecialListType.superTypes.add(listType)
+                            }
+
                             function("main", t("int")) {
                                 body {
-                                    // We need three types with a type hierarchy.
-                                    val objectType = t("test.Object")
-                                    val listType = t("test.List")
-                                    ctx?.let {
-                                        val recordDecl =
-                                            this@translationUnit.startInference(it)
-                                                ?.inferRecordDeclaration(
-                                                    listType,
-                                                )
-                                        listType.recordDeclaration = recordDecl
-                                        recordDecl?.addSuperClass(objectType)
-                                        listType.superTypes.add(objectType)
-                                    }
-
-                                    val specialListType = t("test.SpecialList")
-                                    ctx?.let {
-                                        val recordDecl =
-                                            this@translationUnit.startInference(it)
-                                                ?.inferRecordDeclaration(
-                                                    specialListType,
-                                                )
-                                        specialListType.recordDeclaration = recordDecl
-                                        recordDecl?.addSuperClass(listType)
-                                        specialListType.superTypes.add(listType)
-                                    }
-
-                                    val verySpecialListType = t("test.VerySpecialList")
-                                    ctx?.let {
-                                        val recordDecl =
-                                            this@translationUnit.startInference(it)
-                                                ?.inferRecordDeclaration(
-                                                    specialListType,
-                                                )
-                                        specialListType.recordDeclaration = recordDecl
-                                        recordDecl?.addSuperClass(listType)
-                                        specialListType.superTypes.add(listType)
-                                    }
-
                                     memberCall("addAll", construct("test.VerySpecialList")) {
                                         literal(1, t("int"))
                                         construct("test.Object")
@@ -168,7 +153,7 @@ class DFGFunctionSummariesTest {
         assertEquals(2, listAddAllTwoArgs.parameters.size)
         assertEquals(
             setOf<Node>(listAddAllTwoArgs.receiver!!),
-            listAddAllTwoArgs.parameters[1].nextDFG
+            listAddAllTwoArgs.parameters[1].nextDFG,
         )
         // No flow from param0 or receiver specified => Should be empty and differ from default
         // behavior
@@ -185,7 +170,7 @@ class DFGFunctionSummariesTest {
         assertEquals(2, specialListAddAllTwoArgs.parameters.size)
         assertEquals(
             setOf<Node>(specialListAddAllTwoArgs.receiver!!),
-            specialListAddAllTwoArgs.parameters[1].nextDFG
+            specialListAddAllTwoArgs.parameters[1].nextDFG,
         )
         // No flow from param0 or receiver specified => Should be empty and differ from default
         // behavior
@@ -203,11 +188,11 @@ class DFGFunctionSummariesTest {
         // Very weird data flow specified: receiver to param0 and param1 to return.
         assertEquals(
             setOf<Node>(specialListAddAllSpecializedArgs.parameters[0]),
-            specialListAddAllSpecializedArgs.receiver?.nextDFG ?: setOf()
+            specialListAddAllSpecializedArgs.receiver?.nextDFG ?: setOf(),
         )
         assertEquals(
             setOf<Node>(specialListAddAllSpecializedArgs),
-            specialListAddAllSpecializedArgs.parameters[1].nextDFG
+            specialListAddAllSpecializedArgs.parameters[1].nextDFG,
         )
 
         // Specified by VerySpecialList.addAll(int, Object), overrides List.addAll(int, Object).
@@ -219,11 +204,11 @@ class DFGFunctionSummariesTest {
         // Very weird data flow specified: receiver to param0 and param1 to return.
         assertEquals(
             setOf<Node>(verySpecialListAddAllSpecializedArgs.parameters[0]),
-            verySpecialListAddAllSpecializedArgs.receiver?.nextDFG ?: setOf()
+            verySpecialListAddAllSpecializedArgs.receiver?.nextDFG ?: setOf(),
         )
         assertEquals(
             setOf<Node>(verySpecialListAddAllSpecializedArgs),
-            verySpecialListAddAllSpecializedArgs.parameters[1].nextDFG
+            verySpecialListAddAllSpecializedArgs.parameters[1].nextDFG,
         )
 
         // Not specified => Default behavior (param0 and param1 and receiver to method declaration).
@@ -234,9 +219,9 @@ class DFGFunctionSummariesTest {
             setOf<Node>(
                 randomTypeAddAllTwoArgs.parameters[1],
                 randomTypeAddAllTwoArgs.parameters[0],
-                randomTypeAddAllTwoArgs.receiver!!
+                randomTypeAddAllTwoArgs.receiver!!,
             ),
-            randomTypeAddAllTwoArgs.prevDFG
+            randomTypeAddAllTwoArgs.prevDFG,
         )
     }
 
@@ -269,7 +254,7 @@ class DFGFunctionSummariesTest {
         val nextDfg = argA.nextDFGEdges.single()
         assertEquals(
             call,
-            ((nextDfg as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.call
+            ((nextDfg as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.call,
         )
         assertEquals(param0, nextDfg.end)
 
@@ -306,7 +291,6 @@ class DFGFunctionSummariesTest {
             registerPass<DynamicInvokeResolver>()
             registerPass<EvaluationOrderGraphPass>()
             registerPass<TypeResolver>()
-            registerPass<FilenameMapper>()
         }
         assertNotNull(dfgTest)
 
@@ -373,7 +357,7 @@ class DFGFunctionSummariesTest {
         ): TranslationResult {
             val config =
                 TranslationConfiguration.builder()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .registerFunctionSummaries(File("src/test/resources/function-dfg.yml"))
                     .inferenceConfiguration(
                         InferenceConfiguration.builder()
@@ -391,7 +375,7 @@ class DFGFunctionSummariesTest {
               return a;
             }
              */
-            return GraphExamples.testFrontend(config).build {
+            return testFrontend(config).build {
                 translationResult {
                     translationUnit("DfgInferredCall.c") {
                         function("main", t("int")) {

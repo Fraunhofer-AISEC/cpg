@@ -25,15 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
-import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import de.fraunhofer.aisec.cpg.passes.*
+import de.fraunhofer.aisec.cpg.passes.executePassesInParallel
+import de.fraunhofer.aisec.cpg.passes.executePassesSequentially
+import de.fraunhofer.aisec.cpg.sarif.toLocation
 import java.io.File
 import java.io.PrintWriter
 import java.lang.reflect.InvocationTargetException
@@ -43,6 +43,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.io.path.name
 import kotlin.reflect.full.findAnnotation
 import org.slf4j.LoggerFactory
 
@@ -74,7 +75,7 @@ private constructor(
         var executedFrontends = setOf<LanguageFrontend<*, *>>()
 
         // Build a new global translation context
-        val ctx = TranslationContext(config, ScopeManager(), TypeManager())
+        val ctx = TranslationContext(config)
 
         // Build a new translation result
         val result = TranslationResult(this, ctx)
@@ -97,13 +98,7 @@ private constructor(
                     }
                 }
             } else {
-                // Execute all passes in sequence
-                for (pass in config.registeredPasses.flatten()) {
-                    executePass(pass, ctx, result, executedFrontends)
-                    if (result.isCancelled) {
-                        log.warn("Analysis interrupted, stopping Pass evaluation")
-                    }
-                }
+                executePassesSequentially(ctx, result, executedFrontends)
             }
         } catch (ex: TranslationException) {
             throw CompletionException(ex)
@@ -136,17 +131,28 @@ private constructor(
     @Throws(TranslationException::class)
     private fun runFrontends(
         ctx: TranslationContext,
-        result: TranslationResult
+        result: TranslationResult,
     ): Set<LanguageFrontend<*, *>> {
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
+
+        // If loadIncludes is active, the files stored in the include paths are made available for
+        // conditional analysis by providing them to the frontends over the
+        // [TranslationContext.additionalSources] list.
+        if (ctx.config.loadIncludes) {
+            ctx.config.includePaths.forEach {
+                ctx.additionalSources.addAll(extractAdditionalSources(it.toFile()))
+            }
+        }
+
+        var useParallelFrontends = ctx.config.useParallelFrontends
+
         for (sc in ctx.config.softwareComponents.keys) {
             val component = Component()
             component.name = Name(sc)
+            component.location = with(ctx) { component.topLevel()?.toPath()?.toLocation() }
             result.addComponent(component)
 
             var sourceLocations: List<File> = ctx.config.softwareComponents[sc] ?: listOf()
-
-            var useParallelFrontends = ctx.config.useParallelFrontends
 
             val list =
                 sourceLocations.flatMap { file ->
@@ -156,15 +162,27 @@ private constructor(
                                 .walkTopDown()
                                 .onEnter { !it.name.startsWith(".") }
                                 .filter { it.isFile && !it.name.startsWith(".") }
+                                .filter {
+                                    ctx.config.exclusionPatternsByString.none { pattern ->
+                                        it.absolutePath.contains(pattern)
+                                    }
+                                }
+                                .filter {
+                                    ctx.config.exclusionPatternsByRegex.none { pattern ->
+                                        pattern.containsMatchIn(it.absolutePath)
+                                    }
+                                }
                                 .toList()
                         files
                     } else {
-                        val frontendClass = file.language?.frontend
+                        // Retrieve the file's language based on the available languages of the
+                        // result
+                        val language = with(ctx) { file.language }
+                        val frontendClass = language?.frontend
                         val supportsParallelParsing =
-                            file.language
-                                ?.frontend
-                                ?.findAnnotation<SupportsParallelParsing>()
-                                ?.supported ?: true
+                            frontendClass?.findAnnotation<SupportsParallelParsing>()?.supported !=
+                                false
+
                         // By default, the frontends support parallel parsing. But the
                         // SupportsParallelParsing annotation can be set to false and force
                         // to disable it.
@@ -190,45 +208,43 @@ private constructor(
                                 ".c"
                             } else {
                                 ".cpp"
-                            }
+                            },
                         )
                         .toFile()
                 tmpFile.deleteOnExit()
 
                 PrintWriter(tmpFile).use { writer ->
-                    list.forEach {
+                    list.forEach { file ->
                         val cxxExtensions = listOf("c", "cpp", "cc", "cxx")
-                        if (cxxExtensions.contains(it.extension)) {
-                            if (ctx.config.topLevel != null) {
-                                val topLevel = ctx.config.topLevel.toPath()
+                        if (cxxExtensions.contains(file.extension)) {
+                            ctx.config.topLevels[sc]?.let {
+                                val topLevel = it.toPath()
                                 writer.write(
                                     """
-#include "${topLevel.relativize(it.toPath())}"
-
-"""
-                                        .trimIndent()
-                                )
-                            } else {
-                                writer.write(
-                                    """
-#include "${it.absolutePath}"
+#include "${topLevel.relativize(file.toPath())}"
 
 """
                                         .trimIndent()
                                 )
                             }
+                                ?: run {
+                                    writer.write(
+                                        """
+#include "${file.absolutePath}"
+
+"""
+                                            .trimIndent()
+                                    )
+                                }
                         }
                     }
                 }
 
                 sourceLocations = listOf(tmpFile)
-                if (ctx.config.compilationDatabase != null) {
-                    // merge include paths from all translation units
-                    ctx.config.compilationDatabase.addIncludePath(
-                        tmpFile,
-                        ctx.config.compilationDatabase.allIncludePaths
-                    )
-                }
+                ctx.config.compilationDatabase?.addIncludePath(
+                    tmpFile,
+                    ctx.config.compilationDatabase.allIncludePaths,
+                )
             } else {
                 sourceLocations = list
             }
@@ -240,16 +256,105 @@ private constructor(
                     parseSequentially(component, result, ctx, sourceLocations)
                 }
             )
+
+            // Collects all used languages used in the main analysis code
+            result.usedLanguages.addAll(
+                sourceLocations.mapNotNull { with(ctx) { it.language } }.toSet()
+            )
         }
 
+        // Adds all languages provided as additional sources that may be relevant in the main code
+        result.usedLanguages.addAll(
+            ctx.additionalSources.mapNotNull { with(ctx) { it.relative.language } }.toSet()
+        )
+
+        result.usedLanguages.filterIsInstance<HasBuiltins>().forEach { hasBuiltins ->
+            // Includes a file in the analysis, if relative to its rootpath it matches the name of
+            // a builtins file candidate.
+            val builtinsCandidates = hasBuiltins.builtinsFileCandidates
+            ctx.additionalSources
+                .filter { builtinsCandidates.contains(it.relative) }
+                .forEach { ctx.importedSources.add(it) }
+        }
+
+        // A set of processed files from [TranslationContext.additionalSources] that is used as
+        // negative to the
+        // worklist in ctx.importedSources it is used to filter out files that were already
+        // processed and to
+        // detect if new files were analyzed.
+        val processedAdditionalSources: MutableList<AdditionalSource> = mutableListOf()
+
+        do {
+            val oldProcessedSize = processedAdditionalSources.size
+
+            // Distribute all files by their root path prefix, parse them in individual component
+            // named like their rootPath local name
+            ctx.config.includePaths.forEach { includePath ->
+                val unprocessedFilesInIncludePath =
+                    ctx.importedSources
+                        .filter { !processedAdditionalSources.contains(it) }
+                        .filter { it.includePath == includePath.toFile().canonicalFile }
+                if (unprocessedFilesInIncludePath.isNotEmpty()) {
+                    val compName = Name(includePath.name)
+                    var component = result.components.firstOrNull { it.name == compName }
+                    if (component == null) {
+                        component = Component()
+                        component.name = compName
+                        component.location = includePath.toLocation()
+                        result.addComponent(component)
+                        ctx.config.topLevels.put(includePath.name, includePath.toFile())
+                    }
+
+                    usedFrontends.addAll(
+                        if (useParallelFrontends) {
+                            parseParallel(
+                                component,
+                                result,
+                                ctx,
+                                unprocessedFilesInIncludePath.map { it.absolute },
+                            )
+                        } else {
+                            parseSequentially(
+                                component,
+                                result,
+                                ctx,
+                                unprocessedFilesInIncludePath.map { it.absolute },
+                            )
+                        }
+                    )
+                    processedAdditionalSources.addAll(unprocessedFilesInIncludePath)
+                }
+            }
+            // If the last run added files to the processed list, we do another run
+        } while (processedAdditionalSources.size > oldProcessedSize)
+
         return usedFrontends
+    }
+
+    /**
+     * Extracts all files from the given include path as an [AdditionalSource]. If the path is a
+     * directory, all files in the directory are returned. If the path is a single file, the file
+     * itself is returned.
+     */
+    private fun extractAdditionalSources(includePath: File): List<AdditionalSource> {
+        return when {
+            !includePath.exists() -> listOf()
+            includePath.isDirectory ->
+                includePath.walkTopDown().toList().map {
+                    AdditionalSource(it.relativeTo(includePath), includePath.canonicalFile)
+                }
+            else ->
+                listOf(
+                    AdditionalSource(includePath.relativeTo(includePath), includePath.canonicalFile)
+                )
+        }
     }
 
     private fun parseParallel(
         component: Component,
         result: TranslationResult,
         globalCtx: TranslationContext,
-        sourceLocations: Collection<File>
+        sourceLocations: Collection<File>,
     ): Set<LanguageFrontend<*, *>> {
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
 
@@ -264,19 +369,13 @@ private constructor(
             // Build a new translation context for this parallel parsing process. We need to do this
             // until we can use a single scope manager concurrently. We can re-use the global
             // configuration and type manager.
-            val ctx =
-                TranslationContext(
-                    globalCtx.config,
-                    ScopeManager(),
-                    globalCtx.typeManager,
-                    component
-                )
+            val ctx = TranslationContext(globalCtx.config, globalCtx.typeManager, component)
             parallelContexts.add(ctx)
 
             val future =
                 CompletableFuture.supplyAsync {
                     try {
-                        return@supplyAsync parse(component, ctx, sourceLocation)
+                        return@supplyAsync parse(component, ctx, globalCtx, sourceLocation)
                     } catch (e: TranslationException) {
                         throw RuntimeException("Error parsing $sourceLocation", e)
                     }
@@ -306,20 +405,15 @@ private constructor(
             }
         }
 
+        var b =
+            Benchmark(
+                TranslationManager::class.java,
+                "Merging type and scope information to final context",
+            )
+
         // We want to merge everything into the final scope manager of the result
         globalCtx.scopeManager.mergeFrom(parallelContexts.map { it.scopeManager })
-
-        // We also need to update all types that point to one of the "old" global scopes
-        // TODO(oxisto): This is really messy and instead we should have ONE global scope
-        //  and individual file scopes beneath it
-        var newGlobalScope = globalCtx.scopeManager.globalScope
-        var types =
-            globalCtx.typeManager.firstOrderTypes.union(globalCtx.typeManager.secondOrderTypes)
-        types.forEach {
-            if (it.scope is GlobalScope) {
-                it.scope = newGlobalScope
-            }
-        }
+        b.stop()
 
         log.info("Parallel parsing completed")
 
@@ -331,13 +425,13 @@ private constructor(
         component: Component,
         result: TranslationResult,
         ctx: TranslationContext,
-        sourceLocations: Collection<File>
+        sourceLocations: Collection<File>,
     ): Set<LanguageFrontend<*, *>> {
         val usedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
 
         for (sourceLocation in sourceLocations) {
             ctx.currentComponent = component
-            val f = parse(component, ctx, sourceLocation)
+            val f = parse(component, ctx, ctx, sourceLocation)
             if (f != null) {
                 handleCompletion(result, usedFrontends, sourceLocation, f)
             }
@@ -350,7 +444,7 @@ private constructor(
         result: TranslationResult,
         usedFrontends: MutableSet<LanguageFrontend<*, *>>,
         sourceLocation: File?,
-        f: LanguageFrontend<*, *>
+        f: LanguageFrontend<*, *>,
     ) {
         usedFrontends.add(f)
 
@@ -366,13 +460,14 @@ private constructor(
     private fun parse(
         component: Component,
         ctx: TranslationContext,
+        globalCtx: TranslationContext,
         sourceLocation: File,
     ): LanguageFrontend<*, *>? {
         log.info("Parsing {}", sourceLocation.absolutePath)
 
         var frontend: LanguageFrontend<*, *>? = null
         try {
-            frontend = getFrontend(sourceLocation, ctx)
+            frontend = getFrontend(sourceLocation, ctx, globalCtx)
 
             if (frontend == null) {
                 log.error("Found no parser frontend for ${sourceLocation.name}")
@@ -394,14 +489,20 @@ private constructor(
         return frontend
     }
 
-    private fun getFrontend(file: File, ctx: TranslationContext): LanguageFrontend<*, *>? {
-        val language = file.language
+    private fun getFrontend(
+        file: File,
+        ctx: TranslationContext,
+        globalCtx: TranslationContext,
+    ): LanguageFrontend<*, *>? {
+        // Retrieve the languages based on the global ctx, so that all frontends share the same
+        // language instances.
+        //
+        // Once we address https://github.com/Fraunhofer-AISEC/cpg/issues/2109 we can remove the
+        // globalCtx parameter
+        val language = with(globalCtx) { file.language }
 
         return if (language != null) {
             try {
-                // Make sure, that our simple types are also known to the type manager
-                language.builtInTypes.values.forEach { ctx.typeManager.registerType(it) }
-
                 // Return a new language frontend
                 language.newFrontend(ctx)
             } catch (e: Exception) {
@@ -413,7 +514,7 @@ private constructor(
                         log.error(
                             "Could not instantiate language frontend {}",
                             language.frontend.simpleName,
-                            e
+                            e,
                         )
                         null
                     }
@@ -424,21 +525,21 @@ private constructor(
     }
 
     /**
-     * This extension function returns an appropriate [Language] for this [File] based on the
-     * registered file extensions of [TranslationConfiguration.languages]. It will emit a warning if
-     * multiple languages are registered for the same extension (and the first one that was
-     * registered will be returned).
+     * An additional source file that was originally part of [TranslationConfiguration.includePaths]
+     * and that is potentially included in the analysis.
+     *
+     * To make it easier for language frontends to match specific patterns on this file, e.g.,
+     * whether its path is corresponding to a package structure, we provide a path (relative to the
+     * original include path).
      */
-    private val File.language: Language<*>?
-        get() {
-            val languages = config.languages.filter { it.handlesFile(this) }
-            if (languages.size > 1) {
-                log.warn(
-                    "Multiple languages match for file extension ${this.extension}, the first registered language will be used."
-                )
-            }
-            return languages.firstOrNull()
-        }
+    data class AdditionalSource(val relative: File, val includePath: File) {
+        /**
+         * Returns the absolute path of this [AdditionalSource] by resolving the relative path
+         * against the include path.
+         */
+        val absolute: File
+            get() = includePath.resolve(relative).canonicalFile
+    }
 
     class Builder {
         private var config: TranslationConfiguration? = null
@@ -454,11 +555,28 @@ private constructor(
     }
 
     companion object {
-        private val log = LoggerFactory.getLogger(TranslationManager::class.java)
+        internal val log = LoggerFactory.getLogger(TranslationManager::class.java)
 
         @JvmStatic
         fun builder(): Builder {
             return Builder()
         }
+    }
+}
+
+/**
+ * This function loops through the list of [Type] nodes and updates the [Type.scope] of all nodes
+ * that have a [GlobalScope] as their scope to [newGlobalScope].
+ *
+ * This is needed because we currently have multiple global scopes (one per [ScopeManager]) and we
+ * need to update all types with the merged global scope.
+ */
+private fun MutableList<Type>.updateGlobalScope(newGlobalScope: GlobalScope?) {
+    for (type in this) {
+        if (type.scope is GlobalScope) {
+            type.scope = newGlobalScope
+        }
+
+        type.secondOrderTypes.updateGlobalScope(newGlobalScope)
     }
 }

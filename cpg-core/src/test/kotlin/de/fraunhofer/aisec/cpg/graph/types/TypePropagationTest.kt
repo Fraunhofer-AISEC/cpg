@@ -42,14 +42,8 @@ class TypePropagationTest {
     fun testBinopTypePropagation() {
         val frontend =
             TestLanguageFrontend(
-                ctx =
-                    TranslationContext(
-                        TranslationConfiguration.builder().defaultPasses().build(),
-                        ScopeManager(),
-                        TypeManager()
-                    )
+                ctx = TranslationContext(TranslationConfiguration.builder().defaultPasses().build())
             )
-
         val result =
             frontend.build {
                 translationResult {
@@ -93,12 +87,7 @@ class TypePropagationTest {
     fun testAssignTypePropagation() {
         val frontend =
             TestLanguageFrontend(
-                ctx =
-                    TranslationContext(
-                        TranslationConfiguration.builder().defaultPasses().build(),
-                        ScopeManager(),
-                        TypeManager()
-                    )
+                ctx = TranslationContext(TranslationConfiguration.builder().defaultPasses().build())
             )
 
         /**
@@ -175,12 +164,7 @@ class TypePropagationTest {
     fun testNewPropagation() {
         val frontend =
             TestLanguageFrontend(
-                ctx =
-                    TranslationContext(
-                        TranslationConfiguration.builder().defaultPasses().build(),
-                        ScopeManager(),
-                        TypeManager()
-                    )
+                ctx = TranslationContext(TranslationConfiguration.builder().defaultPasses().build())
             )
 
         /**
@@ -225,7 +209,7 @@ class TypePropagationTest {
                     assertResolvedType("BaseClass").pointer(),
                     assertResolvedType("DerivedClass").pointer(),
                 ),
-                b.assignedTypes
+                b.assignedTypes,
             )
 
             val bRef = main.refs["b"]
@@ -239,12 +223,7 @@ class TypePropagationTest {
     fun testComplexPropagation() {
         val frontend =
             TestLanguageFrontend(
-                ctx =
-                    TranslationContext(
-                        TranslationConfiguration.builder().defaultPasses().build(),
-                        ScopeManager(),
-                        TypeManager()
-                    )
+                ctx = TranslationContext(TranslationConfiguration.builder().defaultPasses().build())
             )
 
         /**
@@ -298,7 +277,7 @@ class TypePropagationTest {
                             method("doSomething")
                         }
                         function("create", t("BaseClass").pointer().pointer()) {
-                            param("flip", t("bool"))
+                            param("flip", t("boolean"))
                             body {
                                 declare { variable("b", t("BaseClass").pointer()) }
                                 ref("b") assign
@@ -334,7 +313,7 @@ class TypePropagationTest {
                         }
                         function("main", t("int")) {
                             body {
-                                declare { variable("random", t("bool")) }
+                                declare { variable("random", t("boolean")) }
                                 declare {
                                     variable("b", t("BaseClass").pointer()) {
                                         call("create") { ref("random") }
@@ -375,9 +354,9 @@ class TypePropagationTest {
                     setOf(
                         objectType("BaseClass").pointer(),
                         objectType("DerivedClassA").pointer(),
-                        objectType("DerivedClassB").pointer()
+                        objectType("DerivedClassB").pointer(),
                     ),
-                    it.assignedTypes
+                    it.assignedTypes,
                 )
             }
 
@@ -391,7 +370,7 @@ class TypePropagationTest {
                         derivedClassA.toType().array(),
                         derivedClassB.toType().array(),
                     )
-                    .commonType
+                    .commonType,
             )
 
             val assign = (body as Block).statements<AssignExpression>(1)
@@ -406,9 +385,9 @@ class TypePropagationTest {
                 setOf(
                     objectType("BaseClass").pointer().array(),
                     objectType("DerivedClassA").pointer().array(),
-                    objectType("DerivedClassB").pointer().array()
+                    objectType("DerivedClassB").pointer().array(),
                 ),
-                bb.assignedTypes
+                bb.assignedTypes,
             )
 
             val returnStatement = (body as Block).statements<ReturnStatement>(3)
@@ -423,9 +402,9 @@ class TypePropagationTest {
                 setOf(
                     objectType("BaseClass").pointer(),
                     objectType("DerivedClassA").pointer(),
-                    objectType("DerivedClassB").pointer()
+                    objectType("DerivedClassB").pointer(),
                 ),
-                returnValue.assignedTypes
+                returnValue.assignedTypes,
             )
 
             // At this point we stop for now since we do not properly propagate the types across

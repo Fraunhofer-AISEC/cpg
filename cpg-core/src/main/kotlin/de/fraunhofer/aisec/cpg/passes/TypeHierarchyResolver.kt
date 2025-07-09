@@ -91,7 +91,7 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                         recordMap.putIfAbsent(t.name, t)
                     }
                 }
-            }
+            },
         )
     }
 
@@ -119,7 +119,7 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     protected fun analyzeOverridingMethods(
         declaration: RecordDeclaration,
-        allMethodsFromSupertypes: List<MethodDeclaration>
+        allMethodsFromSupertypes: List<MethodDeclaration>,
     ) {
         for (superMethod in allMethodsFromSupertypes) {
             val overrideCandidates =

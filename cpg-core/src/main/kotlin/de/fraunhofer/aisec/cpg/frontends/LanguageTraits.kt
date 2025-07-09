@@ -23,9 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.frontends
 
-import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
@@ -37,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.*
+import java.io.File
 import kotlin.reflect.KClass
 
 /**
@@ -76,7 +78,7 @@ interface HasTemplates : HasGenerics {
         applyInference: Boolean,
         ctx: TranslationContext,
         currentTU: TranslationUnitDeclaration?,
-        needsExactMatch: Boolean
+        needsExactMatch: Boolean,
     ): Pair<Boolean, List<FunctionDeclaration>>
 }
 
@@ -116,16 +118,22 @@ interface HasSuperClasses : LanguageTrait {
      */
     val superClassKeyword: String
 
-    fun handleSuperExpression(
+    fun SymbolResolver.handleSuperExpression(
         memberExpression: MemberExpression,
         curClass: RecordDeclaration,
-        scopeManager: ScopeManager,
     ): Boolean
 }
 
 /**
  * A language trait, that specifies that this language has support for implicit receiver, e.g., that
- * one can omit references to a base such as `this`.
+ * one can omit references to a base such as `this`. Common examples are C++ and Java.
+ *
+ * This is contrast to languages such as Python and Go where the name of the receiver such as `self`
+ * is always required to access a field or method.
+ *
+ * We need this information to make a decision which symbols or scopes to consider when doing an
+ * unqualified lookup of a symbol in [Scope.lookupSymbol]. More specifically, we need to skip the
+ * symbols of a [RecordScope] if the language does NOT have this trait.
  */
 interface HasImplicitReceiver : LanguageTrait {
 
@@ -205,9 +213,27 @@ interface HasAnonymousIdentifier : LanguageTrait {
 interface HasGlobalVariables : LanguageTrait
 
 /**
+ * A language trait, that specifies that this language has global functions directly in the
+ * [GlobalScope], i.e., not within a namespace, but directly contained in a
+ * [TranslationUnitDeclaration]. For example, C++ has global functions, Java and Go do not (as every
+ * function is either in a class or a namespace).
+ */
+interface HasGlobalFunctions : LanguageTrait
+
+/**
+ * A common trait for classes, in which supposed member expressions (and thus also member calls) in
+ * the form of "a.b" have an ambiguity between a real field/method access (when "a" is an object)
+ * and a qualified call because of an import, if "a" is an import / namespace.
+ *
+ * We can only resolve this after we have dealt with imports and know all symbols. Therefore, we
+ * invoke the [ResolveMemberExpressionAmbiguityPass].
+ */
+interface HasMemberExpressionAmbiguity : LanguageTrait
+
+/**
  * A common super-class for all language traits that arise because they are an ambiguity of a
  * function call, e.g., function-style casts. This means that we cannot differentiate between a
- * [CallExpression] and other expressions during the frontend and we need to invoke the
+ * [CallExpression] and other expressions during the frontend, and we need to invoke the
  * [ResolveCallExpressionAmbiguityPass] to resolve this.
  */
 sealed interface HasCallExpressionAmbiguity : LanguageTrait
@@ -264,6 +290,21 @@ interface HasOperatorOverloading : LanguageTrait {
 }
 
 /**
+ * A language trait, that specifies that this language has variables and functions that are built
+ * in. For resolution this means that a file may be included into the include paths that contains
+ * the declaration or entire definition of the builtin functions and variables. The file should be
+ * imported unconditionally from the use in import statements, as the contained declarations are
+ * available without explicit importing.
+ */
+interface HasBuiltins : LanguageTrait {
+    /** Returns the namespace under which builtins exist. */
+    val builtinsNamespace: Name
+
+    /** Name of files that may contain the builtin functions of a language */
+    val builtinsFileCandidates: Set<File>
+}
+
+/**
  * Creates a [Pair] of class and operator code used in
  * [HasOperatorOverloading.overloadedOperatorNames].
  */
@@ -274,10 +315,10 @@ inline infix fun <reified T : HasOverloadedOperation> KClass<T>.of(
 }
 
 /** Checks whether the name for a function (as [CharSequence]) is a known operator name. */
-context(LanguageProvider)
+context(provider: LanguageProvider)
 val CharSequence.isKnownOperatorName: Boolean
     get() {
-        val language = language
+        val language = provider.language
         if (language !is HasOperatorOverloading) {
             return false
         }

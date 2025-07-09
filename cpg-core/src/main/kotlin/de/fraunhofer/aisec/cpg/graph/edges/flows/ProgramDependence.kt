@@ -31,11 +31,12 @@ import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.passes.ProgramDependenceGraphPass
 import kotlin.reflect.KProperty
+import org.neo4j.ogm.annotation.RelationshipEntity
 
 /** The types of dependences that might be represented in the CPG */
 enum class DependenceType {
     CONTROL,
-    DATA
+    DATA,
 }
 
 /**
@@ -45,9 +46,7 @@ enum class DependenceType {
  *
  * After population, this collection will contain a direct combination of two other edge collections
  * ([Dataflows] and [ControlDependences]). If we would only handle an in-memory graph, we could just
- * store the edges in their original collection (e.g. DFG) as well as in the PDG. But the Neo4J OGM
- * does not support this, so unfortunately, we need to clone the edges before inserting them into
- * the collection. If we ever got rid of the Neo4J OGM we could potentially also remove the cloning.
+ * store the edges in their original collection (e.g. DFG) as well as in the PDG.
  */
 class ProgramDependences<NodeType : Node> :
     EdgeSet<NodeType, Edge<NodeType>>, MirroredEdgeCollection<NodeType, Edge<NodeType>> {
@@ -56,7 +55,7 @@ class ProgramDependences<NodeType : Node> :
     constructor(
         thisRef: Node,
         mirrorProperty: KProperty<MutableCollection<Edge<NodeType>>>,
-        outgoing: Boolean
+        outgoing: Boolean,
     ) : super(
         thisRef,
         init = { start, end ->
@@ -64,14 +63,42 @@ class ProgramDependences<NodeType : Node> :
                 "This container only allows adding existing edges, but not creating new ones."
             )
         },
-        outgoing
+        outgoing,
     ) {
         this.mirrorProperty = mirrorProperty
     }
 
     override fun add(e: Edge<NodeType>): Boolean {
-        // Clone the edge before inserting. See comment above for a detailed explanation.
-        val clonedEdge = e.clone()
-        return super<EdgeSet>.add(clonedEdge)
+        return super<EdgeSet>.add(e)
+    }
+}
+
+/**
+ * This edge class defines that there's some kind of dependency between [start] and [end]. The
+ * nature of this dependency is defined by [dependence].
+ */
+@RelationshipEntity
+open class ProgramDependence(
+    start: Node,
+    end: Node,
+    /**
+     * The type of dependence (e.g. control or data or none). This selection is defined by the class
+     * extending this class or in the [ProgramDependenceGraphPass].
+     */
+    var dependence: DependenceType,
+) : Edge<Node>(start, end) {
+
+    override var labels = setOf("PDG")
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is ProgramDependence) return false
+        return super.equals(other) && this.dependence == other.dependence
+    }
+
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + dependence.hashCode()
+        return result
     }
 }

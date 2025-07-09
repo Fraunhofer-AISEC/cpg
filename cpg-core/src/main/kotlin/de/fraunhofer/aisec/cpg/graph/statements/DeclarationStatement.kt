@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
@@ -78,5 +79,13 @@ open class DeclarationStatement : Statement() {
             propertyEqualsList(declarationEdges, other.declarationEdges)
     }
 
+    override fun addDeclaration(declaration: Declaration) {
+        addIfNotContains(declarationEdges, declaration)
+    }
+
     override fun hashCode() = Objects.hash(super.hashCode(), declarations)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.declarations.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
+    }
 }

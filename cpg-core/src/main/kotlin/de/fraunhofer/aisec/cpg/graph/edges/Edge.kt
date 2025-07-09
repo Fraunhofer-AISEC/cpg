@@ -27,12 +27,14 @@ package de.fraunhofer.aisec.cpg.graph.edges
 
 import com.fasterxml.jackson.annotation.JsonBackReference
 import com.fasterxml.jackson.annotation.JsonIgnore
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
+import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.TO_STRING_STYLE
+import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.Persistable
-import de.fraunhofer.aisec.cpg.graph.edges.flows.DependenceType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.passes.ProgramDependenceGraphPass
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.*
 import kotlin.reflect.KProperty
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -51,7 +53,7 @@ import org.neo4j.ogm.annotation.*
  * ```
  */
 @RelationshipEntity
-abstract class Edge<NodeType : Node> : Persistable, Cloneable {
+abstract class Edge<NodeType : Node> : Persistable, Cloneable, HasAssumptions {
     /** Required field for object graph mapping. It contains the node id. */
     @field:Id @field:GeneratedValue private val id: Long? = null
 
@@ -60,6 +62,8 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable {
 
     // Node where the edge is ingoing
     @JsonBackReference @field:EndNode var end: NodeType
+
+    @DoNotPersist override val assumptions: MutableSet<Assumption> = mutableSetOf()
 
     constructor(start: Node, end: NodeType) {
         this.start = start
@@ -71,7 +75,11 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable {
         end = edge.end
     }
 
-    @Transient open val label: String = "EDGE"
+    abstract var labels: Set<String>
+
+    /** `true` if one of the two nodes connected by the [Edge] is an overlay node. */
+    val overlaying: Boolean
+        get() = end is OverlayNode || start is OverlayNode
 
     /**
      * The index of this node, if it is stored in an
@@ -82,13 +90,6 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable {
     /** An optional name. */
     var name: String? = null
 
-    /**
-     * The type of dependence (e.g. control or data or none). This field is intentionally nullable,
-     * because not all [Edge] edges are selected in the PDG. This selection is performed in the
-     * [ProgramDependenceGraphPass].
-     */
-    var dependence: DependenceType? = null
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Edge<*>) return false
@@ -96,8 +97,7 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable {
         return start == other.start &&
             end == other.end &&
             index == other.index &&
-            name == other.name &&
-            dependence == other.dependence
+            name == other.name
     }
 
     fun propertyEquals(obj: Any?): Boolean {
@@ -107,7 +107,7 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable {
     }
 
     override fun hashCode(): Int {
-        return Objects.hash(start, end, index, name, dependence)
+        return Objects.hash(start, end, index, name)
     }
 
     override fun toString(): String {
@@ -118,7 +118,7 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable {
     }
 
     public override fun clone(): Edge<NodeType> {
-        // needs to be implemented by sub-classes
+        // needs to be implemented by subclasses
         return super.clone() as Edge<NodeType>
     }
 
@@ -150,9 +150,7 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable {
     }
 
     @Transient
-    inner class Delegate<
-        ThisType : Node,
-    >() {
+    inner class Delegate<ThisType : Node>() {
         operator fun getValue(thisRef: ThisType, property: KProperty<*>): NodeType {
             var edge = this@Edge
             // We only support outgoing edges this way

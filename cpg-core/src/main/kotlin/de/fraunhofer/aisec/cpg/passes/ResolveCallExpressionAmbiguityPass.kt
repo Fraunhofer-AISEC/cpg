@@ -23,6 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
@@ -40,6 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.replace
+import de.fraunhofer.aisec.cpg.helpers.toConstructExpression
 import de.fraunhofer.aisec.cpg.nameIsType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
@@ -61,16 +64,18 @@ class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationU
 
     override fun accept(tu: TranslationUnitDeclaration) {
         walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
-        walker.registerHandler { _, parent, node ->
+        walker.registerHandler { node ->
             when (node) {
-                is CallExpression -> handleCall(node, parent)
+                is CallExpression -> handleCall(node)
             }
         }
 
         walker.iterate(tu)
     }
 
-    private fun handleCall(call: CallExpression, parent: Node?) {
+    private fun handleCall(call: CallExpression) {
+        val parent = call.astParent
+
         // Make sure, we are not accidentally handling construct expressions (since they also derive
         // from call expressions)
         if (call is ConstructExpression) {
@@ -121,14 +126,14 @@ class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationU
     }
 }
 
-context(ContextProvider)
+context(provider: ContextProvider)
 fun SubgraphWalker.ScopedWalker.replaceCallWithCast(
     type: Type,
     parent: Node,
     call: CallExpression,
     pointer: Boolean,
 ) {
-    val cast = newCastExpression()
+    val cast = provider.newCastExpression()
     cast.code = call.code
     cast.language = call.language
     cast.location = call.location
@@ -144,20 +149,16 @@ fun SubgraphWalker.ScopedWalker.replaceCallWithCast(
     replace(parent, call, cast)
 }
 
-context(ContextProvider)
+context(_: ContextProvider)
 fun SubgraphWalker.ScopedWalker.replaceCallWithConstruct(
     type: ObjectType,
     parent: Node,
-    call: CallExpression
+    call: CallExpression,
 ) {
-    val construct = newConstructExpression()
-    construct.code = call.code
-    construct.language = call.language
-    construct.location = call.location
-    construct.callee = call.callee
-    (construct.callee as? Reference)?.resolutionHelper = construct
-    construct.arguments = call.arguments
-    construct.type = type
-
-    replace(parent, call, construct)
+    val callee = call.callee
+    if (callee is Reference) {
+        val construct = call.toConstructExpression(callee)
+        construct.type = type
+        replace(parent, call, construct)
+    }
 }

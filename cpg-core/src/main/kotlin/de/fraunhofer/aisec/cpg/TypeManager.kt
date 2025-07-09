@@ -23,9 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.frontends.CastResult
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
@@ -34,8 +35,11 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import de.fraunhofer.aisec.cpg.passes.ResolveCallExpressionAmbiguityPass
+import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
@@ -57,8 +61,11 @@ class TypeManager {
         MutableMap<TemplateDeclaration, MutableList<ParameterizedType>> =
         ConcurrentHashMap()
 
-    val firstOrderTypes: MutableSet<Type> = ConcurrentHashMap.newKeySet()
-    val secondOrderTypes: MutableSet<Type> = ConcurrentHashMap.newKeySet()
+    /**
+     * Stores all resolved first order types. This is a set of all types that have been resolved by
+     * the [TypeResolver].
+     */
+    val resolvedTypes = identitySetOf<Type>()
 
     /**
      * @param recordDeclaration that is instantiated by a template containing parameterizedtypes
@@ -86,7 +93,7 @@ class TypeManager {
      */
     fun addTypeParameter(
         recordDeclaration: RecordDeclaration,
-        typeParameters: List<ParameterizedType>
+        typeParameters: List<ParameterizedType>,
     ) {
         recordToTypeParameters[recordDeclaration] = typeParameters
     }
@@ -101,7 +108,7 @@ class TypeManager {
      */
     private fun getTypeParameter(
         templateDeclaration: TemplateDeclaration,
-        name: String
+        name: String,
     ): ParameterizedType? {
         if (templateToTypeParameters.containsKey(templateDeclaration)) {
             for (parameterizedType in templateToTypeParameters[templateDeclaration] ?: listOf()) {
@@ -136,7 +143,7 @@ class TypeManager {
      */
     fun searchTemplateScopeForDefinedParameterizedTypes(
         scope: Scope?,
-        name: String
+        name: String,
     ): ParameterizedType? {
         if (scope is TemplateScope) {
             val node = scope.astNode
@@ -164,7 +171,7 @@ class TypeManager {
      */
     fun addTypeParameter(
         templateDeclaration: TemplateDeclaration,
-        typeParameter: ParameterizedType
+        typeParameter: ParameterizedType,
     ) {
         val parameters =
             templateToTypeParameters.computeIfAbsent(templateDeclaration) { mutableListOf() }
@@ -183,7 +190,7 @@ class TypeManager {
     fun createOrGetTypeParameter(
         templateDeclaration: TemplateDeclaration,
         typeName: String,
-        language: Language<*>?
+        language: Language<*>,
     ): ParameterizedType {
         var parameterizedType = getTypeParameter(templateDeclaration, typeName)
         if (parameterizedType == null) {
@@ -193,41 +200,9 @@ class TypeManager {
         return parameterizedType
     }
 
-    inline fun <reified T : Type> registerType(t: T): T {
-        // Skip as they should be unique to each class and not globally unique
-        if (t is ParameterizedType) {
-            return t
-        }
-
-        if (t.isFirstOrderType) {
-            // Make sure we only ever return one unique object per type
-            if (!firstOrderTypes.add(t)) {
-                return firstOrderTypes.first { it == t && it is T } as T
-            } else {
-                log.trace(
-                    "Registering unique first order type {}{}",
-                    t.name,
-                    if ((t as? ObjectType)?.generics?.isNotEmpty() == true) {
-                        " with generics ${t.generics.joinToString(",", "[", "]") { it.name.toString() }}"
-                    } else {
-                        ""
-                    }
-                )
-            }
-        } else if (t is SecondOrderType) {
-            if (!secondOrderTypes.add(t)) {
-                return secondOrderTypes.first { it == t && it is T } as T
-            } else {
-                log.trace("Registering unique second order type {}", t.name)
-            }
-        }
-
-        return t
-    }
-
     /** Checks, whether a [Type] with the given [name] exists. */
     fun typeExists(name: CharSequence): Boolean {
-        return firstOrderTypes.any { type: Type -> type.root.name == name }
+        return resolvedTypes.any { type: Type -> type.root.name == name }
     }
 
     fun resolvePossibleTypedef(alias: Type, scopeManager: ScopeManager): Type {
@@ -243,14 +218,14 @@ class TypeManager {
     fun lookupResolvedType(
         fqn: CharSequence,
         generics: List<Type>? = null,
-        language: Language<*>? = null
+        language: Language<*>? = null,
     ): Type? {
         var primitiveType = language?.getSimpleTypeOf(fqn)
         if (primitiveType != null) {
             return primitiveType
         }
 
-        return firstOrderTypes.firstOrNull {
+        return resolvedTypes.firstOrNull {
             (it.typeOrigin == Type.Origin.RESOLVED || it.typeOrigin == Type.Origin.GUESSED) &&
                 it.root.name == fqn &&
                 if (generics != null) {
@@ -271,7 +246,20 @@ internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
     val types = mutableSetOf<Type.Ancestor>()
 
     // Recursively call ourselves on our super types.
-    types += superTypes.flatMap { it.getAncestors(depth + 1) }
+    types +=
+        superTypes
+            .filter {
+                if (it == this) {
+                    log.warn(
+                        "Removing type {} from the list of its own supertypes. This would create a type cycle that is not allowed.",
+                        this,
+                    )
+                    false
+                } else {
+                    true
+                }
+            }
+            .flatMap { it.getAncestors(depth + 1) }
 
     // Since the chain starts with our type, we add ourselves to it
     types += Type.Ancestor(this, depth)
@@ -288,7 +276,7 @@ internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
  * Optionally, the nodes that hold the respective type can be supplied as [hint] and [targetHint].
  */
 fun Type.tryCast(targetType: Type, hint: HasType? = null, targetHint: HasType? = null): CastResult {
-    return this.language?.tryCast(this, targetType, hint, targetHint) ?: CastNotPossible
+    return this.language.tryCast(this, targetType, hint, targetHint)
 }
 
 /**
@@ -362,23 +350,23 @@ val Collection<Type>.commonType: Type?
  * passes that replace certain [Reference] nodes with other nodes, e.g., the
  * [ResolveCallExpressionAmbiguityPass].
  *
- * Note: This involves some symbol lookup (using [ScopeManager.lookupUniqueTypeSymbolByName]), so
- * this can only be used in passes.
+ * Note: This involves some symbol lookup (using [ScopeManager.lookupTypeSymbolByName]), so this can
+ * only be used in passes.
  */
-context(Pass<*>)
+context(pass: Pass<*>)
 fun Reference.nameIsType(): Type? {
     // First, check if it is a simple type
-    var type = language?.getSimpleTypeOf(name)
+    var type = language.getSimpleTypeOf(name)
     if (type != null) {
         return type
     }
 
     // This could also be a typedef
-    type = scopeManager.typedefFor(name, scope)
+    type = pass.scopeManager.typedefFor(name, scope)
     if (type != null) {
         return type
     }
 
     // Lastly, check if the reference contains a symbol that points to type (declaration)
-    return scopeManager.lookupUniqueTypeSymbolByName(name, scope)?.declaredType
+    return pass.scopeManager.lookupTypeSymbolByName(name, language, scope)?.declaredType
 }

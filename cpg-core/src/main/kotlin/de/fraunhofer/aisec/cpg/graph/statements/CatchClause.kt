@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
@@ -43,9 +44,11 @@ class CatchClause : Statement(), BranchingNode, EOGStarterHolder {
     @Relationship(value = "BODY") var bodyEdge = astOptionalEdgeOf<Block>()
     var body by unwrapping(CatchClause::bodyEdge)
 
+    @DoNotPersist
     override val branchedBy: Node?
         get() = parameter
 
+    @DoNotPersist
     override val eogStarters: List<Node>
         get() = listOf(this)
 

@@ -30,37 +30,31 @@ import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.*
+import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
+import de.fraunhofer.aisec.cpg.persistence.persist
 import java.io.File
 import java.net.ConnectException
 import java.nio.file.Paths
 import java.util.concurrent.Callable
 import kotlin.reflect.KClass
 import kotlin.system.exitProcess
-import org.neo4j.driver.exceptions.AuthenticationException
-import org.neo4j.ogm.config.Configuration
+import org.neo4j.driver.GraphDatabase
 import org.neo4j.ogm.context.EntityGraphMapper
 import org.neo4j.ogm.context.MappingContext
 import org.neo4j.ogm.cypher.compiler.MultiStatementCypherCompiler
 import org.neo4j.ogm.cypher.compiler.builders.node.DefaultNodeBuilder
 import org.neo4j.ogm.cypher.compiler.builders.node.DefaultRelationshipBuilder
-import org.neo4j.ogm.exception.ConnectionException
 import org.neo4j.ogm.metadata.MetaData
-import org.neo4j.ogm.session.Session
-import org.neo4j.ogm.session.SessionFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import picocli.CommandLine
 import picocli.CommandLine.ArgGroup
 
 private const val S_TO_MS_FACTOR = 1000
-private const val TIME_BETWEEN_CONNECTION_TRIES: Long = 2000
-private const val MAX_COUNT_OF_FAILS = 10
 private const val EXIT_SUCCESS = 0
 private const val EXIT_FAILURE = 1
-private const val VERIFY_CONNECTION = true
 private const val DEBUG_PARSER = true
-private const val AUTO_INDEX = "none"
-private const val PROTOCOL = "bolt://"
+private const val PROTOCOL = "neo4j://"
 
 private const val DEFAULT_HOST = "localhost"
 private const val DEFAULT_PORT = 7687
@@ -76,7 +70,7 @@ data class JsonEdge(
     val type: String,
     val startNode: Long,
     val endNode: Long,
-    val properties: Map<String, Any>
+    val properties: Map<String, Any>,
 )
 
 data class JsonGraph(val nodes: List<JsonNode>, val edges: List<JsonEdge>)
@@ -84,11 +78,20 @@ data class JsonGraph(val nodes: List<JsonNode>, val edges: List<JsonEdge>)
 /**
  * An application to export the <a href="https://github.com/Fraunhofer-AISEC/cpg">cpg</a> to a <a
  * href="https://github.com/Fraunhofer-AISEC/cpg">neo4j</a> database.
+ *
+ * Please make sure, that the [APOC](https://neo4j.com/labs/apoc/) plugin is enabled on your neo4j
+ * server. It is used in mass-creating nodes and relationships.
+ *
+ * For example using docker:
+ * ```
+ * docker run -p 7474:7474 -p 7687:7687 -d -e NEO4J_AUTH=neo4j/password -e NEO4JLABS_PLUGINS='["apoc"]' neo4j:5
+ * ```
  */
 class Application : Callable<Int> {
 
     private val log: Logger
         get() = LoggerFactory.getLogger(Application::class.java)
+
     // Either provide the files to evaluate or provide the path of compilation database with
     // --json-compilation-database flag
     @ArgGroup(exclusive = true, multiplicity = "1")
@@ -100,7 +103,7 @@ class Application : Callable<Int> {
             description =
                 [
                     "The paths to analyze. If module support is enabled, the paths will be looked at if they contain modules"
-                ]
+                ],
         )
         var files: List<String> = mutableListOf()
 
@@ -109,45 +112,52 @@ class Application : Callable<Int> {
             description =
                 [
                     "Maps the names of software components to their respective files. The files are separated by commas (No whitespace!).",
-                    "Example: -S App1=./file1.c,./file2.c -S App2=./Main.java,./Class.java"
-                ]
+                    "Example: -S App1=./file1.c,./file2.c -S App2=./Main.java,./Class.java",
+                ],
         )
         var softwareComponents: Map<String, String> = mutableMapOf()
 
         @CommandLine.Option(
             names = ["--json-compilation-database"],
-            description = ["The path to an optional a JSON compilation database"]
+            description = ["The path to an optional a JSON compilation database"],
         )
         var jsonCompilationDatabase: File? = null
 
         @CommandLine.Option(
             names = ["--list-passes"],
-            description = ["Prints the list available passes"]
+            description = ["Prints the list available passes"],
         )
         var listPasses: Boolean = false
     }
 
     @CommandLine.Option(
+        names = ["--include-paths", "-IP"],
+        description =
+            ["Directories containing additional headers and implementations for imported code."],
+    )
+    var includePaths: List<String> = mutableListOf()
+
+    @CommandLine.Option(
         names = ["--user"],
-        description = ["Neo4j user name (default: $DEFAULT_USER_NAME)"]
+        description = ["Neo4j user name (default: $DEFAULT_USER_NAME)"],
     )
     var neo4jUsername: String = DEFAULT_USER_NAME
 
     @CommandLine.Option(
         names = ["--password"],
-        description = ["Neo4j password (default: $DEFAULT_PASSWORD"]
+        description = ["Neo4j password (default: $DEFAULT_PASSWORD"],
     )
     var neo4jPassword: String = DEFAULT_PASSWORD
 
     @CommandLine.Option(
         names = ["--host"],
-        description = ["Set the host of the neo4j Database (default: $DEFAULT_HOST)."]
+        description = ["Set the host of the neo4j Database (default: $DEFAULT_HOST)."],
     )
     private var host: String = DEFAULT_HOST
 
     @CommandLine.Option(
         names = ["--port"],
-        description = ["Set the port of the neo4j Database (default: $DEFAULT_PORT)."]
+        description = ["Set the port of the neo4j Database (default: $DEFAULT_PORT)."],
     )
     private var port: Int = DEFAULT_PORT
 
@@ -158,7 +168,7 @@ class Application : Callable<Int> {
                 "Performance optimisation: " +
                     "Limit recursion depth form neo4j OGM when leaving the AST. " +
                     "$DEFAULT_SAVE_DEPTH (default) means no limit is used."
-            ]
+            ],
     )
     private var depth: Int = DEFAULT_SAVE_DEPTH
 
@@ -169,19 +179,19 @@ class Application : Callable<Int> {
                 "Performance optimisation: " +
                     "Limit the ControlFlowSensitiveDFGPass to functions with a complexity less than what is specified here. " +
                     "$DEFAULT_MAX_COMPLEXITY (default) means no limit is used."
-            ]
+            ],
     )
     private var maxComplexity: Int = DEFAULT_MAX_COMPLEXITY
 
     @CommandLine.Option(
         names = ["--load-includes"],
-        description = ["Enable TranslationConfiguration option loadIncludes"]
+        description = ["Enable TranslationConfiguration option loadIncludes"],
     )
     private var loadIncludes: Boolean = false
 
     @CommandLine.Option(
         names = ["--use-unity-build"],
-        description = ["Enable unity build mode for C++ (requires --load-includes)"]
+        description = ["Enable unity build mode for C++ (requires --load-includes)"],
     )
     private var useUnityBuild: Boolean = false
 
@@ -190,13 +200,13 @@ class Application : Callable<Int> {
 
     @CommandLine.Option(
         names = ["--print-benchmark"],
-        description = ["Print benchmark result as markdown table"]
+        description = ["Print benchmark result as markdown table"],
     )
     private var printBenchmark: Boolean = false
 
     @CommandLine.Option(
         names = ["--no-default-passes"],
-        description = ["Do not register default passes [used for debugging]"]
+        description = ["Do not register default passes [used for debugging]"],
     )
     private var noDefaultPasses: Boolean = false
 
@@ -208,37 +218,37 @@ class Application : Callable<Int> {
                     " passed as a comma-separated list; give either pass name if pass is in list," +
                     " or its FQDN" +
                     " (e.g. --custom-pass-list=DFGPass,CallResolver)"
-            ]
+            ],
     )
     private var customPasses: String = "DEFAULT"
 
     @CommandLine.Option(
         names = ["--no-neo4j"],
-        description = ["Do not push cpg into neo4j [used for debugging]"]
+        description = ["Do not push cpg into neo4j [used for debugging]"],
     )
     private var noNeo4j: Boolean = false
 
     @CommandLine.Option(
         names = ["--no-purge-db"],
-        description = ["Do no purge neo4j database before pushing the cpg"]
+        description = ["Do no purge neo4j database before pushing the cpg"],
     )
     private var noPurgeDb: Boolean = false
 
     @CommandLine.Option(
         names = ["--infer-nodes"],
-        description = ["Create inferred nodes for missing declarations"]
+        description = ["Create inferred nodes for missing declarations"],
     )
     private var inferNodes: Boolean = false
 
     @CommandLine.Option(
         names = ["--schema-markdown"],
-        description = ["Print the CPGs nodes and edges that they can have."]
+        description = ["Print the CPGs nodes and edges that they can have."],
     )
     private var schemaMarkdown: Boolean = false
 
     @CommandLine.Option(
         names = ["--schema-json"],
-        description = ["Print the CPGs nodes and edges that they can have."]
+        description = ["Print the CPGs nodes and edges that they can have."],
     )
     private var schemaJson: Boolean = false
 
@@ -247,13 +257,20 @@ class Application : Callable<Int> {
         description =
             [
                 "Set top level directory of project structure. Default: Largest common path of all source files"
-            ]
+            ],
     )
     private var topLevel: File? = null
 
     @CommandLine.Option(
+        names = ["--exclusion-patterns"],
+        description =
+            ["Configures an exclusion pattern for files or directories that should not be parsed"],
+    )
+    private var exclusionPatterns: List<String> = listOf()
+
+    @CommandLine.Option(
         names = ["--benchmark-json"],
-        description = ["Save benchmark results to json file"]
+        description = ["Save benchmark results to json file"],
     )
     private var benchmarkJson: File? = null
 
@@ -268,9 +285,8 @@ class Application : Callable<Int> {
             EvaluationOrderGraphPass::class,
             TypeResolver::class,
             ControlFlowSensitiveDFGPass::class,
-            FilenameMapper::class,
             ControlDependenceGraphPass::class,
-            ProgramDependenceGraphPass::class
+            ProgramDependenceGraphPass::class,
         )
     private var passClassMap = passClassList.associateBy { it.simpleName }
 
@@ -326,7 +342,7 @@ class Application : Callable<Int> {
      */
     fun buildJsonGraph(
         newNodeBuilders: List<DefaultNodeBuilder>?,
-        newRelationshipBuilders: List<DefaultRelationshipBuilder>?
+        newRelationshipBuilders: List<DefaultRelationshipBuilder>?,
     ): JsonGraph {
         // create simple json structure with flat list of nodes and edges
         val nodes =
@@ -335,7 +351,7 @@ class Application : Callable<Int> {
                 JsonNode(
                     node.id,
                     node.labels.toSet(),
-                    node.propertyList.associate { prop -> prop.key to prop.value }
+                    node.propertyList.associate { prop -> prop.key to prop.value },
                 )
             } ?: emptyList()
         val edges =
@@ -349,7 +365,7 @@ class Application : Callable<Int> {
                         edge.type,
                         edge.startNode,
                         edge.endNode,
-                        edge.propertyList.associate { prop -> prop.key to prop.value }
+                        edge.propertyList.associate { prop -> prop.key to prop.value },
                     )
                 } ?: emptyList()
 
@@ -381,33 +397,14 @@ class Application : Callable<Int> {
      * Pushes the whole translationResult to the neo4j db.
      *
      * @param translationResult, not null
-     * @throws InterruptedException, if the thread is interrupted while it try´s to connect to the
-     *   neo4j db.
-     * @throws ConnectException, if there is no connection to bolt://localhost:7687 possible
      */
-    @Throws(InterruptedException::class, ConnectException::class)
     fun pushToNeo4j(translationResult: TranslationResult) {
-        val bench = Benchmark(this.javaClass, "Push cpg to neo4j", false, translationResult)
-        log.info("Using import depth: $depth")
-        log.info(
-            "Count base nodes to save: " +
-                translationResult.components.size +
-                translationResult.additionalNodes.size
-        )
-
-        val sessionAndSessionFactoryPair = connect()
-
-        val session = sessionAndSessionFactoryPair.first
-        session.beginTransaction().use { transaction ->
-            if (!noPurgeDb) session.purgeDatabase()
-            session.save(translationResult.components, depth)
-            session.save(translationResult.additionalNodes, depth)
-            transaction.commit()
+        val session = connect()
+        with(session) {
+            if (!noPurgeDb) executeWrite { tx -> tx.run("MATCH (n) DETACH DELETE n").consume() }
+            translationResult.persist()
         }
-
-        session.clear()
-        sessionAndSessionFactoryPair.second.close()
-        bench.addMeasurement()
+        session.close()
     }
 
     /**
@@ -420,41 +417,14 @@ class Application : Callable<Int> {
      * @throws ConnectException, if there is no connection to bolt://localhost:7687 possible
      */
     @Throws(InterruptedException::class, ConnectException::class)
-    fun connect(): Pair<Session, SessionFactory> {
-        var fails = 0
-        var sessionFactory: SessionFactory? = null
-        var session: Session? = null
-        while (session == null && fails < MAX_COUNT_OF_FAILS) {
-            try {
-                val configuration =
-                    Configuration.Builder()
-                        .uri("$PROTOCOL$host:$port")
-                        .credentials(neo4jUsername, neo4jPassword)
-                        .verifyConnection(VERIFY_CONNECTION)
-                        .build()
-                sessionFactory = SessionFactory(configuration, *packages)
-
-                session = sessionFactory.openSession()
-            } catch (ex: ConnectionException) {
-                sessionFactory = null
-                fails++
-                log.error(
-                    "Unable to connect to localhost:7687, " +
-                        "ensure the database is running and that " +
-                        "there is a working network connection to it."
-                )
-                Thread.sleep(TIME_BETWEEN_CONNECTION_TRIES)
-            } catch (ex: AuthenticationException) {
-                log.error("Unable to connect to localhost:7687, wrong username/password!")
-                exitProcess(EXIT_FAILURE)
-            }
-        }
-        if (session == null || sessionFactory == null) {
-            log.error("Unable to connect to localhost:7687")
-            exitProcess(EXIT_FAILURE)
-        }
-        assert(fails <= MAX_COUNT_OF_FAILS)
-        return Pair(session, sessionFactory)
+    fun connect(): org.neo4j.driver.Session {
+        val driver =
+            GraphDatabase.driver(
+                "$PROTOCOL$host:$port",
+                org.neo4j.driver.AuthTokens.basic(neo4jUsername, neo4jPassword),
+            )
+        driver.verifyConnectivity()
+        return driver.session()
     }
 
     /**
@@ -483,7 +453,6 @@ class Application : Callable<Int> {
     fun setupTranslationConfiguration(): TranslationConfiguration {
         val translationConfiguration =
             TranslationConfiguration.builder()
-                .topLevel(topLevel)
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
@@ -493,19 +462,23 @@ class Application : Callable<Int> {
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage")
                 .loadIncludes(loadIncludes)
+                .exclusionPatterns(*exclusionPatterns.toTypedArray())
                 .addIncludesToGraph(loadIncludes)
                 .debugParser(DEBUG_PARSER)
                 .useUnityBuild(useUnityBuild)
                 .useParallelPasses(false)
 
+        topLevel?.let { translationConfiguration.topLevel(it) }
+
         if (maxComplexity != -1) {
             translationConfiguration.configurePass<ControlFlowSensitiveDFGPass>(
-                ControlFlowSensitiveDFGPass.Configuration(
-                    maxComplexity = maxComplexity,
-                )
+                ControlFlowSensitiveDFGPass.Configuration(maxComplexity = maxComplexity)
             )
         }
+
+        includePaths.forEach { translationConfiguration.includePath(it) }
 
         if (mutuallyExclusiveParameters.softwareComponents.isNotEmpty()) {
             val components = mutableMapOf<String, List<File>>()
@@ -522,6 +495,8 @@ class Application : Callable<Int> {
             translationConfiguration.defaultPasses()
             translationConfiguration.registerPass<ControlDependenceGraphPass>()
             translationConfiguration.registerPass<ProgramDependenceGraphPass>()
+            translationConfiguration.registerPass<PythonFileConceptPass>()
+            // translationConfiguration.registerPass<PythonEncryptionPass>()
         }
         if (customPasses != "DEFAULT") {
             val pieces = customPasses.split(",")

@@ -26,7 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
@@ -49,7 +51,7 @@ open class BinaryOperator :
     var lhsEdge =
         astEdgeOf<Expression>(
             of = ProblemExpression("could not parse lhs"),
-            onChanged = ::exchangeTypeObserver
+            onChanged = ::exchangeTypeObserverWithAccessPropagation,
         )
     var lhs by unwrapping(BinaryOperator::lhsEdge)
 
@@ -58,7 +60,7 @@ open class BinaryOperator :
     var rhsEdge =
         astEdgeOf<Expression>(
             of = ProblemExpression("could not parse rhs"),
-            onChanged = ::exchangeTypeObserver
+            onChanged = ::exchangeTypeObserverWithAccessPropagation,
         )
     var rhs by unwrapping(BinaryOperator::rhsEdge)
 
@@ -67,11 +69,11 @@ open class BinaryOperator :
         set(value) {
             field = value
             if (
-                (operatorCode in (language?.compoundAssignmentOperators ?: setOf())) ||
-                    (operatorCode == "=")
+                (operatorCode in language.compoundAssignmentOperators) ||
+                    (operatorCode in language.simpleAssignmentOperators)
             ) {
                 throw TranslationException(
-                    "Creating a BinaryOperator with an assignment operator code is not allowed. The class AssignExpression should be used instead."
+                    "Creating a BinaryOperator with an assignment operator code is not allowed. The class AssignExpression must be used instead."
                 )
             }
         }
@@ -81,6 +83,7 @@ open class BinaryOperator :
             .append("lhs", lhs.name)
             .append("rhs", rhs.name)
             .append("operatorCode", operatorCode)
+            .append("location", location)
             .toString()
     }
 
@@ -93,14 +96,9 @@ open class BinaryOperator :
             this.type = newType
         } else {
             // Otherwise, we have a special language-specific function to deal with type propagation
-            val type = language?.propagateTypeOfBinaryOperation(this)
-            if (type != null) {
-                this.type = type
-            } else {
-                // If we don't know how to propagate the types of this particular binary operation,
-                // we just leave the type alone. We cannot take newType because it is just "half" of
-                // the operation (either from lhs or rhs) and would lead to very incorrect results.
-            }
+            val type =
+                language.propagateTypeOfBinaryOperation(this.operatorCode, lhs.type, rhs.type, this)
+            this.type = type
         }
     }
 
@@ -153,6 +151,10 @@ open class BinaryOperator :
 
     override fun hasArgument(expression: Expression): Boolean {
         return lhs == expression || rhs == expression
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.lhs.getStartingPrevEOG()
     }
 
     val base: Expression?

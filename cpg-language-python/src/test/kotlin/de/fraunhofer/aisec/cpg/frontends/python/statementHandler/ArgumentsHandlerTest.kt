@@ -75,7 +75,7 @@ class ArgumentsHandlerTest {
             if (list[name] == true) {
                 assertContains(
                     param.end.modifiers,
-                    PythonLanguage.Companion.MODIFIER_POSITIONAL_ONLY_ARGUMENT
+                    PythonLanguage.Companion.MODIFIER_POSITIONAL_ONLY_ARGUMENT,
                 )
             }
             assertEquals(idx, param.index)
@@ -121,7 +121,7 @@ class ArgumentsHandlerTest {
                 assertEquals(
                     expectedDefaultValue.toLong(),
                     param.default?.evaluate(),
-                    "Default value for parameter '$paramName' is incorrect"
+                    "Default value for parameter '$paramName' is incorrect",
                 )
             } else {
                 assertNull(param.default, "Parameter '$paramName' should not have a default value")
@@ -144,7 +144,7 @@ class ArgumentsHandlerTest {
             assertEquals(
                 expectedDefaultValue.toLong(),
                 param.default?.evaluate(),
-                "Default value for parameter '$paramName' is incorrect"
+                "Default value for parameter '$paramName' is incorrect",
             )
         }
     }
@@ -173,7 +173,7 @@ class ArgumentsHandlerTest {
 
         val kwArgs = func.parameters["kwargs"]
         assertNotNull(kwArgs, "Failed to find kw args")
-        assertEquals(false, kwArgs.isVariadic)
+        assertEquals(true, kwArgs.isVariadic)
     }
 
     @Test
@@ -186,7 +186,7 @@ class ArgumentsHandlerTest {
         val parameterC = func.parameters["c"]
         assertNotNull(
             parameterA,
-            "Failed to find parameter `a` -> cannot test for non-existing default value."
+            "Failed to find parameter `a` -> cannot test for non-existing default value.",
         )
         assertNull(parameterA.default, "Expected the parameter `a` to not have a default value.")
 
@@ -194,5 +194,40 @@ class ArgumentsHandlerTest {
         assertEquals(1.toLong(), parameterB.default?.evaluate())
         assertNotNull(parameterC?.default, "Expected the parameter `c` to have a default value.")
         assertEquals(2.toLong(), parameterC.default?.evaluate())
+    }
+
+    @Test
+    fun testSignatureMatch() {
+        val func = result.functions["kw_args_and_default"]
+        assertNotNull(func)
+        val funcDefault = func.parameters[1]
+        val funcKwargs = func.parameters[2]
+
+        val call = result.methods["call"]?.calls?.firstOrNull()
+        assertNotNull(call)
+        assertContains(func.nextDFG, call)
+
+        val call2 = result.methods["call2"]?.calls?.firstOrNull()
+        assertNotNull(call2)
+        assertContains(call2.invokes, func)
+        assertEquals(2, call2.arguments.size)
+
+        val defaultArg2 = call2.arguments[1]
+        assertContains(defaultArg2.nextDFG, funcDefault)
+
+        val call3 = result.methods["call3"]?.calls?.firstOrNull()
+        assertNotNull(call3)
+
+        listOf("foo", "bar", "baz").forEach { argName ->
+            val arg = call3.argumentEdges.find { it.name == argName }?.end
+            assertNotNull(arg)
+            assertContains(arg.nextDFG, funcKwargs)
+        }
+
+        val call4 = result.methods["call4"]?.calls?.firstOrNull()
+        assertNotNull(call4)
+        val defaultArg4 = call4.arguments[1]
+        assertNotNull(defaultArg4)
+        assertContains(defaultArg4.nextDFG, funcDefault)
     }
 }

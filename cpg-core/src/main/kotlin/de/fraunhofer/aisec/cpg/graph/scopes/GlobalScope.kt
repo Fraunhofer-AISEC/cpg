@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.nodes
 
 /**
  * This should ideally only be called once. It constructs a new global scope, which is not
@@ -36,7 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
  * scope that is restricted to a translation unit, i.e. C++ while still maintaining a unique list of
  * global variables.
  */
-class GlobalScope : StructureDeclarationScope(null) {
+class GlobalScope() : Scope(null) {
 
     /**
      * Because the way we currently handle parallel parsing in [TranslationManager.parseParallel],
@@ -61,11 +62,9 @@ class GlobalScope : StructureDeclarationScope(null) {
             symbols.mergeFrom(other.symbols)
             wildcardImports.addAll(other.wildcardImports)
 
-            for (symbolList in other.symbols) {
-                // Update the scope property of all nodes that live on the global scope to our new
-                // global scope (this)
-                for (symbol in symbolList.value) {
-                    symbol.scope = this
+            for (node in other.astNode?.nodes ?: listOf()) {
+                if (node.scope is GlobalScope) {
+                    node.scope = this
                 }
             }
         }

@@ -31,7 +31,7 @@ import java.util.function.Supplier
 
 abstract class PythonHandler<ResultNode : Node, HandlerNode : Python.AST.AST>(
     configConstructor: Supplier<ResultNode>,
-    lang: PythonLanguageFrontend
+    lang: PythonLanguageFrontend,
 ) : Handler<ResultNode, HandlerNode, PythonLanguageFrontend>(configConstructor, lang) {
     /**
      * We intentionally override the logic of [Handler.handle] because we do not want the map-based

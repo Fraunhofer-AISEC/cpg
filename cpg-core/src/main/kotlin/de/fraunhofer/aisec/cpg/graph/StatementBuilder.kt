@@ -342,7 +342,7 @@ fun MetadataProvider.newDefaultStatement(rawNode: Any? = null): DefaultStatement
 fun MetadataProvider.newLookupScopeStatement(
     symbols: List<Symbol>,
     targetScope: Scope?,
-    rawNode: Any? = null
+    rawNode: Any? = null,
 ): LookupScopeStatement {
     val node = LookupScopeStatement()
     node.targetScope = targetScope
@@ -352,21 +352,6 @@ fun MetadataProvider.newLookupScopeStatement(
     for (symbol in symbols) {
         node.scope?.predefinedLookupScopes[symbol] = node
     }
-
-    log(node)
-    return node
-}
-
-/**
- * Creates a new [ThrowStatement]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
- */
-@JvmOverloads
-fun MetadataProvider.newThrowStatement(rawNode: Any? = null): ThrowStatement {
-    val node = ThrowStatement()
-    node.applyMetadata(this, EMPTY_NAME, rawNode, true)
 
     log(node)
     return node

@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.pointer
@@ -43,9 +44,9 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
         astEdgeOf<Expression>(
             of = ProblemExpression("could not parse input"),
             onChanged = { old, new ->
-                exchangeTypeObserver(old, new)
+                exchangeTypeObserverWithAccessPropagation(old, new)
                 changeExpressionAccess()
-            }
+            },
         )
     /** The expression on which the operation is applied. */
     var input by unwrapping(UnaryOperator::inputEdge)
@@ -74,13 +75,13 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
     var isPrefix = false
 
     private fun changeExpressionAccess() {
-        var access = AccessValues.READ
-        if (operatorCode == "++" || operatorCode == "--") {
-            access = AccessValues.READWRITE
-        }
-        if (input is Reference) {
-            (input as? Reference)?.access = access
-        }
+        var access =
+            if (operatorCode == "++" || operatorCode == "--") {
+                AccessValues.READWRITE
+            } else {
+                this.access
+            }
+        this.input.access = access
     }
 
     override fun toString(): String {
@@ -130,11 +131,13 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
 
     override fun addArgument(expression: Expression) {
         this.input = expression
+        this.input.access = access
     }
 
     override fun replaceArgument(old: Expression, new: Expression): Boolean {
         if (this.input == old) {
             this.input = new
+            this.input.access = access
             return true
         }
 
@@ -161,8 +164,18 @@ class UnaryOperator : Expression(), HasOverloadedOperation, ArgumentHolder, HasT
 
     override fun hashCode() = super.hashCode()
 
+    override var access = AccessValues.READ
+        set(value) {
+            field = value
+            this.input.access = value
+        }
+
     companion object {
         const val OPERATOR_POSTFIX_INCREMENT = "++"
         const val OPERATOR_POSTFIX_DECREMENT = "--"
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.input.getStartingPrevEOG()
     }
 }

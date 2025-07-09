@@ -26,12 +26,15 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.helpers.Util.attachCallParameters
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
 import org.slf4j.Logger
@@ -51,83 +54,78 @@ object Util {
     }
 
     /**
-     * Checks if the Node `n` connects to the nodes in `refs` over the CPGS EOG graph edges that
-     * depict the evaluation order. The parameter q defines if all edges of interest to node must
-     * connect to an edge in refs or one is enough, cn and cr define whether the passed AST nodes
-     * themselves are used to search the connections or the EOG Border nodes in the AST subnode.
-     * Finally, en defines whether the EOG edges go * from n to r in refs or the inverse.
+     * Checks if the Node [startNode] connects to the nodes in [endNodes] over the CPGS EOG graph
+     * edges that depict the evaluation order. The parameter [quantifier] defines if all edges of
+     * interest to node must connect to an edge in [endNodes] or one is enough, [connectStart] and
+     * [connectEnd] define whether the passed AST nodes themselves are used to search the
+     * connections or the EOG Border nodes in the AST subnode. Finally, [edgeDirection] defines
+     * whether the EOG edges go * from [startNode] to node in [endNodes] or the inverse.
      *
-     * @param q
-     * - The quantifier, all or any node of n must connect to refs, defaults to ALL.
-     *
-     * @param cn
-     * - NODE if n itself is the node to connect or SUBTREE if the EOG borders are of interest.
-     *   Defaults to SUBTREE
-     *
-     * @param en
-     * - The Edge direction and therefore the borders of n to connect to refs
-     *
-     * @param n
-     * - Node of interest
-     *
-     * @param cr
-     * - NODE if refs nodes itself are the nodes to connect or SUBTREE if the EOG borders are of
-     *   interest
-     *
-     * @param branch
-     * - All edges must have the specified branch property
-     *
-     * @param refs
-     * - Multiple reference nodes that can be passed as varargs
-     *
-     * @return true if all/any of the connections from node connect to n.
+     * @param quantifier The quantifier, all or any node of [startNode] must connect to [endNodes],
+     *   defaults to ALL.
+     * @param connectStart NODE if [startNode] itself is the node to connect or SUBTREE if the EOG
+     *   borders are of interest. Defaults to SUBTREE
+     * @param edgeDirection The Edge direction and therefore the borders of [startNode] to connect
+     *   to [endNodes]
+     * @param startNode Node of interest
+     * @param connectEnd NODE if [endNodes] nodes itself are the nodes to connect or SUBTREE if the
+     *   EOG borders are of interest
+     * @param predicate All edges must have the specified branch property
+     * @param endNodes Multiple reference nodes that can be passed as varargs
+     * @return true if all/any of the connections from node connect to the [startNode].
      */
     // TODO: this function needs a major overhaul because it was
     //  running on the false assumption of the old containsProperty
     //  return values
     fun eogConnect(
-        q: Quantifier = Quantifier.ALL,
-        cn: Connect = Connect.SUBTREE,
-        en: Edge,
-        n: Node?,
-        cr: Connect = Connect.SUBTREE,
+        quantifier: Quantifier = Quantifier.ALL,
+        connectStart: Connect = Connect.SUBTREE,
+        edgeDirection: Edge,
+        startNode: Node?,
+        connectEnd: Connect = Connect.SUBTREE,
         predicate: ((EvaluationOrder) -> Boolean)? = null,
-        refs: List<Node?>
+        endNodes: List<Node?>,
     ): Boolean {
-        if (n == null) {
+        if (startNode == null) {
             return false
         }
 
-        var nodeSide = listOf(n)
-        val er = if (en == Edge.ENTRIES) Edge.EXITS else Edge.ENTRIES
-        var refSide = refs
+        var nodeSide = listOf(startNode)
+        val er = if (edgeDirection == Edge.ENTRIES) Edge.EXITS else Edge.ENTRIES
+        var refSide = endNodes
         nodeSide =
-            if (cn == Connect.SUBTREE) {
-                val border = SubgraphWalker.getEOGPathEdges(n)
-                if (en == Edge.ENTRIES) {
+            if (connectStart == Connect.SUBTREE) {
+                val border = SubgraphWalker.getEOGPathEdges(startNode)
+                if (edgeDirection == Edge.ENTRIES) {
                     val pe = border.entries.flatMap { it.prevEOGEdges }
-                    if (Quantifier.ALL == q && pe.any { predicate?.invoke(it) == false })
+                    if (Quantifier.ALL == quantifier && pe.any { predicate?.invoke(it) == false })
                         return false
                     pe.filter { predicate?.invoke(it) != false }.map { it.start }
                 } else border.exits
             } else {
                 nodeSide.flatMap {
-                    if (en == Edge.ENTRIES) {
+                    if (edgeDirection == Edge.ENTRIES) {
                         val pe = it.prevEOGEdges
-                        if (Quantifier.ALL == q && pe.any { predicate?.invoke(it) == false })
+                        if (
+                            Quantifier.ALL == quantifier &&
+                                pe.any { predicate?.invoke(it) == false }
+                        )
                             return false
                         pe.filter { predicate?.invoke(it) != false }.map { it.start }
                     } else listOf(it)
                 }
             }
         refSide =
-            if (cr == Connect.SUBTREE) {
-                val borders = refs.map { SubgraphWalker.getEOGPathEdges(it) }
+            if (connectEnd == Connect.SUBTREE) {
+                val borders = endNodes.map { SubgraphWalker.getEOGPathEdges(it) }
 
                 borders.flatMap { border ->
                     if (Edge.ENTRIES == er) {
                         val pe = border.entries.flatMap { it.prevEOGEdges }
-                        if (Quantifier.ALL == q && pe.any { predicate?.invoke(it) == false })
+                        if (
+                            Quantifier.ALL == quantifier &&
+                                pe.any { predicate?.invoke(it) == false }
+                        )
                             return false
                         pe.filter { predicate?.invoke(it) != false }.map { it.start }
                     } else border.exits
@@ -136,14 +134,17 @@ object Util {
                 refSide.flatMap { node ->
                     if (er == Edge.ENTRIES) {
                         val pe = node?.prevEOGEdges ?: listOf()
-                        if (Quantifier.ALL == q && pe.any { predicate?.invoke(it) == false })
+                        if (
+                            Quantifier.ALL == quantifier &&
+                                pe.any { predicate?.invoke(it) == false }
+                        )
                             return false
                         pe.filter { predicate?.invoke(it) != false }.map { it.start }
                     } else listOf(node)
                 }
             }
         val refNodes = refSide
-        return if (Quantifier.ANY == q) nodeSide.any { it in refNodes }
+        return if (Quantifier.ANY == quantifier) nodeSide.any { it in refNodes }
         else refNodes.containsAll(nodeSide)
     }
 
@@ -157,15 +158,15 @@ object Util {
         astNode: AstNode,
         log: Logger,
         format: String?,
-        vararg arguments: Any?
+        vararg arguments: Any?,
     ) {
         log.warn(
             String.format(
                 "%s: %s",
                 PhysicalLocation.locationLink(lang.locationOf(astNode)),
-                format
+                format,
             ),
-            *arguments
+            *arguments,
         )
     }
 
@@ -179,15 +180,15 @@ object Util {
         astNode: AstNode,
         log: Logger,
         format: String?,
-        vararg arguments: Any?
+        vararg arguments: Any?,
     ) {
         log.error(
             String.format(
                 "%s: %s",
                 PhysicalLocation.locationLink(lang.locationOf(astNode)),
-                format
+                format,
             ),
-            *arguments
+            *arguments,
         )
     }
 
@@ -200,11 +201,28 @@ object Util {
         node: Node,
         log: Logger,
         format: String?,
-        vararg arguments: Any?
+        vararg arguments: Any?,
     ) {
         log.warn(
             String.format("%s: %s", PhysicalLocation.locationLink(node.location), format),
-            *arguments
+            *arguments,
+        )
+    }
+
+    /**
+     * Logs a warning with the specified file location. This is intentionally inlined, so that the
+     * [Logger] will use the location of the callee of this function, rather than the [Util] class.
+     */
+    @Suppress("NOTHING_TO_INLINE")
+    inline fun infoWithFileLocation(
+        node: Node,
+        log: Logger,
+        format: String?,
+        vararg arguments: Any?,
+    ) {
+        log.info(
+            String.format("%s: %s", PhysicalLocation.locationLink(node.location), format),
+            *arguments,
         )
     }
 
@@ -217,11 +235,11 @@ object Util {
         location: PhysicalLocation?,
         log: Logger,
         format: String?,
-        vararg arguments: Any?
+        vararg arguments: Any?,
     ) {
         log.warn(
             String.format("%s: %s", PhysicalLocation.locationLink(location), format),
-            *arguments
+            *arguments,
         )
     }
 
@@ -234,11 +252,11 @@ object Util {
         node: Node?,
         log: Logger,
         format: String?,
-        vararg arguments: Any?
+        vararg arguments: Any?,
     ) {
         log.error(
             String.format("%s: %s", PhysicalLocation.locationLink(node?.location), format),
-            *arguments
+            *arguments,
         )
     }
 
@@ -252,11 +270,11 @@ object Util {
         node: Node?,
         log: Logger,
         format: String?,
-        vararg arguments: Any?
+        vararg arguments: Any?,
     ) {
         log.debug(
             String.format("%s: %s", PhysicalLocation.locationLink(node?.location), format),
-            *arguments
+            *arguments,
         )
     }
 
@@ -281,12 +299,14 @@ object Util {
                     openParentheses++
                     currPart.append(c)
                 }
+
                 c == ')' -> {
                     if (openParentheses > 0) {
                         openParentheses--
                     }
                     currPart.append(c)
                 }
+
                 delimiters.contains("" + c) -> {
                     if (openParentheses == 0) {
                         val toAdd = currPart.toString().trim()
@@ -346,15 +366,19 @@ object Util {
                 '(' -> {
                     openParentheses++
                 }
+
                 ')' -> {
                     openParentheses--
                 }
+
                 '<' -> {
                     openTemplate++
                 }
+
                 '>' -> {
                     openTemplate--
                 }
+
                 marker -> {
                     if (openParentheses == 0 && openTemplate == 0) {
                         return true
@@ -366,9 +390,11 @@ object Util {
     }
 
     /**
-     * Establish data-flow from a [CallExpression] arguments to the target [FunctionDeclaration]
-     * parameters. Additionally, if the call is a [MemberCallExpression], it establishes a data-flow
-     * from the [MemberCallExpression.base] towards the [MethodDeclaration.receiver].
+     * Establishes data-flow from the arguments of a [CallExpression] to the parameters of a
+     * [FunctionDeclaration] parameters. It handles positional arguments, named/default arguments,
+     * and variadic parameters. Additionally, if the call is a [MemberCallExpression], it
+     * establishes a data-flow from the [MemberCallExpression.base] towards the
+     * [MethodDeclaration.receiver].
      *
      * @param target The call's target [FunctionDeclaration]
      * @param call The [CallExpression]
@@ -383,33 +409,71 @@ object Util {
             }
         }
 
-        // Connect the arguments to parameters
-        val arguments = call.arguments
-        target.parameterEdges.sortWith(Comparator.comparing { it.end.argumentIndex })
+        val functionParameters = target.parameters
+        val argumentEdges = call.argumentEdges
+        var argumentIndex = 0
 
-        var j = 0
-        while (j < arguments.size) {
-            val parameters = target.parameters
-            if (j < parameters.size) {
-                val param = parameters[j]
-                if (param.isVariadic) {
-                    while (j < arguments.size) {
-                        // map all the following arguments to this variadic param
-                        param.prevDFGEdges.addContextSensitive(
-                            arguments[j],
-                            callingContext = CallingContextIn(call)
-                        )
-                        j++
-                    }
-                    break
-                } else {
-                    param.prevDFGEdges.addContextSensitive(
-                        arguments[j],
-                        callingContext = CallingContextIn(call)
-                    )
-                }
+        for (param in functionParameters) {
+            val argumentEdge = argumentEdges.getOrNull(argumentIndex)
+            // Try to find a named argument matching this parameter
+            val namedEdge = argumentEdges.firstOrNull { it.name == param.name.localName }
+            if (namedEdge != null) {
+                param.prevDFGEdges.addContextSensitive(
+                    namedEdge.end,
+                    callingContext = CallingContextIn(call),
+                )
+                argumentIndex++
+                continue // Move to next parameter
             }
-            j++
+
+            // Handle variadic parameters
+            if (param.isVariadic) {
+                val remainingEdges = argumentEdges.drop(argumentIndex)
+                if (remainingEdges.isNotEmpty()) {
+                    // If it is the last parameter, it is a keyword required parameter (e.g.
+                    // **kwargs in python);
+                    val isKeywordVariadic = functionParameters.lastOrNull { it.isVariadic } == param
+                    remainingEdges.forEach { edge ->
+                        if (isKeywordVariadic) {
+                            param.prevDFGEdges.addContextSensitive(
+                                edge.end,
+                                callingContext = CallingContextIn(call),
+                            )
+                            argumentIndex++
+                        } else {
+                            // otherwise it is a positional variadic parameter (e.g. *args in
+                            // python) without keyword
+                            if (edge.name == null) {
+                                param.prevDFGEdges.addContextSensitive(
+                                    edge.end,
+                                    callingContext = CallingContextIn(call),
+                                )
+                                argumentIndex++
+                            }
+                        }
+                    }
+                }
+                continue // Move to next parameter
+            }
+
+            // Handle only positional parameters, ignoring named arguments
+            if (argumentEdge != null && argumentEdge.name == null) {
+                param.prevDFGEdges.addContextSensitive(
+                    argumentEdge.end,
+                    callingContext = CallingContextIn(call),
+                )
+                argumentIndex++
+                continue // Move to next parameter
+            }
+
+            // Handle default parameters when not explicitly provided
+            val default = param.default
+            if (default != null) {
+                param.prevDFGEdges.addContextSensitive(
+                    default,
+                    callingContext = CallingContextIn(call),
+                )
+            }
         }
     }
 
@@ -458,7 +522,7 @@ object Util {
     fun addDFGEdgesForMutuallyExclusiveBranchingExpression(
         n: Node,
         branchingExp: Node?,
-        branchingDeclaration: Node?
+        branchingDeclaration: Node?,
     ) {
         var conditionNodes = mutableListOf<Node>()
         if (branchingExp != null) {
@@ -472,16 +536,16 @@ object Util {
 
     enum class Connect {
         NODE,
-        SUBTREE
+        SUBTREE,
     }
 
     enum class Quantifier {
         ANY,
-        ALL
+        ALL,
     }
 
     enum class Edge {
         ENTRIES,
-        EXITS
+        EXITS,
     }
 }

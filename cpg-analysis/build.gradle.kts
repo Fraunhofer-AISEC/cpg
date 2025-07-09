@@ -23,20 +23,12 @@
  *                    \______/ \__|       \______/
  *
  */
-plugins {
-    id("cpg.library-conventions")
-}
+plugins { id("cpg.library-conventions") }
 
-
-publishing {
-    publications {
-        named<MavenPublication>("cpg-analysis") {
-            pom {
-                artifactId = "cpg-analysis"
-                name.set("Code Property Graph - Analysis Modules")
-                description.set("Analysis modules for the CPG")
-            }
-        }
+mavenPublishing {
+    pom {
+        name.set("Code Property Graph - Analysis Modules")
+        description.set("Analysis modules for the CPG")
     }
 }
 
@@ -44,4 +36,10 @@ dependencies {
     api(projects.cpgCore)
 
     testImplementation(testFixtures(projects.cpgCore))
+    // We depend on the Python frontend for the integration tests, but the frontend is only
+    // available if enabled.
+    // If it's not available, the integration tests fail (which is ok). But if we would directly
+    // reference the project here, the build system would fail any task since it will not find a
+    // non-enabled project.
+    findProject(":cpg-language-python")?.also { integrationTestImplementation(it) }
 }

@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.FileScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -43,7 +44,7 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
  *
  * ### Examples (Go)
  *
- * In Go, we usually import the package itself as a symbol.
+ * In Go, we usually import the package itself as a symbol (see [ImportStyle.IMPORT_NAMESPACE]).
  *
  * ```Go
  * package p
@@ -101,7 +102,8 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
  * ```
  *
  * The imported symbol is then visible within the current [Scope] of the [ImportDeclaration]. In the
- * example [name] and [import] is set to `std::string`, [wildcardImport] is `false`.
+ * example [name] and [import] is set to `std::string`, [style] is
+ * [ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE].
  *
  * Another possibility is to import a complete namespace, or to be more precise import all symbols
  * of the specified namespace into the current scope.
@@ -118,7 +120,8 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
  * }
  * ```
  *
- * In this example, the [name] and [import] is set to `std` and [wildcardImport] is `true`.
+ * In this example, the [name] and [import] is set to `std` and [style] is
+ * [ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE].
  */
 class ImportDeclaration : Declaration() {
 
@@ -149,11 +152,8 @@ class ImportDeclaration : Declaration() {
      */
     var importURL: String? = null
 
-    /**
-     * Specifies that [name] is pointing to a [NameScope] and that all [Scope.symbols] of that name
-     * scope need to be imported into the scope this declaration lives in.
-     */
-    var wildcardImport: Boolean = false
+    /** The import style. */
+    var style: ImportStyle = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE
 
     /**
      * A list of symbols that this declaration imports. This will be populated by

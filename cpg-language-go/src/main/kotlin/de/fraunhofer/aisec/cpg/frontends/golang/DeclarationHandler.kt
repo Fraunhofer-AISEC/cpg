@@ -51,12 +51,13 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
             if (recv != null) {
                 val recvField = recv.list.firstOrNull()
                 val recordType = recvField?.type?.let { frontend.typeOf(it) } ?: unknownType()
+                // The record type is an unqualified type, so we need to use the current namespace
+                // to make a FQN out of it
+                val fqnRecord =
+                    frontend.scopeManager.currentNamespace.fqn(recordType.root.name.localName)
 
                 val method =
-                    newMethodDeclaration(
-                        Name(funcDecl.name.name, recordType.root.name),
-                        rawNode = funcDecl
-                    )
+                    newMethodDeclaration(Name(funcDecl.name.name, fqnRecord), rawNode = funcDecl)
 
                 // The name of the Go receiver is optional. In fact, if the name is not
                 // specified we probably do not need any receiver variable at all,
@@ -67,16 +68,15 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                         newVariableDeclaration(
                             recvField.names[0].name,
                             recordType,
-                            rawNode = recvField
+                            rawNode = recvField,
                         )
                 }
 
                 if (recordType !is UnknownType) {
-                    val recordName = recordType.root.name
-
                     // TODO: this will only find methods within the current translation unit.
                     //  this is a limitation that we have for C++ as well
-                    val record = frontend.scopeManager.getRecordForName(recordName)
+                    val record =
+                        frontend.scopeManager.lookupScope(fqnRecord)?.astNode as? RecordDeclaration
 
                     // now this gets a little bit hacky, we will add it to the record declaration
                     // this is strictly speaking not 100 % true, since the method property edge is
@@ -105,9 +105,10 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
 
         frontend.scopeManager.enterScope(func)
 
-        if (func is MethodDeclaration && func.receiver != null) {
+        val receiver = (func as? MethodDeclaration)?.receiver
+        if (receiver != null) {
             // Add the receiver do the scope manager, so we can resolve the receiver value
-            frontend.scopeManager.addDeclaration(func.receiver)
+            frontend.scopeManager.addDeclaration(receiver)
         }
 
         val returnTypes = mutableListOf<Type>()
@@ -120,15 +121,18 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
 
                 // If the function has named return variables, be sure to declare them as well
                 if (returnVar.names.isNotEmpty()) {
-                    val param =
+                    val returnParam =
                         newVariableDeclaration(
                             returnVar.names[0].name,
                             frontend.typeOf(returnVar.type),
-                            rawNode = returnVar
+                            rawNode = returnVar,
                         )
 
                     // Add parameter to scope
-                    frontend.scopeManager.addDeclaration(param)
+                    frontend.scopeManager.addDeclaration(returnParam)
+
+                    // TODO(oxisto): Add the return parameter to the function declaration's AST. See
+                    //  https://github.com/Fraunhofer-AISEC/cpg/issues/430
                 }
             }
         }
@@ -137,7 +141,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
         func.returnTypes = returnTypes
 
         // Parse parameters
-        handleFuncParams(funcDecl.type.params)
+        handleFuncParams(func, funcDecl.type.params)
 
         // Only parse function body in non-dependencies
         if (!frontend.isDependency) {
@@ -165,7 +169,10 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
         return func
     }
 
-    internal fun handleFuncParams(list: GoStandardLibrary.Ast.FieldList) {
+    internal fun handleFuncParams(
+        func: FunctionDeclaration,
+        list: GoStandardLibrary.Ast.FieldList,
+    ) {
         for (param in list.list) {
             // We need to differentiate between three cases:
             // - an empty list of names, which means that the parameter is unnamed; and we also give
@@ -205,6 +212,8 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 val p = newParameterDeclaration(name, type, variadic, rawNode = param)
 
                 frontend.scopeManager.addDeclaration(p)
+                func.parameters += p
+
                 frontend.setComment(p, param)
             }
         }

@@ -1,6 +1,6 @@
 # Code Property Graph 
-[![Actions Status](https://github.com/Fraunhofer-AISEC/cpg/workflows/build/badge.svg)](https://github.com/Fraunhofer-AISEC/cpg/actions)
- [![codecov](https://codecov.io/gh/Fraunhofer-AISEC/cpg/graph/badge.svg?token=XBXZZOQIID)](https://codecov.io/gh/Fraunhofer-AISEC/cpg) [![](https://jitpack.io/v/Fraunhofer-AISEC/cpg.svg)](https://jitpack.io/#Fraunhofer-AISEC/cpg)
+[![Actions Status](https://github.com/Fraunhofer-AISEC/cpg/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/Fraunhofer-AISEC/cpg/actions)
+ [![codecov](https://codecov.io/gh/Fraunhofer-AISEC/cpg/graph/badge.svg?token=XBXZZOQIID)](https://codecov.io/gh/Fraunhofer-AISEC/cpg)
 
 A simple library to extract a *code property graph* out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed. It currently supports C/C++ (C17), Java (Java 13) and has experimental support for Golang, Python and TypeScript. Furthermore, it has support for the [LLVM IR](http://llvm.org/docs/LangRef.html) and thus, theoretically support for all languages that compile using LLVM. 
 
@@ -29,7 +29,14 @@ Instead of manually generating or editing the `gradle.properties` file, you can 
 
 ### For Visualization Purposes
 
-In order to get familiar with the graph itself, you can use the subproject [cpg-neo4j](https://github.com/Fraunhofer-AISEC/cpg/tree/master/cpg-neo4j). It uses this library to generate the CPG for a set of user-provided code files. The graph is then persisted to a [Neo4j](https://neo4j.com/) graph database. The advantage this has for the user, is that Neo4j's visualization software [Neo4j Browser](https://neo4j.com/developer/neo4j-browser/) can be used to graphically look at the CPG nodes and edges, instead of their Java representations.
+In order to get familiar with the graph itself, you can use the subproject [cpg-neo4j](./cpg-neo4j). It uses this library to generate the CPG for a set of user-provided code files. The graph is then persisted to a [Neo4j](https://neo4j.com/) graph database. The advantage this has for the user, is that Neo4j's visualization software [Neo4j Browser](https://neo4j.com/developer/neo4j-browser/) can be used to graphically look at the CPG nodes and edges, instead of their Java representations.
+
+Please make sure, that the [APOC](https://neo4j.com/labs/apoc/) plugin is enabled on your neo4j server. It is used in mass-creating nodes and relationships.
+
+For example using docker:
+```
+docker run -p 7474:7474 -p 7687:7687 -d -e NEO4J_AUTH=neo4j/password -e NEO4JLABS_PLUGINS='["apoc"]' neo4j:5
+```
 
 ### As Library
 
@@ -37,15 +44,12 @@ The most recent version is being published to Maven central and can be used as a
 
 ```kotlin
 dependencies {
-    val cpgVersion = "8.0.0"
+    val cpgVersion = "9.0.2"
 
-    // if you want to include all published cpg modules
-    implementation("de.fraunhofer.aisec", "cpg", cpgVersion)
-
-    // if you only want to use some of the cpg modules
     // use the 'cpg-core' module
-    // and then add the needed extra modules, such as Go and Python
     implementation("de.fraunhofer.aisec", "cpg-core", cpgVersion)
+
+    // and then add the needed extra modules, such as Go and Python
     implementation("de.fraunhofer.aisec", "cpg-language-go", cpgVersion)
     implementation("de.fraunhofer.aisec", "cpg-language-python", cpgVersion)
 }
@@ -72,11 +76,9 @@ Beware, that the `cpg` module includes all optional features and might potential
 
 #### Development Builds
 
-A published artifact of every commit can be requested through [JitPack](https://jitpack.io/#Fraunhofer-AISEC/cpg). This is especially useful, if your external project makes use of a specific feature that is not yet merged in yet or not published as a version yet. Please follow the instructions on the JitPack page. Please be aware, that similar to release builds, the CDT repository needs to be added as well (see above).
+For all builds on the `main` branch, an artefact is published in the [GitHub Packages](https://github.com/orgs/Fraunhofer-AISEC/packages?repo_name=cpg) under the version `main-SNAPSHOT`. Additionally, selected PRs that have the `publish-to-github-packages` label will also be published there. This is useful if an important feature is not yet in main, but you want to test it. The version refers to the PR number, e.g. `1954-SNAPSHOT`.  
 
-### On Command Line
-
-The library can be used on the command line using the `cpg-console` subproject. Please refer to the [README.md](./cpg-console/README.md) of the `cpg-console` as well as our small [tutorial](./tutorial.md) for further details.
+To use the GitHub Gradle Registry, please refer to https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-gradle-registry#using-a-published-package
 
 ### Configuration
 
@@ -134,6 +136,7 @@ The current state of languages is:
 | C++                      | cpg-language-cxx                      | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
 | Python                   | cpg-language-python                   | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
 | Go                       | cpg-language-go                       | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
+| INI                      | cpg-language-ini                      | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
 | JVM (Bytecode)           | cpg-language-jvm                      | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `incubating`   |
 | LLVM                     | cpg-language-llvm                     | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `incubating`   |
 | TypeScript/JavaScript    | cpg-language-typescript               | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `experimental` |
@@ -170,7 +173,7 @@ Through the `JepSingleton`, the CPG library will look for well known paths on Li
 
 #### TypeScript
 
-For parsing TypeScript, the necessary NodeJS-based code can be found in the `src/main/nodejs` directory of the `cpg-language-typescript` submodule. Gradle should build the script automatically, provided NodeJS (>=16) is installed. The bundles script will be placed inside the jar's resources and should work out of the box.
+For parsing TypeScript, the necessary TypeScript-based code can be found in the `src/main/nodejs` directory of the `cpg-language-typescript` submodule. Gradle should build the script automatically. The bundles script will be placed inside the jar's resources and should work out of the box.
 
 ### Code Style
 
@@ -193,19 +196,9 @@ cp style/pre-commit .git/hooks
 
 ## Contributors
 
-The following authors have contributed to this project (in alphabetical order):
-* [fwendland](https://github.com/fwendland)
-* [JulianSchuette](https://github.com/JulianSchuette)
-* [konradweiss](https://github.com/konradweiss)
-* [KuechA](https://github.com/KuechA)
-* [Masrepus](https://github.com/Masrepus)
-* [maximiliankaul](https://github.com/maximiliankaul)
-* [maximilian-galanis](https://github.com/maximilian-galanis)
-* [obraunsdorf](https://github.com/obraunsdorf)
-* [oxisto](https://github.com/oxisto)
-* [peckto](https://github.com/peckto)
-* [titze](https://github.com/titze)
-* [vfsrfs](https://github.com/vfsrfs)
+The following authors have contributed to this project:
+
+<a href="https://github.com/Fraunhofer-AISEC/cpg/graphs/contributors"><img src="https://contrib.rocks/image?repo=Fraunhofer-AISEC/cpg" /></a>
 
 ## Contributing
 

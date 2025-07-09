@@ -26,17 +26,23 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
+import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ComprehensionExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.InitializerTypePropagation
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
@@ -44,14 +50,17 @@ import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
 @ExecuteBefore(ImportResolver::class)
 @ExecuteBefore(SymbolResolver::class)
 @RequiredFrontend(PythonLanguageFrontend::class)
-class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
+class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), LanguageProvider {
+
+    lateinit var walker: SubgraphWalker.ScopedWalker
+
     override fun cleanup() {
         // nothing to do
     }
 
     override fun accept(p0: Component) {
-        val walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
-        walker.registerHandler { _, _, currNode -> handle(currNode) }
+        walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
+        walker.registerHandler { node -> handle(node) }
 
         for (tu in p0.translationUnits) {
             walker.iterate(tu)
@@ -59,15 +68,15 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * This function checks for each [AssignExpression] whether there is already a matching variable
-     * or not. New variables can be one of:
+     * This function checks for each [AssignExpression], [ComprehensionExpression] and
+     * [ForEachStatement] whether there is already a matching variable or not. New variables can be
+     * one of:
      * - [FieldDeclaration] if we are currently in a record
      * - [VariableDeclaration] otherwise
-     *
-     * TODO: loops
      */
     private fun handle(node: Node?) {
         when (node) {
+            is ComprehensionExpression -> handleComprehensionExpression(node)
             is AssignExpression -> handleAssignExpression(node)
             is ForEachStatement -> handleForEach(node)
             else -> {
@@ -85,29 +94,44 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
             return null
         }
 
-        // Look for a potential scope modifier for this reference
-        // lookupScope
-        var targetScope =
-            scopeManager.currentScope?.predefinedLookupScopes[ref.name.toString()]?.targetScope
+        // If this is a member expression, and we do not know the base's type, we cannot create a
+        // declaration
+        if (ref is MemberExpression && ref.base.type is UnknownType) {
+            return null
+        }
 
-        // There are a couple of things to consider now
+        // Look for a potential scope modifier for this reference
+        var targetScope =
+            scopeManager.currentScope.predefinedLookupScopes[ref.name.toString()]?.targetScope
+
+        // Try to see whether our symbol already exists. There are basically three rules to follow
+        // here.
         var symbol =
-            // Since this is a WRITE access, we need
-            //   - to look for a local symbol, unless
-            //   - a global keyword is present for this symbol and scope
-            if (targetScope != null) {
-                scopeManager.lookupSymbolByName(ref.name, ref.location, targetScope)
-            } else {
-                scopeManager.lookupSymbolByName(ref.name, ref.location) {
-                    it.scope == scopeManager.currentScope
-                }
+            when {
+                // When a target scope is set, then we have a `global` or `nonlocal` keyword for
+                // this symbol, and we need to start looking in this scope
+                targetScope != null -> scopeManager.lookupSymbolByNodeName(ref, targetScope)
+                // When we have a qualified reference (such as `self.a`), we do not have any
+                // specific restrictions, because the lookup will anyway be a qualified lookup,
+                // and it will consider only the scope of `self`.
+                ref.name.isQualified() -> scopeManager.lookupSymbolByNodeName(ref)
+                // In any other case, we need to restrict the lookup to the current scope. The
+                // main reason for this is that Python requires the `global` keyword in functions
+                // for assigning to global variables. See
+                // https://docs.python.org/3/reference/simple_stmts.html#the-global-statement. So
+                // basically we need to ignore all global variables at this point and only look
+                // for local ones.
+                else ->
+                    scopeManager.lookupSymbolByNodeName(ref) {
+                        it.scope == scopeManager.currentScope
+                    }
             }
 
-        // Nothing to create
+        // If the symbol is already defined in the designed scope, there is nothing to create
         if (symbol.isNotEmpty()) return null
 
         // First, check if we need to create a field
-        var field: FieldDeclaration? =
+        var decl: VariableDeclaration? =
             when {
                 // Check, whether we are referring to a "self.X", which would create a field
                 scopeManager.isInRecord && scopeManager.isInFunction && ref.refersToReceiver -> {
@@ -122,26 +146,26 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     // creating fields, except if this is a receiver
                     return null
                 }
-                scopeManager.isInRecord -> {
+                scopeManager.isInRecord && !scopeManager.isInFunction -> {
                     // We end up here for fields declared directly in the class body. These are
                     // class attributes; more or less static fields.
-                    newFieldDeclaration(ref.name)
+                    newFieldDeclaration(scopeManager.currentNamespace.fqn(ref.name.localName))
                 }
                 else -> {
                     null
                 }
             }
 
-        // If we didn't create any field up to this point and if we are still have not returned, we
-        // can create a normal variable. We need to take scope modifications into account.
-        var decl =
-            if (field == null && targetScope != null) {
-                scopeManager.withScope(targetScope) { newVariableDeclaration(ref.name) }
-            } else if (field == null) {
-                newVariableDeclaration(ref.name)
-            } else {
-                field
-            }
+        // If we didn't create any declaration up to this point and are still here, we need to
+        // create a (local) variable. We need to take scope modifications into account.
+        if (decl == null) {
+            decl =
+                if (targetScope != null) {
+                    scopeManager.withScope(targetScope) { newVariableDeclaration(ref.name) }
+                } else {
+                    newVariableDeclaration(ref.name)
+                }
+        }
 
         decl.code = ref.code
         decl.location = ref.location
@@ -155,12 +179,18 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 "variable"
             },
             decl.name,
-            decl.scope
+            decl.scope,
         )
 
         // Make sure we add the declaration at the correct place, i.e. with the scope we set at the
         // creation time
-        scopeManager.withScope(decl.scope) { scopeManager.addDeclaration(decl) }
+        scopeManager.withScope(decl.scope) {
+            scopeManager.addDeclaration(decl)
+            if (decl is FieldDeclaration) {
+                (it?.astNode as? DeclarationHolder)?.addDeclaration(decl)
+            }
+            decl
+        }
 
         return decl
     }
@@ -171,24 +201,89 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 this.base.name == scopeManager.currentMethod?.receiver?.name
         }
 
-    private fun handleAssignExpression(assignExpression: AssignExpression) {
-        for (target in assignExpression.lhs) {
-            (target as? Reference)?.let {
-                val handled = handleWriteToReference(target)
-                if (handled is Declaration) {
-                    // We cannot assign an initializer here because this will lead to duplicate
-                    // DFG edges, but we need to propagate the type information from our value
-                    // to the declaration. We therefore add the declaration to the observers of
-                    // the value's type, so that it gets informed and can change its own type
-                    // accordingly.
-                    assignExpression
-                        .findValue(target)
-                        ?.registerTypeObserver(InitializerTypePropagation(handled))
+    /**
+     * Generates a new [VariableDeclaration] for [Reference] (and those included in a
+     * [InitializerListExpression]) in the [ComprehensionExpression.variable].
+     */
+    private fun handleComprehensionExpression(comprehensionExpression: ComprehensionExpression) {
+        when (val variable = comprehensionExpression.variable) {
+            is Reference -> {
+                variable.access = AccessValues.WRITE
+                handleWriteToReference(variable)?.let {
+                    if (it !is FieldDeclaration) {
+                        comprehensionExpression.addDeclaration(it)
+                    }
+                }
+            }
+            is InitializerListExpression -> {
+                variable.initializers.forEach {
+                    (it as? Reference)?.let { ref ->
+                        ref.access = AccessValues.WRITE
+                        handleWriteToReference(ref)?.let {
+                            if (it !is FieldDeclaration) {
+                                comprehensionExpression.addDeclaration(it)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
+    /**
+     * Generates a new [VariableDeclaration] if [target] is a [Reference] and there is no existing
+     * declaration yet.
+     */
+    private fun handleAssignmentToTarget(
+        assignExpression: AssignExpression,
+        target: Node,
+        setAccessValue: Boolean = false,
+    ) {
+        (target as? Reference)?.let {
+            if (setAccessValue) it.access = AccessValues.WRITE
+            val handled = handleWriteToReference(target)
+            if (handled != null) {
+                // We cannot assign an initializer here because this will lead to duplicate
+                // DFG edges, but we need to propagate the type information from our value
+                // to the declaration. We therefore add the declaration to the observers of
+                // the value's type, so that it gets informed and can change its own type
+                // accordingly.
+                assignExpression
+                    .findValue(target)
+                    ?.registerTypeObserver(InitializerTypePropagation(handled))
+
+                if (handled !is FieldDeclaration) {
                     // Add it to our assign expression, so that we can find it in the AST
                     assignExpression.declarations += handled
                 }
             }
+        }
+    }
+
+    private fun handleAssignExpression(assignExpression: AssignExpression) {
+        val parentCollectionComprehensions = ArrayDeque<CollectionComprehension>()
+        var parentCollectionComprehension =
+            assignExpression.firstParentOrNull<CollectionComprehension>()
+        while (assignExpression.operatorCode == ":=" && parentCollectionComprehension != null) {
+            scopeManager.leaveScope(parentCollectionComprehension)
+            parentCollectionComprehensions.addLast(parentCollectionComprehension)
+            parentCollectionComprehension =
+                parentCollectionComprehension.firstParentOrNull<CollectionComprehension>()
+        }
+        for (target in assignExpression.lhs) {
+            handleAssignmentToTarget(assignExpression, target, setAccessValue = false)
+            // If the lhs is an InitializerListExpression, we have to handle the individual elements
+            // in the initializers.
+            (target as? InitializerListExpression)?.let {
+                it.initializers.forEach { initializer ->
+                    handleAssignmentToTarget(assignExpression, initializer, setAccessValue = true)
+                }
+            }
+        }
+        while (
+            assignExpression.operatorCode == ":=" && parentCollectionComprehensions.isNotEmpty()
+        ) {
+            scopeManager.enterScope(parentCollectionComprehensions.removeLast())
         }
     }
 
@@ -197,10 +292,13 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx) {
         when (val forVar = node.variable) {
             is Reference -> {
                 val handled = handleWriteToReference(forVar)
-                if (handled is Declaration) {
+                if (handled != null && handled !is FieldDeclaration) {
                     handled.let { node.addDeclaration(it) }
                 }
             }
         }
     }
+
+    override val language: Language<*>
+        get() = ctx.availableLanguage<PythonLanguage>() ?: UnknownLanguage
 }

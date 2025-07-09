@@ -1,3 +1,6 @@
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.MavenPublishBaseExtension
+
 /*
  * Copyright (c) 2019-2021, Fraunhofer AISEC. All rights reserved.
  *
@@ -29,7 +32,7 @@
 //
 plugins {
     id("org.jetbrains.dokka")
-    id("io.github.gradle-nexus.publish-plugin")
+    id("test-report-aggregation")
 }
 
 // this is needed for the plugins block
@@ -44,7 +47,7 @@ allprojects {
 
     val dokkaPlugin by configurations
     dependencies {
-        dokkaPlugin("org.jetbrains.dokka:versioning-plugin:1.9.0")
+        dokkaPlugin("org.jetbrains.dokka:versioning-plugin:2.0.0")
     }
 }
 
@@ -75,22 +78,9 @@ fun generateDokkaWithVersionTag(dokkaMultiModuleTask: org.jetbrains.dokka.gradle
     dokkaMultiModuleTask.pluginsMapConfiguration.set(mapOf)
 }
 
-
-/**
- * Publishing to maven central
- */
-nexusPublishing {
-    repositories {
-        sonatype() {
-            val mavenCentralUsername: String? by project
-            val mavenCentralPassword: String? by project
-
-            username.set(mavenCentralUsername)
-            password.set(mavenCentralPassword)
-        }
-    }
+dependencies {
+    testReportAggregation(project(":cpg-core"))
 }
-
 
 //
 // Load the properties that define which frontends to include
@@ -143,3 +133,9 @@ val enableJVMFrontend: Boolean by extra {
     enableJVMFrontend.toBoolean()
 }
 project.logger.lifecycle("JVM frontend is ${if (enableJVMFrontend) "enabled" else "disabled"}")
+
+val enableINIFrontend: Boolean by extra {
+    val enableINIFrontend: String? by project
+    enableINIFrontend.toBoolean()
+}
+project.logger.lifecycle("INI frontend is ${if (enableINIFrontend) "enabled" else "disabled"}")

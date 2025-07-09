@@ -40,10 +40,7 @@ import sootup.core.signatures.SootClassMemberSignature
 import sootup.java.core.jimple.basic.JavaLocal
 
 class ExpressionHandler(frontend: JVMLanguageFrontend) :
-    Handler<Expression, Value, JVMLanguageFrontend>(
-        ::ProblemExpression,
-        frontend,
-    ) {
+    Handler<Expression, Value, JVMLanguageFrontend>(::ProblemExpression, frontend) {
 
     init {
         map.put(Local::class.java) { handleLocal(it as Local) }
@@ -146,7 +143,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
             newReference(
                 "@parameter${parameterRef.index}",
                 frontend.typeOf(parameterRef.type),
-                rawNode = parameterRef
+                rawNode = parameterRef,
             )
 
         return ref
@@ -160,7 +157,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
                 instanceFieldRef.fieldSignature.name,
                 base,
                 frontend.typeOf(instanceFieldRef.fieldSignature.type),
-                rawNode = instanceFieldRef
+                rawNode = instanceFieldRef,
             )
 
         return ref
@@ -322,7 +319,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
         newLiteral(
             constant.equalEqual(BooleanConstant.getTrue()),
             primitiveType("boolean"),
-            rawNode = constant
+            rawNode = constant,
         )
 
     private fun handleFloatConstant(constant: FloatConstant) =
@@ -361,7 +358,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
                 this.name,
                 this.parameterTypes.map { frontend.typeOf(it) },
                 listOf(frontend.typeOf(this.type)),
-                frontend.language
+                frontend.language,
             )
 
         return ref

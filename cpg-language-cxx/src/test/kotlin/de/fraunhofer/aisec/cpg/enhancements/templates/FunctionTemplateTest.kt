@@ -45,7 +45,7 @@ internal class FunctionTemplateTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "functionTemplate.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -65,20 +65,20 @@ internal class FunctionTemplateTest : BaseTest() {
     private fun testFunctionTemplateArguments(
         callFloat3: CallExpression,
         floatType: ObjectType,
-        int3: Literal<*>
+        int3: Literal<*>,
     ) {
         assertEquals(2, callFloat3.templateArguments.size)
         assertEquals(floatType, (callFloat3.templateArguments[0] as TypeExpression).type)
         assertEquals(0, callFloat3.templateArgumentEdges!![0].index)
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            callFloat3.templateArgumentEdges!![0].instantiation
+            callFloat3.templateArgumentEdges!![0].instantiation,
         )
         assertEquals(int3, callFloat3.templateArguments[1])
         assertEquals(1, callFloat3.templateArgumentEdges!![1].index)
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            callFloat3.templateArgumentEdges!![1].instantiation
+            callFloat3.templateArgumentEdges!![1].instantiation,
         )
     }
 
@@ -89,10 +89,16 @@ internal class FunctionTemplateTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "functionTemplate.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
+        val language = result.finalCtx.availableLanguage<CPPLanguage>()
+        assertNotNull(language)
+
+        val ctx = result.finalCtx
+        assertNotNull(ctx)
+
         // This test checks the structure of FunctionTemplates without the TemplateExpansionPass
         val functionTemplateDecl = result.allChildren<FunctionTemplateDeclaration>()[0]
 
@@ -103,9 +109,9 @@ internal class FunctionTemplateTest : BaseTest() {
         val typeParamDeclaration = typeParamDecls[0]
         assertEquals(typeParamDeclaration, functionTemplateDecl.parameters[0])
 
-        val typeT = ParameterizedType("T", CPPLanguage())
-        val intType = IntegerType("int", 32, CPPLanguage(), NumericType.Modifier.SIGNED)
-        val floatType = FloatingPointType("float", 32, CPPLanguage(), NumericType.Modifier.SIGNED)
+        val typeT = ParameterizedType("T", language)
+        val intType = IntegerType("int", 32, language, NumericType.Modifier.SIGNED)
+        val floatType = FloatingPointType("float", 32, language, NumericType.Modifier.SIGNED)
         assertEquals(typeT, typeParamDeclaration.type)
         assertEquals(intType, typeParamDeclaration.default)
 
@@ -159,7 +165,7 @@ internal class FunctionTemplateTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation1.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -189,10 +195,16 @@ internal class FunctionTemplateTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation2.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
+        val language = result.finalCtx.availableLanguage<CPPLanguage>()
+        assertNotNull(language)
+
+        val ctx = result.finalCtx
+        assertNotNull(ctx)
+
         val templateDeclaration =
             findByUniquePredicate(result.allChildren<FunctionTemplateDeclaration>()) {
                 t: FunctionTemplateDeclaration ->
@@ -217,7 +229,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(fixedMultiply, call.invokes[0])
 
         // Check template parameters
-        val doubleType = FloatingPointType("double", 64, CPPLanguage(), NumericType.Modifier.SIGNED)
+        val doubleType = FloatingPointType("double", 64, language, NumericType.Modifier.SIGNED)
         val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
         assertEquals(2, call.templateArguments.size)
         assertEquals(doubleType, (call.templateArguments[0] as TypeExpression).type)
@@ -235,7 +247,7 @@ internal class FunctionTemplateTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation3.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -277,7 +289,7 @@ internal class FunctionTemplateTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation4.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -326,10 +338,16 @@ internal class FunctionTemplateTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation5.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
+        val language = result.finalCtx.availableLanguage<CPPLanguage>()
+        assertNotNull(language)
+
+        val ctx = result.finalCtx
+        assertNotNull(ctx)
+
         val templateDeclaration =
             findByUniquePredicate(result.allChildren<FunctionTemplateDeclaration>()) {
                 t: FunctionTemplateDeclaration ->
@@ -354,7 +372,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(fixedMultiply, call.invokes[0])
 
         // Check template parameters
-        val doubleType = FloatingPointType("double", 64, CPPLanguage(), NumericType.Modifier.SIGNED)
+        val doubleType = FloatingPointType("double", 64, language, NumericType.Modifier.SIGNED)
         val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
         assertEquals(2, call.templateArguments.size)
         assertEquals(doubleType, (call.templateArguments[0] as TypeExpression).type)
@@ -372,7 +390,7 @@ internal class FunctionTemplateTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation6.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -428,7 +446,7 @@ internal class FunctionTemplateTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation7.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -480,7 +498,7 @@ internal class FunctionTemplateTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "functionTemplateMethod.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -515,7 +533,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertLocalName("int", callExpression.templateArguments[0])
         assertEquals(
             TemplateDeclaration.TemplateInitialization.EXPLICIT,
-            callExpression.templateArgumentEdges?.get(0)?.instantiation
+            callExpression.templateArgumentEdges?.get(0)?.instantiation,
         )
         assertEquals(0, callExpression.templateArgumentEdges!![0].index)
         val int5 =
@@ -524,7 +542,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(1, callExpression.templateArgumentEdges!![1].index)
         assertEquals(
             TemplateDeclaration.TemplateInitialization.DEFAULT,
-            callExpression.templateArgumentEdges!![1].instantiation
+            callExpression.templateArgumentEdges!![1].instantiation,
         )
     }
 
@@ -536,10 +554,12 @@ internal class FunctionTemplateTest : BaseTest() {
             analyze(
                 listOf(Path.of(topLevel.toString(), "functionTemplateInvocation8.cpp").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
+        val language = result.finalCtx.availableLanguage<CPPLanguage>()
+        assertNotNull(language)
 
         // Check inferred for first fixed_division call
         var templateDeclaration =
@@ -594,7 +614,7 @@ internal class FunctionTemplateTest : BaseTest() {
         )
 
         // Check return values
-        assertEquals(UnknownType.getUnknownType(CPPLanguage()), callInt2.type)
-        assertEquals(UnknownType.getUnknownType(CPPLanguage()), callDouble3.type)
+        assertEquals(UnknownType.getUnknownType(language), callInt2.type)
+        assertEquals(UnknownType.getUnknownType(language), callDouble3.type)
     }
 }

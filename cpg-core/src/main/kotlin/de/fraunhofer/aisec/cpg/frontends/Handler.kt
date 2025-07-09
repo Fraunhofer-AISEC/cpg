@@ -47,13 +47,13 @@ import org.slf4j.LoggerFactory
 abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<in HandlerNode, *>>(
     protected val configConstructor: Supplier<ResultNode>,
     /** Returns the frontend which used this handler. */
-    val frontend: L
+    val frontend: L,
 ) :
     LanguageProvider by frontend,
+    ContextProvider by frontend,
     CodeAndLocationProvider<HandlerNode> by frontend,
     ScopeProvider by frontend,
     NamespaceProvider by frontend,
-    ContextProvider by frontend,
     RawNodeTypeProvider<HandlerNode> {
     protected val map = HashMap<Class<out HandlerNode>, HandlerInterface<ResultNode, HandlerNode>>()
     private val typeOfT: Class<*>?
@@ -96,7 +96,7 @@ abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<in 
                     frontend,
                     ctx,
                     log,
-                    "No handler for type ${ctx.javaClass}, resolving for its superclass $toHandle."
+                    "No handler for type ${ctx.javaClass}, resolving for its superclass $toHandle.",
                 )
             }
             if (toHandle == typeOfT || typeOfT != null && !typeOfT.isAssignableFrom(toHandle)) {
@@ -114,7 +114,7 @@ abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<in 
                 frontend,
                 ctx,
                 log,
-                "Parsing of type ${ctx.javaClass} is not supported (yet)"
+                "Parsing of type ${ctx.javaClass} is not supported (yet)",
             )
             ret = configConstructor.get()
             if (ret is ProblemNode) {
@@ -130,7 +130,7 @@ abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<in 
                 frontend,
                 ctx,
                 log,
-                "Parsing of type ${ctx.javaClass} did not produce a proper CPG node"
+                "Parsing of type ${ctx.javaClass} did not produce a proper CPG node",
             )
             ret = configConstructor.get()
         }

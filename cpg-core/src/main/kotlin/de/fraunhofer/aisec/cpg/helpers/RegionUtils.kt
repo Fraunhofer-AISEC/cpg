@@ -25,50 +25,43 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import kotlin.math.min
 import org.apache.commons.lang3.StringUtils
 
 /**
- * To prevent issues with different newline types and formatting.
- *
- * @param multilineCode The newline type is extracted from the code assuming it contains newlines
- * @return the String of the newline or \n as default
+ * Returns the part of the [code] described by [subRegion], embedded in [nodeRegion]. [newLineType]
+ * can be used to specify the type of new-line char(s) used on the platform.
  */
-fun getNewLineType(multilineCode: String, region: Region? = null): String {
-    var code = multilineCode
-    region?.let {
-        if (it.startLine != it.endLine) {
-            code = code.substring(0, code.length - it.endColumn + 1)
-        }
-    }
-
-    val nls = listOf("\n\r", "\r\n", "\n")
-    for (nl in nls) {
-        if (code.endsWith(nl)) {
-            return nl
-        }
-    }
-    LanguageFrontend.log.debug("Could not determine newline type. Assuming \\n.")
-    return "\n"
-}
-
-fun getCodeOfSubregion(code: String, nodeRegion: Region, subRegion: Region): String {
-    val nlType = getNewLineType(code, nodeRegion)
+fun getCodeOfSubregion(
+    code: String,
+    nodeRegion: Region,
+    subRegion: Region,
+    lineBreakSequence: CharSequence = "\n",
+): String {
     val start =
         if (subRegion.startLine == nodeRegion.startLine) {
             subRegion.startColumn - nodeRegion.startColumn
         } else {
-            (StringUtils.ordinalIndexOf(code, nlType, subRegion.startLine - nodeRegion.startLine) +
-                subRegion.startColumn)
+            (StringUtils.ordinalIndexOf(
+                code,
+                lineBreakSequence,
+                subRegion.startLine - nodeRegion.startLine,
+            ) + subRegion.startColumn)
         }
     var end =
         if (subRegion.endLine == nodeRegion.startLine) {
             subRegion.endColumn - nodeRegion.startColumn
         } else {
-            (StringUtils.ordinalIndexOf(code, nlType, subRegion.endLine - nodeRegion.startLine) +
-                subRegion.endColumn)
+            (StringUtils.ordinalIndexOf(
+                code,
+                lineBreakSequence,
+                subRegion.endLine - nodeRegion.startLine,
+            ) + subRegion.endColumn)
         }
 
     // Unfortunately, we sometimes have issues with (non)-Unicode characters in code, where the
@@ -76,4 +69,22 @@ fun getCodeOfSubregion(code: String, nodeRegion: Region, subRegion: Region): Str
     // beyond our "end"
     end = min(end, code.length)
     return code.substring(start, end)
+}
+
+/**
+ * This function returns the [Node]s matching the provided [PhysicalLocation] in the given
+ * [TranslationResult].
+ *
+ * @param location The [PhysicalLocation] to match against.
+ * @param clsName The type of [Node] to match against.
+ * @return A list of [Node]s that match the provided [PhysicalLocation] and requested type
+ *   [clsName].
+ */
+fun TranslationResult.getNodesByRegion(
+    location: PhysicalLocation,
+    clsName: String? = null,
+): List<Node> {
+    return this.nodes.filter { node ->
+        node.location == location && (clsName == null || node.javaClass.name == clsName)
+    }
 }

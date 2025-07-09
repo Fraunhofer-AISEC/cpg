@@ -94,7 +94,7 @@ class ProgramDependenceGraphPassTest {
                         t.prevPDGEdges.union(expectedPrevEdges) == t.prevPDGEdges
                     }
                 }
-            }
+            },
         )
     }
 
@@ -103,12 +103,12 @@ class ProgramDependenceGraphPassTest {
         fun provideTranslationResultForPDGTest() =
             Stream.of(
                 Arguments.of(getIfTest(), "if statement"),
-                Arguments.of(getWhileLoopTest(), "while loop")
+                Arguments.of(getWhileLoopTest(), "while loop"),
             )
 
         private fun getIfTest() =
             testFrontend {
-                    it.registerLanguage(TestLanguage("."))
+                    it.registerLanguage<TestLanguage>()
                     it.defaultPasses()
                     it.registerPass<ControlDependenceGraphPass>()
                     it.registerPass<ProgramDependenceGraphPass>()
@@ -144,7 +144,7 @@ class ProgramDependenceGraphPassTest {
 
         private fun getWhileLoopTest() =
             testFrontend {
-                    it.registerLanguage(TestLanguage("."))
+                    it.registerLanguage<TestLanguage>()
                     it.defaultPasses()
                     it.registerPass<ControlDependenceGraphPass>()
                     it.registerPass<ProgramDependenceGraphPass>()

@@ -58,11 +58,13 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.CommonPath
 import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
+import de.fraunhofer.aisec.cpg.passes.JavaExtraPass
 import de.fraunhofer.aisec.cpg.passes.JavaImportResolver
 import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -78,8 +80,9 @@ import kotlin.jvm.optionals.getOrNull
     JavaExternalTypeHierarchyResolver::class
 ) // this pass is always required for Java
 @RegisterExtraPass(JavaImportResolver::class)
-open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend<Node, Type>(language, ctx) {
+@RegisterExtraPass(JavaExtraPass::class)
+open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<JavaLanguageFrontend>) :
+    LanguageFrontend<Node, Type>(ctx, language) {
 
     var context: CompilationUnit? = null
     var javaSymbolResolver: JavaSymbolSolver?
@@ -116,36 +119,66 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
             context?.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolResolver)
 
             // starting point is always a translation declaration
-            val fileDeclaration = newTranslationUnitDeclaration(file.toString(), rawNode = context)
-            currentTU = fileDeclaration
-            scopeManager.resetToGlobal(fileDeclaration)
+            val tud = newTranslationUnitDeclaration(file.toString(), rawNode = context)
+            currentTU = tud
+            scopeManager.resetToGlobal(tud)
             val packDecl = context?.packageDeclaration?.orElse(null)
-            var namespaceDeclaration: NamespaceDeclaration? = null
-            if (packDecl != null) {
-                namespaceDeclaration =
-                    newNamespaceDeclaration(packDecl.name.asString(), rawNode = packDecl)
-                scopeManager.addDeclaration(namespaceDeclaration)
-                scopeManager.enterScope(namespaceDeclaration)
-            }
+
+            // We need to create nested namespace (if we have a package declaration) so that we have
+            // correct symbols on the global scope. Otherwise, we put everything directly into the
+            // translation unit
+            val holder =
+                packDecl?.name?.toString()?.split(language.namespaceDelimiter)?.fold(null) {
+                    previous: NamespaceDeclaration?,
+                    path ->
+                    var fqn = previous?.name.fqn(path)
+
+                    val nsd = newNamespaceDeclaration(fqn, rawNode = packDecl)
+                    scopeManager.addDeclaration(nsd)
+                    val holder = previous ?: tud
+                    holder.addDeclaration(nsd)
+
+                    scopeManager.enterScope(nsd)
+                    nsd
+                } ?: tud
 
             for (type in context?.types ?: listOf()) {
                 // handle each type. all declaration in this type will be added by the scope manager
-                // along
-                // the way
+                // along the way
                 val declaration = declarationHandler.handle(type)
-                scopeManager.addDeclaration(declaration)
+                if (declaration != null) {
+                    scopeManager.addDeclaration(declaration)
+                    holder.addDeclaration(declaration)
+                }
             }
 
+            // We put imports and includes directly into the file scope, because otherwise the
+            // import would be visible as symbols in the whole namespace
+            scopeManager.enterScope(tud)
             for (anImport in context?.imports ?: listOf()) {
                 val incl = newIncludeDeclaration(anImport.nameAsString)
                 scopeManager.addDeclaration(incl)
+                tud.addDeclaration(incl)
             }
 
-            if (namespaceDeclaration != null) {
-                scopeManager.leaveScope(namespaceDeclaration)
+            // We create an implicit import for "java.lang.*"
+            val decl =
+                newImportDeclaration(
+                        parseName("java.lang"),
+                        style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+                    )
+                    .implicit("import java.lang.*")
+            scopeManager.addDeclaration(decl)
+            tud.addDeclaration(decl)
+            scopeManager.leaveScope(tud)
+
+            if (holder is NamespaceDeclaration) {
+                tud.allChildren<NamespaceDeclaration>().reversed().forEach {
+                    scopeManager.leaveScope(it)
+                }
             }
             bench.addMeasurement()
-            fileDeclaration
+            tud
         } catch (ex: IOException) {
             throw TranslationException(ex)
         }
@@ -199,7 +232,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                     r.begin.line,
                     r.begin.column,
                     r.end.line,
-                    r.end.column + 1
+                    r.end.column + 1,
                 ) // +1 for SARIF compliance
             return PhysicalLocation(storage.path.toUri(), region)
         }
@@ -208,7 +241,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
 
     fun <N : Node, T : Type> getTypeAsGoodAsPossible(
         nodeWithType: NodeWithType<N, T>,
-        resolved: ResolvedValueDeclaration
+        resolved: ResolvedValueDeclaration,
     ): de.fraunhofer.aisec.cpg.graph.types.Type {
         return try {
             val type = nodeWithType.typeAsString
@@ -342,14 +375,14 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
 
     fun <N : Node, T : Type> getReturnTypeAsGoodAsPossible(
         nodeWithType: NodeWithType<N, T>,
-        resolved: ResolvedMethodDeclaration
+        resolved: ResolvedMethodDeclaration,
     ): de.fraunhofer.aisec.cpg.graph.types.Type {
         return try {
             // Resolve type first with ParameterizedType
             var type: de.fraunhofer.aisec.cpg.graph.types.Type? =
                 typeManager.getTypeParameter(
                     scopeManager.currentRecord,
-                    resolved.returnType.describe()
+                    resolved.returnType.describe(),
                 )
             if (type == null) {
                 type = typeOf(resolved.returnType)
@@ -437,7 +470,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
      */
     fun processAnnotations(
         node: de.fraunhofer.aisec.cpg.graph.Node,
-        owner: NodeWithAnnotations<*>
+        owner: NodeWithAnnotations<*>,
     ) {
         if (config.processAnnotations) {
             node.annotations += handleAnnotations(owner)
@@ -457,7 +490,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                         newAnnotationMember(
                             pair.nameAsString,
                             expressionHandler.handle(pair.value) as Expression,
-                            rawNode = pair.value
+                            rawNode = pair.value,
                         )
                     members.add(member)
                 }
@@ -469,7 +502,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                         newAnnotationMember(
                             ANNOTATION_MEMBER_VALUE,
                             expressionHandler.handle(value) as Expression,
-                            rawNode = value
+                            rawNode = value,
                         )
                     members.add(member)
                 }
@@ -488,7 +521,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
             is ClassOrInterfaceType ->
                 objectType(
                     type.nameWithScope,
-                    type.typeArguments.getOrNull()?.map { this.typeOf(it) } ?: listOf()
+                    type.typeArguments.getOrNull()?.map { this.typeOf(it) } ?: listOf(),
                 )
             is ReferenceType -> objectType(type.asString())
             else -> objectType(type.asString())
@@ -514,7 +547,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
     init {
         val reflectionTypeSolver = ReflectionTypeSolver()
         nativeTypeResolver.add(reflectionTypeSolver)
-        var root = config.topLevel
+        var root = ctx.currentComponent?.topLevel()
         if (root == null && config.softwareComponents.size == 1) {
             root =
                 config.softwareComponents[config.softwareComponents.keys.first()]?.let {

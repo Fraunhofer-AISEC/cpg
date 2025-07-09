@@ -36,7 +36,11 @@ import org.neo4j.ogm.annotation.Transient
  *
  * Therefore, we need to wrap the edge in a list with a single element.
  */
-class EdgeSingletonList<NodeType : Node, NullableNodeType : NodeType?, EdgeType : Edge<NodeType>>(
+open class EdgeSingletonList<
+    NodeType : Node,
+    NullableNodeType : NodeType?,
+    EdgeType : Edge<NodeType>,
+>(
     override var thisRef: Node,
     override var init: (Node, NodeType) -> EdgeType,
     var onChanged: ((old: EdgeType?, new: EdgeType?) -> Unit)? = null,
@@ -71,7 +75,15 @@ class EdgeSingletonList<NodeType : Node, NullableNodeType : NodeType?, EdgeType 
     }
 
     override fun add(element: EdgeType): Boolean {
-        throw UnsupportedOperationException()
+        if (this.element == null) {
+            this.element = element
+            onChanged?.invoke(null, this.element)
+            return true
+        } else {
+            throw UnsupportedOperationException(
+                "We cannot 'add' to a singleton edge list, that is already populated"
+            )
+        }
     }
 
     override fun addAll(elements: Collection<EdgeType>): Boolean {
@@ -79,7 +91,10 @@ class EdgeSingletonList<NodeType : Node, NullableNodeType : NodeType?, EdgeType 
     }
 
     override fun clear() {
-        throw UnsupportedOperationException()
+        // Make a copy of our edge so we can pass a copy to our on-remove handler
+        val old = this.element
+        this.element = null
+        old?.let { handleOnRemove(it) }
     }
 
     override fun iterator(): MutableIterator<EdgeType> {
@@ -87,11 +102,21 @@ class EdgeSingletonList<NodeType : Node, NullableNodeType : NodeType?, EdgeType 
     }
 
     override fun remove(element: EdgeType): Boolean {
-        throw UnsupportedOperationException()
+        if (this.element == element) {
+            clear()
+            return true
+        }
+
+        return false
     }
 
     override fun removeAll(elements: Collection<EdgeType>): Boolean {
-        throw UnsupportedOperationException()
+        if (this.element in elements) {
+            clear()
+            return true
+        }
+
+        return false
     }
 
     override fun retainAll(elements: Collection<EdgeType>): Boolean {
@@ -126,7 +151,7 @@ class EdgeSingletonList<NodeType : Node, NullableNodeType : NodeType?, EdgeType 
         var hasNext = isNotEmpty()
 
         override fun remove() {
-            throw UnsupportedOperationException()
+            clear()
         }
 
         override fun hasNext(): Boolean {
@@ -151,6 +176,13 @@ class EdgeSingletonList<NodeType : Node, NullableNodeType : NodeType?, EdgeType 
                 @Suppress("UNCHECKED_CAST") init(node, thisRef as NodeType)
             }
         onChanged?.invoke(old, this.element)
+
+        val element = this.element
+        if (element != null) {
+            handleOnAdd(element)
+        } else if (old != null) {
+            handleOnRemove(old)
+        }
     }
 
     fun <ThisType : Node> delegate(): UnwrapDelegate<ThisType> {
@@ -158,15 +190,13 @@ class EdgeSingletonList<NodeType : Node, NullableNodeType : NodeType?, EdgeType 
     }
 
     @Transient
-    inner class UnwrapDelegate<
-        ThisType : Node,
-    >() {
+    inner class UnwrapDelegate<ThisType : Node>() {
         @Suppress("UNCHECKED_CAST")
         operator fun getValue(thisRef: ThisType, property: KProperty<*>): NullableNodeType {
             return (if (outgoing) {
                 this@EdgeSingletonList.element?.end
             } else {
-                this@EdgeSingletonList.element?.start as NodeType
+                this@EdgeSingletonList.element?.start as NodeType?
             })
                 as NullableNodeType
         }

@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.NodeEntity
@@ -73,7 +74,16 @@ abstract class Type : Node {
     var isPrimitive = false
         protected set
 
+    var isMutable = true
+        protected set
+
     open var typeOrigin: Origin? = null
+
+    /**
+     * The list of second-order types based on this type. An example might be a [PointerType], whose
+     * [PointerType.elementType] is this type.
+     */
+    @DoNotPersist val secondOrderTypes = mutableListOf<Type>()
 
     /**
      * This points to the [DeclaresType] node (most likely a [Declaration]), that declares this
@@ -81,35 +91,19 @@ abstract class Type : Node {
      */
     @PopulatedByPass(TypeResolver::class) var declaredFrom: DeclaresType? = null
 
-    constructor() {
+    constructor() : super() {
         name = Name(EMPTY_NAME, null, language)
     }
 
-    constructor(typeName: String?) {
-        name = language.parseName(typeName ?: UNKNOWN_TYPE_STRING)
-        typeOrigin = Origin.UNRESOLVED
-    }
-
-    constructor(type: Type?) {
-        type?.name?.let { name = it.clone() }
-        typeOrigin = type?.typeOrigin
-    }
-
-    constructor(typeName: CharSequence, language: Language<*>?) {
+    constructor(typeName: CharSequence, language: Language<*>) : this() {
+        this.language = language
         name =
             if (this is FunctionType) {
                 Name(typeName.toString(), null, language)
             } else {
-                language.parseName(typeName)
+                parseName(typeName)
             }
-        this.language = language
         typeOrigin = Origin.UNRESOLVED
-    }
-
-    constructor(fullTypeName: Name, language: Language<*>?) {
-        name = fullTypeName.clone()
-        typeOrigin = Origin.UNRESOLVED
-        this.language = language
     }
 
     /** Type Origin describes where the Type information came from */
@@ -117,7 +111,7 @@ abstract class Type : Node {
         RESOLVED,
         DATAFLOW,
         GUESSED,
-        UNRESOLVED
+        UNRESOLVED,
     }
 
     /**
@@ -141,7 +135,9 @@ abstract class Type : Node {
      */
     abstract fun dereference(): Type
 
-    open fun refreshNames() {}
+    open fun refreshNames() {
+        secondOrderTypes.forEach { it.refreshNames() }
+    }
 
     @get:JsonIgnore
     var root: Type

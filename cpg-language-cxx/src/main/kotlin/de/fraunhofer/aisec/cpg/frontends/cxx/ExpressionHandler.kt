@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.FunctionType
-import de.fraunhofer.aisec.cpg.graph.types.SecondOrderType
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver.Companion.addImplicitTemplateParametersToCall
@@ -141,9 +141,14 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             } else {
                 if (capture.isByReference) {
                     val valueDeclaration =
-                        frontend.scopeManager.resolveReference(
-                            newReference(capture?.identifier?.toString())
-                        )
+                        frontend.scopeManager
+                            .lookupSymbolByName(
+                                newName(capture.identifier?.toString() ?: ""),
+                                language = language,
+                            ) {
+                                it is ValueDeclaration
+                            }
+                            .singleOrNull() as? ValueDeclaration
                     valueDeclaration?.let { lambda.mutableVariables.add(it) }
                 }
             }
@@ -158,7 +163,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         val anonymousFunction =
             node.declarator?.let { frontend.declaratorHandler.handle(it) as? FunctionDeclaration }
                 ?: newFunctionDeclaration("lambda${lambda.hashCode()}")
-        anonymousFunction.type = FunctionType.computeType(anonymousFunction)
+        anonymousFunction.type = computeType(anonymousFunction)
 
         frontend.scopeManager.enterScope(anonymousFunction)
         anonymousFunction.body = frontend.statementHandler.handle(node.body)
@@ -264,7 +269,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             if (newExpression.templateParameters.isNotEmpty() == true) {
                 addImplicitTemplateParametersToCall(
                     newExpression.templateParameters,
-                    initializer as ConstructExpression
+                    initializer as ConstructExpression,
                 )
             }
 
@@ -312,7 +317,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             condition,
             if (ctx.positiveResultExpression != null) handle(ctx.positiveResultExpression)
             else condition,
-            handle(ctx.negativeResultExpression)
+            handle(ctx.negativeResultExpression),
         )
     }
 
@@ -361,7 +366,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             base,
             unknownType(),
             if (ctx.isPointerDereference) "->" else ".",
-            rawNode = ctx
+            rawNode = ctx,
         )
     }
 
@@ -400,7 +405,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 // need to information about the parenthesis.
                 return input as Expression
             }
-            IASTUnaryExpression.op_throw -> operatorCode = "throw"
+            IASTUnaryExpression.op_throw ->
+                return newThrowExpression(rawNode = ctx).apply { this.exception = input }
             IASTUnaryExpression.op_typeid -> operatorCode = "typeid"
             IASTUnaryExpression.op_alignOf -> operatorCode = "alignof"
             IASTUnaryExpression.op_sizeofParameterPack -> operatorCode = "sizeof..."
@@ -414,7 +420,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 operatorCode,
                 ctx.isPostfixOperator,
                 !ctx.isPostfixOperator,
-                rawNode = ctx
+                rawNode = ctx,
             )
         if (input != null) {
             unaryOperator.input = input
@@ -427,8 +433,6 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         val callExpression: CallExpression
         when {
             reference is MemberExpression -> {
-                val baseType = reference.base.type.root
-                assert(baseType !is SecondOrderType)
                 callExpression = newMemberCallExpression(reference, rawNode = ctx)
                 if (
                     (ctx.functionNameExpression as? IASTFieldReference)?.fieldName
@@ -511,14 +515,14 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             return newLiteral(
                 frontend.scopeManager.currentFunction?.name?.localName ?: "",
                 primitiveType("char").pointer(),
-                rawNode = ctx
+                rawNode = ctx,
             )
         } else if (name == "__PRETTY_FUNCTION__") {
             // This is not 100 % compatible with CLANG, but this is ok for now
             return newLiteral(
                 frontend.scopeManager.currentFunction?.signature ?: "",
                 primitiveType("char").pointer(),
-                rawNode = ctx
+                rawNode = ctx,
             )
         }
 
@@ -599,7 +603,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 newLiteral(
                     String(ctx.value.slice(IntRange(1, ctx.value.size - 2)).toCharArray()),
                     primitiveType("char").array(),
-                    rawNode = ctx
+                    rawNode = ctx,
                 )
             lk_this -> handleThisLiteral(ctx)
             lk_true -> newLiteral(true, primitiveType("bool"), rawNode = ctx)
@@ -629,7 +633,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         if (!raw.startsWith("'") || !raw.endsWith("'")) {
             return newProblemExpression(
                 "character literal does not start or end with '",
-                rawNode = ctx
+                rawNode = ctx,
             )
         }
 
@@ -699,7 +703,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                         } catch (ex: NumberFormatException) {
                             return newProblemExpression(
                                 "invalid number: ${ex.message}",
-                                rawNode = ctx
+                                rawNode = ctx,
                             )
                         }
                     }
@@ -779,7 +783,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                         ctx,
                         log,
                         "Unknown designated lhs {}",
-                        des.javaClass.toGenericString()
+                        des.javaClass.toGenericString(),
                     )
                     null
                 }
@@ -788,7 +792,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return newAssignExpression(
             lhs = listOfNotNull(lhs),
             rhs = listOfNotNull(rhs),
-            rawNode = ctx
+            rawNode = ctx,
         )
     }
 
@@ -846,7 +850,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                         ctx,
                         log,
                         "Unknown designated lhs {}",
-                        des.javaClass.toGenericString()
+                        des.javaClass.toGenericString(),
                     )
                     null
                 }
@@ -855,7 +859,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return newAssignExpression(
             lhs = listOfNotNull(lhs),
             rhs = listOfNotNull(rhs),
-            rawNode = ctx
+            rawNode = ctx,
         )
     }
 
@@ -923,7 +927,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                                 ctx,
                                 log,
                                 "Integer literal {} is too large to be represented in a signed type, interpreting it as unsigned.",
-                                ctx
+                                ctx,
                             )
                             // keep it as BigInteger
                             bigValue
@@ -940,7 +944,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                             ctx,
                             log,
                             "Integer literal {} is too large to be represented in a signed type, interpreting it as unsigned.",
-                            ctx
+                            ctx,
                         )
                         // keep it as BigInteger
                         bigValue
@@ -985,7 +989,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     newLiteral(
                         strippedValue.toBigDecimal(),
                         primitiveType("long double"),
-                        rawNode = ctx
+                        rawNode = ctx,
                     )
                 else -> newLiteral(strippedValue.toDouble(), primitiveType("double"), rawNode = ctx)
             }

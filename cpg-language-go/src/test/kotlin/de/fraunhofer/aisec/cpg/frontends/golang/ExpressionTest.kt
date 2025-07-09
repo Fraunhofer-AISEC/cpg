@@ -40,7 +40,7 @@ class ExpressionTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("type_assert.go").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<GoLanguage>()
             }
@@ -163,7 +163,7 @@ class ExpressionTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("short_assign.go").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<GoLanguage>()
             }
@@ -177,7 +177,7 @@ class ExpressionTest {
         assertNotNull(x)
 
         val paths = x.followPrevFullDFGEdgesUntilHit { it == lit5 }
-        assertEquals(3, paths.fulfilled.firstOrNull()?.size)
+        assertEquals(3, paths.fulfilled.firstOrNull()?.nodes?.size)
 
         assertEquals(5, x.evaluate())
     }

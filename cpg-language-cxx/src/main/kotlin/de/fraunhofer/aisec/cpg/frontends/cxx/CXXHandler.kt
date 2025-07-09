@@ -35,7 +35,7 @@ import org.eclipse.cdt.internal.core.dom.parser.ASTNode
 
 abstract class CXXHandler<S : Node, T : IASTNode>(
     configConstructor: Supplier<S>,
-    lang: CXXLanguageFrontend
+    lang: CXXLanguageFrontend,
 ) : Handler<S, T, CXXLanguageFrontend>(configConstructor, lang) {
 
     /**
@@ -75,7 +75,7 @@ abstract class CXXHandler<S : Node, T : IASTNode>(
             frontend,
             node,
             log,
-            "Parsing of type $name is not supported (yet)"
+            "Parsing of type $name is not supported (yet)",
         )
 
         val cpgNode = this.configConstructor.get()

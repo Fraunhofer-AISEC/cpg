@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.Objects
@@ -41,4 +42,8 @@ class DeleteExpression : Expression() {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), operands)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.operands.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
+    }
 }

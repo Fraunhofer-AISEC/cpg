@@ -60,7 +60,7 @@ class OperatorCallExpression : CallExpression(), HasOperatorCode, HasBase {
  */
 fun operatorCallFromDeclaration(
     decl: OperatorDeclaration,
-    op: HasOverloadedOperation
+    op: HasOverloadedOperation,
 ): OperatorCallExpression {
     return with(decl) {
         val ref =

@@ -225,7 +225,7 @@ class TypeScriptLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("component.tsx").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<TypeScriptLanguage>()
             }
@@ -286,7 +286,7 @@ class TypeScriptLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("function-component.tsx").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<TypeScriptLanguage>()
             }
@@ -311,7 +311,7 @@ class TypeScriptLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("decorator.ts").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<TypeScriptLanguage>()
             }
@@ -372,7 +372,7 @@ class TypeScriptLanguageFrontendTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("component.tsx").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<TypeScriptLanguage>()
             }

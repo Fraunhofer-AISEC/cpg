@@ -79,12 +79,10 @@ class StatementHandler(lang: CXXLanguageFrontend) :
             frontend,
             problemStatement,
             log,
-            problemStatement.problem.message
-        )
-
-        return newProblemExpression(
             problemStatement.problem.message,
         )
+
+        return newProblemExpression(problemStatement.problem.message)
     }
 
     private fun handleEmptyStatement(nullStatement: IASTNullStatement): EmptyStatement {
@@ -119,8 +117,9 @@ class StatementHandler(lang: CXXLanguageFrontend) :
 
         catchClause.body = body as? Block
 
-        if (decl != null) {
-            catchClause.parameter = decl as? VariableDeclaration
+        if (decl is VariableDeclaration) {
+            frontend.scopeManager.addDeclaration(decl)
+            catchClause.parameter = decl
         }
         frontend.scopeManager.leaveScope(catchClause)
         return catchClause
@@ -160,6 +159,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         val statement = newLabelStatement(rawNode = ctx)
         statement.subStatement = handle(ctx.nestedStatement)
         statement.label = ctx.name.toString()
+        statement.name = newName(name = ctx.name.toString())
         return statement
     }
 
@@ -167,12 +167,15 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         val statement = newGotoStatement(rawNode = ctx)
         val assigneeTargetLabel = BiConsumer { _: Any, to: Node ->
             statement.targetLabel = to as LabelStatement
+            to.label?.let {
+                statement.labelName = it
+                statement.name = newName(it)
+            }
         }
         val b: IBinding?
         try {
             b = ctx.name.resolveBinding()
             if (b is ILabel) {
-                b.labelStatement
                 // If the bound AST node is/or was transformed into a CPG node the cpg node is bound
                 // to the CPG goto statement
                 frontend.registerObjectListener(b.labelStatement, assigneeTargetLabel)
@@ -182,7 +185,7 @@ class StatementHandler(lang: CXXLanguageFrontend) :
             // names of CPG nodes using the predicate listeners
             frontend.registerPredicateListener(
                 { _, to -> (to is LabelStatement && to.label == statement.labelName) },
-                assigneeTargetLabel
+                assigneeTargetLabel,
             )
         }
         return statement
@@ -296,10 +299,15 @@ class StatementHandler(lang: CXXLanguageFrontend) :
         } else {
             val declarationStatement = newDeclarationStatement(rawNode = ctx)
             val declaration = frontend.declarationHandler.handle(ctx.declaration)
-            if (declaration is DeclarationSequence) {
-                declarationStatement.declarations = declaration.asMutableList()
-            } else {
-                declarationStatement.singleDeclaration = declaration
+            val declarations =
+                if (declaration is DeclarationSequence) {
+                    declaration.asMutableList()
+                } else {
+                    listOfNotNull(declaration)
+                }
+            declarations.forEach {
+                frontend.scopeManager.addDeclaration(it)
+                declarationStatement.addDeclaration(it)
             }
             declarationStatement
         }

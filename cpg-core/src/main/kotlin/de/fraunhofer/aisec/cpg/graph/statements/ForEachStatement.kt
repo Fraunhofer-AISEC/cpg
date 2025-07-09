@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -45,12 +45,7 @@ class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
     @Relationship("VARIABLE")
     var variableEdge =
         astOptionalEdgeOf<Statement>(
-            onChanged = { _, new ->
-                val end = new?.end
-                if (end is Reference) {
-                    end.access = AccessValues.WRITE
-                }
-            }
+            onChanged = { _, new -> (new?.end as? Expression)?.access = AccessValues.WRITE }
         )
 
     /**
@@ -69,10 +64,10 @@ class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
     override var statementEdges: AstEdges<Statement, AstEdge<Statement>>
         get() {
             val statements = astEdgesOf<Statement>()
-            variable?.let { statements.add(AstEdge(this, it)) }
-            iterable?.let { statements.add(AstEdge(this, it)) }
-            statement?.let { statements.add(AstEdge(this, it)) }
-            elseStatement?.let { statements.add(AstEdge(this, it)) }
+            statements += variableEdge
+            statements += iterableEdge
+            statements += statementEdge
+            statements += elseStatementEdge
             return statements
         }
         set(_) {
@@ -95,4 +90,15 @@ class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), variable, iterable)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        val astChildren = this.allChildren<Node> { true }
+        return iterable?.getStartingPrevEOG()?.filter { it !in astChildren }
+            ?: variable?.getStartingPrevEOG()
+            ?: this.prevEOG
+    }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return this.nextEOG.filter { it !in statement.allChildren<Node> { true } }
+    }
 }

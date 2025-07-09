@@ -32,11 +32,12 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
+import kotlin.collections.plus
 import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents a Java or C++ switch statement of the `switch (selector) {...}` that can include case
- * and default statements. Break statements break out of the switch and labeled breaks in JAva are
+ * and default statements. Break statements break out of the switch and labeled breaks in Java are
  * handled properly.
  */
 class SwitchStatement : Statement(), BranchingNode {
@@ -51,7 +52,7 @@ class SwitchStatement : Statement(), BranchingNode {
 
     @Relationship(value = "SELECTOR_DECLARATION")
     var selectorDeclarationEdge = astOptionalEdgeOf<Declaration>()
-    /** C++ allows to use a declaration instead of a expression as selector */
+    /** C++ allows to use a declaration instead of an expression as selector */
     var selectorDeclaration by unwrapping(SwitchStatement::selectorDeclarationEdge)
 
     @Relationship(value = "STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
@@ -80,6 +81,17 @@ class SwitchStatement : Statement(), BranchingNode {
             initializerStatement,
             selectorDeclaration,
             selector,
-            statement
+            statement,
         )
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.initializerStatement?.getStartingPrevEOG()
+            ?: this.selector?.getStartingPrevEOG()
+            ?: this.selectorDeclaration?.getStartingPrevEOG()
+            ?: this.prevEOG
+    }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return this.statement?.getExitNextEOG() ?: this.nextEOG
+    }
 }

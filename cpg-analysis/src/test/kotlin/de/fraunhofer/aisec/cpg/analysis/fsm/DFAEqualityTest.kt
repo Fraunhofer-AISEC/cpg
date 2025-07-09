@@ -38,7 +38,7 @@ class DFAEqualityTest {
     fun testEmptyDfa() {
         assertFailsWith<IllegalStateException>(
             message = "In order to compare to FSMs, both must have exactly one start state.",
-            block = { DFA() == DFA() }
+            block = { DFA() == DFA() },
         )
     }
 
@@ -243,7 +243,7 @@ class DFAEqualityTest {
 
         oldDfa.addEdge(
             oldDfa.states.single { it.name == 1 },
-            Edge("create2()", "v", oldDfa.states.single { it.name == 3 })
+            Edge("create2()", "v", oldDfa.states.single { it.name == 3 }),
         )
         assertNotEquals(oldDfa, dfa)
     }

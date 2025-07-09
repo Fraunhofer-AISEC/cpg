@@ -61,7 +61,7 @@ open class JavaScriptLanguage : Language<TypeScriptLanguageFrontend>(), HasShort
             "|=",
             "||=",
             "^=",
-            "??="
+            "??=",
         )
 
     /**

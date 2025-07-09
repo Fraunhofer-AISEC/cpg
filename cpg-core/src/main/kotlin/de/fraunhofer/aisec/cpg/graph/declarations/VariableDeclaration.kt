@@ -71,7 +71,7 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
         astOptionalEdgeOf<Expression>(
             onChanged = { old, new ->
                 val value = new?.end
-                exchangeTypeObserver(old, new)
+                exchangeTypeObserverWithAccessPropagation(old, new)
                 if (value is Reference) {
                     value.resolutionHelper = this
                 }
@@ -142,5 +142,13 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
 
     override fun hashCode(): Int {
         return super.hashCode()
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.prevEOG
+    }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return this.initializer?.getExitNextEOG() ?: this.nextEOG
     }
 }

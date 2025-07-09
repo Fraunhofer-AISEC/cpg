@@ -36,7 +36,7 @@ import kotlin.reflect.jvm.isAccessible
 
 fun <EdgeType : Edge<Node>> MutableList<Node>.add(
     target: Node,
-    builder: EdgeType.() -> Unit
+    builder: EdgeType.() -> Unit,
 ): Boolean {
     if (this is UnwrappedEdgeList<*, *>) {
         @Suppress("UNCHECKED_CAST")
@@ -48,7 +48,7 @@ fun <EdgeType : Edge<Node>> MutableList<Node>.add(
 
 /** See [UnwrappedEdgeList.Delegate]. */
 fun <PropertyType : Node, NodeType : Node, EdgeType : Edge<PropertyType>> NodeType.unwrapping(
-    edgeProperty: KProperty1<NodeType, EdgeList<PropertyType, EdgeType>>,
+    edgeProperty: KProperty1<NodeType, EdgeList<PropertyType, EdgeType>>
 ): UnwrappedEdgeList<PropertyType, EdgeType> {
     // Create an unwrapped container out of the edge property...
     edgeProperty.isAccessible = true
@@ -56,9 +56,39 @@ fun <PropertyType : Node, NodeType : Node, EdgeType : Edge<PropertyType>> NodeTy
     return edge.unwrap()
 }
 
+/** See [UnwrappedEdgeList.IncomingDelegate]. */
+fun <
+    IncomingType : Node,
+    PropertyType : Node,
+    NodeType : Node,
+    EdgeType : Edge<PropertyType>,
+> NodeType.unwrappingIncoming(
+    edgeProperty: KProperty1<NodeType, EdgeList<PropertyType, EdgeType>>
+): UnwrappedEdgeList<PropertyType, EdgeType>.IncomingDelegate<NodeType, IncomingType> {
+    // Create an unwrapped container out of the edge property...
+    edgeProperty.isAccessible = true
+    val edge = edgeProperty.call(this)
+    return edge.unwrap().IncomingDelegate<NodeType, IncomingType>()
+}
+
+/** See [UnwrappedEdgeSet.IncomingDelegate]. */
+fun <
+    IncomingType : Node,
+    PropertyType : Node,
+    NodeType : Node,
+    EdgeType : Edge<PropertyType>,
+> NodeType.unwrappingIncoming(
+    edgeProperty: KProperty1<NodeType, EdgeSet<PropertyType, EdgeType>>
+): UnwrappedEdgeSet<PropertyType, EdgeType>.IncomingDelegate<NodeType, IncomingType> {
+    // Create an unwrapped container out of the edge property...
+    edgeProperty.isAccessible = true
+    val edge = edgeProperty.call(this)
+    return edge.unwrap().IncomingDelegate<NodeType, IncomingType>()
+}
+
 /** See [UnwrappedEdgeSet.Delegate]. */
 fun <PropertyType : Node, NodeType : Node, EdgeType : Edge<PropertyType>> NodeType.unwrapping(
-    edgeProperty: KProperty1<NodeType, EdgeSet<PropertyType, EdgeType>>,
+    edgeProperty: KProperty1<NodeType, EdgeSet<PropertyType, EdgeType>>
 ): UnwrappedEdgeSet<PropertyType, EdgeType> {
     // Create an unwrapped container out of the edge property...
     edgeProperty.isAccessible = true
@@ -71,12 +101,19 @@ fun <
     PropertyType : Node,
     NullablePropertyType : PropertyType?,
     NodeType : Node,
-    EdgeType : Edge<PropertyType>
+    EdgeType : Edge<PropertyType>,
 > NodeType.unwrapping(
     edgeProperty:
-        KProperty1<NodeType, EdgeSingletonList<PropertyType, NullablePropertyType, EdgeType>>,
+        KProperty1<NodeType, EdgeSingletonList<PropertyType, NullablePropertyType, EdgeType>>
 ): EdgeSingletonList<PropertyType, NullablePropertyType, EdgeType>.UnwrapDelegate<NodeType> {
     edgeProperty.isAccessible = true
     val edge = edgeProperty.call(this)
     return edge.delegate()
+}
+
+/** Returns the first edge with the given [name] or `null` if no such edge exists. */
+operator fun <NodeType : Node, EdgeType : Edge<NodeType>> EdgeList<NodeType, EdgeType>.get(
+    name: String
+): EdgeType? {
+    return this.firstOrNull { it.name == name }
 }

@@ -36,7 +36,7 @@ import org.neo4j.ogm.annotation.Relationship
  */
 class FieldDeclaration : VariableDeclaration() {
     /** Specifies, whether this field declaration is also a definition, i.e. has an initializer. */
-    private var isDefinition = false
+    var isDefinition = false
 
     /** If this is only a declaration, this provides a link to the definition of the field. */
     @Relationship(value = "DEFINES")

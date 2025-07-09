@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.helpers.Util
 
@@ -63,7 +64,13 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 }
             }
 
-        val import = newImportDeclaration(import = name, alias = alias, rawNode = importSpec)
+        val import =
+            newImportDeclaration(
+                import = name,
+                alias = alias,
+                style = ImportStyle.IMPORT_NAMESPACE,
+                rawNode = importSpec,
+            )
         import.importURL = filename
 
         return import
@@ -89,12 +96,9 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
     private fun handleStructTypeSpec(
         typeSpec: GoStandardLibrary.Ast.TypeSpec,
-        structType: GoStandardLibrary.Ast.StructType
+        structType: GoStandardLibrary.Ast.StructType,
     ): RecordDeclaration {
         val record = buildRecordDeclaration(structType, typeSpec.name.name, typeSpec)
-
-        // Make sure to register the type
-        frontend.typeManager.registerType(record.toType())
 
         return record
     }
@@ -126,6 +130,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
                 val decl = newFieldDeclaration(fieldName, type, modifiers, rawNode = field)
                 frontend.scopeManager.addDeclaration(decl)
+                record.fields += decl
             }
         }
 
@@ -136,12 +141,9 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
     private fun handleInterfaceTypeSpec(
         typeSpec: GoStandardLibrary.Ast.TypeSpec,
-        interfaceType: GoStandardLibrary.Ast.InterfaceType
+        interfaceType: GoStandardLibrary.Ast.InterfaceType,
     ): Declaration {
         val record = newRecordDeclaration(typeSpec.name.name, "interface", rawNode = typeSpec)
-
-        // Make sure to register the type
-        frontend.typeManager.registerType(record.toType())
 
         frontend.scopeManager.enterScope(record)
 
@@ -161,12 +163,13 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
                     val params = (field.type as? GoStandardLibrary.Ast.FuncType)?.params
                     if (params != null) {
-                        frontend.declarationHandler.handleFuncParams(params)
+                        frontend.declarationHandler.handleFuncParams(method, params)
                     }
 
                     frontend.scopeManager.leaveScope(method)
 
                     frontend.scopeManager.addDeclaration(method)
+                    record.methods += method
                 } else {
                     log.debug("Adding {} as super class of interface {}", type.name, record.name)
                     // Otherwise, it contains either types or interfaces. For now, we
@@ -187,9 +190,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
      * Since this can potentially declare multiple variables with one "spec", this returns a
      * [DeclarationSequence].
      */
-    private fun handleValueSpec(
-        valueSpec: GoStandardLibrary.Ast.ValueSpec,
-    ): Declaration {
+    private fun handleValueSpec(valueSpec: GoStandardLibrary.Ast.ValueSpec): Declaration {
         // Increment iota value
         frontend.declCtx.iotaValue++
 
@@ -199,7 +200,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         if (lenValues == 1 && lenValues != valueSpec.names.size) {
             // We need to construct a "tuple" declaration on the left side that holds all the
             // variables
-            val tuple = TupleDeclaration()
+            val tuple = newTupleDeclaration(listOf(), null, rawNode = valueSpec)
             tuple.type = autoType()
 
             for (ident in valueSpec.names) {
@@ -224,9 +225,8 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                     tuple.initializer = frontend.expressionHandler.handle(valueSpec.values[0])
                 }
 
-                // We need to manually add the variables to the scope manager
+                // We need to manually add the variables to the AST
                 frontend.scopeManager.addDeclaration(decl)
-
                 tuple += decl
             }
             return tuple
@@ -279,7 +279,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                             Util.errorWithFileLocation(
                                 decl,
                                 log,
-                                "Const declaration is missing its initializer"
+                                "Const declaration is missing its initializer",
                             )
                         } else {
                             decl.initializer = frontend.expressionHandler.handle(initializerExpr)
@@ -301,7 +301,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
     private fun handleFuncTypeSpec(
         spec: GoStandardLibrary.Ast.TypeSpec,
-        type: GoStandardLibrary.Ast.FuncType
+        type: GoStandardLibrary.Ast.FuncType,
     ): Declaration {
         // We model function types as typedef's, so that we can resolve it later
         val funcType = frontend.typeOf(type)
@@ -314,7 +314,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
     private fun handleTypeDef(
         spec: GoStandardLibrary.Ast.TypeSpec,
-        type: GoStandardLibrary.Ast.Expr
+        type: GoStandardLibrary.Ast.Expr,
     ): Declaration {
         val targetType = frontend.typeOf(type)
 
@@ -340,8 +340,10 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 // We add the underlying type as the single super class
                 record.superClasses = mutableListOf(targetType)
 
-                // Register the type with the type system
-                frontend.typeManager.registerType(record.toType())
+                // Make sure to add the scope to the scope manager
+                frontend.scopeManager.enterScope(record)
+                frontend.scopeManager.leaveScope(record)
+
                 record
             }
         }

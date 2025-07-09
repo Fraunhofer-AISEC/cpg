@@ -141,7 +141,7 @@ internal class VariableResolverCppTest : BaseTest() {
 
     @Test
     fun testVarNameOfSecondLoopAccessed() {
-        val vDeclaration = forStatements?.get(1).variables["varName"]
+        val vDeclaration = forStatements?.get(1)?.initializerStatement.variables["varName"]
         assertUsageOf(callParamMap["func1_second_loop_varName"], vDeclaration)
     }
 
@@ -156,7 +156,7 @@ internal class VariableResolverCppTest : BaseTest() {
         assertUsageOfMemberAndBase(
             callParamMap["func2_this_varName"],
             function2Receiver,
-            outerVarName
+            outerVarName,
         )
     }
 
@@ -168,7 +168,7 @@ internal class VariableResolverCppTest : BaseTest() {
     }
 
     @Test
-    fun testVarNameCoughtAsException() {
+    fun testVarNameCaughtAsException() {
         val declaration = outerFunction2.allChildren<CatchClause>()[""].variables["varName"]
         assertUsageOf(callParamMap["func2_catch_varName"], declaration)
     }
@@ -179,7 +179,7 @@ internal class VariableResolverCppTest : BaseTest() {
         assertUsageOfMemberAndBase(
             callParamMap["func2_instance_varName"],
             declaration,
-            outerVarName
+            outerVarName,
         )
     }
 
@@ -189,7 +189,7 @@ internal class VariableResolverCppTest : BaseTest() {
         assertUsageOfMemberAndBase(
             callParamMap["func3_instance_varName"],
             declaration,
-            outerVarName
+            outerVarName,
         )
     }
 
@@ -199,7 +199,7 @@ internal class VariableResolverCppTest : BaseTest() {
         assertUsageOfMemberAndBase(
             callParamMap["func3_external_instance_varName"],
             declaration,
-            externVarName
+            externVarName,
         )
     }
 
@@ -219,7 +219,7 @@ internal class VariableResolverCppTest : BaseTest() {
         assertUsageOfMemberAndBase(
             callParamMap["func4_external_instance_varName"],
             externalInstance,
-            externVarName
+            externVarName,
         )
     }
 
@@ -227,7 +227,7 @@ internal class VariableResolverCppTest : BaseTest() {
     fun testAccessExternalStaticMemberAfterInstanceCreation() {
         assertUsageOf(
             callParamMap["func4_second_external_staticVarName"],
-            externStaticVarName?.definition
+            externStaticVarName?.definition,
         )
     }
 
@@ -237,7 +237,7 @@ internal class VariableResolverCppTest : BaseTest() {
         assertUsageOfMemberAndBase(
             callParamMap["func5_staticVarName_throughInstance_first"],
             declaration,
-            outerStaticVarName?.definition
+            outerStaticVarName?.definition,
         )
     }
 
@@ -247,7 +247,7 @@ internal class VariableResolverCppTest : BaseTest() {
         assertUsageOfMemberAndBase(
             callParamMap["func5_staticVarName_throughInstance_second"],
             declaration,
-            outerStaticVarName?.definition
+            outerStaticVarName?.definition,
         )
     }
 
@@ -262,7 +262,7 @@ internal class VariableResolverCppTest : BaseTest() {
         assertUsageOfMemberAndBase(
             callParamMap["func1_inner_instance_varName"],
             declaration,
-            innerVarName
+            innerVarName,
         )
     }
 
@@ -272,7 +272,7 @@ internal class VariableResolverCppTest : BaseTest() {
         assertUsageOfMemberAndBase(
             callParamMap["func1_outer_instance_varName"],
             declaration,
-            outerVarName
+            outerVarName,
         )
     }
 
@@ -280,7 +280,7 @@ internal class VariableResolverCppTest : BaseTest() {
     fun testAccessOfOuterStaticMember() {
         assertUsageOf(
             callParamMap["func1_outer_static_staticVarName"],
-            outerStaticVarName?.definition
+            outerStaticVarName?.definition,
         )
     }
 
@@ -288,7 +288,7 @@ internal class VariableResolverCppTest : BaseTest() {
     fun testAccessOfInnerStaticMember() {
         assertUsageOf(
             callParamMap["func1_inner_static_staticVarName"],
-            innerStaticVarName?.definition
+            innerStaticVarName?.definition,
         )
     }
 
@@ -298,7 +298,7 @@ internal class VariableResolverCppTest : BaseTest() {
         assertUsageOfMemberAndBase(
             callParamMap["func2_inner_instance_varName_with_shadows"],
             declaration,
-            innerVarName
+            innerVarName,
         )
     }
 
@@ -308,7 +308,7 @@ internal class VariableResolverCppTest : BaseTest() {
         assertUsageOfMemberAndBase(
             callParamMap["func2_outer_instance_varName_with_shadows"],
             declaration,
-            outerVarName
+            outerVarName,
         )
     }
 
@@ -316,7 +316,7 @@ internal class VariableResolverCppTest : BaseTest() {
     fun testAccessOfOuterStaticMemberWithSameNamedVariable() {
         assertUsageOf(
             callParamMap["func2_outer_static_staticVarName_with_shadows"],
-            outerStaticVarName?.definition
+            outerStaticVarName?.definition,
         )
     }
 
@@ -324,7 +324,7 @@ internal class VariableResolverCppTest : BaseTest() {
     fun testAccessOfInnerStaticMemberWithSameNamedVariable() {
         assertUsageOf(
             callParamMap["func2_inner_static_staticVarName_with_shadows"],
-            innerStaticVarName?.definition
+            innerStaticVarName?.definition,
         )
     }
 

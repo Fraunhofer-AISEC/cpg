@@ -63,7 +63,7 @@ class LocationConverter : CpgCompositeConverter<PhysicalLocation?> {
                 Pair("int", START_LINE),
                 Pair("int", END_LINE),
                 Pair("int", START_COLUMN),
-                Pair("int", END_COLUMN)
+                Pair("int", END_COLUMN),
             )
 
     override fun toEntityAttribute(value: Map<String, *>?): PhysicalLocation? {

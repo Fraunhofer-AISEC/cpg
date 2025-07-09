@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
 
@@ -46,7 +47,7 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
         DEFAULT,
         /** Template Parameter is provided explicitly */
         EXPLICIT,
-        UNKNOWN
+        UNKNOWN,
     }
 
     /** Parameters the Template requires for instantiation */
@@ -81,6 +82,7 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
             return defaults
         }
 
+    @DoNotPersist
     override val declarations: List<Declaration>
         get() {
             val list = ArrayList<Declaration>()

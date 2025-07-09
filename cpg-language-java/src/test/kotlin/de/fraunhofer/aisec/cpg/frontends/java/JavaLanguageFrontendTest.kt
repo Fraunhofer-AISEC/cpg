@@ -52,7 +52,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/LargeNegativeNumber.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
 
         val declaration = tu.records["LargeNegativeNumber"]
@@ -73,14 +73,14 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(c)
         assertEquals(
             BigInteger("9223372036854775808"),
-            ((c.initializer as? UnaryOperator)?.input as? Literal<*>)?.value
+            ((c.initializer as? UnaryOperator)?.input as? Literal<*>)?.value,
         )
 
         val d = main.variables["d"]
         assertNotNull(d)
         assertEquals(
             9223372036854775807L,
-            ((d.initializer as? UnaryOperator)?.input as? Literal<*>)?.value
+            ((d.initializer as? UnaryOperator)?.input as? Literal<*>)?.value,
         )
     }
 
@@ -89,7 +89,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/components/ForStmt.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
 
         val declaration = tu.declarations[0] as? RecordDeclaration
@@ -117,7 +117,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/components/ForEachStmt.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
         val declaration = tu.declarations[0] as? RecordDeclaration
         assertNotNull(declaration)
@@ -160,10 +160,13 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     @Test
     fun testTryCatch() {
         val file = File("src/test/resources/components/TryStmt.java")
-        val tu =
-            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage(JavaLanguage())
+        val result =
+            analyze(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<JavaLanguage>()
             }
+
+        val tu = result.components.firstOrNull()?.translationUnits?.firstOrNull()
+        assertNotNull(tu)
 
         val declaration = tu.declarations[0] as? RecordDeclaration
         assertNotNull(declaration)
@@ -187,21 +190,21 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         scope = firstCatch.scope
         assertNotNull(scope)
 
-        with(tu) {
+        with(result) {
             // first exception type was? resolved, so we can expect a FQN
             assertEquals(
                 assertResolvedType("java.lang.NumberFormatException"),
-                firstCatch.parameter?.type
+                firstCatch.parameter?.type,
             )
             // second one could not be resolved so we do not have an FQN
             assertEquals(
                 assertResolvedType("NotResolvableTypeException"),
-                catchClauses[1].parameter?.type
+                catchClauses[1].parameter?.type,
             )
             // third type should have been resolved through the import
             assertEquals(
                 assertResolvedType("some.ImportedException"),
-                (catchClauses[2].parameter)?.type
+                (catchClauses[2].parameter)?.type,
             )
         }
 
@@ -218,7 +221,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/components/LiteralExpr.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
 
         val declaration = tu.declarations[0] as? RecordDeclaration
@@ -281,7 +284,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/compiling/RecordDeclaration.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
         assertNotNull(tu)
 
@@ -317,7 +320,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/compiling/NameExpression.java")
         val declaration =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
         assertNotNull(declaration)
     }
@@ -327,7 +330,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/cfg/Switch.java")
         val declaration =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
         val graphNodes = SubgraphWalker.flattenAST(declaration)
 
@@ -351,7 +354,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/components/CastExpr.java")
         val declaration =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
         assertNotNull(declaration)
 
@@ -399,7 +402,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/compiling/Arrays.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
         assertNotNull(tu)
 
@@ -451,7 +454,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/compiling/FieldAccess.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
         assertNotNull(tu)
 
@@ -481,7 +484,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/compiling/MemberCallExpression.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
         assertNotNull(tu)
 
@@ -494,7 +497,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/compiling/FieldAccess.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
         assertNotNull(tu)
 
@@ -572,7 +575,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/Issue285.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
         val record = tu.declarations<RecordDeclaration>(0)
         assertNotNull(record)
@@ -597,7 +600,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(initializer)
         assertTrue(initializer is MemberCallExpression)
 
-        val call = initializer as? MemberCallExpression
+        val call = initializer
         assertLocalName("get", call)
         val staticCall = nodes.filterIsInstance<MemberCallExpression>().firstOrNull { it.isStatic }
         assertNotNull(staticCall)
@@ -610,33 +613,35 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file2 = File("src/test/resources/fix-328/Animal.java")
         val result =
             analyze(listOf(file1, file2), file1.parentFile.toPath(), true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
         val tu =
             findByUniqueName(result.components.flatMap { it.translationUnits }, file1.toString())
 
-        val namespace = tu.declarations<NamespaceDeclaration>(0)
-        assertNotNull(namespace)
+        with(result) {
+            val namespace = tu.declarations<NamespaceDeclaration>(0)
+            assertNotNull(namespace)
 
-        val record = namespace.declarations<RecordDeclaration>(0)
-        assertNotNull(record)
+            val record = namespace.declarations<RecordDeclaration>(0)
+            assertNotNull(record)
 
-        val constructor = record.constructors[0]
-        val op = constructor.bodyOrNull<AssignExpression>(0)
-        assertNotNull(op)
+            val constructor = record.constructors[0]
+            val op = constructor.bodyOrNull<AssignExpression>(0)
+            assertNotNull(op)
 
-        val lhs = op.lhs<MemberExpression>()
-        val receiver = (lhs?.base as? Reference)?.refersTo as? VariableDeclaration?
-        assertNotNull(receiver)
-        assertLocalName("this", receiver)
-        assertEquals(tu.assertResolvedType("my.Animal"), receiver.type)
+            val lhs = op.lhs<MemberExpression>()
+            val receiver = (lhs?.base as? Reference)?.refersTo as? VariableDeclaration?
+            assertNotNull(receiver)
+            assertLocalName("this", receiver)
+            assertEquals(assertResolvedType("my.Animal"), receiver.type)
+        }
     }
 
     @Test
     fun testOverrideHandler() {
         /** A simple extension of the [JavaLanguageFrontend] to demonstrate handler overriding. */
-        class MyJavaLanguageFrontend(language: JavaLanguage, ctx: TranslationContext) :
-            JavaLanguageFrontend(language, ctx) {
+        class MyJavaLanguageFrontend(ctx: TranslationContext, language: JavaLanguage) :
+            JavaLanguageFrontend(ctx, language) {
             init {
                 this.declarationHandler =
                     object : DeclarationHandler(this@MyJavaLanguageFrontend) {
@@ -650,7 +655,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
                                 Name(
                                     "MySimpleClass",
                                     declaration.name.parent,
-                                    declaration.name.delimiter
+                                    declaration.name.delimiter,
                                 )
 
                             return declaration
@@ -660,16 +665,13 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         }
 
         class MyJavaLanguage : JavaLanguage() {
-            override val fileExtensions = listOf("java")
-            override val namespaceDelimiter = "."
-            override val superClassKeyword = "super"
             override val frontend = MyJavaLanguageFrontend::class
         }
 
         val file = File("src/test/resources/compiling/RecordDeclaration.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage(MyJavaLanguage())
+                it.registerLanguage<MyJavaLanguage>()
             }
 
         assertNotNull(tu)
@@ -736,7 +738,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/compiling/OuterClass.java")
         val result =
             analyze(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
         val tu = result.components.flatMap { it.translationUnits }.firstOrNull()
         assertNotNull(tu)
@@ -772,7 +774,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val file = File("src/test/resources/compiling/ForEach.java")
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
 
         val p = tu.namespaces["compiling"]
@@ -799,7 +801,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         val result =
             analyze(listOf(file), file.parentFile.toPath(), true) {
-                it.registerLanguage(JavaLanguage())
+                it.registerLanguage<JavaLanguage>()
             }
         val record = result.records["Operators"]
         assertNotNull(record)
@@ -845,7 +847,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
     fun testEnums() {
         val parentFile = File("src/test/resources/compiling/enums/")
         val result =
-            analyze(".java", parentFile.toPath(), true) { it.registerLanguage(JavaLanguage()) }
+            analyze(".java", parentFile.toPath(), true) { it.registerLanguage<JavaLanguage>() }
 
         val enum = result.records["Enums"] as EnumDeclaration
         assertNotNull(enum)
@@ -872,7 +874,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             1,
             ((entryOne?.initializer as? ConstructExpression)?.arguments?.singleOrNull()
                     as? Literal<*>)
-                ?.value
+                ?.value,
         )
         assertEquals(constructor, (entryOne?.initializer as? ConstructExpression)?.constructor)
         val entryTwo = enum.entries.singleOrNull { it.name.localName == "VALUE_TWO" }
@@ -880,7 +882,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             2,
             ((entryTwo?.initializer as? ConstructExpression)?.arguments?.singleOrNull()
                     as? Literal<*>)
-                ?.value
+                ?.value,
         )
         assertEquals(constructor, (entryTwo?.initializer as? ConstructExpression)?.constructor)
 

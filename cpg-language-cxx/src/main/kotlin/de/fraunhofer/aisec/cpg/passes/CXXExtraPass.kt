@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
-import de.fraunhofer.aisec.cpg.graph.scopes.ValueDeclarationScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -57,10 +56,10 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
 
         walker.registerHandler(::fixInitializers)
-        walker.registerHandler { _, parent, node ->
+        walker.registerHandler { node ->
             when (node) {
-                is UnaryOperator -> removeBracketOperators(node, parent)
-                is BinaryOperator -> convertOperators(node, parent)
+                is UnaryOperator -> removeBracketOperators(node)
+                is BinaryOperator -> convertOperators(node)
             }
         }
         walker.registerHandler(::connectDefinitions)
@@ -77,7 +76,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * to get rid of those ()-unary operators that are meaningless, in order to reduce clutter to
      * the graph.
      */
-    private fun removeBracketOperators(node: UnaryOperator, parent: Node?) {
+    private fun removeBracketOperators(node: UnaryOperator) {
         val input = node.input
         if (node.operatorCode == "()" && input is Reference && input.nameIsType() == null) {
             // It was really just parenthesis around an identifier, but we can only make this
@@ -86,7 +85,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // In theory, we could just keep this meaningless unary expression, but it in order
             // to reduce nodes, we unwrap the reference and exchange it in the arguments of the
             // binary op
-            walker.replace(parent, node, node.input)
+            walker.replace(node.astParent, node, node.input)
         }
     }
 
@@ -100,7 +99,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * applies to C++), in which a cast and a call are indistinguishable and need to be resolved
      * once all types are known.
      */
-    private fun convertOperators(binOp: BinaryOperator, parent: Node?) {
+    private fun convertOperators(binOp: BinaryOperator) {
         val fakeUnaryOp = binOp.lhs
         val language = fakeUnaryOp.language as? CLanguage
 
@@ -148,11 +147,11 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
             // * replace the binary operator with the cast expression in the parent argument
             //   holder
-            walker.replace(parent, binOp, cast)
+            walker.replace(binOp.astParent, binOp, cast)
         }
     }
 
-    protected fun fixInitializers(node: Node?) {
+    protected fun fixInitializers(node: Node) {
         if (node is VariableDeclaration) {
             // check if we have the corresponding class for this type
             val record = node.type.root.recordDeclaration
@@ -161,13 +160,16 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 val currInitializer = node.initializer
                 if (currInitializer == null && node.isImplicitInitializerAllowed) {
                     val initializer =
-                        newConstructExpression(typeString).implicit(code = "$typeString()")
+                        newConstructExpression(typeString)
+                            .codeAndLocationFrom(node)
+                            .implicit(code = "$typeString()")
                     initializer.language = node.language
                     initializer.type = node.type
                     node.initializer = initializer
-                    node.templateParameters?.let {
-                        SymbolResolver.addImplicitTemplateParametersToCall(it, initializer)
-                    }
+                    SymbolResolver.addImplicitTemplateParametersToCall(
+                        node.templateParameters,
+                        initializer,
+                    )
                 } else if (
                     currInitializer !is ConstructExpression &&
                         currInitializer is CallExpression &&
@@ -196,7 +198,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
      *
      * This works across the whole [Component].
      */
-    private fun connectDefinitions(declaration: Node?) {
+    private fun connectDefinitions(declaration: Node) {
         if (declaration !is FunctionDeclaration) {
             return
         }
@@ -212,7 +214,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (scope is GlobalScope) {
             scope = scopeManager.globalScope
         }
-        if (scope is ValueDeclarationScope) {
+        if (scope != null) {
             // Update the definition
             val candidates =
                 scope.symbols[declaration.symbol]?.filterIsInstance<FunctionDeclaration>()?.filter {

@@ -37,7 +37,7 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 /** A simple interface that a node has [language]. */
 interface HasLanguage {
 
-    var language: Language<*>?
+    var language: Language<*>
 }
 
 /** A simple interface that a node has [name] and [location]. */
@@ -124,7 +124,7 @@ interface HasInitializer : HasScope, HasType, ArgumentHolder, AssignmentHolder {
 
 /**
  * Some nodes have aliases, i.e., it potentially references another variable. This means that
- * writing to this node, also writes to its [aliases] and vice-versa.
+ * writing to this node, also writes to its [aliases] and vice versa.
  */
 interface HasAliases : HasScope {
     /** The aliases which this node has. */
@@ -132,14 +132,14 @@ interface HasAliases : HasScope {
 }
 
 /**
- * Specifies that this node (e.g. a [BinaryOperator] contains an operation that can be overloaded by
- * an [OperatorDeclaration].
+ * Specifies that this node (e.g. a [BinaryOperator]) contains an operation that can be overloaded
+ * by an [OperatorDeclaration].
  */
 interface HasOverloadedOperation : HasOperatorCode {
 
     /**
-     * Arguments forwarded to the operator. This might not necessarily be all of the regular
-     * "arguments", since often the the first argument is part of the [operatorBase].
+     * Arguments forwarded to the operator. These might not necessarily be all regular "arguments",
+     * since often, the first argument is part of the [operatorBase].
      */
     val operatorArguments: List<Expression>
 

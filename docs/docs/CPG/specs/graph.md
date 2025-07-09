@@ -7,11 +7,14 @@ This file shows all node labels and relationships between them that are persiste
 <span class="child">[Statement](#estatement)</span>
 <span class="child">[Declaration](#edeclaration)</span>
 <span class="child">[Type](#etype)</span>
+<span class="child">[Scope](#escope)</span>
+<span class="child">[OverlayNode](#eoverlaynode)</span>
 <span class="child">[AnnotationMember](#eannotationmember)</span>
-<span class="child">[Component](#ecomponent)</span>
 <span class="child">[Annotation](#eannotation)</span>
+<span class="child">[Component](#ecomponent)</span>
 
 ### Relationships
+<span class="relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 <span class="relationship">[EOG](#NodeEOG)</span>
 <span class="relationship">[CDG](#NodeCDG)</span>
 <span class="relationship">[DFG](#NodeDFG)</span>
@@ -19,35 +22,41 @@ This file shows all node labels and relationships between them that are persiste
 <span class="relationship">[PDG](#NodePDG)</span>
 <span class="relationship">[AST](#NodeAST)</span>
 <span class="relationship">[SCOPE](#NodeSCOPE)</span>
+#### ADDITIONAL_PROBLEMS<a id="NodeADDITIONAL_PROBLEMS"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+Node--"ADDITIONAL_PROBLEMS*"-->NodeADDITIONAL_PROBLEMS[<a href='#enode'>Node</a>]:::outer
+```
 #### EOG<a id="NodeEOG"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-Node--"EOG*"-->NodeEOG[<a href='#enode'>Node</a>]:::outer
+Node--"EOG¹"-->NodeEOG[<a href='#enode'>Node</a>]:::outer
 ```
 #### CDG<a id="NodeCDG"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-Node--"CDG*"-->NodeCDG[<a href='#enode'>Node</a>]:::outer
+Node--"CDG¹"-->NodeCDG[<a href='#enode'>Node</a>]:::outer
 ```
 #### DFG<a id="NodeDFG"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-Node--"DFG*"-->NodeDFG[<a href='#enode'>Node</a>]:::outer
+Node--"DFG¹"-->NodeDFG[<a href='#enode'>Node</a>]:::outer
 ```
 #### ANNOTATIONS<a id="NodeANNOTATIONS"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-Node--"ANNOTATIONS*"-->NodeANNOTATIONS[<a href='#eannotation'>Annotation</a>]:::outer
+Node--"ANNOTATIONS¹"-->NodeANNOTATIONS[<a href='#eannotation'>Annotation</a>]:::outer
 ```
 #### PDG<a id="NodePDG"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-Node--"PDG*"-->NodePDG[<a href='#enode'>Node</a>]:::outer
+Node--"PDG¹"-->NodePDG[<a href='#enode'>Node</a>]:::outer
 ```
 #### AST<a id="NodeAST"></a>
 ```mermaid
@@ -59,7 +68,7 @@ Node--"AST*"-->NodeAST[<a href='#enode'>Node</a>]:::outer
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-Node--"SCOPE¹"-->NodeSCOPE[<a href='#enode'>Node</a>]:::outer
+Node--"SCOPE¹"-->NodeSCOPE[<a href='#escope'>Scope</a>]:::outer
 ```
 ### Properties
 code : String
@@ -69,6 +78,8 @@ argumentIndex : int
 file : String
 
 isImplicit : boolean
+
+overlayEdges : Overlays
 
 fullName : String
 
@@ -98,30 +109,30 @@ isInferred : boolean
 
 ### Children
 <span class="child">[AssertStatement](#eassertstatement)</span>
-<span class="child">[DoStatement](#edostatement)</span>
+<span class="child">[LoopStatement](#eloopstatement)</span>
 <span class="child">[Expression](#eexpression)</span>
 <span class="child">[CaseStatement](#ecasestatement)</span>
 <span class="child">[ReturnStatement](#ereturnstatement)</span>
+<span class="child">[LabelStatement](#elabelstatement)</span>
+<span class="child">[EmptyStatement](#eemptystatement)</span>
 <span class="child">[IfStatement](#eifstatement)</span>
-<span class="child">[ForStatement](#eforstatement)</span>
 <span class="child">[CatchClause](#ecatchclause)</span>
 <span class="child">[SwitchStatement](#eswitchstatement)</span>
 <span class="child">[GotoStatement](#egotostatement)</span>
-<span class="child">[WhileStatement](#ewhilestatement)</span>
 <span class="child">[ContinueStatement](#econtinuestatement)</span>
 <span class="child">[DefaultStatement](#edefaultstatement)</span>
 <span class="child">[SynchronizedStatement](#esynchronizedstatement)</span>
 <span class="child">[TryStatement](#etrystatement)</span>
-<span class="child">[ForEachStatement](#eforeachstatement)</span>
-<span class="child">[LabelStatement](#elabelstatement)</span>
 <span class="child">[BreakStatement](#ebreakstatement)</span>
+<span class="child">[LookupScopeStatement](#elookupscopestatement)</span>
 <span class="child">[DeclarationStatement](#edeclarationstatement)</span>
-<span class="child">[EmptyStatement](#eemptystatement)</span>
 
 ### Relationships
 <span class="relationship">[LOCALS](#StatementLOCALS)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -143,7 +154,7 @@ isInferred : boolean
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-Statement--"LOCALS*"-->StatementLOCALS[<a href='#evariabledeclaration'>VariableDeclaration</a>]:::outer
+Statement--"LOCALS¹"-->StatementLOCALS[<a href='#evaluedeclaration'>ValueDeclaration</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -155,6 +166,8 @@ Statement--"LOCALS*"-->StatementLOCALS[<a href='#evariabledeclaration'>VariableD
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -192,6 +205,8 @@ Statement--"LOCALS*"-->StatementLOCALS[<a href='#evariabledeclaration'>VariableD
 ??? info "Inherited Relationships"
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -232,6 +247,94 @@ AssertStatement--"CONDITION¹"-->AssertStatementCONDITION[<a href='#eexpression'
 
     isImplicit : boolean
 
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## LoopStatement<a id="eloopstatement"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Statement](#estatement)</span>
+<span class="classLabel">[LoopStatement](#eloopstatement)</span>
+
+### Children
+<span class="child">[DoStatement](#edostatement)</span>
+<span class="child">[ForStatement](#eforstatement)</span>
+<span class="child">[WhileStatement](#ewhilestatement)</span>
+<span class="child">[ForEachStatement](#eforeachstatement)</span>
+
+### Relationships
+<span class="relationship">[ELSE_STATEMENT](#LoopStatementELSE_STATEMENT)</span>
+<span class="relationship">[STATEMENT](#LoopStatementSTATEMENT)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### ELSE_STATEMENT<a id="LoopStatementELSE_STATEMENT"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+LoopStatement--"ELSE_STATEMENT¹"-->LoopStatementELSE_STATEMENT[<a href='#estatement'>Statement</a>]:::outer
+```
+#### STATEMENT<a id="LoopStatementSTATEMENT"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+LoopStatement--"STATEMENT¹"-->LoopStatementSTATEMENT[<a href='#estatement'>Statement</a>]:::outer
+```
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
     fullName : String
 
     localName : String
@@ -259,15 +362,21 @@ AssertStatement--"CONDITION¹"-->AssertStatementCONDITION[<a href='#eexpression'
 ## DoStatement<a id="edostatement"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
+<span class="superclassLabel">[LoopStatement](#eloopstatement)</span>
 <span class="classLabel">[DoStatement](#edostatement)</span>
 
 ### Relationships
 <span class="relationship">[CONDITION](#DoStatementCONDITION)</span>
-<span class="relationship">[STATEMENT](#DoStatementSTATEMENT)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
+    <span class="inherited-relationship">[ELSE_STATEMENT](#LoopStatementELSE_STATEMENT)</span>
+
+    <span class="inherited-relationship">[STATEMENT](#LoopStatementSTATEMENT)</span>
+
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -291,11 +400,104 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 DoStatement--"CONDITION¹"-->DoStatementCONDITION[<a href='#eexpression'>Expression</a>]:::outer
 ```
-#### STATEMENT<a id="DoStatementSTATEMENT"></a>
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## ForStatement<a id="eforstatement"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Statement](#estatement)</span>
+<span class="superclassLabel">[LoopStatement](#eloopstatement)</span>
+<span class="classLabel">[ForStatement](#eforstatement)</span>
+
+### Relationships
+<span class="relationship">[CONDITION_DECLARATION](#ForStatementCONDITION_DECLARATION)</span>
+<span class="relationship">[CONDITION](#ForStatementCONDITION)</span>
+<span class="relationship">[ITERATION_STATEMENT](#ForStatementITERATION_STATEMENT)</span>
+<span class="relationship">[INITIALIZER_STATEMENT](#ForStatementINITIALIZER_STATEMENT)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[ELSE_STATEMENT](#LoopStatementELSE_STATEMENT)</span>
+
+    <span class="inherited-relationship">[STATEMENT](#LoopStatementSTATEMENT)</span>
+
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### CONDITION_DECLARATION<a id="ForStatementCONDITION_DECLARATION"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-DoStatement--"STATEMENT¹"-->DoStatementSTATEMENT[<a href='#estatement'>Statement</a>]:::outer
+ForStatement--"CONDITION_DECLARATION¹"-->ForStatementCONDITION_DECLARATION[<a href='#edeclaration'>Declaration</a>]:::outer
+```
+#### CONDITION<a id="ForStatementCONDITION"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+ForStatement--"CONDITION¹"-->ForStatementCONDITION[<a href='#eexpression'>Expression</a>]:::outer
+```
+#### ITERATION_STATEMENT<a id="ForStatementITERATION_STATEMENT"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+ForStatement--"ITERATION_STATEMENT¹"-->ForStatementITERATION_STATEMENT[<a href='#estatement'>Statement</a>]:::outer
+```
+#### INITIALIZER_STATEMENT<a id="ForStatementINITIALIZER_STATEMENT"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+ForStatement--"INITIALIZER_STATEMENT¹"-->ForStatementINITIALIZER_STATEMENT[<a href='#estatement'>Statement</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -307,6 +509,178 @@ DoStatement--"STATEMENT¹"-->DoStatementSTATEMENT[<a href='#estatement'>Statemen
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## WhileStatement<a id="ewhilestatement"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Statement](#estatement)</span>
+<span class="superclassLabel">[LoopStatement](#eloopstatement)</span>
+<span class="classLabel">[WhileStatement](#ewhilestatement)</span>
+
+### Relationships
+<span class="relationship">[CONDITION_DECLARATION](#WhileStatementCONDITION_DECLARATION)</span>
+<span class="relationship">[CONDITION](#WhileStatementCONDITION)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[ELSE_STATEMENT](#LoopStatementELSE_STATEMENT)</span>
+
+    <span class="inherited-relationship">[STATEMENT](#LoopStatementSTATEMENT)</span>
+
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### CONDITION_DECLARATION<a id="WhileStatementCONDITION_DECLARATION"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+WhileStatement--"CONDITION_DECLARATION¹"-->WhileStatementCONDITION_DECLARATION[<a href='#edeclaration'>Declaration</a>]:::outer
+```
+#### CONDITION<a id="WhileStatementCONDITION"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+WhileStatement--"CONDITION¹"-->WhileStatementCONDITION[<a href='#eexpression'>Expression</a>]:::outer
+```
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## ForEachStatement<a id="eforeachstatement"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Statement](#estatement)</span>
+<span class="superclassLabel">[LoopStatement](#eloopstatement)</span>
+<span class="classLabel">[ForEachStatement](#eforeachstatement)</span>
+
+### Relationships
+<span class="relationship">[ITERABLE](#ForEachStatementITERABLE)</span>
+<span class="relationship">[VARIABLE](#ForEachStatementVARIABLE)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[ELSE_STATEMENT](#LoopStatementELSE_STATEMENT)</span>
+
+    <span class="inherited-relationship">[STATEMENT](#LoopStatementSTATEMENT)</span>
+
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### ITERABLE<a id="ForEachStatementITERABLE"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+ForEachStatement--"ITERABLE¹"-->ForEachStatementITERABLE[<a href='#estatement'>Statement</a>]:::outer
+```
+#### VARIABLE<a id="ForEachStatementVARIABLE"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+ForEachStatement--"VARIABLE¹"-->ForEachStatementVARIABLE[<a href='#estatement'>Statement</a>]:::outer
+```
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -338,24 +712,27 @@ DoStatement--"STATEMENT¹"-->DoStatementSTATEMENT[<a href='#estatement'>Statemen
 <span class="classLabel">[Expression](#eexpression)</span>
 
 ### Children
-<span class="child">[RangeExpression](#erangeexpression)</span>
-<span class="child">[NewExpression](#enewexpression)</span>
-<span class="child">[LambdaExpression](#elambdaexpression)</span>
-<span class="child">[UnaryOperator](#eunaryoperator)</span>
-<span class="child">[Block](#eblock)</span>
 <span class="child">[CallExpression](#ecallexpression)</span>
-<span class="child">[NewArrayExpression](#enewarrayexpression)</span>
-<span class="child">[KeyValueExpression](#ekeyvalueexpression)</span>
-<span class="child">[AssignExpression](#eassignexpression)</span>
+<span class="child">[NewExpression](#enewexpression)</span>
+<span class="child">[UnaryOperator](#eunaryoperator)</span>
+<span class="child">[CollectionComprehension](#ecollectioncomprehension)</span>
+<span class="child">[ThrowExpression](#ethrowexpression)</span>
+<span class="child">[Block](#eblock)</span>
 <span class="child">[CastExpression](#ecastexpression)</span>
-<span class="child">[TypeExpression](#etypeexpression)</span>
 <span class="child">[Reference](#ereference)</span>
 <span class="child">[BinaryOperator](#ebinaryoperator)</span>
 <span class="child">[ConditionalExpression](#econditionalexpression)</span>
-<span class="child">[InitializerListExpression](#einitializerlistexpression)</span>
 <span class="child">[DeleteExpression](#edeleteexpression)</span>
 <span class="child">[SubscriptExpression](#esubscriptexpression)</span>
 <span class="child">[ProblemExpression](#eproblemexpression)</span>
+<span class="child">[RangeExpression](#erangeexpression)</span>
+<span class="child">[LambdaExpression](#elambdaexpression)</span>
+<span class="child">[NewArrayExpression](#enewarrayexpression)</span>
+<span class="child">[KeyValueExpression](#ekeyvalueexpression)</span>
+<span class="child">[AssignExpression](#eassignexpression)</span>
+<span class="child">[ComprehensionExpression](#ecomprehensionexpression)</span>
+<span class="child">[TypeExpression](#etypeexpression)</span>
+<span class="child">[InitializerListExpression](#einitializerlistexpression)</span>
 <span class="child">[Literal](#eliteral)</span>
 <span class="child">[TypeIdExpression](#etypeidexpression)</span>
 <span class="child">[ExpressionList](#eexpressionlist)</span>
@@ -367,6 +744,8 @@ DoStatement--"STATEMENT¹"-->DoStatementSTATEMENT[<a href='#estatement'>Statemen
 ??? info "Inherited Relationships"
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -407,6 +786,8 @@ Expression--"ASSIGNED_TYPES*"-->ExpressionASSIGNED_TYPES[<a href='#etype'>Type</
 
     isImplicit : boolean
 
+    overlayEdges : Overlays
+
     fullName : String
 
     localName : String
@@ -431,16 +812,23 @@ Expression--"ASSIGNED_TYPES*"-->ExpressionASSIGNED_TYPES[<a href='#etype'>Type</
 
 </div>
 
-## RangeExpression<a id="erangeexpression"></a>
+## CallExpression<a id="ecallexpression"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Statement](#estatement)</span>
 <span class="superclassLabel">[Expression](#eexpression)</span>
-<span class="classLabel">[RangeExpression](#erangeexpression)</span>
+<span class="classLabel">[CallExpression](#ecallexpression)</span>
+
+### Children
+<span class="child">[OperatorCallExpression](#eoperatorcallexpression)</span>
+<span class="child">[ConstructExpression](#econstructexpression)</span>
+<span class="child">[MemberCallExpression](#emembercallexpression)</span>
 
 ### Relationships
-<span class="relationship">[CEILING](#RangeExpressionCEILING)</span>
-<span class="relationship">[THIRD](#RangeExpressionTHIRD)</span>
-<span class="relationship">[FLOOR](#RangeExpressionFLOOR)</span>
+<span class="relationship">[CALLEE](#CallExpressionCALLEE)</span>
+<span class="relationship">[INVOKES](#CallExpressionINVOKES)</span>
+<span class="relationship">[TEMPLATE_INSTANTIATION](#CallExpressionTEMPLATE_INSTANTIATION)</span>
+<span class="relationship">[TEMPLATE_ARGUMENTS](#CallExpressionTEMPLATE_ARGUMENTS)</span>
+<span class="relationship">[ARGUMENTS](#CallExpressionARGUMENTS)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
@@ -449,6 +837,8 @@ Expression--"ASSIGNED_TYPES*"-->ExpressionASSIGNED_TYPES[<a href='#etype'>Type</
     <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -466,36 +856,52 @@ Expression--"ASSIGNED_TYPES*"-->ExpressionASSIGNED_TYPES[<a href='#etype'>Type</
 
 </div>
 
-#### CEILING<a id="RangeExpressionCEILING"></a>
+#### CALLEE<a id="CallExpressionCALLEE"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-RangeExpression--"CEILING¹"-->RangeExpressionCEILING[<a href='#eexpression'>Expression</a>]:::outer
+CallExpression--"CALLEE¹"-->CallExpressionCALLEE[<a href='#eexpression'>Expression</a>]:::outer
 ```
-#### THIRD<a id="RangeExpressionTHIRD"></a>
+#### INVOKES<a id="CallExpressionINVOKES"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-RangeExpression--"THIRD¹"-->RangeExpressionTHIRD[<a href='#eexpression'>Expression</a>]:::outer
+CallExpression--"INVOKES¹"-->CallExpressionINVOKES[<a href='#efunctiondeclaration'>FunctionDeclaration</a>]:::outer
 ```
-#### FLOOR<a id="RangeExpressionFLOOR"></a>
+#### TEMPLATE_INSTANTIATION<a id="CallExpressionTEMPLATE_INSTANTIATION"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-RangeExpression--"FLOOR¹"-->RangeExpressionFLOOR[<a href='#eexpression'>Expression</a>]:::outer
+CallExpression--"TEMPLATE_INSTANTIATION¹"-->CallExpressionTEMPLATE_INSTANTIATION[<a href='#etemplatedeclaration'>TemplateDeclaration</a>]:::outer
+```
+#### TEMPLATE_ARGUMENTS<a id="CallExpressionTEMPLATE_ARGUMENTS"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+CallExpression--"TEMPLATE_ARGUMENTS¹"-->CallExpressionTEMPLATE_ARGUMENTS[<a href='#enode'>Node</a>]:::outer
+```
+#### ARGUMENTS<a id="CallExpressionARGUMENTS"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+CallExpression--"ARGUMENTS¹"-->CallExpressionARGUMENTS[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
-operatorCode : String
+template : boolean
 
 <div class="papers" markdown>
 ??? info "Inherited Properties"
     code : String
 
-    argumentIndex : int
-
     file : String
 
+    isInferred : boolean
+
+    argumentIndex : int
+
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -517,7 +923,282 @@ operatorCode : String
 
     endColumn : int
 
+</div>
+
+## OperatorCallExpression<a id="eoperatorcallexpression"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Statement](#estatement)</span>
+<span class="superclassLabel">[Expression](#eexpression)</span>
+<span class="superclassLabel">[CallExpression](#ecallexpression)</span>
+<span class="classLabel">[OperatorCallExpression](#eoperatorcallexpression)</span>
+
+### Relationships
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[CALLEE](#CallExpressionCALLEE)</span>
+
+    <span class="inherited-relationship">[INVOKES](#CallExpressionINVOKES)</span>
+
+    <span class="inherited-relationship">[TEMPLATE_INSTANTIATION](#CallExpressionTEMPLATE_INSTANTIATION)</span>
+
+    <span class="inherited-relationship">[TEMPLATE_ARGUMENTS](#CallExpressionTEMPLATE_ARGUMENTS)</span>
+
+    <span class="inherited-relationship">[ARGUMENTS](#CallExpressionARGUMENTS)</span>
+
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+### Properties
+operatorCode : String
+
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    template : boolean
+
+    code : String
+
+    file : String
+
     isInferred : boolean
+
+    argumentIndex : int
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+</div>
+
+## ConstructExpression<a id="econstructexpression"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Statement](#estatement)</span>
+<span class="superclassLabel">[Expression](#eexpression)</span>
+<span class="superclassLabel">[CallExpression](#ecallexpression)</span>
+<span class="classLabel">[ConstructExpression](#econstructexpression)</span>
+
+### Relationships
+<span class="relationship">[INSTANTIATES](#ConstructExpressionINSTANTIATES)</span>
+<span class="relationship">[ANONYMOUS_CLASS](#ConstructExpressionANONYMOUS_CLASS)</span>
+<span class="relationship">[CONSTRUCTOR](#ConstructExpressionCONSTRUCTOR)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[CALLEE](#CallExpressionCALLEE)</span>
+
+    <span class="inherited-relationship">[INVOKES](#CallExpressionINVOKES)</span>
+
+    <span class="inherited-relationship">[TEMPLATE_INSTANTIATION](#CallExpressionTEMPLATE_INSTANTIATION)</span>
+
+    <span class="inherited-relationship">[TEMPLATE_ARGUMENTS](#CallExpressionTEMPLATE_ARGUMENTS)</span>
+
+    <span class="inherited-relationship">[ARGUMENTS](#CallExpressionARGUMENTS)</span>
+
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### INSTANTIATES<a id="ConstructExpressionINSTANTIATES"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+ConstructExpression--"INSTANTIATES¹"-->ConstructExpressionINSTANTIATES[<a href='#edeclaration'>Declaration</a>]:::outer
+```
+#### ANONYMOUS_CLASS<a id="ConstructExpressionANONYMOUS_CLASS"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+ConstructExpression--"ANONYMOUS_CLASS¹"-->ConstructExpressionANONYMOUS_CLASS[<a href='#erecorddeclaration'>RecordDeclaration</a>]:::outer
+```
+#### CONSTRUCTOR<a id="ConstructExpressionCONSTRUCTOR"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+ConstructExpression--"CONSTRUCTOR¹"-->ConstructExpressionCONSTRUCTOR[<a href='#econstructordeclaration'>ConstructorDeclaration</a>]:::outer
+```
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    template : boolean
+
+    code : String
+
+    file : String
+
+    isInferred : boolean
+
+    argumentIndex : int
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+</div>
+
+## MemberCallExpression<a id="emembercallexpression"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Statement](#estatement)</span>
+<span class="superclassLabel">[Expression](#eexpression)</span>
+<span class="superclassLabel">[CallExpression](#ecallexpression)</span>
+<span class="classLabel">[MemberCallExpression](#emembercallexpression)</span>
+
+### Relationships
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[CALLEE](#CallExpressionCALLEE)</span>
+
+    <span class="inherited-relationship">[INVOKES](#CallExpressionINVOKES)</span>
+
+    <span class="inherited-relationship">[TEMPLATE_INSTANTIATION](#CallExpressionTEMPLATE_INSTANTIATION)</span>
+
+    <span class="inherited-relationship">[TEMPLATE_ARGUMENTS](#CallExpressionTEMPLATE_ARGUMENTS)</span>
+
+    <span class="inherited-relationship">[ARGUMENTS](#CallExpressionARGUMENTS)</span>
+
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+### Properties
+isStatic : boolean
+
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    template : boolean
+
+    code : String
+
+    file : String
+
+    isInferred : boolean
+
+    argumentIndex : int
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
 
 </div>
 
@@ -538,6 +1219,8 @@ operatorCode : String
     <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -565,7 +1248,7 @@ NewExpression--"INITIALIZER¹"-->NewExpressionINITIALIZER[<a href='#eexpression'
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-NewExpression--"TEMPLATE_PARAMETERS*"-->NewExpressionTEMPLATE_PARAMETERS[<a href='#enode'>Node</a>]:::outer
+NewExpression--"TEMPLATE_PARAMETERS¹"-->NewExpressionTEMPLATE_PARAMETERS[<a href='#enode'>Node</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -578,88 +1261,7 @@ NewExpression--"TEMPLATE_PARAMETERS*"-->NewExpressionTEMPLATE_PARAMETERS[<a href
 
     isImplicit : boolean
 
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-    isInferred : boolean
-
-</div>
-
-## LambdaExpression<a id="elambdaexpression"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Statement](#estatement)</span>
-<span class="superclassLabel">[Expression](#eexpression)</span>
-<span class="classLabel">[LambdaExpression](#elambdaexpression)</span>
-
-### Relationships
-<span class="relationship">[MUTABLE_VARIABLES](#LambdaExpressionMUTABLE_VARIABLES)</span>
-<span class="relationship">[FUNCTION](#LambdaExpressionFUNCTION)</span>
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
-
-    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
-
-    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-#### MUTABLE_VARIABLES<a id="LambdaExpressionMUTABLE_VARIABLES"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-LambdaExpression--"MUTABLE_VARIABLES*"-->LambdaExpressionMUTABLE_VARIABLES[<a href='#evaluedeclaration'>ValueDeclaration</a>]:::outer
-```
-#### FUNCTION<a id="LambdaExpressionFUNCTION"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-LambdaExpression--"FUNCTION¹"-->LambdaExpressionFUNCTION[<a href='#efunctiondeclaration'>FunctionDeclaration</a>]:::outer
-```
-### Properties
-areVariablesMutable : boolean
-
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    code : String
-
-    argumentIndex : int
-
-    file : String
-
-    isImplicit : boolean
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -702,6 +1304,8 @@ areVariablesMutable : boolean
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -740,6 +1344,178 @@ isPrefix : boolean
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## CollectionComprehension<a id="ecollectioncomprehension"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Statement](#estatement)</span>
+<span class="superclassLabel">[Expression](#eexpression)</span>
+<span class="classLabel">[CollectionComprehension](#ecollectioncomprehension)</span>
+
+### Relationships
+<span class="relationship">[COMPREHENSION_EXPRESSIONS](#CollectionComprehensionCOMPREHENSION_EXPRESSIONS)</span>
+<span class="relationship">[STATEMENT](#CollectionComprehensionSTATEMENT)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### COMPREHENSION_EXPRESSIONS<a id="CollectionComprehensionCOMPREHENSION_EXPRESSIONS"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+CollectionComprehension--"COMPREHENSION_EXPRESSIONS¹"-->CollectionComprehensionCOMPREHENSION_EXPRESSIONS[<a href='#ecomprehensionexpression'>ComprehensionExpression</a>]:::outer
+```
+#### STATEMENT<a id="CollectionComprehensionSTATEMENT"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+CollectionComprehension--"STATEMENT¹"-->CollectionComprehensionSTATEMENT[<a href='#estatement'>Statement</a>]:::outer
+```
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## ThrowExpression<a id="ethrowexpression"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Statement](#estatement)</span>
+<span class="superclassLabel">[Expression](#eexpression)</span>
+<span class="classLabel">[ThrowExpression](#ethrowexpression)</span>
+
+### Relationships
+<span class="relationship">[PARENT_EXCEPTION](#ThrowExpressionPARENT_EXCEPTION)</span>
+<span class="relationship">[EXCEPTION](#ThrowExpressionEXCEPTION)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### PARENT_EXCEPTION<a id="ThrowExpressionPARENT_EXCEPTION"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+ThrowExpression--"PARENT_EXCEPTION¹"-->ThrowExpressionPARENT_EXCEPTION[<a href='#eexpression'>Expression</a>]:::outer
+```
+#### EXCEPTION<a id="ThrowExpressionEXCEPTION"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+ThrowExpression--"EXCEPTION¹"-->ThrowExpressionEXCEPTION[<a href='#eexpression'>Expression</a>]:::outer
+```
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -785,6 +1561,8 @@ isPrefix : boolean
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -805,7 +1583,7 @@ isPrefix : boolean
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-Block--"STATEMENTS*"-->BlockSTATEMENTS[<a href='#estatement'>Statement</a>]:::outer
+Block--"STATEMENTS¹"-->BlockSTATEMENTS[<a href='#estatement'>Statement</a>]:::outer
 ```
 ### Properties
 isStaticBlock : boolean
@@ -819,6 +1597,8 @@ isStaticBlock : boolean
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -863,6 +1643,8 @@ isStaticBlock : boolean
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -889,553 +1671,10 @@ isStaticBlock : boolean
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     isStaticBlock : boolean
-
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-    isInferred : boolean
-
-</div>
-
-## CallExpression<a id="ecallexpression"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Statement](#estatement)</span>
-<span class="superclassLabel">[Expression](#eexpression)</span>
-<span class="classLabel">[CallExpression](#ecallexpression)</span>
-
-### Children
-<span class="child">[ConstructExpression](#econstructexpression)</span>
-<span class="child">[MemberCallExpression](#emembercallexpression)</span>
-
-### Relationships
-<span class="relationship">[CALLEE](#CallExpressionCALLEE)</span>
-<span class="relationship">[INVOKES](#CallExpressionINVOKES)</span>
-<span class="relationship">[TEMPLATE_INSTANTIATION](#CallExpressionTEMPLATE_INSTANTIATION)</span>
-<span class="relationship">[ARGUMENTS](#CallExpressionARGUMENTS)</span>
-<span class="relationship">[TEMPLATE_PARAMETERS](#CallExpressionTEMPLATE_PARAMETERS)</span>
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
-
-    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
-
-    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-#### CALLEE<a id="CallExpressionCALLEE"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-CallExpression--"CALLEE¹"-->CallExpressionCALLEE[<a href='#eexpression'>Expression</a>]:::outer
-```
-#### INVOKES<a id="CallExpressionINVOKES"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-CallExpression--"INVOKES*"-->CallExpressionINVOKES[<a href='#efunctiondeclaration'>FunctionDeclaration</a>]:::outer
-```
-#### TEMPLATE_INSTANTIATION<a id="CallExpressionTEMPLATE_INSTANTIATION"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-CallExpression--"TEMPLATE_INSTANTIATION¹"-->CallExpressionTEMPLATE_INSTANTIATION[<a href='#etemplatedeclaration'>TemplateDeclaration</a>]:::outer
-```
-#### ARGUMENTS<a id="CallExpressionARGUMENTS"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-CallExpression--"ARGUMENTS*"-->CallExpressionARGUMENTS[<a href='#eexpression'>Expression</a>]:::outer
-```
-#### TEMPLATE_PARAMETERS<a id="CallExpressionTEMPLATE_PARAMETERS"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-CallExpression--"TEMPLATE_PARAMETERS*"-->CallExpressionTEMPLATE_PARAMETERS[<a href='#enode'>Node</a>]:::outer
-```
-### Properties
-template : boolean
-
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    code : String
-
-    argumentIndex : int
-
-    file : String
-
-    isImplicit : boolean
-
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-    isInferred : boolean
-
-</div>
-
-## ConstructExpression<a id="econstructexpression"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Statement](#estatement)</span>
-<span class="superclassLabel">[Expression](#eexpression)</span>
-<span class="superclassLabel">[CallExpression](#ecallexpression)</span>
-<span class="classLabel">[ConstructExpression](#econstructexpression)</span>
-
-### Relationships
-<span class="relationship">[INSTANTIATES](#ConstructExpressionINSTANTIATES)</span>
-<span class="relationship">[CONSTRUCTOR](#ConstructExpressionCONSTRUCTOR)</span>
-<span class="relationship">[ANONYMOUS_CLASS](#ConstructExpressionANONYMOUS_CLASS)</span>
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[CALLEE](#CallExpressionCALLEE)</span>
-
-    <span class="inherited-relationship">[INVOKES](#CallExpressionINVOKES)</span>
-
-    <span class="inherited-relationship">[TEMPLATE_INSTANTIATION](#CallExpressionTEMPLATE_INSTANTIATION)</span>
-
-    <span class="inherited-relationship">[ARGUMENTS](#CallExpressionARGUMENTS)</span>
-
-    <span class="inherited-relationship">[TEMPLATE_PARAMETERS](#CallExpressionTEMPLATE_PARAMETERS)</span>
-
-    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
-
-    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
-
-    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-#### INSTANTIATES<a id="ConstructExpressionINSTANTIATES"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ConstructExpression--"INSTANTIATES¹"-->ConstructExpressionINSTANTIATES[<a href='#edeclaration'>Declaration</a>]:::outer
-```
-#### CONSTRUCTOR<a id="ConstructExpressionCONSTRUCTOR"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ConstructExpression--"CONSTRUCTOR¹"-->ConstructExpressionCONSTRUCTOR[<a href='#econstructordeclaration'>ConstructorDeclaration</a>]:::outer
-```
-#### ANONYMOUS_CLASS<a id="ConstructExpressionANONYMOUS_CLASS"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ConstructExpression--"ANONYMOUS_CLASS¹"-->ConstructExpressionANONYMOUS_CLASS[<a href='#erecorddeclaration'>RecordDeclaration</a>]:::outer
-```
-### Properties
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    template : boolean
-
-    code : String
-
-    file : String
-
-    isInferred : boolean
-
-    argumentIndex : int
-
-    isImplicit : boolean
-
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-</div>
-
-## MemberCallExpression<a id="emembercallexpression"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Statement](#estatement)</span>
-<span class="superclassLabel">[Expression](#eexpression)</span>
-<span class="superclassLabel">[CallExpression](#ecallexpression)</span>
-<span class="classLabel">[MemberCallExpression](#emembercallexpression)</span>
-
-### Relationships
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[CALLEE](#CallExpressionCALLEE)</span>
-
-    <span class="inherited-relationship">[INVOKES](#CallExpressionINVOKES)</span>
-
-    <span class="inherited-relationship">[TEMPLATE_INSTANTIATION](#CallExpressionTEMPLATE_INSTANTIATION)</span>
-
-    <span class="inherited-relationship">[ARGUMENTS](#CallExpressionARGUMENTS)</span>
-
-    <span class="inherited-relationship">[TEMPLATE_PARAMETERS](#CallExpressionTEMPLATE_PARAMETERS)</span>
-
-    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
-
-    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
-
-    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-### Properties
-isStatic : boolean
-
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    template : boolean
-
-    code : String
-
-    argumentIndex : int
-
-    file : String
-
-    isImplicit : boolean
-
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-    isInferred : boolean
-
-</div>
-
-## NewArrayExpression<a id="enewarrayexpression"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Statement](#estatement)</span>
-<span class="superclassLabel">[Expression](#eexpression)</span>
-<span class="classLabel">[NewArrayExpression](#enewarrayexpression)</span>
-
-### Relationships
-<span class="relationship">[INITIALIZER](#NewArrayExpressionINITIALIZER)</span>
-<span class="relationship">[DIMENSIONS](#NewArrayExpressionDIMENSIONS)</span>
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
-
-    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
-
-    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-#### INITIALIZER<a id="NewArrayExpressionINITIALIZER"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-NewArrayExpression--"INITIALIZER¹"-->NewArrayExpressionINITIALIZER[<a href='#eexpression'>Expression</a>]:::outer
-```
-#### DIMENSIONS<a id="NewArrayExpressionDIMENSIONS"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-NewArrayExpression--"DIMENSIONS*"-->NewArrayExpressionDIMENSIONS[<a href='#eexpression'>Expression</a>]:::outer
-```
-### Properties
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    code : String
-
-    argumentIndex : int
-
-    file : String
-
-    isImplicit : boolean
-
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-    isInferred : boolean
-
-</div>
-
-## KeyValueExpression<a id="ekeyvalueexpression"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Statement](#estatement)</span>
-<span class="superclassLabel">[Expression](#eexpression)</span>
-<span class="classLabel">[KeyValueExpression](#ekeyvalueexpression)</span>
-
-### Relationships
-<span class="relationship">[VALUE](#KeyValueExpressionVALUE)</span>
-<span class="relationship">[KEY](#KeyValueExpressionKEY)</span>
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
-
-    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
-
-    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-#### VALUE<a id="KeyValueExpressionVALUE"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-KeyValueExpression--"VALUE¹"-->KeyValueExpressionVALUE[<a href='#eexpression'>Expression</a>]:::outer
-```
-#### KEY<a id="KeyValueExpressionKEY"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-KeyValueExpression--"KEY¹"-->KeyValueExpressionKEY[<a href='#eexpression'>Expression</a>]:::outer
-```
-### Properties
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    code : String
-
-    argumentIndex : int
-
-    file : String
-
-    isImplicit : boolean
-
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-    isInferred : boolean
-
-</div>
-
-## AssignExpression<a id="eassignexpression"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Statement](#estatement)</span>
-<span class="superclassLabel">[Expression](#eexpression)</span>
-<span class="classLabel">[AssignExpression](#eassignexpression)</span>
-
-### Relationships
-<span class="relationship">[DECLARATIONS](#AssignExpressionDECLARATIONS)</span>
-<span class="relationship">[LHS](#AssignExpressionLHS)</span>
-<span class="relationship">[RHS](#AssignExpressionRHS)</span>
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
-
-    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
-
-    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-#### DECLARATIONS<a id="AssignExpressionDECLARATIONS"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-AssignExpression--"DECLARATIONS*"-->AssignExpressionDECLARATIONS[<a href='#evariabledeclaration'>VariableDeclaration</a>]:::outer
-```
-#### LHS<a id="AssignExpressionLHS"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-AssignExpression--"LHS*"-->AssignExpressionLHS[<a href='#eexpression'>Expression</a>]:::outer
-```
-#### RHS<a id="AssignExpressionRHS"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-AssignExpression--"RHS*"-->AssignExpressionRHS[<a href='#eexpression'>Expression</a>]:::outer
-```
-### Properties
-usedAsExpression : boolean
-
-operatorCode : String
-
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    code : String
-
-    argumentIndex : int
-
-    file : String
-
-    isImplicit : boolean
 
     fullName : String
 
@@ -1479,6 +1718,8 @@ operatorCode : String
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -1518,72 +1759,7 @@ CastExpression--"EXPRESSION¹"-->CastExpressionEXPRESSION[<a href='#eexpression'
 
     isImplicit : boolean
 
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-    isInferred : boolean
-
-</div>
-
-## TypeExpression<a id="etypeexpression"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Statement](#estatement)</span>
-<span class="superclassLabel">[Expression](#eexpression)</span>
-<span class="classLabel">[TypeExpression](#etypeexpression)</span>
-
-### Relationships
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
-
-    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
-
-    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-### Properties
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    code : String
-
-    argumentIndex : int
-
-    file : String
-
-    isImplicit : boolean
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -1622,6 +1798,7 @@ CastExpression--"EXPRESSION¹"-->CastExpressionEXPRESSION[<a href='#eexpression'
 <span class="relationship">[REFERS_TO](#ReferenceREFERS_TO)</span>
 <span class="relationship">[ALIASES](#ReferenceALIASES)</span>
 <span class="relationship">[RESOLUTION_HELPER](#ReferenceRESOLUTION_HELPER)</span>
+<span class="relationship">[CANDIDATES](#ReferenceCANDIDATES)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
@@ -1630,6 +1807,8 @@ CastExpression--"EXPRESSION¹"-->CastExpressionEXPRESSION[<a href='#eexpression'
     <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -1665,6 +1844,12 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 Reference--"RESOLUTION_HELPER¹"-->ReferenceRESOLUTION_HELPER[<a href='#enode'>Node</a>]:::outer
 ```
+#### CANDIDATES<a id="ReferenceCANDIDATES"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+Reference--"CANDIDATES*"-->ReferenceCANDIDATES[<a href='#edeclaration'>Declaration</a>]:::outer
+```
 ### Properties
 access : AccessValues
 
@@ -1674,11 +1859,15 @@ isStaticAccess : boolean
 ??? info "Inherited Properties"
     code : String
 
-    argumentIndex : int
-
     file : String
 
+    isInferred : boolean
+
+    argumentIndex : int
+
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -1700,8 +1889,6 @@ isStaticAccess : boolean
 
     endColumn : int
 
-    isInferred : boolean
-
 </div>
 
 ## MemberExpression<a id="ememberexpression"></a>
@@ -1722,11 +1909,15 @@ isStaticAccess : boolean
 
     <span class="inherited-relationship">[RESOLUTION_HELPER](#ReferenceRESOLUTION_HELPER)</span>
 
+    <span class="inherited-relationship">[CANDIDATES](#ReferenceCANDIDATES)</span>
+
     <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
     <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -1759,13 +1950,17 @@ operatorCode : String
 
     code : String
 
+    file : String
+
+    isInferred : boolean
+
     isStaticAccess : boolean
 
     argumentIndex : int
 
-    file : String
-
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -1787,8 +1982,6 @@ operatorCode : String
 
     endColumn : int
 
-    isInferred : boolean
-
 </div>
 
 ## BinaryOperator<a id="ebinaryoperator"></a>
@@ -1801,8 +1994,8 @@ operatorCode : String
 <span class="child">[ShortCircuitOperator](#eshortcircuitoperator)</span>
 
 ### Relationships
-<span class="relationship">[LHS](#BinaryOperatorLHS)</span>
 <span class="relationship">[RHS](#BinaryOperatorRHS)</span>
+<span class="relationship">[LHS](#BinaryOperatorLHS)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
@@ -1811,6 +2004,8 @@ operatorCode : String
     <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -1828,17 +2023,17 @@ operatorCode : String
 
 </div>
 
-#### LHS<a id="BinaryOperatorLHS"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-BinaryOperator--"LHS¹"-->BinaryOperatorLHS[<a href='#eexpression'>Expression</a>]:::outer
-```
 #### RHS<a id="BinaryOperatorRHS"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 BinaryOperator--"RHS¹"-->BinaryOperatorRHS[<a href='#eexpression'>Expression</a>]:::outer
+```
+#### LHS<a id="BinaryOperatorLHS"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+BinaryOperator--"LHS¹"-->BinaryOperatorLHS[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
 operatorCode : String
@@ -1852,6 +2047,8 @@ operatorCode : String
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -1888,15 +2085,17 @@ operatorCode : String
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
-    <span class="inherited-relationship">[LHS](#BinaryOperatorLHS)</span>
-
     <span class="inherited-relationship">[RHS](#BinaryOperatorRHS)</span>
+
+    <span class="inherited-relationship">[LHS](#BinaryOperatorLHS)</span>
 
     <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
 
     <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -1926,6 +2125,8 @@ operatorCode : String
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -1958,9 +2159,9 @@ operatorCode : String
 <span class="classLabel">[ConditionalExpression](#econditionalexpression)</span>
 
 ### Relationships
-<span class="relationship">[ELSE_EXPRESSION](#ConditionalExpressionELSE_EXPRESSION)</span>
-<span class="relationship">[CONDITION](#ConditionalExpressionCONDITION)</span>
 <span class="relationship">[THEN_EXPRESSION](#ConditionalExpressionTHEN_EXPRESSION)</span>
+<span class="relationship">[CONDITION](#ConditionalExpressionCONDITION)</span>
+<span class="relationship">[ELSE_EXPRESSION](#ConditionalExpressionELSE_EXPRESSION)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
@@ -1969,6 +2170,8 @@ operatorCode : String
     <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -1986,11 +2189,11 @@ operatorCode : String
 
 </div>
 
-#### ELSE_EXPRESSION<a id="ConditionalExpressionELSE_EXPRESSION"></a>
+#### THEN_EXPRESSION<a id="ConditionalExpressionTHEN_EXPRESSION"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ConditionalExpression--"ELSE_EXPRESSION¹"-->ConditionalExpressionELSE_EXPRESSION[<a href='#eexpression'>Expression</a>]:::outer
+ConditionalExpression--"THEN_EXPRESSION¹"-->ConditionalExpressionTHEN_EXPRESSION[<a href='#eexpression'>Expression</a>]:::outer
 ```
 #### CONDITION<a id="ConditionalExpressionCONDITION"></a>
 ```mermaid
@@ -1998,11 +2201,11 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 ConditionalExpression--"CONDITION¹"-->ConditionalExpressionCONDITION[<a href='#eexpression'>Expression</a>]:::outer
 ```
-#### THEN_EXPRESSION<a id="ConditionalExpressionTHEN_EXPRESSION"></a>
+#### ELSE_EXPRESSION<a id="ConditionalExpressionELSE_EXPRESSION"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ConditionalExpression--"THEN_EXPRESSION¹"-->ConditionalExpressionTHEN_EXPRESSION[<a href='#eexpression'>Expression</a>]:::outer
+ConditionalExpression--"ELSE_EXPRESSION¹"-->ConditionalExpressionELSE_EXPRESSION[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -2015,79 +2218,7 @@ ConditionalExpression--"THEN_EXPRESSION¹"-->ConditionalExpressionTHEN_EXPRESSIO
 
     isImplicit : boolean
 
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-    isInferred : boolean
-
-</div>
-
-## InitializerListExpression<a id="einitializerlistexpression"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Statement](#estatement)</span>
-<span class="superclassLabel">[Expression](#eexpression)</span>
-<span class="classLabel">[InitializerListExpression](#einitializerlistexpression)</span>
-
-### Relationships
-<span class="relationship">[INITIALIZERS](#InitializerListExpressionINITIALIZERS)</span>
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
-
-    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
-
-    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-#### INITIALIZERS<a id="InitializerListExpressionINITIALIZERS"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-InitializerListExpression--"INITIALIZERS*"-->InitializerListExpressionINITIALIZERS[<a href='#eexpression'>Expression</a>]:::outer
-```
-### Properties
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    code : String
-
-    argumentIndex : int
-
-    file : String
-
-    isImplicit : boolean
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -2120,7 +2251,7 @@ InitializerListExpression--"INITIALIZERS*"-->InitializerListExpressionINITIALIZE
 <span class="classLabel">[DeleteExpression](#edeleteexpression)</span>
 
 ### Relationships
-<span class="relationship">[OPERAND](#DeleteExpressionOPERAND)</span>
+<span class="relationship">[OPERANDS](#DeleteExpressionOPERANDS)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
@@ -2129,6 +2260,8 @@ InitializerListExpression--"INITIALIZERS*"-->InitializerListExpressionINITIALIZE
     <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -2146,11 +2279,11 @@ InitializerListExpression--"INITIALIZERS*"-->InitializerListExpressionINITIALIZE
 
 </div>
 
-#### OPERAND<a id="DeleteExpressionOPERAND"></a>
+#### OPERANDS<a id="DeleteExpressionOPERANDS"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-DeleteExpression--"OPERAND¹"-->DeleteExpressionOPERAND[<a href='#eexpression'>Expression</a>]:::outer
+DeleteExpression--"OPERANDS¹"-->DeleteExpressionOPERANDS[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -2162,6 +2295,8 @@ DeleteExpression--"OPERAND¹"-->DeleteExpressionOPERAND[<a href='#eexpression'>E
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -2205,6 +2340,8 @@ DeleteExpression--"OPERAND¹"-->DeleteExpressionOPERAND[<a href='#eexpression'>E
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -2243,6 +2380,8 @@ SubscriptExpression--"SUBSCRIPT_EXPRESSION¹"-->SubscriptExpressionSUBSCRIPT_EXP
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -2284,6 +2423,8 @@ SubscriptExpression--"SUBSCRIPT_EXPRESSION¹"-->SubscriptExpressionSUBSCRIPT_EXP
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -2314,6 +2455,696 @@ problemType : ProblemType
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## RangeExpression<a id="erangeexpression"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Statement](#estatement)</span>
+<span class="superclassLabel">[Expression](#eexpression)</span>
+<span class="classLabel">[RangeExpression](#erangeexpression)</span>
+
+### Relationships
+<span class="relationship">[FLOOR](#RangeExpressionFLOOR)</span>
+<span class="relationship">[CEILING](#RangeExpressionCEILING)</span>
+<span class="relationship">[THIRD](#RangeExpressionTHIRD)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### FLOOR<a id="RangeExpressionFLOOR"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+RangeExpression--"FLOOR¹"-->RangeExpressionFLOOR[<a href='#eexpression'>Expression</a>]:::outer
+```
+#### CEILING<a id="RangeExpressionCEILING"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+RangeExpression--"CEILING¹"-->RangeExpressionCEILING[<a href='#eexpression'>Expression</a>]:::outer
+```
+#### THIRD<a id="RangeExpressionTHIRD"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+RangeExpression--"THIRD¹"-->RangeExpressionTHIRD[<a href='#eexpression'>Expression</a>]:::outer
+```
+### Properties
+operatorCode : String
+
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## LambdaExpression<a id="elambdaexpression"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Statement](#estatement)</span>
+<span class="superclassLabel">[Expression](#eexpression)</span>
+<span class="classLabel">[LambdaExpression](#elambdaexpression)</span>
+
+### Relationships
+<span class="relationship">[MUTABLE_VARIABLES](#LambdaExpressionMUTABLE_VARIABLES)</span>
+<span class="relationship">[FUNCTION](#LambdaExpressionFUNCTION)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### MUTABLE_VARIABLES<a id="LambdaExpressionMUTABLE_VARIABLES"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+LambdaExpression--"MUTABLE_VARIABLES*"-->LambdaExpressionMUTABLE_VARIABLES[<a href='#evaluedeclaration'>ValueDeclaration</a>]:::outer
+```
+#### FUNCTION<a id="LambdaExpressionFUNCTION"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+LambdaExpression--"FUNCTION¹"-->LambdaExpressionFUNCTION[<a href='#efunctiondeclaration'>FunctionDeclaration</a>]:::outer
+```
+### Properties
+areVariablesMutable : boolean
+
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## NewArrayExpression<a id="enewarrayexpression"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Statement](#estatement)</span>
+<span class="superclassLabel">[Expression](#eexpression)</span>
+<span class="classLabel">[NewArrayExpression](#enewarrayexpression)</span>
+
+### Relationships
+<span class="relationship">[INITIALIZER](#NewArrayExpressionINITIALIZER)</span>
+<span class="relationship">[DIMENSIONS](#NewArrayExpressionDIMENSIONS)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### INITIALIZER<a id="NewArrayExpressionINITIALIZER"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+NewArrayExpression--"INITIALIZER¹"-->NewArrayExpressionINITIALIZER[<a href='#eexpression'>Expression</a>]:::outer
+```
+#### DIMENSIONS<a id="NewArrayExpressionDIMENSIONS"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+NewArrayExpression--"DIMENSIONS¹"-->NewArrayExpressionDIMENSIONS[<a href='#eexpression'>Expression</a>]:::outer
+```
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## KeyValueExpression<a id="ekeyvalueexpression"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Statement](#estatement)</span>
+<span class="superclassLabel">[Expression](#eexpression)</span>
+<span class="classLabel">[KeyValueExpression](#ekeyvalueexpression)</span>
+
+### Relationships
+<span class="relationship">[KEY](#KeyValueExpressionKEY)</span>
+<span class="relationship">[VALUE](#KeyValueExpressionVALUE)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### KEY<a id="KeyValueExpressionKEY"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+KeyValueExpression--"KEY¹"-->KeyValueExpressionKEY[<a href='#eexpression'>Expression</a>]:::outer
+```
+#### VALUE<a id="KeyValueExpressionVALUE"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+KeyValueExpression--"VALUE¹"-->KeyValueExpressionVALUE[<a href='#eexpression'>Expression</a>]:::outer
+```
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## AssignExpression<a id="eassignexpression"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Statement](#estatement)</span>
+<span class="superclassLabel">[Expression](#eexpression)</span>
+<span class="classLabel">[AssignExpression](#eassignexpression)</span>
+
+### Relationships
+<span class="relationship">[LHS](#AssignExpressionLHS)</span>
+<span class="relationship">[DECLARATIONS](#AssignExpressionDECLARATIONS)</span>
+<span class="relationship">[RHS](#AssignExpressionRHS)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### LHS<a id="AssignExpressionLHS"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+AssignExpression--"LHS¹"-->AssignExpressionLHS[<a href='#eexpression'>Expression</a>]:::outer
+```
+#### DECLARATIONS<a id="AssignExpressionDECLARATIONS"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+AssignExpression--"DECLARATIONS¹"-->AssignExpressionDECLARATIONS[<a href='#evariabledeclaration'>VariableDeclaration</a>]:::outer
+```
+#### RHS<a id="AssignExpressionRHS"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+AssignExpression--"RHS¹"-->AssignExpressionRHS[<a href='#eexpression'>Expression</a>]:::outer
+```
+### Properties
+usedAsExpression : boolean
+
+operatorCode : String
+
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## ComprehensionExpression<a id="ecomprehensionexpression"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Statement](#estatement)</span>
+<span class="superclassLabel">[Expression](#eexpression)</span>
+<span class="classLabel">[ComprehensionExpression](#ecomprehensionexpression)</span>
+
+### Relationships
+<span class="relationship">[PREDICATE](#ComprehensionExpressionPREDICATE)</span>
+<span class="relationship">[ITERABLE](#ComprehensionExpressionITERABLE)</span>
+<span class="relationship">[VARIABLE](#ComprehensionExpressionVARIABLE)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### PREDICATE<a id="ComprehensionExpressionPREDICATE"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+ComprehensionExpression--"PREDICATE¹"-->ComprehensionExpressionPREDICATE[<a href='#estatement'>Statement</a>]:::outer
+```
+#### ITERABLE<a id="ComprehensionExpressionITERABLE"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+ComprehensionExpression--"ITERABLE¹"-->ComprehensionExpressionITERABLE[<a href='#eexpression'>Expression</a>]:::outer
+```
+#### VARIABLE<a id="ComprehensionExpressionVARIABLE"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+ComprehensionExpression--"VARIABLE¹"-->ComprehensionExpressionVARIABLE[<a href='#estatement'>Statement</a>]:::outer
+```
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## TypeExpression<a id="etypeexpression"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Statement](#estatement)</span>
+<span class="superclassLabel">[Expression](#eexpression)</span>
+<span class="classLabel">[TypeExpression](#etypeexpression)</span>
+
+### Relationships
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## InitializerListExpression<a id="einitializerlistexpression"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Statement](#estatement)</span>
+<span class="superclassLabel">[Expression](#eexpression)</span>
+<span class="classLabel">[InitializerListExpression](#einitializerlistexpression)</span>
+
+### Relationships
+<span class="relationship">[INITIALIZERS](#InitializerListExpressionINITIALIZERS)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[TYPE](#ExpressionTYPE)</span>
+
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ExpressionASSIGNED_TYPES)</span>
+
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### INITIALIZERS<a id="InitializerListExpressionINITIALIZERS"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+InitializerListExpression--"INITIALIZERS¹"-->InitializerListExpressionINITIALIZERS[<a href='#eexpression'>Expression</a>]:::outer
+```
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -2355,6 +3186,8 @@ problemType : ProblemType
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -2383,6 +3216,8 @@ value : Object
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -2425,6 +3260,8 @@ value : Object
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -2459,6 +3296,8 @@ operatorCode : String
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -2501,6 +3340,8 @@ operatorCode : String
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -2521,7 +3362,7 @@ operatorCode : String
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ExpressionList--"SUBEXPR*"-->ExpressionListSUBEXPR[<a href='#estatement'>Statement</a>]:::outer
+ExpressionList--"SUBEXPR¹"-->ExpressionListSUBEXPR[<a href='#estatement'>Statement</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -2533,6 +3374,8 @@ ExpressionList--"SUBEXPR*"-->ExpressionListSUBEXPR[<a href='#estatement'>Stateme
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -2570,6 +3413,8 @@ ExpressionList--"SUBEXPR*"-->ExpressionListSUBEXPR[<a href='#estatement'>Stateme
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -2602,6 +3447,8 @@ CaseStatement--"CASE_EXPRESSION¹"-->CaseStatementCASE_EXPRESSION[<a href='#eexp
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -2639,6 +3486,8 @@ CaseStatement--"CASE_EXPRESSION¹"-->CaseStatementCASE_EXPRESSION[<a href='#eexp
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -2659,7 +3508,7 @@ CaseStatement--"CASE_EXPRESSION¹"-->CaseStatementCASE_EXPRESSION[<a href='#eexp
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ReturnStatement--"RETURN_VALUES*"-->ReturnStatementRETURN_VALUES[<a href='#eexpression'>Expression</a>]:::outer
+ReturnStatement--"RETURN_VALUES¹"-->ReturnStatementRETURN_VALUES[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -2671,6 +3520,149 @@ ReturnStatement--"RETURN_VALUES*"-->ReturnStatementRETURN_VALUES[<a href='#eexpr
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## LabelStatement<a id="elabelstatement"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Statement](#estatement)</span>
+<span class="classLabel">[LabelStatement](#elabelstatement)</span>
+
+### Relationships
+<span class="relationship">[SUB_STATEMENT](#LabelStatementSUB_STATEMENT)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### SUB_STATEMENT<a id="LabelStatementSUB_STATEMENT"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+LabelStatement--"SUB_STATEMENT¹"-->LabelStatementSUB_STATEMENT[<a href='#estatement'>Statement</a>]:::outer
+```
+### Properties
+label : String
+
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## EmptyStatement<a id="eemptystatement"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Statement](#estatement)</span>
+<span class="classLabel">[EmptyStatement](#eemptystatement)</span>
+
+### Relationships
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -2702,15 +3694,17 @@ ReturnStatement--"RETURN_VALUES*"-->ReturnStatementRETURN_VALUES[<a href='#eexpr
 <span class="classLabel">[IfStatement](#eifstatement)</span>
 
 ### Relationships
-<span class="relationship">[CONDITION_DECLARATION](#IfStatementCONDITION_DECLARATION)</span>
-<span class="relationship">[INITIALIZER_STATEMENT](#IfStatementINITIALIZER_STATEMENT)</span>
 <span class="relationship">[THEN_STATEMENT](#IfStatementTHEN_STATEMENT)</span>
-<span class="relationship">[CONDITION](#IfStatementCONDITION)</span>
 <span class="relationship">[ELSE_STATEMENT](#IfStatementELSE_STATEMENT)</span>
+<span class="relationship">[CONDITION_DECLARATION](#IfStatementCONDITION_DECLARATION)</span>
+<span class="relationship">[CONDITION](#IfStatementCONDITION)</span>
+<span class="relationship">[INITIALIZER_STATEMENT](#IfStatementINITIALIZER_STATEMENT)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -2728,23 +3722,23 @@ ReturnStatement--"RETURN_VALUES*"-->ReturnStatementRETURN_VALUES[<a href='#eexpr
 
 </div>
 
-#### CONDITION_DECLARATION<a id="IfStatementCONDITION_DECLARATION"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-IfStatement--"CONDITION_DECLARATION¹"-->IfStatementCONDITION_DECLARATION[<a href='#edeclaration'>Declaration</a>]:::outer
-```
-#### INITIALIZER_STATEMENT<a id="IfStatementINITIALIZER_STATEMENT"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-IfStatement--"INITIALIZER_STATEMENT¹"-->IfStatementINITIALIZER_STATEMENT[<a href='#estatement'>Statement</a>]:::outer
-```
 #### THEN_STATEMENT<a id="IfStatementTHEN_STATEMENT"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 IfStatement--"THEN_STATEMENT¹"-->IfStatementTHEN_STATEMENT[<a href='#estatement'>Statement</a>]:::outer
+```
+#### ELSE_STATEMENT<a id="IfStatementELSE_STATEMENT"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+IfStatement--"ELSE_STATEMENT¹"-->IfStatementELSE_STATEMENT[<a href='#estatement'>Statement</a>]:::outer
+```
+#### CONDITION_DECLARATION<a id="IfStatementCONDITION_DECLARATION"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+IfStatement--"CONDITION_DECLARATION¹"-->IfStatementCONDITION_DECLARATION[<a href='#edeclaration'>Declaration</a>]:::outer
 ```
 #### CONDITION<a id="IfStatementCONDITION"></a>
 ```mermaid
@@ -2752,11 +3746,11 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 IfStatement--"CONDITION¹"-->IfStatementCONDITION[<a href='#eexpression'>Expression</a>]:::outer
 ```
-#### ELSE_STATEMENT<a id="IfStatementELSE_STATEMENT"></a>
+#### INITIALIZER_STATEMENT<a id="IfStatementINITIALIZER_STATEMENT"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-IfStatement--"ELSE_STATEMENT¹"-->IfStatementELSE_STATEMENT[<a href='#estatement'>Statement</a>]:::outer
+IfStatement--"INITIALIZER_STATEMENT¹"-->IfStatementINITIALIZER_STATEMENT[<a href='#estatement'>Statement</a>]:::outer
 ```
 ### Properties
 isConstExpression : boolean
@@ -2771,102 +3765,7 @@ isConstExpression : boolean
 
     isImplicit : boolean
 
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-    isInferred : boolean
-
-</div>
-
-## ForStatement<a id="eforstatement"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Statement](#estatement)</span>
-<span class="classLabel">[ForStatement](#eforstatement)</span>
-
-### Relationships
-<span class="relationship">[CONDITION_DECLARATION](#ForStatementCONDITION_DECLARATION)</span>
-<span class="relationship">[INITIALIZER_STATEMENT](#ForStatementINITIALIZER_STATEMENT)</span>
-<span class="relationship">[ITERATION_STATEMENT](#ForStatementITERATION_STATEMENT)</span>
-<span class="relationship">[CONDITION](#ForStatementCONDITION)</span>
-<span class="relationship">[STATEMENT](#ForStatementSTATEMENT)</span>
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-#### CONDITION_DECLARATION<a id="ForStatementCONDITION_DECLARATION"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ForStatement--"CONDITION_DECLARATION¹"-->ForStatementCONDITION_DECLARATION[<a href='#edeclaration'>Declaration</a>]:::outer
-```
-#### INITIALIZER_STATEMENT<a id="ForStatementINITIALIZER_STATEMENT"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ForStatement--"INITIALIZER_STATEMENT¹"-->ForStatementINITIALIZER_STATEMENT[<a href='#estatement'>Statement</a>]:::outer
-```
-#### ITERATION_STATEMENT<a id="ForStatementITERATION_STATEMENT"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ForStatement--"ITERATION_STATEMENT¹"-->ForStatementITERATION_STATEMENT[<a href='#estatement'>Statement</a>]:::outer
-```
-#### CONDITION<a id="ForStatementCONDITION"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ForStatement--"CONDITION¹"-->ForStatementCONDITION[<a href='#eexpression'>Expression</a>]:::outer
-```
-#### STATEMENT<a id="ForStatementSTATEMENT"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ForStatement--"STATEMENT¹"-->ForStatementSTATEMENT[<a href='#estatement'>Statement</a>]:::outer
-```
-### Properties
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    code : String
-
-    argumentIndex : int
-
-    file : String
-
-    isImplicit : boolean
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -2904,6 +3803,8 @@ ForStatement--"STATEMENT¹"-->ForStatementSTATEMENT[<a href='#estatement'>Statem
 ??? info "Inherited Relationships"
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -2944,6 +3845,8 @@ CatchClause--"PARAMETER¹"-->CatchClausePARAMETER[<a href='#evariabledeclaration
 
     isImplicit : boolean
 
+    overlayEdges : Overlays
+
     fullName : String
 
     localName : String
@@ -2974,14 +3877,16 @@ CatchClause--"PARAMETER¹"-->CatchClausePARAMETER[<a href='#evariabledeclaration
 <span class="classLabel">[SwitchStatement](#eswitchstatement)</span>
 
 ### Relationships
-<span class="relationship">[INITIALIZER_STATEMENT](#SwitchStatementINITIALIZER_STATEMENT)</span>
-<span class="relationship">[SELECTOR_DECLARATION](#SwitchStatementSELECTOR_DECLARATION)</span>
-<span class="relationship">[STATEMENT](#SwitchStatementSTATEMENT)</span>
 <span class="relationship">[SELECTOR](#SwitchStatementSELECTOR)</span>
+<span class="relationship">[INITIALIZER_STATEMENT](#SwitchStatementINITIALIZER_STATEMENT)</span>
+<span class="relationship">[STATEMENT](#SwitchStatementSTATEMENT)</span>
+<span class="relationship">[SELECTOR_DECLARATION](#SwitchStatementSELECTOR_DECLARATION)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -2999,17 +3904,17 @@ CatchClause--"PARAMETER¹"-->CatchClausePARAMETER[<a href='#evariabledeclaration
 
 </div>
 
+#### SELECTOR<a id="SwitchStatementSELECTOR"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+SwitchStatement--"SELECTOR¹"-->SwitchStatementSELECTOR[<a href='#eexpression'>Expression</a>]:::outer
+```
 #### INITIALIZER_STATEMENT<a id="SwitchStatementINITIALIZER_STATEMENT"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 SwitchStatement--"INITIALIZER_STATEMENT¹"-->SwitchStatementINITIALIZER_STATEMENT[<a href='#estatement'>Statement</a>]:::outer
-```
-#### SELECTOR_DECLARATION<a id="SwitchStatementSELECTOR_DECLARATION"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-SwitchStatement--"SELECTOR_DECLARATION¹"-->SwitchStatementSELECTOR_DECLARATION[<a href='#edeclaration'>Declaration</a>]:::outer
 ```
 #### STATEMENT<a id="SwitchStatementSTATEMENT"></a>
 ```mermaid
@@ -3017,11 +3922,11 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 SwitchStatement--"STATEMENT¹"-->SwitchStatementSTATEMENT[<a href='#estatement'>Statement</a>]:::outer
 ```
-#### SELECTOR<a id="SwitchStatementSELECTOR"></a>
+#### SELECTOR_DECLARATION<a id="SwitchStatementSELECTOR_DECLARATION"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-SwitchStatement--"SELECTOR¹"-->SwitchStatementSELECTOR[<a href='#eexpression'>Expression</a>]:::outer
+SwitchStatement--"SELECTOR_DECLARATION¹"-->SwitchStatementSELECTOR_DECLARATION[<a href='#edeclaration'>Declaration</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -3033,6 +3938,8 @@ SwitchStatement--"SELECTOR¹"-->SwitchStatementSELECTOR[<a href='#eexpression'>E
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -3070,6 +3977,8 @@ SwitchStatement--"SELECTOR¹"-->SwitchStatementSELECTOR[<a href='#eexpression'>E
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -3105,88 +4014,7 @@ labelName : String
 
     isImplicit : boolean
 
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-    isInferred : boolean
-
-</div>
-
-## WhileStatement<a id="ewhilestatement"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Statement](#estatement)</span>
-<span class="classLabel">[WhileStatement](#ewhilestatement)</span>
-
-### Relationships
-<span class="relationship">[CONDITION_DECLARATION](#WhileStatementCONDITION_DECLARATION)</span>
-<span class="relationship">[CONDITION](#WhileStatementCONDITION)</span>
-<span class="relationship">[STATEMENT](#WhileStatementSTATEMENT)</span>
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-#### CONDITION_DECLARATION<a id="WhileStatementCONDITION_DECLARATION"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-WhileStatement--"CONDITION_DECLARATION¹"-->WhileStatementCONDITION_DECLARATION[<a href='#edeclaration'>Declaration</a>]:::outer
-```
-#### CONDITION<a id="WhileStatementCONDITION"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-WhileStatement--"CONDITION¹"-->WhileStatementCONDITION[<a href='#eexpression'>Expression</a>]:::outer
-```
-#### STATEMENT<a id="WhileStatementSTATEMENT"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-WhileStatement--"STATEMENT¹"-->WhileStatementSTATEMENT[<a href='#estatement'>Statement</a>]:::outer
-```
-### Properties
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    code : String
-
-    argumentIndex : int
-
-    file : String
-
-    isImplicit : boolean
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -3223,6 +4051,8 @@ WhileStatement--"STATEMENT¹"-->WhileStatementSTATEMENT[<a href='#estatement'>St
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -3251,6 +4081,8 @@ label : String
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -3287,6 +4119,8 @@ label : String
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -3313,6 +4147,8 @@ label : String
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -3344,12 +4180,14 @@ label : String
 <span class="classLabel">[SynchronizedStatement](#esynchronizedstatement)</span>
 
 ### Relationships
-<span class="relationship">[EXPRESSION](#SynchronizedStatementEXPRESSION)</span>
 <span class="relationship">[BLOCK](#SynchronizedStatementBLOCK)</span>
+<span class="relationship">[EXPRESSION](#SynchronizedStatementEXPRESSION)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -3367,17 +4205,17 @@ label : String
 
 </div>
 
-#### EXPRESSION<a id="SynchronizedStatementEXPRESSION"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-SynchronizedStatement--"EXPRESSION¹"-->SynchronizedStatementEXPRESSION[<a href='#eexpression'>Expression</a>]:::outer
-```
 #### BLOCK<a id="SynchronizedStatementBLOCK"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 SynchronizedStatement--"BLOCK¹"-->SynchronizedStatementBLOCK[<a href='#eblock'>Block</a>]:::outer
+```
+#### EXPRESSION<a id="SynchronizedStatementEXPRESSION"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+SynchronizedStatement--"EXPRESSION¹"-->SynchronizedStatementEXPRESSION[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -3389,6 +4227,8 @@ SynchronizedStatement--"BLOCK¹"-->SynchronizedStatementBLOCK[<a href='#eblock'>
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -3421,13 +4261,16 @@ SynchronizedStatement--"BLOCK¹"-->SynchronizedStatementBLOCK[<a href='#eblock'>
 
 ### Relationships
 <span class="relationship">[RESOURCES](#TryStatementRESOURCES)</span>
-<span class="relationship">[FINALLY_BLOCK](#TryStatementFINALLY_BLOCK)</span>
+<span class="relationship">[ELSE_BLOCK](#TryStatementELSE_BLOCK)</span>
 <span class="relationship">[TRY_BLOCK](#TryStatementTRY_BLOCK)</span>
+<span class="relationship">[FINALLY_BLOCK](#TryStatementFINALLY_BLOCK)</span>
 <span class="relationship">[CATCH_CLAUSES](#TryStatementCATCH_CLAUSES)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -3449,13 +4292,13 @@ SynchronizedStatement--"BLOCK¹"-->SynchronizedStatementBLOCK[<a href='#eblock'>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-TryStatement--"RESOURCES*"-->TryStatementRESOURCES[<a href='#estatement'>Statement</a>]:::outer
+TryStatement--"RESOURCES¹"-->TryStatementRESOURCES[<a href='#estatement'>Statement</a>]:::outer
 ```
-#### FINALLY_BLOCK<a id="TryStatementFINALLY_BLOCK"></a>
+#### ELSE_BLOCK<a id="TryStatementELSE_BLOCK"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-TryStatement--"FINALLY_BLOCK¹"-->TryStatementFINALLY_BLOCK[<a href='#eblock'>Block</a>]:::outer
+TryStatement--"ELSE_BLOCK¹"-->TryStatementELSE_BLOCK[<a href='#eblock'>Block</a>]:::outer
 ```
 #### TRY_BLOCK<a id="TryStatementTRY_BLOCK"></a>
 ```mermaid
@@ -3463,11 +4306,17 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 TryStatement--"TRY_BLOCK¹"-->TryStatementTRY_BLOCK[<a href='#eblock'>Block</a>]:::outer
 ```
+#### FINALLY_BLOCK<a id="TryStatementFINALLY_BLOCK"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+TryStatement--"FINALLY_BLOCK¹"-->TryStatementFINALLY_BLOCK[<a href='#eblock'>Block</a>]:::outer
+```
 #### CATCH_CLAUSES<a id="TryStatementCATCH_CLAUSES"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-TryStatement--"CATCH_CLAUSES*"-->TryStatementCATCH_CLAUSES[<a href='#ecatchclause'>CatchClause</a>]:::outer
+TryStatement--"CATCH_CLAUSES¹"-->TryStatementCATCH_CLAUSES[<a href='#ecatchclause'>CatchClause</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -3480,159 +4329,7 @@ TryStatement--"CATCH_CLAUSES*"-->TryStatementCATCH_CLAUSES[<a href='#ecatchclaus
 
     isImplicit : boolean
 
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-    isInferred : boolean
-
-</div>
-
-## ForEachStatement<a id="eforeachstatement"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Statement](#estatement)</span>
-<span class="classLabel">[ForEachStatement](#eforeachstatement)</span>
-
-### Relationships
-<span class="relationship">[ITERABLE](#ForEachStatementITERABLE)</span>
-<span class="relationship">[STATEMENT](#ForEachStatementSTATEMENT)</span>
-<span class="relationship">[VARIABLE](#ForEachStatementVARIABLE)</span>
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-#### ITERABLE<a id="ForEachStatementITERABLE"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ForEachStatement--"ITERABLE¹"-->ForEachStatementITERABLE[<a href='#estatement'>Statement</a>]:::outer
-```
-#### STATEMENT<a id="ForEachStatementSTATEMENT"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ForEachStatement--"STATEMENT¹"-->ForEachStatementSTATEMENT[<a href='#estatement'>Statement</a>]:::outer
-```
-#### VARIABLE<a id="ForEachStatementVARIABLE"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ForEachStatement--"VARIABLE¹"-->ForEachStatementVARIABLE[<a href='#estatement'>Statement</a>]:::outer
-```
-### Properties
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    code : String
-
-    argumentIndex : int
-
-    file : String
-
-    isImplicit : boolean
-
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-    isInferred : boolean
-
-</div>
-
-## LabelStatement<a id="elabelstatement"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Statement](#estatement)</span>
-<span class="classLabel">[LabelStatement](#elabelstatement)</span>
-
-### Relationships
-<span class="relationship">[SUB_STATEMENT](#LabelStatementSUB_STATEMENT)</span>
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-#### SUB_STATEMENT<a id="LabelStatementSUB_STATEMENT"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-LabelStatement--"SUB_STATEMENT¹"-->LabelStatementSUB_STATEMENT[<a href='#estatement'>Statement</a>]:::outer
-```
-### Properties
-label : String
-
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    code : String
-
-    argumentIndex : int
-
-    file : String
-
-    isImplicit : boolean
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -3669,6 +4366,8 @@ label : String
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -3697,6 +4396,83 @@ label : String
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## LookupScopeStatement<a id="elookupscopestatement"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Statement](#estatement)</span>
+<span class="classLabel">[LookupScopeStatement](#elookupscopestatement)</span>
+
+### Relationships
+<span class="relationship">[TARGET_SCOPE](#LookupScopeStatementTARGET_SCOPE)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### TARGET_SCOPE<a id="LookupScopeStatementTARGET_SCOPE"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+LookupScopeStatement--"TARGET_SCOPE¹"-->LookupScopeStatementTARGET_SCOPE[<a href='#escope'>Scope</a>]:::outer
+```
+### Properties
+symbols : List
+
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -3734,6 +4510,8 @@ label : String
 
     <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -3754,7 +4532,7 @@ label : String
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-DeclarationStatement--"DECLARATIONS*"-->DeclarationStatementDECLARATIONS[<a href='#edeclaration'>Declaration</a>]:::outer
+DeclarationStatement--"DECLARATIONS¹"-->DeclarationStatementDECLARATIONS[<a href='#edeclaration'>Declaration</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -3767,67 +4545,7 @@ DeclarationStatement--"DECLARATIONS*"-->DeclarationStatementDECLARATIONS[<a href
 
     isImplicit : boolean
 
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-    isInferred : boolean
-
-</div>
-
-## EmptyStatement<a id="eemptystatement"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Statement](#estatement)</span>
-<span class="classLabel">[EmptyStatement](#eemptystatement)</span>
-
-### Relationships
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[LOCALS](#StatementLOCALS)</span>
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-### Properties
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    code : String
-
-    argumentIndex : int
-
-    file : String
-
-    isImplicit : boolean
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -3860,17 +4578,19 @@ DeclarationStatement--"DECLARATIONS*"-->DeclarationStatementDECLARATIONS[<a href
 ### Children
 <span class="child">[ValueDeclaration](#evaluedeclaration)</span>
 <span class="child">[TemplateDeclaration](#etemplatedeclaration)</span>
-<span class="child">[RecordDeclaration](#erecorddeclaration)</span>
-<span class="child">[TypedefDeclaration](#etypedefdeclaration)</span>
 <span class="child">[NamespaceDeclaration](#enamespacedeclaration)</span>
-<span class="child">[DeclarationSequence](#edeclarationsequence)</span>
+<span class="child">[RecordDeclaration](#erecorddeclaration)</span>
 <span class="child">[TranslationUnitDeclaration](#etranslationunitdeclaration)</span>
-<span class="child">[UsingDeclaration](#eusingdeclaration)</span>
+<span class="child">[ImportDeclaration](#eimportdeclaration)</span>
 <span class="child">[IncludeDeclaration](#eincludedeclaration)</span>
+<span class="child">[TypedefDeclaration](#etypedefdeclaration)</span>
+<span class="child">[DeclarationSequence](#edeclarationsequence)</span>
 
 ### Relationships
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -3898,6 +4618,8 @@ DeclarationStatement--"DECLARATIONS*"-->DeclarationStatementDECLARATIONS[<a href
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -3930,11 +4652,11 @@ DeclarationStatement--"DECLARATIONS*"-->DeclarationStatementDECLARATIONS[<a href
 
 ### Children
 <span class="child">[VariableDeclaration](#evariabledeclaration)</span>
-<span class="child">[ProblemDeclaration](#eproblemdeclaration)</span>
 <span class="child">[EnumConstantDeclaration](#eenumconstantdeclaration)</span>
-<span class="child">[FunctionDeclaration](#efunctiondeclaration)</span>
 <span class="child">[TypeParameterDeclaration](#etypeparameterdeclaration)</span>
 <span class="child">[ParameterDeclaration](#eparameterdeclaration)</span>
+<span class="child">[FunctionDeclaration](#efunctiondeclaration)</span>
+<span class="child">[ProblemDeclaration](#eproblemdeclaration)</span>
 
 ### Relationships
 <span class="relationship">[ALIASES](#ValueDeclarationALIASES)</span>
@@ -3944,6 +4666,8 @@ DeclarationStatement--"DECLARATIONS*"-->DeclarationStatementDECLARATIONS[<a href
 <span class="relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -3983,7 +4707,7 @@ ValueDeclaration--"ASSIGNED_TYPES*"-->ValueDeclarationASSIGNED_TYPES[<a href='#e
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-ValueDeclaration--"USAGE*"-->ValueDeclarationUSAGE[<a href='#ereference'>Reference</a>]:::outer
+ValueDeclaration--"USAGE¹"-->ValueDeclarationUSAGE[<a href='#ereference'>Reference</a>]:::outer
 ```
 #### TYPE_OBSERVERS<a id="ValueDeclarationTYPE_OBSERVERS"></a>
 ```mermaid
@@ -4001,6 +4725,8 @@ ValueDeclaration--"TYPE_OBSERVERS*"-->ValueDeclarationTYPE_OBSERVERS[<a href='#e
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -4052,6 +4778,8 @@ ValueDeclaration--"TYPE_OBSERVERS*"-->ValueDeclarationTYPE_OBSERVERS[<a href='#e
 
     <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -4078,7 +4806,7 @@ VariableDeclaration--"INITIALIZER¹"-->VariableDeclarationINITIALIZER[<a href='#
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-VariableDeclaration--"TEMPLATE_PARAMETERS*"-->VariableDeclarationTEMPLATE_PARAMETERS[<a href='#enode'>Node</a>]:::outer
+VariableDeclaration--"TEMPLATE_PARAMETERS¹"-->VariableDeclarationTEMPLATE_PARAMETERS[<a href='#enode'>Node</a>]:::outer
 ```
 ### Properties
 isImplicitInitializerAllowed : boolean
@@ -4089,11 +4817,15 @@ isArray : boolean
 ??? info "Inherited Properties"
     code : String
 
-    argumentIndex : int
-
     file : String
 
+    isInferred : boolean
+
+    argumentIndex : int
+
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -4115,8 +4847,6 @@ isArray : boolean
 
     endColumn : int
 
-    isInferred : boolean
-
 </div>
 
 ## TupleDeclaration<a id="etupledeclaration"></a>
@@ -4127,7 +4857,7 @@ isArray : boolean
 <span class="classLabel">[TupleDeclaration](#etupledeclaration)</span>
 
 ### Relationships
-<span class="relationship">[ELEMENTS](#TupleDeclarationELEMENTS)</span>
+<span class="relationship">[ELEMENT_EDGES](#TupleDeclarationELEMENT_EDGES)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
@@ -4145,6 +4875,8 @@ isArray : boolean
 
     <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -4161,22 +4893,26 @@ isArray : boolean
 
 </div>
 
-#### ELEMENTS<a id="TupleDeclarationELEMENTS"></a>
+#### ELEMENT_EDGES<a id="TupleDeclarationELEMENT_EDGES"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-TupleDeclaration--"ELEMENTS*"-->TupleDeclarationELEMENTS[<a href='#evariabledeclaration'>VariableDeclaration</a>]:::outer
+TupleDeclaration--"ELEMENT_EDGES¹"-->TupleDeclarationELEMENT_EDGES[<a href='#evariabledeclaration'>VariableDeclaration</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
 ??? info "Inherited Properties"
     code : String
 
-    argumentIndex : int
-
     file : String
 
+    isInferred : boolean
+
+    argumentIndex : int
+
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     isImplicitInitializerAllowed : boolean
 
@@ -4201,8 +4937,6 @@ TupleDeclaration--"ELEMENTS*"-->TupleDeclarationELEMENTS[<a href='#evariabledecl
     startColumn : int
 
     endColumn : int
-
-    isInferred : boolean
 
 </div>
 
@@ -4231,6 +4965,8 @@ TupleDeclaration--"ELEMENTS*"-->TupleDeclarationELEMENTS[<a href='#evariabledecl
     <span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
 
     <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -4271,6 +5007,8 @@ isDefinition : boolean
 
     isImplicit : boolean
 
+    overlayEdges : Overlays
+
     isImplicitInitializerAllowed : boolean
 
     fullName : String
@@ -4297,81 +5035,6 @@ isDefinition : boolean
 
 </div>
 
-## ProblemDeclaration<a id="eproblemdeclaration"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Declaration](#edeclaration)</span>
-<span class="superclassLabel">[ValueDeclaration](#evaluedeclaration)</span>
-<span class="classLabel">[ProblemDeclaration](#eproblemdeclaration)</span>
-
-### Relationships
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
-
-    <span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
-
-    <span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
-
-    <span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
-
-    <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-### Properties
-problem : String
-
-problemType : ProblemType
-
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    code : String
-
-    argumentIndex : int
-
-    file : String
-
-    isImplicit : boolean
-
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-    isInferred : boolean
-
-</div>
-
 ## EnumConstantDeclaration<a id="eenumconstantdeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Declaration](#edeclaration)</span>
@@ -4392,6 +5055,8 @@ problemType : ProblemType
     <span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
 
     <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -4426,132 +5091,7 @@ EnumConstantDeclaration--"INITIALIZER¹"-->EnumConstantDeclarationINITIALIZER[<a
 
     isImplicit : boolean
 
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-    isInferred : boolean
-
-</div>
-
-## FunctionDeclaration<a id="efunctiondeclaration"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Declaration](#edeclaration)</span>
-<span class="superclassLabel">[ValueDeclaration](#evaluedeclaration)</span>
-<span class="classLabel">[FunctionDeclaration](#efunctiondeclaration)</span>
-
-### Children
-<span class="child">[MethodDeclaration](#emethoddeclaration)</span>
-
-### Relationships
-<span class="relationship">[THROWS_TYPES](#FunctionDeclarationTHROWS_TYPES)</span>
-<span class="relationship">[OVERRIDES](#FunctionDeclarationOVERRIDES)</span>
-<span class="relationship">[BODY](#FunctionDeclarationBODY)</span>
-<span class="relationship">[RECORDS](#FunctionDeclarationRECORDS)</span>
-<span class="relationship">[DEFINES](#FunctionDeclarationDEFINES)</span>
-<span class="relationship">[RETURN_TYPES](#FunctionDeclarationRETURN_TYPES)</span>
-<span class="relationship">[PARAMETERS](#FunctionDeclarationPARAMETERS)</span>
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
-
-    <span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
-
-    <span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
-
-    <span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
-
-    <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-#### THROWS_TYPES<a id="FunctionDeclarationTHROWS_TYPES"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-FunctionDeclaration--"THROWS_TYPES*"-->FunctionDeclarationTHROWS_TYPES[<a href='#etype'>Type</a>]:::outer
-```
-#### OVERRIDES<a id="FunctionDeclarationOVERRIDES"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-FunctionDeclaration--"OVERRIDES*"-->FunctionDeclarationOVERRIDES[<a href='#efunctiondeclaration'>FunctionDeclaration</a>]:::outer
-```
-#### BODY<a id="FunctionDeclarationBODY"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-FunctionDeclaration--"BODY¹"-->FunctionDeclarationBODY[<a href='#estatement'>Statement</a>]:::outer
-```
-#### RECORDS<a id="FunctionDeclarationRECORDS"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-FunctionDeclaration--"RECORDS*"-->FunctionDeclarationRECORDS[<a href='#erecorddeclaration'>RecordDeclaration</a>]:::outer
-```
-#### DEFINES<a id="FunctionDeclarationDEFINES"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-FunctionDeclaration--"DEFINES¹"-->FunctionDeclarationDEFINES[<a href='#efunctiondeclaration'>FunctionDeclaration</a>]:::outer
-```
-#### RETURN_TYPES<a id="FunctionDeclarationRETURN_TYPES"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-FunctionDeclaration--"RETURN_TYPES*"-->FunctionDeclarationRETURN_TYPES[<a href='#etype'>Type</a>]:::outer
-```
-#### PARAMETERS<a id="FunctionDeclarationPARAMETERS"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-FunctionDeclaration--"PARAMETERS*"-->FunctionDeclarationPARAMETERS[<a href='#eparameterdeclaration'>ParameterDeclaration</a>]:::outer
-```
-### Properties
-isDefinition : boolean
-
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    code : String
-
-    file : String
-
-    isInferred : boolean
-
-    argumentIndex : int
-
-    isImplicit : boolean
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -4573,207 +5113,7 @@ isDefinition : boolean
 
     endColumn : int
 
-</div>
-
-## MethodDeclaration<a id="emethoddeclaration"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Declaration](#edeclaration)</span>
-<span class="superclassLabel">[ValueDeclaration](#evaluedeclaration)</span>
-<span class="superclassLabel">[FunctionDeclaration](#efunctiondeclaration)</span>
-<span class="classLabel">[MethodDeclaration](#emethoddeclaration)</span>
-
-### Children
-<span class="child">[ConstructorDeclaration](#econstructordeclaration)</span>
-
-### Relationships
-<span class="relationship">[RECORD_DECLARATION](#MethodDeclarationRECORD_DECLARATION)</span>
-<span class="relationship">[RECEIVER](#MethodDeclarationRECEIVER)</span>
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[THROWS_TYPES](#FunctionDeclarationTHROWS_TYPES)</span>
-
-    <span class="inherited-relationship">[OVERRIDES](#FunctionDeclarationOVERRIDES)</span>
-
-    <span class="inherited-relationship">[BODY](#FunctionDeclarationBODY)</span>
-
-    <span class="inherited-relationship">[RECORDS](#FunctionDeclarationRECORDS)</span>
-
-    <span class="inherited-relationship">[DEFINES](#FunctionDeclarationDEFINES)</span>
-
-    <span class="inherited-relationship">[RETURN_TYPES](#FunctionDeclarationRETURN_TYPES)</span>
-
-    <span class="inherited-relationship">[PARAMETERS](#FunctionDeclarationPARAMETERS)</span>
-
-    <span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
-
-    <span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
-
-    <span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
-
-    <span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
-
-    <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-#### RECORD_DECLARATION<a id="MethodDeclarationRECORD_DECLARATION"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-MethodDeclaration--"RECORD_DECLARATION¹"-->MethodDeclarationRECORD_DECLARATION[<a href='#erecorddeclaration'>RecordDeclaration</a>]:::outer
-```
-#### RECEIVER<a id="MethodDeclarationRECEIVER"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-MethodDeclaration--"RECEIVER¹"-->MethodDeclarationRECEIVER[<a href='#evariabledeclaration'>VariableDeclaration</a>]:::outer
-```
-### Properties
-isStatic : boolean
-
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    code : String
-
-    file : String
-
     isInferred : boolean
-
-    isDefinition : boolean
-
-    argumentIndex : int
-
-    isImplicit : boolean
-
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-</div>
-
-## ConstructorDeclaration<a id="econstructordeclaration"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Declaration](#edeclaration)</span>
-<span class="superclassLabel">[ValueDeclaration](#evaluedeclaration)</span>
-<span class="superclassLabel">[FunctionDeclaration](#efunctiondeclaration)</span>
-<span class="superclassLabel">[MethodDeclaration](#emethoddeclaration)</span>
-<span class="classLabel">[ConstructorDeclaration](#econstructordeclaration)</span>
-
-### Relationships
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[RECORD_DECLARATION](#MethodDeclarationRECORD_DECLARATION)</span>
-
-    <span class="inherited-relationship">[RECEIVER](#MethodDeclarationRECEIVER)</span>
-
-    <span class="inherited-relationship">[THROWS_TYPES](#FunctionDeclarationTHROWS_TYPES)</span>
-
-    <span class="inherited-relationship">[OVERRIDES](#FunctionDeclarationOVERRIDES)</span>
-
-    <span class="inherited-relationship">[BODY](#FunctionDeclarationBODY)</span>
-
-    <span class="inherited-relationship">[RECORDS](#FunctionDeclarationRECORDS)</span>
-
-    <span class="inherited-relationship">[DEFINES](#FunctionDeclarationDEFINES)</span>
-
-    <span class="inherited-relationship">[RETURN_TYPES](#FunctionDeclarationRETURN_TYPES)</span>
-
-    <span class="inherited-relationship">[PARAMETERS](#FunctionDeclarationPARAMETERS)</span>
-
-    <span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
-
-    <span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
-
-    <span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
-
-    <span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
-
-    <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-### Properties
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    isStatic : boolean
-
-    code : String
-
-    file : String
-
-    isInferred : boolean
-
-    isDefinition : boolean
-
-    argumentIndex : int
-
-    isImplicit : boolean
-
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
 
 </div>
 
@@ -4797,6 +5137,8 @@ isStatic : boolean
     <span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
 
     <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -4830,6 +5172,8 @@ TypeParameterDeclaration--"DEFAULT¹"-->TypeParameterDeclarationDEFAULT[<a href=
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -4876,6 +5220,8 @@ TypeParameterDeclaration--"DEFAULT¹"-->TypeParameterDeclarationDEFAULT[<a href=
 
     <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -4899,6 +5245,8 @@ flowchart LR
 ParameterDeclaration--"DEFAULT¹"-->ParameterDeclarationDEFAULT[<a href='#eexpression'>Expression</a>]:::outer
 ```
 ### Properties
+modifiers : List
+
 isVariadic : boolean
 
 <div class="papers" markdown>
@@ -4910,6 +5258,519 @@ isVariadic : boolean
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## FunctionDeclaration<a id="efunctiondeclaration"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Declaration](#edeclaration)</span>
+<span class="superclassLabel">[ValueDeclaration](#evaluedeclaration)</span>
+<span class="classLabel">[FunctionDeclaration](#efunctiondeclaration)</span>
+
+### Children
+<span class="child">[MethodDeclaration](#emethoddeclaration)</span>
+
+### Relationships
+<span class="relationship">[THROWS_TYPES](#FunctionDeclarationTHROWS_TYPES)</span>
+<span class="relationship">[OVERRIDES](#FunctionDeclarationOVERRIDES)</span>
+<span class="relationship">[BODY](#FunctionDeclarationBODY)</span>
+<span class="relationship">[DEFINES](#FunctionDeclarationDEFINES)</span>
+<span class="relationship">[RETURN_TYPES](#FunctionDeclarationRETURN_TYPES)</span>
+<span class="relationship">[PARAMETERS](#FunctionDeclarationPARAMETERS)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
+
+    <span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
+
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
+
+    <span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
+
+    <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### THROWS_TYPES<a id="FunctionDeclarationTHROWS_TYPES"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+FunctionDeclaration--"THROWS_TYPES*"-->FunctionDeclarationTHROWS_TYPES[<a href='#etype'>Type</a>]:::outer
+```
+#### OVERRIDES<a id="FunctionDeclarationOVERRIDES"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+FunctionDeclaration--"OVERRIDES*"-->FunctionDeclarationOVERRIDES[<a href='#efunctiondeclaration'>FunctionDeclaration</a>]:::outer
+```
+#### BODY<a id="FunctionDeclarationBODY"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+FunctionDeclaration--"BODY¹"-->FunctionDeclarationBODY[<a href='#estatement'>Statement</a>]:::outer
+```
+#### DEFINES<a id="FunctionDeclarationDEFINES"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+FunctionDeclaration--"DEFINES¹"-->FunctionDeclarationDEFINES[<a href='#efunctiondeclaration'>FunctionDeclaration</a>]:::outer
+```
+#### RETURN_TYPES<a id="FunctionDeclarationRETURN_TYPES"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+FunctionDeclaration--"RETURN_TYPES*"-->FunctionDeclarationRETURN_TYPES[<a href='#etype'>Type</a>]:::outer
+```
+#### PARAMETERS<a id="FunctionDeclarationPARAMETERS"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+FunctionDeclaration--"PARAMETERS¹"-->FunctionDeclarationPARAMETERS[<a href='#eparameterdeclaration'>ParameterDeclaration</a>]:::outer
+```
+### Properties
+isDefinition : boolean
+
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    file : String
+
+    isInferred : boolean
+
+    argumentIndex : int
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+</div>
+
+## MethodDeclaration<a id="emethoddeclaration"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Declaration](#edeclaration)</span>
+<span class="superclassLabel">[ValueDeclaration](#evaluedeclaration)</span>
+<span class="superclassLabel">[FunctionDeclaration](#efunctiondeclaration)</span>
+<span class="classLabel">[MethodDeclaration](#emethoddeclaration)</span>
+
+### Children
+<span class="child">[ConstructorDeclaration](#econstructordeclaration)</span>
+<span class="child">[OperatorDeclaration](#eoperatordeclaration)</span>
+
+### Relationships
+<span class="relationship">[RECORD_DECLARATION](#MethodDeclarationRECORD_DECLARATION)</span>
+<span class="relationship">[RECEIVER](#MethodDeclarationRECEIVER)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[THROWS_TYPES](#FunctionDeclarationTHROWS_TYPES)</span>
+
+    <span class="inherited-relationship">[OVERRIDES](#FunctionDeclarationOVERRIDES)</span>
+
+    <span class="inherited-relationship">[BODY](#FunctionDeclarationBODY)</span>
+
+    <span class="inherited-relationship">[DEFINES](#FunctionDeclarationDEFINES)</span>
+
+    <span class="inherited-relationship">[RETURN_TYPES](#FunctionDeclarationRETURN_TYPES)</span>
+
+    <span class="inherited-relationship">[PARAMETERS](#FunctionDeclarationPARAMETERS)</span>
+
+    <span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
+
+    <span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
+
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
+
+    <span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
+
+    <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### RECORD_DECLARATION<a id="MethodDeclarationRECORD_DECLARATION"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+MethodDeclaration--"RECORD_DECLARATION¹"-->MethodDeclarationRECORD_DECLARATION[<a href='#erecorddeclaration'>RecordDeclaration</a>]:::outer
+```
+#### RECEIVER<a id="MethodDeclarationRECEIVER"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+MethodDeclaration--"RECEIVER¹"-->MethodDeclarationRECEIVER[<a href='#evariabledeclaration'>VariableDeclaration</a>]:::outer
+```
+### Properties
+isStatic : boolean
+
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    file : String
+
+    isInferred : boolean
+
+    isDefinition : boolean
+
+    argumentIndex : int
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+</div>
+
+## ConstructorDeclaration<a id="econstructordeclaration"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Declaration](#edeclaration)</span>
+<span class="superclassLabel">[ValueDeclaration](#evaluedeclaration)</span>
+<span class="superclassLabel">[FunctionDeclaration](#efunctiondeclaration)</span>
+<span class="superclassLabel">[MethodDeclaration](#emethoddeclaration)</span>
+<span class="classLabel">[ConstructorDeclaration](#econstructordeclaration)</span>
+
+### Relationships
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[RECORD_DECLARATION](#MethodDeclarationRECORD_DECLARATION)</span>
+
+    <span class="inherited-relationship">[RECEIVER](#MethodDeclarationRECEIVER)</span>
+
+    <span class="inherited-relationship">[THROWS_TYPES](#FunctionDeclarationTHROWS_TYPES)</span>
+
+    <span class="inherited-relationship">[OVERRIDES](#FunctionDeclarationOVERRIDES)</span>
+
+    <span class="inherited-relationship">[BODY](#FunctionDeclarationBODY)</span>
+
+    <span class="inherited-relationship">[DEFINES](#FunctionDeclarationDEFINES)</span>
+
+    <span class="inherited-relationship">[RETURN_TYPES](#FunctionDeclarationRETURN_TYPES)</span>
+
+    <span class="inherited-relationship">[PARAMETERS](#FunctionDeclarationPARAMETERS)</span>
+
+    <span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
+
+    <span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
+
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
+
+    <span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
+
+    <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    isStatic : boolean
+
+    code : String
+
+    file : String
+
+    isInferred : boolean
+
+    isDefinition : boolean
+
+    argumentIndex : int
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+</div>
+
+## OperatorDeclaration<a id="eoperatordeclaration"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Declaration](#edeclaration)</span>
+<span class="superclassLabel">[ValueDeclaration](#evaluedeclaration)</span>
+<span class="superclassLabel">[FunctionDeclaration](#efunctiondeclaration)</span>
+<span class="superclassLabel">[MethodDeclaration](#emethoddeclaration)</span>
+<span class="classLabel">[OperatorDeclaration](#eoperatordeclaration)</span>
+
+### Relationships
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[RECORD_DECLARATION](#MethodDeclarationRECORD_DECLARATION)</span>
+
+    <span class="inherited-relationship">[RECEIVER](#MethodDeclarationRECEIVER)</span>
+
+    <span class="inherited-relationship">[THROWS_TYPES](#FunctionDeclarationTHROWS_TYPES)</span>
+
+    <span class="inherited-relationship">[OVERRIDES](#FunctionDeclarationOVERRIDES)</span>
+
+    <span class="inherited-relationship">[BODY](#FunctionDeclarationBODY)</span>
+
+    <span class="inherited-relationship">[DEFINES](#FunctionDeclarationDEFINES)</span>
+
+    <span class="inherited-relationship">[RETURN_TYPES](#FunctionDeclarationRETURN_TYPES)</span>
+
+    <span class="inherited-relationship">[PARAMETERS](#FunctionDeclarationPARAMETERS)</span>
+
+    <span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
+
+    <span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
+
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
+
+    <span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
+
+    <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+### Properties
+operatorCode : String
+
+isPrefix : boolean
+
+isPostfix : boolean
+
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    isStatic : boolean
+
+    code : String
+
+    file : String
+
+    isInferred : boolean
+
+    isDefinition : boolean
+
+    argumentIndex : int
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+</div>
+
+## ProblemDeclaration<a id="eproblemdeclaration"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Declaration](#edeclaration)</span>
+<span class="superclassLabel">[ValueDeclaration](#evaluedeclaration)</span>
+<span class="classLabel">[ProblemDeclaration](#eproblemdeclaration)</span>
+
+### Relationships
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[ALIASES](#ValueDeclarationALIASES)</span>
+
+    <span class="inherited-relationship">[TYPE](#ValueDeclarationTYPE)</span>
+
+    <span class="inherited-relationship">[ASSIGNED_TYPES](#ValueDeclarationASSIGNED_TYPES)</span>
+
+    <span class="inherited-relationship">[USAGE](#ValueDeclarationUSAGE)</span>
+
+    <span class="inherited-relationship">[TYPE_OBSERVERS](#ValueDeclarationTYPE_OBSERVERS)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+### Properties
+problem : String
+
+problemType : ProblemType
+
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -4949,6 +5810,8 @@ isVariadic : boolean
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -4969,7 +5832,7 @@ isVariadic : boolean
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-TemplateDeclaration--"PARAMETERS*"-->TemplateDeclarationPARAMETERS[<a href='#edeclaration'>Declaration</a>]:::outer
+TemplateDeclaration--"PARAMETERS¹"-->TemplateDeclarationPARAMETERS[<a href='#edeclaration'>Declaration</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -4981,6 +5844,8 @@ TemplateDeclaration--"PARAMETERS*"-->TemplateDeclarationPARAMETERS[<a href='#ede
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -5019,6 +5884,8 @@ TemplateDeclaration--"PARAMETERS*"-->TemplateDeclarationPARAMETERS[<a href='#ede
 
     <span class="inherited-relationship">[PARAMETERS](#TemplateDeclarationPARAMETERS)</span>
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -5039,7 +5906,7 @@ TemplateDeclaration--"PARAMETERS*"-->TemplateDeclarationPARAMETERS[<a href='#ede
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-RecordTemplateDeclaration--"REALIZATION*"-->RecordTemplateDeclarationREALIZATION[<a href='#erecorddeclaration'>RecordDeclaration</a>]:::outer
+RecordTemplateDeclaration--"REALIZATION¹"-->RecordTemplateDeclarationREALIZATION[<a href='#erecorddeclaration'>RecordDeclaration</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -5051,6 +5918,8 @@ RecordTemplateDeclaration--"REALIZATION*"-->RecordTemplateDeclarationREALIZATION
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -5089,6 +5958,8 @@ RecordTemplateDeclaration--"REALIZATION*"-->RecordTemplateDeclarationREALIZATION
 
     <span class="inherited-relationship">[PARAMETERS](#TemplateDeclarationPARAMETERS)</span>
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -5109,7 +5980,7 @@ RecordTemplateDeclaration--"REALIZATION*"-->RecordTemplateDeclarationREALIZATION
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-FunctionTemplateDeclaration--"REALIZATION*"-->FunctionTemplateDeclarationREALIZATION[<a href='#efunctiondeclaration'>FunctionDeclaration</a>]:::outer
+FunctionTemplateDeclaration--"REALIZATION¹"-->FunctionTemplateDeclarationREALIZATION[<a href='#efunctiondeclaration'>FunctionDeclaration</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -5121,6 +5992,88 @@ FunctionTemplateDeclaration--"REALIZATION*"-->FunctionTemplateDeclarationREALIZA
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## NamespaceDeclaration<a id="enamespacedeclaration"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Declaration](#edeclaration)</span>
+<span class="classLabel">[NamespaceDeclaration](#enamespacedeclaration)</span>
+
+### Relationships
+<span class="relationship">[DECLARATION_EDGES](#NamespaceDeclarationDECLARATION_EDGES)</span>
+<span class="relationship">[STATEMENTS](#NamespaceDeclarationSTATEMENTS)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### DECLARATION_EDGES<a id="NamespaceDeclarationDECLARATION_EDGES"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+NamespaceDeclaration--"DECLARATION_EDGES¹"-->NamespaceDeclarationDECLARATION_EDGES[<a href='#edeclaration'>Declaration</a>]:::outer
+```
+#### STATEMENTS<a id="NamespaceDeclarationSTATEMENTS"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+NamespaceDeclaration--"STATEMENTS¹"-->NamespaceDeclarationSTATEMENTS[<a href='#estatement'>Statement</a>]:::outer
+```
+### Properties
+path : String
+
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -5167,6 +6120,8 @@ FunctionTemplateDeclaration--"REALIZATION*"-->FunctionTemplateDeclarationREALIZA
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -5193,19 +6148,19 @@ RecordDeclaration--"IMPORTS*"-->RecordDeclarationIMPORTS[<a href='#edeclaration'
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-RecordDeclaration--"CONSTRUCTORS*"-->RecordDeclarationCONSTRUCTORS[<a href='#econstructordeclaration'>ConstructorDeclaration</a>]:::outer
+RecordDeclaration--"CONSTRUCTORS¹"-->RecordDeclarationCONSTRUCTORS[<a href='#econstructordeclaration'>ConstructorDeclaration</a>]:::outer
 ```
 #### FIELDS<a id="RecordDeclarationFIELDS"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-RecordDeclaration--"FIELDS*"-->RecordDeclarationFIELDS[<a href='#efielddeclaration'>FieldDeclaration</a>]:::outer
+RecordDeclaration--"FIELDS¹"-->RecordDeclarationFIELDS[<a href='#efielddeclaration'>FieldDeclaration</a>]:::outer
 ```
 #### TEMPLATES<a id="RecordDeclarationTEMPLATES"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-RecordDeclaration--"TEMPLATES*"-->RecordDeclarationTEMPLATES[<a href='#etemplatedeclaration'>TemplateDeclaration</a>]:::outer
+RecordDeclaration--"TEMPLATES¹"-->RecordDeclarationTEMPLATES[<a href='#etemplatedeclaration'>TemplateDeclaration</a>]:::outer
 ```
 #### STATIC_IMPORTS<a id="RecordDeclarationSTATIC_IMPORTS"></a>
 ```mermaid
@@ -5217,7 +6172,7 @@ RecordDeclaration--"STATIC_IMPORTS*"-->RecordDeclarationSTATIC_IMPORTS[<a href='
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-RecordDeclaration--"RECORDS*"-->RecordDeclarationRECORDS[<a href='#erecorddeclaration'>RecordDeclaration</a>]:::outer
+RecordDeclaration--"RECORDS¹"-->RecordDeclarationRECORDS[<a href='#erecorddeclaration'>RecordDeclaration</a>]:::outer
 ```
 #### SUPER_TYPE_DECLARATIONS<a id="RecordDeclarationSUPER_TYPE_DECLARATIONS"></a>
 ```mermaid
@@ -5229,13 +6184,13 @@ RecordDeclaration--"SUPER_TYPE_DECLARATIONS*"-->RecordDeclarationSUPER_TYPE_DECL
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-RecordDeclaration--"STATEMENTS*"-->RecordDeclarationSTATEMENTS[<a href='#estatement'>Statement</a>]:::outer
+RecordDeclaration--"STATEMENTS¹"-->RecordDeclarationSTATEMENTS[<a href='#estatement'>Statement</a>]:::outer
 ```
 #### METHODS<a id="RecordDeclarationMETHODS"></a>
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-RecordDeclaration--"METHODS*"-->RecordDeclarationMETHODS[<a href='#emethoddeclaration'>MethodDeclaration</a>]:::outer
+RecordDeclaration--"METHODS¹"-->RecordDeclarationMETHODS[<a href='#emethoddeclaration'>MethodDeclaration</a>]:::outer
 ```
 ### Properties
 kind : String
@@ -5255,6 +6210,8 @@ staticImportStatements : List
     argumentIndex : int
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -5307,6 +6264,8 @@ staticImportStatements : List
 
     <span class="inherited-relationship">[METHODS](#RecordDeclarationMETHODS)</span>
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -5327,7 +6286,7 @@ staticImportStatements : List
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-EnumDeclaration--"ENTRIES*"-->EnumDeclarationENTRIES[<a href='#eenumconstantdeclaration'>EnumConstantDeclaration</a>]:::outer
+EnumDeclaration--"ENTRIES¹"-->EnumDeclarationENTRIES[<a href='#eenumconstantdeclaration'>EnumConstantDeclaration</a>]:::outer
 ```
 ### Properties
 <div class="papers" markdown>
@@ -5343,6 +6302,8 @@ EnumDeclaration--"ENTRIES*"-->EnumDeclarationENTRIES[<a href='#eenumconstantdecl
     argumentIndex : int
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -5370,6 +6331,250 @@ EnumDeclaration--"ENTRIES*"-->EnumDeclarationENTRIES[<a href='#eenumconstantdecl
 
 </div>
 
+## TranslationUnitDeclaration<a id="etranslationunitdeclaration"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Declaration](#edeclaration)</span>
+<span class="classLabel">[TranslationUnitDeclaration](#etranslationunitdeclaration)</span>
+
+### Relationships
+<span class="relationship">[DECLARATIONS](#TranslationUnitDeclarationDECLARATIONS)</span>
+<span class="relationship">[NAMESPACES](#TranslationUnitDeclarationNAMESPACES)</span>
+<span class="relationship">[STATEMENTS](#TranslationUnitDeclarationSTATEMENTS)</span>
+<span class="relationship">[INCLUDES](#TranslationUnitDeclarationINCLUDES)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### DECLARATIONS<a id="TranslationUnitDeclarationDECLARATIONS"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+TranslationUnitDeclaration--"DECLARATIONS¹"-->TranslationUnitDeclarationDECLARATIONS[<a href='#edeclaration'>Declaration</a>]:::outer
+```
+#### NAMESPACES<a id="TranslationUnitDeclarationNAMESPACES"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+TranslationUnitDeclaration--"NAMESPACES¹"-->TranslationUnitDeclarationNAMESPACES[<a href='#enamespacedeclaration'>NamespaceDeclaration</a>]:::outer
+```
+#### STATEMENTS<a id="TranslationUnitDeclarationSTATEMENTS"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+TranslationUnitDeclaration--"STATEMENTS¹"-->TranslationUnitDeclarationSTATEMENTS[<a href='#estatement'>Statement</a>]:::outer
+```
+#### INCLUDES<a id="TranslationUnitDeclarationINCLUDES"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+TranslationUnitDeclaration--"INCLUDES¹"-->TranslationUnitDeclarationINCLUDES[<a href='#eincludedeclaration'>IncludeDeclaration</a>]:::outer
+```
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## ImportDeclaration<a id="eimportdeclaration"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Declaration](#edeclaration)</span>
+<span class="classLabel">[ImportDeclaration](#eimportdeclaration)</span>
+
+### Relationships
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+### Properties
+import : Name
+
+wildcardImport : boolean
+
+alias : Name
+
+importURL : String
+
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## IncludeDeclaration<a id="eincludedeclaration"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Declaration](#edeclaration)</span>
+<span class="classLabel">[IncludeDeclaration](#eincludedeclaration)</span>
+
+### Relationships
+<span class="relationship">[INCLUDES](#IncludeDeclarationINCLUDES)</span>
+<span class="relationship">[PROBLEMS](#IncludeDeclarationPROBLEMS)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### INCLUDES<a id="IncludeDeclarationINCLUDES"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+IncludeDeclaration--"INCLUDES¹"-->IncludeDeclarationINCLUDES[<a href='#eincludedeclaration'>IncludeDeclaration</a>]:::outer
+```
+#### PROBLEMS<a id="IncludeDeclarationPROBLEMS"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+IncludeDeclaration--"PROBLEMS¹"-->IncludeDeclarationPROBLEMS[<a href='#eproblemdeclaration'>ProblemDeclaration</a>]:::outer
+```
+### Properties
+filename : String
+
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
 ## TypedefDeclaration<a id="etypedefdeclaration"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Declaration](#edeclaration)</span>
@@ -5380,6 +6585,8 @@ EnumDeclaration--"ENTRIES*"-->EnumDeclarationENTRIES[<a href='#eenumconstantdecl
 <span class="relationship">[ALIAS](#TypedefDeclarationALIAS)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -5420,81 +6627,7 @@ TypedefDeclaration--"ALIAS¹"-->TypedefDeclarationALIAS[<a href='#etype'>Type</a
 
     isImplicit : boolean
 
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-    isInferred : boolean
-
-</div>
-
-## NamespaceDeclaration<a id="enamespacedeclaration"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Declaration](#edeclaration)</span>
-<span class="classLabel">[NamespaceDeclaration](#enamespacedeclaration)</span>
-
-### Relationships
-<span class="relationship">[DECLARATIONS](#NamespaceDeclarationDECLARATIONS)</span>
-<span class="relationship">[STATEMENTS](#NamespaceDeclarationSTATEMENTS)</span>
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-#### DECLARATIONS<a id="NamespaceDeclarationDECLARATIONS"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-NamespaceDeclaration--"DECLARATIONS*"-->NamespaceDeclarationDECLARATIONS[<a href='#edeclaration'>Declaration</a>]:::outer
-```
-#### STATEMENTS<a id="NamespaceDeclarationSTATEMENTS"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-NamespaceDeclaration--"STATEMENTS*"-->NamespaceDeclarationSTATEMENTS[<a href='#estatement'>Statement</a>]:::outer
-```
-### Properties
-path : String
-
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    code : String
-
-    argumentIndex : int
-
-    file : String
-
-    isImplicit : boolean
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -5530,6 +6663,8 @@ path : String
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -5563,231 +6698,7 @@ DeclarationSequence--"CHILDREN*"-->DeclarationSequenceCHILDREN[<a href='#edeclar
 
     isImplicit : boolean
 
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-    isInferred : boolean
-
-</div>
-
-## TranslationUnitDeclaration<a id="etranslationunitdeclaration"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Declaration](#edeclaration)</span>
-<span class="classLabel">[TranslationUnitDeclaration](#etranslationunitdeclaration)</span>
-
-### Relationships
-<span class="relationship">[DECLARATIONS](#TranslationUnitDeclarationDECLARATIONS)</span>
-<span class="relationship">[NAMESPACES](#TranslationUnitDeclarationNAMESPACES)</span>
-<span class="relationship">[STATEMENTS](#TranslationUnitDeclarationSTATEMENTS)</span>
-<span class="relationship">[INCLUDES](#TranslationUnitDeclarationINCLUDES)</span>
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-#### DECLARATIONS<a id="TranslationUnitDeclarationDECLARATIONS"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-TranslationUnitDeclaration--"DECLARATIONS*"-->TranslationUnitDeclarationDECLARATIONS[<a href='#edeclaration'>Declaration</a>]:::outer
-```
-#### NAMESPACES<a id="TranslationUnitDeclarationNAMESPACES"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-TranslationUnitDeclaration--"NAMESPACES*"-->TranslationUnitDeclarationNAMESPACES[<a href='#enamespacedeclaration'>NamespaceDeclaration</a>]:::outer
-```
-#### STATEMENTS<a id="TranslationUnitDeclarationSTATEMENTS"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-TranslationUnitDeclaration--"STATEMENTS*"-->TranslationUnitDeclarationSTATEMENTS[<a href='#estatement'>Statement</a>]:::outer
-```
-#### INCLUDES<a id="TranslationUnitDeclarationINCLUDES"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-TranslationUnitDeclaration--"INCLUDES*"-->TranslationUnitDeclarationINCLUDES[<a href='#eincludedeclaration'>IncludeDeclaration</a>]:::outer
-```
-### Properties
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    code : String
-
-    argumentIndex : int
-
-    file : String
-
-    isImplicit : boolean
-
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-    isInferred : boolean
-
-</div>
-
-## UsingDeclaration<a id="eusingdeclaration"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Declaration](#edeclaration)</span>
-<span class="classLabel">[UsingDeclaration](#eusingdeclaration)</span>
-
-### Relationships
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-### Properties
-qualifiedName : String
-
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    code : String
-
-    argumentIndex : int
-
-    file : String
-
-    isImplicit : boolean
-
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-    isInferred : boolean
-
-</div>
-
-## IncludeDeclaration<a id="eincludedeclaration"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Declaration](#edeclaration)</span>
-<span class="classLabel">[IncludeDeclaration](#eincludedeclaration)</span>
-
-### Relationships
-<span class="relationship">[INCLUDES](#IncludeDeclarationINCLUDES)</span>
-<span class="relationship">[PROBLEMS](#IncludeDeclarationPROBLEMS)</span>
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-#### INCLUDES<a id="IncludeDeclarationINCLUDES"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-IncludeDeclaration--"INCLUDES*"-->IncludeDeclarationINCLUDES[<a href='#eincludedeclaration'>IncludeDeclaration</a>]:::outer
-```
-#### PROBLEMS<a id="IncludeDeclarationPROBLEMS"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-IncludeDeclaration--"PROBLEMS*"-->IncludeDeclarationPROBLEMS[<a href='#eproblemdeclaration'>ProblemDeclaration</a>]:::outer
-```
-### Properties
-filename : String
-
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    code : String
-
-    argumentIndex : int
-
-    file : String
-
-    isImplicit : boolean
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -5818,22 +6729,25 @@ filename : String
 <span class="classLabel">[Type](#etype)</span>
 
 ### Children
-<span class="child">[ProblemType](#eproblemtype)</span>
-<span class="child">[UnknownType](#eunknowntype)</span>
 <span class="child">[ObjectType](#eobjecttype)</span>
+<span class="child">[UnknownType](#eunknowntype)</span>
 <span class="child">[ParameterizedType](#eparameterizedtype)</span>
 <span class="child">[PointerType](#epointertype)</span>
 <span class="child">[AutoType](#eautotype)</span>
+<span class="child">[IncompleteType](#eincompletetype)</span>
+<span class="child">[ProblemType](#eproblemtype)</span>
 <span class="child">[FunctionPointerType](#efunctionpointertype)</span>
 <span class="child">[TupleType](#etupletype)</span>
-<span class="child">[IncompleteType](#eincompletetype)</span>
 <span class="child">[ReferenceType](#ereferencetype)</span>
 <span class="child">[FunctionType](#efunctiontype)</span>
 
 ### Relationships
 <span class="relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+<span class="relationship">[DECLARED_FROM](#TypeDECLARED_FROM)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -5857,6 +6771,12 @@ flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
 Type--"SUPER_TYPE*"-->TypeSUPER_TYPE[<a href='#etype'>Type</a>]:::outer
 ```
+#### DECLARED_FROM<a id="TypeDECLARED_FROM"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+Type--"DECLARED_FROM¹"-->TypeDECLARED_FROM[<a href='#enode'>Node</a>]:::outer
+```
 ### Properties
 isPrimitive : boolean
 
@@ -5872,67 +6792,7 @@ typeOrigin : Origin
 
     isImplicit : boolean
 
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-    isInferred : boolean
-
-</div>
-
-## ProblemType<a id="eproblemtype"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Type](#etype)</span>
-<span class="classLabel">[ProblemType](#eproblemtype)</span>
-
-### Relationships
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-### Properties
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    code : String
-
-    argumentIndex : int
-
-    file : String
-
-    isImplicit : boolean
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -5953,76 +6813,6 @@ typeOrigin : Origin
     startColumn : int
 
     endColumn : int
-
-    isPrimitive : boolean
-
-    isInferred : boolean
-
-    typeOrigin : Origin
-
-</div>
-
-## UnknownType<a id="eunknowntype"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Type](#etype)</span>
-<span class="classLabel">[UnknownType](#eunknowntype)</span>
-
-### Relationships
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-### Properties
-typeOrigin : Origin
-
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    code : String
-
-    argumentIndex : int
-
-    file : String
-
-    isImplicit : boolean
-
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-    isPrimitive : boolean
 
     isInferred : boolean
 
@@ -6034,7 +6824,10 @@ typeOrigin : Origin
 <span class="classLabel">[ObjectType](#eobjecttype)</span>
 
 ### Children
+<span class="child">[ListType](#elisttype)</span>
+<span class="child">[SetType](#esettype)</span>
 <span class="child">[NumericType](#enumerictype)</span>
+<span class="child">[MapType](#emaptype)</span>
 <span class="child">[StringType](#estringtype)</span>
 
 ### Relationships
@@ -6044,6 +6837,10 @@ typeOrigin : Origin
 ??? info "Inherited Relationships"
 
     <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+
+    <span class="inherited-relationship">[DECLARED_FROM](#TypeDECLARED_FROM)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -6083,6 +6880,176 @@ ObjectType--"RECORD_DECLARATION¹"-->ObjectTypeRECORD_DECLARATION[<a href='#erec
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isPrimitive : boolean
+
+    isInferred : boolean
+
+    typeOrigin : Origin
+
+</div>
+
+## ListType<a id="elisttype"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Type](#etype)</span>
+<span class="superclassLabel">[ObjectType](#eobjecttype)</span>
+<span class="classLabel">[ListType](#elisttype)</span>
+
+### Relationships
+<span class="relationship">[ELEMENT_TYPE](#ListTypeELEMENT_TYPE)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[GENERICS](#ObjectTypeGENERICS)</span>
+
+    <span class="inherited-relationship">[RECORD_DECLARATION](#ObjectTypeRECORD_DECLARATION)</span>
+
+    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+
+    <span class="inherited-relationship">[DECLARED_FROM](#TypeDECLARED_FROM)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### ELEMENT_TYPE<a id="ListTypeELEMENT_TYPE"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+ListType--"ELEMENT_TYPE¹"-->ListTypeELEMENT_TYPE[<a href='#etype'>Type</a>]:::outer
+```
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isPrimitive : boolean
+
+    isInferred : boolean
+
+    typeOrigin : Origin
+
+</div>
+
+## SetType<a id="esettype"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Type](#etype)</span>
+<span class="superclassLabel">[ObjectType](#eobjecttype)</span>
+<span class="classLabel">[SetType](#esettype)</span>
+
+### Relationships
+<span class="relationship">[ELEMENT_TYPE](#SetTypeELEMENT_TYPE)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[GENERICS](#ObjectTypeGENERICS)</span>
+
+    <span class="inherited-relationship">[RECORD_DECLARATION](#ObjectTypeRECORD_DECLARATION)</span>
+
+    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+
+    <span class="inherited-relationship">[DECLARED_FROM](#TypeDECLARED_FROM)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### ELEMENT_TYPE<a id="SetTypeELEMENT_TYPE"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+SetType--"ELEMENT_TYPE¹"-->SetTypeELEMENT_TYPE[<a href='#etype'>Type</a>]:::outer
+```
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -6133,6 +7100,10 @@ ObjectType--"RECORD_DECLARATION¹"-->ObjectTypeRECORD_DECLARATION[<a href='#erec
 
     <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
+    <span class="inherited-relationship">[DECLARED_FROM](#TypeDECLARED_FROM)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -6163,6 +7134,8 @@ bitWidth : Integer
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -6209,6 +7182,10 @@ bitWidth : Integer
 
     <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
+    <span class="inherited-relationship">[DECLARED_FROM](#TypeDECLARED_FROM)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -6237,6 +7214,8 @@ bitWidth : Integer
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     bitWidth : Integer
 
@@ -6285,6 +7264,10 @@ bitWidth : Integer
 
     <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
+    <span class="inherited-relationship">[DECLARED_FROM](#TypeDECLARED_FROM)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -6313,6 +7296,8 @@ bitWidth : Integer
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     bitWidth : Integer
 
@@ -6361,6 +7346,10 @@ bitWidth : Integer
 
     <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
+    <span class="inherited-relationship">[DECLARED_FROM](#TypeDECLARED_FROM)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -6390,7 +7379,93 @@ bitWidth : Integer
 
     isImplicit : boolean
 
+    overlayEdges : Overlays
+
     bitWidth : Integer
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isPrimitive : boolean
+
+    isInferred : boolean
+
+    typeOrigin : Origin
+
+</div>
+
+## MapType<a id="emaptype"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Type](#etype)</span>
+<span class="superclassLabel">[ObjectType](#eobjecttype)</span>
+<span class="classLabel">[MapType](#emaptype)</span>
+
+### Relationships
+<span class="relationship">[ELEMENT_TYPE](#MapTypeELEMENT_TYPE)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[GENERICS](#ObjectTypeGENERICS)</span>
+
+    <span class="inherited-relationship">[RECORD_DECLARATION](#ObjectTypeRECORD_DECLARATION)</span>
+
+    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+
+    <span class="inherited-relationship">[DECLARED_FROM](#TypeDECLARED_FROM)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### ELEMENT_TYPE<a id="MapTypeELEMENT_TYPE"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+MapType--"ELEMENT_TYPE¹"-->MapTypeELEMENT_TYPE[<a href='#etype'>Type</a>]:::outer
+```
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -6436,6 +7511,10 @@ bitWidth : Integer
 
     <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
+    <span class="inherited-relationship">[DECLARED_FROM](#TypeDECLARED_FROM)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -6462,6 +7541,8 @@ bitWidth : Integer
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -6491,6 +7572,78 @@ bitWidth : Integer
 
 </div>
 
+## UnknownType<a id="eunknowntype"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Type](#etype)</span>
+<span class="classLabel">[UnknownType](#eunknowntype)</span>
+
+### Relationships
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+
+    <span class="inherited-relationship">[DECLARED_FROM](#TypeDECLARED_FROM)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+### Properties
+typeOrigin : Origin
+
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isPrimitive : boolean
+
+    isInferred : boolean
+
+</div>
+
 ## ParameterizedType<a id="eparameterizedtype"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="superclassLabel">[Type](#etype)</span>
@@ -6501,6 +7654,10 @@ bitWidth : Integer
 ??? info "Inherited Relationships"
 
     <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+
+    <span class="inherited-relationship">[DECLARED_FROM](#TypeDECLARED_FROM)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -6528,6 +7685,8 @@ bitWidth : Integer
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -6569,6 +7728,10 @@ bitWidth : Integer
 
     <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
+    <span class="inherited-relationship">[DECLARED_FROM](#TypeDECLARED_FROM)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -6603,6 +7766,8 @@ pointerOrigin : PointerOrigin
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -6643,6 +7808,10 @@ pointerOrigin : PointerOrigin
 
     <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
+    <span class="inherited-relationship">[DECLARED_FROM](#TypeDECLARED_FROM)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -6669,6 +7838,152 @@ pointerOrigin : PointerOrigin
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isPrimitive : boolean
+
+    isInferred : boolean
+
+    typeOrigin : Origin
+
+</div>
+
+## IncompleteType<a id="eincompletetype"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Type](#etype)</span>
+<span class="classLabel">[IncompleteType](#eincompletetype)</span>
+
+### Relationships
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+
+    <span class="inherited-relationship">[DECLARED_FROM](#TypeDECLARED_FROM)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isPrimitive : boolean
+
+    isInferred : boolean
+
+    typeOrigin : Origin
+
+</div>
+
+## ProblemType<a id="eproblemtype"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Type](#etype)</span>
+<span class="classLabel">[ProblemType](#eproblemtype)</span>
+
+### Relationships
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
+
+    <span class="inherited-relationship">[DECLARED_FROM](#TypeDECLARED_FROM)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -6711,6 +8026,10 @@ pointerOrigin : PointerOrigin
 
     <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
+    <span class="inherited-relationship">[DECLARED_FROM](#TypeDECLARED_FROM)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -6749,6 +8068,8 @@ FunctionPointerType--"RETURN_TYPE¹"-->FunctionPointerTypeRETURN_TYPE[<a href='#
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -6790,6 +8111,10 @@ FunctionPointerType--"RETURN_TYPE¹"-->FunctionPointerTypeRETURN_TYPE[<a href='#
 
     <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
+    <span class="inherited-relationship">[DECLARED_FROM](#TypeDECLARED_FROM)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -6823,71 +8148,7 @@ TupleType--"TYPES*"-->TupleTypeTYPES[<a href='#etype'>Type</a>]:::outer
 
     isImplicit : boolean
 
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-    isPrimitive : boolean
-
-    isInferred : boolean
-
-    typeOrigin : Origin
-
-</div>
-
-## IncompleteType<a id="eincompletetype"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="superclassLabel">[Type](#etype)</span>
-<span class="classLabel">[IncompleteType](#eincompletetype)</span>
-
-### Relationships
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-### Properties
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    code : String
-
-    argumentIndex : int
-
-    file : String
-
-    isImplicit : boolean
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -6929,6 +8190,10 @@ TupleType--"TYPES*"-->TupleTypeTYPES[<a href='#etype'>Type</a>]:::outer
 
     <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
+    <span class="inherited-relationship">[DECLARED_FROM](#TypeDECLARED_FROM)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -6961,6 +8226,8 @@ ReferenceType--"ELEMENT_TYPE¹"-->ReferenceTypeELEMENT_TYPE[<a href='#etype'>Typ
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -7003,6 +8270,10 @@ ReferenceType--"ELEMENT_TYPE¹"-->ReferenceTypeELEMENT_TYPE[<a href='#etype'>Typ
 
     <span class="inherited-relationship">[SUPER_TYPE](#TypeSUPER_TYPE)</span>
 
+    <span class="inherited-relationship">[DECLARED_FROM](#TypeDECLARED_FROM)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -7042,6 +8313,8 @@ FunctionType--"PARAMETERS*"-->FunctionTypePARAMETERS[<a href='#etype'>Type</a>]:
 
     isImplicit : boolean
 
+    overlayEdges : Overlays
+
     fullName : String
 
     localName : String
@@ -7070,6 +8343,1013 @@ FunctionType--"PARAMETERS*"-->FunctionTypePARAMETERS[<a href='#etype'>Type</a>]:
 
 </div>
 
+## Scope<a id="escope"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="classLabel">[Scope](#escope)</span>
+
+### Children
+<span class="child">[ValueDeclarationScope](#evaluedeclarationscope)</span>
+<span class="child">[FileScope](#efilescope)</span>
+
+### Relationships
+<span class="relationship">[PARENT](#ScopePARENT)</span>
+<span class="relationship">[SCOPE](#ScopeSCOPE)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#ScopeSCOPE)</span>
+
+</div>
+
+#### PARENT<a id="ScopePARENT"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+Scope--"PARENT¹"-->ScopePARENT[<a href='#escope'>Scope</a>]:::outer
+```
+#### SCOPE<a id="ScopeSCOPE"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+Scope--"SCOPE¹"-->ScopeSCOPE[<a href='#enode'>Node</a>]:::outer
+```
+### Properties
+scopedName : String
+
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## ValueDeclarationScope<a id="evaluedeclarationscope"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Scope](#escope)</span>
+<span class="classLabel">[ValueDeclarationScope](#evaluedeclarationscope)</span>
+
+### Children
+<span class="child">[FunctionScope](#efunctionscope)</span>
+<span class="child">[StructureDeclarationScope](#estructuredeclarationscope)</span>
+<span class="child">[LocalScope](#elocalscope)</span>
+
+### Relationships
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[PARENT](#ScopePARENT)</span>
+
+    <span class="inherited-relationship">[SCOPE](#ScopeSCOPE)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+</div>
+
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    scopedName : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## FunctionScope<a id="efunctionscope"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Scope](#escope)</span>
+<span class="superclassLabel">[ValueDeclarationScope](#evaluedeclarationscope)</span>
+<span class="classLabel">[FunctionScope](#efunctionscope)</span>
+
+### Relationships
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[PARENT](#ScopePARENT)</span>
+
+    <span class="inherited-relationship">[SCOPE](#ScopeSCOPE)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+</div>
+
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    scopedName : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## StructureDeclarationScope<a id="estructuredeclarationscope"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Scope](#escope)</span>
+<span class="superclassLabel">[ValueDeclarationScope](#evaluedeclarationscope)</span>
+<span class="classLabel">[StructureDeclarationScope](#estructuredeclarationscope)</span>
+
+### Children
+<span class="child">[NameScope](#enamescope)</span>
+<span class="child">[GlobalScope](#eglobalscope)</span>
+<span class="child">[TemplateScope](#etemplatescope)</span>
+
+### Relationships
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[PARENT](#ScopePARENT)</span>
+
+    <span class="inherited-relationship">[SCOPE](#ScopeSCOPE)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+</div>
+
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    scopedName : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## NameScope<a id="enamescope"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Scope](#escope)</span>
+<span class="superclassLabel">[ValueDeclarationScope](#evaluedeclarationscope)</span>
+<span class="superclassLabel">[StructureDeclarationScope](#estructuredeclarationscope)</span>
+<span class="classLabel">[NameScope](#enamescope)</span>
+
+### Children
+<span class="child">[NamespaceScope](#enamespacescope)</span>
+<span class="child">[RecordScope](#erecordscope)</span>
+
+### Relationships
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[PARENT](#ScopePARENT)</span>
+
+    <span class="inherited-relationship">[SCOPE](#ScopeSCOPE)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+</div>
+
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    scopedName : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## NamespaceScope<a id="enamespacescope"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Scope](#escope)</span>
+<span class="superclassLabel">[ValueDeclarationScope](#evaluedeclarationscope)</span>
+<span class="superclassLabel">[StructureDeclarationScope](#estructuredeclarationscope)</span>
+<span class="superclassLabel">[NameScope](#enamescope)</span>
+<span class="classLabel">[NamespaceScope](#enamespacescope)</span>
+
+### Relationships
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[PARENT](#ScopePARENT)</span>
+
+    <span class="inherited-relationship">[SCOPE](#ScopeSCOPE)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+</div>
+
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    scopedName : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## RecordScope<a id="erecordscope"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Scope](#escope)</span>
+<span class="superclassLabel">[ValueDeclarationScope](#evaluedeclarationscope)</span>
+<span class="superclassLabel">[StructureDeclarationScope](#estructuredeclarationscope)</span>
+<span class="superclassLabel">[NameScope](#enamescope)</span>
+<span class="classLabel">[RecordScope](#erecordscope)</span>
+
+### Relationships
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[PARENT](#ScopePARENT)</span>
+
+    <span class="inherited-relationship">[SCOPE](#ScopeSCOPE)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+</div>
+
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    scopedName : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## GlobalScope<a id="eglobalscope"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Scope](#escope)</span>
+<span class="superclassLabel">[ValueDeclarationScope](#evaluedeclarationscope)</span>
+<span class="superclassLabel">[StructureDeclarationScope](#estructuredeclarationscope)</span>
+<span class="classLabel">[GlobalScope](#eglobalscope)</span>
+
+### Relationships
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[PARENT](#ScopePARENT)</span>
+
+    <span class="inherited-relationship">[SCOPE](#ScopeSCOPE)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+</div>
+
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    scopedName : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## TemplateScope<a id="etemplatescope"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Scope](#escope)</span>
+<span class="superclassLabel">[ValueDeclarationScope](#evaluedeclarationscope)</span>
+<span class="superclassLabel">[StructureDeclarationScope](#estructuredeclarationscope)</span>
+<span class="classLabel">[TemplateScope](#etemplatescope)</span>
+
+### Relationships
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[PARENT](#ScopePARENT)</span>
+
+    <span class="inherited-relationship">[SCOPE](#ScopeSCOPE)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+</div>
+
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    scopedName : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## LocalScope<a id="elocalscope"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Scope](#escope)</span>
+<span class="superclassLabel">[ValueDeclarationScope](#evaluedeclarationscope)</span>
+<span class="classLabel">[LocalScope](#elocalscope)</span>
+
+### Relationships
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[PARENT](#ScopePARENT)</span>
+
+    <span class="inherited-relationship">[SCOPE](#ScopeSCOPE)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+</div>
+
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    scopedName : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## FileScope<a id="efilescope"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[Scope](#escope)</span>
+<span class="classLabel">[FileScope](#efilescope)</span>
+
+### Relationships
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[PARENT](#ScopePARENT)</span>
+
+    <span class="inherited-relationship">[SCOPE](#ScopeSCOPE)</span>
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+</div>
+
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    scopedName : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## OverlayNode<a id="eoverlaynode"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="classLabel">[OverlayNode](#eoverlaynode)</span>
+
+### Children
+<span class="child">[Operation](#eoperation)</span>
+<span class="child">[Concept](#econcept)</span>
+
+### Relationships
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+### Properties
+underlyingNodeEdge : OverlaySingleEdge
+
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## Operation<a id="eoperation"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[OverlayNode](#eoverlaynode)</span>
+<span class="classLabel">[Operation](#eoperation)</span>
+
+### Relationships
+<span class="relationship">[CONCEPT](#OperationCONCEPT)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### CONCEPT<a id="OperationCONCEPT"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+Operation--"CONCEPT¹"-->OperationCONCEPT[<a href='#enode'>Node</a>]:::outer
+```
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    underlyingNodeEdge : OverlaySingleEdge
+
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## Concept<a id="econcept"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="superclassLabel">[OverlayNode](#eoverlaynode)</span>
+<span class="classLabel">[Concept](#econcept)</span>
+
+### Relationships
+<span class="relationship">[OPS](#ConceptOPS)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### OPS<a id="ConceptOPS"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+Concept--"OPS*"-->ConceptOPS[<a href='#enode'>Node</a>]:::outer
+```
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    underlyingNodeEdge : OverlaySingleEdge
+
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
 ## AnnotationMember<a id="eannotationmember"></a>
 **Labels**:<span class="superclassLabel">[Node](#enode)</span>
 <span class="classLabel">[AnnotationMember](#eannotationmember)</span>
@@ -7078,6 +9358,8 @@ FunctionType--"PARAMETERS*"-->FunctionTypePARAMETERS[<a href='#etype'>Type</a>]:
 <span class="relationship">[VALUE](#AnnotationMemberVALUE)</span>
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
 
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
@@ -7112,85 +9394,7 @@ AnnotationMember--"VALUE¹"-->AnnotationMemberVALUE[<a href='#eexpression'>Expre
 
     isImplicit : boolean
 
-    fullName : String
-
-    localName : String
-
-    name : String
-
-    nameDelimiter : String
-
-    comment : String
-
-    artifact : String
-
-    startLine : int
-
-    endLine : int
-
-    startColumn : int
-
-    endColumn : int
-
-    isInferred : boolean
-
-</div>
-
-## Component<a id="ecomponent"></a>
-**Labels**:<span class="superclassLabel">[Node](#enode)</span>
-<span class="classLabel">[Component](#ecomponent)</span>
-
-### Relationships
-<span class="relationship">[INCOMING_INTERACTIONS](#ComponentINCOMING_INTERACTIONS)</span>
-<span class="relationship">[OUTGOING_INTERACTIONS](#ComponentOUTGOING_INTERACTIONS)</span>
-<span class="relationship">[TRANSLATION_UNITS](#ComponentTRANSLATION_UNITS)</span>
-<div class="papers" markdown>
-??? info "Inherited Relationships"
-
-    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
-
-    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
-
-    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
-
-    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
-
-    <span class="inherited-relationship">[PDG](#NodePDG)</span>
-
-    <span class="inherited-relationship">[AST](#NodeAST)</span>
-
-    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
-
-</div>
-
-#### INCOMING_INTERACTIONS<a id="ComponentINCOMING_INTERACTIONS"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-Component--"INCOMING_INTERACTIONS*"-->ComponentINCOMING_INTERACTIONS[<a href='#enode'>Node</a>]:::outer
-```
-#### OUTGOING_INTERACTIONS<a id="ComponentOUTGOING_INTERACTIONS"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-Component--"OUTGOING_INTERACTIONS*"-->ComponentOUTGOING_INTERACTIONS[<a href='#enode'>Node</a>]:::outer
-```
-#### TRANSLATION_UNITS<a id="ComponentTRANSLATION_UNITS"></a>
-```mermaid
-flowchart LR
-  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
-Component--"TRANSLATION_UNITS*"-->ComponentTRANSLATION_UNITS[<a href='#etranslationunitdeclaration'>TranslationUnitDeclaration</a>]:::outer
-```
-### Properties
-<div class="papers" markdown>
-??? info "Inherited Properties"
-    code : String
-
-    argumentIndex : int
-
-    file : String
-
-    isImplicit : boolean
+    overlayEdges : Overlays
 
     fullName : String
 
@@ -7225,6 +9429,8 @@ Component--"TRANSLATION_UNITS*"-->ComponentTRANSLATION_UNITS[<a href='#etranslat
 <div class="papers" markdown>
 ??? info "Inherited Relationships"
 
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
     <span class="inherited-relationship">[EOG](#NodeEOG)</span>
 
     <span class="inherited-relationship">[CDG](#NodeCDG)</span>
@@ -7257,6 +9463,92 @@ Annotation--"MEMBERS*"-->AnnotationMEMBERS[<a href='#eannotationmember'>Annotati
     file : String
 
     isImplicit : boolean
+
+    overlayEdges : Overlays
+
+    fullName : String
+
+    localName : String
+
+    name : String
+
+    nameDelimiter : String
+
+    comment : String
+
+    artifact : String
+
+    startLine : int
+
+    endLine : int
+
+    startColumn : int
+
+    endColumn : int
+
+    isInferred : boolean
+
+</div>
+
+## Component<a id="ecomponent"></a>
+**Labels**:<span class="superclassLabel">[Node](#enode)</span>
+<span class="classLabel">[Component](#ecomponent)</span>
+
+### Relationships
+<span class="relationship">[TRANSLATION_UNITS](#ComponentTRANSLATION_UNITS)</span>
+<span class="relationship">[INCOMING_INTERACTIONS](#ComponentINCOMING_INTERACTIONS)</span>
+<span class="relationship">[OUTGOING_INTERACTIONS](#ComponentOUTGOING_INTERACTIONS)</span>
+<div class="papers" markdown>
+??? info "Inherited Relationships"
+
+    <span class="inherited-relationship">[ADDITIONAL_PROBLEMS](#NodeADDITIONAL_PROBLEMS)</span>
+
+    <span class="inherited-relationship">[EOG](#NodeEOG)</span>
+
+    <span class="inherited-relationship">[CDG](#NodeCDG)</span>
+
+    <span class="inherited-relationship">[DFG](#NodeDFG)</span>
+
+    <span class="inherited-relationship">[ANNOTATIONS](#NodeANNOTATIONS)</span>
+
+    <span class="inherited-relationship">[PDG](#NodePDG)</span>
+
+    <span class="inherited-relationship">[AST](#NodeAST)</span>
+
+    <span class="inherited-relationship">[SCOPE](#NodeSCOPE)</span>
+
+</div>
+
+#### TRANSLATION_UNITS<a id="ComponentTRANSLATION_UNITS"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+Component--"TRANSLATION_UNITS¹"-->ComponentTRANSLATION_UNITS[<a href='#etranslationunitdeclaration'>TranslationUnitDeclaration</a>]:::outer
+```
+#### INCOMING_INTERACTIONS<a id="ComponentINCOMING_INTERACTIONS"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+Component--"INCOMING_INTERACTIONS*"-->ComponentINCOMING_INTERACTIONS[<a href='#enode'>Node</a>]:::outer
+```
+#### OUTGOING_INTERACTIONS<a id="ComponentOUTGOING_INTERACTIONS"></a>
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;  classDef special fill:#afa,stroke:#5a5,stroke-dasharray:5 5;
+Component--"OUTGOING_INTERACTIONS*"-->ComponentOUTGOING_INTERACTIONS[<a href='#enode'>Node</a>]:::outer
+```
+### Properties
+<div class="papers" markdown>
+??? info "Inherited Properties"
+    code : String
+
+    argumentIndex : int
+
+    file : String
+
+    isImplicit : boolean
+
+    overlayEdges : Overlays
 
     fullName : String
 

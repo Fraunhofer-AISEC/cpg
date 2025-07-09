@@ -25,20 +25,27 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
-import de.fraunhofer.aisec.cpg.GraphExamples.Companion.testFrontend
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.testFrontend
+import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.applyWithScope
 import de.fraunhofer.aisec.cpg.graph.builder.body
 import de.fraunhofer.aisec.cpg.graph.builder.declare
 import de.fraunhofer.aisec.cpg.graph.builder.function
 import de.fraunhofer.aisec.cpg.graph.builder.problemDecl
 import de.fraunhofer.aisec.cpg.graph.builder.translationResult
 import de.fraunhofer.aisec.cpg.graph.builder.translationUnit
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.problems
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
 internal class ExtensionsTest : BaseTest() {
@@ -49,7 +56,7 @@ internal class ExtensionsTest : BaseTest() {
         config: TranslationConfiguration =
             TranslationConfiguration.builder()
                 .defaultPasses()
-                .registerLanguage(TestLanguage("."))
+                .registerLanguage<TestLanguage>()
                 .build()
     ) =
         testFrontend(config).build {
@@ -68,11 +75,27 @@ internal class ExtensionsTest : BaseTest() {
         assertEquals(2, test.problems.size, "Expected two problems.")
         assertNotNull(
             test.problems.filter { it.problem == problemDeclText },
-            "Failed to find the problem declaration."
+            "Failed to find the problem declaration.",
         )
         assertNotNull(
             test.problems.filter { it.problem == problemExprText },
-            "Failed to find the problem expression."
+            "Failed to find the problem expression.",
         )
+    }
+
+    @Test
+    fun testApplyWithScope() {
+        with(TestLanguageFrontend()) {
+            val collectionComprehension =
+                newCollectionComprehension().applyWithScope {
+                    val varA = newVariableDeclaration("a")
+                    val declarationStatement = newDeclarationStatement()
+                    declarationStatement.addDeclaration(varA)
+                    this.statement = declarationStatement
+                }
+            val varA = collectionComprehension.variables["a"]
+            assertIs<VariableDeclaration>(varA)
+            assertIs<GlobalScope>(varA.scope)
+        }
     }
 }

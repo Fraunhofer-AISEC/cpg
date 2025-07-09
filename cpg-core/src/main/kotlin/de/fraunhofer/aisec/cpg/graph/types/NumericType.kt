@@ -32,9 +32,16 @@ import java.util.*
 open class NumericType(
     typeName: CharSequence = "",
     val bitWidth: Int? = null,
-    language: Language<*>? = null,
-    val modifier: Modifier = Modifier.SIGNED
-) : ObjectType(typeName, listOf(), true, language) {
+    language: Language<*>,
+    val modifier: Modifier = Modifier.SIGNED,
+) :
+    ObjectType(
+        typeName = typeName,
+        generics = listOf(),
+        primitive = true,
+        mutable = false,
+        language = language,
+    ) {
 
     init {
         // Built-in types are always resolved
@@ -48,7 +55,7 @@ open class NumericType(
     enum class Modifier {
         SIGNED,
         UNSIGNED,
-        NOT_APPLICABLE
+        NOT_APPLICABLE,
     }
 
     override fun equals(other: Any?) =

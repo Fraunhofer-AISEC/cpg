@@ -66,13 +66,13 @@ class CDataflowTest {
         val flow = result.fulfilled.singleOrNull()
         assertNotNull(flow)
         val fields =
-            flow
+            flow.nodes
                 .flatMap {
                     it.prevDFGEdges
                         .map(Dataflow::granularity)
-                        .filterIsInstance<PartialDataflowGranularity>()
+                        .filterIsInstance<PartialDataflowGranularity<*>>()
                 }
-                .mapNotNull(PartialDataflowGranularity::partialTarget)
+                .mapNotNull(PartialDataflowGranularity<*>::partialTarget)
                 .toSet()
 
         assertEquals(setOf<Declaration>(i, j), fields)

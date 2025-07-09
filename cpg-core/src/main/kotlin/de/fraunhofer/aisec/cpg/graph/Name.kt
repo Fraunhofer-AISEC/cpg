@@ -42,23 +42,25 @@ class Name(
     /** The parent name, e.g., the namespace this name lives in. */
     val parent: Name? = null,
     /** A potential namespace delimiter, usually either `.` or `::`. */
-    val delimiter: String = "."
+    val delimiter: String = ".",
 ) : Cloneable, Comparable<Name>, CharSequence {
     constructor(
         localName: String,
         parent: Name? = null,
-        language: Language<*>?
+        language: Language<*>?,
     ) : this(localName, parent, language?.namespaceDelimiter ?: ".")
 
     companion object {
         /**
-         * Creates a random name starting with a prefix plus a random UUID (version 4). The Name is
-         * prefixed by [prefix], followed by a separator character [separatorChar] and finalized by
-         * a random UUID ("-" separators also replaced with [separatorChar]).
+         * Creates a temporary name starting with a prefix plus a UUID (version 4) seeded by the
+         * hash code of [prefix] and [seed]. The Name is prefixed by [prefix], followed by a
+         * separator character [separatorChar] and finalized by the UUID ("-" separators also
+         * replaced with [separatorChar]).
          */
-        fun random(prefix: String, separatorChar: Char = '_'): Name {
-            val randomPart = Uuid.random().toString().replace('-', separatorChar)
-            return Name(localName = prefix + separatorChar + randomPart)
+        fun temporary(prefix: String, separatorChar: Char = '_', vararg seed: Node): Name {
+            val uuid =
+                Uuid.fromLongs(prefix.hashCode().toLong(), seed.sumOf { it.hashCode().toLong() })
+            return Name(localName = prefix + separatorChar + uuid)
         }
     }
 
@@ -72,6 +74,20 @@ class Name(
     }
 
     public override fun clone(): Name = Name(localName, parent?.clone(), delimiter)
+
+    /**
+     * This function splits a fully qualified name into its parts. For example,
+     * `my::namespace::name` would be split into `["my::namespace::name", "my::namespace", "my"]`.
+     */
+    fun splitTo(out: MutableList<Name>): MutableList<Name> {
+        var current: Name? = this
+        while (current != null) {
+            out += current
+            current = current.parent
+        }
+
+        return out
+    }
 
     /**
      * Returns the string representation of this name using a fully qualified name notation with the
@@ -141,8 +157,9 @@ class Name(
  * (such as a [Node], a [Language], a [LanguageFrontend] or a [Handler]) to parse a fully qualified
  * name.
  */
-fun LanguageProvider?.parseName(fqn: CharSequence) =
-    parseName(fqn, this?.language?.namespaceDelimiter ?: ".")
+fun LanguageProvider.parseName(fqn: CharSequence): Name {
+    return parseName(fqn, this.language.namespaceDelimiter)
+}
 
 /** Tries to parse the given fully qualified name using the specified [delimiter] into a [Name]. */
 internal fun parseName(fqn: CharSequence, delimiter: String, vararg splitDelimiters: String): Name {
