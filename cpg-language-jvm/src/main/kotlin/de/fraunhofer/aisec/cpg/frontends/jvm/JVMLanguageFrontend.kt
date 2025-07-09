@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.jvm
 
+import com.googlecode.dex2jar.tools.Dex2jarCmd
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -35,18 +36,29 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
+import java.nio.file.Path
+import java.nio.file.Paths
+import sootup.apk.frontend.ApkAnalysisInputLocation
 import sootup.core.model.Body
 import sootup.core.model.SootMethod
 import sootup.core.model.SourceType
+import sootup.core.transform.BodyInterceptor
 import sootup.core.types.ArrayType
 import sootup.core.types.UnknownType
 import sootup.core.util.printer.NormalStmtPrinter
-import sootup.java.bytecode.inputlocation.JavaClassPathAnalysisInputLocation
-import sootup.java.core.interceptors.*
+import sootup.interceptors.Aggregator
+import sootup.interceptors.CastAndReturnInliner
+import sootup.interceptors.CopyPropagator
+import sootup.interceptors.EmptySwitchEliminator
+import sootup.interceptors.LocalNameStandardizer
+import sootup.interceptors.NopEliminator
+import sootup.interceptors.UnreachableCodeEliminator
+import sootup.java.bytecode.frontend.inputlocation.ArchiveBasedAnalysisInputLocation
+import sootup.java.bytecode.frontend.inputlocation.JavaClassPathAnalysisInputLocation
 import sootup.java.core.views.JavaView
-import sootup.java.sourcecode.inputlocation.JavaSourcePathAnalysisInputLocation
-import sootup.jimple.parser.JimpleAnalysisInputLocation
-import sootup.jimple.parser.JimpleView
+import sootup.java.frontend.inputlocation.JavaSourcePathAnalysisInputLocation
+import sootup.jimple.frontend.JimpleAnalysisInputLocation
+import sootup.jimple.frontend.JimpleView
 
 typealias SootType = sootup.core.types.Type
 
@@ -65,6 +77,19 @@ class JVMLanguageFrontend(
 
     var printer: NormalStmtPrinter? = null
 
+    val bodyInterceptors: List<BodyInterceptor> =
+        listOf(
+            NopEliminator(),
+            CastAndReturnInliner(),
+            UnreachableCodeEliminator(),
+            Aggregator(),
+            CopyPropagator(),
+            // ConditionalBranchFolder(),
+            EmptySwitchEliminator(),
+            // TypeAssigner(),
+            LocalNameStandardizer(),
+        )
+
     /**
      * Because of a limitation in SootUp, we can only specify the whole classpath for soot to parse.
      * But in the CPG we need to specify one file. In this case, we take the
@@ -80,17 +105,7 @@ class JVMLanguageFrontend(
                         JavaClassPathAnalysisInputLocation(
                             ctx.currentComponent?.topLevel()?.path!!,
                             SourceType.Library,
-                            listOf(
-                                NopEliminator(),
-                                CastAndReturnInliner(),
-                                UnreachableCodeEliminator(),
-                                Aggregator(),
-                                CopyPropagator(),
-                                // ConditionalBranchFolder(),
-                                EmptySwitchEliminator(),
-                                TypeAssigner(),
-                                LocalNameStandardizer(),
-                            ),
+                            bodyInterceptors,
                         )
                     )
                 }
@@ -99,17 +114,7 @@ class JVMLanguageFrontend(
                         JavaClassPathAnalysisInputLocation(
                             file.path,
                             SourceType.Library,
-                            listOf(
-                                NopEliminator(),
-                                CastAndReturnInliner(),
-                                UnreachableCodeEliminator(),
-                                Aggregator(),
-                                CopyPropagator(),
-                                // ConditionalBranchFolder(),
-                                EmptySwitchEliminator(),
-                                TypeAssigner(),
-                                LocalNameStandardizer(),
-                            ),
+                            bodyInterceptors,
                         )
                     )
                 }
@@ -119,6 +124,37 @@ class JVMLanguageFrontend(
                             ctx.currentComponent?.topLevel()?.path!!
                         )
                     )
+                }
+                "apk" -> {
+                    class Dex2JarAnalysisInputLocation(
+                        path: Path,
+                        srcType: SourceType,
+                        bodyInterceptors: List<BodyInterceptor>,
+                    ) : ArchiveBasedAnalysisInputLocation(path, srcType, bodyInterceptors) {
+                        init {
+                            this.path = Paths.get(dex2jar(path))
+                        }
+
+                        private fun dex2jar(path: Path): String {
+                            val apkPath = path.toAbsolutePath().toString()
+                            val outDir = "./tmp/"
+                            val start = apkPath.lastIndexOf(File.separator)
+                            val end = apkPath.lastIndexOf(".apk")
+                            val outputFile = outDir + apkPath.substring(start + 1, end) + ".jar"
+                            Dex2jarCmd.main("-f", apkPath, "-o", outputFile)
+                            return outputFile
+                        }
+                    }
+                    /*val apkAnalysis =
+                    Dex2JarAnalysisInputLocation(
+                        file.toPath(),
+                        SourceType.Application,
+                        bodyInterceptors,
+                    )*/
+
+                    val apkAnalysis = ApkAnalysisInputLocation(file.toPath(), "", bodyInterceptors)
+
+                    JavaView(apkAnalysis)
                 }
                 "jimple" -> {
                     JimpleView(
@@ -173,8 +209,13 @@ class JVMLanguageFrontend(
     }
 
     override fun codeOf(astNode: Any): String? {
+
         if (astNode is SootMethod && astNode.isConcrete) {
-            return astNode.body.toString()
+            try {
+                return astNode.body.toString()
+            } catch (_: IllegalArgumentException) {
+                // Do nothing
+            }
         }
         // We do not really have a source anyway. maybe in jimple?
         return ""
