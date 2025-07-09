@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.testcases
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
 
@@ -107,7 +108,7 @@ abstract class AbstractEvaluationTests {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .registerPass<UnreachableEOGPass>()
                     .build()
         ) =
@@ -182,15 +183,19 @@ abstract class AbstractEvaluationTests {
                                     declare { variable("b", t("Bar")) }
                                     declare { variable("a", t("int")) { literal(5, t("int")) } }
 
-                                    forStmt(
-                                        declare {
-                                            variable("i", t("int")) { literal(0, t("int")) }
-                                        },
-                                        ref("i") lt literal(5, t("int")),
-                                        ref("i").inc()
-                                    ) {
-                                        ref("a") assignPlus literal(1, t("int"))
-                                        call("println") { ref("i") }
+                                    forStmt {
+                                        forInitializer {
+                                            declare {
+                                                variable("i", t("int")) { literal(0, t("int")) }
+                                            }
+                                        }
+                                        forCondition { ref("i") lt literal(5, t("int")) }
+                                        forIteration { ref("i").inc() }
+
+                                        loopBody {
+                                            ref("a") assignPlus literal(1, t("int"))
+                                            call("println") { ref("i") }
+                                        }
                                     }
 
                                     memberCall("f", ref("Bar")) { ref("a") }

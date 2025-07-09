@@ -106,12 +106,12 @@ class LatticeIntervalTest {
         assertEquals(Bounded(INFINITE, INFINITE), Bounded(INFINITE, INFINITE) + Bounded(-5, 5))
         assertEquals(
             Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE),
-            Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE) + Bounded(-5, 5)
+            Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE) + Bounded(-5, 5),
         )
         assertEquals(Bounded(INFINITE, INFINITE), Bounded(-5, 5) + Bounded(INFINITE, INFINITE))
         assertEquals(
             Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE),
-            Bounded(-5, 5) + Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE)
+            Bounded(-5, 5) + Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE),
         )
         assertEquals(Bounded(-8, 8), Bounded(-5, 5) + Bounded(-3, 3))
 
@@ -137,15 +137,15 @@ class LatticeIntervalTest {
         assertEquals(Bounded(INFINITE, INFINITE), Bounded(INFINITE, INFINITE) - Bounded(-5, 5))
         assertEquals(
             Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE),
-            Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE) - Bounded(-5, 5)
+            Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE) - Bounded(-5, 5),
         )
         assertEquals(
             Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE),
-            Bounded(-5, 5) - Bounded(INFINITE, INFINITE)
+            Bounded(-5, 5) - Bounded(INFINITE, INFINITE),
         )
         assertEquals(
             Bounded(INFINITE, INFINITE),
-            Bounded(-5, 5) - Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE)
+            Bounded(-5, 5) - Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE),
         )
         assertEquals(Bounded(-2, 2), Bounded(-5, 5) - Bounded(-3, 3))
 
@@ -168,19 +168,19 @@ class LatticeIntervalTest {
         // Without BOTTOM
         assertEquals(
             Bounded(NEGATIVE_INFINITE, INFINITE),
-            Bounded(INFINITE, INFINITE) * Bounded(-5, 5)
+            Bounded(INFINITE, INFINITE) * Bounded(-5, 5),
         )
         assertEquals(
             Bounded(NEGATIVE_INFINITE, INFINITE),
-            Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE) * Bounded(-5, 5)
+            Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE) * Bounded(-5, 5),
         )
         assertEquals(
             Bounded(NEGATIVE_INFINITE, INFINITE),
-            Bounded(-5, 5) * Bounded(INFINITE, INFINITE)
+            Bounded(-5, 5) * Bounded(INFINITE, INFINITE),
         )
         assertEquals(
             Bounded(NEGATIVE_INFINITE, INFINITE),
-            Bounded(-5, 5) * Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE)
+            Bounded(-5, 5) * Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE),
         )
         assertEquals(Bounded(15, 15), Bounded(-5, 5) * Bounded(-3, 3))
 
@@ -205,11 +205,11 @@ class LatticeIntervalTest {
         // Without BOTTOM
         assertEquals(
             Bounded(NEGATIVE_INFINITE, INFINITE),
-            Bounded(INFINITE, INFINITE) / Bounded(-5, 5)
+            Bounded(INFINITE, INFINITE) / Bounded(-5, 5),
         )
         assertEquals(
             Bounded(NEGATIVE_INFINITE, INFINITE),
-            Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE) / Bounded(-5, 5)
+            Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE) / Bounded(-5, 5),
         )
         assertEquals(Bounded(0, 0), Bounded(-5, 5) / Bounded(INFINITE, INFINITE))
         assertEquals(Bounded(0, 0), Bounded(-5, 5) / Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE))
@@ -266,12 +266,12 @@ class LatticeIntervalTest {
         // Without BOTTOM
         assertEquals(
             Bounded(NEGATIVE_INFINITE, 10),
-            Bounded(5, 10).join(Bounded(NEGATIVE_INFINITE, -5))
+            Bounded(5, 10).join(Bounded(NEGATIVE_INFINITE, -5)),
         )
         assertEquals(Bounded(-10, INFINITE), Bounded(-10, -5).join(Bounded(5, INFINITE)))
         assertEquals(
             Bounded(NEGATIVE_INFINITE, INFINITE),
-            Bounded(0, 0).join(Bounded(NEGATIVE_INFINITE, INFINITE))
+            Bounded(0, 0).join(Bounded(NEGATIVE_INFINITE, INFINITE)),
         )
         assertEquals(Bounded(-10, 10), Bounded(9, 10).join(Bounded(-10, -9)))
     }
@@ -283,11 +283,11 @@ class LatticeIntervalTest {
         assertEquals(Bounded(5, 5), Bounded(5, 5).meet(BOTTOM))
         assertEquals(
             Bounded(NEGATIVE_INFINITE, INFINITE),
-            BOTTOM.meet(Bounded(NEGATIVE_INFINITE, INFINITE))
+            BOTTOM.meet(Bounded(NEGATIVE_INFINITE, INFINITE)),
         )
         assertEquals(
             Bounded(NEGATIVE_INFINITE, INFINITE),
-            Bounded(NEGATIVE_INFINITE, INFINITE).meet(BOTTOM)
+            Bounded(NEGATIVE_INFINITE, INFINITE).meet(BOTTOM),
         )
         assertEquals(BOTTOM, BOTTOM.meet(BOTTOM))
 
@@ -306,23 +306,23 @@ class LatticeIntervalTest {
         assertEquals(Bounded(5, 5), Bounded(5, 5).widen(BOTTOM))
         assertEquals(
             Bounded(NEGATIVE_INFINITE, INFINITE),
-            BOTTOM.widen(Bounded(NEGATIVE_INFINITE, INFINITE))
+            BOTTOM.widen(Bounded(NEGATIVE_INFINITE, INFINITE)),
         )
         assertEquals(
             Bounded(NEGATIVE_INFINITE, INFINITE),
-            Bounded(NEGATIVE_INFINITE, INFINITE).widen(BOTTOM)
+            Bounded(NEGATIVE_INFINITE, INFINITE).widen(BOTTOM),
         )
         assertEquals(BOTTOM, BOTTOM.widen(BOTTOM))
 
         // Without BOTTOM
         assertEquals(
             Bounded(NEGATIVE_INFINITE, 10),
-            Bounded(5, 10).widen(Bounded(NEGATIVE_INFINITE, -5))
+            Bounded(5, 10).widen(Bounded(NEGATIVE_INFINITE, -5)),
         )
         assertEquals(Bounded(-10, INFINITE), Bounded(-10, -5).widen(Bounded(5, INFINITE)))
         assertEquals(
             Bounded(NEGATIVE_INFINITE, INFINITE),
-            Bounded(0, 0).widen(Bounded(NEGATIVE_INFINITE, INFINITE))
+            Bounded(0, 0).widen(Bounded(NEGATIVE_INFINITE, INFINITE)),
         )
         assertEquals(Bounded(NEGATIVE_INFINITE, 10), Bounded(9, 10).widen(Bounded(-10, -9)))
         assertEquals(Bounded(-10, INFINITE), Bounded(-10, -9).widen(Bounded(9, 10)))

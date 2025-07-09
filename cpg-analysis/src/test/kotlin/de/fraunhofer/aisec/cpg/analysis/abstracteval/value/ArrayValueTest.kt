@@ -51,7 +51,7 @@ class ArrayValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(5, 5),
-            ArrayValue().applyEffect(current, correctDeclaration, name.localName)
+            ArrayValue().applyEffect(current, correctDeclaration, name.localName),
         )
 
         val wrongNameDeclaration = run {
@@ -64,7 +64,7 @@ class ArrayValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(1, 1),
-            ArrayValue().applyEffect(current, wrongNameDeclaration, name.localName)
+            ArrayValue().applyEffect(current, wrongNameDeclaration, name.localName),
         )
 
         val noInitializerDeclaration = run {
@@ -74,7 +74,7 @@ class ArrayValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(1, 1),
-            ArrayValue().applyEffect(current, noInitializerDeclaration, name.localName)
+            ArrayValue().applyEffect(current, noInitializerDeclaration, name.localName),
         )
     }
 }

@@ -61,7 +61,7 @@ class AbstractIntervalEvaluator {
             getInitializerOf(node)!!,
             node,
             getType(node),
-            IntervalLattice(LatticeInterval.BOTTOM)
+            IntervalLattice(LatticeInterval.BOTTOM),
         )
     }
 
@@ -79,7 +79,7 @@ class AbstractIntervalEvaluator {
         start: Node,
         end: Node,
         type: KClass<out Value<LatticeInterval>>,
-        interval: IntervalLattice? = null
+        interval: IntervalLattice? = null,
     ): LatticeInterval {
         targetNode = end
         targetName = name
@@ -104,7 +104,7 @@ class AbstractIntervalEvaluator {
     private fun handleNode(
         currentNode: Node,
         state: State<Node, LatticeInterval>,
-        worklist: Worklist<Node, Node, LatticeInterval>
+        worklist: Worklist<Node, Node, LatticeInterval>,
     ): State<Node, LatticeInterval> {
         // Check if the current node is already DONE
         // (prevents infinite loop and unnecessary double-checking)

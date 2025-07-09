@@ -80,7 +80,7 @@ class IntegerValue : Value<LatticeInterval> {
                             else {
                                 LatticeInterval.Bounded(
                                     LatticeInterval.Bound.NEGATIVE_INFINITE,
-                                    LatticeInterval.Bound.INFINITE
+                                    LatticeInterval.Bound.INFINITE,
                                 )
                             }
                         newInterval
@@ -98,7 +98,7 @@ class IntegerValue : Value<LatticeInterval> {
                                 val joinInterval: LatticeInterval =
                                     LatticeInterval.Bounded(
                                         LatticeInterval.Bound.NEGATIVE_INFINITE,
-                                        LatticeInterval.Bound.INFINITE
+                                        LatticeInterval.Bound.INFINITE,
                                     )
                                 current.join(joinInterval)
                             }
@@ -117,7 +117,7 @@ class IntegerValue : Value<LatticeInterval> {
                                 val joinInterval: LatticeInterval =
                                     LatticeInterval.Bounded(
                                         LatticeInterval.Bound.NEGATIVE_INFINITE,
-                                        LatticeInterval.Bound.INFINITE
+                                        LatticeInterval.Bound.INFINITE,
                                     )
                                 current.join(joinInterval)
                             }
@@ -135,7 +135,7 @@ class IntegerValue : Value<LatticeInterval> {
                             else {
                                 LatticeInterval.Bounded(
                                     LatticeInterval.Bound.NEGATIVE_INFINITE,
-                                    LatticeInterval.Bound.INFINITE
+                                    LatticeInterval.Bound.INFINITE,
                                 )
                             }
                         newInterval
@@ -152,7 +152,7 @@ class IntegerValue : Value<LatticeInterval> {
                             else {
                                 LatticeInterval.Bounded(
                                     LatticeInterval.Bound.NEGATIVE_INFINITE,
-                                    LatticeInterval.Bound.INFINITE
+                                    LatticeInterval.Bound.INFINITE,
                                 )
                             }
                         newInterval
@@ -169,7 +169,7 @@ class IntegerValue : Value<LatticeInterval> {
                             else {
                                 LatticeInterval.Bounded(
                                     LatticeInterval.Bound.NEGATIVE_INFINITE,
-                                    LatticeInterval.Bound.INFINITE
+                                    LatticeInterval.Bound.INFINITE,
                                 )
                             }
                         newInterval

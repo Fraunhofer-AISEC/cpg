@@ -446,7 +446,7 @@ class IntervalState : State<Node, LatticeInterval>() {
      */
     override fun push(
         newNode: de.fraunhofer.aisec.cpg.graph.Node,
-        newLatticeElement: LatticeElement<LatticeInterval>?
+        newLatticeElement: LatticeElement<LatticeInterval>?,
     ): Boolean {
         if (newLatticeElement == null) {
             return false

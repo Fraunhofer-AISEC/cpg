@@ -157,7 +157,7 @@ class Worklist<K : Any, N : Any, V>() {
     enum class EvaluationState {
         WIDENING,
         NARROWING,
-        DONE
+        DONE,
     }
 
     val evaluationStateMap = IdentityHashMap<K, EvaluationState>()
@@ -332,7 +332,7 @@ inline fun <reified K : Node, V> iterateEOG(
     startNode: K,
     startState: State<K, V>,
     transformation: (K, State<K, V>, Worklist<K, K, V>) -> State<K, V>,
-    until: Node?
+    until: Node?,
 ): State<K, V>? {
     val initialState = IdentityHashMap<K, State<K, V>>()
     initialState[startNode] = startState
