@@ -189,7 +189,7 @@ class JVMLanguageFrontendTest {
         tu.methods.forEach { println(it.code) }
     }
 
-    @Ignore
+    @Disabled("APK support is implemented but always crashes with an out of memory error")
     @Test
     fun testHelloWorldApk() {
         // This will be our classpath
