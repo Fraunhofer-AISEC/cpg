@@ -37,86 +37,77 @@ import sootup.core.jimple.common.expr.*
 import sootup.core.jimple.common.ref.*
 import sootup.core.signatures.MethodSignature
 import sootup.core.signatures.SootClassMemberSignature
-import sootup.java.core.jimple.basic.JavaLocal
 
 class ExpressionHandler(frontend: JVMLanguageFrontend) :
     Handler<Expression, Value, JVMLanguageFrontend>(::ProblemExpression, frontend) {
 
-    init {
-        map.put(JCaughtExceptionRef::class.java) { handleExceptionRef(it as JCaughtExceptionRef) }
-        map.put(Local::class.java) { handleLocal(it as Local) }
-        map.put(JavaLocal::class.java) { handleLocal(it as Local) }
-        map.put(JThisRef::class.java) { handleThisRef(it as JThisRef) }
-        map.put(JParameterRef::class.java) { handleParameterRef(it as JParameterRef) }
-        map.put(JInstanceFieldRef::class.java) { handleInstanceFieldRef(it as JInstanceFieldRef) }
-        map.put(JStaticFieldRef::class.java) { handleStaticFieldRef(it as JStaticFieldRef) }
-        map.put(JArrayRef::class.java) { handleArrayRef(it as JArrayRef) }
-        map.put(JInterfaceInvokeExpr::class.java) {
-            handleInterfaceInvokeExpr(it as JInterfaceInvokeExpr)
+    override fun handle(ctx: Value): Expression {
+        return when (ctx) {
+            is JCaughtExceptionRef -> handleExceptionRef(ctx)
+            is Local -> handleLocal(ctx)
+            is JThisRef -> handleThisRef(ctx)
+            is JParameterRef -> handleParameterRef(ctx)
+            is JInstanceFieldRef -> handleInstanceFieldRef(ctx)
+            is JStaticFieldRef -> handleStaticFieldRef(ctx)
+            is JArrayRef -> handleArrayRef(ctx)
+            is JInterfaceInvokeExpr -> handleInterfaceInvokeExpr(ctx)
+            is JVirtualInvokeExpr -> handleVirtualInvokeExpr(ctx)
+            is JDynamicInvokeExpr -> handleDynamicInvokeExpr(ctx)
+            is JSpecialInvokeExpr -> handleSpecialInvoke(ctx)
+            is JStaticInvokeExpr -> handleStaticInvoke(ctx)
+            is JNewExpr -> handleNewExpr(ctx)
+            is JNewArrayExpr -> handleNewArrayExpr(ctx)
+            is JNewMultiArrayExpr -> handleNewMultiArrayExpr(ctx)
+            is JCastExpr -> handleCastExpr(ctx)
+            // Binary operators
+            // - Equality checks
+            is JEqExpr,
+            is JNeExpr,
+            is JGeExpr,
+            is JGtExpr,
+            is JLeExpr,
+            is JLtExpr,
+            // - Numeric comparisons
+            is JCmpExpr,
+            is JCmplExpr,
+            is JCmpgExpr,
+            // - Simple arithmetics
+            is JAddExpr,
+            is JDivExpr,
+            is JMulExpr,
+            is JRemExpr,
+            is JSubExpr,
+            // - Binary arithmetics
+            is JAndExpr,
+            is JOrExpr,
+            is JShlExpr,
+            is JShrExpr,
+            is JUshrExpr,
+            is JXorExpr,
+            // Fallback, just to be sure
+            is AbstractBinopExpr -> handleAbstractBinopExpr(ctx)
+            // Unary operators
+            is JNegExpr -> handleNegExpr(ctx)
+            // Special operators, which we need to model as binary/unary operators
+            is JInstanceOfExpr -> handleInstanceOfExpr(ctx)
+            is JLengthExpr -> handleLengthExpr(ctx)
+            // Constants
+            is BooleanConstant -> handleBooleanConstant(ctx)
+            is FloatConstant -> handleFloatConstant(ctx)
+            is DoubleConstant -> handleDoubleConstant(ctx)
+            is IntConstant -> handleIntConstant(ctx)
+            is LongConstant -> handleLongConstant(ctx)
+            is StringConstant -> handleStringConstant(ctx)
+            is NullConstant -> handleNullConstant(ctx)
+            is ClassConstant -> handleClassConstant(ctx)
+            else -> {
+                log.warn("Unhandled expression type: ${ctx.javaClass.simpleName}")
+                newProblemExpression(
+                    "Unhandled expression type: ${ctx.javaClass.simpleName}",
+                    rawNode = ctx,
+                )
+            }
         }
-        map.put(JVirtualInvokeExpr::class.java) {
-            handleVirtualInvokeExpr(it as JVirtualInvokeExpr)
-        }
-        map.put(JDynamicInvokeExpr::class.java) {
-            handleDynamicInvokeExpr(it as JDynamicInvokeExpr)
-        }
-        map.put(JSpecialInvokeExpr::class.java) { handleSpecialInvoke(it as JSpecialInvokeExpr) }
-        map.put(JStaticInvokeExpr::class.java) { handleStaticInvoke(it as JStaticInvokeExpr) }
-        map.put(JNewExpr::class.java) { handleNewExpr(it as JNewExpr) }
-        map.put(JNewArrayExpr::class.java) { handleNewArrayExpr(it as JNewArrayExpr) }
-        map.put(JNewMultiArrayExpr::class.java) {
-            handleNewMultiArrayExpr(it as JNewMultiArrayExpr)
-        }
-        map.put(JCastExpr::class.java) { handleCastExpr(it as JCastExpr) }
-
-        // Binary operators
-        // - Equality checks
-        map.put(JEqExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
-        map.put(JNeExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
-        map.put(JGeExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
-        map.put(JGtExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
-        map.put(JLeExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
-        map.put(JLtExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
-
-        // - Numeric comparisons
-        map.put(JCmpExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
-        map.put(JCmplExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
-        map.put(JCmpgExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
-
-        // - Simple arithmetics
-        map.put(JAddExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
-        map.put(JDivExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
-        map.put(JMulExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
-        map.put(JRemExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
-        map.put(JSubExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
-
-        // - Binary arithmetics
-        map.put(JAndExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
-        map.put(JOrExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
-        map.put(JShlExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
-        map.put(JShrExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
-        map.put(JUshrExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
-        map.put(JXorExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
-
-        // Fallback, just to be sure
-        map.put(AbstractBinopExpr::class.java) { handleAbstractBinopExpr(it as AbstractBinopExpr) }
-
-        // Unary operator
-        map.put(JNegExpr::class.java) { handleNegExpr(it as JNegExpr) }
-
-        // Special operators, which we need to model as binary/unary operators
-        map.put(JInstanceOfExpr::class.java) { handleInstanceOfExpr(it as JInstanceOfExpr) }
-        map.put(JLengthExpr::class.java) { handleLengthExpr(it as JLengthExpr) }
-
-        // Constants
-        map.put(BooleanConstant::class.java) { handleBooleanConstant(it as BooleanConstant) }
-        map.put(FloatConstant::class.java) { handleFloatConstant(it as FloatConstant) }
-        map.put(DoubleConstant::class.java) { handleDoubleConstant(it as DoubleConstant) }
-        map.put(IntConstant::class.java) { handleIntConstant(it as IntConstant) }
-        map.put(LongConstant::class.java) { handleLongConstant(it as LongConstant) }
-        map.put(StringConstant::class.java) { handleStringConstant(it as StringConstant) }
-        map.put(NullConstant::class.java) { handleNullConstant(it as NullConstant) }
-        map.put(ClassConstant::class.java) { handleClassConstant(it as ClassConstant) }
     }
 
     private fun handleExceptionRef(exceptionRef: JCaughtExceptionRef): Expression {
