@@ -25,6 +25,12 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.jacksonyml)
 
+    // Kotlin scripting for query execution
+    implementation(libs.kotlin.scripting.common)
+    implementation(libs.kotlin.scripting.jvm)
+    implementation(libs.kotlin.scripting.jvm.host)
+    implementation(libs.kotlin.scripting.dependencies)
+
     // Testing
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.ktor.client.content.negotiation)

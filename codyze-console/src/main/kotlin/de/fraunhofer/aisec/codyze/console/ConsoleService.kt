@@ -31,7 +31,6 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -43,7 +42,11 @@ import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigu
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import java.io.File
 import java.nio.file.Path
-import kotlin.script.experimental.api.constructorArgs
+import kotlin.script.experimental.api.*
+import kotlin.script.experimental.host.toScriptSource
+import kotlin.script.experimental.jvm.dependenciesFromCurrentContext
+import kotlin.script.experimental.jvm.jvm
+import kotlin.script.experimental.jvmhost.BasicJvmScriptingHost
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -275,118 +278,54 @@ class ConsoleService {
         translationResult: de.fraunhofer.aisec.cpg.TranslationResult,
     ): String {
         return try {
-            // Simple query pattern matching and evaluation
-            val result = executeSimpleQuery(scriptCode.trim(), translationResult)
-            result
+            executeKotlinScript(scriptCode, translationResult)
         } catch (e: Exception) {
             "Error: ${e.message}"
         }
     }
 
-    private fun executeSimpleQuery(
-        query: String,
+    private fun executeKotlinScript(
+        scriptCode: String,
         result: de.fraunhofer.aisec.cpg.TranslationResult,
     ): String {
-        // Handle some basic query patterns
-        return when {
-            query.contains("result.nodes.size") -> {
-                "Total nodes: ${result.nodes.size}"
-            }
+        val scriptHost = BasicJvmScriptingHost()
 
-            query.contains("result.allChildren<FunctionDeclaration>()") -> {
-                val functions =
-                    result.allChildren<
-                        de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-                    >()
-                when {
-                    query.contains(".size") -> "Functions: ${functions.size}"
-                    query.contains(".map") ->
-                        "Functions:\n${functions.take(10).map { "- ${it.name}" }.joinToString("\n")}"
-                    else -> "Found ${functions.size} functions"
-                }
-            }
+        // Create script compilation configuration
+        val compilationConfig = ScriptCompilationConfiguration {
+            jvm { dependenciesFromCurrentContext(wholeClasspath = true) }
+            // Add default imports for CPG classes
+            defaultImports(
+                "de.fraunhofer.aisec.cpg.graph.*",
+                "de.fraunhofer.aisec.cpg.graph.declarations.*",
+                "de.fraunhofer.aisec.cpg.graph.statements.*",
+                "de.fraunhofer.aisec.cpg.graph.statements.expressions.*",
+            )
+        }
 
-            query.contains("result.allChildren<CallExpression>()") -> {
-                val calls =
-                    result.allChildren<
-                        de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-                    >()
-                when {
-                    query.contains(".size") -> "Call expressions: ${calls.size}"
-                    query.contains("malloc") -> {
-                        val mallocCalls = calls.filter { it.name.localName == "malloc" }
-                        "Malloc calls: ${mallocCalls.size}"
+        // Create script evaluation configuration with the result binding
+        val evaluationConfig = ScriptEvaluationConfiguration {
+            providedProperties("result" to result)
+        }
+
+        // Execute the script
+        val evalResult =
+            scriptHost.eval(scriptCode.toScriptSource(), compilationConfig, evaluationConfig)
+
+        return when (evalResult) {
+            is ResultWithDiagnostics.Success -> {
+                evalResult.value.returnValue.let { returnValue ->
+                    when (returnValue) {
+                        is ResultValue.Value -> returnValue.value.toString()
+                        is ResultValue.Unit -> "Unit"
+                        is ResultValue.Error -> "Script execution error: ${returnValue.error}"
+                        else -> "No result"
                     }
-                    query.contains(".map") ->
-                        "Calls:\n${calls.take(10).map { "- ${it.name}" }.joinToString("\n")}"
-                    else -> "Found ${calls.size} call expressions"
                 }
             }
-
-            query.contains("result.allChildren<VariableDeclaration>()") -> {
-                val variables =
-                    result.allChildren<
-                        de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-                    >()
-                when {
-                    query.contains(".size") -> "Variables: ${variables.size}"
-                    query.contains(".map") ->
-                        "Variables:\n${variables.take(10).map { "- ${it.name}" }.joinToString("\n")}"
-                    else -> "Found ${variables.size} variable declarations"
-                }
-            }
-
-            // Example of query API usage
-            query.contains("result.all<CallExpression>") -> {
-                // This would be the actual query API usage, but requires more complex parsing
-                val calls =
-                    result.allChildren<
-                        de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-                    >()
-                "Query API example - found ${calls.size} call expressions\n(Full query API support coming soon)"
-            }
-
-            // Basic stats as fallback
-            else -> {
-                val nodeCount = result.nodes.size
-                val functionCount =
-                    result
-                        .allChildren<
-                            de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-                        >()
-                        .size
-                val callCount =
-                    result
-                        .allChildren<
-                            de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-                        >()
-                        .size
-                val varCount =
-                    result
-                        .allChildren<
-                            de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-                        >()
-                        .size
-
-                """
-                Query executed: $query
-                
-                Translation Result Summary:
-                - Total nodes: $nodeCount
-                - Functions: $functionCount  
-                - Calls: $callCount
-                - Variables: $varCount
-                
-                Supported simple queries:
-                • result.nodes.size
-                • result.allChildren<FunctionDeclaration>().size
-                • result.allChildren<CallExpression>().size
-                • result.allChildren<CallExpression>().filter { it.name.localName == "malloc" }.size
-                • result.allChildren<VariableDeclaration>().size
-                
-                Note: Full Kotlin scripting support is planned for a future release.
-                """
-                    .trimIndent()
+            is ResultWithDiagnostics.Failure -> {
+                val errors =
+                    evalResult.reports.filter { it.severity >= ScriptDiagnostic.Severity.ERROR }
+                "Compilation error: ${errors.joinToString("; ") { it.message }}"
             }
         }
     }

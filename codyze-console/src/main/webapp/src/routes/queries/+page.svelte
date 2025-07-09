@@ -2,7 +2,8 @@
   import { onMount } from 'svelte';
   import { PageHeader } from '$lib/components/navigation';
 
-  let scriptCode = $state(`// Examples of supported query patterns:
+  let scriptCode = $state(`// Kotlin scripting examples - full CPG API access:
+
 // Basic node counting:
 result.nodes.size
 
@@ -18,7 +19,11 @@ result.allChildren<CallExpression>().filter { it.name.localName == "malloc" }.si
 // Variable declarations:
 result.allChildren<VariableDeclaration>().size
 
-// Try entering one of the examples above`);
+// More complex analysis - function names:
+result.allChildren<FunctionDeclaration>().map { it.name.localName }.take(5)
+
+// Find functions with specific parameters:
+result.allChildren<FunctionDeclaration>().filter { it.parameters.size > 2 }.size`);
   let queryResult = $state('');
   let isExecuting = $state(false);
   let error = $state<string | null>(null);
@@ -65,8 +70,8 @@ result.allChildren<VariableDeclaration>().size
     <div class="px-6 py-4">
       <h2 class="text-lg font-medium text-gray-900">Kotlin Query Script</h2>
       <p class="mt-1 text-sm text-gray-500">
-        Write a query to analyze the current translation result. The result is available as the 'result' variable.
-        This initial version supports basic query patterns - full Kotlin scripting support is coming soon.
+        Write Kotlin scripts to analyze the current translation result. The result is available as the 'result' variable.
+        Full Kotlin scripting is now supported with access to the complete CPG API.
       </p>
     </div>
     
