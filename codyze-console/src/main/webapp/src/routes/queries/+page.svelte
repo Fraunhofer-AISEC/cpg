@@ -2,28 +2,37 @@
   import { onMount } from 'svelte';
   import { PageHeader } from '$lib/components/navigation';
 
-  let scriptCode = $state(`// Kotlin scripting examples - full CPG API access:
+  let scriptCode = $state(`// Kotlin scripting examples - CPG Shortcut API and Query API:
 
+// === Shortcut API Examples ===
+// Get all functions using the shortcut API:
+result.functions.size
+
+// Get a specific function by name:
+result.functions["main"]?.name?.localName
+
+// Get all variables:
+result.variables.size
+
+// Get all records (classes/structs):
+result.records.size
+
+// Get function names:
+result.functions.map { it.name.localName }.take(5)
+
+// === Traditional API Examples ===
 // Basic node counting:
 result.nodes.size
-
-// Function analysis:
-result.allChildren<FunctionDeclaration>().size
-
-// Call expression analysis:
-result.allChildren<CallExpression>().size
 
 // Filter for specific calls (e.g., malloc):
 result.allChildren<CallExpression>().filter { it.name.localName == "malloc" }.size
 
-// Variable declarations:
-result.allChildren<VariableDeclaration>().size
-
-// More complex analysis - function names:
-result.allChildren<FunctionDeclaration>().map { it.name.localName }.take(5)
-
 // Find functions with specific parameters:
-result.allChildren<FunctionDeclaration>().filter { it.parameters.size > 2 }.size`);
+result.functions.filter { it.parameters.size > 2 }.size
+
+// === Query API Examples ===
+// Note: Query API provides trace information for compliance checking
+// See https://fraunhofer-aisec.github.io/cpg/GettingStarted/query/ for more details`);
   let queryResult = $state('');
   let isExecuting = $state(false);
   let error = $state<string | null>(null);
@@ -71,7 +80,8 @@ result.allChildren<FunctionDeclaration>().filter { it.parameters.size > 2 }.size
       <h2 class="text-lg font-medium text-gray-900">Kotlin Query Script</h2>
       <p class="mt-1 text-sm text-gray-500">
         Write Kotlin scripts to analyze the current translation result. The result is available as the 'result' variable.
-        Full Kotlin scripting is now supported with access to the complete CPG API.
+        Use the CPG Shortcut API (e.g., result.functions, result.variables) for common queries, or the full CPG API for advanced analysis.
+        See <a href="https://fraunhofer-aisec.github.io/cpg/GettingStarted/shortcuts/" class="text-blue-600 hover:text-blue-800" target="_blank">Shortcut API docs</a> for more details.
       </p>
     </div>
     

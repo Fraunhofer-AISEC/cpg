@@ -62,7 +62,6 @@ private const val AD_HOC_PROJECT_NAME = "ad-hoc"
  */
 class ConsoleService {
     private var analysisResult: AnalysisResultJSON? = null
-    private var currentAnalysisResult: AnalysisResult? = null
     var lastProject: AnalysisProject? = null
 
     private var newConceptNodes: Set<Concept> = emptySet()
@@ -130,7 +129,6 @@ class ConsoleService {
         lastProject = project
 
         val result = project.analyze()
-        currentAnalysisResult = result
 
         // Populate QueryTree cache for lazy loading
         populateQueryTreeCache(result.requirementsResults)
@@ -248,7 +246,7 @@ class ConsoleService {
     }
 
     /**
-     * Executes a Kotlin query script against the current TranslationResult.
+     * Executes a Kotlin query script against the current [TranslationResult].
      *
      * @param scriptCode The Kotlin script code containing the query
      * @return The result of the query execution as a string, or an error message
@@ -256,7 +254,7 @@ class ConsoleService {
     suspend fun executeQuery(scriptCode: String): String =
         withContext(Dispatchers.IO) {
             val translationResult =
-                currentAnalysisResult?.translationResult
+                analysisResult?.analysisResult?.translationResult
                     ?: return@withContext "No analysis result available. Please run an analysis first."
 
             try {
@@ -401,7 +399,6 @@ class ConsoleService {
         fun fromAnalysisResult(result: AnalysisResult): ConsoleService {
             val service = ConsoleService()
             service.analysisResult = result.toJSON()
-            service.currentAnalysisResult = result
             service.lastProject = result.project
             // Populate QueryTree cache for lazy loading
             service.populateQueryTreeCache(result.requirementsResults)
