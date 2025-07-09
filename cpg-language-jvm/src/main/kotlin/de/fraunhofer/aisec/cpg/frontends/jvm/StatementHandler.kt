@@ -52,7 +52,7 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
             is JThrowStmt -> handleThrowExpression(ctx)
             is JNopStmt -> newEmptyStatement(ctx)
             else -> {
-                log.error("Unhandled statement type: ${ctx.javaClass.simpleName}")
+                log.warn("Unhandled statement type: ${ctx.javaClass.simpleName}")
                 newProblemExpression(
                     "Unhandled statement type: ${ctx.javaClass.simpleName}",
                     rawNode = ctx,
