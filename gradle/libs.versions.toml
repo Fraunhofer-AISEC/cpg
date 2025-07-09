@@ -83,6 +83,8 @@ sootup-java-bytecode = { module = "org.soot-oss:sootup.java.bytecode.frontend", 
 sootup-apk = { module = "org.soot-oss:sootup.apk.frontend", version.ref = "sootup" }
 sootup-jimple = { module = "org.soot-oss:sootup.jimple.frontend", version.ref = "sootup" }
 
+dex2jar = {module = "de.femtopedia.dex2jar:dex2jar", version="2.4.22" }
+
 [bundles]
 log4j = ["log4j-impl", "log4j-core"]
 neo4j = ["neo4j-ogm-core", "neo4j-ogm-bolt-driver"]
