@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.concepts
 
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 
 /**
@@ -34,11 +33,8 @@ import de.fraunhofer.aisec.cpg.graph.OverlayNode
  * logging, files, databases. The relevant operations on this concept are modeled as [Operation]s
  * and stored in [ops].
  */
-abstract class Concept(underlyingNode: Node? = null) : OverlayNode() {
+abstract class Concept : OverlayNode() {
     init {
-        if (underlyingNode != null) {
-            this.underlyingNode = underlyingNode
-        }
         this::class.simpleName?.let { name = Name(it) }
     }
 

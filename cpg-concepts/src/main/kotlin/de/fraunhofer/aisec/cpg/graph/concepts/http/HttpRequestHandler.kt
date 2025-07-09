@@ -34,7 +34,7 @@ open class HttpRequestHandler(
     underlyingNode: Node? = null,
     val basePath: String,
     val endpoints: MutableList<HttpEndpoint>,
-) : Concept(underlyingNode = underlyingNode)
+) : Concept()
 
 /** Base class for Http operations. */
 abstract class HttpRequestHandlerOperation(underlyingNode: Node?, concept: Concept) :

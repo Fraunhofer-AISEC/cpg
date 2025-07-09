@@ -35,8 +35,7 @@ import java.util.Objects
  * such as a main function, a library initialization function or a "remote" entry point, such as a
  * network endpoint.
  */
-abstract class EntryPoint(underlyingNode: FunctionDeclaration?) :
-    Concept(underlyingNode = underlyingNode)
+abstract class EntryPoint(underlyingNode: FunctionDeclaration?) : Concept()
 
 /** Represents a local entry point into the execution of the program, such as a main function. */
 abstract class LocalEntryPoint(

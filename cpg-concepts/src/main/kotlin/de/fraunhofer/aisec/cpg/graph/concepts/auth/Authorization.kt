@@ -25,8 +25,18 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.auth
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 
-/** Represents an abstract concept of `authorization`. */
-data class Authorization(val authorizationId: String, val permissions: Set<String> = emptySet()) :
-    Concept()
+/**
+ * Represents an abstract concept of `authorization`.
+ *
+ * @param underlyingNode The underlying CPG node.
+ */
+open class Authorization(underlyingNode: Node? = null) : Concept() {
+    init {
+        if (underlyingNode != null) {
+            this.underlyingNode = underlyingNode
+        }
+    }
+}

@@ -41,8 +41,7 @@ import java.util.Objects
  * class loader in Java, loading shared library code in C++. Interpreters, such as Python can also
  * load code dynamically during runtime.
  */
-open class DynamicLoading(underlyingNode: Node? = null) :
-    Concept(underlyingNode = underlyingNode), IsMemory
+open class DynamicLoading(underlyingNode: Node? = null) : Concept(), IsMemory
 
 /** Represents an operation used by the [DynamicLoading] concept. */
 abstract class DynamicLoadingOperation<T : Node>(

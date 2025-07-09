@@ -53,7 +53,7 @@ enum class MemoryManagementMode {
  * @param mode The memory management mode of the memory concept.
  */
 open class Memory(underlyingNode: Node? = null, val mode: MemoryManagementMode) :
-    Concept(underlyingNode = underlyingNode), IsMemory
+    Concept(), IsMemory
 
 /** A common interface for the "memory" sub-graph. */
 interface IsMemory

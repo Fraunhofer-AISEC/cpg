@@ -36,7 +36,7 @@ open class HttpClient(
     underlyingNode: Node? = null,
     val isTLS: Boolean? = false,
     val authentication: Authentication? = null,
-) : Concept(underlyingNode = underlyingNode) {
+) : Concept() {
     override fun equals(other: Any?): Boolean {
         return other is HttpClient &&
             super.equals(other) &&

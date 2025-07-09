@@ -30,8 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import kotlin.reflect.full.isSubclassOf
 
 /** Represents an architecture of an operating system. */
-abstract class OperatingSystemArchitecture(underlyingNode: Node?) :
-    Concept(underlyingNode = underlyingNode) {
+abstract class OperatingSystemArchitecture(underlyingNode: Node?) : Concept() {
     override fun equals(other: Any?): Boolean {
         return other != null && other::class.isSubclassOf(this::class)
     }

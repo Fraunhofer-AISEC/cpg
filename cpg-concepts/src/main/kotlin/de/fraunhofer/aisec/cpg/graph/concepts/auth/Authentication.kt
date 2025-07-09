@@ -32,7 +32,13 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import java.util.Objects
 
 /** Represents a high-level concept for authentication. */
-abstract class Authentication(underlyingNode: Node?) : Concept(underlyingNode)
+abstract class Authentication(underlyingNode: Node?) : Concept() {
+    init {
+        if (underlyingNode != null) {
+            this.underlyingNode = underlyingNode
+        }
+    }
+}
 
 /**
  * Represents a token-based authentication.

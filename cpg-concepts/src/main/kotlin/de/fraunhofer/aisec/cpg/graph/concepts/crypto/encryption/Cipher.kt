@@ -30,8 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import java.util.Objects
 
 /** Represents a cipher suite. E.g. `AES-XTS-plain64` */
-open class Cipher(underlyingNode: Node? = null) :
-    Concept(underlyingNode = underlyingNode), IsEncryption {
+open class Cipher(underlyingNode: Node? = null) : Concept(), IsEncryption {
     /** A string representing the cipher used, e.g. `AES-XTS-plain64`. */
     var cipherName: String? = null
 
