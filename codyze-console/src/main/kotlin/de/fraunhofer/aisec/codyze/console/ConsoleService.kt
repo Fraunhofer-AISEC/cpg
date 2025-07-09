@@ -42,6 +42,11 @@ import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigu
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import java.io.File
 import java.nio.file.Path
+import kotlin.script.experimental.api.*
+import kotlin.script.experimental.host.toScriptSource
+import kotlin.script.experimental.jvm.dependenciesFromCurrentContext
+import kotlin.script.experimental.jvm.jvm
+import kotlin.script.experimental.jvmhost.BasicJvmScriptingHost
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -238,6 +243,89 @@ class ConsoleService {
         }
 
         return QueryTreeWithParentsJSON(queryTree = queryTree, parentIds = parentIds)
+    }
+
+    /**
+     * Executes a Kotlin query script against the current [TranslationResult].
+     *
+     * @param scriptCode The Kotlin script code containing the query
+     * @return The result of the query execution as a string, or an error message
+     */
+    suspend fun executeQuery(scriptCode: String): String =
+        withContext(Dispatchers.IO) {
+            val translationResult =
+                analysisResult?.analysisResult?.translationResult
+                    ?: return@withContext "No analysis result available. Please run an analysis first."
+
+            try {
+                // Create a simple evaluation context where the user script can access the
+                // translation result
+                // We'll use Kotlin's scripting capabilities to evaluate the query
+
+                // For now, we'll use a simple approach where we create a function that has access
+                // to the translation result and execute the user's code within that context
+                val resultString = evaluateQueryScript(scriptCode, translationResult)
+                resultString
+            } catch (e: Exception) {
+                "Error executing query: ${e.message}"
+            }
+        }
+
+    private fun evaluateQueryScript(
+        scriptCode: String,
+        translationResult: de.fraunhofer.aisec.cpg.TranslationResult,
+    ): String {
+        return try {
+            executeKotlinScript(scriptCode, translationResult)
+        } catch (e: Exception) {
+            "Error: ${e.message}"
+        }
+    }
+
+    private fun executeKotlinScript(
+        scriptCode: String,
+        result: de.fraunhofer.aisec.cpg.TranslationResult,
+    ): String {
+        val scriptHost = BasicJvmScriptingHost()
+
+        // Create script compilation configuration
+        val compilationConfig = ScriptCompilationConfiguration {
+            jvm { dependenciesFromCurrentContext(wholeClasspath = true) }
+            // Add default imports for CPG classes
+            defaultImports(
+                "de.fraunhofer.aisec.cpg.graph.*",
+                "de.fraunhofer.aisec.cpg.graph.declarations.*",
+                "de.fraunhofer.aisec.cpg.graph.statements.*",
+                "de.fraunhofer.aisec.cpg.graph.statements.expressions.*",
+            )
+        }
+
+        // Create script evaluation configuration with the result binding
+        val evaluationConfig = ScriptEvaluationConfiguration {
+            providedProperties("result" to result)
+        }
+
+        // Execute the script
+        val evalResult =
+            scriptHost.eval(scriptCode.toScriptSource(), compilationConfig, evaluationConfig)
+
+        return when (evalResult) {
+            is ResultWithDiagnostics.Success -> {
+                evalResult.value.returnValue.let { returnValue ->
+                    when (returnValue) {
+                        is ResultValue.Value -> returnValue.value.toString()
+                        is ResultValue.Unit -> "Unit"
+                        is ResultValue.Error -> "Script execution error: ${returnValue.error}"
+                        else -> "No result"
+                    }
+                }
+            }
+            is ResultWithDiagnostics.Failure -> {
+                val errors =
+                    evalResult.reports.filter { it.severity >= ScriptDiagnostic.Severity.ERROR }
+                "Compilation error: ${errors.joinToString("; ") { it.message }}"
+            }
+        }
     }
 
     /**
