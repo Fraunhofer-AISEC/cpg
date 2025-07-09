@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.helpers.State
 
 /**
  * The [LatticeInterval] class implements the functionality of intervals that is needed for the
- * [AbstractEvaluator]. It is either a [BOTTOM] object signaling no knowledge or a [Bounded] object
- * with a lower and upper [Bound]. Each [Bound] can then be [Bound.NEGATIVE_INFINITE],
+ * [AbstractIntervalEvaluator]. It is either a [BOTTOM] object signaling no knowledge or a [Bounded]
+ * object with a lower and upper [Bound]. Each [Bound] can then be [Bound.NEGATIVE_INFINITE],
  * [Bound.INFINITE] or a [Bound.Value]. This class implements many convenience methods to handle the
  * [LatticeInterval].
  */

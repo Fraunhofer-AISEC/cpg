@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -36,9 +35,9 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
  * that might affect its internal value in [applyEffect]. When adding new classes remember to add
  * them to AbstractEvaluator.getType and add tests.
  */
-interface Value {
+interface Value<T> {
     /** Applies the effect of a Node to the interval containing its possible values. */
-    fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval
+    fun applyEffect(current: T, node: Node, name: String): T
 
     companion object {
         fun getInitializer(node: Node?): Node? {

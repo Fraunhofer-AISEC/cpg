@@ -44,13 +44,13 @@ import org.apache.commons.lang3.NotImplementedException
  * respective [Value] class. The result is a [LatticeInterval] defining both a lower and upper bound
  * for the final value.
  */
-class AbstractEvaluator {
+class AbstractIntervalEvaluator {
     // The node for which we want to get the value
     private lateinit var targetNode: Node
     // The name of the value we are analyzing
     private lateinit var targetName: String
     // The type of the value we are analyzing
-    private lateinit var targetType: KClass<out Value>
+    private lateinit var targetType: KClass<out Value<LatticeInterval>>
 
     /**
      * Takes a node (e.g. Reference) and tries to evaluate its value at this point in the program.
@@ -78,7 +78,7 @@ class AbstractEvaluator {
         name: String,
         start: Node,
         end: Node,
-        type: KClass<out Value>,
+        type: KClass<out Value<LatticeInterval>>,
         interval: IntervalLattice? = null
     ): LatticeInterval {
         targetNode = end
@@ -213,7 +213,7 @@ class AbstractEvaluator {
      * @param node The target node
      * @return A [Value] class that models the effects on the node type
      */
-    private fun getType(node: Node): KClass<out Value> {
+    private fun getType(node: Node): KClass<out Value<LatticeInterval>> {
         if (node !is Reference) {
             throw NotImplementedException()
         }

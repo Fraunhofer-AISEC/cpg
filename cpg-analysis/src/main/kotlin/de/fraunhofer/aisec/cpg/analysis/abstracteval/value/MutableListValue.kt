@@ -35,13 +35,13 @@ import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import org.apache.commons.lang3.NotImplementedException
 
 /**
- * This class implements the [Value] interface for Mutable Lists, tracking the size of the
+ * This class implements the [Value] interface for mutable Lists, tracking the size of the
  * collection. We assume that there is no operation that changes an array's size apart from
  * re-declaring it. NOTE: This is an unpolished example implementation. Before actual usage consider
  * the below TODOs and write a test file.
  */
 @Suppress("UNUSED")
-class MutableListValue : Value {
+class MutableListValue : Value<LatticeInterval> {
     override fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval {
         if (
             node is VariableDeclaration && node.initializer != null && node.name.localName == name

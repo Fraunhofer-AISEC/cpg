@@ -65,7 +65,7 @@ class AbstractEvaluatorTest {
         val refA = f1.bodyOrNull<MemberCallExpression>(5)!!.arguments.first()
         assertNotNull(refA)
 
-        val evaluator = AbstractEvaluator()
+        val evaluator = AbstractIntervalEvaluator()
         val value = evaluator.evaluate(refA)
         assertEquals(LatticeInterval.Bounded(1, 1), value)
     }
@@ -97,7 +97,7 @@ class AbstractEvaluatorTest {
         val refA = f1.bodyOrNull<MemberCallExpression>(12)!!.arguments.first()
         assertNotNull(refA)
 
-        val evaluator = AbstractEvaluator()
+        val evaluator = AbstractIntervalEvaluator()
         val value = evaluator.evaluate(refA)
         assertEquals(LatticeInterval.Bounded(2, 2), value)
     }
@@ -122,7 +122,7 @@ class AbstractEvaluatorTest {
         val refA = f1.bodyOrNull<MemberCallExpression>(3)!!.arguments.first()
         assertNotNull(refA)
 
-        val evaluator = AbstractEvaluator()
+        val evaluator = AbstractIntervalEvaluator()
         val value = evaluator.evaluate(refA)
         assertEquals(LatticeInterval.Bounded(4, 5), value)
     }
@@ -149,7 +149,7 @@ class AbstractEvaluatorTest {
         val refA = f1.bodyOrNull<MemberCallExpression>(3)!!.arguments.first()
         assertNotNull(refA)
 
-        val evaluator = AbstractEvaluator()
+        val evaluator = AbstractIntervalEvaluator()
         val value = evaluator.evaluate(refA)
         assertEquals(LatticeInterval.Bounded(3, 4), value)
     }
@@ -160,6 +160,7 @@ class AbstractEvaluatorTest {
 
        for (int i = 0; i < 5; i++) {
            a += 1;
+           println(i);
        }
 
        b.f(a);
@@ -168,13 +169,20 @@ class AbstractEvaluatorTest {
     fun testLoopInteger() {
         val mainClass = tu.records["Foo"]
         assertNotNull(mainClass)
-        val f1 = mainClass.methods["f5"]
-        assertNotNull(f1)
+        val f5 = mainClass.methods["f5"]
+        assertNotNull(f5)
 
-        val refA = f1.bodyOrNull<MemberCallExpression>(5)!!.arguments.first()
+        val refI = f5.calls["println"]?.arguments?.singleOrNull()
+        assertNotNull(refI)
+
+        val evaluatorI = AbstractIntervalEvaluator()
+        val valueI = evaluatorI.evaluate(refI)
+        assertEquals(LatticeInterval.Bounded(0, 4), valueI)
+
+        val refA = f5.bodyOrNull<MemberCallExpression>(6)!!.arguments.first()
         assertNotNull(refA)
 
-        val evaluator = AbstractEvaluator()
+        val evaluator = AbstractIntervalEvaluator()
         val value = evaluator.evaluate(refA)
         assertEquals(LatticeInterval.Bounded(5, LatticeInterval.Bound.INFINITE), value)
     }

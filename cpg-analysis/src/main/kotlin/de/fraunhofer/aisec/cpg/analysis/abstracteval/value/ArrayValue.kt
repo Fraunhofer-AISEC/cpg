@@ -38,7 +38,7 @@ import org.apache.commons.lang3.NotImplementedException
  * This class implements the [Value] interface for Arrays, tracking the size of the collection. We
  * assume that there is no operation that changes an array's size apart from re-declaring it.
  */
-class ArrayValue : Value {
+class ArrayValue : Value<LatticeInterval> {
     override fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval {
         // (Re-)Declaration
         if (

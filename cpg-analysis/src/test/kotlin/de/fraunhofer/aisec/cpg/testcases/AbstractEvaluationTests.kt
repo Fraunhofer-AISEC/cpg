@@ -190,6 +190,7 @@ abstract class AbstractEvaluationTests {
                                         ref("i").inc()
                                     ) {
                                         ref("a") assignPlus literal(1, t("int"))
+                                        call("println") { ref("i") }
                                     }
 
                                     memberCall("f", ref("Bar")) { ref("a") }
