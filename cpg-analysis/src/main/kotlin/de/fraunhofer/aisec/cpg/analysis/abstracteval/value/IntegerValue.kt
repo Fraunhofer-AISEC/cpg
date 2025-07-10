@@ -42,7 +42,8 @@ class IntegerValue : Value<LatticeInterval> {
         ) {
             val initValue =
                 when (val init = node.initializer) {
-                    is Literal<*> -> init.value as? Int ?: throw NotImplementedException()
+                    is Literal<*> ->
+                        (init.value as? Number)?.toLong() ?: throw NotImplementedException()
                     else -> throw NotImplementedException()
                 }
             return LatticeInterval.Bounded(initValue, initValue)
@@ -71,7 +72,8 @@ class IntegerValue : Value<LatticeInterval> {
                 return when (node.operatorCode) {
                     "=" -> {
                         // If the rhs is only a literal use this exact value
-                        val value = (node.rhs.getOrNull(0) as? Literal<*>)?.value as? Int
+                        val value =
+                            ((node.rhs.getOrNull(0) as? Literal<*>)?.value as? Number)?.toLong()
                         val newInterval =
                             if (value != null) {
                                 LatticeInterval.Bounded(value, value)
@@ -87,7 +89,8 @@ class IntegerValue : Value<LatticeInterval> {
                     }
                     "+=" -> {
                         // If the rhs is only a literal we subtract this exact value
-                        val value = (node.rhs.getOrNull(0) as? Literal<*>)?.value as? Int
+                        val value =
+                            ((node.rhs.getOrNull(0) as? Literal<*>)?.value as? Number)?.toLong()
                         val newInterval =
                             if (value != null) {
                                 val valueInterval = LatticeInterval.Bounded(value, value)
@@ -106,7 +109,8 @@ class IntegerValue : Value<LatticeInterval> {
                     }
                     "-=" -> {
                         // If the rhs is only a literal we subtract this exact value
-                        val value = (node.rhs.getOrNull(0) as? Literal<*>)?.value as? Int
+                        val value =
+                            ((node.rhs.getOrNull(0) as? Literal<*>)?.value as? Number)?.toLong()
                         val newInterval =
                             if (value != null) {
                                 val valueInterval = LatticeInterval.Bounded(value, value)
@@ -125,7 +129,8 @@ class IntegerValue : Value<LatticeInterval> {
                     }
                     "*=" -> {
                         // If the rhs is only a literal we subtract this exact value
-                        val value = (node.rhs.getOrNull(0) as? Literal<*>)?.value as? Int
+                        val value =
+                            ((node.rhs.getOrNull(0) as? Literal<*>)?.value as? Number)?.toLong()
                         val newInterval =
                             if (value != null) {
                                 val valueInterval = LatticeInterval.Bounded(value, value)
@@ -142,7 +147,8 @@ class IntegerValue : Value<LatticeInterval> {
                     }
                     "/=" -> {
                         // If the rhs is only a literal we subtract this exact value
-                        val value = (node.rhs.getOrNull(0) as? Literal<*>)?.value as? Int
+                        val value =
+                            ((node.rhs.getOrNull(0) as? Literal<*>)?.value as? Number)?.toLong()
                         val newInterval =
                             if (value != null) {
                                 val valueInterval = LatticeInterval.Bounded(value, value)
@@ -159,7 +165,8 @@ class IntegerValue : Value<LatticeInterval> {
                     }
                     "%=" -> {
                         // If the rhs is only a literal we subtract this exact value
-                        val value = (node.rhs.getOrNull(0) as? Literal<*>)?.value as? Int
+                        val value =
+                            ((node.rhs.getOrNull(0) as? Literal<*>)?.value as? Number)?.toLong()
                         val newInterval =
                             if (value != null) {
                                 val valueInterval = LatticeInterval.Bounded(value, value)

@@ -48,7 +48,7 @@ class MutableListValue : Value<LatticeInterval> {
         ) {
             when (val init = node.initializer) {
                 is MemberCallExpression -> {
-                    val size = init.arguments.size
+                    val size = init.arguments.size.toLong()
                     return LatticeInterval.Bounded(size, size)
                 }
                 is NewExpression -> {

@@ -50,7 +50,7 @@ class ArrayValue : Value<LatticeInterval> {
         return current
     }
 
-    private fun getSize(node: Node): Int {
+    private fun getSize(node: Node): Long {
         return when (node) {
             // TODO: depending on the desired behavior we could distinguish between included types
             // (e.g. String and Int Literals)
@@ -58,14 +58,14 @@ class ArrayValue : Value<LatticeInterval> {
                 1
             }
             is InitializerListExpression -> {
-                node.initializers.fold(0) { acc, init -> acc + getSize(init) }
+                node.initializers.fold(0L) { acc, init -> acc + getSize(init) }
             }
             is NewArrayExpression -> {
                 if (node.initializer != null) {
                     getSize(node.initializer!!)
                 } else {
                     node.dimensions
-                        .map { it.value.value as Int }
+                        .map { (it.value.value as Number).toLong() }
                         .reduce { acc, dimension -> acc * dimension }
                 }
             }

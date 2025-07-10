@@ -37,17 +37,22 @@ import de.fraunhofer.aisec.cpg.helpers.State
  * [LatticeInterval].
  */
 sealed class LatticeInterval : Comparable<LatticeInterval> {
+    /** Explicit representation of the bottom element of the lattice. */
     object BOTTOM : LatticeInterval()
 
+    /**
+     * Explicit representation of an interval with a minimal value [lower] and a maximal value
+     * [upper].
+     */
     class Bounded(arg1: Bound, arg2: Bound) : LatticeInterval() {
         val lower: Bound
         val upper: Bound
 
-        constructor(arg1: Int, arg2: Int) : this(Bound.Value(arg1), Bound.Value(arg2))
+        constructor(arg1: Long, arg2: Long) : this(Bound.Value(arg1), Bound.Value(arg2))
 
-        constructor(arg1: Int, arg2: Bound) : this(Bound.Value(arg1), arg2)
+        constructor(arg1: Long, arg2: Bound) : this(Bound.Value(arg1), arg2)
 
-        constructor(arg1: Bound, arg2: Int) : this(arg1, Bound.Value(arg2))
+        constructor(arg1: Bound, arg2: Long) : this(arg1, Bound.Value(arg2))
 
         // Automatically switch the arguments if the upper bound is lower than the lower bound
         init {
@@ -65,17 +70,29 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    // TODO: future iterations should support fractional values
+    /**
+     * Representation of a value of the interval. It can be a concrete integer ([Long]) value,
+     * negative or positive infinity.
+     */
     sealed class Bound : Comparable<Bound> {
-        data class Value(val value: Int) : Bound() {
+        /** The [Bound] that represents a concrete integer value in the interval. */
+        data class Value(val value: Long) : Bound() {
             override fun toString(): String {
                 return value.toString()
             }
         }
 
         // necessary values for widening and narrowing
+        /**
+         * The [Bound] that represents negative infinity. It is used to represent the lower bound of
+         * an interval that can go infinitely low.
+         */
         data object NEGATIVE_INFINITE : Bound()
 
+        /**
+         * The [Bound] that represents positive infinity. It is used to represent the lower bound of
+         * an interval that can go infinitely high.
+         */
         data object INFINITE : Bound()
 
         override fun compareTo(other: Bound): Int {
@@ -115,7 +132,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    // Equals check only true if both Intervals are true or have the same boundaries
+    // Equals check is only true if both Intervals are true or have the same boundaries
     // Not the same as a zero result in compareTo!
     override fun equals(other: Any?): Boolean {
         return when (other) {
@@ -485,8 +502,8 @@ class IntervalState : State<Node, LatticeInterval>() {
      * [LatticeInterval]
      */
     override fun lub(
-        other: State<de.fraunhofer.aisec.cpg.graph.Node, LatticeInterval>
-    ): Pair<State<de.fraunhofer.aisec.cpg.graph.Node, LatticeInterval>, Boolean> {
+        other: State<Node, LatticeInterval>
+    ): Pair<State<Node, LatticeInterval>, Boolean> {
         var update = false
         for ((node, newLattice) in other) {
             update = push(node, newLattice) || update

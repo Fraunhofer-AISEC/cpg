@@ -26,7 +26,9 @@
 package de.fraunhofer.aisec.cpg.analysis.abstracteval
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.*
+import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.statements.DoStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
@@ -88,7 +90,7 @@ class AbstractIntervalEvaluator {
         // evaluate effect of each operation on the list until we reach "node"
         val startState = IntervalState()
         startState.push(start, interval)
-        val finalState = iterateEOG(start, startState, ::handleNode, targetNode)
+        val finalState = iterateEOG(start, startState, ::handleNode)
         return finalState?.get(targetNode)?.elements ?: LatticeInterval.BOTTOM
     }
 
@@ -204,7 +206,26 @@ class AbstractIntervalEvaluator {
     }
 
     private fun State<Node, LatticeInterval>.calculateEffect(node: Node): LatticeInterval {
-        return targetType.createInstance().applyEffect(this[node]!!.elements, node, targetName)
+        val currentInterval =
+            if (
+                node is Reference &&
+                    (node.access == AccessValues.READ || node.access == AccessValues.READWRITE)
+            ) {
+                val prevDFGs =
+                    node.prevDFGEdges
+                        .filter { it.granularity is FullDataflowGranularity }
+                        .map { it.start }
+                prevDFGs.fold(LatticeInterval.BOTTOM) { acc: LatticeInterval, prevNode ->
+                    acc.meet(this[prevNode]?.elements ?: LatticeInterval.BOTTOM)
+                }
+            } else {
+                this[node]?.elements
+                    ?: LatticeInterval.Bounded(
+                        LatticeInterval.Bound.NEGATIVE_INFINITE,
+                        LatticeInterval.Bound.INFINITE,
+                    )
+            }
+        return targetType.createInstance().applyEffect(currentInterval, node, targetName)
     }
 
     /**
