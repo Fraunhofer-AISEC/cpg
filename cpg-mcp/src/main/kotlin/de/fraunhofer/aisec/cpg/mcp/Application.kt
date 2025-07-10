@@ -28,20 +28,21 @@ package de.fraunhofer.aisec.cpg.mcp
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
+import io.ktor.server.cio.CIO
+import io.ktor.server.engine.embeddedServer
+import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.Implementation
 import io.modelcontextprotocol.kotlin.sdk.ServerCapabilities
+import io.modelcontextprotocol.kotlin.sdk.TextContent
+import io.modelcontextprotocol.kotlin.sdk.Tool
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
-import io.modelcontextprotocol.kotlin.sdk.server.StdioServerTransport
+import io.modelcontextprotocol.kotlin.sdk.server.mcp
 import java.io.File
 import java.net.ConnectException
 import java.nio.file.Path
 import java.nio.file.Paths
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
-import kotlinx.io.asSink
-import kotlinx.io.asSource
-import kotlinx.io.buffered
 
 private const val DEBUG_PARSER = true
 
@@ -112,7 +113,6 @@ fun setupTranslationConfiguration(
     translationConfiguration.registerPass<ControlDependenceGraphPass>()
     translationConfiguration.registerPass<ProgramDependenceGraphPass>()
     translationConfiguration.registerPass<PythonFileConceptPass>()
-    // translationConfiguration.registerPass<PythonEncryptionPass>()
 
     translationConfiguration.registerPass(PrepareSerialization::class)
 
@@ -144,6 +144,21 @@ fun setupTranslationConfiguration(
  * @throws ConnectException, if there is no connection to bolt://localhost:7687 possible
  */
 fun main() {
+    runBlocking { runSseMcpServerUsingKtorPlugin(3001, configureServer()) }
+}
+
+/**
+ * Starts an SSE (Server Sent Events) MCP server using the Ktor framework and the specified port.
+ *
+ * The url can be accessed in the MCP inspector at [http://localhost:$port]
+ *
+ * @param port The port number on which the SSE MCP server will listen for client connections.
+ */
+fun runSseMcpServerUsingKtorPlugin(port: Int, server: Server) {
+    embeddedServer(CIO, host = "0.0.0.0", port = port) { mcp { server } }.start(wait = true)
+}
+
+fun configureServer(): Server {
     // Create the MCP Server instance with a basic implementation
     val server =
         Server(
@@ -162,16 +177,14 @@ fun main() {
             ),
         )
 
-    val transport =
-        StdioServerTransport(
-            inputStream = System.`in`.asSource().buffered(),
-            outputStream = System.out.asSink().buffered(),
-        )
-
-    runBlocking {
-        server.connect(transport)
-        val done = Job()
-        server.onClose { done.complete() }
-        done.join()
+    // Add CPG Upload tool
+    server.addTool(
+        name = "cpg upload",
+        description = "The CPG upload tool",
+        inputSchema = Tool.Input(),
+    ) { request ->
+        CallToolResult(content = listOf(TextContent("Hello, world!")))
     }
+
+    return server
 }
