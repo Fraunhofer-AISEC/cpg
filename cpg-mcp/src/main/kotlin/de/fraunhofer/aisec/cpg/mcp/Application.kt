@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.mcp
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
-import io.ktor.utils.io.streams.asInput
 import io.modelcontextprotocol.kotlin.sdk.Implementation
 import io.modelcontextprotocol.kotlin.sdk.ServerCapabilities
 import io.modelcontextprotocol.kotlin.sdk.server.Server
@@ -41,6 +40,7 @@ import java.nio.file.Paths
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import kotlinx.io.asSink
+import kotlinx.io.asSource
 import kotlinx.io.buffered
 
 private const val DEBUG_PARSER = true
@@ -148,17 +148,25 @@ fun main() {
     val server =
         Server(
             Implementation(
-                name = "cpg", // Tool name is "weather"
+                name = "cpg", // Tool name is "cpg"
                 version = "0.0.1", // Version of the implementation
             ),
             ServerOptions(
                 capabilities =
-                    ServerCapabilities(tools = ServerCapabilities.Tools(listChanged = true))
+                    ServerCapabilities(
+                        prompts = ServerCapabilities.Prompts(listChanged = true),
+                        resources =
+                            ServerCapabilities.Resources(subscribe = true, listChanged = true),
+                        tools = ServerCapabilities.Tools(listChanged = true),
+                    )
             ),
         )
 
-    // Create a transport using standard IO for server communication
-    val transport = StdioServerTransport(System.`in`.asInput(), System.out.asSink().buffered())
+    val transport =
+        StdioServerTransport(
+            inputStream = System.`in`.asSource().buffered(),
+            outputStream = System.out.asSink().buffered(),
+        )
 
     runBlocking {
         server.connect(transport)
