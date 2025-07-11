@@ -45,11 +45,7 @@ import org.eclipse.cdt.core.dom.ast.IASTLiteralExpression.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTConstructorInitializer
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTLambdaExpression
 import org.eclipse.cdt.core.dom.ast.gnu.IGNUASTCompoundStatementExpression
-import org.eclipse.cdt.internal.core.dom.parser.c.CASTArrayDesignator
-import org.eclipse.cdt.internal.core.dom.parser.c.CASTArrayRangeDesignator
-import org.eclipse.cdt.internal.core.dom.parser.c.CASTDesignatedInitializer
-import org.eclipse.cdt.internal.core.dom.parser.c.CASTFieldDesignator
-import org.eclipse.cdt.internal.core.dom.parser.c.CASTTypeIdInitializerExpression
+import org.eclipse.cdt.internal.core.dom.parser.c.*
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 import org.eclipse.cdt.internal.core.model.ASTStringUtil
 
@@ -86,10 +82,15 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             is CPPASTDeleteExpression -> handleDeleteExpression(node)
             is CPPASTLambdaExpression -> handleLambdaExpression(node)
             is CPPASTSimpleTypeConstructorExpression -> handleSimpleTypeConstructorExpression(node)
+            is CASTArrayModifier -> handleCASTArrayModifier(node)
             else -> {
                 return handleNotSupported(node, node.javaClass.name)
             }
         }
+    }
+
+    private fun handleCASTArrayModifier(node: CASTArrayModifier): Expression {
+        return handleNode(node.constantExpression)
     }
 
     /**
@@ -363,7 +364,9 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
         return newMemberExpression(
             name,
-            base,
+            if (ctx.isPointerDereference)
+                newPointerDereference(base.name, rawNode = ctx).apply { this.input = base }
+            else base,
             unknownType(),
             if (ctx.isPointerDereference) "->" else ".",
             rawNode = ctx,
@@ -415,17 +418,33 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             else ->
                 Util.errorWithFileLocation(frontend, ctx, log, "unknown operator {}", ctx.operator)
         }
-        val unaryOperator =
-            newUnaryOperator(
-                operatorCode,
-                ctx.isPostfixOperator,
-                !ctx.isPostfixOperator,
-                rawNode = ctx,
-            )
-        if (input != null) {
-            unaryOperator.input = input
+        if (operatorCode == "&") {
+            return newPointerReference(handle(ctx.operand)?.name, unknownType(), rawNode = ctx)
+                .apply {
+                    if (input != null) {
+                        this.input = input
+                    }
+                }
+        } else if (operatorCode == "*") {
+            return newPointerDereference(handle(ctx.operand)?.name, unknownType(), rawNode = ctx)
+                .apply {
+                    if (input != null) {
+                        this.input = input
+                    }
+                }
+        } else {
+            val unaryOperator =
+                newUnaryOperator(
+                    operatorCode,
+                    ctx.isPostfixOperator,
+                    !ctx.isPostfixOperator,
+                    rawNode = ctx,
+                )
+            if (input != null) {
+                unaryOperator.input = input
+            }
+            return unaryOperator
         }
-        return unaryOperator
     }
 
     private fun handleFunctionCallExpression(ctx: IASTFunctionCallExpression): Expression {

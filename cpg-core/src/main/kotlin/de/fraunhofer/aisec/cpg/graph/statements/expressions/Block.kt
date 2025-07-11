@@ -61,12 +61,10 @@ open class Block : Expression(), StatementHolder {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Block) return false
-        return super.equals(other) &&
-            this.statements == other.statements &&
-            Edge.propertyEqualsList(statementEdges, other.statementEdges)
+        return super.equals(other) && Edge.propertyEqualsList(statementEdges, other.statementEdges)
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), statements)
+    override fun hashCode() = Objects.hash(super.hashCode())
 
     /** Returns the [n]-th statement in this list of statements. */
     operator fun get(n: Int): Statement {

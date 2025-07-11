@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes.configuration
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.passes.TranslationUnitPass
 import kotlin.reflect.KClass
 
 /**
@@ -36,6 +37,9 @@ import kotlin.reflect.KClass
  *
  * The primary use-case for this annotation is to allow language frontends to override specific
  * passes, such as the [EvaluationOrderGraphPass] in order to optimize language specific graphs.
+ *
+ * Please, be careful: DO NOT register the to-be-replaced pass with registerPass. Additionally,
+ * currently, only a [TranslationUnitPass] can be replaced.
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
