@@ -26,9 +26,7 @@
 package de.fraunhofer.aisec.cpg.analysis.abstracteval
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.testcases.AbstractEvaluationTests
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -49,7 +47,7 @@ class AbstractEvaluatorTest {
        Bar f = new Bar();
        int a = 5;
 
-       a = 5;
+       a = 0;
        a -= 2;
        a += 3;
 
@@ -60,9 +58,9 @@ class AbstractEvaluatorTest {
         val mainClass = tu.records["Foo"]
         assertNotNull(mainClass)
         val f1 = mainClass.methods["f1"]
-        assertNotNull(f1)
+        assertNotNull(f1, "There should be an argument for the call to f")
 
-        val refA = f1.bodyOrNull<MemberCallExpression>(5)!!.arguments.first()
+        val refA = f1.mcalls["f"]?.arguments?.singleOrNull()
         assertNotNull(refA)
 
         val evaluator = AbstractIntervalEvaluator()
@@ -77,6 +75,7 @@ class AbstractEvaluatorTest {
        a = 3;
        a++;
        ++a;
+       b.c(a);
        a -= 2;
        a += 3;
        a--;
@@ -91,15 +90,21 @@ class AbstractEvaluatorTest {
     fun testIntegerOperations() {
         val mainClass = tu.records["Foo"]
         assertNotNull(mainClass)
-        val f1 = mainClass.methods["f2"]
-        assertNotNull(f1)
+        val f2 = mainClass.methods["f2"]
+        assertNotNull(f2)
 
-        val refA = f1.bodyOrNull<MemberCallExpression>(12)!!.arguments.first()
-        assertNotNull(refA)
+        val refAMiddle = f2.mcalls["f"]?.arguments?.singleOrNull()
+        assertNotNull(refAMiddle, "There should be an argument for the call to c")
+        val evaluatorMiddle = AbstractIntervalEvaluator()
+        val valueMiddle = evaluatorMiddle.evaluate(refAMiddle)
+        assertEquals(LatticeInterval.Bounded(5, 5), valueMiddle)
 
-        val evaluator = AbstractIntervalEvaluator()
-        val value = evaluator.evaluate(refA)
-        assertEquals(LatticeInterval.Bounded(2, 2), value)
+        val refAEnd = f2.mcalls["f"]?.arguments?.singleOrNull()
+        assertNotNull(refAEnd, "There should be an argument for the call to f")
+
+        val evaluatorEnd = AbstractIntervalEvaluator()
+        val valueEnd = evaluatorEnd.evaluate(refAEnd)
+        assertEquals(LatticeInterval.Bounded(2, 2), valueEnd)
     }
 
     /*
@@ -116,11 +121,11 @@ class AbstractEvaluatorTest {
     fun testBranch1Integer() {
         val mainClass = tu.records["Foo"]
         assertNotNull(mainClass)
-        val f1 = mainClass.methods["f3"]
-        assertNotNull(f1)
+        val f3 = mainClass.methods["f3"]
+        assertNotNull(f3)
 
-        val refA = f1.bodyOrNull<MemberCallExpression>(3)!!.arguments.first()
-        assertNotNull(refA)
+        val refA = f3.mcalls["f"]?.arguments?.firstOrNull()
+        assertNotNull(refA, "There should be an argument for the call to f")
 
         val evaluator = AbstractIntervalEvaluator()
         val value = evaluator.evaluate(refA)
@@ -143,11 +148,11 @@ class AbstractEvaluatorTest {
     fun testBranch2Integer() {
         val mainClass = tu.records["Foo"]
         assertNotNull(mainClass)
-        val f1 = mainClass.methods["f4"]
-        assertNotNull(f1)
+        val f4 = mainClass.methods["f4"]
+        assertNotNull(f4)
 
-        val refA = f1.bodyOrNull<MemberCallExpression>(3)!!.arguments.first()
-        assertNotNull(refA)
+        val refA = f4.mcalls["f"]?.arguments?.firstOrNull()
+        assertNotNull(refA, "There should be an argument for the call to f")
 
         val evaluator = AbstractIntervalEvaluator()
         val value = evaluator.evaluate(refA)
@@ -173,14 +178,14 @@ class AbstractEvaluatorTest {
         assertNotNull(f5)
 
         val refI = f5.calls["println"]?.arguments?.singleOrNull()
-        assertNotNull(refI)
+        assertNotNull(refI, "There should be an argument for the call to println")
 
         val evaluatorI = AbstractIntervalEvaluator()
         val valueI = evaluatorI.evaluate(refI)
         assertEquals(LatticeInterval.Bounded(0, 4), valueI)
 
-        val refA = f5.bodyOrNull<MemberCallExpression>(6)!!.arguments.first()
-        assertNotNull(refA)
+        val refA = f5.mcalls["f"]?.arguments?.firstOrNull()
+        assertNotNull(refA, "There should be an argument for the call to f")
 
         val evaluator = AbstractIntervalEvaluator()
         val value = evaluator.evaluate(refA)
