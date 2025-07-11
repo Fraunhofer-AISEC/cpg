@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpre
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 import de.fraunhofer.aisec.cpg.query.value
-import org.apache.commons.lang3.NotImplementedException
 
 /**
  * This class implements the [Value] interface for Arrays, tracking the size of the collection. We
@@ -69,7 +68,7 @@ class ArrayValue : Value<LatticeInterval> {
                         .reduce { acc, dimension -> acc * dimension }
                 }
             }
-            else -> throw NotImplementedException()
+            else -> TODO()
         }
     }
 }

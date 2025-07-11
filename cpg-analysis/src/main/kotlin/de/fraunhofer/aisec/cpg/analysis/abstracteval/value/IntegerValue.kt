@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
-import org.apache.commons.lang3.NotImplementedException
 
 /** This class implements the [Value] interface for Integer values. */
 class IntegerValue : Value<LatticeInterval> {
@@ -42,9 +41,8 @@ class IntegerValue : Value<LatticeInterval> {
         ) {
             val initValue =
                 when (val init = node.initializer) {
-                    is Literal<*> ->
-                        (init.value as? Number)?.toLong() ?: throw NotImplementedException()
-                    else -> throw NotImplementedException()
+                    is Literal<*> -> (init.value as? Number)?.toLong() ?: TODO()
+                    else -> TODO()
                 }
             return LatticeInterval.Bounded(initValue, initValue)
         }

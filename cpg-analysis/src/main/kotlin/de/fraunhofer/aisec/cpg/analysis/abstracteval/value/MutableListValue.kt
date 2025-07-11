@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewExpression
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
-import org.apache.commons.lang3.NotImplementedException
 
 /**
  * This class implements the [Value] interface for mutable Lists, tracking the size of the
@@ -55,7 +54,7 @@ class MutableListValue : Value<LatticeInterval> {
                     // TODO: consider collection as argument!
                     return LatticeInterval.Bounded(0, 0)
                 }
-                else -> throw NotImplementedException()
+                else -> TODO()
             }
         }
         // State can only be directly changed via MemberCalls (add, clear, ...)

@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.*
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
-import org.apache.commons.lang3.NotImplementedException
 
 /**
  * An evaluator performing abstract evaluation for a singular [Value]. It takes a target [Node] and
@@ -47,11 +46,9 @@ import org.apache.commons.lang3.NotImplementedException
  * for the final value.
  */
 class AbstractIntervalEvaluator {
-    // The node for which we want to get the value
-    private lateinit var targetNode: Node
-    // The name of the value we are analyzing
+    /** The name of the value we are analyzing */
     private lateinit var targetName: String
-    // The type of the value we are analyzing
+    /** The type of the value we are analyzing */
     private lateinit var targetType: KClass<out Value<LatticeInterval>>
 
     /**
@@ -59,7 +56,6 @@ class AbstractIntervalEvaluator {
      */
     fun evaluate(node: Node): LatticeInterval {
         return evaluate(
-            node.name.localName,
             getInitializerOf(node)!!,
             node,
             getType(node),
@@ -70,21 +66,17 @@ class AbstractIntervalEvaluator {
     /**
      * Takes a manual configuration and tries to evaluate the value of the node at the end.
      *
-     * @param name The name of the target node
      * @param start The beginning of the analysis, usually the start of the target's life
-     * @param end The place at which we want to know the target's value
+     * @param targetNode The place at which we want to know the target's value
      * @param type The Type of the target
      * @param interval The starting value of the analysis, optional
      */
     fun evaluate(
-        name: String,
         start: Node,
-        end: Node,
+        targetNode: Node,
         type: KClass<out Value<LatticeInterval>>,
         interval: IntervalLattice? = null,
     ): LatticeInterval {
-        targetNode = end
-        targetName = name
         targetType = type
 
         // evaluate effect of each operation on the list until we reach "node"
@@ -193,10 +185,7 @@ class AbstractIntervalEvaluator {
         // Finally, we propagate the current Interval to all successor nodes which are empty.
         // If the next EOG already has a value we need to join them.
         // This is implemented in IntervalState.push.
-        // Only do this if we have not yet reached the goal node
-        if (currentNode != targetNode) {
-            currentNode.nextEOG.forEach { newState.push(it, newState[currentNode]) }
-        }
+        currentNode.nextEOG.forEach { newState.push(it, newState[currentNode]) }
 
         return newState
     }
@@ -236,13 +225,13 @@ class AbstractIntervalEvaluator {
      */
     private fun getType(node: Node): KClass<out Value<LatticeInterval>> {
         if (node !is Reference) {
-            throw NotImplementedException()
+            TODO()
         }
         val name = node.type.name.toString()
         return when {
             name.endsWith("[]") -> ArrayValue::class
             name == "int" -> IntegerValue::class
-            else -> throw NotImplementedException()
+            else -> TODO()
         }
     }
 
