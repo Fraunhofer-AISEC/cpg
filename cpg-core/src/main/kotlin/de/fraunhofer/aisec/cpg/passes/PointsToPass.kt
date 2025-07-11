@@ -2278,7 +2278,12 @@ fun PointsToStateElement.getAddresses(node: Node, startNode: Node): IdentitySet<
              * For example, the address of `*a` is the value of `a`
              */
             val ret = identitySetOf<Node>()
-            this.getValues(node.input, startNode).forEach { (value, _) ->
+            // When the node.input is not the startNode,
+            val inputVals =
+                if (node.input != startNode && node != startNode)
+                    this.fetchValueFromGeneralState(node.input)
+                else this.getValues(node.input, startNode)
+            inputVals.forEach { (value, _) ->
                 // In case the value is a BinaryOperator (like `*(ptr + 8)`), we treat this as a
                 // SubscriptExpression for now
                 // We assume that the rhs of the BinaryOperator is the pointer, and the rhs is a
