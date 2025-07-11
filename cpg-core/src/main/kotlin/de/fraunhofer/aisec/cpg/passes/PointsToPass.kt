@@ -2330,7 +2330,12 @@ fun PointsToStateElement.getAddresses(node: Node, startNode: Node): IdentitySet<
         }
         is SubscriptExpression -> {
             val localName = getNodeName(node.subscriptExpression)
-            this.getValues(node.base, startNode).flatMapTo(identitySetOf()) {
+            // When startNode is different from the current node, we should already have an entry,
+            // so we fetch that from the general state
+            val baseValues =
+                if (startNode != node) fetchValueFromGeneralState(node.base)
+                else this.getValues(node.base, startNode)
+            baseValues.flatMapTo(identitySetOf()) {
                 fetchFieldAddresses(
                     identitySetOf(it.first),
                     Name(localName.localName, getNodeName(it.first)),
