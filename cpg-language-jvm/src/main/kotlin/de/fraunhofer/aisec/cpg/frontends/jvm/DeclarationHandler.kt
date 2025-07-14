@@ -32,22 +32,24 @@ import sootup.core.jimple.basic.Local
 import sootup.core.model.SootClass
 import sootup.core.model.SootField
 import sootup.core.model.SootMethod
-import sootup.java.core.JavaSootClass
-import sootup.java.core.JavaSootField
-import sootup.java.core.JavaSootMethod
-import sootup.java.core.jimple.basic.JavaLocal
 
 class DeclarationHandler(frontend: JVMLanguageFrontend) :
     Handler<Declaration, Any, JVMLanguageFrontend>(::ProblemDeclaration, frontend) {
-    init {
-        map.put(SootClass::class.java) { handleClass(it as SootClass) }
-        map.put(JavaSootClass::class.java) { handleClass(it as SootClass) }
-        map.put(SootMethod::class.java) { handleMethod(it as SootMethod) }
-        map.put(JavaSootMethod::class.java) { handleMethod(it as SootMethod) }
-        map.put(SootField::class.java) { handleField(it as SootField) }
-        map.put(JavaSootField::class.java) { handleField(it as SootField) }
-        map.put(Local::class.java) { handleLocal(it as Local) }
-        map.put(JavaLocal::class.java) { handleLocal(it as Local) }
+
+    override fun handle(ctx: Any): Declaration {
+        return when (ctx) {
+            is SootClass -> handleClass(ctx)
+            is SootMethod -> handleMethod(ctx)
+            is SootField -> handleField(ctx)
+            is Local -> handleLocal(ctx)
+            else -> {
+                log.warn("Unhandled declaration type: ${ctx.javaClass.simpleName}")
+                newProblemDeclaration(
+                    "Unhandled declaration type: ${ctx.javaClass.simpleName}",
+                    rawNode = ctx,
+                )
+            }
+        }
     }
 
     private fun handleClass(sootClass: SootClass): RecordDeclaration {
