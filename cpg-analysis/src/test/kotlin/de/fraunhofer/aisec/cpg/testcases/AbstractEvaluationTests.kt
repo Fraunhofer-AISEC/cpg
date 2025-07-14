@@ -138,6 +138,8 @@ abstract class AbstractEvaluationTests {
                                     ref("a").inc()
                                     ref("a").incPrefix()
 
+                                    memberCall("c", ref("Bar")) { ref("a") }
+
                                     ref("a") assignMinus literal(2, t("int"))
                                     ref("a") assignPlus literal(3, t("int"))
 

@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.changeDeclarationState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.intervalOf
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToDeclarationState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToGeneralState
@@ -80,7 +81,7 @@ class IntegerValue : Value<LatticeInterval> {
                     }
                     else -> current
                 }
-            lattice.pushToDeclarationState(state, node.input, newValue)
+            lattice.changeDeclarationState(state, node.input, newValue)
             lattice.pushToGeneralState(state, node, newValue)
             return newValue
             // Binary Operators
@@ -237,8 +238,8 @@ class IntegerValue : Value<LatticeInterval> {
                         else -> TODO("Unsupported operator: ${node.operatorCode}")
                     }
                 // Push the new value to the declaration state of the variable
-                lattice.pushToDeclarationState(state, node.lhs.first(), newValue)
-                lattice.pushToGeneralState(state, node, newValue)
+                lattice.changeDeclarationState(state, node.lhs.first(), newValue)
+                // lattice.pushToGeneralState(state, node, newValue)
                 return newValue
             } else {
                 // We do not support multiple lhs or rhs in the current implementation.

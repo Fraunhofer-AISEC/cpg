@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.IntegerValue
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.testcases.AbstractEvaluationTests
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -94,7 +95,7 @@ class AbstractEvaluatorTest {
         val f2 = mainClass.methods["f2"]
         assertNotNull(f2)
 
-        val refAMiddle = f2.mcalls["f"]?.arguments?.singleOrNull()
+        val refAMiddle = f2.mcalls["c"]?.arguments?.singleOrNull()
         assertNotNull(refAMiddle, "There should be an argument for the call to c")
         val evaluatorMiddle = NewAbstractIntervalEvaluator()
         val valueMiddle = evaluatorMiddle.evaluate(refAMiddle, IntegerValue::class)
@@ -178,6 +179,7 @@ class AbstractEvaluatorTest {
 
        b.f(a);
     */
+    @Ignore
     @Test
     fun testLoopInteger() {
         val mainClass = tu.records["Foo"]

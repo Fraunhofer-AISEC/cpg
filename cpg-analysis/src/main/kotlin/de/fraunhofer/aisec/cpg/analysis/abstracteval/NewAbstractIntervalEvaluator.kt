@@ -222,6 +222,19 @@ fun <NodeId> TupleStateElement<NodeId>.intervalOf(node: Node): LatticeInterval {
     return this.first[id]?.element ?: LatticeInterval.TOP
 }
 
+fun <NodeId> TupleState<NodeId>.changeDeclarationState(
+    current: TupleStateElement<NodeId>,
+    node: Node,
+    interval: LatticeInterval,
+): TupleStateElement<NodeId> {
+    val id =
+        (node.objectIdentifier() as? NodeId)?.let { tmpId ->
+            current.first.keys.singleOrNull { it == tmpId } ?: tmpId
+        } ?: node as NodeId ?: TODO()
+    current.first[id] = NewIntervalLattice.Element(interval)
+    return current
+}
+
 fun <NodeId> TupleState<NodeId>.pushToDeclarationState(
     current: TupleStateElement<NodeId>,
     node: Node,
