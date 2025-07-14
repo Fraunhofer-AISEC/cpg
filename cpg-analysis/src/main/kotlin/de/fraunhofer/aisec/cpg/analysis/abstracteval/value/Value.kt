@@ -45,6 +45,7 @@ interface Value<T> {
         state: TupleStateElement<Any>,
         node: Node,
         name: String,
+        computeWithoutPush: Boolean = false,
     ): T
 
     companion object {

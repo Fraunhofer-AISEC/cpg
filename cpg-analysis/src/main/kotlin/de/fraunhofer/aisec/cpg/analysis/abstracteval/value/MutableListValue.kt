@@ -49,6 +49,7 @@ class MutableListValue : Value<LatticeInterval> {
         state: TupleStateElement<Any>,
         node: Node,
         name: String,
+        computeWithoutPush: Boolean,
     ): LatticeInterval {
         if (
             node is VariableDeclaration && node.initializer != null && node.name.localName == name

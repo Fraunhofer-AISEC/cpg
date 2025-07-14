@@ -46,6 +46,7 @@ class ArrayValue : Value<LatticeInterval> {
         state: TupleStateElement<Any>,
         node: Node,
         name: String,
+        computeWithoutPush: Boolean,
     ): LatticeInterval {
         // (Re-)Declaration
         if (

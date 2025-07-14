@@ -218,7 +218,7 @@ class AbstractIntervalEvaluator {
             .createInstance()
             .applyEffect(
                 currentInterval,
-                TupleState<Node>(
+                TupleState(
                     DeclarationState(NewIntervalLattice()),
                     NewIntervalState(NewIntervalLattice()),
                 ),

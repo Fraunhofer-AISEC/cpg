@@ -25,8 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.*
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval.Bound.*
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.NewIntervalLattice
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -55,7 +57,20 @@ class MutableListValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(2, 2),
-            MutableListValue().applyEffect(current, correctDeclaration, name.localName),
+            MutableListValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    correctDeclaration,
+                    name.localName,
+                ),
         )
 
         val wrongNameDeclaration = run {
@@ -68,7 +83,20 @@ class MutableListValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(1, 1),
-            MutableListValue().applyEffect(current, wrongNameDeclaration, name.localName),
+            MutableListValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    wrongNameDeclaration,
+                    name.localName,
+                ),
         )
 
         val noInitializerDeclaration = run {
@@ -78,7 +106,20 @@ class MutableListValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(1, 1),
-            MutableListValue().applyEffect(current, noInitializerDeclaration, name.localName),
+            MutableListValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    noInitializerDeclaration,
+                    name.localName,
+                ),
         )
     }
 
@@ -94,7 +135,20 @@ class MutableListValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(2, 2),
-            MutableListValue().applyEffect(current, add, name.localName),
+            MutableListValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    add,
+                    name.localName,
+                ),
         )
 
         val addAll = run {
@@ -107,7 +161,20 @@ class MutableListValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(1, INFINITE),
-            MutableListValue().applyEffect(current, addAll, name.localName),
+            MutableListValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    addAll,
+                    name.localName,
+                ),
         )
 
         val clear = run {
@@ -120,7 +187,20 @@ class MutableListValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(0, 0),
-            MutableListValue().applyEffect(current, clear, name.localName),
+            MutableListValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    clear,
+                    name.localName,
+                ),
         )
 
         val removeInt = run {
@@ -136,7 +216,20 @@ class MutableListValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(0, 0),
-            MutableListValue().applyEffect(current, removeInt, name.localName),
+            MutableListValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    removeInt,
+                    name.localName,
+                ),
         )
 
         val removeObject = run {
@@ -151,7 +244,20 @@ class MutableListValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(0, 1),
-            MutableListValue().applyEffect(current, removeObject, name.localName),
+            MutableListValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    removeObject,
+                    name.localName,
+                ),
         )
 
         val removeAll = run {
@@ -164,7 +270,20 @@ class MutableListValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(0, 1),
-            MutableListValue().applyEffect(current, removeAll, name.localName),
+            MutableListValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    removeAll,
+                    name.localName,
+                ),
         )
 
         val wrongName = run {
@@ -176,9 +295,20 @@ class MutableListValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(1, 1),
-            MutableListValue().applyEffect(current, wrongName, name.localName),
+            MutableListValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    wrongName,
+                    name.localName,
+                ),
         )
     }
-
-    @Test fun applyIndirectCallTest() {}
 }

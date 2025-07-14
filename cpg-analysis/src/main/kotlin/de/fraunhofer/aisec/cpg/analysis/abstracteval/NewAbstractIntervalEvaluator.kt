@@ -27,8 +27,9 @@ package de.fraunhofer.aisec.cpg.analysis.abstracteval
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.*
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.passes.objectIdentifier
 import kotlin.reflect.KClass
@@ -54,6 +55,41 @@ class NewIntervalLattice() : Lattice<NewIntervalLattice.Element> {
     override val bottom: Element = Element(LatticeInterval.BOTTOM)
 
     override fun lub(one: Element, two: Element, allowModify: Boolean): Element {
+        val oneElem = one.element
+        val twoElem = two.element
+        if (allowModify) {
+            if (oneElem == LatticeInterval.TOP || twoElem == LatticeInterval.BOTTOM) {
+                // Nothing to do as one is already the top or bigger than two.
+            } else if (twoElem == LatticeInterval.TOP) {
+                // Set one to TOP too.
+                one.element = LatticeInterval.TOP
+                return two
+            } else if (oneElem == LatticeInterval.BOTTOM) {
+                // Set one to two as it is the bottom.
+                one.element = twoElem
+                return one
+            } else if (oneElem is LatticeInterval.Bounded && twoElem is LatticeInterval.Bounded) {
+                // If both are bounded, we can calculate the new bounds.
+                val newLower = minOf(oneElem.lower, twoElem.lower)
+                val newUpper = maxOf(oneElem.upper, twoElem.upper)
+                one.element = LatticeInterval.Bounded(newLower, newUpper)
+                return one
+            }
+            return one
+        } else {
+            if (oneElem == LatticeInterval.TOP || twoElem == LatticeInterval.TOP) {
+                return Element(LatticeInterval.TOP)
+            } else if (twoElem == LatticeInterval.BOTTOM) {
+                return one.duplicate()
+            } else if (oneElem == LatticeInterval.BOTTOM) {
+                return two.duplicate()
+            } else if (oneElem is LatticeInterval.Bounded && twoElem is LatticeInterval.Bounded) {
+                val newLower = minOf(oneElem.lower, twoElem.lower)
+                val newUpper = maxOf(oneElem.upper, twoElem.upper)
+                return Element(LatticeInterval.Bounded(newLower, newUpper))
+            }
+        }
+
         TODO("Not yet implemented")
     }
 
@@ -69,7 +105,7 @@ class NewIntervalLattice() : Lattice<NewIntervalLattice.Element> {
         return one.duplicate()
     }
 
-    class Element(val element: LatticeInterval) : Lattice.Element {
+    class Element(var element: LatticeInterval) : Lattice.Element {
         override fun toString(): String {
             return "IntervalLattice.Element(elements=$element)"
         }
@@ -108,7 +144,9 @@ class NewAbstractIntervalEvaluator {
      * Takes a node (e.g. Reference) and tries to evaluate its value at this point in the program.
      */
     fun evaluate(node: Node, targetType: KClass<out Value<LatticeInterval>>): LatticeInterval {
-        return evaluate(getInitializerOf(node)!!, node, targetType, LatticeInterval.BOTTOM)
+        val startNode =
+            node.firstParentOrNull<FunctionDeclaration>() ?: return LatticeInterval.BOTTOM
+        return evaluate(startNode, node, targetType, LatticeInterval.BOTTOM)
     }
 
     /**
@@ -155,7 +193,9 @@ class NewAbstractIntervalEvaluator {
         currentState: TupleStateElement<Any>,
     ): TupleStateElement<Any> {
         val currentNode = currentEdge.end
-        var newState = currentState
+        val newState = currentState
+
+        calculateEffect(currentNode, lattice as TupleState<Any>, newState)
 
         return newState
     }
@@ -175,7 +215,10 @@ class NewAbstractIntervalEvaluator {
 }
 
 fun <NodeId> TupleStateElement<NodeId>.intervalOf(node: Node): LatticeInterval {
-    val id = (node.objectIdentifier() as? NodeId) ?: node as? NodeId ?: TODO()
+    val id =
+        node.objectIdentifier()?.let { tmpId ->
+            this.first.keys.singleOrNull { it == tmpId } ?: (tmpId as? NodeId)
+        } ?: node as? NodeId ?: TODO()
     return this.first[id]?.element ?: LatticeInterval.TOP
 }
 
@@ -184,13 +227,24 @@ fun <NodeId> TupleState<NodeId>.pushToDeclarationState(
     node: Node,
     interval: LatticeInterval,
 ): TupleStateElement<NodeId> {
-    val id = (node.objectIdentifier() as? NodeId) ?: node as NodeId ?: TODO()
+    val id =
+        (node.objectIdentifier() as? NodeId)?.let { tmpId ->
+            current.first.keys.singleOrNull { it == tmpId } ?: tmpId
+        } ?: node as NodeId ?: TODO()
     this.innerLattice1.lub(
         current.first,
         DeclarationStateElement(id to NewIntervalLattice.Element(interval)),
         allowModify = true,
     )
     return current
+}
+
+operator fun DeclarationStateElement<Any>.get(nodeId: Any): NewIntervalLattice.Element? {
+    return if (nodeId is Integer) {
+        this.entries.singleOrNull { it.key == nodeId }?.value
+    } else {
+        this.entries.singleOrNull { it.key === nodeId }?.value
+    }
 }
 
 fun <NodeId> TupleState<NodeId>.pushToGeneralState(

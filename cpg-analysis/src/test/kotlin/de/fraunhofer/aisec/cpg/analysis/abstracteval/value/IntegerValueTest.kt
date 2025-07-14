@@ -25,8 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.*
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval.Bound.*
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.NewIntervalLattice
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
@@ -52,7 +54,20 @@ class IntegerValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(5, 5),
-            IntegerValue().applyEffect(current, correctDeclaration, name.localName),
+            IntegerValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    correctDeclaration,
+                    name.localName,
+                ),
         )
 
         val wrongNameDeclaration = run {
@@ -65,7 +80,20 @@ class IntegerValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(1, 1),
-            IntegerValue().applyEffect(current, wrongNameDeclaration, name.localName),
+            IntegerValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    wrongNameDeclaration,
+                    name.localName,
+                ),
         )
 
         val noInitializerDeclaration = run {
@@ -75,7 +103,20 @@ class IntegerValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(1, 1),
-            IntegerValue().applyEffect(current, noInitializerDeclaration, name.localName),
+            IntegerValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    noInitializerDeclaration,
+                    name.localName,
+                ),
         )
     }
 
@@ -90,7 +131,20 @@ class IntegerValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(2, 2),
-            IntegerValue().applyEffect(current, preInc, name.localName),
+            IntegerValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    preInc,
+                    name.localName,
+                ),
         )
 
         val postInc = run {
@@ -102,7 +156,20 @@ class IntegerValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(2, 2),
-            IntegerValue().applyEffect(current, postInc, name.localName),
+            IntegerValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    postInc,
+                    name.localName,
+                ),
         )
 
         val preDec = run {
@@ -114,7 +181,20 @@ class IntegerValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(0, 0),
-            IntegerValue().applyEffect(current, preDec, name.localName),
+            IntegerValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    preDec,
+                    name.localName,
+                ),
         )
 
         val postDec = run {
@@ -126,7 +206,20 @@ class IntegerValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(0, 0),
-            IntegerValue().applyEffect(current, postDec, name.localName),
+            IntegerValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    postDec,
+                    name.localName,
+                ),
         )
 
         val wrongName = run {
@@ -138,7 +231,20 @@ class IntegerValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(1, 1),
-            IntegerValue().applyEffect(current, wrongName, name.localName),
+            IntegerValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    wrongName,
+                    name.localName,
+                ),
         )
 
         val wrongCode = run {
@@ -150,7 +256,20 @@ class IntegerValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(1, 1),
-            IntegerValue().applyEffect(current, wrongCode, name.localName),
+            IntegerValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    wrongCode,
+                    name.localName,
+                ),
         )
     }
 
@@ -169,7 +288,20 @@ class IntegerValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(3, 3),
-            IntegerValue().applyEffect(current, assignLiteral, name.localName),
+            IntegerValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    assignLiteral,
+                    name.localName,
+                ),
         )
 
         val assignFallback = run {
@@ -182,7 +314,20 @@ class IntegerValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(NEGATIVE_INFINITE, INFINITE),
-            IntegerValue().applyEffect(current, assignFallback, name.localName),
+            IntegerValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    assignFallback,
+                    name.localName,
+                ),
         )
 
         val assignPlusLiteral = run {
@@ -198,7 +343,20 @@ class IntegerValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(4, 4),
-            IntegerValue().applyEffect(current, assignPlusLiteral, name.localName),
+            IntegerValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    assignPlusLiteral,
+                    name.localName,
+                ),
         )
 
         val assignPlusFallback = run {
@@ -211,7 +369,20 @@ class IntegerValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(NEGATIVE_INFINITE, INFINITE),
-            IntegerValue().applyEffect(current, assignPlusFallback, name.localName),
+            IntegerValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    assignPlusFallback,
+                    name.localName,
+                ),
         )
 
         val assignMinusLiteral = run {
@@ -227,7 +398,20 @@ class IntegerValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(-2, -2),
-            IntegerValue().applyEffect(current, assignMinusLiteral, name.localName),
+            IntegerValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    assignMinusLiteral,
+                    name.localName,
+                ),
         )
 
         val assignMinusFallback = run {
@@ -240,7 +424,20 @@ class IntegerValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(NEGATIVE_INFINITE, INFINITE),
-            IntegerValue().applyEffect(current, assignMinusFallback, name.localName),
+            IntegerValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    assignMinusFallback,
+                    name.localName,
+                ),
         )
 
         val assignTimesLiteral = run {
@@ -256,7 +453,20 @@ class IntegerValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(3, 3),
-            IntegerValue().applyEffect(current, assignTimesLiteral, name.localName),
+            IntegerValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    assignTimesLiteral,
+                    name.localName,
+                ),
         )
 
         val assignTimesFallback = run {
@@ -269,7 +479,20 @@ class IntegerValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(NEGATIVE_INFINITE, INFINITE),
-            IntegerValue().applyEffect(current, assignTimesFallback, name.localName),
+            IntegerValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    assignTimesFallback,
+                    name.localName,
+                ),
         )
 
         val assignDivLiteral = run {
@@ -285,7 +508,20 @@ class IntegerValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(0, 0),
-            IntegerValue().applyEffect(current, assignDivLiteral, name.localName),
+            IntegerValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    assignDivLiteral,
+                    name.localName,
+                ),
         )
 
         val assignDivFallback = run {
@@ -298,7 +534,20 @@ class IntegerValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(NEGATIVE_INFINITE, INFINITE),
-            IntegerValue().applyEffect(current, assignDivFallback, name.localName),
+            IntegerValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    assignDivFallback,
+                    name.localName,
+                ),
         )
 
         val assignModLiteral = run {
@@ -314,7 +563,20 @@ class IntegerValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(1, 1),
-            IntegerValue().applyEffect(current, assignModLiteral, name.localName),
+            IntegerValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    assignModLiteral,
+                    name.localName,
+                ),
         )
 
         val assignModFallback = run {
@@ -327,7 +589,20 @@ class IntegerValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(NEGATIVE_INFINITE, INFINITE),
-            IntegerValue().applyEffect(current, assignModFallback, name.localName),
+            IntegerValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    assignModFallback,
+                    name.localName,
+                ),
         )
     }
 }

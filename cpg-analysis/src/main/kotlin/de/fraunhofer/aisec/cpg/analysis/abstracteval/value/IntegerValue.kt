@@ -46,18 +46,25 @@ class IntegerValue : Value<LatticeInterval> {
         state: TupleStateElement<Any>,
         node: Node,
         name: String,
+        computeWithoutPush: Boolean,
     ): LatticeInterval {
         if (node is Literal<*>) {
             val value = node.value as? Number ?: return current
             val interval = LatticeInterval.Bounded(value.toLong(), value.toLong())
-            lattice.pushToDeclarationState(state, node, interval)
-            lattice.pushToGeneralState(state, node, interval)
+            if (!computeWithoutPush) {
+                lattice.pushToDeclarationState(state, node, interval)
+                lattice.pushToGeneralState(state, node, interval)
+            }
+            return interval
             // (Re-)Declarations of the Variable
         } else if (node is VariableDeclaration) {
             val initializerValue =
-                node.initializer?.let { state.intervalOf(it) } ?: LatticeInterval.TOP
+                node.initializer?.let {
+                    this.applyEffect(current, lattice, state, it, name, computeWithoutPush = true)
+                } ?: LatticeInterval.TOP
             lattice.pushToDeclarationState(state, node, initializerValue)
             lattice.pushToGeneralState(state, node, initializerValue)
+            return initializerValue
             // Unary Operators
         } else if (node is UnaryOperator) {
             val current = state.intervalOf(node.input)
@@ -232,10 +239,12 @@ class IntegerValue : Value<LatticeInterval> {
                 // Push the new value to the declaration state of the variable
                 lattice.pushToDeclarationState(state, node.lhs.first(), newValue)
                 lattice.pushToGeneralState(state, node, newValue)
+                return newValue
             } else {
                 // We do not support multiple lhs or rhs in the current implementation.
             }
         }
+        lattice.pushToGeneralState(state, node, state.intervalOf(node))
         return current
     }
 }

@@ -25,7 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.*
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.NewIntervalLattice
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
@@ -51,7 +53,20 @@ class ArrayValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(5, 5),
-            ArrayValue().applyEffect(current, correctDeclaration, name.localName),
+            ArrayValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    correctDeclaration,
+                    name.localName,
+                ),
         )
 
         val wrongNameDeclaration = run {
@@ -64,7 +79,20 @@ class ArrayValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(1, 1),
-            ArrayValue().applyEffect(current, wrongNameDeclaration, name.localName),
+            ArrayValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    wrongNameDeclaration,
+                    name.localName,
+                ),
         )
 
         val noInitializerDeclaration = run {
@@ -74,7 +102,20 @@ class ArrayValueTest {
         }
         assertEquals(
             LatticeInterval.Bounded(1, 1),
-            ArrayValue().applyEffect(current, noInitializerDeclaration, name.localName),
+            ArrayValue()
+                .applyEffect(
+                    current,
+                    TupleState(
+                        DeclarationState(NewIntervalLattice()),
+                        NewIntervalState(NewIntervalLattice()),
+                    ),
+                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
+                        DeclarationStateElement(),
+                        NewIntervalStateElement(),
+                    ),
+                    noInitializerDeclaration,
+                    name.localName,
+                ),
         )
     }
 }
