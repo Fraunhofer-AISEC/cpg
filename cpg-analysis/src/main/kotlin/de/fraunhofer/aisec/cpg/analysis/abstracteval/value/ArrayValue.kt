@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleState
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
@@ -38,7 +40,13 @@ import de.fraunhofer.aisec.cpg.query.value
  * assume that there is no operation that changes an array's size apart from re-declaring it.
  */
 class ArrayValue : Value<LatticeInterval> {
-    override fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval {
+    override fun applyEffect(
+        current: LatticeInterval,
+        lattice: TupleState<Any>,
+        state: TupleStateElement<Any>,
+        node: Node,
+        name: String,
+    ): LatticeInterval {
         // (Re-)Declaration
         if (
             node is VariableDeclaration && node.initializer != null && node.name.localName == name

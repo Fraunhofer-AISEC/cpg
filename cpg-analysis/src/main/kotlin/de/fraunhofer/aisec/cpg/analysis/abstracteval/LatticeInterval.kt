@@ -40,11 +40,17 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
     /** Explicit representation of the bottom element of the lattice. */
     object BOTTOM : LatticeInterval()
 
+    object TOP :
+        LatticeInterval.Bounded(
+            LatticeInterval.Bound.NEGATIVE_INFINITE,
+            LatticeInterval.Bound.INFINITE,
+        )
+
     /**
      * Explicit representation of an interval with a minimal value [lower] and a maximal value
      * [upper].
      */
-    class Bounded(arg1: Bound, arg2: Bound) : LatticeInterval() {
+    open class Bounded(arg1: Bound, arg2: Bound) : LatticeInterval() {
         val lower: Bound
         val upper: Bound
 

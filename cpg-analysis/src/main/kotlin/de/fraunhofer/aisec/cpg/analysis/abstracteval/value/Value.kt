@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleState
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -37,7 +39,13 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
  */
 interface Value<T> {
     /** Applies the effect of a Node to the interval containing its possible values. */
-    fun applyEffect(current: T, node: Node, name: String): T
+    fun applyEffect(
+        current: T,
+        lattice: TupleState<Any>,
+        state: TupleStateElement<Any>,
+        node: Node,
+        name: String,
+    ): T
 
     companion object {
         fun getInitializer(node: Node?): Node? {

@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleState
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
@@ -41,7 +43,13 @@ import de.fraunhofer.aisec.cpg.graph.types.IntegerType
  */
 @Suppress("UNUSED")
 class MutableListValue : Value<LatticeInterval> {
-    override fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval {
+    override fun applyEffect(
+        current: LatticeInterval,
+        lattice: TupleState<Any>,
+        state: TupleStateElement<Any>,
+        node: Node,
+        name: String,
+    ): LatticeInterval {
         if (
             node is VariableDeclaration && node.initializer != null && node.name.localName == name
         ) {

@@ -26,22 +26,24 @@
 package de.fraunhofer.aisec.cpg.analysis.abstracteval
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.*
-import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.functional.*
+import de.fraunhofer.aisec.cpg.passes.objectIdentifier
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
+import kotlin.to
 
-typealias TupleState = TupleLattice<DeclarationStateElement, NewIntervalStateElement>
+typealias TupleState<NodeId> =
+    TupleLattice<DeclarationStateElement<NodeId>, NewIntervalStateElement>
 
-typealias TupleStateElement = TupleLattice.Element<DeclarationStateElement, DeclarationStateElement>
+typealias TupleStateElement<NodeId> =
+    TupleLattice.Element<DeclarationStateElement<NodeId>, NewIntervalStateElement>
 
-typealias DeclarationState = MapLattice<Node, NewIntervalLattice.Element>
+typealias DeclarationState<NodeId> = MapLattice<NodeId, NewIntervalLattice.Element>
 
-typealias DeclarationStateElement = MapLattice.Element<Node, NewIntervalLattice.Element>
+typealias DeclarationStateElement<NodeId> = MapLattice.Element<NodeId, NewIntervalLattice.Element>
 
 typealias NewIntervalState = MapLattice<Node, NewIntervalLattice.Element>
 
@@ -124,13 +126,15 @@ class NewAbstractIntervalEvaluator {
         interval: LatticeInterval = LatticeInterval.BOTTOM, // TODO: Maybe should be top?
     ): LatticeInterval {
         analysisType = type
+        val declarationState = DeclarationState<Any>(NewIntervalLattice())
         val intervalState = NewIntervalState(NewIntervalLattice())
-        val startState = TupleState(DeclarationState(NewIntervalLattice()), intervalState)
+        val startState = TupleState(declarationState, intervalState)
 
         // evaluate effect of each operation on the list until we reach "node"
         val startStateElement = startState.bottom
         val startInterval = startStateElement.second
         intervalState.push(startInterval, start, interval)
+        declarationState.push(startStateElement.first, start, interval)
 
         val finalState = startState.iterateEOG(start.nextEOGEdges, startStateElement, ::handleNode)
         return finalState.second.get(targetNode)?.element ?: LatticeInterval.BOTTOM
@@ -146,10 +150,10 @@ class NewAbstractIntervalEvaluator {
      * @return The updated state after handling the current node
      */
     private fun handleNode(
-        lattice: Lattice<TupleStateElement>,
+        lattice: Lattice<TupleStateElement<Any>>,
         currentEdge: EvaluationOrder,
-        currentState: TupleStateElement,
-    ): TupleStateElement {
+        currentState: TupleStateElement<Any>,
+    ): TupleStateElement<Any> {
         val currentNode = currentEdge.end
         var newState = currentState
 
@@ -160,28 +164,58 @@ class NewAbstractIntervalEvaluator {
         return Value.getInitializer(node)
     }
 
-    private fun calculateEffect(node: Node, state: TupleStateElement): LatticeInterval {
-        val currentInterval =
-            if (
-                node is Reference &&
-                    (node.access == AccessValues.READ || node.access == AccessValues.READWRITE)
-            ) {
-                val prevDFGs =
-                    node.prevDFGEdges
-                        .filter { it.granularity is FullDataflowGranularity }
-                        .map { it.start }
-                prevDFGs.fold(LatticeInterval.BOTTOM) { acc: LatticeInterval, prevNode ->
-                    acc.meet(state.first[prevNode]?.element ?: LatticeInterval.BOTTOM)
-                }
-            } else {
-                state.first[node]?.element
-                    ?: LatticeInterval.Bounded(
-                        LatticeInterval.Bound.NEGATIVE_INFINITE,
-                        LatticeInterval.Bound.INFINITE,
-                    )
-            }
-        return analysisType.createInstance().applyEffect(currentInterval, node, "")
+    private fun calculateEffect(
+        node: Node,
+        lattice: TupleState<Any>,
+        state: TupleStateElement<Any>,
+    ): LatticeInterval {
+        val currentInterval = state.intervalOf(node)
+        return analysisType.createInstance().applyEffect(currentInterval, lattice, state, node, "")
     }
+}
+
+fun <NodeId> TupleStateElement<NodeId>.intervalOf(node: Node): LatticeInterval {
+    val id = (node.objectIdentifier() as? NodeId) ?: node as? NodeId ?: TODO()
+    return this.first[id]?.element ?: LatticeInterval.TOP
+}
+
+fun <NodeId> TupleState<NodeId>.pushToDeclarationState(
+    current: TupleStateElement<NodeId>,
+    node: Node,
+    interval: LatticeInterval,
+): TupleStateElement<NodeId> {
+    val id = (node.objectIdentifier() as? NodeId) ?: node as NodeId ?: TODO()
+    this.innerLattice1.lub(
+        current.first,
+        DeclarationStateElement(id to NewIntervalLattice.Element(interval)),
+        allowModify = true,
+    )
+    return current
+}
+
+fun <NodeId> TupleState<NodeId>.pushToGeneralState(
+    current: TupleStateElement<NodeId>,
+    node: Node,
+    interval: LatticeInterval,
+): TupleStateElement<NodeId> {
+    this.innerLattice2.lub(
+        current.second,
+        NewIntervalStateElement(node to NewIntervalLattice.Element(interval)),
+        allowModify = true,
+    )
+    return current
+}
+
+private fun <NodeId> DeclarationState<NodeId>.push(
+    current: DeclarationStateElement<NodeId>,
+    start: NodeId,
+    interval: LatticeInterval,
+) {
+    this.lub(
+        current,
+        DeclarationStateElement(start to NewIntervalLattice.Element(interval)),
+        allowModify = true,
+    )
 }
 
 private fun NewIntervalState.push(
@@ -189,5 +223,9 @@ private fun NewIntervalState.push(
     start: Node,
     interval: LatticeInterval,
 ) {
-    this.lub(current, NewIntervalStateElement(start to NewIntervalLattice.Element(interval)))
+    this.lub(
+        current,
+        NewIntervalStateElement(start to NewIntervalLattice.Element(interval)),
+        allowModify = true,
+    )
 }

@@ -26,30 +26,43 @@
 package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleState
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.intervalOf
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToDeclarationState
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToGeneralState
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 
 /** This class implements the [Value] interface for Integer values. */
 class IntegerValue : Value<LatticeInterval> {
-    override fun applyEffect(current: LatticeInterval, node: Node, name: String): LatticeInterval {
-        // (Re-)Declarations of the Variable
-        if (
-            node is VariableDeclaration && node.initializer != null && node.name.localName == name
-        ) {
-            val initValue =
-                when (val init = node.initializer) {
-                    is Literal<*> -> (init.value as? Number)?.toLong() ?: TODO()
-                    else -> TODO()
-                }
-            return LatticeInterval.Bounded(initValue, initValue)
-        }
-        // Unary Operators
-        if (node is UnaryOperator) {
-            if (node.input.code == name) {
-                return when (node.operatorCode) {
+    override fun applyEffect(
+        current: LatticeInterval,
+        lattice: TupleState<Any>,
+        state: TupleStateElement<Any>,
+        node: Node,
+        name: String,
+    ): LatticeInterval {
+        if (node is Literal<*>) {
+            val value = node.value as? Number ?: return current
+            val interval = LatticeInterval.Bounded(value.toLong(), value.toLong())
+            lattice.pushToDeclarationState(state, node, interval)
+            lattice.pushToGeneralState(state, node, interval)
+            // (Re-)Declarations of the Variable
+        } else if (node is VariableDeclaration) {
+            val initializerValue =
+                node.initializer?.let { state.intervalOf(it) } ?: LatticeInterval.TOP
+            lattice.pushToDeclarationState(state, node, initializerValue)
+            lattice.pushToGeneralState(state, node, initializerValue)
+            // Unary Operators
+        } else if (node is UnaryOperator) {
+            val current = state.intervalOf(node.input)
+            val newValue =
+                when (node.operatorCode) {
                     "++" -> {
                         val oneInterval = LatticeInterval.Bounded(1, 1)
                         current + oneInterval
@@ -60,127 +73,167 @@ class IntegerValue : Value<LatticeInterval> {
                     }
                     else -> current
                 }
-            }
+            lattice.pushToDeclarationState(state, node.input, newValue)
+            lattice.pushToGeneralState(state, node, newValue)
+            return newValue
+            // Binary Operators
+        } else if (node is BinaryOperator) {
+            val lhsValue = state.intervalOf(node.lhs)
+            val rhsValue = state.intervalOf(node.rhs)
+            val newValue =
+                when (node.operatorCode) {
+                    "+" -> {
+                        lhsValue + rhsValue
+                    }
+                    "-" -> {
+                        lhsValue - rhsValue
+                    }
+                    "*" -> {
+                        lhsValue * rhsValue
+                    }
+                    "/" -> {
+                        lhsValue / rhsValue
+                    }
+                    "%" -> {
+                        lhsValue % rhsValue
+                    }
+
+                    "<" -> {
+                        if (
+                            lhsValue is LatticeInterval.Bounded &&
+                                rhsValue is LatticeInterval.Bounded
+                        ) {
+                            if (lhsValue.lower > rhsValue.upper) {
+                                LatticeInterval.Bounded(0, 0)
+                            } else if (lhsValue.upper < rhsValue.lower) {
+                                LatticeInterval.Bounded(1, 1)
+                            } else {
+                                LatticeInterval.Bounded(0, 1)
+                            }
+                        } else {
+                            LatticeInterval.TOP // Cannot determine bounds
+                        }
+                    }
+                    "<=" -> {
+                        if (
+                            lhsValue is LatticeInterval.Bounded &&
+                                rhsValue is LatticeInterval.Bounded
+                        ) {
+                            if (lhsValue.lower >= rhsValue.upper) {
+                                LatticeInterval.Bounded(0, 0)
+                            } else if (lhsValue.upper <= rhsValue.lower) {
+                                LatticeInterval.Bounded(1, 1)
+                            } else {
+                                LatticeInterval.Bounded(0, 1)
+                            }
+                        } else {
+                            LatticeInterval.TOP // Cannot determine bounds
+                        }
+                    }
+                    ">" -> {
+                        if (
+                            lhsValue is LatticeInterval.Bounded &&
+                                rhsValue is LatticeInterval.Bounded
+                        ) {
+                            if (lhsValue.lower < rhsValue.upper) {
+                                LatticeInterval.Bounded(0, 0)
+                            } else if (lhsValue.upper > rhsValue.lower) {
+                                LatticeInterval.Bounded(1, 1)
+                            } else {
+                                LatticeInterval.Bounded(0, 1)
+                            }
+                        } else {
+                            LatticeInterval.TOP // Cannot determine bounds
+                        }
+                    }
+                    ">=" -> {
+                        if (
+                            lhsValue is LatticeInterval.Bounded &&
+                                rhsValue is LatticeInterval.Bounded
+                        ) {
+                            if (lhsValue.lower <= rhsValue.upper) {
+                                LatticeInterval.Bounded(0, 0)
+                            } else if (lhsValue.upper >= rhsValue.lower) {
+                                LatticeInterval.Bounded(1, 1)
+                            } else {
+                                LatticeInterval.Bounded(0, 1)
+                            }
+                        } else {
+                            LatticeInterval.TOP // Cannot determine bounds
+                        }
+                    }
+                    "==" -> {
+                        if (
+                            lhsValue is LatticeInterval.Bounded &&
+                                rhsValue is LatticeInterval.Bounded
+                        ) {
+                            if (
+                                lhsValue.upper == lhsValue.lower &&
+                                    rhsValue.lower == rhsValue.upper &&
+                                    lhsValue.lower == rhsValue.lower
+                            ) {
+                                LatticeInterval.Bounded(1, 1)
+                            } else if (
+                                lhsValue.upper < rhsValue.lower || rhsValue.upper < lhsValue.lower
+                            ) {
+                                LatticeInterval.Bounded(0, 0)
+                            } else {
+                                LatticeInterval.Bounded(0, 1)
+                            }
+                        } else {
+                            LatticeInterval.TOP // Cannot determine bounds
+                        }
+                    }
+                    "!=" -> {
+                        if (
+                            lhsValue is LatticeInterval.Bounded &&
+                                rhsValue is LatticeInterval.Bounded
+                        ) {
+                            if (
+                                lhsValue.upper == lhsValue.lower &&
+                                    rhsValue.lower == rhsValue.upper &&
+                                    lhsValue.lower == rhsValue.lower
+                            ) {
+                                LatticeInterval.Bounded(0, 0)
+                            } else if (
+                                lhsValue.upper < rhsValue.lower || rhsValue.upper < lhsValue.lower
+                            ) {
+                                LatticeInterval.Bounded(1, 1)
+                            } else {
+                                LatticeInterval.Bounded(0, 1)
+                            }
+                        } else {
+                            LatticeInterval.TOP // Cannot determine bounds
+                        }
+                    }
+                    else -> TODO("Unsupported operator: ${node.operatorCode}")
+                }
+            lattice.pushToGeneralState(state, node, newValue)
+            lattice.pushToDeclarationState(state, node, newValue)
+            return newValue
         }
         // Assignments and combined assign expressions
-        // TODO: we should aim to evaluate the right hand side expression for all cases!
-        //  currently evaluation only works correctly for literals
         else if (node is AssignExpression) {
-            if (node.lhs.any { it.code == name }) {
-                return when (node.operatorCode) {
-                    "=" -> {
-                        // If the rhs is only a literal use this exact value
-                        val value =
-                            ((node.rhs.getOrNull(0) as? Literal<*>)?.value as? Number)?.toLong()
-                        val newInterval =
-                            if (value != null) {
-                                LatticeInterval.Bounded(value, value)
-                            }
-                            // Per default set the bounds to unknown
-                            else {
-                                LatticeInterval.Bounded(
-                                    LatticeInterval.Bound.NEGATIVE_INFINITE,
-                                    LatticeInterval.Bound.INFINITE,
-                                )
-                            }
-                        newInterval
+            if (node.lhs.size == 1 && node.rhs.size == 1) {
+                // The lhs and rhs must already have been evaluated before reaching the operator.
+                // This should be guaranteed by the evaluation order graph.
+                val rhsValue = state.intervalOf(node.rhs[0])
+                val lhsValue = state.intervalOf(node.lhs[0])
+                val newValue =
+                    when (node.operatorCode) {
+                        "=" -> rhsValue
+                        "+=" -> lhsValue + rhsValue
+                        "-=" -> lhsValue - rhsValue
+                        "*=" -> lhsValue * rhsValue
+                        "/=" -> lhsValue / rhsValue
+                        "%=" -> lhsValue % rhsValue
+                        else -> TODO("Unsupported operator: ${node.operatorCode}")
                     }
-                    "+=" -> {
-                        // If the rhs is only a literal we subtract this exact value
-                        val value =
-                            ((node.rhs.getOrNull(0) as? Literal<*>)?.value as? Number)?.toLong()
-                        val newInterval =
-                            if (value != null) {
-                                val valueInterval = LatticeInterval.Bounded(value, value)
-                                current + valueInterval
-                            }
-                            // Per default lose all information
-                            else {
-                                val joinInterval: LatticeInterval =
-                                    LatticeInterval.Bounded(
-                                        LatticeInterval.Bound.NEGATIVE_INFINITE,
-                                        LatticeInterval.Bound.INFINITE,
-                                    )
-                                current.join(joinInterval)
-                            }
-                        newInterval
-                    }
-                    "-=" -> {
-                        // If the rhs is only a literal we subtract this exact value
-                        val value =
-                            ((node.rhs.getOrNull(0) as? Literal<*>)?.value as? Number)?.toLong()
-                        val newInterval =
-                            if (value != null) {
-                                val valueInterval = LatticeInterval.Bounded(value, value)
-                                current - valueInterval
-                            }
-                            // Per default lose all information
-                            else {
-                                val joinInterval: LatticeInterval =
-                                    LatticeInterval.Bounded(
-                                        LatticeInterval.Bound.NEGATIVE_INFINITE,
-                                        LatticeInterval.Bound.INFINITE,
-                                    )
-                                current.join(joinInterval)
-                            }
-                        newInterval
-                    }
-                    "*=" -> {
-                        // If the rhs is only a literal we subtract this exact value
-                        val value =
-                            ((node.rhs.getOrNull(0) as? Literal<*>)?.value as? Number)?.toLong()
-                        val newInterval =
-                            if (value != null) {
-                                val valueInterval = LatticeInterval.Bounded(value, value)
-                                current * valueInterval
-                            }
-                            // Per default lose all information
-                            else {
-                                LatticeInterval.Bounded(
-                                    LatticeInterval.Bound.NEGATIVE_INFINITE,
-                                    LatticeInterval.Bound.INFINITE,
-                                )
-                            }
-                        newInterval
-                    }
-                    "/=" -> {
-                        // If the rhs is only a literal we subtract this exact value
-                        val value =
-                            ((node.rhs.getOrNull(0) as? Literal<*>)?.value as? Number)?.toLong()
-                        val newInterval =
-                            if (value != null) {
-                                val valueInterval = LatticeInterval.Bounded(value, value)
-                                current / valueInterval
-                            }
-                            // Per default lose all information
-                            else {
-                                LatticeInterval.Bounded(
-                                    LatticeInterval.Bound.NEGATIVE_INFINITE,
-                                    LatticeInterval.Bound.INFINITE,
-                                )
-                            }
-                        newInterval
-                    }
-                    "%=" -> {
-                        // If the rhs is only a literal we subtract this exact value
-                        val value =
-                            ((node.rhs.getOrNull(0) as? Literal<*>)?.value as? Number)?.toLong()
-                        val newInterval =
-                            if (value != null) {
-                                val valueInterval = LatticeInterval.Bounded(value, value)
-                                current % valueInterval
-                            }
-                            // Per default lose all information
-                            else {
-                                LatticeInterval.Bounded(
-                                    LatticeInterval.Bound.NEGATIVE_INFINITE,
-                                    LatticeInterval.Bound.INFINITE,
-                                )
-                            }
-                        newInterval
-                    }
-                    else -> current
-                }
+                // Push the new value to the declaration state of the variable
+                lattice.pushToDeclarationState(state, node.lhs.first(), newValue)
+                lattice.pushToGeneralState(state, node, newValue)
+            } else {
+                // We do not support multiple lhs or rhs in the current implementation.
             }
         }
         return current

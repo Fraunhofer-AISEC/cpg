@@ -214,7 +214,18 @@ class AbstractIntervalEvaluator {
                         LatticeInterval.Bound.INFINITE,
                     )
             }
-        return targetType.createInstance().applyEffect(currentInterval, node, targetName)
+        return targetType
+            .createInstance()
+            .applyEffect(
+                currentInterval,
+                TupleState<Node>(
+                    DeclarationState(NewIntervalLattice()),
+                    NewIntervalState(NewIntervalLattice()),
+                ),
+                TupleStateElement(DeclarationStateElement(), NewIntervalStateElement()),
+                node,
+                targetName,
+            )
     }
 
     /**
