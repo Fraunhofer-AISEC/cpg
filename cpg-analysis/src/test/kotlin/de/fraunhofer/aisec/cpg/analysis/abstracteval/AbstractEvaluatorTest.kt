@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.IntegerValue
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.testcases.AbstractEvaluationTests
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -179,7 +178,6 @@ class AbstractEvaluatorTest {
 
        b.f(a);
     */
-    @Ignore
     @Test
     fun testLoopInteger() {
         val mainClass = tu.records["Foo"]

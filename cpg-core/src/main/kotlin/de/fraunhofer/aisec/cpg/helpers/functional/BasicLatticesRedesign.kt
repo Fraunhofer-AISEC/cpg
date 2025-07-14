@@ -59,6 +59,30 @@ fun compareMultiple(vararg orders: Order) =
         else -> Order.UNEQUAL
     }
 
+interface HasWidening<T : Lattice.Element> {
+    /**
+     * Computes the widening of [one] and [two]. This is used to ensure that the fixpoint iteration
+     * converges (faster).
+     *
+     * @param one The first element to widen
+     * @param two The second element to widen
+     * @return The widened element
+     */
+    fun widen(one: T, two: T): T
+}
+
+interface HasNarrowing<T : Lattice.Element> {
+    /**
+     * Computes the narrowing of [one] and [two]. This is used to ensure that the fixpoint iteration
+     * converges (faster) without too much overapproximation.
+     *
+     * @param one The first element to narrow
+     * @param two The second element to narrow
+     * @return The narrowed element
+     */
+    fun narrow(one: T, two: T): T
+}
+
 /**
  * A lattice is a partially ordered structure of values of type [T]. [T] could be anything, where
  * common examples are sets, ranges, maps, tuples, but it can also have random names and a new data
@@ -77,6 +101,13 @@ fun compareMultiple(vararg orders: Order) =
  * and currently has no real effect.
  */
 interface Lattice<T : Lattice.Element> {
+    enum class Strategy {
+        PRECISE,
+        WIDENING,
+        WIDENING_NARROWING,
+        NARROWING,
+    }
+
     /**
      * Represents a single element of the [Lattice]. It also provides the functionality to compare
      * and duplicate the element.
@@ -136,6 +167,7 @@ interface Lattice<T : Lattice.Element> {
         startEdges: List<EvaluationOrder>,
         startState: T,
         transformation: (Lattice<T>, EvaluationOrder, T) -> T,
+        strategy: Strategy = Strategy.PRECISE,
     ): T {
         val globalState = IdentityHashMap<EvaluationOrder, T>()
         val finalState: T = this.bottom
@@ -183,9 +215,18 @@ interface Lattice<T : Lattice.Element> {
                 // the state in comparison to the previous time we were there.
 
                 val oldGlobalIt = globalState[it]
+                // TODO: If we're on the loop head (some node is LoopStatement), and we use WIDENING
+                // or
+                // WIDENING_NARROWING, we have to apply the widening/narrowing here (if oldGlobalIt
+                // is not null).
                 val newGlobalIt =
-                    (oldGlobalIt?.let { this.lub(newState, it, isNotNearStartOrEndOfBasicBlock) }
-                        ?: newState)
+                    (oldGlobalIt?.let {
+                        this.lub(
+                            one = newState,
+                            two = it,
+                            allowModify = isNotNearStartOrEndOfBasicBlock,
+                        )
+                    } ?: newState)
                 globalState[it] = newGlobalIt
                 if (
                     it !in edgesList &&

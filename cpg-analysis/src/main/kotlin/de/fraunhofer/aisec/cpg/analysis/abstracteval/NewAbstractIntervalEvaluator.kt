@@ -50,7 +50,10 @@ typealias NewIntervalState = MapLattice<Node, NewIntervalLattice.Element>
 
 typealias NewIntervalStateElement = MapLattice.Element<Node, NewIntervalLattice.Element>
 
-class NewIntervalLattice() : Lattice<NewIntervalLattice.Element> {
+class NewIntervalLattice() :
+    Lattice<NewIntervalLattice.Element>,
+    HasWidening<NewIntervalLattice.Element>,
+    HasNarrowing<NewIntervalLattice.Element> {
     override var elements: Set<Element> = setOf()
     override val bottom: Element = Element(LatticeInterval.BOTTOM)
 
@@ -103,6 +106,14 @@ class NewIntervalLattice() : Lattice<NewIntervalLattice.Element> {
 
     override fun duplicate(one: Element): Element {
         return one.duplicate()
+    }
+
+    override fun widen(one: Element, two: Element): Element {
+        return Element(one.element.widen(two.element))
+    }
+
+    override fun narrow(one: Element, two: Element): Element {
+        return Element(one.element.narrow(two.element))
     }
 
     class Element(var element: LatticeInterval) : Lattice.Element {
@@ -174,7 +185,13 @@ class NewAbstractIntervalEvaluator {
         intervalState.push(startInterval, start, interval)
         declarationState.push(startStateElement.first, start, interval)
 
-        val finalState = startState.iterateEOG(start.nextEOGEdges, startStateElement, ::handleNode)
+        val finalState =
+            startState.iterateEOG(
+                start.nextEOGEdges,
+                startStateElement,
+                ::handleNode,
+                strategy = Lattice.Strategy.WIDENING_NARROWING,
+            )
         return finalState.second.get(targetNode)?.element ?: LatticeInterval.BOTTOM
     }
 
@@ -195,22 +212,11 @@ class NewAbstractIntervalEvaluator {
         val currentNode = currentEdge.end
         val newState = currentState
 
-        calculateEffect(currentNode, lattice as TupleState<Any>, newState)
+        analysisType
+            .createInstance()
+            .applyEffect(lattice = lattice as TupleState<Any>, state = newState, node = currentNode)
 
         return newState
-    }
-
-    private fun getInitializerOf(node: Node): Node? {
-        return Value.getInitializer(node)
-    }
-
-    private fun calculateEffect(
-        node: Node,
-        lattice: TupleState<Any>,
-        state: TupleStateElement<Any>,
-    ): LatticeInterval {
-        val currentInterval = state.intervalOf(node)
-        return analysisType.createInstance().applyEffect(currentInterval, lattice, state, node, "")
     }
 }
 
