@@ -44,13 +44,15 @@ import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 @Suppress("UNUSED")
 class MutableListValue : Value<LatticeInterval> {
     override fun applyEffect(
-        current: LatticeInterval,
+        current: LatticeInterval?,
         lattice: TupleState<Any>,
         state: TupleStateElement<Any>,
         node: Node,
-        name: String,
+        name: String?,
         computeWithoutPush: Boolean,
     ): LatticeInterval {
+        current ?: TODO()
+
         if (
             node is VariableDeclaration && node.initializer != null && node.name.localName == name
         ) {

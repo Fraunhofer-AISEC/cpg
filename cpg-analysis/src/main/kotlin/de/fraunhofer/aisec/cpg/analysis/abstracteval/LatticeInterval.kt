@@ -54,7 +54,10 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         val lower: Bound
         val upper: Bound
 
-        constructor(arg1: Long, arg2: Long) : this(Bound.Value(arg1), Bound.Value(arg2))
+        constructor(
+            arg1: Number,
+            arg2: Number,
+        ) : this(Bound.Value(arg1.toLong()), Bound.Value(arg2.toLong()))
 
         constructor(arg1: Long, arg2: Bound) : this(Bound.Value(arg1), arg2)
 

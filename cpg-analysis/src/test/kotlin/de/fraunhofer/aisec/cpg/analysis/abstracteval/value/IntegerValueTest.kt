@@ -35,574 +35,446 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.passes.objectIdentifier
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class IntegerValueTest {
     private val name = Name("testVariable")
     private val current = LatticeInterval.Bounded(1, 1)
+    val lattice =
+        TupleState<Any>(
+            DeclarationState(NewIntervalLattice()),
+            NewIntervalState(NewIntervalLattice()),
+        )
 
     @Test
     fun applyDeclarationTest() {
-        val correctDeclaration = run {
-            val decl = VariableDeclaration()
-            val init = Literal<Int>()
-            init.value = 5
-            decl.name = name
-            decl.initializer = init
-            decl
-        }
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val declaration =
+            VariableDeclaration().apply {
+                name = this@IntegerValueTest.name
+                initializer =
+                    Literal<Int>().apply {
+                        value = 5
+                        this.value?.let { value ->
+                            startState.first[this.objectIdentifier()] =
+                                NewIntervalLattice.Element(LatticeInterval.Bounded(value, value))
+                        }
+                    }
+            }
         assertEquals(
             LatticeInterval.Bounded(5, 5),
-            IntegerValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    correctDeclaration,
-                    name.localName,
-                ),
-        )
-
-        val wrongNameDeclaration = run {
-            val decl = VariableDeclaration()
-            val init = Literal<Int>()
-            init.value = 5
-            decl.name = Name("otherVariable")
-            decl.initializer = init
-            decl
-        }
-        assertEquals(
-            LatticeInterval.Bounded(1, 1),
-            IntegerValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    wrongNameDeclaration,
-                    name.localName,
-                ),
-        )
-
-        val noInitializerDeclaration = run {
-            val decl = VariableDeclaration()
-            decl.name = name
-            decl
-        }
-        assertEquals(
-            LatticeInterval.Bounded(1, 1),
-            IntegerValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    noInitializerDeclaration,
-                    name.localName,
-                ),
+            IntegerValue().applyEffect(lattice = lattice, state = startState, node = declaration),
         )
     }
 
     @Test
-    fun applyUnaryOperator() {
-        val preInc = run {
-            val op = UnaryOperator()
-            op.isPrefix = true
-            op.operatorCode = "++"
-            op.input.code = name.localName
-            op
-        }
+    fun applyUninitializedDeclarationTest() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val declaration = VariableDeclaration().apply { name = this@IntegerValueTest.name }
+        assertEquals(
+            LatticeInterval.Bounded(NEGATIVE_INFINITE, INFINITE),
+            IntegerValue().applyEffect(lattice = lattice, state = startState, node = declaration),
+        )
+    }
+
+    @Test
+    fun applyPrefixIncrement() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val reference =
+            Reference().apply {
+                name = this@IntegerValueTest.name
+                refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
+                startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
+            }
+        val unaryOperator =
+            UnaryOperator().apply {
+                isPrefix = true
+                operatorCode = "++"
+                input = reference
+            }
         assertEquals(
             LatticeInterval.Bounded(2, 2),
-            IntegerValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    preInc,
-                    name.localName,
-                ),
+            IntegerValue().applyEffect(lattice = lattice, state = startState, node = unaryOperator),
         )
+    }
 
-        val postInc = run {
-            val op = UnaryOperator()
-            op.isPrefix = false
-            op.operatorCode = "++"
-            op.input.code = name.localName
-            op
-        }
+    @Test
+    fun applyPostfixIncrement() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val reference =
+            Reference().apply {
+                name = this@IntegerValueTest.name
+                refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
+                startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
+            }
+        val unaryOperator =
+            UnaryOperator().apply {
+                isPrefix = false
+                operatorCode = "++"
+                input = reference
+            }
         assertEquals(
             LatticeInterval.Bounded(2, 2),
-            IntegerValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    postInc,
-                    name.localName,
-                ),
+            IntegerValue().applyEffect(lattice = lattice, state = startState, node = unaryOperator),
         )
+    }
 
-        val preDec = run {
-            val op = UnaryOperator()
-            op.isPrefix = true
-            op.operatorCode = "--"
-            op.input.code = name.localName
-            op
-        }
+    @Test
+    fun applyPrefixDecrement() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val reference =
+            Reference().apply {
+                name = this@IntegerValueTest.name
+                refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
+                startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
+            }
+        val unaryOperator =
+            UnaryOperator().apply {
+                isPrefix = true
+                operatorCode = "--"
+                input = reference
+            }
         assertEquals(
             LatticeInterval.Bounded(0, 0),
-            IntegerValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    preDec,
-                    name.localName,
-                ),
+            IntegerValue().applyEffect(lattice = lattice, state = startState, node = unaryOperator),
         )
+    }
 
-        val postDec = run {
-            val op = UnaryOperator()
-            op.isPrefix = false
-            op.operatorCode = "--"
-            op.input.code = name.localName
-            op
-        }
+    @Test
+    fun applyPostfixIncrementation() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val reference =
+            Reference().apply {
+                name = this@IntegerValueTest.name
+                refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
+                startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
+            }
+        val unaryOperator =
+            UnaryOperator().apply {
+                isPrefix = false
+                operatorCode = "--"
+                input = reference
+            }
         assertEquals(
             LatticeInterval.Bounded(0, 0),
-            IntegerValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    postDec,
-                    name.localName,
-                ),
+            IntegerValue().applyEffect(lattice = lattice, state = startState, node = unaryOperator),
         )
+    }
 
-        val wrongName = run {
-            val op = UnaryOperator()
-            op.isPrefix = false
-            op.operatorCode = "--"
-            op.input.code = "otherVariable"
-            op
-        }
+    @Test
+    fun applyUnaryStar() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val reference =
+            Reference().apply {
+                name = this@IntegerValueTest.name
+                refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
+                startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
+            }
+        val unaryOperator =
+            UnaryOperator().apply {
+                operatorCode = "*"
+                input = reference
+            }
         assertEquals(
             LatticeInterval.Bounded(1, 1),
-            IntegerValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    wrongName,
-                    name.localName,
-                ),
-        )
-
-        val wrongCode = run {
-            val op = UnaryOperator()
-            op.isPrefix = false
-            op.operatorCode = "+-"
-            op.input.code = name.localName
-            op
-        }
-        assertEquals(
-            LatticeInterval.Bounded(1, 1),
-            IntegerValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    wrongCode,
-                    name.localName,
-                ),
+            IntegerValue().applyEffect(lattice = lattice, state = startState, node = unaryOperator),
         )
     }
 
     @Test
     fun applyAssignExpression() {
-        val assignLiteral = run {
-            val expr = AssignExpression()
-            val ref = Reference()
-            val lit = Literal<Int>()
-            lit.value = 3
-            ref.code = name.localName
-            expr.operatorCode = "="
-            expr.lhs.add(0, ref)
-            expr.rhs.add(0, lit)
-            expr
-        }
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val assignment =
+            AssignExpression().apply {
+                operatorCode = "="
+                lhs +=
+                    Reference().apply {
+                        name = this@IntegerValueTest.name
+                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
+                    }
+                rhs +=
+                    Literal<Int>().apply {
+                        value = 3
+                        this.value?.let { value ->
+                            startState.first[this.objectIdentifier()] =
+                                NewIntervalLattice.Element(LatticeInterval.Bounded(value, value))
+                        }
+                    }
+            }
         assertEquals(
             LatticeInterval.Bounded(3, 3),
-            IntegerValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    assignLiteral,
-                    name.localName,
-                ),
+            IntegerValue().applyEffect(lattice = lattice, state = startState, node = assignment),
         )
+    }
 
-        val assignFallback = run {
-            val expr = AssignExpression()
-            val ref = Reference()
-            ref.code = name.localName
-            expr.operatorCode = "="
-            expr.lhs.add(0, ref)
-            expr
-        }
+    @Test
+    fun testAssignUnresolved() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val assignment =
+            AssignExpression().apply {
+                operatorCode = "="
+                lhs +=
+                    Reference().apply {
+                        name = this@IntegerValueTest.name
+                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
+                    }
+            }
         assertEquals(
             LatticeInterval.Bounded(NEGATIVE_INFINITE, INFINITE),
-            IntegerValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    assignFallback,
-                    name.localName,
-                ),
+            IntegerValue().applyEffect(lattice = lattice, state = startState, node = assignment),
         )
+    }
 
-        val assignPlusLiteral = run {
-            val expr = AssignExpression()
-            val ref = Reference()
-            val lit = Literal<Int>()
-            lit.value = 3
-            ref.code = name.localName
-            expr.operatorCode = "+="
-            expr.lhs.add(0, ref)
-            expr.rhs.add(0, lit)
-            expr
-        }
+    @Test
+    fun testAssignPlusLiteral() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val assignment =
+            AssignExpression().apply {
+                operatorCode = "+="
+                lhs +=
+                    Reference().apply {
+                        name = this@IntegerValueTest.name
+                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
+                    }
+                rhs +=
+                    Literal<Int>().apply {
+                        value = 3
+                        this.value?.let { value ->
+                            startState.first[this.objectIdentifier()] =
+                                NewIntervalLattice.Element(LatticeInterval.Bounded(value, value))
+                        }
+                    }
+            }
         assertEquals(
             LatticeInterval.Bounded(4, 4),
-            IntegerValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    assignPlusLiteral,
-                    name.localName,
-                ),
+            IntegerValue().applyEffect(lattice = lattice, state = startState, node = assignment),
         )
+    }
 
-        val assignPlusFallback = run {
-            val expr = AssignExpression()
-            val ref = Reference()
-            ref.code = name.localName
-            expr.operatorCode = "+="
-            expr.lhs.add(0, ref)
-            expr
-        }
+    @Test
+    fun testAssignPlusUnresolved() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val assignment =
+            AssignExpression().apply {
+                operatorCode = "+="
+                lhs +=
+                    Reference().apply {
+                        name = this@IntegerValueTest.name
+                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
+                    }
+            }
         assertEquals(
             LatticeInterval.Bounded(NEGATIVE_INFINITE, INFINITE),
-            IntegerValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    assignPlusFallback,
-                    name.localName,
-                ),
+            IntegerValue().applyEffect(lattice = lattice, state = startState, node = assignment),
         )
+    }
 
-        val assignMinusLiteral = run {
-            val expr = AssignExpression()
-            val ref = Reference()
-            val lit = Literal<Int>()
-            lit.value = 3
-            ref.code = name.localName
-            expr.operatorCode = "-="
-            expr.lhs.add(0, ref)
-            expr.rhs.add(0, lit)
-            expr
-        }
+    @Test
+    fun testAssignMinusLiteral() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val assignment =
+            AssignExpression().apply {
+                operatorCode = "-="
+                lhs +=
+                    Reference().apply {
+                        name = this@IntegerValueTest.name
+                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
+                    }
+                rhs +=
+                    Literal<Int>().apply {
+                        value = 3
+                        this.value?.let { value ->
+                            startState.first[this.objectIdentifier()] =
+                                NewIntervalLattice.Element(LatticeInterval.Bounded(value, value))
+                        }
+                    }
+            }
         assertEquals(
             LatticeInterval.Bounded(-2, -2),
-            IntegerValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    assignMinusLiteral,
-                    name.localName,
-                ),
+            IntegerValue().applyEffect(lattice = lattice, state = startState, node = assignment),
         )
+    }
 
-        val assignMinusFallback = run {
-            val expr = AssignExpression()
-            val ref = Reference()
-            ref.code = name.localName
-            expr.operatorCode = "-="
-            expr.lhs.add(0, ref)
-            expr
-        }
+    @Test
+    fun testAssignMinusUnresolved() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val assignment =
+            AssignExpression().apply {
+                operatorCode = "-="
+                lhs +=
+                    Reference().apply {
+                        name = this@IntegerValueTest.name
+                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
+                    }
+            }
         assertEquals(
             LatticeInterval.Bounded(NEGATIVE_INFINITE, INFINITE),
-            IntegerValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    assignMinusFallback,
-                    name.localName,
-                ),
+            IntegerValue().applyEffect(lattice = lattice, state = startState, node = assignment),
         )
+    }
 
-        val assignTimesLiteral = run {
-            val expr = AssignExpression()
-            val ref = Reference()
-            val lit = Literal<Int>()
-            lit.value = 3
-            ref.code = name.localName
-            expr.operatorCode = "*="
-            expr.lhs.add(0, ref)
-            expr.rhs.add(0, lit)
-            expr
-        }
+    @Test
+    fun testAssignTimesLiteral() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val assignment =
+            AssignExpression().apply {
+                operatorCode = "*="
+                lhs +=
+                    Reference().apply {
+                        name = this@IntegerValueTest.name
+                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
+                    }
+                rhs +=
+                    Literal<Int>().apply {
+                        value = 3
+                        this.value?.let { value ->
+                            startState.first[this.objectIdentifier()] =
+                                NewIntervalLattice.Element(LatticeInterval.Bounded(value, value))
+                        }
+                    }
+            }
         assertEquals(
             LatticeInterval.Bounded(3, 3),
-            IntegerValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    assignTimesLiteral,
-                    name.localName,
-                ),
+            IntegerValue().applyEffect(lattice = lattice, state = startState, node = assignment),
         )
+    }
 
-        val assignTimesFallback = run {
-            val expr = AssignExpression()
-            val ref = Reference()
-            ref.code = name.localName
-            expr.operatorCode = "*="
-            expr.lhs.add(0, ref)
-            expr
-        }
+    @Test
+    fun testAssignTimesUnresolved() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val assignment =
+            AssignExpression().apply {
+                operatorCode = "*="
+                lhs +=
+                    Reference().apply {
+                        name = this@IntegerValueTest.name
+                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
+                    }
+            }
         assertEquals(
             LatticeInterval.Bounded(NEGATIVE_INFINITE, INFINITE),
-            IntegerValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    assignTimesFallback,
-                    name.localName,
-                ),
+            IntegerValue().applyEffect(lattice = lattice, state = startState, node = assignment),
         )
+    }
 
-        val assignDivLiteral = run {
-            val expr = AssignExpression()
-            val ref = Reference()
-            val lit = Literal<Int>()
-            lit.value = 3
-            ref.code = name.localName
-            expr.operatorCode = "/="
-            expr.lhs.add(0, ref)
-            expr.rhs.add(0, lit)
-            expr
-        }
+    @Test
+    fun testAssignDivLiteral() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val assignment =
+            AssignExpression().apply {
+                operatorCode = "/="
+                lhs +=
+                    Reference().apply {
+                        name = this@IntegerValueTest.name
+                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
+                    }
+                rhs +=
+                    Literal<Int>().apply {
+                        value = 3
+                        this.value?.let { value ->
+                            startState.first[this.objectIdentifier()] =
+                                NewIntervalLattice.Element(LatticeInterval.Bounded(value, value))
+                        }
+                    }
+            }
         assertEquals(
             LatticeInterval.Bounded(0, 0),
-            IntegerValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    assignDivLiteral,
-                    name.localName,
-                ),
+            IntegerValue().applyEffect(lattice = lattice, state = startState, node = assignment),
         )
+    }
 
-        val assignDivFallback = run {
-            val expr = AssignExpression()
-            val ref = Reference()
-            ref.code = name.localName
-            expr.operatorCode = "/="
-            expr.lhs.add(0, ref)
-            expr
-        }
+    @Test
+    fun testAssignDivUnresolved() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val assignment =
+            AssignExpression().apply {
+                operatorCode = "/="
+                lhs +=
+                    Reference().apply {
+                        name = this@IntegerValueTest.name
+                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
+                    }
+            }
         assertEquals(
             LatticeInterval.Bounded(NEGATIVE_INFINITE, INFINITE),
-            IntegerValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    assignDivFallback,
-                    name.localName,
-                ),
+            IntegerValue().applyEffect(lattice = lattice, state = startState, node = assignment),
         )
+    }
 
-        val assignModLiteral = run {
-            val expr = AssignExpression()
-            val ref = Reference()
-            val lit = Literal<Int>()
-            lit.value = 3
-            ref.code = name.localName
-            expr.operatorCode = "%="
-            expr.lhs.add(0, ref)
-            expr.rhs.add(0, lit)
-            expr
-        }
+    @Test
+    fun testAssignModLiteral() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val assignment =
+            AssignExpression().apply {
+                operatorCode = "%="
+                lhs +=
+                    Reference().apply {
+                        name = this@IntegerValueTest.name
+                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
+                    }
+                rhs +=
+                    Literal<Int>().apply {
+                        value = 3
+                        this.value?.let { value ->
+                            startState.first[this.objectIdentifier()] =
+                                NewIntervalLattice.Element(LatticeInterval.Bounded(value, value))
+                        }
+                    }
+            }
         assertEquals(
             LatticeInterval.Bounded(1, 1),
-            IntegerValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    assignModLiteral,
-                    name.localName,
-                ),
+            IntegerValue().applyEffect(lattice = lattice, state = startState, node = assignment),
         )
+    }
 
-        val assignModFallback = run {
-            val expr = AssignExpression()
-            val ref = Reference()
-            ref.code = name.localName
-            expr.operatorCode = "%="
-            expr.lhs.add(0, ref)
-            expr
-        }
+    @Test
+    fun testAssignModUnresolved() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val assignment =
+            AssignExpression().apply {
+                operatorCode = "%="
+                lhs +=
+                    Reference().apply {
+                        name = this@IntegerValueTest.name
+                        refersTo = VariableDeclaration().apply { name = this@IntegerValueTest.name }
+                        startState.first[objectIdentifier()] = NewIntervalLattice.Element(current)
+                    }
+            }
         assertEquals(
             LatticeInterval.Bounded(NEGATIVE_INFINITE, INFINITE),
-            IntegerValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    assignModFallback,
-                    name.localName,
-                ),
+            IntegerValue().applyEffect(lattice = lattice, state = startState, node = assignment),
         )
     }
 }

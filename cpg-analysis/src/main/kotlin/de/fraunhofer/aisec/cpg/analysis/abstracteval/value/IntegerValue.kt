@@ -42,15 +42,16 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 /** This class implements the [Value] interface for Integer values. */
 class IntegerValue : Value<LatticeInterval> {
     override fun applyEffect(
-        current: LatticeInterval,
+        current: LatticeInterval?,
         lattice: TupleState<Any>,
         state: TupleStateElement<Any>,
         node: Node,
-        name: String,
+        name: String?,
         computeWithoutPush: Boolean,
     ): LatticeInterval {
         if (node is Literal<*>) {
-            val value = node.value as? Number ?: return current
+            val value = node.value as? Number ?: return current ?: state.intervalOf(node)
+
             val interval = LatticeInterval.Bounded(value.toLong(), value.toLong())
             if (!computeWithoutPush) {
                 lattice.pushToDeclarationState(state, node, interval)
@@ -246,6 +247,7 @@ class IntegerValue : Value<LatticeInterval> {
             }
         }
         lattice.pushToGeneralState(state, node, state.intervalOf(node))
-        return current
+
+        return state.intervalOf(node)
     }
 }

@@ -41,13 +41,14 @@ import de.fraunhofer.aisec.cpg.query.value
  */
 class ArrayValue : Value<LatticeInterval> {
     override fun applyEffect(
-        current: LatticeInterval,
+        current: LatticeInterval?,
         lattice: TupleState<Any>,
         state: TupleStateElement<Any>,
         node: Node,
-        name: String,
+        name: String?,
         computeWithoutPush: Boolean,
     ): LatticeInterval {
+        current ?: TODO()
         // (Re-)Declaration
         if (
             node is VariableDeclaration && node.initializer != null && node.name.localName == name
