@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.persistence
 
 import com.fasterxml.jackson.annotation.JacksonInject
+import com.fasterxml.jackson.annotation.JsonAutoDetect
+import com.fasterxml.jackson.annotation.PropertyAccessor
 import com.fasterxml.jackson.core.*
 import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
@@ -34,48 +36,25 @@ import com.fasterxml.jackson.databind.deser.ResolvableDeserializer
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.module.SimpleKeyDeserializers
 import com.fasterxml.jackson.databind.module.SimpleModule
-import com.fasterxml.jackson.databind.ser.BeanSerializerModifier
-import com.fasterxml.jackson.databind.ser.std.BeanSerializerBase
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.parseName
 
-class DepthLimitingSerializer<T>(
-    private val delegate: JsonSerializer<T>,
-    private val maxDepth: Int,
-) : JsonSerializer<T>() {
-    override fun serialize(value: T, gen: JsonGenerator, serializers: SerializerProvider) {
-        // getCurrentDepth: root object is depth=0, each nested object/array increments.
-        fun currentDepth(ctx: JsonStreamContext?): Int {
-            if (ctx == null) return -1
-            return 1 + currentDepth(ctx.parent)
-        }
-
-        val depth = currentDepth(gen.outputContext)
-        if (depth > maxDepth) {
-            println(depth)
-            // short‐circuit: write a placeholder, or just the object’s ID, etc.
-            // Here I would like to write the object ID or something to pick up later
-            gen.writeString("[truncated at depth $maxDepth]")
-        } else {
-            // normal serialization
-            delegate.serialize(value, gen, serializers)
-        }
+class NameKeySerializer : JsonSerializer<Name>() {
+    override fun serialize(value: Name, gen: JsonGenerator, serializers: SerializerProvider) {
+        // Convert key object to string — customize your format here
+        gen.writeFieldName(value.delimiter + " " + value.toString())
     }
 }
 
-class DepthLimitingModifier(private val maxDepth: Int) : BeanSerializerModifier() {
-    override fun modifySerializer(
-        config: SerializationConfig,
-        beanDesc: BeanDescription,
-        serializer: JsonSerializer<*>,
-    ): JsonSerializer<*> {
-
-        println(serializer.javaClass.name)
-        if (serializer is BeanSerializerBase && !serializer.usesObjectId()) {
-            return DepthLimitingSerializer(serializer as JsonSerializer<Any>, maxDepth)
-        }
-        return serializer
+class NameKeyDeserializer : KeyDeserializer() {
+    override fun deserializeKey(key: String, ctxt: DeserializationContext): Any {
+        val fqnName = key.substringAfter(" ")
+        val delimiter = key.substringBefore(" ")
+        // Parse string back into MyKey
+        return parseName(fqnName, delimiter)
     }
 }
 
@@ -104,6 +83,8 @@ class NodeKeyDeserializers(@JacksonInject val registry: NodeRegistry) : SimpleKe
         val raw = type.rawClass
         return if (Node::class.java.isAssignableFrom(raw)) {
             NodeKeyDeserializer(registry)
+        } else if (Name::class.java.isAssignableFrom(raw)) {
+            NameKeyDeserializer()
         } else {
             null
         }
@@ -141,6 +122,8 @@ class NodeDelegatingDeserializer(
         ctxt: DeserializationContext,
         property: BeanProperty?,
     ): JsonDeserializer<*> {
+        println(property?.fullName)
+        println(property?.name + " " + property?.type)
         val contextualDelegate =
             if (delegate is ContextualDeserializer) {
                 (delegate as ContextualDeserializer).createContextual(ctxt, property)
@@ -152,6 +135,7 @@ class NodeDelegatingDeserializer(
 
     // Register node after delegating actual deserialization
     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Node {
+        println("Parent: " + p.parsingContext?.parent?.currentValue as? Node)
         @Suppress("UNCHECKED_CAST") val node = delegate.deserialize(p, ctxt) as Node
         registry.register(node)
         return node
@@ -176,11 +160,12 @@ fun serializeToJson(translationResult: TranslationResult): String {
     // objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY)
 
     return objectMapper
-        // .apply {
-        //    val module = SimpleModule()
-        //    module.setSerializerModifier(DepthLimitingModifier(maxDepth = 5))
-        //    registerModule(module)
-        // }
+        .apply {
+            val module =
+                SimpleModule().apply { addKeySerializer(Name::class.java, NameKeySerializer()) }
+            //    module.setSerializerModifier(DepthLimitingModifier(maxDepth = 5))
+            registerModule(module)
+        }
         // .writerWithDefaultPrettyPrinter()
         .writeValueAsString(translationResult)
 }
@@ -208,7 +193,7 @@ fun deserializeFromJson(json: String): TranslationResult {
         }
 
     val objectMapper =
-        ObjectMapper().apply {
+        ObjectMapper().setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY).apply {
             registerModule(module)
 
             // Allow injection of the registry instance

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo
+import com.fasterxml.jackson.annotation.JsonMerge
 import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import de.fraunhofer.aisec.cpg.TranslationManager.AdditionalSource
 import de.fraunhofer.aisec.cpg.TranslationManager.Companion.log
@@ -44,7 +45,7 @@ import java.io.File
 open class TranslationContext(
 
     /** The configuration for this translation. */
-    val config: TranslationConfiguration = TranslationConfiguration.builder().build(),
+    @JsonMerge val config: TranslationConfiguration = TranslationConfiguration.builder().build(),
 
     /**
      * The type manager is responsible for managing type information. Currently, we have one

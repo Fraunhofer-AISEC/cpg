@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
-import com.fasterxml.jackson.annotation.JsonBackReference
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.HasBuiltins
 import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
@@ -41,6 +41,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.Imports
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
+import de.fraunhofer.aisec.cpg.graph.serialize.Serializers
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.LookupScopeStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -65,7 +66,7 @@ typealias SymbolMap = MutableMap<Symbol, MutableList<Declaration>>
 @NodeEntity
 sealed class Scope(
     @Relationship(value = "SCOPE", direction = Relationship.Direction.INCOMING)
-    @JsonBackReference
+    @JsonSerialize(using = Serializers.ReferenceSerializer::class)
     open var astNode: Node?
 ) : Node() {
 

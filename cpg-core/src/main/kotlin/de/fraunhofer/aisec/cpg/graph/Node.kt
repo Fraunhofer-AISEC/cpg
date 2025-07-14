@@ -27,12 +27,13 @@
 
 package de.fraunhofer.aisec.cpg.graph
 
-import com.fasterxml.jackson.annotation.JsonBackReference
 import com.fasterxml.jackson.annotation.JsonIdentityInfo
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonMerge
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
@@ -49,6 +50,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+import de.fraunhofer.aisec.cpg.graph.serialize.Serializers
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
@@ -117,6 +119,7 @@ abstract class Node() :
     /** Incoming control flow edges. */
     @Relationship(value = "EOG", direction = Relationship.Direction.INCOMING)
     @PopulatedByPass(EvaluationOrderGraphPass::class)
+    @JsonMerge
     var prevEOGEdges: EvaluationOrders<Node> =
         EvaluationOrders<Node>(this, mirrorProperty = Node::nextEOGEdges, outgoing = false)
         protected set
@@ -124,6 +127,7 @@ abstract class Node() :
     /** Outgoing control flow edges. */
     @Relationship(value = "EOG", direction = Relationship.Direction.OUTGOING)
     @PopulatedByPass(EvaluationOrderGraphPass::class)
+    @JsonMerge
     var nextEOGEdges: EvaluationOrders<Node> =
         EvaluationOrders<Node>(this, mirrorProperty = Node::prevEOGEdges, outgoing = true)
         protected set
@@ -134,6 +138,7 @@ abstract class Node() :
      */
     @PopulatedByPass(ControlDependenceGraphPass::class)
     @Relationship(value = "CDG", direction = Relationship.Direction.OUTGOING)
+    @JsonMerge
     var nextCDGEdges: ControlDependences<Node> =
         ControlDependences(this, mirrorProperty = Node::prevCDGEdges, outgoing = true)
         protected set
@@ -146,6 +151,7 @@ abstract class Node() :
      */
     @PopulatedByPass(ControlDependenceGraphPass::class)
     @Relationship(value = "CDG", direction = Relationship.Direction.INCOMING)
+    @JsonMerge
     var prevCDGEdges: ControlDependences<Node> =
         ControlDependences<Node>(this, mirrorProperty = Node::nextCDGEdges, outgoing = false)
         protected set
@@ -167,7 +173,10 @@ abstract class Node() :
     var astChildren: List<Node> = listOf()
         get() = SubgraphWalker.getAstChildren(this)
 
-    @DoNotPersist @Transient @JsonBackReference var astParent: Node? = null
+    @DoNotPersist
+    @Transient
+    @JsonSerialize(using = Serializers.ReferenceSerializer::class)
+    var astParent: Node? = null
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class)
@@ -182,6 +191,7 @@ abstract class Node() :
     /** Incoming data flow edges */
     @Relationship(value = "DFG", direction = Relationship.Direction.INCOMING)
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @JsonMerge
     var prevDFGEdges: Dataflows<Node> =
         Dataflows<Node>(this, mirrorProperty = Node::nextDFGEdges, outgoing = false)
         protected set
@@ -208,6 +218,7 @@ abstract class Node() :
     /** Outgoing data flow edges */
     @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
     @Relationship(value = "DFG", direction = Relationship.Direction.OUTGOING)
+    @JsonMerge
     var nextDFGEdges: Dataflows<Node> =
         Dataflows<Node>(this, mirrorProperty = Node::prevDFGEdges, outgoing = true)
         protected set
@@ -232,6 +243,7 @@ abstract class Node() :
     /** Outgoing Program Dependence Edges. */
     @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.OUTGOING)
+    @JsonMerge
     var nextPDGEdges: ProgramDependences<Node> =
         ProgramDependences<Node>(this, mirrorProperty = Node::prevPDGEdges, outgoing = false)
         protected set
@@ -241,6 +253,7 @@ abstract class Node() :
     /** Incoming Program Dependence Edges. */
     @PopulatedByPass(ProgramDependenceGraphPass::class)
     @Relationship(value = "PDG", direction = Relationship.Direction.INCOMING)
+    @JsonMerge
     var prevPDGEdges: ProgramDependences<Node> =
         ProgramDependences<Node>(this, mirrorProperty = Node::nextPDGEdges, outgoing = false)
         protected set
@@ -288,7 +301,7 @@ abstract class Node() :
     var argumentIndex = 0
 
     /** List of annotations associated with that node. */
-    @Relationship("ANNOTATIONS") var annotationEdges = astEdgesOf<Annotation>()
+    @Relationship("ANNOTATIONS") @JsonMerge var annotationEdges = astEdgesOf<Annotation>()
     var annotations by unwrapping(Node::annotationEdges)
 
     /**
@@ -298,6 +311,7 @@ abstract class Node() :
     val additionalProblems: MutableSet<ProblemNode> = mutableSetOf()
 
     @Relationship(value = "OVERLAY", direction = Relationship.Direction.OUTGOING)
+    @JsonMerge
     val overlayEdges: Overlays =
         Overlays(this, mirrorProperty = OverlayNode::underlyingNodeEdge, outgoing = true)
     var overlays by unwrapping(Node::overlayEdges)

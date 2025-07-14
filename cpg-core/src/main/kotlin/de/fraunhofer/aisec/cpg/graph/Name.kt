@@ -160,7 +160,7 @@ fun LanguageProvider.parseName(fqn: CharSequence): Name {
 }
 
 /** Tries to parse the given fully qualified name using the specified [delimiter] into a [Name]. */
-internal fun parseName(fqn: CharSequence, delimiter: String, vararg splitDelimiters: String): Name {
+fun parseName(fqn: CharSequence, delimiter: String, vararg splitDelimiters: String): Name {
     // We can take a shortcut, if this is already a name
     if (fqn is Name) {
         return fqn

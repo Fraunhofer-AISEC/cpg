@@ -28,6 +28,7 @@
 package de.fraunhofer.aisec.cpg
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
@@ -99,7 +100,7 @@ class TranslationResult() : Node(), StatisticsHolder, ContextProvider {
      * evaluation of assumptions. The Map is then used when a decision is made based on the
      * [Assumption].
      */
-    @Transient val assumptionStates: MutableMap<Uuid, AssumptionStatus> = mutableMapOf()
+    @Transient @JsonIgnore val assumptionStates: MutableMap<Uuid, AssumptionStatus> = mutableMapOf()
 
     /**
      * Scratch storage that can be used by passes to store additional information in this result.
@@ -193,6 +194,7 @@ class TranslationResult() : Node(), StatisticsHolder, ContextProvider {
     override val config: TranslationConfiguration
         get() = finalCtx.config
 
+    @get:JsonIgnore
     override var language: Language<*>
         get() {
             return multiLanguage()

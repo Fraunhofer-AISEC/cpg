@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -74,7 +75,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * lookup from a [Name] to its [NameScope]. Otherwise, we would need to iterate through all
      * scopes, which can be quite slow.
      */
-    private val nameScopeMap: MutableMap<Name, NameScope> = mutableMapOf()
+    @JsonIgnore private val nameScopeMap: MutableMap<Name, NameScope> = mutableMapOf()
 
     /** True, if the scope manager is currently in a [FunctionScope]. */
     val isInFunction: Boolean

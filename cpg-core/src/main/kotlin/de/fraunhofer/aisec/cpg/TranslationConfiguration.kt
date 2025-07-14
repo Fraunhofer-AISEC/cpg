@@ -29,6 +29,7 @@ import com.fasterxml.jackson.annotation.JsonIdentityInfo
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.ObjectIdGenerators
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import de.fraunhofer.aisec.cpg.TranslationContext.EmptyTranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
@@ -60,6 +61,7 @@ import org.slf4j.LoggerFactory
  */
 @DoNotPersist
 @JsonIdentityInfo(generator = ObjectIdGenerators.UUIDGenerator::class, property = "@id")
+@JsonDeserialize(builder = TranslationConfiguration.Builder::class)
 class TranslationConfiguration
 private constructor(
     /** Definition of additional symbols, mostly useful for C++. */
