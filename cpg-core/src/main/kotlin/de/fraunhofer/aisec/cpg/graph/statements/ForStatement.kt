@@ -61,14 +61,14 @@ class ForStatement : LoopStatement(), BranchingNode, StatementHolder {
     override val branchedBy: Node?
         get() = condition ?: conditionDeclaration
 
-    override var statementEdges: AstEdges<Statement, AstEdge<Statement>>
+    override var statementEdges: AstEdges<Statement, AstEdge<Statement>> = astEdgesOf<Statement>()
         get() {
-            val statements = astEdgesOf<Statement>()
-            statements += initializerStatementEdge
-            statements += iterationStatementEdge
-            statements += statementEdge
-            statements += elseStatementEdge
-            return statements
+            field.clear()
+            field += initializerStatementEdge
+            field += iterationStatementEdge
+            field += statementEdge
+            field += elseStatementEdge
+            return field
         }
         set(_) {
             // Nothing to do here
