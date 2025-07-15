@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.helpers.functional
 
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.statements.LoopStatement
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import java.io.Serializable
@@ -136,7 +137,7 @@ interface Lattice<T : Lattice.Element> {
      * is modified if there is no element greater than each other (if set to `true`) or if a new
      * [Lattice.Element] is returned (if set to `false`).
      */
-    fun lub(one: T, two: T, allowModify: Boolean = false): T
+    fun lub(one: T, two: T, allowModify: Boolean = false, widen: Boolean = false): T
 
     /** Computes the greatest lower bound (meet) of [one] and [two] */
     fun glb(one: T, two: T): T
@@ -215,18 +216,35 @@ interface Lattice<T : Lattice.Element> {
                 // the state in comparison to the previous time we were there.
 
                 val oldGlobalIt = globalState[it]
-                // TODO: If we're on the loop head (some node is LoopStatement), and we use WIDENING
-                // or
+
+                // If we're on the loop head (some node is LoopStatement), and we use WIDENING or
                 // WIDENING_NARROWING, we have to apply the widening/narrowing here (if oldGlobalIt
                 // is not null).
                 val newGlobalIt =
-                    (oldGlobalIt?.let {
+                    if (
+                        nextEdge.end is LoopStatement &&
+                            (strategy == Strategy.WIDENING ||
+                                strategy == Strategy.WIDENING_NARROWING) &&
+                            oldGlobalIt != null
+                    ) {
                         this.lub(
                             one = newState,
-                            two = it,
+                            two = oldGlobalIt,
                             allowModify = isNotNearStartOrEndOfBasicBlock,
+                            widen = true,
                         )
-                    } ?: newState)
+                    } else if (strategy == Strategy.NARROWING) {
+                        TODO()
+                    } else {
+                        (oldGlobalIt?.let {
+                            this.lub(
+                                one = newState,
+                                two = it,
+                                allowModify = isNotNearStartOrEndOfBasicBlock,
+                            )
+                        } ?: newState)
+                    }
+
                 globalState[it] = newGlobalIt
                 if (
                     it !in edgesList &&
@@ -290,7 +308,12 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
     override val bottom: Element<T>
         get() = Element()
 
-    override fun lub(one: Element<T>, two: Element<T>, allowModify: Boolean): Element<T> {
+    override fun lub(
+        one: Element<T>,
+        two: Element<T>,
+        allowModify: Boolean,
+        widen: Boolean,
+    ): Element<T> {
         if (allowModify) {
             one += two
             return one
@@ -434,7 +457,12 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     override val bottom: Element<K, V>
         get() = MapLattice.Element()
 
-    override fun lub(one: Element<K, V>, two: Element<K, V>, allowModify: Boolean): Element<K, V> {
+    override fun lub(
+        one: Element<K, V>,
+        two: Element<K, V>,
+        allowModify: Boolean,
+        widen: Boolean,
+    ): Element<K, V> {
         if (allowModify) {
             two.forEach { (k, v) ->
                 if (!one.containsKey(k)) {
@@ -442,7 +470,9 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                     one[k] = v
                 } else {
                     // This key already exists in "one", so we have to compute the lub of the values
-                    one[k]?.let { oneValue -> innerLattice.lub(oneValue, v, true) }
+                    one[k]?.let { oneValue ->
+                        innerLattice.lub(one = oneValue, two = v, allowModify = true, widen = widen)
+                    }
                 }
             }
             return one
@@ -464,7 +494,12 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                             val thisValue = one[key]
                             val newValue =
                                 if (thisValue != null && otherValue != null) {
-                                    innerLattice.lub(thisValue, otherValue)
+                                    innerLattice.lub(
+                                        one = thisValue,
+                                        two = otherValue,
+                                        allowModify = false,
+                                        widen = widen,
+                                    )
                                 } else thisValue ?: otherValue
                             newValue?.let { current[key] = it }
                             current
@@ -549,15 +584,30 @@ class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
     override val bottom: Element<S, T>
         get() = Element(innerLattice1.bottom, innerLattice2.bottom)
 
-    override fun lub(one: Element<S, T>, two: Element<S, T>, allowModify: Boolean): Element<S, T> {
+    override fun lub(
+        one: Element<S, T>,
+        two: Element<S, T>,
+        allowModify: Boolean,
+        widen: Boolean,
+    ): Element<S, T> {
         return if (allowModify) {
-            innerLattice1.lub(one.first, two.first, true)
-            innerLattice2.lub(one.second, two.second, true)
+            innerLattice1.lub(one = one.first, two = two.first, allowModify = true, widen = widen)
+            innerLattice2.lub(one = one.second, two = two.second, allowModify = true, widen = widen)
             one
         } else {
             Element(
-                innerLattice1.lub(one.first, two.first),
-                innerLattice2.lub(one.second, two.second),
+                innerLattice1.lub(
+                    one = one.first,
+                    two = two.first,
+                    allowModify = false,
+                    widen = widen,
+                ),
+                innerLattice2.lub(
+                    one = one.second,
+                    two = two.second,
+                    allowModify = false,
+                    widen = widen,
+                ),
             )
         }
     }
@@ -635,17 +685,33 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
         one: Element<R, S, T>,
         two: Element<R, S, T>,
         allowModify: Boolean,
+        widen: Boolean,
     ): Element<R, S, T> {
         return if (allowModify) {
-            innerLattice1.lub(one.first, two.first, true)
-            innerLattice2.lub(one.second, two.second, true)
-            innerLattice3.lub(one.third, two.third, true)
+            innerLattice1.lub(one = one.first, two = two.first, allowModify = true, widen = widen)
+            innerLattice2.lub(one = one.second, two = two.second, allowModify = true, widen = widen)
+            innerLattice3.lub(one = one.third, two = two.third, allowModify = true, widen = widen)
             one
         } else {
             Element(
-                innerLattice1.lub(one.first, two.first),
-                innerLattice2.lub(one.second, two.second),
-                innerLattice3.lub(one.third, two.third),
+                innerLattice1.lub(
+                    one = one.first,
+                    two = two.first,
+                    allowModify = false,
+                    widen = widen,
+                ),
+                innerLattice2.lub(
+                    one = one.second,
+                    two = two.second,
+                    allowModify = false,
+                    widen = widen,
+                ),
+                innerLattice3.lub(
+                    one = one.third,
+                    two = two.third,
+                    allowModify = false,
+                    widen = widen,
+                ),
             )
         }
     }

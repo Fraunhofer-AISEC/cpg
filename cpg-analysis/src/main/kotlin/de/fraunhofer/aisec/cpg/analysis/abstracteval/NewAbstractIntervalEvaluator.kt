@@ -57,7 +57,7 @@ class NewIntervalLattice() :
     override var elements: Set<Element> = setOf()
     override val bottom: Element = Element(LatticeInterval.BOTTOM)
 
-    override fun lub(one: Element, two: Element, allowModify: Boolean): Element {
+    override fun lub(one: Element, two: Element, allowModify: Boolean, widen: Boolean): Element {
         val oneElem = one.element
         val twoElem = two.element
         if (allowModify) {
