@@ -477,12 +477,11 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
             }
             return one
         }
-
-        return when (val comp = compare(one, two)) {
-            Order.EQUAL,
-            Order.GREATER -> one
-            Order.LESSER,
-            Order.UNEQUAL -> {
+        val comp = compare(one, two)
+        return when {
+            !widen && comp == Order.EQUAL -> one
+            !widen && comp == Order.GREATER -> one
+            else -> {
                 if (comp == Order.LESSER) {
                     two.duplicate()
                 } else {

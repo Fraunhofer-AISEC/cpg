@@ -61,39 +61,54 @@ class NewIntervalLattice() :
         val oneElem = one.element
         val twoElem = two.element
         if (allowModify) {
-            if (oneElem == LatticeInterval.TOP || twoElem == LatticeInterval.BOTTOM) {
-                // Nothing to do as one is already the top or bigger than two.
-            } else if (twoElem == LatticeInterval.TOP) {
-                // Set one to TOP too.
-                one.element = LatticeInterval.TOP
-                return two
-            } else if (oneElem == LatticeInterval.BOTTOM) {
-                // Set one to two as it is the bottom.
-                one.element = twoElem
-                return one
-            } else if (oneElem is LatticeInterval.Bounded && twoElem is LatticeInterval.Bounded) {
-                // If both are bounded, we can calculate the new bounds.
-                val newLower = minOf(oneElem.lower, twoElem.lower)
-                val newUpper = maxOf(oneElem.upper, twoElem.upper)
-                one.element = LatticeInterval.Bounded(newLower, newUpper)
-                return one
+            when {
+                widen -> {
+                    one.element = twoElem.widen(oneElem)
+                }
+                oneElem == LatticeInterval.TOP || twoElem == LatticeInterval.BOTTOM -> {
+                    // Nothing to do as one is already the top or bigger than two.
+                }
+                twoElem == LatticeInterval.TOP -> {
+                    // Set one to TOP too.
+                    one.element = LatticeInterval.TOP
+                }
+                oneElem == LatticeInterval.BOTTOM -> {
+                    // Set one to two as it is the bottom.
+                    one.element = twoElem
+                }
+                oneElem is LatticeInterval.Bounded && twoElem is LatticeInterval.Bounded -> {
+                    // If both are bounded, we can calculate the new bounds.
+                    val newLower = minOf(oneElem.lower, twoElem.lower)
+                    val newUpper = maxOf(oneElem.upper, twoElem.upper)
+                    one.element = LatticeInterval.Bounded(newLower, newUpper)
+                }
+                else -> {
+                    TODO("Cannot handle this case: $oneElem and $twoElem")
+                }
             }
             return one
         } else {
-            if (oneElem == LatticeInterval.TOP || twoElem == LatticeInterval.TOP) {
-                return Element(LatticeInterval.TOP)
-            } else if (twoElem == LatticeInterval.BOTTOM) {
-                return one.duplicate()
-            } else if (oneElem == LatticeInterval.BOTTOM) {
-                return two.duplicate()
-            } else if (oneElem is LatticeInterval.Bounded && twoElem is LatticeInterval.Bounded) {
-                val newLower = minOf(oneElem.lower, twoElem.lower)
-                val newUpper = maxOf(oneElem.upper, twoElem.upper)
-                return Element(LatticeInterval.Bounded(newLower, newUpper))
+            return when {
+                widen -> {
+                    Element(twoElem.widen(oneElem))
+                }
+                oneElem == LatticeInterval.TOP || twoElem == LatticeInterval.TOP -> {
+                    Element(LatticeInterval.TOP)
+                }
+                twoElem == LatticeInterval.BOTTOM -> {
+                    one.duplicate()
+                }
+                oneElem == LatticeInterval.BOTTOM -> {
+                    two.duplicate()
+                }
+                oneElem is LatticeInterval.Bounded && twoElem is LatticeInterval.Bounded -> {
+                    val newLower = minOf(oneElem.lower, twoElem.lower)
+                    val newUpper = maxOf(oneElem.upper, twoElem.upper)
+                    Element(LatticeInterval.Bounded(newLower, newUpper))
+                }
+                else -> TODO("Not yet implemented")
             }
         }
-
-        TODO("Not yet implemented")
     }
 
     override fun glb(one: Element, two: Element): Element {
@@ -125,11 +140,28 @@ class NewIntervalLattice() :
             if (other !is Element) {
                 throw IllegalArgumentException("Cannot compare IntervalLattice.Element with $other")
             }
-            // TODO: Fix the comparison logic.
+            val thisBounded = this.element as? LatticeInterval.Bounded
+            val otherBounded = other.element as? LatticeInterval.Bounded
             return when {
-                this.element == other.element -> Order.EQUAL
-                this.element < other.element -> Order.LESSER
-                this.element > other.element -> Order.GREATER
+                this.element is LatticeInterval.TOP && other.element is LatticeInterval.TOP ->
+                    Order.EQUAL
+                this.element is LatticeInterval.BOTTOM && other.element is LatticeInterval.BOTTOM ->
+                    Order.EQUAL
+                this.element is LatticeInterval.TOP -> Order.GREATER
+                other.element is LatticeInterval.TOP -> Order.LESSER
+                this.element is LatticeInterval.BOTTOM -> Order.LESSER
+                other.element is LatticeInterval.BOTTOM -> Order.GREATER
+                thisBounded != null &&
+                    thisBounded.lower == otherBounded?.lower &&
+                    thisBounded.upper == otherBounded.upper -> Order.EQUAL
+                thisBounded != null &&
+                    otherBounded != null &&
+                    thisBounded.lower >= otherBounded.lower &&
+                    thisBounded.upper <= otherBounded.upper -> Order.LESSER
+                thisBounded != null &&
+                    otherBounded != null &&
+                    thisBounded.lower <= otherBounded.lower &&
+                    thisBounded.upper >= otherBounded.upper -> Order.GREATER
                 else -> Order.UNEQUAL
             }
         }
