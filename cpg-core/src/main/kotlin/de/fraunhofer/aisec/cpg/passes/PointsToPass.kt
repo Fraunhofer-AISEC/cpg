@@ -222,6 +222,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             return
         }
 
+        functionSummaryAnalysisChain.add(node)
+
         // Calculate the complexity of the function and see, if it exceeds our threshold
         val max = passConfig<Configuration>()?.maxComplexity
         val c = node.body?.cyclomaticComplexity() ?: 0
@@ -324,6 +326,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         /* Store function summary for this FunctionDeclaration. */
         storeFunctionSummary(node, finalState)
+        functionSummaryAnalysisChain.clear()
     }
 
     /**
@@ -431,6 +434,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     }
 
     private fun storeFunctionSummary(node: FunctionDeclaration, doubleState: PointsToStateElement) {
+        clearFSDummies(node.functionSummary)
         node.parameters.forEach { param ->
             // Collect all addresses of the parameter that we can use as index to look up possible
             // new values
@@ -621,6 +625,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         PowersetLattice.Element(),
                     ),
             )
+
+        if (currentNode is CallExpression && currentNode.location?.region?.startLine == 14672)
+            println("Analyzing CE in 14672")
+        if (currentNode is CallExpression && currentNode.location?.region?.startLine == 14679)
+            println("Analyzing CE in 14679")
+        /*        println(
+            "${Runtime.getRuntime().freeMemory()} - ${Runtime.getRuntime().totalMemory()} - ${Runtime.getRuntime().maxMemory()}"
+        )*/
 
         doubleState =
             when (currentNode) {
@@ -874,6 +886,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         while (i < invokes.size) {
             val invoke = calculateFunctionSummaries(invokes[i])
 
+            if (invoke == null) break
+
             doubleState =
                 calculateIncomingCallingContexts(lattice, invoke, currentNode, doubleState)
 
@@ -991,13 +1005,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return ret
     }
 
-    private fun calculateFunctionSummaries(invoke: FunctionDeclaration): FunctionDeclaration {
+    private fun calculateFunctionSummaries(invoke: FunctionDeclaration): FunctionDeclaration? {
         if (invoke.functionSummary.isEmpty()) {
             if (invoke.hasBody()) {
                 log.debug("functionSummaryAnalysisChain: {}", functionSummaryAnalysisChain)
                 if (invoke !in functionSummaryAnalysisChain) {
                     val summaryCopy = functionSummaryAnalysisChain.toSet()
-                    functionSummaryAnalysisChain.add(invoke)
+                    //                    functionSummaryAnalysisChain.add(invoke)
                     acceptInternal(invoke)
                     functionSummaryAnalysisChain.clear()
                     functionSummaryAnalysisChain.addAll(summaryCopy)
@@ -1006,6 +1020,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         "Cannot calculate functionSummary for ${invoke.name.localName} as it's recursively called. callChain: ${functionSummaryAnalysisChain.map{it.name.localName}}"
                     )
                     invoke.functionSummary[newLiteral("dummy")] = mutableSetOf()
+                    return null
                 }
             } else {
                 // Add a dummy function summary so that we don't try this every time
