@@ -74,7 +74,9 @@ class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
             // Nothing to do here
         }
 
-    override var statements by unwrapping(ForEachStatement::statementEdges)
+    override var statements: MutableList<Statement>
+        get() = unwrapping(ForEachStatement::statementEdges)
+        set(value) {}
 
     override fun toString() =
         ToStringBuilder(this, TO_STRING_STYLE)
