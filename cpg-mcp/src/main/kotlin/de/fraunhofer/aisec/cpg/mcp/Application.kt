@@ -43,6 +43,10 @@ import java.net.ConnectException
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 
 private const val DEBUG_PARSER = true
 
@@ -181,8 +185,33 @@ fun configureServer(): Server {
     server.addTool(
         name = "cpg upload",
         description = "The CPG upload tool",
-        inputSchema = Tool.Input(),
+        inputSchema =
+            Tool.Input(
+                properties =
+                    buildJsonObject {
+                        putJsonObject("file") {
+                            put("type", "string")
+                            put("description", "Source code file to analyze")
+                        }
+                    },
+                required = listOf("file"),
+            ),
     ) { request ->
+        val filePath = request.arguments["file"]?.jsonPrimitive?.content
+        requireNotNull(filePath) { "No file uploaded" }
+        // TODO: Replace this with a temporary file?
+        // Or: Provide a list of "resources" = projects/files/directories which can be analyzed and
+        // where we then run the queries.
+        val file = File(filePath)
+        // TODO: Dump the content of the file upload to the temp file.
+
+        // Call setupTranslationConfiguration with the uploaded file
+        val config =
+            setupTranslationConfiguration(
+                topLevel = file,
+                files = listOf(file.absolutePath),
+                includePaths = emptyList(),
+            )
         CallToolResult(content = listOf(TextContent("Hello, world!")))
     }
 

@@ -69,6 +69,7 @@ mavenPublishing {
 dependencies {
     implementation(libs.mcp)
     implementation(libs.slf4j.nop)
+    implementation(libs.ktor.serialization.kotlinx.json)
 
     // Command line interface support
     api(libs.picocli)
