@@ -134,6 +134,8 @@ fun stringToDepth(name: String): Int {
 
 /** clear dummys from a FunctionSummary */
 fun clearFSDummies(functionSummary: MutableMap<Node, MutableSet<FunctionDeclaration.FSEntry>>) {
+    // Do not clear the dummies for which we don't have bodies, only the "obvious" dummies we
+    // created for recursive functions
     functionSummary
         .filter { (it.key as? Literal<*>)?.value == "dummy" }
         .keys
@@ -326,7 +328,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         /* Store function summary for this FunctionDeclaration. */
         storeFunctionSummary(node, finalState)
-        functionSummaryAnalysisChain.clear()
+        if (functionSummaryAnalysisChain.last() == node) functionSummaryAnalysisChain.remove(node)
+        else
+            log.error(
+                "finished analyzing $node, which is not at the end of the functionSummaryAnalsysis chain, which is surprising"
+            )
     }
 
     /**
@@ -1010,11 +1016,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             if (invoke.hasBody()) {
                 log.debug("functionSummaryAnalysisChain: {}", functionSummaryAnalysisChain)
                 if (invoke !in functionSummaryAnalysisChain) {
-                    val summaryCopy = functionSummaryAnalysisChain.toSet()
-                    //                    functionSummaryAnalysisChain.add(invoke)
+                    //                    val summaryCopy = functionSummaryAnalysisChain.toSet()
                     acceptInternal(invoke)
-                    functionSummaryAnalysisChain.clear()
-                    functionSummaryAnalysisChain.addAll(summaryCopy)
+                    //                    functionSummaryAnalysisChain.addAll(summaryCopy)
                 } else {
                     log.error(
                         "Cannot calculate functionSummary for ${invoke.name.localName} as it's recursively called. callChain: ${functionSummaryAnalysisChain.map{it.name.localName}}"
