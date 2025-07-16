@@ -57,10 +57,11 @@ class LabelStatement : Statement(), StatementHolder {
             .toString()
     }
 
-    override var statementEdges: AstEdges<Statement, AstEdge<Statement>> = astEdgesOf<Statement>()
+    override var statementEdges: AstEdges<Statement, AstEdge<Statement>>
         get() {
-            subStatement?.let { field.resetTo(listOf(it)) }
-            return field
+            var list = astEdgesOf<Statement>()
+            subStatement?.let { list.resetTo(listOf(it)) }
+            return list
         }
         set(value) {
             subStatement = value.toNodeCollection().firstOrNull()
