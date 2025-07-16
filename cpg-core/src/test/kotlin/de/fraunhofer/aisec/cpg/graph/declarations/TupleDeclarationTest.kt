@@ -76,17 +76,17 @@ class TupleDeclarationTest {
                 }
             }
 
-            val main = result.functions["main"]
+            val main = result.dFunctions["main"]
             assertNotNull(main)
 
-            val tuple = result.variables["(a,b)"]
+            val tuple = result.dVariables["(a,b)"]
             assertNotNull(tuple)
             assertIs<TupleDeclaration>(tuple)
             assertIs<TupleType>(tuple.type)
 
             val call = tuple.initializer as? CallExpression
             assertNotNull(call)
-            assertInvokes(call, result.functions["func"])
+            assertInvokes(call, result.dFunctions["func"])
 
             val tuplePrevDFG = tuple.prevDFGEdges.singleOrNull()
             assertNotNull(tuplePrevDFG)
@@ -115,7 +115,7 @@ class TupleDeclarationTest {
             assertIs<IndexedDataflowGranularity>(bPrevDFGGranularity)
             assertEquals(1, bPrevDFGGranularity.partialTarget)
 
-            val callPrint = main.calls["print"]
+            val callPrint = main.dCalls["print"]
             assertNotNull(callPrint)
             assertIs<CallExpression>(callPrint)
 
@@ -166,17 +166,17 @@ class TupleDeclarationTest {
                 }
             }
 
-            val main = result.functions["main"]
+            val main = result.dFunctions["main"]
             assertNotNull(main)
 
-            val tuple = main.variables["(a,b)"]
+            val tuple = main.dVariables["(a,b)"]
             assertNotNull(tuple)
             assertIs<TupleDeclaration>(tuple)
             assertIs<TupleType>(tuple.type)
 
             val call = tuple.initializer
             assertIs<CallExpression>(call)
-            assertInvokes(call, result.functions["func"])
+            assertInvokes(call, result.dFunctions["func"])
             assertEquals(setOf<Node>(call), tuple.prevDFG)
 
             val a = tuple.elements["a"]
@@ -201,7 +201,7 @@ class TupleDeclarationTest {
             assertIs<IndexedDataflowGranularity>(bPrevDFGGranularity)
             assertEquals(1, bPrevDFGGranularity.partialTarget)
 
-            val callPrint = main.calls["print"]
+            val callPrint = main.dCalls["print"]
             assertNotNull(callPrint)
             assertIs<CallExpression>(callPrint)
 

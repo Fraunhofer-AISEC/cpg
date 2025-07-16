@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.component
+import de.fraunhofer.aisec.cpg.graph.pComponent
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -40,7 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.graph.translationUnit
+import de.fraunhofer.aisec.cpg.graph.pTranslationUnit
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
@@ -244,7 +244,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
      * [ImportDeclaration].
      */
     private fun collectImportDependencies(import: ImportDeclaration) {
-        val currentComponent = import.component
+        val currentComponent = import.pComponent
         if (currentComponent == null) {
             errorWithFileLocation(import, log, "Cannot determine component of import node")
             return
@@ -303,9 +303,9 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
             // Next, we loop through all namespaces in order to "connect" them to our current module
             for (declaration in namespaces) {
                 // Retrieve the module of the declarations
-                var namespaceTu = declaration.translationUnit
-                var namespaceComponent = declaration.component
-                var importTu = import.translationUnit
+                var namespaceTu = declaration.pTranslationUnit
+                var namespaceComponent = declaration.pComponent
+                var importTu = import.pTranslationUnit
                 // Skip, if we cannot find the module or if they belong to the same module (we do
                 // not want self-references)
                 if (

@@ -63,7 +63,7 @@ class ThrowExpressionTest {
                 }
 
         // Let's assert that we did this correctly
-        val main = result.functions["foo"]
+        val main = result.dFunctions["foo"]
         assertNotNull(main)
         val body = main.body
         assertIs<Block>(body)

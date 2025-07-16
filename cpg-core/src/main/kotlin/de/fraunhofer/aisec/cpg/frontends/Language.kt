@@ -40,7 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
-import de.fraunhofer.aisec.cpg.graph.component
+import de.fraunhofer.aisec.cpg.graph.pComponent
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
@@ -496,11 +496,11 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
         // component.
         val component =
             if (source !is Type) {
-                source.component
+                source.pComponent
                     ?: provider.ctx.currentComponent
-                    ?: source.scope?.astNode?.component
+                    ?: source.scope?.astNode?.pComponent
             } else {
-                provider.ctx.currentComponent ?: source.scope?.astNode?.component
+                provider.ctx.currentComponent ?: source.scope?.astNode?.pComponent
             }
         if (component == null) {
             val msg =

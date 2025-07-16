@@ -49,15 +49,15 @@ class UnreachableEOGandDFGTest {
     @Test
     @Ignore
     fun testIfTrue() {
-        val method = tu.functions["ifTrue"]
+        val method = tu.dFunctions["ifTrue"]
         assertNotNull(method)
 
         val ifStatement = method.bodyOrNull<IfStatement>()
         assertNotNull(ifStatement)
-        val thenY = ifStatement.thenStatement.refs["y"]
+        val thenY = ifStatement.thenStatement.dRefs["y"]
         assertNotNull(thenY)
 
-        val argY = method.calls["println"]?.arguments?.firstOrNull()
+        val argY = method.dCalls["println"]?.arguments?.firstOrNull()
         assertNotNull(argY)
         // There's only one DFG to the y++ in the then branch.
         assertEquals(setOf<Node>(thenY), argY.prevDFG)
@@ -66,15 +66,15 @@ class UnreachableEOGandDFGTest {
     @Test
     @Ignore
     fun testIfFalse() {
-        val method = tu.functions["ifFalse"]
+        val method = tu.dFunctions["ifFalse"]
         assertNotNull(method)
 
         val ifStatement = method.bodyOrNull<IfStatement>()
         assertNotNull(ifStatement)
-        val elseY = ifStatement.elseStatement.refs["y"]
+        val elseY = ifStatement.elseStatement.dRefs["y"]
         assertNotNull(elseY)
 
-        val argY = method.calls["println"]?.arguments?.firstOrNull()
+        val argY = method.dCalls["println"]?.arguments?.firstOrNull()
         assertNotNull(argY)
         // There's only one DFG to the y++ in the then branch.
         assertEquals(setOf<Node>(elseY), argY.prevDFG)
@@ -83,14 +83,14 @@ class UnreachableEOGandDFGTest {
     @Test
     @Ignore
     fun testIfTrueComputed() {
-        val method = tu.functions["ifTrueComputed"]
+        val method = tu.dFunctions["ifTrueComputed"]
         assertNotNull(method)
 
         val ifStatement = method.bodyOrNull<IfStatement>()
         assertNotNull(ifStatement)
-        val thenY = ifStatement.thenStatement.refs["y"]
+        val thenY = ifStatement.thenStatement.dRefs["y"]
         assertNotNull(thenY)
-        val argY = method.calls["println"]?.arguments?.firstOrNull()
+        val argY = method.dCalls["println"]?.arguments?.firstOrNull()
         assertNotNull(argY)
 
         // Still only the y in the then branch
@@ -100,14 +100,14 @@ class UnreachableEOGandDFGTest {
     @Test
     @Ignore
     fun testIfFalseComputed() {
-        val method = tu.functions["ifFalseComputed"]
+        val method = tu.dFunctions["ifFalseComputed"]
         assertNotNull(method)
 
         val ifStatement = method.bodyOrNull<IfStatement>()
         assertNotNull(ifStatement)
-        val elseY = ifStatement.elseStatement.refs["y"]
+        val elseY = ifStatement.elseStatement.dRefs["y"]
         assertNotNull(elseY)
-        val argY = method.calls["println"]?.arguments?.firstOrNull()
+        val argY = method.dCalls["println"]?.arguments?.firstOrNull()
         assertNotNull(argY)
 
         // Still only the y in the then branch
@@ -117,14 +117,14 @@ class UnreachableEOGandDFGTest {
     @Test
     @Ignore
     fun testIfTrueComputedHard() {
-        val method = tu.functions["ifTrueComputedHard"]
+        val method = tu.dFunctions["ifTrueComputedHard"]
         assertNotNull(method)
 
         val ifStatement = method.bodyOrNull<IfStatement>()
         assertNotNull(ifStatement)
-        val thenY = ifStatement.thenStatement.refs["y"]
+        val thenY = ifStatement.thenStatement.dRefs["y"]
         assertNotNull(thenY)
-        val argY = method.calls["println"]?.arguments?.firstOrNull()
+        val argY = method.dCalls["println"]?.arguments?.firstOrNull()
         assertNotNull(argY)
 
         // Still only the y in the then branch
@@ -134,14 +134,14 @@ class UnreachableEOGandDFGTest {
     @Test
     @Ignore
     fun testIfFalseComputedHard() {
-        val method = tu.functions["ifFalseComputedHard"]
+        val method = tu.dFunctions["ifFalseComputedHard"]
         assertNotNull(method)
 
         val ifStatement = method.bodyOrNull<IfStatement>()
         assertNotNull(ifStatement)
-        val elseY = ifStatement.elseStatement.refs["y"]
+        val elseY = ifStatement.elseStatement.dRefs["y"]
         assertNotNull(elseY)
-        val argY = method.calls["println"]?.arguments?.firstOrNull()
+        val argY = method.dCalls["println"]?.arguments?.firstOrNull()
         assertNotNull(argY)
 
         // Still only the y in the then branch
@@ -151,16 +151,16 @@ class UnreachableEOGandDFGTest {
     @Test
     @Ignore
     fun testIfBothPossible() {
-        val method = tu.functions["ifBothPossible"]
+        val method = tu.dFunctions["ifBothPossible"]
         assertNotNull(method)
 
         val ifStatement = method.bodyOrNull<IfStatement>()
         assertNotNull(ifStatement)
-        val thenY = ifStatement.thenStatement.refs["y"]
+        val thenY = ifStatement.thenStatement.dRefs["y"]
         assertNotNull(thenY)
-        val elseY = ifStatement.elseStatement.refs["y"]
+        val elseY = ifStatement.elseStatement.dRefs["y"]
         assertNotNull(elseY)
-        val argY = method.calls["println"]?.arguments?.firstOrNull()
+        val argY = method.dCalls["println"]?.arguments?.firstOrNull()
         assertNotNull(argY)
 
         // Still only the y in the then branch

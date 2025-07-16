@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.codyze
 
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.functions
+import de.fraunhofer.aisec.cpg.graph.dFunctions
 import de.fraunhofer.aisec.cpg.graph.get
-import de.fraunhofer.aisec.cpg.graph.literals
+import de.fraunhofer.aisec.cpg.graph.dLiterals
 import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.test.analyze
 import io.github.detekt.sarif4k.ResultKind
@@ -48,7 +48,7 @@ class SarifTest {
             analyze(listOf(topLevel.resolve("simple.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
-        val fullLoc = result.functions["foo"].toSarifLocation()
+        val fullLoc = result.dFunctions["foo"].toSarifLocation()
 
         assertNotNull(fullLoc)
         assertEquals(7, fullLoc.physicalLocation?.region?.endLine)
@@ -62,7 +62,7 @@ class SarifTest {
         assertEquals("simple.foo", logical.fullyQualifiedName)
         assertEquals("function", logical.kind)
 
-        val onlyHeader = result.functions["foo"].toSarifLocation(onlyFunctionHeader = true)
+        val onlyHeader = result.dFunctions["foo"].toSarifLocation(onlyFunctionHeader = true)
         assertNotNull(onlyHeader)
         assertEquals(2, onlyHeader.physicalLocation?.region?.endLine)
         assertEquals(5, onlyHeader.physicalLocation?.region?.endColumn)
@@ -76,7 +76,7 @@ class SarifTest {
                 it.registerLanguage<PythonLanguage>()
             }
 
-        val lit = result.literals.firstOrNull()
+        val lit = result.dLiterals.firstOrNull()
         assertNotNull(lit)
 
         val paths = dataFlow(lit) { it is FunctionDeclaration }

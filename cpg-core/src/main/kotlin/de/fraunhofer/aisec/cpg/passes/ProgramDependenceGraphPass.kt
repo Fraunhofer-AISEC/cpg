@@ -65,7 +65,7 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
                         if (prevDfgNode is Reference || prevDfgNode is ValueDeclaration) {
                             val cdgConditionChildren =
                                 t.prevCDG.flatMap {
-                                    (it as? BranchingNode)?.branchedBy?.allChildren<Reference> { c
+                                    (it as? BranchingNode)?.branchedBy?.descendants<Reference> { c
                                         ->
                                         c in prevDfgNode.nextDFG
                                     } ?: listOf()

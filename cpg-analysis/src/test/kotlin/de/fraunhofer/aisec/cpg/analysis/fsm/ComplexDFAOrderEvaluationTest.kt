@@ -73,7 +73,7 @@ class ComplexDFAOrderEvaluationTest {
 
     @Test
     fun testSuccessMinimal1FSM() {
-        val functionOk = tu.functions["ok_minimal1"]
+        val functionOk = tu.dFunctions["ok_minimal1"]
         assertNotNull(functionOk)
 
         val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
@@ -94,7 +94,7 @@ class ComplexDFAOrderEvaluationTest {
 
     @Test
     fun testSuccessMinimal2FSM() {
-        val functionOk = tu.functions["ok_minimal2"]
+        val functionOk = tu.dFunctions["ok_minimal2"]
         assertNotNull(functionOk)
 
         val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
@@ -116,7 +116,7 @@ class ComplexDFAOrderEvaluationTest {
 
     @Test
     fun testSuccessMimimal3FSM() {
-        val functionOk = tu.functions["ok_minimal3"]
+        val functionOk = tu.dFunctions["ok_minimal3"]
         assertNotNull(functionOk)
 
         val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
@@ -139,7 +139,7 @@ class ComplexDFAOrderEvaluationTest {
 
     @Test
     fun testSuccessMultiProcessFSM() {
-        val functionOk = tu.functions["ok2"]
+        val functionOk = tu.dFunctions["ok2"]
         assertNotNull(functionOk)
 
         val p2Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
@@ -164,7 +164,7 @@ class ComplexDFAOrderEvaluationTest {
 
     @Test
     fun testSuccessLoopFSM() {
-        val functionOk = tu.functions["ok3"]
+        val functionOk = tu.dFunctions["ok3"]
         assertNotNull(functionOk)
 
         val p3Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
@@ -189,7 +189,7 @@ class ComplexDFAOrderEvaluationTest {
 
     @Test
     fun testSuccessLoopResetFSM() {
-        val functionOk = tu.functions["ok4"]
+        val functionOk = tu.dFunctions["ok4"]
         assertNotNull(functionOk)
 
         val p3Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
@@ -215,7 +215,7 @@ class ComplexDFAOrderEvaluationTest {
 
     @Test
     fun testFailMissingCreateFSM() {
-        val functionOk = tu.functions["nok1"]
+        val functionOk = tu.dFunctions["nok1"]
         assertNotNull(functionOk)
 
         val p5Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
@@ -236,7 +236,7 @@ class ComplexDFAOrderEvaluationTest {
 
     @Test
     fun testFailIfFSM() {
-        val functionOk = tu.functions["nok2"]
+        val functionOk = tu.dFunctions["nok2"]
         assertNotNull(functionOk)
 
         val p6Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
@@ -264,7 +264,7 @@ class ComplexDFAOrderEvaluationTest {
 
     @Test
     fun testFailWhileLoopFSM() {
-        val functionOk = tu.functions["nok3"]
+        val functionOk = tu.dFunctions["nok3"]
 
         assertNotNull(functionOk)
 
@@ -292,7 +292,7 @@ class ComplexDFAOrderEvaluationTest {
 
     @Test
     fun testFailWhileLoop2FSM() {
-        val functionOk = tu.functions["nokWhile"]
+        val functionOk = tu.dFunctions["nokWhile"]
 
         assertNotNull(functionOk)
 
@@ -320,7 +320,7 @@ class ComplexDFAOrderEvaluationTest {
 
     @Test
     fun testSuccessWhileLoop2FSM() {
-        val functionOk = tu.functions["okWhile2"]
+        val functionOk = tu.dFunctions["okWhile2"]
         assertNotNull(functionOk)
 
         val p7Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
@@ -347,7 +347,7 @@ class ComplexDFAOrderEvaluationTest {
 
     @Test
     fun testSuccessWhileLoopFSM() {
-        val functionOk = tu.functions["okWhile"]
+        val functionOk = tu.dFunctions["okWhile"]
         assertNotNull(functionOk)
 
         val p8Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
@@ -377,7 +377,7 @@ class ComplexDFAOrderEvaluationTest {
 
     @Test
     fun testSuccessDoWhileLoopFSM() {
-        val functionOk = tu.functions["okDoWhile"]
+        val functionOk = tu.dFunctions["okDoWhile"]
         assertNotNull(functionOk)
 
         val p6Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
@@ -403,7 +403,7 @@ class ComplexDFAOrderEvaluationTest {
 
     @Test
     fun testSuccessMinimalInterprocUnclearFSM() {
-        val functionOk = tu.functions["minimalInterprocUnclear"]
+        val functionOk = tu.dFunctions["minimalInterprocUnclear"]
         assertNotNull(functionOk)
 
         val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
@@ -439,7 +439,7 @@ class ComplexDFAOrderEvaluationTest {
 
     @Test
     fun testSuccessMinimalInterprocUnclearArgumentFSM() {
-        val functionOk = tu.functions["minimalInterprocUnclearArgument"]
+        val functionOk = tu.dFunctions["minimalInterprocUnclearArgument"]
         assertNotNull(functionOk)
 
         val p1Decl = functionOk.parameters[0]
@@ -477,7 +477,7 @@ class ComplexDFAOrderEvaluationTest {
 
     @Test
     fun testSuccessMinimalInterprocUnclearReturnFSM() {
-        val functionOk = tu.functions["minimalInterprocUnclearReturn"]
+        val functionOk = tu.dFunctions["minimalInterprocUnclearReturn"]
         assertNotNull(functionOk)
 
         val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
@@ -513,7 +513,7 @@ class ComplexDFAOrderEvaluationTest {
 
     @Test
     fun testSuccessMinimalInterprocFailFSM() {
-        val functionOk = tu.functions["minimalInterprocFail"]
+        val functionOk = tu.dFunctions["minimalInterprocFail"]
         assertNotNull(functionOk)
 
         val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
@@ -553,7 +553,7 @@ class ComplexDFAOrderEvaluationTest {
 
     @Test
     fun testSuccessMinimalInterprocFail2FSM() {
-        val functionOk = tu.functions["minimalInterprocFail2"]
+        val functionOk = tu.dFunctions["minimalInterprocFail2"]
         assertNotNull(functionOk)
 
         val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)

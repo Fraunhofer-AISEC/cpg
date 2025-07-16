@@ -48,7 +48,7 @@ class SizeEvaluatorTest {
 
     @Test
     fun testArraySize() {
-        val mainClass = tu.records["MainClass"]
+        val mainClass = tu.dRecords["MainClass"]
         assertNotNull(mainClass)
         val main = mainClass.methods["main"]
         assertNotNull(main)
@@ -60,7 +60,7 @@ class SizeEvaluatorTest {
         var value = evaluator.evaluate(array)
         assertEquals(3, value)
 
-        val printCall = main.calls["println"]
+        val printCall = main.dCalls["println"]
         assertNotNull(printCall)
 
         value = evaluator.evaluate(printCall.arguments.firstOrNull()) as Int
@@ -69,7 +69,7 @@ class SizeEvaluatorTest {
 
     @Test
     fun testArraySizeFromSubscript() {
-        val mainClass = tu.records["MainClass"]
+        val mainClass = tu.dRecords["MainClass"]
         assertNotNull(mainClass)
 
         val main = mainClass.methods["main"]
@@ -82,7 +82,7 @@ class SizeEvaluatorTest {
         var value = evaluator.evaluate(array)
         assertEquals(3, value)
 
-        val forLoop = main.forLoops.firstOrNull()
+        val forLoop = main.dForLoops.firstOrNull()
         assertNotNull(forLoop)
 
         val subscriptExpr =
@@ -96,13 +96,13 @@ class SizeEvaluatorTest {
 
     @Test
     fun testStringSize() {
-        val mainClass = tu.records["MainClass"]
+        val mainClass = tu.dRecords["MainClass"]
         assertNotNull(mainClass)
 
         val main = mainClass.methods["main"]
         assertNotNull(main)
 
-        val printCall = main.calls("println").getOrNull(1)
+        val printCall = main.dCalls("println").getOrNull(1)
         assertNotNull(printCall)
 
         val evaluator = SizeEvaluator()

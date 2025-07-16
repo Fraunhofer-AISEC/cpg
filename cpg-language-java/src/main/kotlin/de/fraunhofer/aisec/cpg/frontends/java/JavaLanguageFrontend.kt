@@ -173,7 +173,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
             scopeManager.leaveScope(tud)
 
             if (holder is NamespaceDeclaration) {
-                tud.allChildren<NamespaceDeclaration>().reversed().forEach {
+                tud.descendants<NamespaceDeclaration>().reversed().forEach {
                     scopeManager.leaveScope(it)
                 }
             }

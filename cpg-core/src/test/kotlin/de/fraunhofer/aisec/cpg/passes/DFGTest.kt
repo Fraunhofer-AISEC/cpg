@@ -48,31 +48,31 @@ class DFGTest {
     fun testConditionalExpression() {
         val result = GraphExamples.getConditionalExpression()
 
-        val bJoin = result.refs[{ it.name.localName == "b" && it.location?.region?.startLine == 6 }]
+        val bJoin = result.dRefs[{ it.name.localName == "b" && it.location?.region?.startLine == 6 }]
         val a5 =
-            result.refs[
+            result.dRefs[
                     {
                         it.name.localName == "a" &&
                             it.location?.region?.startLine == 5 &&
                             it.location?.region?.startColumn == 3
                     }]
-        val a6 = result.refs[{ it.name.localName == "a" && it.location?.region?.startLine == 6 }]
+        val a6 = result.dRefs[{ it.name.localName == "a" && it.location?.region?.startLine == 6 }]
         val bCond =
-            result.refs[
+            result.dRefs[
                     {
                         it.name.localName == "b" &&
                             it.location?.region?.startLine == 5 &&
                             it.location?.region?.startColumn == 12
                     }]
         val b2 =
-            result.refs[
+            result.dRefs[
                     {
                         it.name.localName == "b" &&
                             it.location?.region?.startLine == 5 &&
                             it.location?.region?.startColumn == 16
                     }]
         val b3 =
-            result.refs[
+            result.dRefs[
                     {
                         it.name.localName == "b" &&
                             it.location?.region?.startLine == 5 &&
@@ -85,10 +85,10 @@ class DFGTest {
         assertNotNull(a5)
         assertNotNull(a6)
 
-        val val2 = result.literals[{ it.value == 2 }]
+        val val2 = result.dLiterals[{ it.value == 2 }]
         assertNotNull(val2)
 
-        val val3 = result.literals[{ it.value == 3 }]
+        val val3 = result.dLiterals[{ it.value == 3 }]
         assertNotNull(val3)
 
         assertEquals(1, b2.prevDFG.size)
@@ -124,27 +124,27 @@ class DFGTest {
     fun testDelayedAssignment() {
         val result = GraphExamples.getDelayedAssignmentAfterRHS()
 
-        val binaryOperatorAssignment = findByUniqueName(result.allChildren<AssignExpression>(), "=")
+        val binaryOperatorAssignment = findByUniqueName(result.descendants<AssignExpression>(), "=")
         assertNotNull(binaryOperatorAssignment)
 
-        val binaryOperatorAddition = findByUniqueName(result.allChildren<BinaryOperator>(), "+")
+        val binaryOperatorAddition = findByUniqueName(result.descendants<BinaryOperator>(), "+")
         assertNotNull(binaryOperatorAddition)
 
-        val varA = findByUniqueName(result.variables, "a")
+        val varA = findByUniqueName(result.dVariables, "a")
         assertNotNull(varA)
 
-        val varB = findByUniqueName(result.variables, "b")
+        val varB = findByUniqueName(result.dVariables, "b")
         assertNotNull(varB)
 
         val lhsA = binaryOperatorAssignment.lhs.first() as Reference
         val rhsA = binaryOperatorAddition.lhs as Reference
-        val b = findByUniqueName(result.refs, "b")
+        val b = findByUniqueName(result.dRefs, "b")
         assertNotNull(b)
 
-        val literal0 = result.literals[{ it.value == 0 }]
+        val literal0 = result.dLiterals[{ it.value == 0 }]
         assertNotNull(literal0)
 
-        val literal1 = result.literals[{ it.value == 1 }]
+        val literal1 = result.dLiterals[{ it.value == 1 }]
         assertNotNull(literal1)
         // a and b flow to the References in (a+b)
         assertEquals(1, varA.nextDFG.size)
@@ -178,10 +178,10 @@ class DFGTest {
     fun testCompoundOperatorDFG() {
         val result = GraphExamples.getCompoundOperator()
 
-        val rwCompoundOperator = findByUniqueName(result.allChildren(), "+=")
+        val rwCompoundOperator = findByUniqueName(result.descendants(), "+=")
         assertNotNull(rwCompoundOperator)
 
-        val expression = findByUniqueName(result.refs, "i")
+        val expression = findByUniqueName(result.dRefs, "i")
         assertNotNull(expression)
 
         val prevDFGOperator = rwCompoundOperator.prevDFG
@@ -198,10 +198,10 @@ class DFGTest {
     fun testUnaryOperatorDFG() {
         val result = GraphExamples.getUnaryOperator()
 
-        val rwUnaryOperator = findByUniqueName(result.allChildren<UnaryOperator>(), "++")
+        val rwUnaryOperator = findByUniqueName(result.descendants<UnaryOperator>(), "++")
         assertNotNull(rwUnaryOperator)
 
-        val expression = findByUniqueName(result.refs, "i")
+        val expression = findByUniqueName(result.dRefs, "i")
         assertNotNull(expression)
 
         val prevDFGOperator: Set<Node> = rwUnaryOperator.prevDFG
@@ -281,19 +281,19 @@ class DFGTest {
     fun testReturnStatement() {
         val result = GraphExamples.getReturnTest()
 
-        val returnFunction = result.functions["testReturn"]
+        val returnFunction = result.dFunctions["testReturn"]
         assertNotNull(returnFunction)
 
         assertEquals(2, returnFunction.prevDFG.size)
 
-        val allRealReturns = returnFunction.allChildren<ReturnStatement> { it.location != null }
+        val allRealReturns = returnFunction.descendants<ReturnStatement> { it.location != null }
         assertEquals(allRealReturns.toSet() as Set<Node>, returnFunction.prevDFG)
 
         assertEquals(1, allRealReturns[0].prevDFG.size)
-        assertTrue(returnFunction.literals.first { it.value == 2 } in allRealReturns[0].prevDFG)
+        assertTrue(returnFunction.dLiterals.first { it.value == 2 } in allRealReturns[0].prevDFG)
         assertEquals(1, allRealReturns[1].prevDFG.size)
         assertTrue(
-            returnFunction.refs.last { it.name.localName == "a" } in allRealReturns[1].prevDFG
+            returnFunction.dRefs.last { it.name.localName == "a" } in allRealReturns[1].prevDFG
         )
     }
 
@@ -301,7 +301,7 @@ class DFGTest {
     @Throws(Exception::class)
     fun testSensitivityThroughLoop() {
         val result = GraphExamples.getLoopingDFG()
-        val looping = result.methods["looping"]
+        val looping = result.dMethods["looping"]
         val methodNodes = SubgraphWalker.flattenAST(looping)
         val l0 = getLiteral(methodNodes, 0)
         val l1 = getLiteral(methodNodes, 1)
@@ -311,7 +311,7 @@ class DFGTest {
             SubgraphWalker.flattenAST(looping).filter { n: Node ->
                 n is CallExpression && n.name.localName == "println"
             }
-        val dfgNodes = flattenDFGGraph(calls[0].refs["a"], false)
+        val dfgNodes = flattenDFGGraph(calls[0].dRefs["a"], false)
         assertTrue(dfgNodes.contains(l0))
         assertTrue(dfgNodes.contains(l1))
         assertTrue(dfgNodes.contains(l2))
@@ -322,7 +322,7 @@ class DFGTest {
     @Throws(Exception::class)
     fun testSensitivityWithLabels() {
         val result = GraphExamples.getLabeledBreakContinueLoopDFG()
-        val looping = result.methods["labeledBreakContinue"]
+        val looping = result.dMethods["labeledBreakContinue"]
         val methodNodes = SubgraphWalker.flattenAST(looping)
         val l0 = getLiteral(methodNodes, 0)
         val l1 = getLiteral(methodNodes, 1)
@@ -333,10 +333,10 @@ class DFGTest {
             SubgraphWalker.flattenAST(looping)
                 .filter { n: Node -> n is CallExpression && n.name.localName == "println" }
                 .toMutableList()
-        val dfgNodesA0 = flattenDFGGraph(calls[0].refs["a"], false)
-        val dfgNodesA1 = flattenDFGGraph(calls[1].refs["a"], false)
-        val dfgNodesA2 = flattenDFGGraph(calls[2].refs["a"], false)
-        assertEquals(3, calls[0].refs["a"]?.prevDFG?.size)
+        val dfgNodesA0 = flattenDFGGraph(calls[0].dRefs["a"], false)
+        val dfgNodesA1 = flattenDFGGraph(calls[1].dRefs["a"], false)
+        val dfgNodesA2 = flattenDFGGraph(calls[2].dRefs["a"], false)
+        assertEquals(3, calls[0].dRefs["a"]?.prevDFG?.size)
         assertTrue(dfgNodesA0.contains(l0))
         assertTrue(dfgNodesA0.contains(l1))
         assertTrue(dfgNodesA0.contains(l3))
@@ -363,11 +363,11 @@ class DFGTest {
     fun testControlSensitiveDFGPassIfNoMerge() {
         val result = GraphExamples.getControlFlowSensitiveDFGIfNoMerge()
 
-        val b = result.variables["b"]
+        val b = result.dVariables["b"]
         assertNotNull(b)
 
         val ab = b.nextEOG[0] as Reference
-        val literal4 = result.literals[{ it.value == 4 }]
+        val literal4 = result.dLiterals[{ it.value == 4 }]
         assertNotNull(literal4)
 
         val a4 = ab.prevDFG.first { it is Reference }
@@ -381,13 +381,13 @@ class DFGTest {
         val result = GraphExamples.getControlFlowSensitiveDFGIfMerge()
 
         // Test If-Block
-        val literal2 = result.literals[{ it.value == 2 }]
+        val literal2 = result.dLiterals[{ it.value == 2 }]
         assertNotNull(literal2)
 
-        val b = result.variables["b"]
+        val b = result.dVariables["b"]
         assertNotNull(b)
 
-        val a2 = result.refs[{ it.access == AccessValues.WRITE }]
+        val a2 = result.dRefs[{ it.access == AccessValues.WRITE }]
         assertNotNull(a2)
         assertTrue(literal2.nextDFG.contains(a2))
         assertEquals(
@@ -403,9 +403,9 @@ class DFGTest {
         assertTrue(refersTo.nextDFG.contains(b.initializer!!))
 
         // Test Else-Block with System.out.println()
-        val literal1 = result.literals[{ it.value == 1 }]
+        val literal1 = result.dLiterals[{ it.value == 1 }]
         assertNotNull(literal1)
-        val println = result.calls["println"]
+        val println = result.dCalls["println"]
         assertNotNull(println)
         val aPrintln = println.arguments[0]
         assertTrue(refersTo.nextDFG.contains(aPrintln))
@@ -425,24 +425,24 @@ class DFGTest {
     fun testControlSensitiveDFGPassSwitch() {
         val result = GraphExamples.getControlFlowSesitiveDFGSwitch()
 
-        val a = result.variables["a"]
+        val a = result.dVariables["a"]
         assertNotNull(a)
 
-        val b = result.variables["b"]
+        val b = result.dVariables["b"]
         assertNotNull(b)
 
         val ab = b.nextEOG[0] as Reference
-        val a10 = result.refs[{ compareLineFromLocationIfExists(it, true, 8) }]
-        val a11 = result.refs[{ compareLineFromLocationIfExists(it, true, 11) }]
-        val a12 = result.refs[{ compareLineFromLocationIfExists(it, true, 14) }]
+        val a10 = result.dRefs[{ compareLineFromLocationIfExists(it, true, 8) }]
+        val a11 = result.dRefs[{ compareLineFromLocationIfExists(it, true, 11) }]
+        val a12 = result.dRefs[{ compareLineFromLocationIfExists(it, true, 14) }]
         assertNotNull(a10)
         assertNotNull(a11)
         assertNotNull(a12)
 
-        val literal0 = result.literals[{ it.value == 0 }]
-        val literal10 = result.literals[{ it.value == 10 }]
-        val literal11 = result.literals[{ it.value == 11 }]
-        val literal12 = result.literals[{ it.value == 12 }]
+        val literal0 = result.dLiterals[{ it.value == 0 }]
+        val literal10 = result.dLiterals[{ it.value == 10 }]
+        val literal11 = result.dLiterals[{ it.value == 11 }]
+        val literal12 = result.dLiterals[{ it.value == 12 }]
         assertNotNull(literal0)
         assertNotNull(literal10)
         assertNotNull(literal11)
@@ -464,10 +464,10 @@ class DFGTest {
         assertTrue(ab.nextDFG.contains(b))
 
         // Fallthrough test
-        val println = result.calls["println"]
+        val println = result.dCalls["println"]
         assertNotNull(println)
 
-        val aPrintln = result.refs[{ it.nextEOG.contains(println) }]
+        val aPrintln = result.dRefs[{ it.nextEOG.contains(println) }]
         assertNotNull(aPrintln)
         assertEquals(2, aPrintln.prevDFG.size)
         assertTrue(aPrintln.prevDFG.contains(a))
@@ -487,7 +487,7 @@ class DFGTest {
         //   testControlSensitiveDFGPassIfMerge).
         val result = GraphExamples.getBasicSlice()
 
-        val varA = findByUniqueName(result.variables, "a")
+        val varA = findByUniqueName(result.dVariables, "a")
         assertNotNull(varA)
         // The variable can flow to lines 19, 23, 24, 26, 31, 34 without modifications.
         assertEquals(6, varA.nextDFG.size)
@@ -497,7 +497,7 @@ class DFGTest {
     @Test
     fun testInitializerListExpression() {
         val result = GraphExamples.getInitializerListExprDFG()
-        val variable = result.variables["i"]
+        val variable = result.dVariables["i"]
         assertNotNull(variable)
         assertEquals(1, variable.prevDFG.size)
         val initializer = variable.prevDFG.first()

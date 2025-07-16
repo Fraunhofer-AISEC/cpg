@@ -41,7 +41,7 @@ class Neo4JTest {
         val (application, result) = createTranslationResult()
 
         // 22 inferred functions, 1 inferred method, 2 inferred constructors, 11 regular functions
-        assertEquals(36, result.functions.size)
+        assertEquals(36, result.dFunctions.size)
 
         application.pushToNeo4j(result)
     }
@@ -50,9 +50,9 @@ class Neo4JTest {
     fun testPushVeryLong() {
         val (application, result) = createTranslationResult("very_long.cpp")
 
-        assertEquals(1, result.variables.size)
+        assertEquals(1, result.dVariables.size)
 
-        val lit = result.variables["l"]?.initializer
+        val lit = result.dVariables["l"]?.initializer
         assertIs<Literal<BigInteger>>(lit)
         assertEquals(BigInteger("10958011617037158669"), lit.value)
 
@@ -66,7 +66,7 @@ class Neo4JTest {
         val tu = result.translationUnits.firstOrNull()
         assertNotNull(tu)
 
-        val connectCall = result.calls["connect"]
+        val connectCall = result.dCalls["connect"]
         assertNotNull(connectCall)
 
         abstract class NetworkingOperation(underlyingNode: Node, concept: Concept) :

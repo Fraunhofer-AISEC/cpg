@@ -43,10 +43,10 @@ class RubyLanguageFrontendTest {
             }
         assertNotNull(tu)
 
-        val myFunction = tu.functions["my_function"]
+        val myFunction = tu.dFunctions["my_function"]
         assertNotNull(myFunction)
 
-        val anotherFunction = tu.functions["another_function"]
+        val anotherFunction = tu.dFunctions["another_function"]
         assertNotNull(anotherFunction)
     }
 
@@ -73,13 +73,13 @@ class RubyLanguageFrontendTest {
             }
         assertNotNull(tu)
 
-        val each = tu.calls["each"]
+        val each = tu.dCalls["each"]
         assertNotNull(each)
 
         val arg0 = each.arguments[0]
         assertIs<LambdaExpression>(arg0)
 
-        val i = arg0.function.parameters[0]
+        val i = arg0.function.dParameters[0]
         assertLocalName("i", i)
     }
 }

@@ -45,10 +45,10 @@ class CXXDeclarationTest {
             }
         assertNotNull(result)
 
-        val declaration = result.functions[{ it.name.localName == "function" && !it.isDefinition }]
+        val declaration = result.dFunctions[{ it.name.localName == "function" && !it.isDefinition }]
         assertNotNull(declaration)
 
-        val definition = result.functions[{ it.name.localName == "function" && it.isDefinition }]
+        val definition = result.dFunctions[{ it.name.localName == "function" && it.isDefinition }]
         assertNotNull(definition)
 
         assertEquals(definition, declaration.definition)
@@ -68,17 +68,17 @@ class CXXDeclarationTest {
             }
         assertNotNull(result)
 
-        val declarations = result.functions { it.name.localName == "foo" && !it.isDefinition }
+        val declarations = result.dFunctions { it.name.localName == "foo" && !it.isDefinition }
         assertTrue(declarations.isNotEmpty())
 
-        val definition = result.functions[{ it.name.localName == "foo" && it.isDefinition }]
+        val definition = result.dFunctions[{ it.name.localName == "foo" && it.isDefinition }]
         assertNotNull(definition)
 
         declarations.forEach { assertEquals(definition, it.definition) }
 
         // With the "std" lib, we know that size_t is a typedef for an int-type and therefore we can
         // resolve all the calls
-        val calls = result.calls("foo")
+        val calls = result.dCalls("foo")
         calls.forEach { assertInvokes(it, definition) }
     }
 
@@ -96,10 +96,10 @@ class CXXDeclarationTest {
         assertNotNull(result)
 
         val declarations =
-            result.functions { it.name.localName == "foo" && !it.isDefinition && !it.isInferred }
+            result.dFunctions { it.name.localName == "foo" && !it.isDefinition && !it.isInferred }
         assertTrue(declarations.isNotEmpty())
 
-        val definition = result.functions[{ it.name.localName == "foo" && it.isDefinition }]
+        val definition = result.dFunctions[{ it.name.localName == "foo" && it.isDefinition }]
         assertNotNull(definition)
 
         declarations.forEach { assertEquals(definition, it.definition) }
@@ -108,7 +108,7 @@ class CXXDeclarationTest {
         // and this will actually result in a problematic resolution, since C does not allow
         // function overloading.
         val inferredDefinition =
-            result.functions[{ it.name.localName == "foo" && !it.isDefinition && it.isInferred }]
+            result.dFunctions[{ it.name.localName == "foo" && !it.isDefinition && it.isInferred }]
         assertNotNull(inferredDefinition)
     }
 
@@ -122,7 +122,7 @@ class CXXDeclarationTest {
             }
 
         // should be eight function nodes
-        assertEquals(8, tu.functions.size)
+        assertEquals(8, tu.dFunctions.size)
 
         var method = tu.declarations<FunctionDeclaration>(0)
         assertEquals("function0(int)void", method!!.signature)
@@ -133,11 +133,11 @@ class CXXDeclarationTest {
         val args = method.parameters.map { it.name.localName }
         assertEquals(listOf("arg0", "arg1", "arg2", "arg3"), args)
 
-        val function0 = tu.functions[{ it.name.localName == "function0" && it.isDefinition }]
+        val function0 = tu.dFunctions[{ it.name.localName == "function0" && it.isDefinition }]
         assertNotNull(function0)
 
         val function0DeclOnly =
-            tu.functions[{ it.name.localName == "function0" && !it.isDefinition }]
+            tu.dFunctions[{ it.name.localName == "function0" && !it.isDefinition }]
         assertNotNull(function0DeclOnly)
 
         // the declaration should be connected to the definition
@@ -163,7 +163,7 @@ class CXXDeclarationTest {
         assertEquals(1, statements.size)
 
         // should only contain 1 explicit return statement
-        statement = method.returns.singleOrNull()
+        statement = method.dReturns.singleOrNull()
         assertNotNull(statement)
         assertFalse(statement.isImplicit)
 
@@ -202,20 +202,20 @@ class CXXDeclarationTest {
             }
         assertNotNull(result)
 
-        val manipulateString = result.functions["manipulateString"]
+        val manipulateString = result.dFunctions["manipulateString"]
         assertNotNull(manipulateString)
         assertFalse(manipulateString.isInferred)
 
-        val size = result.functions["size"]
+        val size = result.dFunctions["size"]
         assertNotNull(size)
         assertFalse(size.isInferred)
 
         // We should be able to resolve all calls to manipulateString
-        var calls = result.calls("manipulateString")
+        var calls = result.dCalls("manipulateString")
         calls.forEach { assertContains(it.invokes, manipulateString) }
 
         // We should be able to resolve all calls to size
-        calls = result.calls("size")
+        calls = result.dCalls("size")
         calls.forEach { assertContains(it.invokes, size) }
     }
 
@@ -228,7 +228,7 @@ class CXXDeclarationTest {
             }
         assertNotNull(result)
         with(result) {
-            val a = result.variables["a"]
+            val a = result.dVariables["a"]
             assertNotNull(a)
             assertEquals(assertResolvedType("ABC::A"), a.type)
         }
@@ -243,29 +243,29 @@ class CXXDeclarationTest {
             }
         assertNotNull(result)
 
-        val integer = result.records["Integer"]
+        val integer = result.dRecords["Integer"]
         assertNotNull(integer)
 
-        val plusplus = integer.operators["operator++"]
+        val plusplus = integer.dOperators["operator++"]
         assertNotNull(plusplus)
         assertEquals("++", plusplus.operatorCode)
 
-        val plus = integer.operators("operator+")
+        val plus = integer.dOperators("operator+")
         assertEquals(2, plus.size)
         assertEquals("+", plus.map { it.operatorCode }.distinct().singleOrNull())
 
-        val main = result.functions["main"]
+        val main = result.dFunctions["main"]
         assertNotNull(main)
 
-        val unaryOp = main.operatorCalls["++"]
+        val unaryOp = main.dOperatorCalls["++"]
         assertNotNull(unaryOp)
         assertInvokes(unaryOp, plusplus)
 
-        val binaryOp0 = main.operatorCalls("+").getOrNull(0)
+        val binaryOp0 = main.dOperatorCalls("+").getOrNull(0)
         assertNotNull(binaryOp0)
         assertInvokes(binaryOp0, plus.getOrNull(0))
 
-        val binaryOp1 = main.operatorCalls("+").getOrNull(1)
+        val binaryOp1 = main.dOperatorCalls("+").getOrNull(1)
         assertNotNull(binaryOp1)
         assertInvokes(binaryOp1, plus.getOrNull(1))
     }
@@ -279,23 +279,23 @@ class CXXDeclarationTest {
             }
         assertNotNull(result)
 
-        val proxy = result.records["Proxy"]
+        val proxy = result.dRecords["Proxy"]
         assertNotNull(proxy)
 
-        val op = proxy.operators["operator->"]
+        val op = proxy.dOperators["operator->"]
         assertNotNull(op)
 
-        val data = result.records["Data"]
+        val data = result.dRecords["Data"]
         assertNotNull(data)
 
         val size = data.fields["size"]
         assertNotNull(size)
 
-        val p = result.refs["p"]
+        val p = result.dRefs["p"]
         assertNotNull(p)
         assertEquals(proxy.toType(), p.type)
 
-        val sizeRef = result.memberExpressions["size"]
+        val sizeRef = result.dMemberExpressions["size"]
         assertNotNull(sizeRef)
         assertRefersTo(sizeRef, size)
 
@@ -316,30 +316,30 @@ class CXXDeclarationTest {
             }
         assertNotNull(result)
 
-        val proxy = result.records["Proxy"]
+        val proxy = result.dRecords["Proxy"]
         assertNotNull(proxy)
 
-        val funcBar = proxy.functions["bar"]
+        val funcBar = proxy.dFunctions["bar"]
         assertNotNull(funcBar)
 
-        val op = proxy.operators["operator->"]
+        val op = proxy.dOperators["operator->"]
         assertNotNull(op)
 
-        val data = result.records["Data"]
+        val data = result.dRecords["Data"]
         assertNotNull(data)
 
-        val funcFoo = data.functions["foo"]
+        val funcFoo = data.dFunctions["foo"]
         assertNotNull(funcFoo)
 
-        val p = result.refs["p"]
+        val p = result.dRefs["p"]
         assertNotNull(p)
         assertEquals(proxy.toType(), p.type)
 
-        val funcFooRef = result.memberExpressions["foo"]
+        val funcFooRef = result.dMemberExpressions["foo"]
         assertNotNull(funcFooRef)
         assertRefersTo(funcFooRef, funcFoo)
 
-        val funcBarRef = result.memberExpressions["bar"]
+        val funcBarRef = result.dMemberExpressions["bar"]
         assertNotNull(funcBarRef)
         assertRefersTo(funcBarRef, funcBar)
 

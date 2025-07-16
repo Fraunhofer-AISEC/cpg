@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
@@ -202,7 +201,7 @@ class VisitorTest : BaseTest() {
         )
         fun setup() {
             val cpg = GraphExamples.getVisitorTest()
-            recordDeclaration = cpg.records.firstOrNull()
+            recordDeclaration = cpg.dRecords.firstOrNull()
         }
     }
 }

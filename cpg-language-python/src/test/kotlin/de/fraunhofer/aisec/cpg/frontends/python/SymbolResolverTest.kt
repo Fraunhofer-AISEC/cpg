@@ -48,43 +48,43 @@ class SymbolResolverTest {
             }
 
         val globalA =
-            result.namespaces["fields"]
-                .variables[{ it.name.localName == "a" && it !is FieldDeclaration }]
+            result.dNamespaces["fields"]
+                .dVariables[{ it.name.localName == "a" && it !is FieldDeclaration }]
         assertNotNull(globalA)
 
         // Make sure, we only have one (!) field a
-        val fieldsA = result.records["MyClass"]?.fields("a")
+        val fieldsA = result.dRecords["MyClass"]?.fields("a")
         val fieldA = fieldsA?.singleOrNull()
         assertNotNull(fieldA)
 
-        val aRefs = result.refs("a")
+        val aRefs = result.dRefs("a")
         aRefs.filterIsInstance<MemberExpression>().forEach { assertRefersTo(it, fieldA) }
         aRefs.filter { it !is MemberExpression }.forEach { assertRefersTo(it, globalA) }
 
         // We should only have one reference to "os" -> the member expression "self.os"
-        val osRefs = result.refs("os")
+        val osRefs = result.dRefs("os")
         assertEquals(1, osRefs.size)
         assertIs<MemberExpression>(osRefs.singleOrNull())
 
         // "os.name" is not a member expression but a reference to the field "name" of the "os"
         // module, therefore it is a reference
-        val osNameRefs = result.refs("os.name")
+        val osNameRefs = result.dRefs("os.name")
         assertEquals(1, osNameRefs.size)
         assertIsNot<MemberExpression>(osNameRefs.singleOrNull())
 
         // Same tests but for fields declared at the record level.
         // A variable "declared" inside a class is considered a field in Python.
-        val fieldCopyA = result.records["MyClass"]?.fields["copyA"]
+        val fieldCopyA = result.dRecords["MyClass"]?.fields["copyA"]
         assertIs<FieldDeclaration>(fieldCopyA)
-        val baz = result.records["MyClass"]?.methods["baz"]
+        val baz = result.dRecords["MyClass"]?.methods["baz"]
         assertIs<MethodDeclaration>(baz)
-        val bazPrint = baz.calls("print").singleOrNull()
+        val bazPrint = baz.dCalls("print").singleOrNull()
         assertIs<CallExpression>(bazPrint)
         val bazPrintArgument = bazPrint.arguments.firstOrNull()
         assertRefersTo(bazPrintArgument, fieldCopyA)
 
         // make sure, that this does not work without the receiver
-        val bazDoesNotWork = baz.calls("doesNotWork").singleOrNull()
+        val bazDoesNotWork = baz.dCalls("doesNotWork").singleOrNull()
         assertIs<CallExpression>(bazDoesNotWork)
         val bazDoesNotWorkArgument = bazDoesNotWork.arguments.firstOrNull()
         assertNotNull(bazDoesNotWorkArgument)
@@ -104,7 +104,7 @@ class SymbolResolverTest {
             }
         assertNotNull(result)
 
-        val myClass = result.records["MyClass"]
+        val myClass = result.dRecords["MyClass"]
         assertNotNull(myClass)
         assertFullName("other.myclass.MyClass", myClass.superTypes.singleOrNull())
     }
@@ -118,11 +118,11 @@ class SymbolResolverTest {
             }
         assertNotNull(result)
 
-        val someContext = result.records["context.SomeContext"]
+        val someContext = result.dRecords["context.SomeContext"]
         assertNotNull(someContext)
         assertTrue(someContext.isInferred, "Expected to infer a record 'context.SomeContext'")
 
-        val doSomething = result.calls("do_something").singleOrNull()
+        val doSomething = result.dCalls("do_something").singleOrNull()
         assertNotNull(doSomething, "Expected to find a single call to 'do_something'")
         assertIs<MemberCallExpression>(doSomething, "'do_something' should be a member call")
     }

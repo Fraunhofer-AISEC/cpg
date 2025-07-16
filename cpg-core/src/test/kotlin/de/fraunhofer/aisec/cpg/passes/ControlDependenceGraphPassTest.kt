@@ -43,7 +43,7 @@ class ControlDependenceGraphPassTest {
     fun testIfStatements() {
         val result = getIfTest()
         assertNotNull(result)
-        val main = result.functions["main"]
+        val main = result.dFunctions["main"]
         assertNotNull(main)
         val if0 = (main.body as Block).statements[1]
         assertNotNull(if0)
@@ -51,13 +51,13 @@ class ControlDependenceGraphPassTest {
         assertTrue(main in if0.prevCDG)
 
         val assignment1 =
-            result.assignments.firstOrNull { 1 == (it.value as? Literal<*>)?.value }?.start
+            result.dAssignments.firstOrNull { 1 == (it.value as? Literal<*>)?.value }?.start
         assertNotNull(assignment1)
         assertEquals(1, assignment1.prevCDG.size)
         assertTrue(if0 in assignment1.prevCDG)
 
         val print0 =
-            result.calls("printf").first {
+            result.dCalls("printf").first {
                 "0\n" == (it.arguments.firstOrNull() as? Literal<*>)?.value
             }
         assertNotNull(print0)
@@ -65,7 +65,7 @@ class ControlDependenceGraphPassTest {
         assertTrue(if0 in print0.prevCDG)
 
         val print1 =
-            result.calls("printf").first {
+            result.dCalls("printf").first {
                 "1\n" == (it.arguments.firstOrNull() as? Literal<*>)?.value
             }
         assertNotNull(print1)
@@ -73,7 +73,7 @@ class ControlDependenceGraphPassTest {
         assertTrue(main in print1.prevCDG)
 
         val print2 =
-            result.calls("printf").first {
+            result.dCalls("printf").first {
                 "2\n" == (it.arguments.firstOrNull() as? Literal<*>)?.value
             }
         assertNotNull(print2)
@@ -85,7 +85,7 @@ class ControlDependenceGraphPassTest {
     fun testForEachLoop() {
         val result = getForEachTest()
         assertNotNull(result)
-        val main = result.functions["main"]
+        val main = result.dFunctions["main"]
         assertNotNull(main)
         val forEachStmt = (main.body as Block).statements[1]
         assertNotNull(forEachStmt)
@@ -93,7 +93,7 @@ class ControlDependenceGraphPassTest {
         assertTrue(main in forEachStmt.prevCDG)
 
         val printInLoop =
-            result.calls("printf").first {
+            result.dCalls("printf").first {
                 "loop: \${}\n" == (it.arguments.firstOrNull() as? Literal<*>)?.value
             }
         assertNotNull(printInLoop)
@@ -101,7 +101,7 @@ class ControlDependenceGraphPassTest {
         assertTrue(forEachStmt in printInLoop.prevCDG)
 
         val printAfterLoop =
-            result.calls("printf").first {
+            result.dCalls("printf").first {
                 "1\n" == (it.arguments.firstOrNull() as? Literal<*>)?.value
             }
         assertNotNull(printAfterLoop)

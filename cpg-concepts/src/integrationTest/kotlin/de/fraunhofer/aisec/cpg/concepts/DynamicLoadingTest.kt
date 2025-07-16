@@ -63,10 +63,10 @@ class DynamicLoadingTest {
         val libExample = result.components["libexample"]
         assertNotNull(libExample)
 
-        val myFunc = result.functions["myfunc"]
+        val myFunc = result.dFunctions["myfunc"]
         assertNotNull(myFunc)
 
-        val lib = result.variables["lib"]
+        val lib = result.dVariables["lib"]
         assertNotNull(lib)
 
         val path =
@@ -83,11 +83,11 @@ class DynamicLoadingTest {
             "\"what\" of the LoadLibrary should be the libexample component",
         )
 
-        val bCall = result.calls["b"]
+        val bCall = result.dCalls["b"]
         assertNotNull(bCall)
         assertInvokes(bCall, myFunc, "The call to b should invoke myFunc")
 
-        val dlSym = result.calls["dlsym"]
+        val dlSym = result.dCalls["dlsym"]
         assertNotNull(dlSym)
 
         val loadSymbol =
@@ -96,7 +96,7 @@ class DynamicLoadingTest {
         assertIs<POSIX>(loadSymbol.os)
         assertEquals(myFunc, loadSymbol.what, "\"what\" of the LoadSymbol should be myFunc")
 
-        val c = result.refs["c"]
+        val c = result.dRefs["c"]
         assertNotNull(c)
 
         // The multi-evaluator contains too many values for now, since we just stupidly take all DFG
@@ -106,7 +106,7 @@ class DynamicLoadingTest {
         assertIs<Set<*>>(values)
         assertContains(values, 2)
 
-        val a = result.refs["a"]
+        val a = result.dRefs["a"]
         assertNotNull(a)
 
         values = a.evaluate(MultiValueEvaluator())
@@ -133,7 +133,7 @@ class DynamicLoadingTest {
         val winexample = result.components["winexample"]
         assertNotNull(winexample)
 
-        val dllMain = result.functions["DllMain"]
+        val dllMain = result.dFunctions["DllMain"]
         assertNotNull(dllMain)
 
         val winmain = result.components["winmain"]

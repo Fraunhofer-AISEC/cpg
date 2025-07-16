@@ -52,18 +52,18 @@ class CXXCompilationDatabaseTest {
             val tu = result.components.flatMap { it.translationUnits }.firstOrNull()
             assertNotNull(tu)
 
-            val mainFunc = tu.functions["main"]
+            val mainFunc = tu.dFunctions["main"]
             assertNotNull(mainFunc)
 
-            val func1 = tu.functions["func1"]
+            val func1 = tu.dFunctions["func1"]
             assertNotNull(func1)
             assertEquals(func1.isInferred, false)
 
-            val func2 = tu.functions["func2"]
+            val func2 = tu.dFunctions["func2"]
             assertNotNull(func2)
             assertEquals(func2.isInferred, false)
 
-            val sysFunc = tu.functions["sys_func"]
+            val sysFunc = tu.dFunctions["sys_func"]
             assertNotNull(sysFunc)
             assertEquals(sysFunc.isInferred, false)
 
@@ -110,10 +110,10 @@ class CXXCompilationDatabaseTest {
         assertNotNull(tu)
         assertNotNull(tu)
 
-        val mainFunc = tu.functions["main"]
+        val mainFunc = tu.dFunctions["main"]
         assertNotNull(mainFunc)
 
-        val s0 = mainFunc.returns.firstOrNull()
+        val s0 = mainFunc.dReturns.firstOrNull()
         assertNotNull(s0)
 
         val retVal = s0.returnValue as Literal<*>
@@ -134,14 +134,14 @@ class CXXCompilationDatabaseTest {
 
         for (tu in tus) {
             val value = ref[File(tu.name.toString()).name]
-            val mainFunc = tu.functions["main"]
+            val mainFunc = tu.dFunctions["main"]
             assertNotNull(mainFunc)
 
-            val s0 = mainFunc.literals.getOrNull(0)
+            val s0 = mainFunc.dLiterals.getOrNull(0)
             assertNotNull(s0)
             assertEquals(value, s0.value)
 
-            val s1 = mainFunc.literals.getOrNull(1)
+            val s1 = mainFunc.dLiterals.getOrNull(1)
             assertNotNull(s1)
             assertEquals(value, s1.value)
         }
@@ -156,7 +156,7 @@ class CXXCompilationDatabaseTest {
                 it.registerLanguage<CLanguage>()
             }
 
-        val main = result.functions["main"]
+        val main = result.dFunctions["main"]
         assertNotNull(main)
     }
 
@@ -188,7 +188,7 @@ class CXXCompilationDatabaseTest {
         for ((name, version) in versions) {
             val component = result.components[name]
             assertNotNull(component, "component $name is missing")
-            val a = component.variables["version"]
+            val a = component.dVariables["version"]
             assertNotNull(a)
             assertEquals(version, a.evaluate(), "$name should be version $version")
         }
@@ -208,7 +208,7 @@ class CXXCompilationDatabaseTest {
         val lib1 = result.components["lib1"]
         assertNotNull(lib1)
 
-        val function = lib1.functions["function"]
+        val function = lib1.dFunctions["function"]
         assertNotNull(function)
     }
 }

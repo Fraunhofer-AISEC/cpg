@@ -49,13 +49,13 @@ class SymbolResolverTest {
                 it.disableTypeObserver()
             }
         assertNotNull(result)
-        result.refs.forEach { assertNotNull(it.refersTo, "$it should not have an empty refersTo") }
+        result.dRefs.forEach { assertNotNull(it.refersTo, "$it should not have an empty refersTo") }
 
-        val ifCondition = result.ifs.firstOrNull()?.condition
+        val ifCondition = result.dIfs.firstOrNull()?.condition
         assertNotNull(ifCondition)
         assertIs<BooleanType>(ifCondition.type, "Type of if condition should be BooleanType")
 
-        val unaryOp = result.allChildren<UnaryOperator>().firstOrNull()
+        val unaryOp = result.descendants<UnaryOperator>().firstOrNull()
         assertNotNull(unaryOp)
     }
 
@@ -71,8 +71,8 @@ class SymbolResolverTest {
                 it.disableTypeObserver()
             }
         assertNotNull(result)
-        result.refs.forEach { assertNotNull(it.refersTo) }
-        result.mcalls.forEach { assertTrue(it.invokes.isNotEmpty()) }
+        result.dRefs.forEach { assertNotNull(it.refersTo) }
+        result.dMCalls.forEach { assertTrue(it.invokes.isNotEmpty()) }
     }
 
     @Test
@@ -87,7 +87,7 @@ class SymbolResolverTest {
                 it.disableTypeObserver()
             }
         assertNotNull(result)
-        result.refs.forEach { assertNotNull(it.refersTo) }
-        result.calls.forEach { assertTrue(it.invokes.isNotEmpty()) }
+        result.dRefs.forEach { assertNotNull(it.refersTo) }
+        result.dCalls.forEach { assertTrue(it.invokes.isNotEmpty()) }
     }
 }

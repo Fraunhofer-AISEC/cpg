@@ -49,17 +49,17 @@ class LoadIncludesTest {
 
         assertEquals(result.finalCtx.importedSources.size, 3)
 
-        val stdlib = result.components("stdlib").flatMap { it.allChildren<Node>() }
+        val stdlib = result.components("stdlib").flatMap { it.descendants<Node>() }
 
-        val jsonloads = result.calls("json.loads").firstOrNull()
+        val jsonloads = result.dCalls("json.loads").firstOrNull()
         assertNotNull(jsonloads)
         assertTrue(jsonloads.invokes.all { !it.isInferred && stdlib.contains(it) })
 
-        val jsonEncoder = result.memberExpressions("item_separator").firstOrNull()
+        val jsonEncoder = result.dMemberExpressions("item_separator").firstOrNull()
         assertNotNull(jsonEncoder)
         assertTrue(jsonEncoder.refersTo?.let { !it.isInferred && stdlib.contains(it) } == true)
 
-        val str = result.calls("str").firstOrNull()
+        val str = result.dCalls("str").firstOrNull()
         assertNotNull(str)
         assertTrue(str.invokes.all { !it.isInferred && stdlib.contains(it) })
     }

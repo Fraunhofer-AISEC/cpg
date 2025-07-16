@@ -49,13 +49,13 @@ class ExpressionTest {
         val main = tu.namespaces["main"]
         assertNotNull(main)
 
-        val mainFunc = main.functions["main"]
+        val mainFunc = main.dFunctions["main"]
         assertNotNull(mainFunc)
 
-        val f = mainFunc.variables["f"]
+        val f = mainFunc.dVariables["f"]
         assertNotNull(f)
 
-        val s = mainFunc.variables["s"]
+        val s = mainFunc.dVariables["s"]
         assertNotNull(s)
 
         val cast = s.initializer as? CastExpression
@@ -63,7 +63,7 @@ class ExpressionTest {
         assertFullName("main.MyStruct", cast.castType)
         assertSame(f, (cast.expression as? Reference)?.refersTo)
 
-        val ignored = main.variables("_")
+        val ignored = main.dVariables("_")
         ignored.forEach { assertIs<CastExpression>(it.initializer) }
     }
 
@@ -76,49 +76,49 @@ class ExpressionTest {
             }
         assertNotNull(tu)
 
-        val a = tu.variables["a"]
+        val a = tu.dVariables["a"]
         assertNotNull(a)
         assertLocalName("int[]", a.type)
 
-        val b = tu.variables["b"]
+        val b = tu.dVariables["b"]
         assertNotNull(b)
         assertLocalName("int[]", b.type)
 
         // [:1]
         var slice =
             assertIs<RangeExpression>(
-                assertIs<SubscriptExpression>(b.firstAssignment).subscriptExpression
+                assertIs<SubscriptExpression>(b.dFirstAssignment).subscriptExpression
             )
         assertNull(slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertNull(slice.third)
 
-        val c = tu.variables["c"]
+        val c = tu.dVariables["c"]
         assertNotNull(c)
         assertLocalName("int[]", c.type)
 
         // [1:]
-        slice = assertIs(assertIs<SubscriptExpression>(c.firstAssignment).subscriptExpression)
+        slice = assertIs(assertIs<SubscriptExpression>(c.dFirstAssignment).subscriptExpression)
         assertLiteralValue(1, slice.floor)
         assertNull(slice.ceiling)
         assertNull(slice.third)
 
-        val d = tu.variables["d"]
+        val d = tu.dVariables["d"]
         assertNotNull(d)
         assertLocalName("int[]", d.type)
 
         // [0:1]
-        slice = assertIs(assertIs<SubscriptExpression>(d.firstAssignment).subscriptExpression)
+        slice = assertIs(assertIs<SubscriptExpression>(d.dFirstAssignment).subscriptExpression)
         assertLiteralValue(0, slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertNull(slice.third)
 
-        val e = tu.variables["e"]
+        val e = tu.dVariables["e"]
         assertNotNull(e)
         assertLocalName("int[]", e.type)
 
         // [0:1:1]
-        slice = assertIs(assertIs<SubscriptExpression>(e.firstAssignment).subscriptExpression)
+        slice = assertIs(assertIs<SubscriptExpression>(e.dFirstAssignment).subscriptExpression)
         assertLiteralValue(0, slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertLiteralValue(1, slice.third)
@@ -134,14 +134,14 @@ class ExpressionTest {
         assertNotNull(tu)
 
         with(tu) {
-            val main = tu.functions["main"]
+            val main = tu.dFunctions["main"]
             assertNotNull(main)
 
-            val v = main.variables["v"]
+            val v = main.dVariables["v"]
             assertNotNull(v)
             assertEquals(primitiveType("int"), v.type)
 
-            val ch = main.variables["ch"]
+            val ch = main.dVariables["ch"]
             assertNotNull(ch)
             assertEquals(objectType("chan", generics = listOf(primitiveType("int"))), ch.type)
 
@@ -169,11 +169,11 @@ class ExpressionTest {
             }
         assertNotNull(tu)
 
-        val lit5 = tu.literals.firstOrNull()
+        val lit5 = tu.dLiterals.firstOrNull()
         assertNotNull(lit5)
         println(lit5.printDFG())
 
-        val x = tu.refs("x").lastOrNull()
+        val x = tu.dRefs("x").lastOrNull()
         assertNotNull(x)
 
         val paths = x.followPrevFullDFGEdgesUntilHit { it == lit5 }

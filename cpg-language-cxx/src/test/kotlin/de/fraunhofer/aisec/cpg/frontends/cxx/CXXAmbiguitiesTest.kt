@@ -62,7 +62,7 @@ class CXXAmbiguitiesTest {
         // record declarations for all types, so we end up with 3 declarations here.
         assertEquals(3, tu.declarations.size)
 
-        val myClass = tu.records["MyClass"]
+        val myClass = tu.dRecords["MyClass"]
         assertNotNull(myClass)
 
         val someFunction = myClass.methods["someFunction"]
@@ -70,7 +70,7 @@ class CXXAmbiguitiesTest {
 
         // CDT now (incorrectly) thinks the first line is a declaration statement, when in reality
         // it should be a CallExpression. But we cannot fix that at the moment
-        val crazy = someFunction.allChildren<DeclarationStatement>().firstOrNull()
+        val crazy = someFunction.descendants<DeclarationStatement>().firstOrNull()
         assertNotNull(crazy) // if we ever fix it, this will FAIL
 
         val problem = crazy.singleDeclaration as? ProblemDeclaration
@@ -91,10 +91,10 @@ class CXXAmbiguitiesTest {
             }
         assertNotNull(tu)
 
-        val mainFunc = tu.functions["main"]
+        val mainFunc = tu.dFunctions["main"]
         assertNotNull(mainFunc)
 
-        val fooFunc = tu.functions["foo"]
+        val fooFunc = tu.dFunctions["foo"]
         assertNotNull(fooFunc)
 
         val body = mainFunc.body
@@ -134,13 +134,13 @@ class CXXAmbiguitiesTest {
             }
         assertNotNull(tu)
 
-        val mainFunc = tu.functions["main"]
+        val mainFunc = tu.dFunctions["main"]
         assertNotNull(mainFunc)
 
-        val classA = tu.records["A"]
+        val classA = tu.dRecords["A"]
         assertNotNull(classA)
 
-        val structB = tu.records["B"]
+        val structB = tu.dRecords["B"]
         assertNotNull(structB)
     }
 }

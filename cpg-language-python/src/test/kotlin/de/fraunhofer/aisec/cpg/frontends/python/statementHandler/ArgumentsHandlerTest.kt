@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.get
-import de.fraunhofer.aisec.cpg.graph.parameters
+import de.fraunhofer.aisec.cpg.graph.dParameters
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path
 import kotlin.collections.component1
@@ -65,7 +65,7 @@ class ArgumentsHandlerTest {
 
     @Test
     fun testPosOnlyArguments() {
-        val func = result.functions["pos_only_and_args"]
+        val func = result.dFunctions["pos_only_and_args"]
         assertNotNull(func)
 
         val list = mapOf("a" to true, "b" to true, "c" to false)
@@ -84,7 +84,7 @@ class ArgumentsHandlerTest {
 
     @Test
     fun testVarargsArguments() {
-        val func = result.functions["test_varargs"]
+        val func = result.dFunctions["test_varargs"]
         assertNotNull(func, "Function 'test_varargs' should be found")
 
         val variadicArg = func.parameters["args"]
@@ -94,7 +94,7 @@ class ArgumentsHandlerTest {
 
     @Test
     fun testKwOnlyArguments() {
-        val func = result.functions["kwd_only_arg"]
+        val func = result.dFunctions["kwd_only_arg"]
         assertNotNull(func, "Function 'kwd_only_arg' should be found")
 
         val kwOnlyArg = func.parameters["arg"]
@@ -104,7 +104,7 @@ class ArgumentsHandlerTest {
 
     @Test
     fun testKwDefaultArguments() {
-        val func = result.functions["kw_defaults"]
+        val func = result.dFunctions["kw_defaults"]
         assertNotNull(func, "Function 'kw_defaults' should be found")
 
         assertEquals(4, func.parameters.size)
@@ -131,7 +131,7 @@ class ArgumentsHandlerTest {
 
     @Test
     fun testDefaultsArguments() {
-        val func = result.functions["defaults"]
+        val func = result.dFunctions["defaults"]
         assertNotNull(func, "Function 'defaults' should be found")
 
         assertEquals(4, func.parameters.size)
@@ -151,11 +151,11 @@ class ArgumentsHandlerTest {
 
     @Test
     fun testReceiverWithDefault() {
-        val func = result.functions["my_method"]
+        val func = result.dFunctions["my_method"]
         assertNotNull(func, "Function 'my_method' should be found")
 
         assertEquals(2, func.parameters.size)
-        assertNotNull(func.methods[0].receiver)
+        assertNotNull(func.dMethods[0].receiver)
 
         val parameterD = func.parameters["d"]
         assertNotNull(parameterD?.default, "Expected the parameter `d` to have a default value.")
@@ -168,7 +168,7 @@ class ArgumentsHandlerTest {
 
     @Test
     fun testKwArguments() {
-        val func = result.functions["kw_args"]
+        val func = result.dFunctions["kw_args"]
         assertNotNull(func, "Function 'kw_args' should be found")
 
         val kwArgs = func.parameters["kwargs"]
@@ -178,12 +178,12 @@ class ArgumentsHandlerTest {
 
     @Test
     fun testMethodDefaults() {
-        val func = result.functions["method_with_some_defaults"]
+        val func = result.dFunctions["method_with_some_defaults"]
 
-        assertEquals(3, func.parameters.size)
-        val parameterA = func.parameters["a"]
-        val parameterB = func.parameters["b"]
-        val parameterC = func.parameters["c"]
+        assertEquals(3, func.dParameters.size)
+        val parameterA = func.dParameters["a"]
+        val parameterB = func.dParameters["b"]
+        val parameterC = func.dParameters["c"]
         assertNotNull(
             parameterA,
             "Failed to find parameter `a` -> cannot test for non-existing default value.",
@@ -198,16 +198,16 @@ class ArgumentsHandlerTest {
 
     @Test
     fun testSignatureMatch() {
-        val func = result.functions["kw_args_and_default"]
+        val func = result.dFunctions["kw_args_and_default"]
         assertNotNull(func)
         val funcDefault = func.parameters[1]
         val funcKwargs = func.parameters[2]
 
-        val call = result.methods["call"]?.calls?.firstOrNull()
+        val call = result.dMethods["call"]?.dCalls?.firstOrNull()
         assertNotNull(call)
         assertContains(func.nextDFG, call)
 
-        val call2 = result.methods["call2"]?.calls?.firstOrNull()
+        val call2 = result.dMethods["call2"]?.dCalls?.firstOrNull()
         assertNotNull(call2)
         assertContains(call2.invokes, func)
         assertEquals(2, call2.arguments.size)
@@ -215,7 +215,7 @@ class ArgumentsHandlerTest {
         val defaultArg2 = call2.arguments[1]
         assertContains(defaultArg2.nextDFG, funcDefault)
 
-        val call3 = result.methods["call3"]?.calls?.firstOrNull()
+        val call3 = result.dMethods["call3"]?.dCalls?.firstOrNull()
         assertNotNull(call3)
 
         listOf("foo", "bar", "baz").forEach { argName ->
@@ -224,7 +224,7 @@ class ArgumentsHandlerTest {
             assertContains(arg.nextDFG, funcKwargs)
         }
 
-        val call4 = result.methods["call4"]?.calls?.firstOrNull()
+        val call4 = result.dMethods["call4"]?.dCalls?.firstOrNull()
         assertNotNull(call4)
         val defaultArg4 = call4.arguments[1]
         assertNotNull(defaultArg4)

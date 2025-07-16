@@ -36,7 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.policy.Principal
 import de.fraunhofer.aisec.cpg.graph.concepts.policy.ProtectedAsset
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.returns
+import de.fraunhofer.aisec.cpg.graph.dReturns
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -75,7 +75,7 @@ class PolicyTest {
                                     )
                                     .with {
                                         val boundary = Boundary()
-                                        node.returns.forEach { ret ->
+                                        node.dReturns.forEach { ret ->
                                             propagate { ret }.with { ExitBoundary(boundary) }
                                         }
                                         boundary
@@ -105,7 +105,7 @@ class PolicyTest {
                                         lhs?.getOverlaysByPrevDFG<Context>(state)?.singleOrNull()
                                     val principal =
                                         rhs?.getOverlaysByPrevDFG<Principal>(state)?.singleOrNull()
-                                    val thenReturns = node.thenStatement.returns
+                                    val thenReturns = node.thenStatement.dReturns
                                     val protectedAsset =
                                         thenReturns
                                             .mapNotNull { it.returnValue }

@@ -92,13 +92,13 @@ class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
     override fun hashCode() = Objects.hash(super.hashCode(), variable, iterable)
 
     override fun getStartingPrevEOG(): Collection<Node> {
-        val astChildren = this.allChildren<Node> { true }
+        val astChildren = this.descendants<Node> { true }
         return iterable?.getStartingPrevEOG()?.filter { it !in astChildren }
             ?: variable?.getStartingPrevEOG()
             ?: this.prevEOG
     }
 
     override fun getExitNextEOG(): Collection<Node> {
-        return this.nextEOG.filter { it !in statement.allChildren<Node> { true } }
+        return this.nextEOG.filter { it !in statement.descendants<Node> { true } }
     }
 }

@@ -35,10 +35,10 @@ import de.fraunhofer.aisec.cpg.frontends.HasStructs
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.dCalls
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.invoke
-import de.fraunhofer.aisec.cpg.graph.methods
+import de.fraunhofer.aisec.cpg.graph.dMethods
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
@@ -46,7 +46,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.translationUnit
+import de.fraunhofer.aisec.cpg.graph.pTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -323,7 +323,7 @@ internal fun Pass<*>.tryFunctionInferenceFromFunctionPointer(
             extracted.scope
         }
 
-    return (scope?.astNode ?: ref.translationUnit)
+    return (scope?.astNode ?: ref.pTranslationUnit)
         ?.startInference(ctx)
         ?.inferFunctionDeclaration(ref.name, null, false, type.parameters, type.returnType)
 }
@@ -374,7 +374,7 @@ internal fun Pass<*>.tryMethodInference(
             // several classes and in all occasions the `this` was left out; but this seems
             // unlikely
             var others =
-                ctx.currentComponent.calls {
+                ctx.currentComponent.dCalls {
                     it != call && it.name == call.name && call !is MemberCallExpression
                 }
             others.isNotEmpty()
@@ -436,6 +436,6 @@ internal fun Pass<*>.tryScopeInference(scopeName: Name, source: Node): Declarati
  */
 private fun methodExists(type: ObjectType, name: String): Boolean {
     var types = type.ancestors.map { it.type }
-    var methods = types.map { it.recordDeclaration }.flatMap { it.methods }
+    var methods = types.map { it.recordDeclaration }.flatMap { it.dMethods }
     return methods.any { it.name.localName == name }
 }

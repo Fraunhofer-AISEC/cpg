@@ -47,7 +47,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
         // parse without symbols
         val tu =
             CXXLanguageFrontend(ctx, CPPLanguage()).parse(File("src/test/resources/symbols.cpp"))
-        val main = tu.functions["main"]
+        val main = tu.dFunctions["main"]
         assertNotNull(main)
 
         val funcDecl = main
@@ -83,7 +83,7 @@ internal class CXXSymbolConfigurationTest : BaseTest() {
         val ctx = TranslationContext(config)
         val tu =
             CXXLanguageFrontend(ctx, CPPLanguage()).parse(File("src/test/resources/symbols.cpp"))
-        val main = tu.functions["main"]
+        val main = tu.dFunctions["main"]
         assertNotNull(main)
 
         val funcDecl = main

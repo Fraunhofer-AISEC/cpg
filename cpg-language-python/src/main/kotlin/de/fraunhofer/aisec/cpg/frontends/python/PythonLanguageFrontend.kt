@@ -393,7 +393,7 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
         }
 
         // Leave scopes in reverse order
-        tud.allChildren<NamespaceDeclaration>().reversed().forEach { scopeManager.leaveScope(it) }
+        tud.descendants<NamespaceDeclaration>().reversed().forEach { scopeManager.leaveScope(it) }
 
         return tud
     }

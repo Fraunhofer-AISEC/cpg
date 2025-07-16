@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.functions
+import de.fraunhofer.aisec.cpg.graph.dFunctions
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
@@ -47,7 +47,7 @@ class ProgramDependenceGraphPassTest {
     @MethodSource("provideTranslationResultForPDGTest")
     fun `test if pdg is equal to union of cdg and dfg`(result: TranslationResult, name: String) {
         assertNotNull(result)
-        val main = result.functions["main"]
+        val main = result.dFunctions["main"]
         assertNotNull(main)
 
         main.accept(

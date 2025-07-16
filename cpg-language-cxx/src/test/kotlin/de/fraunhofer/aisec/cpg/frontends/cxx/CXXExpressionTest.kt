@@ -43,11 +43,11 @@ class CXXExpressionTest {
         assertNotNull(tu)
 
         // We should have two calls (int and myint64)
-        val casts = tu.casts
+        val casts = tu.dCasts
         assertEquals(2, casts.size)
         assertEquals(listOf("int", "long long int"), casts.map { it.name.localName })
 
-        val cast = tu.casts.firstOrNull()
+        val cast = tu.dCasts.firstOrNull()
         assertNotNull(cast)
         assertEquals(cast, cast.expression.astParent)
     }

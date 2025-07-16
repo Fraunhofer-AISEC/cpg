@@ -50,13 +50,13 @@ class StatementTest {
         val p = tu.namespaces["p"]
         assertNotNull(p)
 
-        val main = p.functions["main"]
+        val main = p.dFunctions["main"]
         assertNotNull(main)
 
-        val start = main.allChildren<LabelStatement>().firstOrNull { it.label == "start" }
+        val start = main.descendants<LabelStatement>().firstOrNull { it.label == "start" }
         assertNotNull(start)
 
-        val cases = start.allChildren<CaseStatement>()
+        val cases = start.descendants<CaseStatement>()
         assertEquals(4, cases.size)
 
         val case0 = cases.firstOrNull { (it.caseExpression as? Literal<*>)?.value == 0 }
@@ -72,10 +72,10 @@ class StatementTest {
         val breakStatement = assertIs<BreakStatement>(stmt)
         assertEquals("start", breakStatement.label)
 
-        val default = start.allChildren<DefaultStatement>().firstOrNull()
+        val default = start.descendants<DefaultStatement>().firstOrNull()
         assertNotNull(default)
 
-        val end = main.allChildren<LabelStatement>().firstOrNull { it.label == "end" }
+        val end = main.descendants<LabelStatement>().firstOrNull { it.label == "end" }
         assertNotNull(end)
     }
 
@@ -91,10 +91,10 @@ class StatementTest {
         val p = tu.namespaces["p"]
         assertNotNull(p)
 
-        val `do` = p.methods["Do"]
+        val `do` = p.dMethods["Do"]
         assertNotNull(`do`)
 
-        val op = `do`.allChildren<UnaryOperator> { it.name.localName == "defer" }.firstOrNull()
+        val op = `do`.descendants<UnaryOperator> { it.name.localName == "defer" }.firstOrNull()
         assertNotNull(op)
 
         // The EOG for the defer statement itself should be in the regular EOG path
@@ -121,7 +121,7 @@ class StatementTest {
             }
         assertNotNull(tu)
 
-        val main = tu.functions["main"]
+        val main = tu.dFunctions["main"]
         assertNotNull(main)
 
         val body = main.body
@@ -135,7 +135,7 @@ class StatementTest {
         assertIs<Block>(block)
         assertNotNull(block)
 
-        val vs = main.variables("v")
+        val vs = main.dVariables("v")
         assertNotNull(vs)
         assertEquals(
             listOf("main.MyStruct", "main.MyStruct*", "main.MyInterface"),

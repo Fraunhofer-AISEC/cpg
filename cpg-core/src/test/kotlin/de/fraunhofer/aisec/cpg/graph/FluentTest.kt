@@ -78,7 +78,7 @@ class FluentTest {
                 }
 
         // Let's assert that we did this correctly
-        val main = result.functions["main"]
+        val main = result.dFunctions["main"]
         assertNotNull(main)
         assertNotNull(main.scope)
         assertTrue(main.scope is GlobalScope)
@@ -120,7 +120,7 @@ class FluentTest {
         assertEquals("==", condition.operatorCode)
 
         // The "then" should have a call to "printf" with argument "then"
-        var printf = ifStatement.thenStatement.calls["printf"]
+        var printf = ifStatement.thenStatement.dCalls["printf"]
         assertNotNull(printf)
         assertEquals("then", printf.arguments[0]<Literal<*>>()?.value)
 
@@ -128,11 +128,11 @@ class FluentTest {
         val elseIf = ifStatement.elseStatement as? IfStatement
         assertNotNull(elseIf)
 
-        printf = elseIf.thenStatement.calls["printf"]
+        printf = elseIf.thenStatement.dCalls["printf"]
         assertNotNull(printf)
         assertEquals("elseIf", printf.arguments[0]<Literal<*>>()?.value)
 
-        printf = elseIf.elseStatement.calls["printf"]
+        printf = elseIf.elseStatement.dCalls["printf"]
         assertNotNull(printf)
         assertEquals("else", printf.arguments[0]<Literal<*>>()?.value)
 
@@ -223,7 +223,7 @@ class FluentTest {
                     }
                 }
 
-        val listComp = result.variables["some"]?.initializer
+        val listComp = result.dVariables["some"]?.initializer
         assertIs<CollectionComprehension>(listComp)
         print(listComp.toString()) // This is only here to get a better test coverage
         print(
@@ -276,7 +276,7 @@ class FluentTest {
                     }
                 }
 
-        val listComp = result.variables["some"]?.initializer
+        val listComp = result.dVariables["some"]?.initializer
         assertIs<CollectionComprehension>(listComp)
         print(listComp.toString()) // This is only here to get a better test coverage
         print(
@@ -333,7 +333,7 @@ class FluentTest {
                     }
                 }
 
-        val listComp = result.variables["some"]?.initializer
+        val listComp = result.dVariables["some"]?.initializer
         assertIs<CollectionComprehension>(listComp)
         print(listComp.toString()) // This is only here to get a better test coverage
         print(

@@ -1379,7 +1379,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         // We have multiple pairs, so we insert a declaration at the beginning of the function and
         // make an assignment in each BB.
         val functionName = LLVMGetValueName(bbsFunction).string
-        val functions = tu.functions(functionName)
+        val functions = tu.dFunctions(functionName)
         if (functions.size != 1) {
             log.error(
                 "${functions.size} functions match the name of the one where the phi instruction is inserted. Can't handle this case."

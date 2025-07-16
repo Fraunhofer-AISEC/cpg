@@ -32,23 +32,23 @@ import org.reflections.scanners.Scanners.SubTypes
 
 /**
  * Retrieves a set of all [Concept] nodes associated with this [Node] and its AST children
- * ([Node.nodes]).
+ * ([Node.dNodes]).
  *
  * @return A set containing all [Concept] nodes found in the overlays of the [Node] and its
  *   children.
  */
 val Node.conceptNodes: Set<Concept>
-    get() = this.nodes.flatMapTo(mutableSetOf()) { it.overlays.filterIsInstance<Concept>() }
+    get() = this.dNodes.flatMapTo(mutableSetOf()) { it.overlays.filterIsInstance<Concept>() }
 
 /**
  * Retrieves a set of all [Operation] nodes associated with this [Node] and its AST children
- * ([Node.nodes]).
+ * ([Node.dNodes]).
  *
  * @return A set containing all [Operation] nodes found in the overlays of the [Node] and its
  *   children.
  */
 val Node.operationNodes: Set<Operation>
-    get() = this.nodes.flatMapTo(mutableSetOf()) { it.overlays.filterIsInstance<Operation>() }
+    get() = this.dNodes.flatMapTo(mutableSetOf()) { it.overlays.filterIsInstance<Operation>() }
 
 /** Returns a [Set] of all subclasses of the class [T]. */
 inline fun <reified T : OverlayNode> listOverlayClasses(

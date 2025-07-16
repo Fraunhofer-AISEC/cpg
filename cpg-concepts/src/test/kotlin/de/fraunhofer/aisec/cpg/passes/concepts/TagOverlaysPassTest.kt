@@ -99,7 +99,7 @@ class TagOverlaysPassTest {
                                                         val encryptOps =
                                                             secrets.flatMap { secret ->
                                                                 val ciphers =
-                                                                    node.translationUnit
+                                                                    node.pTranslationUnit
                                                                         .allChildrenWithOverlays<
                                                                             Cipher
                                                                         >() +
@@ -139,19 +139,19 @@ class TagOverlaysPassTest {
                 }
             }
 
-        val encryption = result.records["Encryption"]
+        val encryption = result.dRecords["Encryption"]
         assertNotNull(encryption)
 
         val cipher = encryption.conceptNodes.singleOrNull()
         assertIs<Cipher>(cipher)
 
-        val key = result.variables["key"]
+        val key = result.dVariables["key"]
         assertNotNull(key)
 
         val secret = key.conceptNodes.singleOrNull()
         assertIs<Secret>(secret)
 
-        val encryptCall = result.calls["encrypt"]
+        val encryptCall = result.dCalls["encrypt"]
         assertNotNull(encryptCall)
 
         val encrypt = encryptCall.operationNodes.singleOrNull()

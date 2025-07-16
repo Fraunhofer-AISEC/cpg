@@ -164,7 +164,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
         // We can check, whether we have a matching component based on the base filename
         val component =
             path?.let {
-                call.translationResult?.findComponentForLibrary(
+                call.pTranslationResult?.findComponentForLibrary(
                     Path(it).fileName.nameWithoutExtension.toString()
                 )
             }

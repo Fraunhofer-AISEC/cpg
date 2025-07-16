@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.translationUnit
+import de.fraunhofer.aisec.cpg.graph.pTranslationUnit
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
 import kotlin.math.pow
@@ -79,9 +79,9 @@ class PythonValueEvaluator : ValueEvaluator() {
             // we have it). This allows us to dynamically prune if-branches based on constant
             // evaluation.
             "sys.platform" ->
-                node.translationUnit?.sysInfo?.platform ?: super.handleReference(node, depth)
+                node.pTranslationUnit?.sysInfo?.platform ?: super.handleReference(node, depth)
             "sys.version_info" -> {
-                return node.translationUnit?.sysInfo?.versionInfo?.toList()
+                return node.pTranslationUnit?.sysInfo?.versionInfo?.toList()
                     ?: super.handleReference(node, depth)
             }
             else -> super.handleReference(node, depth)
@@ -177,7 +177,7 @@ class PythonValueEvaluator : ValueEvaluator() {
      * @return The evaluated symbol or null if it is not specified in the [symbolsMap].
      */
     internal fun resolveSymbolViaLookup(node: Reference, symbol: String): Any? {
-        val platform = node.translationUnit?.sysInfo?.platform
+        val platform = node.pTranslationUnit?.sysInfo?.platform
         if (platform == null) {
             Util.warnWithFileLocation(node, log, "No platform found. Cannot evaluate symbol.")
         }

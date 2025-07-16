@@ -52,7 +52,7 @@ internal class ScopeManagerTest : BaseTest() {
         val ctx = TranslationContext(config)
         val frontend = CXXLanguageFrontend(ctx, CPPLanguage())
         val tu = frontend.parse(File("src/test/resources/cxx/recordstmt.cpp"))
-        val methods = tu.allChildren<MethodDeclaration>().filter { it !is ConstructorDeclaration }
+        val methods = tu.descendants<MethodDeclaration>().filter { it !is ConstructorDeclaration }
         assertFalse(methods.isEmpty())
 
         methods.forEach {
@@ -60,7 +60,7 @@ internal class ScopeManagerTest : BaseTest() {
             assertSame(it, scope!!.astNode)
         }
 
-        val constructors = tu.allChildren<ConstructorDeclaration>()
+        val constructors = tu.descendants<ConstructorDeclaration>()
         assertFalse(constructors.isEmpty())
 
         // make sure that the scope of the constructor actually has the constructor as an ast node.

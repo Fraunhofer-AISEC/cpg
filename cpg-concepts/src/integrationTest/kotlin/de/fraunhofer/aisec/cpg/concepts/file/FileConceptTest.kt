@@ -73,7 +73,7 @@ class FileConceptTest : BaseTest() {
             "Expected to find 5 operations (open, read, flags, 2 x close (one for normally exiting `with` and one for the `catch` exit)).",
         )
 
-        val fileNameLiteral = result.literals.singleOrNull { it.value == "example.txt" }
+        val fileNameLiteral = result.dLiterals.singleOrNull { it.value == "example.txt" }
         assertNotNull(fileNameLiteral, "Expected to find exactly one literal \"example.txt\".")
         assertEquals(
             fileNameLiteral,
@@ -89,7 +89,7 @@ class FileConceptTest : BaseTest() {
             "Expected to find access mode \"RDONLY\".",
         )
 
-        val contentRef = result.refs("content").singleOrNull()
+        val contentRef = result.dRefs("content").singleOrNull()
         assertNotNull(contentRef)
 
         assertTrue(
@@ -166,7 +166,7 @@ class FileConceptTest : BaseTest() {
             "Expected to find access mode \"WRONLY\".",
         )
 
-        val helloWorld = result.literals.singleOrNull { it.value == "Hello world!" }
+        val helloWorld = result.dLiterals.singleOrNull { it.value == "Hello world!" }
         assertNotNull(helloWorld)
 
         assertTrue(
@@ -570,7 +570,7 @@ class FileConceptTest : BaseTest() {
         )
 
         val literal =
-            result.literals.singleOrNull { it.value is String && it.value == "Hello world!" }
+            result.dLiterals.singleOrNull { it.value is String && it.value == "Hello world!" }
         assertNotNull(literal)
 
         assertTrue(
@@ -675,7 +675,7 @@ class FileConceptTest : BaseTest() {
         val notTempFile = file.singleOrNull { it.isTempFile == FileTempFileStatus.NOT_A_TEMP_FILE }
         assertNotNull(notTempFile)
 
-        val barLiteral = result.literals.singleOrNull { it.value is String && it.value == "bar" }
+        val barLiteral = result.dLiterals.singleOrNull { it.value is String && it.value == "bar" }
         assertNotNull(barLiteral)
 
         assertTrue(
@@ -715,7 +715,7 @@ class FileConceptTest : BaseTest() {
         assertNotNull(mkstempFile)
 
         val stuffLiteral =
-            result.literals.singleOrNull { it.value is String && it.value == "stuff" }
+            result.dLiterals.singleOrNull { it.value is String && it.value == "stuff" }
         assertNotNull(stuffLiteral)
 
         assertTrue(
@@ -732,7 +732,7 @@ class FileConceptTest : BaseTest() {
         assertNotNull(mkdtempFile)
 
         val helloWorldLiteral =
-            result.literals.singleOrNull { it.value is String && it.value == "hello world!" }
+            result.dLiterals.singleOrNull { it.value is String && it.value == "hello world!" }
         assertNotNull(helloWorldLiteral)
 
         assertTrue(

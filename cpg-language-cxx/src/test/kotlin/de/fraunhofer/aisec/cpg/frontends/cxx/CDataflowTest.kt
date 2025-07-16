@@ -45,14 +45,14 @@ class CDataflowTest {
             }
         assertNotNull(tu)
 
-        val main = tu.functions["main"]
+        val main = tu.dFunctions["main"]
         assertNotNull(main)
 
-        val i = assertNotNull(tu.fields["tls_context::i"])
-        val j = assertNotNull(tu.fields["tls_context::j"])
-        val k = assertNotNull(tu.fields["tls_context::k"])
+        val i = assertNotNull(tu.dFields["tls_context::i"])
+        val j = assertNotNull(tu.dFields["tls_context::j"])
+        val k = assertNotNull(tu.dFields["tls_context::k"])
 
-        val renegotiate = tu.functions["renegotiate"]
+        val renegotiate = tu.dFunctions["renegotiate"]
         assertNotNull(renegotiate)
 
         // Our start function and variable/parameter

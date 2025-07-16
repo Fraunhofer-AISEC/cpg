@@ -70,7 +70,7 @@ class FormattedValueHandlerTest {
     @Test
     fun testFormattedValues() {
         // Test for a = f'Number: {42:.2f}'
-        val aAssExpression = result.variables["a"]?.astParent
+        val aAssExpression = result.dVariables["a"]?.astParent
         assertIs<AssignExpression>(aAssExpression)
         val aExprRhs = aAssExpression.rhs.singleOrNull()
         assertIs<BinaryOperator>(aExprRhs)
@@ -85,7 +85,7 @@ class FormattedValueHandlerTest {
         assertLiteralValue(".2f", aArguments[1])
 
         // Test for b = f'Hexadecimal: {255:#x}'
-        val bAssExpression = result.variables["b"]?.astParent
+        val bAssExpression = result.dVariables["b"]?.astParent
         assertIs<AssignExpression>(bAssExpression)
         val bExprRhs = bAssExpression.rhs.singleOrNull()
         assertIs<BinaryOperator>(bExprRhs)
@@ -100,7 +100,7 @@ class FormattedValueHandlerTest {
         assertLiteralValue("#x", bArguments[1])
 
         // Test for c = f'String with conversion: {"Hello, world!"!r}'
-        val cAssExpression = result.variables["c"]?.astParent
+        val cAssExpression = result.dVariables["c"]?.astParent
         assertIs<AssignExpression>(cAssExpression)
         val cExprRhs = cAssExpression.rhs.singleOrNull()
         assertIs<BinaryOperator>(cExprRhs)
@@ -112,7 +112,7 @@ class FormattedValueHandlerTest {
         assertLiteralValue("Hello, world!", cArguments)
 
         // Test for d = f'ASCII representation: {"50$"!a}'
-        val dAssExpression = result.variables["d"]?.astParent
+        val dAssExpression = result.dVariables["d"]?.astParent
         assertIs<AssignExpression>(dAssExpression)
         val dExprRhs = dAssExpression.rhs.singleOrNull()
         assertIs<BinaryOperator>(dExprRhs)
@@ -125,7 +125,7 @@ class FormattedValueHandlerTest {
 
         // Test for e = f'Combined: {42!s:10}'
         // This is translated to `'Combined: ' +  format(str(b), "10")`
-        val eAssExpression = result.variables["e"]?.astParent
+        val eAssExpression = result.dVariables["e"]?.astParent
         assertIs<AssignExpression>(eAssExpression)
         val eExprRhs = eAssExpression.rhs.singleOrNull()
         assertIs<BinaryOperator>(eExprRhs)

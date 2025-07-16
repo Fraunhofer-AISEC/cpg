@@ -26,10 +26,10 @@
 package de.fraunhofer.aisec.cpg.enhancements.calls
 
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
-import de.fraunhofer.aisec.cpg.graph.allChildren
+import de.fraunhofer.aisec.cpg.graph.descendants
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.variables
+import de.fraunhofer.aisec.cpg.graph.dVariables
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.*
@@ -41,11 +41,11 @@ internal class ConstructorsTest : BaseTest() {
     @Throws(Exception::class)
     fun testJava() {
         val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
-        val constructors = result.allChildren<ConstructorDeclaration>()
+        val constructors = result.descendants<ConstructorDeclaration>()
         val noArg = findByUniquePredicate(constructors) { it.parameters.isEmpty() }
         val singleArg = findByUniquePredicate(constructors) { it.parameters.size == 1 }
         val twoArgs = findByUniquePredicate(constructors) { it.parameters.size == 2 }
-        val variables = result.variables
+        val variables = result.dVariables
         val a1 = findByUniqueName(variables, "a1")
         assertNotNull(a1)
         assertTrue(a1.initializer is NewExpression)

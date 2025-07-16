@@ -38,17 +38,17 @@ class MultiValueEvaluatorTest {
     fun testSingleValue() {
         val tu = ValueEvaluationTests.getExample().components.first().translationUnits.first()
 
-        val main = tu.functions["main"]
+        val main = tu.dFunctions["main"]
         assertNotNull(main)
 
-        val b = main.variables["b"]
+        val b = main.dVariables["b"]
         assertNotNull(b)
 
         var value = b.evaluate()
         assertEquals(2, value)
 
         val printB =
-            main.calls[
+            main.dCalls[
                     {
                         it.name.localName == "println" &&
                             it.arguments.firstOrNull()?.name?.localName == "b"
@@ -70,55 +70,55 @@ class MultiValueEvaluatorTest {
         assertEquals(value.min(), value.max())
         assertEquals(2, value.min())
 
-        val c = main.variables["c"]
+        val c = main.dVariables["c"]
         assertNotNull(c)
 
         value = evaluator.evaluate(c)
         assertEquals(3, value)
 
-        val d = main.variables["d"]
+        val d = main.dVariables["d"]
         assertNotNull(d)
 
         value = evaluator.evaluate(d)
         assertEquals(2, value)
 
-        val e = main.variables["e"]
+        val e = main.dVariables["e"]
         assertNotNull(e)
         value = evaluator.evaluate(e)
         assertEquals(3.5, value)
 
-        val f = main.variables["f"]
+        val f = main.dVariables["f"]
         assertNotNull(f)
         value = evaluator.evaluate(f)
         assertEquals(10, value)
 
-        val g = main.variables["g"]
+        val g = main.dVariables["g"]
         assertNotNull(g)
         value = evaluator.evaluate(g) as ConcreteNumberSet
         assertEquals(value.min(), value.max())
         assertEquals(-3, value.min())
 
-        val i = main.variables["i"]
+        val i = main.dVariables["i"]
         assertNotNull(i)
         value = evaluator.evaluate(i)
         assertFalse(value as Boolean)
 
-        val j = main.variables["j"]
+        val j = main.dVariables["j"]
         assertNotNull(j)
         value = evaluator.evaluate(j)
         assertFalse(value as Boolean)
 
-        val k = main.variables["k"]
+        val k = main.dVariables["k"]
         assertNotNull(k)
         value = evaluator.evaluate(k)
         assertFalse(value as Boolean)
 
-        val l = main.variables["l"]
+        val l = main.dVariables["l"]
         assertNotNull(l)
         value = evaluator.evaluate(l)
         assertFalse(value as Boolean)
 
-        val m = main.variables["m"]
+        val m = main.dVariables["m"]
         assertNotNull(m)
         value = evaluator.evaluate(m)
         assertFalse(value as Boolean)
@@ -128,13 +128,13 @@ class MultiValueEvaluatorTest {
     fun testMultipleValues() {
         val tu = ValueEvaluationTests.getCfExample().components.first().translationUnits.first()
 
-        val main = tu.functions["main"]
+        val main = tu.dFunctions["main"]
         assertNotNull(main)
 
-        val b = main.variables["b"]
+        val b = main.dVariables["b"]
         assertNotNull(b)
 
-        var printB = main.calls("println")[0]
+        var printB = main.dCalls("println")[0]
         assertNotNull(printB)
 
         val evaluator = MultiValueEvaluator()
@@ -144,25 +144,25 @@ class MultiValueEvaluatorTest {
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
         assertEquals(setOf<Long>(1, 2), value.values)
 
-        printB = main.calls("println")[1]
+        printB = main.dCalls("println")[1]
         assertNotNull(printB)
         evaluator.clearPath()
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
         assertEquals(setOf<Long>(0, 1, 2), value.values)
 
-        printB = main.calls("println")[2]
+        printB = main.dCalls("println")[2]
         assertNotNull(printB)
         evaluator.clearPath()
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
         assertEquals(setOf<Long>(0, 1, 2, 4), value.values)
 
-        printB = main.calls("println")[3]
+        printB = main.dCalls("println")[3]
         assertNotNull(printB)
         evaluator.clearPath()
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
         assertEquals(setOf<Long>(-4, -2, -1, 0, 1, 2, 4), value.values)
 
-        printB = main.calls("println")[4]
+        printB = main.dCalls("println")[4]
         assertNotNull(printB)
         evaluator.clearPath()
         value = evaluator.evaluate(printB.arguments.firstOrNull()) as ConcreteNumberSet
@@ -173,10 +173,10 @@ class MultiValueEvaluatorTest {
     fun testLoop() {
         val tu = ValueEvaluationTests.getCfExample().components.first().translationUnits.first()
 
-        val loop = tu.functions["loop"]
+        val loop = tu.dFunctions["loop"]
         assertNotNull(loop)
 
-        val forLoop = loop.forLoops.firstOrNull()
+        val forLoop = loop.dForLoops.firstOrNull()
         assertNotNull(forLoop)
 
         val evaluator = MultiValueEvaluator()

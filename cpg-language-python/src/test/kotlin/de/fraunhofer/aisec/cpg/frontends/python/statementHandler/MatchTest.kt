@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.python.statementHandler
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
-import de.fraunhofer.aisec.cpg.graph.functions
+import de.fraunhofer.aisec.cpg.graph.dFunctions
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
 import de.fraunhofer.aisec.cpg.graph.statements.CaseStatement
@@ -38,7 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.switches
+import de.fraunhofer.aisec.cpg.graph.dSwitches
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertLiteralValue
 import de.fraunhofer.aisec.cpg.test.assertLocalName
@@ -69,10 +69,10 @@ class MatchTest {
 
     @Test
     fun testMatchSingleton() {
-        val func = result.functions["matchSingleton"]
+        val func = result.dFunctions["matchSingleton"]
         assertNotNull(func)
 
-        val switchStatement = func.switches.singleOrNull()
+        val switchStatement = func.dSwitches.singleOrNull()
         assertNotNull(switchStatement)
 
         assertLocalName("x", switchStatement.selector)
@@ -98,10 +98,10 @@ class MatchTest {
 
     @Test
     fun testMatchValue() {
-        val func = result.functions["matchValue"]
+        val func = result.dFunctions["matchValue"]
         assertNotNull(func)
 
-        val switchStatement = func.switches.singleOrNull()
+        val switchStatement = func.dSwitches.singleOrNull()
         assertNotNull(switchStatement)
 
         assertLocalName("x", switchStatement.selector)
@@ -125,10 +125,10 @@ class MatchTest {
 
     @Test
     fun testMatchOr() {
-        val func = result.functions["matchOr"]
+        val func = result.dFunctions["matchOr"]
         assertNotNull(func)
 
-        val switchStatement = func.switches.singleOrNull()
+        val switchStatement = func.dSwitches.singleOrNull()
         assertNotNull(switchStatement)
 
         assertLocalName("x", switchStatement.selector)
@@ -152,10 +152,10 @@ class MatchTest {
 
     @Test
     fun testMatchDefault() {
-        val func = result.functions["matchDefault"]
+        val func = result.dFunctions["matchDefault"]
         assertNotNull(func)
 
-        val switchStatement = func.switches.singleOrNull()
+        val switchStatement = func.dSwitches.singleOrNull()
         assertNotNull(switchStatement)
 
         assertLocalName("x", switchStatement.selector)
@@ -174,10 +174,10 @@ class MatchTest {
 
     @Test
     fun testMatchGuard() {
-        val func = result.functions["matchAnd"]
+        val func = result.dFunctions["matchAnd"]
         assertNotNull(func)
 
-        val switchStatement = func.switches.singleOrNull()
+        val switchStatement = func.dSwitches.singleOrNull()
         assertNotNull(switchStatement)
 
         assertLocalName("x", switchStatement.selector)
@@ -203,10 +203,10 @@ class MatchTest {
 
     @Test
     fun testMatchCombined() {
-        val func = result.functions["matcher"]
+        val func = result.dFunctions["matcher"]
         assertNotNull(func)
 
-        val switchStatement = func.switches.singleOrNull()
+        val switchStatement = func.dSwitches.singleOrNull()
         assertNotNull(switchStatement)
 
         assertLocalName("x", switchStatement.selector)
@@ -278,10 +278,10 @@ class MatchTest {
 
     @Test
     fun testMatch2() {
-        val func = result.functions["match_weird"]
+        val func = result.dFunctions["match_weird"]
         assertNotNull(func)
 
-        val switchStatement = func.switches.singleOrNull()
+        val switchStatement = func.dSwitches.singleOrNull()
         assertNotNull(switchStatement)
 
         assertIs<CallExpression>(switchStatement.selector)

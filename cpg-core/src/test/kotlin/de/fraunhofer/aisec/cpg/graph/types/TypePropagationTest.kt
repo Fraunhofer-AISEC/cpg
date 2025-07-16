@@ -64,15 +64,15 @@ class TypePropagationTest {
                 }
             }
 
-        val intVar = result.variables["intVar"]
+        val intVar = result.dVariables["intVar"]
         assertNotNull(intVar)
         assertLocalName("int", intVar.type)
 
-        val intVarRef = result.refs["intVar"]
+        val intVarRef = result.dRefs["intVar"]
         assertNotNull(intVarRef)
         assertLocalName("int", intVarRef.type)
 
-        val addResult = result.variables["addResult"]
+        val addResult = result.dVariables["addResult"]
         assertNotNull(addResult)
 
         val binaryOp = addResult.initializer
@@ -121,13 +121,13 @@ class TypePropagationTest {
             }
 
         with(frontend) {
-            val main = result.functions["main"]
+            val main = result.dFunctions["main"]
             assertNotNull(main)
 
             val assign = (main.body as? Block)?.statements?.get(2) as? AssignExpression
             assertNotNull(assign)
 
-            val shortVar = main.variables["shortVar"]
+            val shortVar = main.dVariables["shortVar"]
             assertNotNull(shortVar)
             // At this point, shortVar should only have "short" as type and assigned types
             assertEquals(primitiveType("short"), shortVar.type)
@@ -147,7 +147,7 @@ class TypePropagationTest {
             assertEquals(setOf(primitiveType("short")), shortVarRefLhs.assignedTypes)
 
             val shortVarRefReturnValue =
-                main.allChildren<ReturnStatement>().firstOrNull()?.returnValue
+                main.descendants<ReturnStatement>().firstOrNull()?.returnValue
             assertNotNull(shortVarRefReturnValue)
             // Finally, the assigned types should propagate along the DFG
             assertEquals(setOf(primitiveType("short")), shortVarRefLhs.assignedTypes)
@@ -198,10 +198,10 @@ class TypePropagationTest {
             }
 
         with(frontend) {
-            val main = result.functions["main"]
+            val main = result.dFunctions["main"]
             assertNotNull(main)
 
-            val b = main.variables["b"]
+            val b = main.dVariables["b"]
             assertNotNull(b)
             assertEquals(assertResolvedType("BaseClass").pointer(), b.type)
             assertEquals(
@@ -212,7 +212,7 @@ class TypePropagationTest {
                 b.assignedTypes,
             )
 
-            val bRef = main.refs["b"]
+            val bRef = main.dRefs["b"]
             assertNotNull(bRef)
             assertEquals(b.type, bRef.type)
             assertEquals(b.assignedTypes, bRef.assignedTypes)
@@ -326,26 +326,26 @@ class TypePropagationTest {
                 }
             }
 
-        val baseClass = result.records["BaseClass"]
+        val baseClass = result.dRecords["BaseClass"]
         assertNotNull(baseClass)
 
-        val derivedClassA = result.records["DerivedClassA"]
+        val derivedClassA = result.dRecords["DerivedClassA"]
         assertNotNull(derivedClassA)
         assertContains(derivedClassA.superTypeDeclarations, baseClass)
 
-        val derivedClassB = result.records["DerivedClassB"]
+        val derivedClassB = result.dRecords["DerivedClassB"]
         assertNotNull(derivedClassB)
         assertContains(derivedClassB.superTypeDeclarations, baseClass)
 
-        val create = result.functions["create"]
+        val create = result.dFunctions["create"]
         assertNotNull(create)
 
         with(create) {
-            val b = variables["b"]
+            val b = dVariables["b"]
             assertNotNull(b)
             assertEquals(objectType("BaseClass").pointer(), b.type)
 
-            val bRefs = refs("b")
+            val bRefs = dRefs("b")
             bRefs.forEach {
                 // The "type" of a reference must always be the same as its declaration
                 assertEquals(b.type, it.type)
@@ -376,7 +376,7 @@ class TypePropagationTest {
             val assign = (body as Block).statements<AssignExpression>(1)
             assertNotNull(assign)
 
-            val bb = variables["bb"]
+            val bb = dVariables["bb"]
             assertNotNull(bb)
             // Auto type based on the initializer's type
             assertEquals(objectType("BaseClass").pointer().array(), bb.type)
@@ -411,15 +411,15 @@ class TypePropagationTest {
             // functions (yet)
         }
 
-        val main = result.functions["main"]
+        val main = result.dFunctions["main"]
         assertNotNull(main)
 
         with(main) {
-            val createCall = main.calls["create"]
+            val createCall = main.dCalls["create"]
             assertNotNull(createCall)
             assertContains(createCall.invokes, create)
 
-            val b = main.variables["b"]
+            val b = main.dVariables["b"]
             assertNotNull(b)
             assertEquals(objectType("BaseClass").pointer(), b.type)
         }

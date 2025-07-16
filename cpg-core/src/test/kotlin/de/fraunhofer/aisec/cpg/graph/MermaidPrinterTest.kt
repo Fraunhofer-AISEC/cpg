@@ -35,7 +35,7 @@ class MermaidPrinterTest {
     @Test
     fun testPrintDFG() {
         val graph = GraphExamples.getDataflowClass()
-        val sc = graph.functions["main"].variables["sc"]
+        val sc = graph.dFunctions["main"].dVariables["sc"]
         assertNotNull(sc)
 
         val p = sc.printDFG()
@@ -46,7 +46,7 @@ class MermaidPrinterTest {
     @Test
     fun testPrintEOG() {
         val graph = GraphExamples.getDataflowClass()
-        val sc = graph.functions["main"].variables["sc"]
+        val sc = graph.dFunctions["main"].dVariables["sc"]
         assertNotNull(sc)
 
         val p = sc.printEOG()

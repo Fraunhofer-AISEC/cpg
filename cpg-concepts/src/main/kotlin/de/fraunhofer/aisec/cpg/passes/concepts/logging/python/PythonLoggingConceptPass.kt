@@ -84,9 +84,9 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     override fun accept(comp: Component) {
         loggingLogger =
-            comp.imports.singleOrNull { import -> import.import.toString() == "logging" }
-        comp.imports.forEach { import -> handleImport(import) }
-        comp.calls.forEach { call -> handleCall(call) }
+            comp.dImports.singleOrNull { import -> import.import.toString() == "logging" }
+        comp.dImports.forEach { import -> handleImport(import) }
+        comp.dCalls.forEach { call -> handleCall(call) }
     }
 
     /**

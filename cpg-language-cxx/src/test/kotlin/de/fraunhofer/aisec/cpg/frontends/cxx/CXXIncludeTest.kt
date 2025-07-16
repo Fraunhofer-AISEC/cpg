@@ -49,21 +49,21 @@ internal class CXXIncludeTest : BaseTest() {
         }
         assertEquals(6, tu.declarations.size)
 
-        val someClass = tu.records["SomeClass"]
+        val someClass = tu.dRecords["SomeClass"]
         assertNotNull(someClass)
 
-        val main = tu.functions["main"]
+        val main = tu.dFunctions["main"]
         assertNotNull(main)
 
         val someClassConstructor = someClass.constructors["SomeClass::SomeClass"]
         assertNotNull(someClassConstructor)
         assertEquals(someClass, someClassConstructor.recordDeclaration)
 
-        val doSomething = tu.methods["SomeClass::DoSomething"]?.definition as? MethodDeclaration
+        val doSomething = tu.dMethods["SomeClass::DoSomething"]?.definition as? MethodDeclaration
         assertNotNull(doSomething)
         assertEquals(someClass, doSomething.recordDeclaration)
 
-        val returnStatement = doSomething.returns.firstOrNull()
+        val returnStatement = doSomething.dReturns.firstOrNull()
         assertNotNull(returnStatement)
 
         val ref = returnStatement.returnValue as Reference
@@ -83,7 +83,7 @@ internal class CXXIncludeTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val someClass = tu.records["SomeClass"]
+        val someClass = tu.dRecords["SomeClass"]
         assertNotNull(someClass)
 
         val decl = someClass.constructors[0]
@@ -254,11 +254,11 @@ internal class CXXIncludeTest : BaseTest() {
 
         // the tu should not contain any classes, since they are defined in the header (which are
         // not loaded) and inference is off.
-        assertTrue(tu.records.isEmpty())
+        assertTrue(tu.dRecords.isEmpty())
 
         // however, we should still have two methods (one of which is a constructor declaration)
-        assertEquals(2, tu.methods.size)
-        assertEquals(1, tu.methods.filterIsInstance<ConstructorDeclaration>().size)
+        assertEquals(2, tu.dMethods.size)
+        assertEquals(1, tu.dMethods.filterIsInstance<ConstructorDeclaration>().size)
     }
 
     @Test
@@ -279,7 +279,7 @@ internal class CXXIncludeTest : BaseTest() {
 
         val tu = tus.firstOrNull()
         assertNotNull(tu)
-        assertFalse(tu.records.isEmpty())
+        assertFalse(tu.dRecords.isEmpty())
     }
 
     @Test
@@ -301,6 +301,6 @@ internal class CXXIncludeTest : BaseTest() {
 
         val tu = tus.firstOrNull()
         assertNotNull(tu)
-        assertFalse(tu.records.isEmpty())
+        assertFalse(tu.dRecords.isEmpty())
     }
 }

@@ -47,10 +47,10 @@ class CPPLambdaTest {
         val result = analyzer.analyze().get()
 
         assertNotNull(result)
-        val function = result.functions["lambda1"]
+        val function = result.dFunctions["lambda1"]
         assertNotNull(function)
 
-        val lambdaVar = function.variables["this_is_a_lambda"]
+        val lambdaVar = function.dVariables["this_is_a_lambda"]
         assertNotNull(lambdaVar)
         assertIs<FunctionPointerType>(lambdaVar.type)
 
@@ -58,11 +58,11 @@ class CPPLambdaTest {
         assertNotNull(lambda)
         assertTrue(lambda in lambdaVar.nextEOG)
 
-        val printFunctionCall = function.calls["print_function"]
+        val printFunctionCall = function.dCalls["print_function"]
         assertNotNull(printFunctionCall)
         assertTrue(printFunctionCall in lambdaVar.prevEOG)
 
-        val lambdaCall = function.calls["this_is_a_lambda"]
+        val lambdaCall = function.dCalls["this_is_a_lambda"]
         assertEquals(1, lambdaCall?.invokes?.size)
         assertEquals(lambda.function, lambdaCall?.invokes?.firstOrNull())
     }
@@ -79,24 +79,24 @@ class CPPLambdaTest {
         val result = analyzer.analyze().get()
 
         assertNotNull(result)
-        val function = result.functions["lambda2"]
+        val function = result.dFunctions["lambda2"]
         assertNotNull(function)
 
-        val lambdaVar = function.variables["this_is_a_lambda"]
+        val lambdaVar = function.dVariables["this_is_a_lambda"]
         assertNotNull(lambdaVar)
         val lambda = lambdaVar.initializer as? LambdaExpression
         assertNotNull(lambda)
 
         // Check the type of the parameter
-        assertEquals(1, lambda.function.parameters.size)
+        assertEquals(1, lambda.function.dParameters.size)
         assertEquals("uint64_t", lambda.function?.parameters?.first()?.type?.name?.localName)
         // Check that the ref is resolved to the param.
-        val numberRef = lambda.function?.body?.refs?.get("number")
+        val numberRef = lambda.function?.body?.dRefs?.get("number")
         assertNotNull(numberRef)
         assertEquals(lambda.function?.parameters?.firstOrNull(), numberRef.refersTo)
 
         assertTrue(lambda in lambdaVar.nextEOG)
-        val printFunctionCall = function.calls["print_function"]
+        val printFunctionCall = function.dCalls["print_function"]
         assertNotNull(printFunctionCall)
         assertTrue(printFunctionCall in lambdaVar.prevEOG)
     }
@@ -113,15 +113,15 @@ class CPPLambdaTest {
         val result = analyzer.analyze().get()
 
         assertNotNull(result)
-        val function = result.functions["lambda3"]
+        val function = result.dFunctions["lambda3"]
         assertNotNull(function)
 
-        val lambdaVar = function.variables["this_is_a_lambda"]
+        val lambdaVar = function.dVariables["this_is_a_lambda"]
         assertNotNull(lambdaVar)
         val lambda = lambdaVar.initializer as? LambdaExpression
         assertNotNull(lambda)
 
-        assertEquals(1, lambda.function.parameters.size)
+        assertEquals(1, lambda.function.dParameters.size)
         // Check the param type
         assertEquals("bool", lambda.function?.parameters?.first()?.type?.name?.localName)
         // Check the return type
@@ -140,19 +140,19 @@ class CPPLambdaTest {
         val result = analyzer.analyze().get()
 
         assertNotNull(result)
-        val function = result.functions["lambda4"]
+        val function = result.dFunctions["lambda4"]
         assertNotNull(function)
 
-        val aNumberDecl = function.variables["a_number"]
+        val aNumberDecl = function.dVariables["a_number"]
         assertNotNull(aNumberDecl)
 
-        val lambdaVar = function.variables["this_is_a_lambda"]
+        val lambdaVar = function.dVariables["this_is_a_lambda"]
         assertNotNull(lambdaVar)
         val lambda = lambdaVar.initializer as? LambdaExpression
         assertNotNull(lambda)
 
         // Check that the ref is resolved to the decl outside the lambda
-        val numberRef = lambda.function?.body?.refs?.filter { it.name.localName == "a_number" }
+        val numberRef = lambda.function?.body?.dRefs?.filter { it.name.localName == "a_number" }
         assertNotNull(numberRef)
         assertEquals(2, numberRef.size)
         for (ref in numberRef) {
@@ -176,19 +176,19 @@ class CPPLambdaTest {
         val result = analyzer.analyze().get()
 
         assertNotNull(result)
-        val function = result.functions["lambda5"]
+        val function = result.dFunctions["lambda5"]
         assertNotNull(function)
 
-        val aNumberDecl = function.variables["a_number"]
+        val aNumberDecl = function.dVariables["a_number"]
         assertNotNull(aNumberDecl)
 
-        val lambdaVar = function.variables["this_is_a_lambda"]
+        val lambdaVar = function.dVariables["this_is_a_lambda"]
         assertNotNull(lambdaVar)
         val lambda = lambdaVar.initializer as? LambdaExpression
         assertNotNull(lambda)
 
         // Check that the ref is resolved to the decl outside the lambda
-        val numberRef = lambda.function?.body?.refs?.filter { it.name.localName == "a_number" }
+        val numberRef = lambda.function?.body?.dRefs?.filter { it.name.localName == "a_number" }
         assertNotNull(numberRef)
         assertEquals(2, numberRef.size)
         for (ref in numberRef) {
@@ -213,19 +213,19 @@ class CPPLambdaTest {
         val result = analyzer.analyze().get()
 
         assertNotNull(result)
-        val function = result.functions["lambda6"]
+        val function = result.dFunctions["lambda6"]
         assertNotNull(function)
 
-        val aNumberDecl = function.variables["a_number"]
+        val aNumberDecl = function.dVariables["a_number"]
         assertNotNull(aNumberDecl)
 
-        val lambdaVar = function.variables["this_is_a_lambda"]
+        val lambdaVar = function.dVariables["this_is_a_lambda"]
         assertNotNull(lambdaVar)
         val lambda = lambdaVar.initializer as? LambdaExpression
         assertNotNull(lambda)
 
         // Check that the ref is resolved to the decl outside the lambda
-        val numberRef = lambda.function?.body?.refs?.filter { it.name.localName == "a_number" }
+        val numberRef = lambda.function?.body?.dRefs?.filter { it.name.localName == "a_number" }
         assertNotNull(numberRef)
         assertEquals(2, numberRef.size)
         for (ref in numberRef) {
@@ -249,19 +249,19 @@ class CPPLambdaTest {
         val result = analyzer.analyze().get()
 
         assertNotNull(result)
-        val function = result.functions["lambda7"]
+        val function = result.dFunctions["lambda7"]
         assertNotNull(function)
 
-        val aNumberDecl = function.variables["a_number"]
+        val aNumberDecl = function.dVariables["a_number"]
         assertNotNull(aNumberDecl)
 
-        val lambdaVar = function.variables["this_is_a_lambda"]
+        val lambdaVar = function.dVariables["this_is_a_lambda"]
         assertNotNull(lambdaVar)
         val lambda = lambdaVar.initializer as? LambdaExpression
         assertNotNull(lambda)
 
         // Check that the ref is resolved to the decl outside the lambda
-        val numberRef = lambda.function?.body?.refs?.filter { it.name.localName == "a_number" }
+        val numberRef = lambda.function?.body?.dRefs?.filter { it.name.localName == "a_number" }
         assertNotNull(numberRef)
         assertEquals(1, numberRef.size)
         assertEquals(aNumberDecl, numberRef.first().refersTo)
@@ -283,19 +283,19 @@ class CPPLambdaTest {
         val result = analyzer.analyze().get()
 
         assertNotNull(result)
-        val function = result.functions["lambda8"]
+        val function = result.dFunctions["lambda8"]
         assertNotNull(function)
 
-        val aNumberDecl = function.variables["a_number"]
+        val aNumberDecl = function.dVariables["a_number"]
         assertNotNull(aNumberDecl)
 
-        val lambdaVar = function.variables["this_is_a_lambda"]
+        val lambdaVar = function.dVariables["this_is_a_lambda"]
         assertNotNull(lambdaVar)
         val lambda = lambdaVar.initializer as? LambdaExpression
         assertNotNull(lambda)
 
         // Check that the ref is resolved to the decl outside the lambda
-        val numberRef = lambda.function?.body?.refs?.filter { it.name.localName == "a_number" }
+        val numberRef = lambda.function?.body?.dRefs?.filter { it.name.localName == "a_number" }
         assertNotNull(numberRef)
         assertEquals(2, numberRef.size)
         for (ref in numberRef) {
@@ -319,17 +319,17 @@ class CPPLambdaTest {
         val result = analyzer.analyze().get()
 
         assertNotNull(result)
-        val function = result.functions["lambda9"]
+        val function = result.dFunctions["lambda9"]
         assertNotNull(function)
 
-        val lambda = function.calls["for_each"]?.arguments?.get(2) as? LambdaExpression
+        val lambda = function.dCalls["for_each"]?.arguments?.get(2) as? LambdaExpression
         assertNotNull(lambda)
 
         // Check the type of the parameter
-        assertEquals(1, lambda.function.parameters.size)
+        assertEquals(1, lambda.function.dParameters.size)
         assertEquals("std::string", lambda.function?.parameters?.first()?.type?.name.toString())
         // Check that the ref is resolved to the param.
-        val numberRef = lambda.function?.body?.refs?.get("it")
+        val numberRef = lambda.function?.body?.dRefs?.get("it")
         assertNotNull(numberRef)
         assertEquals(lambda.function?.parameters?.firstOrNull(), numberRef.refersTo)
     }
@@ -346,10 +346,10 @@ class CPPLambdaTest {
         val result = analyzer.analyze().get()
 
         assertNotNull(result)
-        val function = result.functions["lambda10"]
+        val function = result.dFunctions["lambda10"]
         assertNotNull(function)
 
-        val lambdaVar = function.variables["this_is_a_lambda"]
+        val lambdaVar = function.dVariables["this_is_a_lambda"]
         assertNotNull(lambdaVar)
         val lambda = (lambdaVar.initializer as? CallExpression)?.callee as? LambdaExpression
         assertNotNull(lambda)
@@ -367,10 +367,10 @@ class CPPLambdaTest {
         val result = analyzer.analyze().get()
 
         assertNotNull(result)
-        val function = result.functions["lambda11"]
+        val function = result.dFunctions["lambda11"]
         assertNotNull(function)
 
-        val lambdaVar = function.variables["this_is_a_lambda"]
+        val lambdaVar = function.dVariables["this_is_a_lambda"]
         assertNotNull(lambdaVar)
         assertNotNull(lambdaVar.initializer as? LambdaExpression)
         assertNotNull((lambdaVar.initializer as? LambdaExpression)?.function)
