@@ -113,10 +113,10 @@ fun TranslationResult.pushToNeo4j(
  * - A [Session] context to perform persistence actions.
  */
 context(_: Session)
-fun TranslationResult.persist() {
+fun TranslationResult.persistNeo4j() {
     val b = Benchmark(Persistable::class.java, "Persisting translation result")
 
-    val astNodes = this@persist.nodes
+    val astNodes = this@persistNeo4j.nodes
     val connected = astNodes.flatMap { it.connectedNodes }.toSet()
     val nodes = (astNodes + connected).distinct()
 
@@ -126,12 +126,12 @@ fun TranslationResult.persist() {
         astNodes.size,
         connected.size,
     )
-    nodes.persist()
+    nodes.persistNeo4j()
 
     val relationships = nodes.collectRelationships()
 
     log.info("Persisting {} relationships", relationships.size)
-    relationships.persist()
+    relationships.persistNeo4j()
 
     b.stop()
 }
@@ -151,7 +151,7 @@ fun TranslationResult.persist() {
  * it extracts the labels and properties and executes the Cypher query to persist the node.
  */
 context(session: Session)
-private fun List<Node>.persist() {
+private fun List<Node>.persistNeo4j() {
     this.chunked(nodeChunkSize).map { chunk ->
         val b = Benchmark(Persistable::class.java, "Persisting chunk of ${chunk.size} nodes")
         val params =
@@ -191,7 +191,7 @@ private fun List<Node>.persist() {
  * - Relationship properties and labels are mapped before using database utilities for creation.
  */
 context(session: Session)
-private fun Collection<Relationship>.persist() {
+private fun Collection<Relationship>.persistNeo4j() {
     // Create an index for the "id" field of node, because we are "MATCH"ing on it in the edge
     // creation. We need to wait for this to be finished
     session.executeWrite { tx ->
@@ -256,7 +256,7 @@ val Persistable.connectedNodes: IdentitySet<Node>
         return nodes
     }
 
-private fun List<Node>.collectRelationships(): List<Relationship> {
+fun List<Node>.collectRelationships(): List<Relationship> {
     val relationships = mutableListOf<Relationship>()
 
     for (node in this) {

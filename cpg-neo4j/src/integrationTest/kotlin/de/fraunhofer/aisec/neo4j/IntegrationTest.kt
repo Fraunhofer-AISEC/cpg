@@ -30,6 +30,8 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.persistence.createJsonGraph
+import de.fraunhofer.aisec.cpg.persistence.persistJson
 import de.fraunhofer.aisec.cpg_vis_neo4j.Application
 import java.nio.file.Paths
 import kotlin.io.path.createTempFile
@@ -67,8 +69,7 @@ class IntegrationTest {
         // 22 inferred functions, 1 inferred method, 2 inferred constructors, 11 regular functions
         assertEquals(36, translationResult.functions.size)
 
-        val (nodes, edges) = application.translateCPGToOGMBuilders(translationResult)
-        val graph = application.buildJsonGraph(nodes, edges)
+        val graph = translationResult.createJsonGraph()
         val connectToFuncDel =
             graph.nodes.firstOrNull {
                 it.labels.contains(FunctionDeclaration::class.simpleName) &&
@@ -100,7 +101,7 @@ class IntegrationTest {
         // 22 inferred functions, 1 inferred method, 2 inferred constructors, 11 regular functions
         assertEquals(36, translationResult.functions.size)
         val path = createTempFile().toFile()
-        application.exportToJson(translationResult, path)
+        translationResult.persistJson(path)
         assert(path.length() > 0)
     }
 }
