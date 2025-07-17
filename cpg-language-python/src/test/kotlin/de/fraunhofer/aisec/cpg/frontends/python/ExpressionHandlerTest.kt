@@ -44,7 +44,7 @@ class ExpressionHandlerTest {
             }
         assertNotNull(result)
 
-        val twoBoolOpCondition = result.dFunctions["twoBoolOp"]?.dIfs?.singleOrNull()?.condition
+        val twoBoolOpCondition = result.allFunctions["twoBoolOp"]?.allIfs?.singleOrNull()?.condition
         assertIs<BinaryOperator>(twoBoolOpCondition)
         assertEquals("and", twoBoolOpCondition.operatorCode)
         assertLocalName("a", twoBoolOpCondition.lhs)
@@ -53,7 +53,7 @@ class ExpressionHandlerTest {
         // We expect that lhs comes first in the EOG and then the rhs.
         assertContains(twoBoolOpCondition.lhs.nextEOG, twoBoolOpCondition.rhs)
 
-        val threeBoolOpCondition = result.dFunctions["threeBoolOp"]?.dIfs?.singleOrNull()?.condition
+        val threeBoolOpCondition = result.allFunctions["threeBoolOp"]?.allIfs?.singleOrNull()?.condition
         assertIs<BinaryOperator>(threeBoolOpCondition)
         assertEquals("and", threeBoolOpCondition.operatorCode)
         assertLocalName("a", threeBoolOpCondition.lhs)
@@ -64,7 +64,7 @@ class ExpressionHandlerTest {
         assertLocalName("b", threeBoolOpConditionRhs.rhs)
 
         val threeBoolOpNoBoolCondition =
-            result.dFunctions["threeBoolOpNoBool"]?.dIfs?.singleOrNull()?.condition
+            result.allFunctions["threeBoolOpNoBool"]?.allIfs?.singleOrNull()?.condition
         assertIs<BinaryOperator>(threeBoolOpNoBoolCondition)
         assertEquals("and", threeBoolOpNoBoolCondition.operatorCode)
         assertLocalName("a", threeBoolOpNoBoolCondition.lhs)
@@ -80,7 +80,7 @@ class ExpressionHandlerTest {
         assertContains(threeBoolOpNoBoolConditionRhs.lhs.nextEOG, threeBoolOpNoBoolConditionRhs.rhs)
 
         val nestedBoolOpDifferentOp =
-            result.dFunctions["nestedBoolOpDifferentOp"]?.dIfs?.singleOrNull()?.condition
+            result.allFunctions["nestedBoolOpDifferentOp"]?.allIfs?.singleOrNull()?.condition
 
         assertIs<BinaryOperator>(nestedBoolOpDifferentOp)
         assertEquals("or", nestedBoolOpDifferentOp.operatorCode)
@@ -98,7 +98,7 @@ class ExpressionHandlerTest {
         assertContains(nestedBoolOpDifferentOpLhs.nextEOG, nestedBoolOpDifferentOp.rhs)
 
         val nestedBoolOpDifferentOp2 =
-            result.dFunctions["nestedBoolOpDifferentOp2"]?.dIfs?.singleOrNull()?.condition
+            result.allFunctions["nestedBoolOpDifferentOp2"]?.allIfs?.singleOrNull()?.condition
         assertIs<BinaryOperator>(nestedBoolOpDifferentOp2)
         assertEquals("or", nestedBoolOpDifferentOp2.operatorCode)
         assertLocalName("a", nestedBoolOpDifferentOp2.lhs)

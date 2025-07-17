@@ -41,7 +41,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.config.newProvideConfigurationGrou
 import de.fraunhofer.aisec.cpg.graph.concepts.config.newProvideConfigurationOption
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.operationNodes
-import de.fraunhofer.aisec.cpg.graph.pTranslationResult
+import de.fraunhofer.aisec.cpg.graph.parentTranslationResult
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.stringValues
@@ -65,7 +65,7 @@ class ProvideConfigPass(ctx: TranslationContext) : ConceptPass(ctx) {
         return tu.conceptNodes.filterIsInstance<ConfigurationSource>().flatMap { source ->
             // Find all LoadConfigurationFile operations that match the INI file name
             val loadConfigOps =
-                tu.pTranslationResult
+                tu.parentTranslationResult
                     ?.operationNodes
                     ?.filterIsInstance<LoadConfiguration>()
                     ?.filter {

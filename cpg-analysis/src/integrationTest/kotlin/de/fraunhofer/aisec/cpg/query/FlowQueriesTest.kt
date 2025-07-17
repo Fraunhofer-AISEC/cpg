@@ -106,7 +106,7 @@ class FlowQueriesTest {
                                 startNode = call,
                                 type = Must,
                                 direction = Backward(GraphToFollow.DFG),
-                                ctx = Context.ofCallStack(assertNotNull(func.dCalls["authorize"])),
+                                ctx = Context.ofCallStack(assertNotNull(func.allCalls["authorize"])),
                                 predicate = { node ->
                                     node is Literal<*> && node.value == func.name.localName
                                 },

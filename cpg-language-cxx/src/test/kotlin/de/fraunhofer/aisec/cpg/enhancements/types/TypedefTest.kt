@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.InferenceConfiguration.Companion.builder
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.dVariables
+import de.fraunhofer.aisec.cpg.graph.allVariables
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
@@ -52,23 +52,23 @@ internal class TypedefTest : BaseTest() {
             }
         with(result) {
             // normal type
-            val l1 = dVariables["l1"]
-            val l2 = dVariables["l2"]
+            val l1 = allVariables["l1"]
+            val l2 = allVariables["l2"]
             assertEquals(l1?.type, l2?.type)
 
             // pointer
-            val longptr1 = dVariables["longptr1"]
-            val longptr2 = dVariables["longptr2"]
+            val longptr1 = allVariables["longptr1"]
+            val longptr2 = allVariables["longptr2"]
             assertEquals(longptr1?.type, longptr2?.type)
 
             // array
-            val arr1 = dVariables["arr1"]
-            val arr2 = dVariables["arr2"]
+            val arr1 = allVariables["arr1"]
+            val arr2 = allVariables["arr2"]
             assertEquals(arr1?.type, arr2?.type)
 
             // function pointer
-            val uintfp1 = dVariables["uintfp1"]
-            val uintfp2 = dVariables["uintfp2"]
+            val uintfp1 = allVariables["uintfp1"]
+            val uintfp2 = allVariables["uintfp2"]
 
             val fpType = uintfp1?.type as? FunctionPointerType
             assertNotNull(fpType)
@@ -97,10 +97,10 @@ internal class TypedefTest : BaseTest() {
             }
 
         // pointer
-        val l1ptr = tu.dVariables["l1ptr"]
-        val l2ptr = tu.dVariables["l2ptr"]
-        val l3ptr = tu.dVariables["l3ptr"]
-        val l4ptr = tu.dVariables["l4ptr"]
+        val l1ptr = tu.allVariables["l1ptr"]
+        val l2ptr = tu.allVariables["l2ptr"]
+        val l3ptr = tu.allVariables["l3ptr"]
+        val l4ptr = tu.allVariables["l4ptr"]
         assertEquals(l1ptr?.type, l2ptr?.type)
         assertEquals(l1ptr?.type, l3ptr?.type)
         assertEquals(l1ptr?.type, l4ptr?.type)
@@ -118,9 +118,9 @@ internal class TypedefTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
             }
 
-        val l1 = tu.dVariables["l1"]
-        val l3 = tu.dVariables["l3"]
-        val l4 = tu.dVariables["l4"]
+        val l1 = tu.allVariables["l1"]
+        val l3 = tu.allVariables["l3"]
+        val l4 = tu.allVariables["l4"]
         assertEquals(l1?.type, l3?.type)
         assertEquals(l1?.type, l4?.type)
     }
@@ -134,23 +134,23 @@ internal class TypedefTest : BaseTest() {
             }
         with(result) {
             // simple type
-            val i1 = dVariables["i1"]
-            val i2 = dVariables["i2"]
+            val i1 = allVariables["i1"]
+            val i2 = allVariables["i2"]
             assertEquals(i1?.type, i2?.type)
 
             // array
-            val a1 = dVariables["a1"]
-            val a2 = dVariables["a2"]
+            val a1 = allVariables["a1"]
+            val a2 = allVariables["a2"]
             assertEquals(a1?.type, a2?.type)
 
             // pointer
-            val intPtr1 = dVariables["intPtr1"]
-            val intPtr2 = dVariables["intPtr2"]
+            val intPtr1 = allVariables["intPtr1"]
+            val intPtr2 = allVariables["intPtr2"]
             assertEquals(intPtr1?.type, intPtr2?.type)
 
             // function pointer
-            val fPtr1 = dVariables["intFptr1"]
-            val fPtr2 = dVariables["intFptr2"]
+            val fPtr1 = allVariables["intFptr1"]
+            val fPtr2 = allVariables["intFptr2"]
             assertEquals(fPtr1?.type, fPtr2?.type)
 
             val type =
@@ -173,8 +173,8 @@ internal class TypedefTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
             }
 
-        val ps1 = tu.dVariables["ps1"]
-        val ps2 = tu.dVariables["ps2"]
+        val ps1 = tu.allVariables["ps1"]
+        val ps2 = tu.allVariables["ps2"]
         assertEquals(ps1?.type, ps2?.type)
     }
 
@@ -190,14 +190,14 @@ internal class TypedefTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
             }
 
-        val ullong1 = tu.dVariables["someUllong1"]
+        val ullong1 = tu.allVariables["someUllong1"]
         assertNotNull(ullong1)
 
-        val ullong2 = tu.dVariables["someUllong2"]
+        val ullong2 = tu.allVariables["someUllong2"]
         assertNotNull(ullong2)
         assertEquals(ullong1.type, ullong2.type)
 
-        val records = tu.dRecords
+        val records = tu.allRecords
         assertEquals(2, records.size)
         assertEquals(listOf("bar", "foo"), records.map { it.name.localName })
     }
@@ -210,16 +210,16 @@ internal class TypedefTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
             }
 
-        val addConst = result.dRecords["add_const"]
-        val typeMember1: ValueDeclaration = findByUniqueName(addConst.dFields, "typeMember1")
-        val typeMember2: ValueDeclaration = findByUniqueName(addConst.dFields, "typeMember2")
+        val addConst = result.allRecords["add_const"]
+        val typeMember1: ValueDeclaration = findByUniqueName(addConst.allFields, "typeMember1")
+        val typeMember2: ValueDeclaration = findByUniqueName(addConst.allFields, "typeMember2")
         assertEquals(typeMember1.type, typeMember2.type)
 
-        val typeMemberOutside = result.dVariables["typeMemberOutside"]
+        val typeMemberOutside = result.allVariables["typeMemberOutside"]
         assertNotEquals(typeMemberOutside?.type, typeMember2.type)
 
-        val cptr1 = result.dVariables["cptr1"]
-        val cptr2 = result.dVariables["cptr2"]
+        val cptr1 = result.allVariables["cptr1"]
+        val cptr2 = result.allVariables["cptr2"]
         assertEquals(cptr1?.type, cptr2?.type)
         assertNotEquals(typeMemberOutside?.type, cptr2?.type)
     }
@@ -232,17 +232,17 @@ internal class TypedefTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val someDataClass = result.dRecords["SomeDataClass"]
+        val someDataClass = result.allRecords["SomeDataClass"]
         assertNotNull(someDataClass)
 
-        val baseClass = result.dRecords["BaseClass"]
+        val baseClass = result.allRecords["BaseClass"]
         assertNotNull(baseClass)
 
         val sizeField = baseClass.fields["size"]
         assertNotNull(sizeField)
         assertFalse(sizeField.isInferred)
 
-        val size = result.dMemberExpressions["size"]
+        val size = result.allMemberExpressions["size"]
         assertNotNull(size)
         assertRefersTo(size, sizeField)
     }
@@ -256,10 +256,10 @@ internal class TypedefTest : BaseTest() {
                 it.inferenceConfiguration(builder().enabled(false).build())
             }
         with(tu) {
-            val me = tu.dMemberExpressions
+            val me = tu.allMemberExpressions
             me.forEach { assertNotNull(it.refersTo) }
 
-            val test = tu.dRecords.singleOrNull()
+            val test = tu.allRecords.singleOrNull()
             assertNotNull(test)
             assertLocalName("test", test)
         }
@@ -274,10 +274,10 @@ internal class TypedefTest : BaseTest() {
                 it.inferenceConfiguration(builder().enabled(false).build())
             }
         with(tu) {
-            val me = tu.dMemberExpressions
+            val me = tu.allMemberExpressions
             me.forEach { assertNotNull(it.refersTo) }
 
-            val test = tu.dRecords.singleOrNull()
+            val test = tu.allRecords.singleOrNull()
             assertNotNull(test)
             assertLocalName("test", test)
         }

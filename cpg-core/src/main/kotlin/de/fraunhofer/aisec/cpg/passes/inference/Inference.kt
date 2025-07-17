@@ -611,14 +611,14 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         // Try to find out, if the supplied hint is part of an assignment. If yes, we can use their
         // type as the return type of the function
         val targetType =
-            ctx.currentComponent.dAssignments.singleOrNull { it.value == hint }?.target?.type
+            ctx.currentComponent.allAssignments.singleOrNull { it.value == hint }?.target?.type
         if (targetType != null && targetType !is UnknownType) {
             return targetType
         }
 
         // Look for an "argument holder". These can be different kind of nodes
         val holder =
-            ctx.currentComponent.descendants<ArgumentHolder> { it.hasArgument(hint) }.singleOrNull()
+            ctx.currentComponent.allDescendants<ArgumentHolder> { it.hasArgument(hint) }.singleOrNull()
         when (holder) {
             is UnaryOperator -> {
                 // If it's a boolean operator, the return type is probably a boolean

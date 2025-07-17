@@ -40,17 +40,17 @@ class InferenceTest {
         assertNotNull(tu)
 
         with(tu) {
-            val main = tu.dFunctions["main"]
+            val main = tu.allFunctions["main"]
 
-            val valueRef = main.dRefs["value"]
+            val valueRef = main.allRefs["value"]
             assertNotNull(valueRef)
             assertContains(valueRef.assignedTypes, primitiveType("int"))
 
-            val nextRef = main.dRefs["next"]
+            val nextRef = main.allRefs["next"]
             assertNotNull(nextRef)
             assertContains(nextRef.assignedTypes, objectType("T").pointer())
 
-            val record = tu.dRecords["T"]
+            val record = tu.allRecords["T"]
             assertNotNull(record)
             assertLocalName("T", record)
             assertEquals(true, record.isInferred)
@@ -79,7 +79,7 @@ class InferenceTest {
 
         assertNotNull(tu)
 
-        val record = tu.dRecords["T"]
+        val record = tu.allRecords["T"]
         assertNotNull(record)
         assertLocalName("T", record)
         assertEquals(true, record.isInferred)
@@ -103,7 +103,7 @@ class InferenceTest {
         with(result) {
             val longType = assertResolvedType("long")
 
-            val bar = dFunctions["bar"]
+            val bar = allFunctions["bar"]
             assertNotNull(bar)
 
             assertEquals(longType, bar.returnTypes.singleOrNull())
@@ -118,7 +118,7 @@ class InferenceTest {
             val fooType = assertResolvedType("Foo")
             val barType = assertResolvedType("Bar")
 
-            val bar = dFunctions["bar"]
+            val bar = allFunctions["bar"]
             assertNotNull(bar)
 
             assertEquals(listOf(fooType, barType), bar.returnTypes)
@@ -133,11 +133,11 @@ class InferenceTest {
             val intType = assertResolvedType("int")
             val longType = assertResolvedType("long")
 
-            val bar = dFunctions["bar"]
+            val bar = allFunctions["bar"]
             assertNotNull(bar)
             assertEquals(intType, bar.returnTypes.singleOrNull())
 
-            val baz = dFunctions["baz"]
+            val baz = allFunctions["baz"]
             assertNotNull(baz)
             assertEquals(longType, baz.returnTypes.singleOrNull())
         }
@@ -147,17 +147,17 @@ class InferenceTest {
     fun testNestedNamespace() {
         val result = GraphExamples.getInferenceNestedNamespace()
         with(result) {
-            val java = result.dNamespaces["java"]
+            val java = result.allNamespaces["java"]
             assertNotNull(java)
             assertLocalName("java", java)
 
-            val javaLang = result.dNamespaces["java.lang"]
+            val javaLang = result.allNamespaces["java.lang"]
             assertNotNull(javaLang)
             assertLocalName("lang", javaLang)
             // should exist in the scope of "java"
             assertEquals(java, javaLang.scope?.astNode)
 
-            val javaLangString = result.dRecords["java.lang.String"]
+            val javaLangString = result.allRecords["java.lang.String"]
             assertNotNull(javaLangString)
             assertLocalName("String", javaLangString)
             // should exist in the scope of "java.lang"

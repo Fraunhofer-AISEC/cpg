@@ -43,13 +43,13 @@ internal class VariableResolverJavaTest : BaseTest() {
 
     @Test
     fun testVarNameDeclaredInLoop() {
-        val firstLoopLocal = forStatements?.get(0).dVariables["varName"]
+        val firstLoopLocal = forStatements?.get(0).allVariables["varName"]
         assertUsageOf(callParamMap["func1_first_loop_varName"], firstLoopLocal)
     }
 
     @Test
     fun testVarNameInSecondLoop() {
-        val secondLoopLocal = forStatements?.get(1).dVariables["varName"]
+        val secondLoopLocal = forStatements?.get(1).allVariables["varName"]
         assertUsageOf(callParamMap["func1_second_loop_varName"], secondLoopLocal)
     }
 
@@ -60,13 +60,13 @@ internal class VariableResolverJavaTest : BaseTest() {
 
     @Test
     fun testReferenceToParameter() {
-        val param: ValueDeclaration? = outerFunction2.dParameters["varName"]
+        val param: ValueDeclaration? = outerFunction2.allParameters["varName"]
         assertUsageOf(callParamMap["func2_param_varName"], param)
     }
 
     @Test
     fun testVarNameInInstanceOfExternalClass() {
-        val externalClassInstance = outerFunction3.dVariables["externalClass"]
+        val externalClassInstance = outerFunction3.allVariables["externalClass"]
         assertUsageOfMemberAndBase(
             callParamMap["func3_external_instance_varName"],
             externalClassInstance,
@@ -123,7 +123,7 @@ internal class VariableResolverJavaTest : BaseTest() {
     fun testParamVarNameInInnerClass() {
         assertUsageOf(
             callParamMap["func2_inner_param_varName"],
-            innerFunction2.dParameters["varName"],
+            innerFunction2.allParameters["varName"],
         )
     }
 
@@ -138,13 +138,13 @@ internal class VariableResolverJavaTest : BaseTest() {
 
     @Test
     fun testStaticVarNameAsCoughtExcpetionInInner() {
-        val staticVarNameException = innerFunction3.dVariables["staticVarName"]
+        val staticVarNameException = innerFunction3.allVariables["staticVarName"]
         assertUsageOf(callParamMap["func3_inner_exception_staticVarName"], staticVarNameException)
     }
 
     @Test
     fun testVarNameAsCaughtExceptionInInner() {
-        val varNameException = innerFunction3.dVariables["varName"]
+        val varNameException = innerFunction3.allVariables["varName"]
         assertUsageOf(callParamMap["func3_inner_exception_varName"], varNameException)
     }
 
@@ -187,36 +187,36 @@ internal class VariableResolverJavaTest : BaseTest() {
                     .map(Path::toFile)
             val result = analyze(fileNames, topLevel, true) { it.registerLanguage<JavaLanguage>() }
 
-            val calls = result.dCalls { it.name.localName == "printLog" }
-            val records = result.dRecords
+            val calls = result.allCalls { it.name.localName == "printLog" }
+            val records = result.allRecords
 
             // Extract all Variable declarations and field declarations for matching
             externalClass = records["variables_extended.ExternalClass"]
-            externVarName = externalClass.dFields["varName"]
-            externStaticVarName = externalClass.dFields["staticVarName"]
+            externVarName = externalClass.allFields["varName"]
+            externStaticVarName = externalClass.allFields["staticVarName"]
             outerClass = records["variables_extended.ScopeVariables"]
-            outerVarName = outerClass.dFields["varName"]
-            outerStaticVarName = outerClass.dFields["staticVarName"]
+            outerVarName = outerClass.allFields["varName"]
+            outerStaticVarName = outerClass.allFields["staticVarName"]
 
             // Inner class and its fields
             innerClass = records["variables_extended.ScopeVariables.InnerClass"]
-            implicitOuterThis = innerClass.dFields["this\$ScopeVariables"]
-            innerVarName = innerClass.dFields["varName"]
-            innerStaticVarName = innerClass.dFields["staticVarName"]
-            function1Receiver = innerClass.dMethods["function1"]?.receiver
-            function2Receiver = innerClass.dMethods["function2"]?.receiver
-            innerImpOuter = innerClass.dFields["this\$ScopeVariables"]
-            main = outerClass.dMethods["main"]
-            outerFunction1 = outerClass.dMethods["function1"]
-            forStatements = outerFunction1.descendants()
+            implicitOuterThis = innerClass.allFields["this\$ScopeVariables"]
+            innerVarName = innerClass.allFields["varName"]
+            innerStaticVarName = innerClass.allFields["staticVarName"]
+            function1Receiver = innerClass.allMethods["function1"]?.receiver
+            function2Receiver = innerClass.allMethods["function2"]?.receiver
+            innerImpOuter = innerClass.allFields["this\$ScopeVariables"]
+            main = outerClass.allMethods["main"]
+            outerFunction1 = outerClass.allMethods["function1"]
+            forStatements = outerFunction1.allDescendants()
 
             // Functions in the outer and inner object
-            outerFunction2 = outerClass.dMethods["function2"]
-            outerFunction3 = outerClass.dMethods["function3"]
-            outerFunction4 = outerClass.dMethods["function4"]
-            innerFunction1 = innerClass.dMethods["function1"]
-            innerFunction2 = innerClass.dMethods["function2"]
-            innerFunction3 = innerClass.dMethods["function3"]
+            outerFunction2 = outerClass.allMethods["function2"]
+            outerFunction3 = outerClass.allMethods["function3"]
+            outerFunction4 = outerClass.allMethods["function4"]
+            innerFunction1 = innerClass.allMethods["function1"]
+            innerFunction2 = innerClass.allMethods["function2"]
+            innerFunction3 = innerClass.allMethods["function3"]
 
             for (call in calls) {
                 val first = call.arguments[0]

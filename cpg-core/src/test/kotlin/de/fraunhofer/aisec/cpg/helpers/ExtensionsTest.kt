@@ -37,8 +37,8 @@ import de.fraunhofer.aisec.cpg.graph.builder.function
 import de.fraunhofer.aisec.cpg.graph.builder.problemDecl
 import de.fraunhofer.aisec.cpg.graph.builder.translationResult
 import de.fraunhofer.aisec.cpg.graph.builder.translationUnit
-import de.fraunhofer.aisec.cpg.graph.dProblems
-import de.fraunhofer.aisec.cpg.graph.dVariables
+import de.fraunhofer.aisec.cpg.graph.allProblems
+import de.fraunhofer.aisec.cpg.graph.allVariables
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
@@ -72,13 +72,13 @@ internal class ExtensionsTest : BaseTest() {
     fun testProblemsExtension() {
         val test = getTranslationResultWithProblems()
         assertNotNull(test)
-        assertEquals(2, test.dProblems.size, "Expected two problems.")
+        assertEquals(2, test.allProblems.size, "Expected two problems.")
         assertNotNull(
-            test.dProblems.filter { it.problem == problemDeclText },
+            test.allProblems.filter { it.problem == problemDeclText },
             "Failed to find the problem declaration.",
         )
         assertNotNull(
-            test.dProblems.filter { it.problem == problemExprText },
+            test.allProblems.filter { it.problem == problemExprText },
             "Failed to find the problem expression.",
         )
     }
@@ -93,7 +93,7 @@ internal class ExtensionsTest : BaseTest() {
                     declarationStatement.addDeclaration(varA)
                     this.statement = declarationStatement
                 }
-            val varA = collectionComprehension.dVariables["a"]
+            val varA = collectionComprehension.allVariables["a"]
             assertIs<VariableDeclaration>(varA)
             assertIs<GlobalScope>(varA.scope)
         }

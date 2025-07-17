@@ -29,8 +29,8 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.python.PythonHandler
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.dRefs
-import de.fraunhofer.aisec.cpg.graph.dStatements
+import de.fraunhofer.aisec.cpg.graph.allRefs
+import de.fraunhofer.aisec.cpg.graph.allStatements
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.EmptyStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
@@ -78,11 +78,11 @@ class WithStatementTest : BaseTest() {
     fun testWithSingleStatement() {
         // Test: with open("file.txt", "r") as file:
         val blockStmts =
-            result.dStatements.filterIsInstance<Block>().filter {
+            result.allStatements.filterIsInstance<Block>().filter {
                 it.astParent is NamespaceDeclaration
             }
 
-        val ref = result.dRefs["contextManager_00000000-11a2-7efe-0000-0000461d42fc"]
+        val ref = result.allRefs["contextManager_00000000-11a2-7efe-0000-0000461d42fc"]
         assertNotNull(
             ref,
             "Expected to find a reference to the context manager with a deterministic ID.",
@@ -176,7 +176,7 @@ class WithStatementTest : BaseTest() {
     fun testWithWithoutVar() {
         // Test: with open("file.txt", "r"):
         val blockStmts =
-            result.dStatements.filterIsInstance<Block>().filter {
+            result.allStatements.filterIsInstance<Block>().filter {
                 it.astParent is NamespaceDeclaration
             }
 
@@ -247,11 +247,11 @@ class WithStatementTest : BaseTest() {
 
     @Test
     fun testWithContextManager() {
-        val testFunction = result.dFunctions.firstOrNull { it -> it.name.contains("test_function") }
+        val testFunction = result.allFunctions.firstOrNull { it -> it.name.contains("test_function") }
         assertNotNull(testFunction)
 
         val withBlock =
-            testFunction.body.dStatements
+            testFunction.body.allStatements
                 .filterIsInstance<Block>()
                 .flatMap { it.statements.filterIsInstance<Block>() }
                 .firstOrNull()
@@ -340,11 +340,11 @@ class WithStatementTest : BaseTest() {
 
     @Test
     fun testMultiple() {
-        val testFunction = result.dFunctions.firstOrNull { it -> it.name.contains("test_multiple") }
+        val testFunction = result.allFunctions.firstOrNull { it -> it.name.contains("test_multiple") }
         assertNotNull(testFunction)
 
         val withBlock =
-            testFunction.body.dStatements
+            testFunction.body.allStatements
                 .filterIsInstance<Block>()
                 .flatMap { it.statements.filterIsInstance<Block>() }
                 .firstOrNull()

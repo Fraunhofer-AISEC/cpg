@@ -49,13 +49,13 @@ class ExpressionTest {
         val main = tu.namespaces["main"]
         assertNotNull(main)
 
-        val mainFunc = main.dFunctions["main"]
+        val mainFunc = main.allFunctions["main"]
         assertNotNull(mainFunc)
 
-        val f = mainFunc.dVariables["f"]
+        val f = mainFunc.allVariables["f"]
         assertNotNull(f)
 
-        val s = mainFunc.dVariables["s"]
+        val s = mainFunc.allVariables["s"]
         assertNotNull(s)
 
         val cast = s.initializer as? CastExpression
@@ -63,7 +63,7 @@ class ExpressionTest {
         assertFullName("main.MyStruct", cast.castType)
         assertSame(f, (cast.expression as? Reference)?.refersTo)
 
-        val ignored = main.dVariables("_")
+        val ignored = main.allVariables("_")
         ignored.forEach { assertIs<CastExpression>(it.initializer) }
     }
 
@@ -76,49 +76,49 @@ class ExpressionTest {
             }
         assertNotNull(tu)
 
-        val a = tu.dVariables["a"]
+        val a = tu.allVariables["a"]
         assertNotNull(a)
         assertLocalName("int[]", a.type)
 
-        val b = tu.dVariables["b"]
+        val b = tu.allVariables["b"]
         assertNotNull(b)
         assertLocalName("int[]", b.type)
 
         // [:1]
         var slice =
             assertIs<RangeExpression>(
-                assertIs<SubscriptExpression>(b.dFirstAssignment).subscriptExpression
+                assertIs<SubscriptExpression>(b.firstAssignment).subscriptExpression
             )
         assertNull(slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertNull(slice.third)
 
-        val c = tu.dVariables["c"]
+        val c = tu.allVariables["c"]
         assertNotNull(c)
         assertLocalName("int[]", c.type)
 
         // [1:]
-        slice = assertIs(assertIs<SubscriptExpression>(c.dFirstAssignment).subscriptExpression)
+        slice = assertIs(assertIs<SubscriptExpression>(c.firstAssignment).subscriptExpression)
         assertLiteralValue(1, slice.floor)
         assertNull(slice.ceiling)
         assertNull(slice.third)
 
-        val d = tu.dVariables["d"]
+        val d = tu.allVariables["d"]
         assertNotNull(d)
         assertLocalName("int[]", d.type)
 
         // [0:1]
-        slice = assertIs(assertIs<SubscriptExpression>(d.dFirstAssignment).subscriptExpression)
+        slice = assertIs(assertIs<SubscriptExpression>(d.firstAssignment).subscriptExpression)
         assertLiteralValue(0, slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertNull(slice.third)
 
-        val e = tu.dVariables["e"]
+        val e = tu.allVariables["e"]
         assertNotNull(e)
         assertLocalName("int[]", e.type)
 
         // [0:1:1]
-        slice = assertIs(assertIs<SubscriptExpression>(e.dFirstAssignment).subscriptExpression)
+        slice = assertIs(assertIs<SubscriptExpression>(e.firstAssignment).subscriptExpression)
         assertLiteralValue(0, slice.floor)
         assertLiteralValue(1, slice.ceiling)
         assertLiteralValue(1, slice.third)
@@ -134,14 +134,14 @@ class ExpressionTest {
         assertNotNull(tu)
 
         with(tu) {
-            val main = tu.dFunctions["main"]
+            val main = tu.allFunctions["main"]
             assertNotNull(main)
 
-            val v = main.dVariables["v"]
+            val v = main.allVariables["v"]
             assertNotNull(v)
             assertEquals(primitiveType("int"), v.type)
 
-            val ch = main.dVariables["ch"]
+            val ch = main.allVariables["ch"]
             assertNotNull(ch)
             assertEquals(objectType("chan", generics = listOf(primitiveType("int"))), ch.type)
 
@@ -169,11 +169,11 @@ class ExpressionTest {
             }
         assertNotNull(tu)
 
-        val lit5 = tu.dLiterals.firstOrNull()
+        val lit5 = tu.allLiterals.firstOrNull()
         assertNotNull(lit5)
         println(lit5.printDFG())
 
-        val x = tu.dRefs("x").lastOrNull()
+        val x = tu.allRefs("x").lastOrNull()
         assertNotNull(x)
 
         val paths = x.followPrevFullDFGEdgesUntilHit { it == lit5 }

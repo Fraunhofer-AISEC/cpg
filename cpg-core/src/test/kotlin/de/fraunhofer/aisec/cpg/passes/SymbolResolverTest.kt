@@ -44,33 +44,33 @@ class SymbolResolverTest {
         val result = GraphExamples.getCombinedVariableAndCallTest()
 
         with(result) {
-            val type = result.dRecords["TestClass"]?.toType()
+            val type = result.allRecords["TestClass"]?.toType()
             assertNotNull(type)
 
-            val method1 = result.dMethods["method1"]
+            val method1 = result.allMethods["method1"]
             assertNotNull(method1)
 
-            val method2 = result.dMethods["method2"]
+            val method2 = result.allMethods["method2"]
             assertNotNull(method2)
 
-            val constructor = result.dMethods["TestClass"]
+            val constructor = result.allMethods["TestClass"]
             assertNotNull(constructor)
 
-            val variable = method2.dVariables["variable"]
+            val variable = method2.allVariables["variable"]
             assertEquals(type, variable?.type)
 
-            val ref = method2.dRefs["variable"]
+            val ref = method2.allRefs["variable"]
             assertEquals(type, ref?.type)
 
-            val callmethod1 = method2.dCalls["method1"]
+            val callmethod1 = method2.allCalls["method1"]
             assertIs<MemberCallExpression>(callmethod1)
             assertRefersTo(callmethod1.base, method2.receiver)
             assertInvokes(callmethod1, method1)
 
-            val callmethod2 = method2.dCalls["method2"]
+            val callmethod2 = method2.allCalls["method2"]
             assertInvokes(callmethod2, method2)
 
-            val construct = method1.dCalls { it is ConstructExpression }.firstOrNull()
+            val construct = method1.allCalls { it is ConstructExpression }.firstOrNull()
             assertNotNull(construct)
             assertInvokes(construct, constructor)
         }
@@ -82,7 +82,7 @@ class SymbolResolverTest {
 
         val map = mutableMapOf<ReferenceTag, MutableList<Reference>>()
 
-        val refs = result.dRefs
+        val refs = result.allRefs
         refs.forEach {
             // Build a unique tag based on the scope of the reference is in (since this is usually
             // the start scope)

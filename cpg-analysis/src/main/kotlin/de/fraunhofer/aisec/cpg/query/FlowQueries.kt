@@ -547,11 +547,11 @@ internal fun Node.alwaysFlowsToInternal(
                     node = nodeToTrack.node,
                     terminationReason =
                         if (failureReason == FailureReason.PATH_ENDED) {
-                            PathEnded(dNodes.last())
+                            PathEnded(allNodes.last())
                         } else if (failureReason == FailureReason.HIT_EARLY_TERMINATION) {
-                            HitEarlyTermination(dNodes.last())
+                            HitEarlyTermination(allNodes.last())
                         } else {
-                            StepsExceeded(dNodes.last())
+                            StepsExceeded(allNodes.last())
                         },
                     operator = GenericQueryOperators.EVALUATE,
                 )

@@ -43,14 +43,14 @@ internal class SuperCallTest : BaseTest() {
     @Throws(Exception::class)
     fun testSimpleCall() {
         val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
-        val records = result.dRecords
+        val records = result.allRecords
         val superClass = findByUniqueName(records, "SuperClass")
         val superMethods = superClass.methods
         val superTarget = findByUniqueName(superMethods, "target")
         val subClass = findByUniqueName(records, "SubClass")
         val methods = subClass.methods
         val target = findByUniqueName(methods, "target")
-        val calls = target.dCalls
+        val calls = target.allCalls
         val superCall = findByUniquePredicate(calls) { "super.target();" == it.code }
         assertInvokes(superCall, superTarget)
     }
@@ -59,7 +59,7 @@ internal class SuperCallTest : BaseTest() {
     @Throws(Exception::class)
     fun testInterfaceCall() {
         val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
-        val records = result.dRecords
+        val records = result.allRecords
         val interface1 = findByUniqueName(records, "Interface1")
         val interface1Methods = interface1.methods
         val interface1Target = findByUniqueName(interface1Methods, "target")
@@ -69,7 +69,7 @@ internal class SuperCallTest : BaseTest() {
         val subClass = findByUniqueName(records, "SubClass")
         val methods = subClass.methods
         val target = findByUniqueName(methods, "target")
-        val calls = target.dCalls
+        val calls = target.allCalls
         val interface1Call =
             findByUniquePredicate(calls) { "Interface1.super.target();" == it.code }
         val interface2Call =
@@ -82,17 +82,17 @@ internal class SuperCallTest : BaseTest() {
     @Throws(Exception::class)
     fun testSuperField() {
         val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
-        val records = result.dRecords
+        val records = result.allRecords
         val superClass = findByUniqueName(records, "SuperClass")
         val superField = findByUniqueName(superClass.fields, "field")
         val subClass = findByUniqueName(records, "SubClass")
         val methods = subClass.methods
         val field = findByUniqueName(subClass.fields, "field")
         val getField = findByUniqueName(methods, "getField")
-        var refs = getField.dRefs
+        var refs = getField.allRefs
         val fieldRef = findByUniquePredicate(refs) { "field" == it.code }
         val getSuperField = findByUniqueName(methods, "getSuperField")
-        refs = getSuperField.descendants<MemberExpression>()
+        refs = getSuperField.allDescendants<MemberExpression>()
         val superFieldRef = findByUniquePredicate(refs) { "super.field" == it.code }
         assertEquals(field, fieldRef.refersTo)
         assertTrue(superFieldRef.base is Reference)
@@ -104,14 +104,14 @@ internal class SuperCallTest : BaseTest() {
     @Throws(Exception::class)
     fun testInnerCall() {
         val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
-        val records = result.dRecords
+        val records = result.allRecords
         val superClass = findByUniqueName(records, "SuperClass")
         val superMethods = superClass.methods
         val superTarget = findByUniqueName(superMethods, "target")
         val innerClass = findByUniqueName(records, "SubClass.Inner")
         val methods = innerClass.methods
         val target = findByUniqueName(methods, "inner")
-        val calls = target.dCalls
+        val calls = target.allCalls
         val superCall = findByUniquePredicate(calls) { "SubClass.super.target();" == it.code }
         assertInvokes(superCall, superTarget)
     }
@@ -120,7 +120,7 @@ internal class SuperCallTest : BaseTest() {
     @Throws(Exception::class)
     fun testNoExcessFields() {
         val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
-        val records = result.dRecords
+        val records = result.allRecords
 
         val superClass = records["SuperClass"]
         assertNotNull(superClass)

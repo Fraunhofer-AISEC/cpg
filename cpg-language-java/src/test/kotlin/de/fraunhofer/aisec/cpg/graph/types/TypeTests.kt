@@ -44,7 +44,7 @@ internal class TypeTests : BaseTest() {
         assertNotNull(language)
 
         // Check Parameterized
-        val recordDeclarations = result.dRecords
+        val recordDeclarations = result.allRecords
         val recordDeclarationBox = findByUniqueName(recordDeclarations, "Box")
         val typeT = result.finalCtx.typeManager.getTypeParameter(recordDeclarationBox, "T")
         assertNotNull(typeT)
@@ -53,12 +53,12 @@ internal class TypeTests : BaseTest() {
         assertEquals(typeT, result.finalCtx.typeManager.getTypeParameter(recordDeclarationBox, "T"))
 
         // Type of field t
-        val fieldDeclarations = result.dFields
+        val fieldDeclarations = result.allFields
         val fieldDeclarationT = findByUniqueName(fieldDeclarations, "t")
         assertTrue(fieldDeclarationT.assignedTypes.contains(typeT))
 
         // Parameter of set Method
-        val methodDeclarations = result.dMethods
+        val methodDeclarations = result.allMethods
         val methodDeclarationSet = findByUniqueName(methodDeclarations, "set")
         val t = methodDeclarationSet.parameters[0]
         assertEquals(typeT, t.type)
@@ -77,8 +77,8 @@ internal class TypeTests : BaseTest() {
     fun graphTest() {
         val topLevel = Path.of("src", "test", "resources", "types")
         val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
-        val variables = result.descendants<ObjectType>()
-        val recordDeclarations = result.dRecords
+        val variables = result.allDescendants<ObjectType>()
+        val recordDeclarations = result.allRecords
 
         // Test RecordDeclaration relationship
         val objectTypes = findByName(variables, "A")
@@ -88,12 +88,12 @@ internal class TypeTests : BaseTest() {
         }
 
         // Test uniqueness of types x and y have same type
-        val fieldDeclarations = result.dFields
+        val fieldDeclarations = result.allFields
         val x = findByUniqueName(fieldDeclarations, "x")
         val z = findByUniqueName(fieldDeclarations, "z")
         assertSame(x.type, z.type)
 
-        val variableDeclarations = result.dVariables
+        val variableDeclarations = result.allVariables
         // Test PointerType chain with array
         val array = findByUniqueName(variableDeclarations, "array")
         assertTrue(array.type is PointerType)

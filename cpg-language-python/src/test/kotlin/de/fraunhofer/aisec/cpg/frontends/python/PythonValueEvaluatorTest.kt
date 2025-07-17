@@ -62,20 +62,20 @@ class PythonValueEvaluatorTest {
             }
         assertNotNull(result)
 
-        val ifs = result.dIfs
+        val ifs = result.allIfs
         ifs.forEach {
             val value = it.condition?.evaluate(PythonValueEvaluator()) as? Boolean
             assertNotNull(value)
             assertTrue(value)
         }
 
-        val weirdCompares = result.dVariables["weird_compare"]?.assignments
+        val weirdCompares = result.allVariables["weird_compare"]?.assignments
         weirdCompares?.forEach {
             val value = it.value.evaluate(PythonValueEvaluator())
             assertEquals("{==}", value)
         }
 
-        val theFuncCall = result.dCalls["the_func"]
+        val theFuncCall = result.allCalls["the_func"]
         assertNotNull(theFuncCall)
         assertEquals(1, theFuncCall.invokes.size)
     }
@@ -103,7 +103,7 @@ class PythonValueEvaluatorTest {
             }
         assertNotNull(result)
 
-        val ifs = result.dIfs
+        val ifs = result.allIfs
         ifs.forEach {
             val value = it.condition?.evaluate(PythonValueEvaluator()) as? Boolean
             assertNotNull(value)
@@ -120,7 +120,7 @@ class PythonValueEvaluatorTest {
                 it.registerPass<UnreachableEOGPass>()
             }
 
-        val binOps = result.descendants<BinaryOperator>()
+        val binOps = result.allDescendants<BinaryOperator>()
         binOps.forEach {
             val value = it.evaluate(PythonValueEvaluator())
             assertEquals("{${it.operatorCode}}", value)
@@ -136,13 +136,13 @@ class PythonValueEvaluatorTest {
             }
         assertNotNull(result)
 
-        val b = result.dVariables["b"]?.dFirstAssignment
+        val b = result.allVariables["b"]?.firstAssignment
         assertNotNull(b)
 
         var value = b.evaluate(PythonValueEvaluator())
         assertEquals(12L, value)
 
-        val c = result.dVariables["c"]?.dFirstAssignment
+        val c = result.allVariables["c"]?.firstAssignment
         assertNotNull(c)
 
         value = c.evaluate(PythonValueEvaluator())

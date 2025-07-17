@@ -276,7 +276,7 @@ fun LanguageFrontend<*, *>.block(needsScope: Boolean = true, init: Block.() -> U
 
 /**
  * Creates a new [ParameterDeclaration] in the Fluent Node DSL and adds it to the
- * [FunctionDeclaration.dParameters] of the nearest enclosing [FunctionDeclaration]. The [init]
+ * [FunctionDeclaration.allParameters] of the nearest enclosing [FunctionDeclaration]. The [init]
  * block can be used to create further sub-nodes as well as configuring the created node itself.
  */
 context(func: FunctionDeclaration)

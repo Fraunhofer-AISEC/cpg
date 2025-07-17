@@ -36,8 +36,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.Import
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
-import de.fraunhofer.aisec.cpg.graph.pComponent
-import de.fraunhofer.aisec.cpg.graph.pTranslationUnit
+import de.fraunhofer.aisec.cpg.graph.parentComponent
+import de.fraunhofer.aisec.cpg.graph.parentTranslationUnit
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -244,7 +244,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
      * [ImportDeclaration].
      */
     private fun collectImportDependencies(import: ImportDeclaration) {
-        val currentComponent = import.pComponent
+        val currentComponent = import.parentComponent
         if (currentComponent == null) {
             errorWithFileLocation(import, log, "Cannot determine component of import node")
             return
@@ -303,9 +303,9 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
             // Next, we loop through all namespaces in order to "connect" them to our current module
             for (declaration in namespaces) {
                 // Retrieve the module of the declarations
-                var namespaceTu = declaration.pTranslationUnit
-                var namespaceComponent = declaration.pComponent
-                var importTu = import.pTranslationUnit
+                var namespaceTu = declaration.parentTranslationUnit
+                var namespaceComponent = declaration.parentComponent
+                var importTu = import.parentTranslationUnit
                 // Skip, if we cannot find the module or if they belong to the same module (we do
                 // not want self-references)
                 if (

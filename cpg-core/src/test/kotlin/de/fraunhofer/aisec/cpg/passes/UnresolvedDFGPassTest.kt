@@ -46,13 +46,13 @@ class UnresolvedDFGPassTest {
         val result = getDfgUnresolvedCalls(true, false)
 
         // Flow from base to return value
-        val firstCall = result.dCalls { it.name.localName == "get" }[0]
-        val osDecl = result.dVariables["os"]
+        val firstCall = result.allCalls { it.name.localName == "get" }[0]
+        val osDecl = result.allVariables["os"]
         assertEquals(1, firstCall.prevDFG.size)
         assertEquals(osDecl, (firstCall.prevDFG.firstOrNull() as? Reference)?.refersTo)
 
         // Flow from base and argument to return value
-        val callWithParam = result.dCalls { it.name.localName == "get" }[1]
+        val callWithParam = result.allCalls { it.name.localName == "get" }[1]
         assertEquals(2, callWithParam.prevDFG.size)
         assertEquals(
             osDecl,
@@ -63,7 +63,7 @@ class UnresolvedDFGPassTest {
         // No specific flows for resolved functions
         // => Goes through the method declaration and then follows the instructions in the method's
         // implementation
-        val knownCall = result.dCalls { it.name.localName == "knownFunction" }[0]
+        val knownCall = result.allCalls { it.name.localName == "knownFunction" }[0]
         assertEquals(1, knownCall.prevDFG.size)
         assertTrue(knownCall.prevDFG.firstOrNull() is MethodDeclaration)
     }
@@ -73,17 +73,17 @@ class UnresolvedDFGPassTest {
         val result = getDfgUnresolvedCalls(false, false)
 
         // No flow from base to return value
-        val firstCall = result.dCalls { it.name.localName == "get" }[0]
+        val firstCall = result.allCalls { it.name.localName == "get" }[0]
         assertEquals(0, firstCall.prevDFG.size)
 
         // No flow from base or argument to return value
-        val callWithParam = result.dCalls { it.name.localName == "get" }[1]
+        val callWithParam = result.allCalls { it.name.localName == "get" }[1]
         assertEquals(0, callWithParam.prevDFG.size)
 
         // No specific flows for resolved functions
         // => Goes through the method declaration and then follows the instructions in the method's
         // implementation
-        val knownCall = result.dCalls { it.name.localName == "knownFunction" }[0]
+        val knownCall = result.allCalls { it.name.localName == "knownFunction" }[0]
         assertEquals(1, knownCall.prevDFG.size)
         assertTrue(knownCall.prevDFG.firstOrNull() is MethodDeclaration)
     }
@@ -96,11 +96,11 @@ class UnresolvedDFGPassTest {
         // the lhs of the assignment.
         val result = getDfgUnresolvedCalls(false, true)
 
-        val osDecl = result.dVariables["os"]
+        val osDecl = result.allVariables["os"]
         assertNotNull(osDecl)
 
         // Flow from base to method declaration which then flows to the call
-        val firstCall = result.dCalls { it.name.localName == "get" }[0]
+        val firstCall = result.allCalls { it.name.localName == "get" }[0]
         assertEquals(1, firstCall.prevDFG.size)
         // Check if it's the "get" method.
         val getMethod1 = firstCall.prevDFG.singleOrNull { it.name.localName == "get" }
@@ -112,7 +112,7 @@ class UnresolvedDFGPassTest {
         )
 
         // Flow from base and argument to return value
-        val callWithParam = result.dCalls { it.name.localName == "get" }[1]
+        val callWithParam = result.allCalls { it.name.localName == "get" }[1]
         assertEquals(1, callWithParam.prevDFG.size)
         // Check if it's the "get" method.
         val getMethod2 = callWithParam.prevDFG.singleOrNull { it.name.localName == "get" }
@@ -128,7 +128,7 @@ class UnresolvedDFGPassTest {
         // No specific flows for resolved functions
         // => Goes through the method declaration and then follows the instructions in the method's
         // implementation
-        val knownCall = result.dCalls { it.name.localName == "knownFunction" }[0]
+        val knownCall = result.allCalls { it.name.localName == "knownFunction" }[0]
         assertEquals(1, knownCall.prevDFG.size)
         assertTrue(knownCall.prevDFG.firstOrNull() is MethodDeclaration)
     }

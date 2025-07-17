@@ -158,14 +158,14 @@ class ConfigurationPassTest {
             registerOptionOps.associate { Pair(it.name.toString(), it.option) },
         )
 
-        val subs = result.descendants<SubscriptExpression>()
+        val subs = result.allDescendants<SubscriptExpression>()
         assertEquals(6, subs.size)
 
-        val port = result.dRefs["port"]
+        val port = result.allRefs["port"]
         assertNotNull(port)
         assertEquals(setOf("80", "8080"), port.evaluate(MultiValueEvaluator()))
 
-        val sslEnabled = result.dRefs["ssl_enabled"]
+        val sslEnabled = result.allRefs["ssl_enabled"]
         assertNotNull(sslEnabled)
         assertEquals(setOf("true", "false"), sslEnabled.evaluate(MultiValueEvaluator()))
 

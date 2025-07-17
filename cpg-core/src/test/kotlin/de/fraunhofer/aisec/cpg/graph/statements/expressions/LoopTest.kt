@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.dFunctions
-import de.fraunhofer.aisec.cpg.graph.dStatements
+import de.fraunhofer.aisec.cpg.graph.allFunctions
+import de.fraunhofer.aisec.cpg.graph.allStatements
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertNotEquals
@@ -39,96 +39,96 @@ class LoopTest {
     @Test
     fun testWhileStatement() {
         val whileTest = GraphExamples.getWhileWithElseAndBreak()
-        val func = whileTest.dFunctions["someRecord.func"]
+        val func = whileTest.allFunctions["someRecord.func"]
         assertNotNull(func)
 
-        val whileStmt = whileTest.dWhileLoops.firstOrNull()
+        val whileStmt = whileTest.allWhileLoops.firstOrNull()
         assertNotNull(whileStmt)
-        assertContains(func.body.dStatements, whileStmt)
+        assertContains(func.body.allStatements, whileStmt)
         whileStmt.astChildren.forEach { assertContains(whileStmt.toString(), it.toString()) }
-        val secondWhileStmt = whileTest.dWhileLoops.lastOrNull()
+        val secondWhileStmt = whileTest.allWhileLoops.lastOrNull()
         assertNotNull(secondWhileStmt)
         assertNotEquals(whileStmt, secondWhileStmt)
 
-        val breakStmt = whileStmt.dBreaks.firstOrNull()
+        val breakStmt = whileStmt.allBreaks.firstOrNull()
         assertNotNull(breakStmt)
 
-        val elseCall = whileTest.dCalls["elseCall"]
+        val elseCall = whileTest.allCalls["elseCall"]
         assertNotNull(elseCall)
 
-        val postWhile = whileTest.dCalls["postWhile"]
+        val postWhile = whileTest.allCalls["postWhile"]
         assertNotNull(postWhile)
     }
 
     @Test
     fun testDoStatement() {
         val doTest = GraphExamples.getDoWithElseAndBreak()
-        val func = doTest.dFunctions["someRecord.func"]
+        val func = doTest.allFunctions["someRecord.func"]
         assertNotNull(func)
 
-        val doStmt = doTest.dDoLoops.firstOrNull()
+        val doStmt = doTest.allDoLoops.firstOrNull()
         assertNotNull(doStmt)
-        assertContains(func.body.dStatements, doStmt)
+        assertContains(func.body.allStatements, doStmt)
         doStmt.astChildren.forEach { assertContains(doStmt.toString(), it.toString()) }
-        val secondDoStmt = doTest.dDoLoops.lastOrNull()
+        val secondDoStmt = doTest.allDoLoops.lastOrNull()
         assertNotNull(secondDoStmt)
         assertNotEquals(doStmt, secondDoStmt)
 
-        val breakStmt = doStmt.dBreaks.firstOrNull()
+        val breakStmt = doStmt.allBreaks.firstOrNull()
         assertNotNull(breakStmt)
 
-        val elseCall = doTest.dCalls["elseCall"]
+        val elseCall = doTest.allCalls["elseCall"]
         assertNotNull(elseCall)
 
-        val postWhile = doTest.dCalls["postDo"]
+        val postWhile = doTest.allCalls["postDo"]
         assertNotNull(postWhile)
     }
 
     @Test
     fun testForStatement() {
         val forTest = GraphExamples.getForWithElseAndBreak()
-        val func = forTest.dFunctions["someRecord.func"]
+        val func = forTest.allFunctions["someRecord.func"]
         assertNotNull(func)
 
-        val forStmt = forTest.dForLoops.firstOrNull()
+        val forStmt = forTest.allForLoops.firstOrNull()
         assertNotNull(forStmt)
-        assertContains(func.body.dStatements, forStmt)
+        assertContains(func.body.allStatements, forStmt)
         forStmt.astChildren.forEach { assertContains(forStmt.toString(), it.toString()) }
-        val secondForStmt = forTest.dForLoops.lastOrNull()
+        val secondForStmt = forTest.allForLoops.lastOrNull()
         assertNotNull(secondForStmt)
         assertNotEquals(forStmt, secondForStmt)
 
-        val breakStmt = forStmt.dBreaks.firstOrNull()
+        val breakStmt = forStmt.allBreaks.firstOrNull()
         assertNotNull(breakStmt)
 
-        val elseCall = forTest.dCalls["elseCall"]
+        val elseCall = forTest.allCalls["elseCall"]
         assertNotNull(elseCall)
 
-        val postFor = forTest.dCalls["postFor"]
+        val postFor = forTest.allCalls["postFor"]
         assertNotNull(postFor)
     }
 
     @Test
     fun testForEachStatement() {
         val forEachTest = GraphExamples.getForEachWithElseAndBreak()
-        val func = forEachTest.dFunctions["someRecord.func"]
+        val func = forEachTest.allFunctions["someRecord.func"]
         assertNotNull(func)
 
-        val forEachStmt = forEachTest.dForEachLoops.firstOrNull()
+        val forEachStmt = forEachTest.allForEachLoops.firstOrNull()
         assertNotNull(forEachStmt)
-        assertContains(func.body.dStatements, forEachStmt)
+        assertContains(func.body.allStatements, forEachStmt)
         forEachStmt.astChildren.forEach { assertContains(forEachStmt.toString(), it.toString()) }
-        val secondForEachStmt = forEachTest.dForEachLoops.lastOrNull()
+        val secondForEachStmt = forEachTest.allForEachLoops.lastOrNull()
         assertNotNull(secondForEachStmt)
         assertNotEquals(forEachStmt, secondForEachStmt)
 
-        val breakStmt = forEachTest.dBreaks.firstOrNull()
+        val breakStmt = forEachTest.allBreaks.firstOrNull()
         assertNotNull(breakStmt)
 
-        val elseCall = forEachTest.dCalls["elseCall"]
+        val elseCall = forEachTest.allCalls["elseCall"]
         assertNotNull(elseCall)
 
-        val postForEach = forEachTest.dCalls["postForEach"]
+        val postForEach = forEachTest.allCalls["postForEach"]
         assertNotNull(postForEach)
     }
 }

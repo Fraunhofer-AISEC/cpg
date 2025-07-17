@@ -112,7 +112,7 @@ class DataflowTest {
         val result = prepareThrowDFGTest()
 
         // Let's assert that we did this correctly
-        val main = result.dFunctions["foo"]
+        val main = result.allFunctions["foo"]
         assertNotNull(main)
         val body = main.body
         assertIs<Block>(body)
@@ -123,7 +123,7 @@ class DataflowTest {
         val throwCall = throwStmt.exception
         assertIs<CallExpression>(throwCall)
 
-        val someError = result.dCalls["SomeError"]
+        val someError = result.allCalls["SomeError"]
         assertIs<CallExpression>(someError)
         assertContains(throwStmt.prevDFG, someError)
     }

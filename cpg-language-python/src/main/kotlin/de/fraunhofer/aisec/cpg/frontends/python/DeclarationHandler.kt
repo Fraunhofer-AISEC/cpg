@@ -202,7 +202,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
      * This function creates a [newParameterDeclaration] for the argument, setting any modifiers
      * (like positional-only or keyword-only) and [defaultValue] if applicable.
      *
-     * This also adds the [ParameterDeclaration] to the [FunctionDeclaration.dParameters].
+     * This also adds the [ParameterDeclaration] to the [FunctionDeclaration.allParameters].
      */
     internal fun handleArgument(
         func: FunctionDeclaration,

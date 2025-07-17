@@ -82,17 +82,17 @@ class DFGTest {
         assertIs<CallExpression>(tuplePrevDFG)
         assertLocalName(functionName, tuplePrevDFG)
 
-        val c = body.dVariables["c"]
+        val c = body.allVariables["c"]
         assertNotNull(c)
         assertTrue(c.prevDFG.isEmpty())
 
-        val d = body.dVariables["d"]
+        val d = body.allVariables["d"]
         assertNotNull(d)
         assertTrue(d.prevDFG.isEmpty())
     }
 
     fun checkReturnTuple(functionDeclaration: FunctionDeclaration) {
-        val returnStmt = functionDeclaration.dReturns.singleOrNull()
+        val returnStmt = functionDeclaration.allReturns.singleOrNull()
         assertNotNull(returnStmt)
         val returnVal = returnStmt.returnValue
         assertIs<InitializerListExpression>(returnVal)
@@ -117,7 +117,7 @@ class DFGTest {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
-        val getTuple = result.dFunctions["getTuple"]
+        val getTuple = result.allFunctions["getTuple"]
         assertNotNull(getTuple)
 
         val body = getTuple.body
@@ -133,7 +133,7 @@ class DFGTest {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
-        val returnTuple = result.dFunctions["returnTuple"]
+        val returnTuple = result.allFunctions["returnTuple"]
         assertNotNull(returnTuple)
         checkReturnTuple(returnTuple)
     }
@@ -146,7 +146,7 @@ class DFGTest {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
-        val returnTuple = result.dFunctions["returnTuple2"]
+        val returnTuple = result.allFunctions["returnTuple2"]
         assertNotNull(returnTuple)
         checkReturnTuple(returnTuple)
     }
@@ -159,7 +159,7 @@ class DFGTest {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
-        val getTuple = result.dFunctions["getTuple2"]
+        val getTuple = result.allFunctions["getTuple2"]
         assertNotNull(getTuple)
 
         val body = getTuple.body
@@ -176,7 +176,7 @@ class DFGTest {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
-        val getTuple = result.dFunctions["getTuple3"]
+        val getTuple = result.allFunctions["getTuple3"]
         assertNotNull(getTuple)
 
         val body = getTuple.body
@@ -192,7 +192,7 @@ class DFGTest {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
-        val getTuple = result.dFunctions["getTuple4"]
+        val getTuple = result.allFunctions["getTuple4"]
         assertNotNull(getTuple)
 
         val body = getTuple.body
@@ -208,16 +208,16 @@ class DFGTest {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
-        val getTuple = result.dFunctions["getTuple4"]
+        val getTuple = result.allFunctions["getTuple4"]
         assertNotNull(getTuple)
-        val cRead = getTuple.dRefs["c"]
+        val cRead = getTuple.allRefs["c"]
         assertNotNull(cRead)
 
-        val returnTuple = result.dFunctions["returnTuple"]
+        val returnTuple = result.allFunctions["returnTuple"]
         assertNotNull(returnTuple)
-        val aReturned = returnTuple.dRefs["a"]
+        val aReturned = returnTuple.allRefs["a"]
         assertNotNull(aReturned)
-        val bReturned = returnTuple.dRefs["b"]
+        val bReturned = returnTuple.allRefs["b"]
         assertNotNull(bReturned)
         val backwardsPathCToA =
             cRead
@@ -245,7 +245,7 @@ class DFGTest {
             }
         assertNotNull(result)
 
-        val keyStartRef = result.dCalls["retrieve_key_from_server"]?.nextDFG?.first()
+        val keyStartRef = result.allCalls["retrieve_key_from_server"]?.nextDFG?.first()
         assertNotNull(keyStartRef)
 
         val paths =
@@ -270,7 +270,7 @@ class DFGTest {
         assertNotNull(result)
 
         val dInitialization =
-            result.dRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 2 }]
+            result.allRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 2 }]
         assertIs<Reference>(
             dInitialization,
             "We expect that there is a reference called \"d\" in line 2 of the file.",
@@ -278,20 +278,20 @@ class DFGTest {
 
         // Test the DFG edges for the reference d and the access d['b'] in line 9 of the file.
         val dLine9 =
-            result.dRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 9 }]
+            result.allRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 9 }]
         assertIs<Reference>(
             dLine9,
             "We expect that there is a reference called \"d\" in line 9 of the file.",
         )
         val dBLine9 =
             result
-                .descendants<SubscriptExpression> { it.location?.region?.startLine == 9 }
+                .allDescendants<SubscriptExpression> { it.location?.region?.startLine == 9 }
                 .singleOrNull()
         assertIs<SubscriptExpression>(
             dBLine9,
             "We expect that there is a subscript expression representing \"d['b']\" in line 9 of the file.",
         )
-        val literal1 = result.dLiterals.singleOrNull { it.value == 1L }
+        val literal1 = result.allLiterals.singleOrNull { it.value == 1L }
         assertIs<Literal<*>>(
             literal1,
             "We expect that there is a Literal<Int> representing \"1\" in line 9 of the file.",
@@ -345,7 +345,7 @@ class DFGTest {
         // Test the DFG edges for the reference d and the access d['b'] printed in line 10 of the
         // file.
         val printDLine10 =
-            result.dRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 10 }]
+            result.allRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 10 }]
         assertIs<Reference>(
             printDLine10,
             "We expect that there is a reference called \"d\" in line 10 of the file.",
@@ -372,7 +372,7 @@ class DFGTest {
 
         val subscriptLine10 =
             result
-                .descendants<SubscriptExpression> { it.location?.region?.startLine == 10 }
+                .allDescendants<SubscriptExpression> { it.location?.region?.startLine == 10 }
                 .singleOrNull()
         assertIs<SubscriptExpression>(
             subscriptLine10,
@@ -421,7 +421,7 @@ class DFGTest {
         // Test the DFG edges for the reference d and the access d['a'] printed in line 11 of the
         // file.
         val printDLine11 =
-            result.dRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 11 }]
+            result.allRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 11 }]
         assertIs<Reference>(
             printDLine11,
             "We expect that there is a reference called \"d\" in line 11 of the file.",
@@ -448,7 +448,7 @@ class DFGTest {
 
         val subscriptLine11 =
             result
-                .descendants<SubscriptExpression> { it.location?.region?.startLine == 11 }
+                .allDescendants<SubscriptExpression> { it.location?.region?.startLine == 11 }
                 .singleOrNull()
         assertIs<SubscriptExpression>(
             subscriptLine11,
@@ -477,7 +477,7 @@ class DFGTest {
 
         // Test the DFG edges for the reference d printed in line 12 of the file.
         val printD =
-            result.dRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 12 }]
+            result.allRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 12 }]
         assertIs<Reference>(
             printD,
             "We expect that there is a reference called \"d\" in line 12 of the file.",
@@ -510,7 +510,7 @@ class DFGTest {
         assertNotNull(result)
 
         val dInitialization =
-            result.dRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 2 }]
+            result.allRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 2 }]
         assertIs<Reference>(
             dInitialization,
             "We expect that there is a reference called \"d\" in line 2 of the file.",
@@ -518,20 +518,20 @@ class DFGTest {
 
         // Test the DFG edges for the reference d and the access d[1] in line 9 of the file.
         val dLine9 =
-            result.dRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 9 }]
+            result.allRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 9 }]
         assertIs<Reference>(
             dLine9,
             "We expect that there is a reference called \"d\" in line 9 of the file.",
         )
         val d1Line9 =
             result
-                .descendants<SubscriptExpression> { it.location?.region?.startLine == 9 }
+                .allDescendants<SubscriptExpression> { it.location?.region?.startLine == 9 }
                 .singleOrNull()
         assertIs<SubscriptExpression>(
             d1Line9,
             "We expect that there is a subscript expression representing \"d[1]\" in line 9 of the file.",
         )
-        val literal1 = result.dLiterals.singleOrNull { it.value == 10L }
+        val literal1 = result.allLiterals.singleOrNull { it.value == 10L }
         assertIs<Literal<*>>(
             literal1,
             "We expect that there is a Literal<Int> representing \"1\" in line 9 of the file.",
@@ -585,7 +585,7 @@ class DFGTest {
         // Test the DFG edges for the reference d and the access d[1] printed in line 10 of the
         // file.
         val printDLine10 =
-            result.dRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 10 }]
+            result.allRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 10 }]
         assertIs<Reference>(
             printDLine10,
             "We expect that there is a reference called \"d\" in line 10 of the file.",
@@ -612,7 +612,7 @@ class DFGTest {
 
         val subscriptLine10 =
             result
-                .descendants<SubscriptExpression> { it.location?.region?.startLine == 10 }
+                .allDescendants<SubscriptExpression> { it.location?.region?.startLine == 10 }
                 .singleOrNull()
         assertIs<SubscriptExpression>(
             subscriptLine10,
@@ -661,7 +661,7 @@ class DFGTest {
         // Test the DFG edges for the reference d and the access d[0] printed in line 11 of the
         // file.
         val printDLine11 =
-            result.dRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 11 }]
+            result.allRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 11 }]
         assertIs<Reference>(
             printDLine11,
             "We expect that there is a reference called \"d\" in line 11 of the file.",
@@ -688,7 +688,7 @@ class DFGTest {
 
         val subscriptLine11 =
             result
-                .descendants<SubscriptExpression> { it.location?.region?.startLine == 11 }
+                .allDescendants<SubscriptExpression> { it.location?.region?.startLine == 11 }
                 .singleOrNull()
         assertIs<SubscriptExpression>(
             subscriptLine11,
@@ -717,7 +717,7 @@ class DFGTest {
 
         // Test the DFG edges for the reference d printed in line 12 of the file.
         val printD =
-            result.dRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 12 }]
+            result.allRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 12 }]
         assertIs<Reference>(
             printD,
             "We expect that there is a reference called \"d\" in line 12 of the file.",
@@ -749,13 +749,13 @@ class DFGTest {
             }
         assertNotNull(result)
 
-        val fieldA = result.dFields["a"]
+        val fieldA = result.allFields["a"]
         assertNotNull(fieldA, "We expect that there is a field called \"a\".")
-        val fieldB = result.dFields["b"]
+        val fieldB = result.allFields["b"]
         assertNotNull(fieldB, "We expect that there is a field called \"b\".")
 
         val dInitialization =
-            result.dRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 2 }]
+            result.allRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 2 }]
         assertIs<Reference>(
             dInitialization,
             "We expect that there is a reference called \"d\" in line 2 of the file.",
@@ -763,20 +763,20 @@ class DFGTest {
 
         // Test the DFG edges for the reference d and the access d.b in line 9 of the file.
         val dLine9 =
-            result.dRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 9 }]
+            result.allRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 9 }]
         assertIs<Reference>(
             dLine9,
             "We expect that there is a reference called \"d\" in line 9 of the file.",
         )
         val dBLine9 =
             result
-                .descendants<MemberExpression> { it.location?.region?.startLine == 9 }
+                .allDescendants<MemberExpression> { it.location?.region?.startLine == 9 }
                 .singleOrNull()
         assertIs<MemberExpression>(
             dBLine9,
             "We expect that there is a subscript expression representing \"d.b\" in line 9 of the file.",
         )
-        val literal1 = result.dLiterals.singleOrNull { it.value == 1L }
+        val literal1 = result.allLiterals.singleOrNull { it.value == 1L }
         assertIs<Literal<*>>(
             literal1,
             "We expect that there is a Literal<Int> representing \"1\" in line 9 of the file.",
@@ -830,7 +830,7 @@ class DFGTest {
         // Test the DFG edges for the reference d and the access d.b printed in line 10 of the
         // file.
         val printDLine10 =
-            result.dRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 10 }]
+            result.allRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 10 }]
         assertIs<Reference>(
             printDLine10,
             "We expect that there is a reference called \"d\" in line 10 of the file.",
@@ -857,7 +857,7 @@ class DFGTest {
 
         val subscriptLine10 =
             result
-                .descendants<MemberExpression> { it.location?.region?.startLine == 10 }
+                .allDescendants<MemberExpression> { it.location?.region?.startLine == 10 }
                 .singleOrNull()
         assertIs<MemberExpression>(
             subscriptLine10,
@@ -906,7 +906,7 @@ class DFGTest {
         // Test the DFG edges for the reference d and the access d.a printed in line 11 of the
         // file.
         val printDLine11 =
-            result.dRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 11 }]
+            result.allRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 11 }]
         assertIs<Reference>(
             printDLine11,
             "We expect that there is a reference called \"d\" in line 11 of the file.",
@@ -933,7 +933,7 @@ class DFGTest {
 
         val subscriptLine11 =
             result
-                .descendants<MemberExpression> { it.location?.region?.startLine == 11 }
+                .allDescendants<MemberExpression> { it.location?.region?.startLine == 11 }
                 .singleOrNull()
         assertIs<MemberExpression>(
             subscriptLine11,
@@ -985,7 +985,7 @@ class DFGTest {
 
         // Test the DFG edges for the reference d printed in line 12 of the file.
         val printD =
-            result.dRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 12 }]
+            result.allRefs[{ it.name.localName == "d" && it.location?.region?.startLine == 12 }]
         assertIs<Reference>(
             printD,
             "We expect that there is a reference called \"d\" in line 12 of the file.",

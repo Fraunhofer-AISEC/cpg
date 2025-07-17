@@ -54,16 +54,16 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
             }
         with(result) {
-            val main = dFunctions["main"]
+            val main = allFunctions["main"]
             assertNotNull(main)
 
             val decl = main
-            val ls = decl.dVariables["ls"]
+            val ls = decl.allVariables["ls"]
             assertNotNull(ls)
             assertEquals(assertResolvedType("std::vector"), ls.type)
             assertLocalName("ls", ls)
 
-            val forEachStatement = decl.dForEachLoops.firstOrNull()
+            val forEachStatement = decl.allForEachLoops.firstOrNull()
             assertNotNull(forEachStatement)
 
             // should loop over ls
@@ -90,10 +90,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val main = tu.dFunctions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
-        val tryStatement = main.dTrys.firstOrNull()
+        val tryStatement = main.allTrys.firstOrNull()
         assertNotNull(tryStatement)
 
         val catchClauses = tryStatement.catchClauses
@@ -126,12 +126,12 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyze(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val main = result.dFunctions["main"]
+        val main = result.allFunctions["main"]
         with(result) {
             assertNotNull(main)
 
             val funcDecl = main
-            val i = funcDecl.dVariables["i"]
+            val i = funcDecl.allVariables["i"]
             assertNotNull(i)
 
             val sizeof = i.initializer as? TypeIdExpression
@@ -139,7 +139,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             assertLocalName("sizeof", sizeof)
             assertEquals(assertResolvedType("std::size_t"), sizeof.type)
 
-            val typeInfo = funcDecl.dVariables["typeInfo"]
+            val typeInfo = funcDecl.allVariables["typeInfo"]
             assertNotNull(typeInfo)
 
             val typeid = typeInfo.initializer as? TypeIdExpression
@@ -148,7 +148,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
             assertEquals(assertResolvedType("std::type_info").ref(), typeid.type)
 
-            val j = funcDecl.dVariables["j"]
+            val j = funcDecl.allVariables["j"]
             assertNotNull(j)
 
             val alignOf = j.initializer as? TypeIdExpression
@@ -168,14 +168,14 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
             }
         with(result) {
-            val main = dFunctions["main"]
+            val main = allFunctions["main"]
             assertNotNull(main)
 
-            val e = main.dVariables["e"]
+            val e = main.allVariables["e"]
             assertNotNull(e)
             assertEquals(assertResolvedType("ExtendedClass").pointer(), e.type)
 
-            val b = main.dVariables["b"]
+            val b = main.allVariables["b"]
             assertNotNull(b)
             assertEquals(assertResolvedType("BaseClass").pointer(), b.type)
 
@@ -184,19 +184,19 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             assertNotNull(cast)
             assertEquals(assertResolvedType("BaseClass").pointer(), cast.castType)
 
-            val staticCast = main.dAssigns.getOrNull(0)
+            val staticCast = main.allAssigns.getOrNull(0)
             assertNotNull(staticCast)
             cast = staticCast.rhs<CastExpression>()
             assertNotNull(cast)
             assertLocalName("BaseClass*", cast)
 
-            val reinterpretCast = main.dAssigns.getOrNull(0)
+            val reinterpretCast = main.allAssigns.getOrNull(0)
             assertNotNull(reinterpretCast)
             cast = reinterpretCast.rhs<CastExpression>()
             assertNotNull(cast)
             assertLocalName("BaseClass*", cast)
 
-            val d = main.dVariables["d"]
+            val d = main.allVariables["d"]
             assertNotNull(d)
 
             cast = d.initializer as? CastExpression
@@ -214,7 +214,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
             }
         with(result) {
-            val main = dFunctions["main"]
+            val main = allFunctions["main"]
             assertNotNull(main)
 
             val statement = main.body as Block
@@ -344,18 +344,18 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
             }
 
-        assertTrue(tu.descendants<Node>().isNotEmpty())
+        assertTrue(tu.allDescendants<Node>().isNotEmpty())
 
-        val switchStatements = tu.descendants<SwitchStatement>()
+        val switchStatements = tu.allDescendants<SwitchStatement>()
         assertTrue(switchStatements.size == 3)
 
         val switchStatement = switchStatements[0]
         assertTrue((switchStatement.statement as Block).statements.size == 11)
 
-        val caseStatements = switchStatement.descendants<CaseStatement>()
+        val caseStatements = switchStatement.allDescendants<CaseStatement>()
         assertTrue(caseStatements.size == 4)
 
-        val defaultStatements = switchStatement.descendants<DefaultStatement>()
+        val defaultStatements = switchStatement.allDescendants<DefaultStatement>()
         assertTrue(defaultStatements.size == 1)
     }
 
@@ -467,13 +467,13 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             }
 
         // just take a look at the second function
-        val main = tu.dFunctions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
         val statements = main.statements
         assertNotNull(statements)
 
-        val a = main.dVariables["a"]
+        val a = main.allVariables["a"]
         val assignA = statements[1]
         assertTrue(assignA is AssignExpression)
 
@@ -483,7 +483,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals(2, (rhs as? Literal<*>)?.value)
         assertRefersTo(lhs, a)
 
-        val b = main.dVariables["b"]
+        val b = main.allVariables["b"]
 
         // a = b
         val assignB = statements[3]
@@ -598,7 +598,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
             }
 
-        val main = result.dFunctions["main"]
+        val main = result.allFunctions["main"]
         assertNotNull(main)
 
         val statements = main.statements
@@ -669,7 +669,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(tu)
         assertEquals(language, tu.language)
 
-        val recordDeclaration = tu.dRecords.firstOrNull()
+        val recordDeclaration = tu.allRecords.firstOrNull()
         assertNotNull(recordDeclaration)
         assertLocalName("SomeClass", recordDeclaration)
         assertEquals("class", recordDeclaration.kind)
@@ -757,16 +757,16 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertFalse(constructorDeclaration.isDefinition)
         assertEquals(constructorDefinition, constructorDeclaration.definition)
 
-        val main = tu.dFunctions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
-        val methodCallWithConstant = main.dCalls("method").getOrNull(1)
+        val methodCallWithConstant = main.allCalls("method").getOrNull(1)
         assertNotNull(methodCallWithConstant)
 
         val arg = methodCallWithConstant.arguments[0]
         assertSame(constant, (arg as Reference).refersTo)
 
-        val anotherMethod = tu.dMethods["anotherMethod"]
+        val anotherMethod = tu.allMethods["anotherMethod"]
         assertNotNull(anotherMethod)
         assertFullName("OtherClass::anotherMethod", anotherMethod)
     }
@@ -780,7 +780,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
             }
 
-        val s = tu.dVariables["s"]
+        val s = tu.allVariables["s"]
         assertNotNull(s)
         assertIs<PointerType>(s.type)
         assertLocalName("char[]", s.type)
@@ -789,7 +789,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(initializer)
         assertEquals("string", initializer.value)
 
-        val i = tu.dVariables["i"]
+        val i = tu.allVariables["i"]
         assertNotNull(i)
         assertIs<IntegerType>(i.type)
         assertLocalName("int", i.type)
@@ -798,7 +798,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(initializer)
         assertEquals(1, initializer.value)
 
-        val f = tu.dVariables["f"]
+        val f = tu.allVariables["f"]
         assertNotNull(f)
         assertIs<FloatingPointType>(f.type)
         assertLocalName("float", f.type)
@@ -807,7 +807,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(initializer)
         assertEquals(0.2f, initializer.value)
 
-        val d = tu.dVariables["d"]
+        val d = tu.allVariables["d"]
         assertNotNull(d)
         assertIs<FloatingPointType>(d.type)
         assertLocalName("double", d.type)
@@ -816,7 +816,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(initializer)
         assertEquals(0.2, initializer.value)
 
-        val b = tu.dVariables["b"]
+        val b = tu.allVariables["b"]
         assertNotNull(b)
         assertIs<BooleanType>(b.type)
         assertLocalName("bool", b.type)
@@ -825,7 +825,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(initializer)
         assertEquals(false, initializer.value)
 
-        val c = tu.dVariables["c"]
+        val c = tu.allVariables["c"]
         assertNotNull(c)
         assertIs<IntegerType>(c.type)
         assertLocalName("char", c.type)
@@ -834,16 +834,16 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(initializer)
         assertEquals('c', initializer.value)
 
-        val hex = tu.dVariables["hex"]
+        val hex = tu.allVariables["hex"]
         assertNotNull(hex)
         assertIs<IntegerType>(hex.type)
         assertLocalName("unsigned long long int", hex.type)
 
-        val duration_ms = tu.dVariables["duration_ms"]
+        val duration_ms = tu.allVariables["duration_ms"]
         assertNotNull(duration_ms)
         assertIs<ProblemExpression>(duration_ms.initializer)
 
-        val duration_s = tu.dVariables["duration_s"]
+        val duration_s = tu.allVariables["duration_s"]
         assertNotNull(duration_s)
         assertIs<ProblemExpression>(duration_s.initializer)
     }
@@ -989,7 +989,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<CLanguage>()
             }
 
-        val foo3 = tu.dVariables["foo3"]
+        val foo3 = tu.allVariables["foo3"]
         assertNotNull(foo3)
 
         val init = foo3.initializer
@@ -1011,7 +1011,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
             }
 
-        val method = declaration.dFunctions["main"]
+        val method = declaration.allFunctions["main"]
         assertNotNull(method)
         assertEquals("main()int", method.signature)
         assertTrue(method.body is Block)
@@ -1080,7 +1080,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertLiteralValue(5, (die.lhs[0] as SubscriptExpression).subscriptExpression)
         assertLiteralValue(2, die.rhs[0])
 
-        val o = declaration.dVariables["o"]
+        val o = declaration.allVariables["o"]
         assertNotNull(o)
     }
 
@@ -1093,11 +1093,11 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
             }
 
-        val function = declaration.dFunctions["testExpressionInExpressionList"]
+        val function = declaration.allFunctions["testExpressionInExpressionList"]
         assertNotNull(function)
         assertEquals("testExpressionInExpressionList()int", function.signature)
 
-        val locals = function.body.dVariables
+        val locals = function.body.allVariables
         assertNotNull(locals)
 
         // Expecting x, foo, t
@@ -1117,7 +1117,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val main = tu.dFunctions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
         val location = main.location
@@ -1141,10 +1141,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val firstNamespace = tu.namespaces["FirstNamespace"]
         assertNotNull(firstNamespace)
 
-        val someClass = firstNamespace.dRecords["SomeClass"]
+        val someClass = firstNamespace.allRecords["SomeClass"]
         assertNotNull(someClass)
 
-        val anotherClass = tu.dRecords["AnotherClass"]
+        val anotherClass = tu.allRecords["AnotherClass"]
         assertNotNull(anotherClass)
     }
 
@@ -1171,11 +1171,11 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val tu = declarations[0]
         assertNotNull(tu)
 
-        val main = tu.dFunctions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
         assertLocalName("function_attribute", main.annotations[0])
 
-        val someClass = tu.dRecords["SomeClass"]
+        val someClass = tu.allRecords["SomeClass"]
         assertNotNull(someClass)
         assertLocalName("record_attribute", someClass.annotations[0])
 
@@ -1228,7 +1228,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val main = tu.dFunctions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
         val body = main.body as Block
@@ -1260,10 +1260,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val main = tu.dFunctions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
-        val count = tu.dVariables["count"]
+        val count = tu.allVariables["count"]
         assertNotNull(count)
 
         var cast = count.initializer
@@ -1271,7 +1271,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertLocalName("int", cast.castType)
         assertLiteralValue(42, cast.expression)
 
-        val addr = tu.dVariables["addr"]
+        val addr = tu.allVariables["addr"]
         assertNotNull(addr)
 
         cast = addr.initializer
@@ -1289,10 +1289,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertTrue(paths.fulfilled.isNotEmpty())
         assertTrue(paths.failed.isEmpty())
 
-        val refKey = tu.dRefs["key"]
+        val refKey = tu.allRefs["key"]
         assertNotNull(refKey)
 
-        val assign = tu.dAssignments.firstOrNull { it.value is UnaryOperator }
+        val assign = tu.allAssignments.firstOrNull { it.value is UnaryOperator }
         assertNotNull(assign)
         paths = assign.value.followPrevFullDFGEdgesUntilHit { it == refKey }
         assertTrue(paths.fulfilled.isNotEmpty())
@@ -1307,16 +1307,16 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val main = tu.dFunctions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
-        val classT = tu.dRecords["T"]
+        val classT = tu.allRecords["T"]
         assertNotNull(classT)
 
         val classTFoo = classT.methods.firstOrNull()
         assertNotNull(classTFoo)
 
-        val classTReturn = classTFoo.dReturns.firstOrNull()
+        val classTReturn = classTFoo.allReturns.firstOrNull()
         assertNotNull(classTReturn)
 
         val classTReturnMemberExpression = classTReturn.returnValue as? MemberExpression
@@ -1325,7 +1325,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val classTThisExpression = classTReturnMemberExpression.base as? Reference
         assertEquals(classTThisExpression?.refersTo, classTFoo.receiver)
 
-        val classS = tu.dRecords["S"]
+        val classS = tu.allRecords["S"]
         assertNotNull(classS)
 
         val classSFoo = classS.methods.firstOrNull()
@@ -1356,7 +1356,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals(3, tu.declarations.size)
         assertEquals(0, tu.declarations.filterIsInstance<EnumConstantDeclaration>().size)
 
-        val main = tu.dFunctions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
         val returnStatement = main.bodyOrNull<ReturnStatement>()
@@ -1376,7 +1376,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         // but NOT any EnumConstantDeclarations
         assertEquals(2, tu.declarations.size)
 
-        val main = tu.dFunctions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
         val returnStatement = main.bodyOrNull<ReturnStatement>()
@@ -1393,16 +1393,16 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<CLanguage>()
             }
 
-        val main = tu.dFunctions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
-        val myStruct = tu.dRecords["MyStruct"]
+        val myStruct = tu.allRecords["MyStruct"]
         assertNotNull(myStruct)
 
         val field = myStruct.fields["field"]
         assertNotNull(field)
 
-        val s = main.dVariables["s"]
+        val s = main.allVariables["s"]
         assertNotNull(s)
 
         assertEquals(myStruct, (s.type as? ObjectType)?.recordDeclaration)
@@ -1420,10 +1420,10 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             val typedefs = result.finalCtx.scopeManager.typedefFor(Name("MyStruct"))
             assertLocalName("__myStruct", typedefs)
 
-            val main = result.dFunctions["main"]
+            val main = result.allFunctions["main"]
             assertNotNull(main)
 
-            val call = main.dCalls.firstOrNull()
+            val call = main.allCalls.firstOrNull()
             assertNotNull(call)
             assertTrue(call.invokes.isNotEmpty())
 
@@ -1442,7 +1442,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
             }
 
-        val myClass = tu.dRecords["MyClass"]
+        val myClass = tu.allRecords["MyClass"]
         assertNotNull(myClass)
 
         val targetNoParam =
@@ -1453,25 +1453,25 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             myClass.methods[{ it.name.localName == "target" && it.parameters.size == 1 }]
         assertNotNull(targetSingleParam)
 
-        val main = tu.dFunctions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
         // three variables (the class object and two function pointers)
-        assertEquals(3, main.dVariables.size)
+        assertEquals(3, main.allVariables.size)
 
-        val my = main.dVariables["my"]
+        val my = main.allVariables["my"]
         assertNotNull(my)
         assertFullName("MyClass", my.type)
 
         // ensure that our function pointer variable is connected to the method declaration via DFG
-        val noParam = main.dVariables["no_param"]
+        val noParam = main.allVariables["no_param"]
         assertNotNull(noParam)
         assertTrue(
             noParam.followPrevFullDFGEdgesUntilHit { it == targetNoParam }.fulfilled.isNotEmpty()
         )
 
         // ensure that our function pointer variable is connected to the method declaration via DFG
-        val singleParam = main.dVariables["single_param"]
+        val singleParam = main.allVariables["single_param"]
         assertNotNull(singleParam)
         assertTrue(
             singleParam
@@ -1480,7 +1480,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 .isNotEmpty()
         )
 
-        val noParamCall = main.dMCalls[0]
+        val noParamCall = main.allMCalls[0]
         assertNotNull(noParamCall)
         assertInvokes(noParamCall, targetNoParam)
         assertFullName("MyClass::*no_param", noParamCall)
@@ -1490,7 +1490,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertRefersTo(callee.lhs, my)
         assertRefersTo(callee.rhs, noParam)
 
-        val singleParamCall = main.dMCalls[1]
+        val singleParamCall = main.allMCalls[1]
         assertNotNull(singleParamCall)
         assertInvokes(singleParamCall, targetSingleParam)
         assertFullName("MyClass::*single_param", singleParamCall)
@@ -1518,30 +1518,30 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerPass<DynamicInvokeResolver>()
             }
 
-        val target = tu.dFunctions["target"]
+        val target = tu.allFunctions["target"]
         assertNotNull(target)
 
-        val main = tu.dFunctions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
         // We do not want any inferred functions
-        assertTrue(tu.dFunctions.none { it.isInferred })
+        assertTrue(tu.allFunctions.none { it.isInferred })
 
-        val noParamPointerCall = tu.dCalls("no_param").firstOrNull { it.callee is UnaryOperator }
+        val noParamPointerCall = tu.allCalls("no_param").firstOrNull { it.callee is UnaryOperator }
         assertInvokes(assertNotNull(noParamPointerCall), target)
 
         val noParamNoInitPointerCall =
-            tu.dCalls("no_param_uninitialized").firstOrNull { it.callee is UnaryOperator }
+            tu.allCalls("no_param_uninitialized").firstOrNull { it.callee is UnaryOperator }
         assertInvokes(assertNotNull(noParamNoInitPointerCall), target)
 
-        val noParamCall = tu.dCalls("no_param").firstOrNull { it.callee is Reference }
+        val noParamCall = tu.allCalls("no_param").firstOrNull { it.callee is Reference }
         assertInvokes(assertNotNull(noParamCall), target)
 
         val noParamNoInitCall =
-            tu.dCalls("no_param_uninitialized").firstOrNull { it.callee is Reference }
+            tu.allCalls("no_param_uninitialized").firstOrNull { it.callee is Reference }
         assertInvokes(assertNotNull(noParamNoInitCall), target)
 
-        val targetCall = tu.dCalls["target"]
+        val targetCall = tu.allCalls["target"]
         assertInvokes(assertNotNull(targetCall), target)
     }
 
@@ -1562,30 +1562,30 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerPass<ControlFlowSensitiveDFGPass>()
             }
 
-        val target = tu.dFunctions["target"]
+        val target = tu.allFunctions["target"]
         assertNotNull(target)
 
-        val main = tu.dFunctions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
         // We do not want any inferred functions
-        assertTrue(tu.dFunctions.none { it.isInferred })
+        assertTrue(tu.allFunctions.none { it.isInferred })
 
-        val noParamPointerCall = tu.dCalls("no_param").firstOrNull { it.callee is UnaryOperator }
+        val noParamPointerCall = tu.allCalls("no_param").firstOrNull { it.callee is UnaryOperator }
         assertInvokes(assertNotNull(noParamPointerCall), target)
 
         val noParamNoInitPointerCall =
-            tu.dCalls("no_param_uninitialized").firstOrNull { it.callee is UnaryOperator }
+            tu.allCalls("no_param_uninitialized").firstOrNull { it.callee is UnaryOperator }
         assertInvokes(assertNotNull(noParamNoInitPointerCall), target)
 
-        val noParamCall = tu.dCalls("no_param").firstOrNull { it.callee is Reference }
+        val noParamCall = tu.allCalls("no_param").firstOrNull { it.callee is Reference }
         assertInvokes(assertNotNull(noParamCall), target)
 
         val noParamNoInitCall =
-            tu.dCalls("no_param_uninitialized").firstOrNull { it.callee is Reference }
+            tu.allCalls("no_param_uninitialized").firstOrNull { it.callee is Reference }
         assertInvokes(assertNotNull(noParamNoInitCall), target)
 
-        val targetCall = tu.dCalls["target"]
+        val targetCall = tu.allCalls["target"]
         assertInvokes(assertNotNull(targetCall), target)
     }
 
@@ -1601,23 +1601,23 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         // everything in the TU should be a function (within a namespace), not a method (except the
         // implicit constructor of ABC::A)
-        assertTrue(tu.dFunctions.isNotEmpty())
-        assertTrue(tu.dMethods.none { it !is ConstructorDeclaration })
+        assertTrue(tu.allFunctions.isNotEmpty())
+        assertTrue(tu.allMethods.none { it !is ConstructorDeclaration })
 
-        var foo = tu.dFunctions["foo"]
+        var foo = tu.allFunctions["foo"]
         assertNotNull(foo)
 
         // jump to definition (in case we got the declaration), but they should be connected anyway
         foo = foo.definition
 
-        val a = foo.dVariables["a"]
+        val a = foo.allVariables["a"]
         assertNotNull(a)
         assertFullName("ABC::A", a.type)
 
-        val main = tu.dFunctions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
-        val callFoo = main.dCalls["ABC::foo"]
+        val callFoo = main.allCalls["ABC::foo"]
         assertNotNull(callFoo)
         assertInvokes(callFoo, foo)
         assertTrue(callFoo.invokes.none { it.isInferred })
@@ -1644,7 +1644,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        assertLocalName("int", tu.dFunctions["main"]?.returnTypes?.firstOrNull())
+        assertLocalName("int", tu.allFunctions["main"]?.returnTypes?.firstOrNull())
     }
 
     @Test
@@ -1657,7 +1657,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val ptr = tu.dVariables["ptr"]
+        val ptr = tu.allVariables["ptr"]
         assertNotNull(ptr)
         assertLocalName("decltype(nullptr)", ptr.type)
     }
@@ -1678,7 +1678,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         // For now, we have duplicate functions because we include the header twice. This might
         // change in the future. The important thing is that this gets parsed at all because we
         // previously had a loop in our equals method
-        val functions = result.dFunctions { it.name.localName == "foo" && it.isDefinition }
+        val functions = result.allFunctions { it.name.localName == "foo" && it.isDefinition }
         assertEquals(2, functions.size)
     }
 
@@ -1711,7 +1711,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val doCall = result.dCalls["do_call"]
+        val doCall = result.allCalls["do_call"]
         assertNotNull(doCall)
         assertTrue(doCall.invokes.isNotEmpty())
     }
@@ -1725,7 +1725,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val printf = result.dCalls["printf"]
+        val printf = result.allCalls["printf"]
         assertNotNull(printf)
         assertTrue(printf.prevEOG.isNotEmpty())
         assertTrue(printf.invokes.isNotEmpty())
@@ -1740,7 +1740,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val test = result.dFunctions["test"]
+        val test = result.allFunctions["test"]
         assertNotNull(test)
     }
 
@@ -1754,7 +1754,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val assign = tu.dAssigns.firstOrNull()
+        val assign = tu.allAssigns.firstOrNull()
         assertNotNull(assign)
 
         val cast = assign.rhs.singleOrNull()
@@ -1773,12 +1773,12 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
         val labelCName = "LAB_123"
 
-        val goto = tu.descendants<GotoStatement>().firstOrNull()
+        val goto = tu.allDescendants<GotoStatement>().firstOrNull()
         assertIs<GotoStatement>(goto)
         assertEquals(labelCName, goto.labelName)
         assertLocalName(labelCName, goto)
 
-        val label = tu.dLabels[labelCName]
+        val label = tu.allLabels[labelCName]
         assertIs<LabelStatement>(label)
         assertLocalName(labelCName, label)
 

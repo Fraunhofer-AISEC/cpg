@@ -54,21 +54,21 @@ internal class StaticImportsTest : BaseTest() {
             ) {
                 it.registerLanguage<JavaLanguage>()
             }
-        val methods = result.dMethods
+        val methods = result.allMethods
         val test = findByUniqueName(methods, "test")
         val main = findByUniqueName(methods, "main")
-        val call = main.dCalls.firstOrNull()
+        val call = main.allCalls.firstOrNull()
         assertNotNull(call)
         assertInvokes(call, test)
 
-        val testFields = result.dFields { it.name.localName == "test" }
+        val testFields = result.allFields { it.name.localName == "test" }
         assertEquals(1, testFields.size)
 
         val staticField = testFields.firstOrNull()
         assertNotNull(staticField)
         assertTrue(staticField.modifiers.contains("static"))
 
-        val memberExpressionExpressions = main.descendants<MemberExpression>()
+        val memberExpressionExpressions = main.allDescendants<MemberExpression>()
         // we have two member expressions, one to the field and one to the method
         assertEquals(2, memberExpressionExpressions.size)
 
@@ -85,13 +85,13 @@ internal class StaticImportsTest : BaseTest() {
             analyze("java", topLevel.resolve("asterisk"), true) {
                 it.registerLanguage<JavaLanguage>()
             }
-        val methods = result.dMethods
+        val methods = result.allMethods
         val main = methods["main", SearchModifier.UNIQUE]
-        val records = result.dRecords
+        val records = result.allRecords
         val a = records["A", SearchModifier.UNIQUE]
         val b = records["B", SearchModifier.UNIQUE]
 
-        for (call in main.dCalls) {
+        for (call in main.allCalls) {
             when (call.name.localName) {
                 "a" -> {
                     assertInvokes(call, methods["a"])
@@ -105,21 +105,21 @@ internal class StaticImportsTest : BaseTest() {
                     )
                 }
                 "nonStatic" -> {
-                    val nonStatic = findByUniqueName(b.dMethods, "nonStatic")
+                    val nonStatic = findByUniqueName(b.allMethods, "nonStatic")
                     assertTrue(nonStatic.isInferred)
                     assertInvokes(call, nonStatic)
                 }
             }
         }
-        val testFields = a.dFields
-        val staticField = a.dFields["staticField"]
-        val inferredNonStaticField = b.dFields["nonStaticField"]
+        val testFields = a.allFields
+        val staticField = a.allFields["staticField"]
+        val inferredNonStaticField = b.allFields["nonStaticField"]
         assertNotNull(staticField)
         assertNotNull(inferredNonStaticField)
         assertTrue(staticField.modifiers.contains("static"))
         assertFalse(inferredNonStaticField.modifiers.contains("static"))
 
-        val declaredReferences = main.dRefs
+        val declaredReferences = main.allRefs
         val usage = findByUniqueName(declaredReferences, "staticField")
         assertRefersTo(usage, staticField)
 

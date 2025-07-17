@@ -36,7 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.byFQN
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
-import de.fraunhofer.aisec.cpg.graph.dCalls
+import de.fraunhofer.aisec.cpg.graph.allCalls
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.helpers.getNodesByRegion
 import de.fraunhofer.aisec.cpg.passes.*
@@ -129,7 +129,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      * @return A list of nodes matching the provided [SignatureEntry].
      */
     private fun TranslationResult.getNodesBySignature(signature: SignatureEntry): List<Node> {
-        return this.dCalls.byFQN(signature.fqn)
+        return this.allCalls.byFQN(signature.fqn)
     }
 
     /**

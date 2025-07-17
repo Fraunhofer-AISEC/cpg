@@ -39,16 +39,16 @@ class EvaluationOrderGraphPassTest {
     fun testWhileStatement() {
         val whileTest = GraphExamples.getWhileWithElseAndBreak()
 
-        val whileStmt = whileTest.dWhileLoops.firstOrNull()
+        val whileStmt = whileTest.allWhileLoops.firstOrNull()
         assertNotNull(whileStmt)
 
-        val breakStmt = whileStmt.dBreaks.firstOrNull()
+        val breakStmt = whileStmt.allBreaks.firstOrNull()
         assertNotNull(breakStmt)
 
-        val elseCall = whileTest.dCalls["elseCall"]
+        val elseCall = whileTest.allCalls["elseCall"]
         assertNotNull(elseCall)
 
-        val postWhile = whileTest.dCalls["postWhile"]
+        val postWhile = whileTest.allCalls["postWhile"]
         assertNotNull(postWhile)
 
         assertTrue(
@@ -89,16 +89,16 @@ class EvaluationOrderGraphPassTest {
     fun testDoStatement() {
         val doTest = GraphExamples.getDoWithElseAndBreak()
 
-        val doStmt = doTest.dDoLoops.firstOrNull()
+        val doStmt = doTest.allDoLoops.firstOrNull()
         assertNotNull(doStmt)
 
-        val breakStmt = doStmt.dBreaks.firstOrNull()
+        val breakStmt = doStmt.allBreaks.firstOrNull()
         assertNotNull(breakStmt)
 
-        val elseCall = doTest.dCalls["elseCall"]
+        val elseCall = doTest.allCalls["elseCall"]
         assertNotNull(elseCall)
 
-        val postWhile = doTest.dCalls["postDo"]
+        val postWhile = doTest.allCalls["postDo"]
         assertNotNull(postWhile)
 
         assertTrue(
@@ -139,16 +139,16 @@ class EvaluationOrderGraphPassTest {
     fun testForStatement() {
         val forTest = GraphExamples.getForWithElseAndBreak()
 
-        val forStmt = forTest.dForLoops.firstOrNull()
+        val forStmt = forTest.allForLoops.firstOrNull()
         assertNotNull(forStmt)
 
-        val breakStmt = forStmt.dBreaks.firstOrNull()
+        val breakStmt = forStmt.allBreaks.firstOrNull()
         assertNotNull(breakStmt)
 
-        val elseCall = forTest.dCalls["elseCall"]
+        val elseCall = forTest.allCalls["elseCall"]
         assertNotNull(elseCall)
 
-        val postFor = forTest.dCalls["postFor"]
+        val postFor = forTest.allCalls["postFor"]
         assertNotNull(postFor)
 
         assertTrue(
@@ -189,16 +189,16 @@ class EvaluationOrderGraphPassTest {
     fun testForEachStatement() {
         val forTest = GraphExamples.getForEachWithElseAndBreak()
 
-        val forEachStmt = forTest.dForEachLoops.firstOrNull()
+        val forEachStmt = forTest.allForEachLoops.firstOrNull()
         assertNotNull(forEachStmt)
 
-        val breakStmt = forTest.dBreaks.firstOrNull()
+        val breakStmt = forTest.allBreaks.firstOrNull()
         assertNotNull(breakStmt)
 
-        val elseCall = forTest.dCalls["elseCall"]
+        val elseCall = forTest.allCalls["elseCall"]
         assertNotNull(elseCall)
 
-        val postForEach = forTest.dCalls["postForEach"]
+        val postForEach = forTest.allCalls["postForEach"]
         assertNotNull(postForEach)
 
         assertTrue(
@@ -239,13 +239,13 @@ class EvaluationOrderGraphPassTest {
     fun testCollectionComprehensionStatement() {
         val compExample = GraphExamples.getNestedComprehensionExpressions()
 
-        val listComp = compExample.descendants<CollectionComprehension>().first()
+        val listComp = compExample.allDescendants<CollectionComprehension>().first()
         assertNotNull(listComp)
 
-        val preCall = compExample.dCalls["preComprehensions"]
+        val preCall = compExample.allCalls["preComprehensions"]
         assertNotNull(preCall)
 
-        val postCall = compExample.dCalls["postComprehensions"]
+        val postCall = compExample.allCalls["postComprehensions"]
         assertNotNull(postCall)
 
         assertTrue { listComp.comprehensionExpressions.size == 2 }

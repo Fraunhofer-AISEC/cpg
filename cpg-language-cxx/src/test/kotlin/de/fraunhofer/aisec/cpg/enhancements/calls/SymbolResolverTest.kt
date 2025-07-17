@@ -43,11 +43,11 @@ class SymbolResolverTest {
                 it.registerLanguage<CLanguage>()
             }
 
-        val f = tu.dFunctions["f"]
+        val f = tu.allFunctions["f"]
         assertNotNull(f)
         assertFalse(f.isImplicit)
 
-        val fCall = tu.dCalls["f"]
+        val fCall = tu.allCalls["f"]
         assertNotNull(fCall)
         assertInvokes(fCall, f)
     }
@@ -60,31 +60,31 @@ class SymbolResolverTest {
                 it.registerLanguage<CPPLanguage>()
             }
 
-        val f = tu.dFunctions["f"]
+        val f = tu.allFunctions["f"]
         assertNotNull(f)
         assertFalse(f.isImplicit)
 
-        val fCall = tu.dCalls["f"]
+        val fCall = tu.allCalls["f"]
         assertNotNull(fCall)
         assertInvokes(fCall, f)
 
-        val gChar = tu.dFunctions[{ it.signature == "g(char)void" }]
+        val gChar = tu.allFunctions[{ it.signature == "g(char)void" }]
         assertNotNull(gChar)
-        val gInt = tu.dFunctions[{ it.signature == "g(int)void" }]
+        val gInt = tu.allFunctions[{ it.signature == "g(int)void" }]
         assertNotNull(gInt)
-        val gFloat = tu.dFunctions[{ it.signature == "g(float)void" }]
+        val gFloat = tu.allFunctions[{ it.signature == "g(float)void" }]
         assertNotNull(gFloat)
 
-        val gCall = tu.dCalls["g"]
+        val gCall = tu.allCalls["g"]
         assertNotNull(gCall)
         assertInvokes(gCall, gChar)
 
-        val hBase = tu.dFunctions[{ it.signature == "h(Base*)void" }]
+        val hBase = tu.allFunctions[{ it.signature == "h(Base*)void" }]
         assertNotNull(hBase)
-        val hOne = tu.dFunctions[{ it.signature == "h(One*)void" }]
+        val hOne = tu.allFunctions[{ it.signature == "h(One*)void" }]
         assertNotNull(hOne)
 
-        val hCall = tu.dCalls["h"]
+        val hCall = tu.allCalls["h"]
         assertNotNull(hCall)
         assertInvokes(hCall, hOne)
     }
@@ -98,11 +98,11 @@ class SymbolResolverTest {
             }
         assertNotNull(tu)
 
-        val field = tu.dFields["field"]
+        val field = tu.allFields["field"]
         assertNotNull(field)
         assertFalse(field.isInferred)
 
-        val fieldRef = tu.dRefs["field"]
+        val fieldRef = tu.allRefs["field"]
         assertNotNull(fieldRef)
         assertRefersTo(fieldRef, field)
     }

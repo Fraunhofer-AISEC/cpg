@@ -68,7 +68,7 @@ class MockPythonDynamicPass(ctx: TranslationContext) : ConceptPass(ctx) {
                 paths.fulfilled.forEach { path ->
                     val dynamicLoading = path.nodes.last() as DynamicLoading
 
-                    val record = node.pTranslationResult.dRecords["impl.simple.SimpleImplClass"]
+                    val record = node.parentTranslationResult.allRecords["impl.simple.SimpleImplClass"]
                     if (record == null) {
                         log.error("Could not find impl simple.SimpleImplClass")
                         return
@@ -116,10 +116,10 @@ class MockPythonDynamicLoadingTest {
             }
         assertNotNull(result)
 
-        val simpleImplClass = result.dRecords["impl.simple.SimpleImplClass"]
+        val simpleImplClass = result.allRecords["impl.simple.SimpleImplClass"]
         assertNotNull(simpleImplClass)
 
-        val barRefs = result.dRefs("bar")
+        val barRefs = result.allRefs("bar")
         assertNotNull(barRefs)
 
         barRefs.forEach { bar ->
@@ -130,7 +130,7 @@ class MockPythonDynamicLoadingTest {
             )
         }
 
-        val fooCall = result.dCalls["foo"]
+        val fooCall = result.allCalls["foo"]
         assertNotNull(fooCall)
         assertInvokes(
             fooCall,

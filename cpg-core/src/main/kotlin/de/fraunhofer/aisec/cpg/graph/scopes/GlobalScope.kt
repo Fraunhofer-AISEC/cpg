@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationManager
-import de.fraunhofer.aisec.cpg.graph.dNodes
+import de.fraunhofer.aisec.cpg.graph.allNodes
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 
 /**
@@ -62,7 +62,7 @@ class GlobalScope() : Scope(null) {
             symbols.mergeFrom(other.symbols)
             wildcardImports.addAll(other.wildcardImports)
 
-            for (node in other.astNode?.dNodes ?: listOf()) {
+            for (node in other.astNode?.allNodes ?: listOf()) {
                 if (node.scope is GlobalScope) {
                     node.scope = this
                 }

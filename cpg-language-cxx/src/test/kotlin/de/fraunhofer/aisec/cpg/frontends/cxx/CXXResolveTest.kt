@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.dFunctions
+import de.fraunhofer.aisec.cpg.graph.allFunctions
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
@@ -50,10 +50,10 @@ class CXXResolveTest {
             }
         assertNotNull(tu)
 
-        val main = tu.dFunctions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
-        val realCalls = main.dCalls.filter { it !is ConstructExpression }
+        val realCalls = main.allCalls.filter { it !is ConstructExpression }
 
         // 0, 1 and 2 are construct expressions -> our "real" calls start at index 3
         val aFoo = realCalls.getOrNull(0)
@@ -80,7 +80,7 @@ class CXXResolveTest {
         assertFalse(func is MethodDeclaration)
         assertTrue(func.isInferred)
 
-        val cFoo = main.dCalls.getOrNull(6)
+        val cFoo = main.allCalls.getOrNull(6)
         assertNotNull(cFoo)
 
         // c.foo should connect to C::foo
@@ -109,7 +109,7 @@ class CXXResolveTest {
             }
         assertNotNull(tu)
 
-        val main = tu.dFunctions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
         val foo = main.bodyOrNull<CallExpression>(0)

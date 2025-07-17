@@ -27,11 +27,11 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.dFunctions
-import de.fraunhofer.aisec.cpg.graph.dRecords
-import de.fraunhofer.aisec.cpg.graph.dRefs
-import de.fraunhofer.aisec.cpg.graph.dStatements
-import de.fraunhofer.aisec.cpg.graph.dVariables
+import de.fraunhofer.aisec.cpg.graph.allFunctions
+import de.fraunhofer.aisec.cpg.graph.allRecords
+import de.fraunhofer.aisec.cpg.graph.allRefs
+import de.fraunhofer.aisec.cpg.graph.allStatements
+import de.fraunhofer.aisec.cpg.graph.allVariables
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
@@ -94,7 +94,7 @@ class CollectionComprehensionTest {
     @Test
     fun testComprehensionExpressionTuple() {
         // Get the function tuple_comp
-        val tupleComp = result.dFunctions["tuple_comp"]
+        val tupleComp = result.allFunctions["tuple_comp"]
         assertIs<FunctionDeclaration>(
             tupleComp,
             "There must be a function called \"tuple_comp\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
@@ -244,7 +244,7 @@ class CollectionComprehensionTest {
 
     @Test
     fun testListComprehensions() {
-        val listCompFunctionDeclaration = result.dFunctions["list_comp"]
+        val listCompFunctionDeclaration = result.allFunctions["list_comp"]
         assertIs<FunctionDeclaration>(
             listCompFunctionDeclaration,
             "There must be a function called \"list_comp\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
@@ -478,7 +478,7 @@ class CollectionComprehensionTest {
 
     @Test
     fun testSetComprehensions() {
-        val setCompFunctionDeclaration = result.dFunctions["set_comp"]
+        val setCompFunctionDeclaration = result.allFunctions["set_comp"]
         assertIs<FunctionDeclaration>(
             setCompFunctionDeclaration,
             "There must be a function called \"set_comp\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
@@ -704,7 +704,7 @@ class CollectionComprehensionTest {
 
     @Test
     fun testDictComprehensions() {
-        val dictCompFunctionDeclaration = result.dFunctions["dict_comp"]
+        val dictCompFunctionDeclaration = result.allFunctions["dict_comp"]
         assertIs<FunctionDeclaration>(
             dictCompFunctionDeclaration,
             "There must be a function called \"dict_comp\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
@@ -982,7 +982,7 @@ class CollectionComprehensionTest {
 
     @Test
     fun testGeneratorExpr() {
-        val generatorFunctionDeclaration = result.dFunctions["generator"]
+        val generatorFunctionDeclaration = result.allFunctions["generator"]
         assertIs<FunctionDeclaration>(
             generatorFunctionDeclaration,
             "There must be a function called \"generator\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
@@ -1044,18 +1044,18 @@ class CollectionComprehensionTest {
      * [testCompBindingAssignExpr] for exceptions.
      */
     fun testCompBinding() {
-        val compBindingFunctionDeclaration = result.dFunctions["comp_binding"]
+        val compBindingFunctionDeclaration = result.allFunctions["comp_binding"]
         assertIs<FunctionDeclaration>(
             compBindingFunctionDeclaration,
             "There must be a function called \"comp_binding\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
         )
 
-        val xDeclaration = compBindingFunctionDeclaration.dVariables.firstOrNull()
+        val xDeclaration = compBindingFunctionDeclaration.allVariables.firstOrNull()
         assertIs<VariableDeclaration>(xDeclaration)
 
         assertEquals(
             5,
-            compBindingFunctionDeclaration.dVariables.size,
+            compBindingFunctionDeclaration.allVariables.size,
             "Expected five variables. One for the \"outside\" x and one for each of the four comprehensions.",
         )
 
@@ -1066,13 +1066,13 @@ class CollectionComprehensionTest {
         )
 
         val comprehensions =
-            compBindingFunctionDeclaration.body.dStatements.filterIsInstance<
+            compBindingFunctionDeclaration.body.allStatements.filterIsInstance<
                 CollectionComprehension
             >()
         assertEquals(4, comprehensions.size, "Expected to find four comprehensions.")
 
         comprehensions.forEach {
-            it.dRefs("x").forEach { ref -> assertNotRefersTo(ref, xDeclaration) }
+            it.allRefs("x").forEach { ref -> assertNotRefersTo(ref, xDeclaration) }
         }
     }
 
@@ -1082,13 +1082,13 @@ class CollectionComprehensionTest {
      * are used in an `AssignExpr`. See https://peps.python.org/pep-0572/#scope-of-the-target
      */
     fun testCompBindingAssignExpr() {
-        val compBindingAssignExprFunctionDeclaration = result.dFunctions["comp_binding_assign_expr"]
+        val compBindingAssignExprFunctionDeclaration = result.allFunctions["comp_binding_assign_expr"]
         assertIs<FunctionDeclaration>(
             compBindingAssignExprFunctionDeclaration,
             "There must be a function called \"comp_binding_assign_expr\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
         )
 
-        val xDeclaration = compBindingAssignExprFunctionDeclaration.dVariables["x"]
+        val xDeclaration = compBindingAssignExprFunctionDeclaration.allVariables["x"]
         assertIs<VariableDeclaration>(
             xDeclaration,
             "There must be a VariableDeclaration with the local name \"x\" inside the function.",
@@ -1096,7 +1096,7 @@ class CollectionComprehensionTest {
 
         assertEquals(
             2,
-            compBindingAssignExprFunctionDeclaration.dVariables.size,
+            compBindingAssignExprFunctionDeclaration.allVariables.size,
             "Expected two variables. One for the \"outside\" x and one for the \"temp\" inside the comprehension.",
         )
 
@@ -1107,11 +1107,11 @@ class CollectionComprehensionTest {
         )
 
         val comprehension =
-            compBindingAssignExprFunctionDeclaration.body.dStatements.singleOrNull {
+            compBindingAssignExprFunctionDeclaration.body.allStatements.singleOrNull {
                 it is CollectionComprehension
             }
         assertNotNull(comprehension)
-        val xRef = comprehension.dRefs("x").singleOrNull()
+        val xRef = comprehension.allRefs("x").singleOrNull()
         assertNotNull(xRef)
         assertRefersTo(xRef, xDeclaration)
     }
@@ -1123,13 +1123,13 @@ class CollectionComprehensionTest {
      */
     fun testCompBindingAssignExprNested() {
         val compBindingAssignExprNestedFunctionDeclaration =
-            result.dFunctions["comp_binding_assign_expr_nested"]
+            result.allFunctions["comp_binding_assign_expr_nested"]
         assertIs<FunctionDeclaration>(
             compBindingAssignExprNestedFunctionDeclaration,
             "There must be a function called \"comp_binding_assign_expr_nested\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
         )
 
-        val xDeclaration = compBindingAssignExprNestedFunctionDeclaration.dVariables["x"]
+        val xDeclaration = compBindingAssignExprNestedFunctionDeclaration.allVariables["x"]
         assertIs<VariableDeclaration>(
             xDeclaration,
             "There must be a VariableDeclaration with the local name \"x\" inside the function.",
@@ -1137,7 +1137,7 @@ class CollectionComprehensionTest {
 
         assertEquals(
             3,
-            compBindingAssignExprNestedFunctionDeclaration.dVariables.size,
+            compBindingAssignExprNestedFunctionDeclaration.allVariables.size,
             "Expected two variables. One for the \"outside\" x, one for the \"temp\" inside the comprehension and one for the \"a\" inside the comprehension.",
         )
 
@@ -1158,7 +1158,7 @@ class CollectionComprehensionTest {
             innerComprehension,
             "The inner comprehension is the statement of the outer list comprehension",
         )
-        val xRef = innerComprehension.dRefs("x").singleOrNull()
+        val xRef = innerComprehension.allRefs("x").singleOrNull()
         assertNotNull(
             xRef,
             "There is only one usage of \"x\" which is inside the inner comprehension's statement.",
@@ -1173,7 +1173,7 @@ class CollectionComprehensionTest {
     @Test
     fun testCompBindingListAssignment() {
         val comprehensionWithListAssignmentFunctionDeclaration =
-            result.dFunctions["comprehension_with_list_assignment"]
+            result.allFunctions["comprehension_with_list_assignment"]
         assertIs<FunctionDeclaration>(
             comprehensionWithListAssignmentFunctionDeclaration,
             "There must be a function called \"comprehension_with_list_assignment\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
@@ -1201,7 +1201,7 @@ class CollectionComprehensionTest {
             refBFirstStatement,
             "The left hand side of the assignment \"b = [0, 1, 2]\" is expected to be represented by a Reference with localName \"b\" in the CPG.",
         )
-        val bDeclaration = listBInitialization.dVariables["b"]
+        val bDeclaration = listBInitialization.allVariables["b"]
         assertIs<VariableDeclaration>(
             bDeclaration,
             "There must be a VariableDeclaration with the local name \"b\" inside the first statement of the function \"comprehension_with_list_assignment\".",
@@ -1338,7 +1338,7 @@ class CollectionComprehensionTest {
     @Test
     fun testComprehensionWithListAssignmentAndIndexVariable() {
         val comprehensionWithListAssignmentAndIndexVariableFunctionDeclaration =
-            result.dFunctions["comprehension_with_list_assignment_and_index_variable"]
+            result.allFunctions["comprehension_with_list_assignment_and_index_variable"]
         assertIs<FunctionDeclaration>(
             comprehensionWithListAssignmentAndIndexVariableFunctionDeclaration,
             "There must be a function called \"comprehension_with_list_assignment_and_index_variable\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
@@ -1366,7 +1366,7 @@ class CollectionComprehensionTest {
             refBFirstStatement,
             "The left hand side of the assignment \"b = [0, 1, 2]\" is expected to be represented by a Reference with localName \"b\" in the CPG.",
         )
-        val bDeclaration = listBInitialization.dVariables["b"]
+        val bDeclaration = listBInitialization.allVariables["b"]
         assertIs<VariableDeclaration>(
             bDeclaration,
             "There must be a VariableDeclaration with the local name \"b\" inside the first statement of the function \"comprehension_with_list_assignment_and_index_variable\".",
@@ -1512,7 +1512,7 @@ class CollectionComprehensionTest {
     @Test
     fun testComprehensionWithListAssignmentAndIndexVariableReversed() {
         val comprehensionWithListAssignmentAndIndexVariableReversedFunctionDeclaration =
-            result.dFunctions["comprehension_with_list_assignment_and_index_variable_reversed"]
+            result.allFunctions["comprehension_with_list_assignment_and_index_variable_reversed"]
         assertIs<FunctionDeclaration>(
             comprehensionWithListAssignmentAndIndexVariableReversedFunctionDeclaration,
             "There must be a function called \"comprehension_with_list_assignment_and_index_variable_reversed\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
@@ -1540,7 +1540,7 @@ class CollectionComprehensionTest {
             refBFirstStatement,
             "The left hand side of the assignment \"b = [0, 1, 2]\" is expected to be represented by a Reference with localName \"b\" in the CPG.",
         )
-        val bDeclaration = listBInitialization.dVariables["b"]
+        val bDeclaration = listBInitialization.allVariables["b"]
         assertIs<VariableDeclaration>(
             bDeclaration,
             "There must be a VariableDeclaration with the local name \"b\" inside the first statement of the function \"comprehension_with_list_assignment_and_index_variable_reversed\".",
@@ -1561,7 +1561,7 @@ class CollectionComprehensionTest {
             localARef,
             "The left hand side of the assignment \"a = 1\" is expected to be represented by a Reference with localName \"a\" in the CPG.",
         )
-        val aDeclaration = localAAssignment.dVariables["a"]
+        val aDeclaration = localAAssignment.allVariables["a"]
         assertIs<VariableDeclaration>(
             aDeclaration,
             "There must be a VariableDeclaration with the local name \"a\" inside the first statement of the function \"comprehension_with_list_assignment_and_index_variable_reversed\".",
@@ -1718,7 +1718,7 @@ class CollectionComprehensionTest {
     @Test
     fun testComprehensionWithListAssignmentAndLocalIndexVariable() {
         val comprehensionWithListAssignmentAndLocalIndexVariableFunctionDeclaration =
-            result.dFunctions["comprehension_with_list_assignment_and_local_index_variable"]
+            result.allFunctions["comprehension_with_list_assignment_and_local_index_variable"]
         assertIs<FunctionDeclaration>(
             comprehensionWithListAssignmentAndLocalIndexVariableFunctionDeclaration,
             "There must be a function called \"comprehension_with_list_assignment_and_local_index_variable\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
@@ -1746,7 +1746,7 @@ class CollectionComprehensionTest {
             refBFirstStatement,
             "The left hand side of the assignment \"b = [0, 1, 2]\" is expected to be represented by a Reference with localName \"b\" in the CPG.",
         )
-        val bDeclaration = listBInitialization.dVariables["b"]
+        val bDeclaration = listBInitialization.allVariables["b"]
         assertIs<VariableDeclaration>(
             bDeclaration,
             "There must be a VariableDeclaration with the local name \"b\" inside the first statement of the function \"comprehension_with_list_assignment_and_local_index_variable\".",
@@ -1767,7 +1767,7 @@ class CollectionComprehensionTest {
             localCRef,
             "The left hand side of the assignment \"c = 1\" is expected to be represented by a Reference with localName \"c\" in the CPG.",
         )
-        val cDeclaration = localCAssignment.dVariables["c"]
+        val cDeclaration = localCAssignment.allVariables["c"]
         assertIs<VariableDeclaration>(
             cDeclaration,
             "There must be a VariableDeclaration with the local name \"c\" inside the first statement of the function \"comprehension_with_list_assignment_and_local_index_variable\".",
@@ -1874,7 +1874,7 @@ class CollectionComprehensionTest {
     @Test
     fun testListComprehensionToListIndex() {
         val moreLoopVariablesFunctionDeclaration =
-            result.dFunctions["list_comprehension_to_list_index"]
+            result.allFunctions["list_comprehension_to_list_index"]
         assertIs<FunctionDeclaration>(
             moreLoopVariablesFunctionDeclaration,
             "There must be a function called \"list_comprehension_to_list_index\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
@@ -1902,7 +1902,7 @@ class CollectionComprehensionTest {
             refBFirstStatement,
             "The left hand side of the assignment \"b = [0, 1, 2]\" is expected to be represented by a Reference with localName \"b\" in the CPG.",
         )
-        val bDeclaration = listBInitialization.dVariables["b"]
+        val bDeclaration = listBInitialization.allVariables["b"]
         assertIs<VariableDeclaration>(
             bDeclaration,
             "There must be a VariableDeclaration with the local name \"b\" inside the first statement of the function \"list_comprehension_to_list_index\".",
@@ -1975,7 +1975,7 @@ class CollectionComprehensionTest {
     @Test
     fun testListComprehensionToField() {
         val listComprehensionToFieldFunctionDeclaration =
-            result.dFunctions["list_comprehension_to_field"]
+            result.allFunctions["list_comprehension_to_field"]
         assertIs<FunctionDeclaration>(
             listComprehensionToFieldFunctionDeclaration,
             "There must be a function called \"list_comprehension_to_field\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",
@@ -2003,7 +2003,7 @@ class CollectionComprehensionTest {
             refBFirstStatement,
             "The left hand side of the assignment \"b = Magic())\" is expected to be represented by a Reference with localName \"b\" in the CPG.",
         )
-        val bDeclaration = listBInitialization.dVariables["b"]
+        val bDeclaration = listBInitialization.allVariables["b"]
         assertIs<VariableDeclaration>(
             bDeclaration,
             "There must be a VariableDeclaration with the local name \"b\" inside the first statement of the function \"list_comprehension_to_field\".",
@@ -2062,7 +2062,7 @@ class CollectionComprehensionTest {
             "We expect that the reference \"b\" used in the control variable refers to the VariableDeclaration of \"b\" which is added outside the list comprehension (in statement 0).",
         )
 
-        val magicClass = result.dRecords["Magic"]
+        val magicClass = result.allRecords["Magic"]
         assertIs<RecordDeclaration>(
             magicClass,
             "There must be a class called \"Magic\" in the file. It must be neither null nor any other class than a RecordDeclaration which is expected to model python classes in the CPG.",

@@ -45,10 +45,10 @@ class DataflowQueriesTest {
     @Test
     fun testIntraproceduralForwardDFG() {
         val result = FlowQueriesTest.verySimpleDataflow()
-        val literal5 = result.dLiterals.singleOrNull { it.value == 5 }
+        val literal5 = result.allLiterals.singleOrNull { it.value == 5 }
         assertNotNull(literal5)
 
-        val assignmentPlus = result.dAssigns.singleOrNull { it.operatorCode == "+=" }
+        val assignmentPlus = result.allAssigns.singleOrNull { it.operatorCode == "+=" }
         assertNotNull(assignmentPlus, "There is exactly one \"+=\" assignment")
         val refB = assignmentPlus.lhs.singleOrNull()
         assertIs<Reference>(
@@ -209,7 +209,7 @@ class DataflowQueriesTest {
     @Test
     fun testIntraproceduralBidirectionalDFG() {
         val result = FlowQueriesTest.verySimpleDataflow()
-        val assignmentPlus = result.dAssigns.singleOrNull { it.operatorCode == "+=" }
+        val assignmentPlus = result.allAssigns.singleOrNull { it.operatorCode == "+=" }
         assertNotNull(assignmentPlus, "There is exactly one \"+=\" assignment")
         val refB = assignmentPlus.lhs.singleOrNull()
         assertIs<Reference>(
@@ -290,7 +290,7 @@ class DataflowQueriesTest {
     @Test
     fun testIntraproceduralBackwardDFG() {
         val result = FlowQueriesTest.verySimpleDataflow()
-        val bazCall = result.dCalls["baz"]
+        val bazCall = result.allCalls["baz"]
         assertNotNull(bazCall, "There is exactly one call to a function called baz")
         val addition = bazCall.arguments.singleOrNull()
         assertIs<BinaryOperator>(
@@ -307,7 +307,7 @@ class DataflowQueriesTest {
             bazARef,
             "The lhs of the addition is expected to be a Reference to \"a\"",
         )
-        val assignmentPlus = result.dAssigns.singleOrNull { it.operatorCode == "+=" }
+        val assignmentPlus = result.allAssigns.singleOrNull { it.operatorCode == "+=" }
         assertNotNull(assignmentPlus, "There is exactly one \"+=\" assignment")
         val refB = assignmentPlus.lhs.singleOrNull()
         assertIs<Reference>(
@@ -529,7 +529,7 @@ class DataflowQueriesTest {
     @Test
     fun testValidatorDFGSimpleLinear() {
         val resultLinear = FlowQueriesTest.validatorDataflowLinearSimple()
-        val linearStartA = resultLinear.dVariables["a"]
+        val linearStartA = resultLinear.allVariables["a"]
         assertNotNull(linearStartA, "There's a variable \"a\" in main")
         val linearResult =
             dataFlowWithValidator(
@@ -551,7 +551,7 @@ class DataflowQueriesTest {
     @Test
     fun testValidatorDFGLinear() {
         val resultLinearWithB = FlowQueriesTest.validatorDataflowLinear()
-        val linearStartAWithB = resultLinearWithB.dVariables["a"]
+        val linearStartAWithB = resultLinearWithB.allVariables["a"]
         assertNotNull(linearStartAWithB, "There's a variable \"a\" in main")
         val linearResultWithB =
             dataFlowWithValidator(
@@ -573,7 +573,7 @@ class DataflowQueriesTest {
     @Test
     fun testValidatorDFGSimpleLinearWithCall() {
         val resultLinearWithBInterProc = FlowQueriesTest.validatorDataflowLinearWithCall()
-        val linearStartAWithBInterProc = resultLinearWithBInterProc.dVariables["a"]
+        val linearStartAWithBInterProc = resultLinearWithBInterProc.allVariables["a"]
         assertNotNull(linearStartAWithBInterProc, "There's a variable \"a\" in main")
         val linearResultWithBInterProc =
             dataFlowWithValidator(
@@ -592,7 +592,7 @@ class DataflowQueriesTest {
         )
 
         val resultIf = FlowQueriesTest.validatorDataflowIfSimple()
-        val ifStartA = resultIf.dVariables["a"]
+        val ifStartA = resultIf.allVariables["a"]
         assertNotNull(ifStartA, "There's a variable \"a\" in main")
         val ifResult =
             dataFlowWithValidator(
@@ -614,7 +614,7 @@ class DataflowQueriesTest {
     @Test
     fun testValidatorDFGIf() {
         val resultIfWithB = FlowQueriesTest.validatorDataflowIf()
-        val ifStartAWithB = resultIfWithB.dVariables["a"]
+        val ifStartAWithB = resultIfWithB.allVariables["a"]
         assertNotNull(ifStartAWithB, "There's a variable \"a\" in main")
         val ifResultWithB =
             dataFlowWithValidator(
@@ -636,7 +636,7 @@ class DataflowQueriesTest {
     @Test
     fun testValidatorDFGSimpleIfWithCall() {
         val resultIfWithBInterProc = FlowQueriesTest.validatorDataflowIfWithCall()
-        val ifStartAWithBInterProc = resultIfWithBInterProc.dVariables["a"]
+        val ifStartAWithBInterProc = resultIfWithBInterProc.allVariables["a"]
         assertNotNull(ifStartAWithBInterProc, "There's a variable \"a\" in main")
         val ifResultWithBInterProc =
             dataFlowWithValidator(
@@ -658,7 +658,7 @@ class DataflowQueriesTest {
     @Test
     fun testValidatorDFGSimpleIfElse() {
         val resultIfElse = FlowQueriesTest.validatorDataflowIfElseSimple()
-        val ifElseStartA = resultIfElse.dVariables["a"]
+        val ifElseStartA = resultIfElse.allVariables["a"]
         assertNotNull(ifElseStartA, "There's a variable \"a\" in main")
         val ifElseResult =
             dataFlowWithValidator(
@@ -677,7 +677,7 @@ class DataflowQueriesTest {
     @Test
     fun testValidatorDataflowOnlyIfSink() {
         val resultIfElse = FlowQueriesTest.validatorDataflowOnlyIfSink()
-        val ifElseStartA = resultIfElse.dVariables["a"]
+        val ifElseStartA = resultIfElse.allVariables["a"]
         assertNotNull(ifElseStartA, "There's a variable \"a\" in main")
         val ifElseResult =
             dataFlowWithValidator(
@@ -699,7 +699,7 @@ class DataflowQueriesTest {
     @Test
     fun testValidatorDFGSIfElse() {
         val resultIfElseWithB = FlowQueriesTest.validatorDataflowIfElse()
-        val ifElseStartAWithB = resultIfElseWithB.dVariables["a"]
+        val ifElseStartAWithB = resultIfElseWithB.allVariables["a"]
         assertNotNull(ifElseStartAWithB, "There's a variable \"a\" in main")
         val ifElseWithBResult =
             dataFlowWithValidator(
@@ -718,7 +718,7 @@ class DataflowQueriesTest {
     @Test
     fun testValidatorDFGIfElseWithCall() {
         val resultIfElseWithBInterProc = FlowQueriesTest.validatorDataflowIfElseWithCall()
-        val ifElseStartAWithBInterProc = resultIfElseWithBInterProc.dVariables["a"]
+        val ifElseStartAWithBInterProc = resultIfElseWithBInterProc.allVariables["a"]
         assertNotNull(ifElseStartAWithBInterProc, "There's a variable \"a\" in main")
         val ifElseWithBResultInterProc =
             dataFlowWithValidator(
@@ -740,7 +740,7 @@ class DataflowQueriesTest {
     @Test
     fun testValidatorDFGLinearInterprocedural() {
         val resultLinearWithBInterProc = FlowQueriesTest.validatorDataflowLinearWithCall()
-        val linearStartAWithBInterProc = resultLinearWithBInterProc.dVariables["a"]
+        val linearStartAWithBInterProc = resultLinearWithBInterProc.allVariables["a"]
         assertNotNull(linearStartAWithBInterProc, "There's a variable \"a\" in main")
         val linearResultWithBInterProc =
             dataFlowWithValidator(
@@ -763,7 +763,7 @@ class DataflowQueriesTest {
     @Test
     fun testValidatorDFGIfInterprocedural() {
         val resultIfWithBInterProc = FlowQueriesTest.validatorDataflowIfWithCall()
-        val ifStartAWithBInterProc = resultIfWithBInterProc.dVariables["a"]
+        val ifStartAWithBInterProc = resultIfWithBInterProc.allVariables["a"]
         assertNotNull(ifStartAWithBInterProc, "There's a variable \"a\" in main")
         val ifResultWithBInterProc =
             dataFlowWithValidator(
@@ -785,7 +785,7 @@ class DataflowQueriesTest {
     @Test
     fun testValidatorDFGIfElseInterprocedural() {
         val resultIfElseWithBInterProc = FlowQueriesTest.validatorDataflowIfElseWithCall()
-        val ifElseStartAWithBInterProc = resultIfElseWithBInterProc.dVariables["a"]
+        val ifElseStartAWithBInterProc = resultIfElseWithBInterProc.allVariables["a"]
         assertNotNull(ifElseStartAWithBInterProc, "There's a variable \"a\" in main")
         val ifElseWithBResultInterProc =
             dataFlowWithValidator(
@@ -808,7 +808,7 @@ class DataflowQueriesTest {
     fun testImplicitFlows() {
         val resultVerySimple = FlowQueriesTest.verySimpleDataflow()
 
-        val bazCall = resultVerySimple.dCalls["baz"]
+        val bazCall = resultVerySimple.allCalls["baz"]
         assertNotNull(bazCall, "We expect a call to the function \"baz\".")
         val bazArg = bazCall.arguments.singleOrNull()
         assertIs<BinaryOperator>(

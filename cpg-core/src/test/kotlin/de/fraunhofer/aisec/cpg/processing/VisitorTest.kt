@@ -201,7 +201,7 @@ class VisitorTest : BaseTest() {
         )
         fun setup() {
             val cpg = GraphExamples.getVisitorTest()
-            recordDeclaration = cpg.dRecords.firstOrNull()
+            recordDeclaration = cpg.allRecords.firstOrNull()
         }
     }
 }

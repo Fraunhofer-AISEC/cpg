@@ -271,7 +271,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 }
             }
         } else {
-            node.descendants<ReturnStatement>().forEach { node.prevDFGEdges += it }
+            node.allDescendants<ReturnStatement>().forEach { node.prevDFGEdges += it }
         }
     }
 
@@ -305,7 +305,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     it.prevDFGEdges += iterable
                 }
             } else {
-                node.variable.dVariables.lastOrNull()?.prevDFGEdges += iterable
+                node.variable.allVariables.lastOrNull()?.prevDFGEdges += iterable
                 node.assume(
                     AssumptionType.AmbiguityAssumption,
                     "We assume that the last VariableDeclaration in the statement kept in \"variable\" is the variable we care about in the ForEachStatement if there is no DeclarationStatement related to the iterable.\n\n" +

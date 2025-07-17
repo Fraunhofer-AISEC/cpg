@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.ini
 
-import de.fraunhofer.aisec.cpg.graph.dRecords
+import de.fraunhofer.aisec.cpg.graph.allRecords
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -59,9 +59,9 @@ class IniFileTest : BaseTest() {
             "Namespace name mismatch.",
         ) // analyzeAndGetFirstTU does not provide the full path
 
-        assertEquals(2, tu.dRecords.size, "Expected two records")
+        assertEquals(2, tu.allRecords.size, "Expected two records")
 
-        val sectionA = tu.dRecords["SectionA"]
+        val sectionA = tu.allRecords["SectionA"]
         assertIs<RecordDeclaration>(sectionA)
         assertEquals(2, sectionA.fields.size, "Expected two fields")
 
@@ -73,7 +73,7 @@ class IniFileTest : BaseTest() {
         assertIs<FieldDeclaration>(sectionAEntry2)
         assertLiteralValue("value2", sectionAEntry2.initializer)
 
-        val sectionB = tu.dRecords["SectionB"]
+        val sectionB = tu.allRecords["SectionB"]
         assertIs<RecordDeclaration>(sectionB)
         assertEquals(3, sectionB.fields.size, "Expected three fields")
 

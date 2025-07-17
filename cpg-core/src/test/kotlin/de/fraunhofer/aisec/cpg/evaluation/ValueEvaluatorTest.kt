@@ -66,16 +66,16 @@ class ValueEvaluatorTest {
     fun test() {
         val tu = ValueEvaluationTests.getExample().components.first().translationUnits.first()
 
-        val main = tu.dFunctions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
-        val b = main.dVariables["b"]
+        val b = main.allVariables["b"]
         assertNotNull(b)
 
         var value = b.evaluate()
         assertEquals(2, value)
 
-        val printB = main.dCalls("println").getOrNull(0)
+        val printB = main.allCalls("println").getOrNull(0)
         assertNotNull(printB)
 
         val evaluator = ValueEvaluator()
@@ -85,76 +85,76 @@ class ValueEvaluatorTest {
         val path = evaluator.path
         assertEquals(5, path.size)
 
-        val printA = main.dCalls("println").getOrNull(1)
+        val printA = main.allCalls("println").getOrNull(1)
         assertNotNull(printA)
 
         value = printA.arguments.firstOrNull()?.evaluate()
         assertEquals(2, value)
 
-        val c = main.dVariables["c"]
+        val c = main.allVariables["c"]
         assertNotNull(c)
 
         value = c.evaluate()
         assertEquals(3, value)
 
-        val d = main.dVariables["d"]
+        val d = main.allVariables["d"]
         assertNotNull(d)
 
         value = d.evaluate()
         assertEquals(2, value)
 
-        val e = main.dVariables["e"]
+        val e = main.allVariables["e"]
         assertNotNull(e)
         value = e.evaluate()
         assertEquals(3.5, value)
 
-        val f = main.dVariables["f"]
+        val f = main.allVariables["f"]
         assertNotNull(f)
         value = f.evaluate()
         assertEquals(10, value)
 
-        val printHelloWorld = main.dCalls("println").getOrNull(2)
+        val printHelloWorld = main.allCalls("println").getOrNull(2)
         assertNotNull(printHelloWorld)
 
         value = printHelloWorld.arguments.firstOrNull()?.evaluate()
         assertEquals("Hello world", value)
 
-        val g = main.dVariables["g"]
+        val g = main.allVariables["g"]
         assertNotNull(g)
         value = g.evaluate()
         assertEquals(-3, value)
 
-        val h = main.dVariables["h"]
+        val h = main.allVariables["h"]
         assertNotNull(h)
         value = h.evaluate()
         assertFalse(value as Boolean)
 
-        val i = main.dVariables["i"]
+        val i = main.allVariables["i"]
         assertNotNull(i)
         value = i.evaluate()
         assertFalse(value as Boolean)
 
-        val j = main.dVariables["j"]
+        val j = main.allVariables["j"]
         assertNotNull(j)
         value = j.evaluate()
         assertFalse(value as Boolean)
 
-        val k = main.dVariables["k"]
+        val k = main.allVariables["k"]
         assertNotNull(k)
         value = k.evaluate()
         assertFalse(value as Boolean)
 
-        val l = main.dVariables["l"]
+        val l = main.allVariables["l"]
         assertNotNull(l)
         value = l.evaluate()
         assertFalse(value as Boolean)
 
-        val m = main.dVariables["m"]
+        val m = main.allVariables["m"]
         assertNotNull(m)
         value = m.evaluate()
         assertFalse(value as Boolean)
 
-        val n = main.dVariables["n"]
+        val n = main.allVariables["n"]
         assertNotNull(n)
         value = n.evaluate()
         assertFalse(value as Boolean)
@@ -167,13 +167,13 @@ class ValueEvaluatorTest {
 
         assertNotNull(tu)
 
-        val mainClass = tu.dRecords["MainClass"]
+        val mainClass = tu.allRecords["MainClass"]
         assertNotNull(mainClass)
 
-        val main = mainClass.dFunctions["main"]
+        val main = mainClass.allFunctions["main"]
         assertNotNull(main)
 
-        val s = main.dRefs("s").lastOrNull()
+        val s = main.allRefs("s").lastOrNull()
         assertNotNull(s)
 
         var value = s.evaluate()
@@ -182,7 +182,7 @@ class ValueEvaluatorTest {
         value = s.evaluate(MultiValueEvaluator())
         assertEquals(setOf("big!?", "small!?"), value)
 
-        val i = main.dRefs("i").lastOrNull()
+        val i = main.allRefs("i").lastOrNull()
         assertNotNull(i)
 
         value = i.evaluate()

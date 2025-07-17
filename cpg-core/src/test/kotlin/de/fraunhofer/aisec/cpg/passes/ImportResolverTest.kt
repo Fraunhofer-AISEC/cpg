@@ -123,7 +123,7 @@ class ImportResolverTest {
             }
 
         assertNotNull(result)
-        var foo = result.dVariables["a.foo"]
+        var foo = result.allVariables["a.foo"]
         assertNotNull(foo)
 
         var app = result.components.firstOrNull()

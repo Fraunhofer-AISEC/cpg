@@ -26,10 +26,10 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.GraphExamples
-import de.fraunhofer.aisec.cpg.graph.dFields
-import de.fraunhofer.aisec.cpg.graph.dMethods
-import de.fraunhofer.aisec.cpg.graph.dVariables
-import de.fraunhofer.aisec.cpg.graph.descendants
+import de.fraunhofer.aisec.cpg.graph.allFields
+import de.fraunhofer.aisec.cpg.graph.allMethods
+import de.fraunhofer.aisec.cpg.graph.allVariables
+import de.fraunhofer.aisec.cpg.graph.allDescendants
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -45,17 +45,17 @@ internal class VariableResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testFields() {
         val result = GraphExamples.getVariables()
-        val methods = result.dMethods
-        val fields = result.dFields
+        val methods = result.allMethods
+        val fields = result.allFields
         val field = findByUniqueName(fields, "field")
         val getField = findByUniqueName(methods, "getField")
-        var returnStatement = getField.descendants<ReturnStatement>().firstOrNull()
+        var returnStatement = getField.allDescendants<ReturnStatement>().firstOrNull()
         assertNotNull(returnStatement)
         assertEquals(field, (returnStatement.returnValue as MemberExpression).refersTo)
 
         val noShadow = findByUniqueName(methods, "getField")
 
-        returnStatement = noShadow.descendants<ReturnStatement>().firstOrNull()
+        returnStatement = noShadow.allDescendants<ReturnStatement>().firstOrNull()
         assertNotNull(returnStatement)
         assertEquals(field, (returnStatement.returnValue as MemberExpression).refersTo)
     }
@@ -64,14 +64,14 @@ internal class VariableResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testLocalVars() {
         val result = GraphExamples.getVariables()
-        val methods = result.dMethods
-        val fields = result.dFields
+        val methods = result.allMethods
+        val fields = result.allFields
         val field = findByUniqueName(fields, "field")
         val getLocal = findByUniqueName(methods, "getLocal")
-        var returnStatement = getLocal.descendants<ReturnStatement>().firstOrNull()
+        var returnStatement = getLocal.allDescendants<ReturnStatement>().firstOrNull()
         assertNotNull(returnStatement)
 
-        var local = getLocal.dVariables.firstOrNull { it.name.localName != "this" }
+        var local = getLocal.allVariables.firstOrNull { it.name.localName != "this" }
 
         var returnValue = returnStatement.returnValue as Reference
         assertNotEquals(field, returnValue.refersTo)
@@ -79,10 +79,10 @@ internal class VariableResolverTest : BaseTest() {
 
         val getShadow = findByUniqueName(methods, "getShadow")
 
-        returnStatement = getShadow.descendants<ReturnStatement>().firstOrNull()
+        returnStatement = getShadow.allDescendants<ReturnStatement>().firstOrNull()
         assertNotNull(returnStatement)
 
-        local = getShadow.dVariables.firstOrNull { it.name.localName != "this" }
+        local = getShadow.allVariables.firstOrNull { it.name.localName != "this" }
 
         returnValue = returnStatement.returnValue as Reference
         assertNotEquals(field, returnValue.refersTo)

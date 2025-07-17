@@ -26,10 +26,10 @@
 package de.fraunhofer.aisec.cpg.enhancements.calls
 
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
-import de.fraunhofer.aisec.cpg.graph.dLiterals
-import de.fraunhofer.aisec.cpg.graph.dVariables
+import de.fraunhofer.aisec.cpg.graph.allLiterals
+import de.fraunhofer.aisec.cpg.graph.allVariables
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
-import de.fraunhofer.aisec.cpg.graph.descendants
+import de.fraunhofer.aisec.cpg.graph.allDescendants
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
@@ -42,7 +42,7 @@ internal class ConstructorsTest : BaseTest() {
     @Throws(Exception::class)
     fun testCPP() {
         val result = analyze("cpp", topLevel, true) { it.registerLanguage<CPPLanguage>() }
-        val constructors = result.descendants<ConstructorDeclaration>()
+        val constructors = result.allDescendants<ConstructorDeclaration>()
         val noArg =
             findByUniquePredicate(constructors) {
                 it.parameters.isEmpty() && it.name.localName == "A"
@@ -55,7 +55,7 @@ internal class ConstructorsTest : BaseTest() {
             findByUniquePredicate(constructors) {
                 it.parameters.size == 2 && it.name.localName == "A"
             }
-        val variables = result.dVariables
+        val variables = result.allVariables
         val a1 = findByUniqueName(variables, "a1")
         assertNotNull(a1)
         assertTrue(a1.initializer is ConstructExpression)
@@ -144,16 +144,16 @@ internal class ConstructorsTest : BaseTest() {
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val constructors = result.descendants<ConstructorDeclaration>()
-        val variables = result.dVariables
+        val constructors = result.allDescendants<ConstructorDeclaration>()
+        val variables = result.allVariables
         val twoDefaultArg =
             findByUniquePredicate(constructors) {
                 it.defaultParameters.size == 2 && it.name.localName == "D"
             }
         assertNotNull(twoDefaultArg)
 
-        val literal0 = findByUniquePredicate(result.dLiterals) { it.value == 0 }
-        val literal1 = findByUniquePredicate(result.dLiterals) { it.value == 1 }
+        val literal0 = findByUniquePredicate(result.allLiterals) { it.value == 0 }
+        val literal1 = findByUniquePredicate(result.allLiterals) { it.value == 1 }
         val d1 = findByUniqueName(variables, "d1")
         assertNotNull(d1)
         assertTrue(d1.initializer is ConstructExpression)
@@ -201,13 +201,13 @@ internal class ConstructorsTest : BaseTest() {
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val constructors = result.descendants<ConstructorDeclaration>()
-        val variables = result.dVariables
+        val constructors = result.allDescendants<ConstructorDeclaration>()
+        val variables = result.allVariables
         val singleDefaultArg =
             findByUniquePredicate(constructors) { c: ConstructorDeclaration ->
                 c.parameters.size == 2 && c.name.localName == "E"
             }
-        val literal10 = findByUniquePredicate(result.dLiterals) { it.value == 10 }
+        val literal10 = findByUniquePredicate(result.allLiterals) { it.value == 10 }
         val e1 = findByUniqueName(variables, "e1")
         assertTrue(e1.initializer is ConstructExpression)
         val e1Initializer = e1.initializer as ConstructExpression
@@ -248,13 +248,13 @@ internal class ConstructorsTest : BaseTest() {
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val constructors = result.descendants<ConstructorDeclaration>()
-        val variables = result.dVariables
+        val constructors = result.allDescendants<ConstructorDeclaration>()
+        val variables = result.allVariables
         val implicitConstructor =
             findByUniquePredicate(constructors) { c: ConstructorDeclaration ->
                 c.name.localName == "I"
             }
-        val literal10 = findByUniquePredicate(result.dLiterals) { it.value == 10 }
+        val literal10 = findByUniquePredicate(result.allLiterals) { it.value == 10 }
         val i1 = findByUniqueName(variables, "i1")
         assertTrue(i1.initializer is ConstructExpression)
 

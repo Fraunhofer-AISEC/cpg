@@ -47,7 +47,7 @@ internal class CXXLiteralTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val zero = tu.dFunctions["zero"]
+        val zero = tu.allFunctions["zero"]
         assertNotNull(zero)
 
         val funcDecl = zero
@@ -71,7 +71,7 @@ internal class CXXLiteralTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val decimal = tu.dFunctions["decimal"]
+        val decimal = tu.allFunctions["decimal"]
         assertNotNull(decimal)
 
         val funcDecl = decimal
@@ -114,7 +114,7 @@ internal class CXXLiteralTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val octal = tu.dFunctions["octal"]
+        val octal = tu.allFunctions["octal"]
         assertNotNull(octal)
 
         val funcDecl = octal
@@ -138,7 +138,7 @@ internal class CXXLiteralTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val hex = tu.dFunctions["hex"]
+        val hex = tu.allFunctions["hex"]
         assertNotNull(hex)
 
         val funcDecl = hex
@@ -161,11 +161,11 @@ internal class CXXLiteralTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val main = tu.dFunctions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
         val funcDecl = main
-        val a = funcDecl.dVariables["a"]
+        val a = funcDecl.allVariables["a"]
         assertNotNull(a)
         assertEquals(1, (a.getInitializerAs(UnaryOperator::class.java)?.input as Literal<*>).value)
 
@@ -174,21 +174,21 @@ internal class CXXLiteralTest : BaseTest() {
         // in an integer, it should be automatically converted to a long. The resulting value
         // -2147483648 however is small enough to fit into an int, so it is ok for the variable a to
         // have an int type
-        val b = funcDecl.dVariables["b"]
+        val b = funcDecl.allVariables["b"]
         assertNotNull(b)
         assertEquals(
             2147483648L,
             (b.getInitializerAs(UnaryOperator::class.java)?.input as Literal<*>).value,
         )
 
-        val c = funcDecl.dVariables["c"]
+        val c = funcDecl.allVariables["c"]
         assertNotNull(c)
         assertEquals(
             2147483649L,
             (c.getInitializerAs(UnaryOperator::class.java)?.input as Literal<*>).value,
         )
 
-        val d = funcDecl.dVariables["d"]
+        val d = funcDecl.allVariables["d"]
         assertNotNull(d)
         assertEquals(
             BigInteger("9223372036854775808"),
@@ -206,7 +206,7 @@ internal class CXXLiteralTest : BaseTest() {
         assertNotNull(tu)
 
         with(tu) {
-            val main = tu.dFunctions["main"]
+            val main = tu.allFunctions["main"]
             assertNotNull(main)
 
             assertLiteral('a', primitiveType("char"), main, "a")
@@ -218,10 +218,10 @@ internal class CXXLiteralTest : BaseTest() {
             assertLiteral(258, primitiveType("int"), main, "multi")
             assertLiteral(21300, primitiveType("int"), main, "multi2")
 
-            val invalid = tu.dVariables["invalid"]?.initializer
+            val invalid = tu.allVariables["invalid"]?.initializer
             assertIs<ProblemExpression>(invalid)
 
-            val invalid2 = tu.dVariables["invalid2"]?.initializer
+            val invalid2 = tu.allVariables["invalid2"]?.initializer
             assertIs<ProblemExpression>(invalid2)
         }
     }
@@ -232,7 +232,7 @@ internal class CXXLiteralTest : BaseTest() {
         functionDeclaration: FunctionDeclaration,
         name: String,
     ) {
-        val variableDeclaration = functionDeclaration.dVariables[name]
+        val variableDeclaration = functionDeclaration.allVariables[name]
         assertNotNull(variableDeclaration)
 
         val literal = variableDeclaration.initializer<Literal<*>>()

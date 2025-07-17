@@ -257,7 +257,7 @@ class ApplicationTest {
 
     @Test
     fun testAddConcept() = testApplication {
-        val open = assertNotNull(mockTu.dCalls["open"])
+        val open = assertNotNull(mockTu.allCalls["open"])
 
         application { configureWebconsole(mockService) }
         val client = createClient { install(ContentNegotiation) { json() } }
@@ -292,7 +292,7 @@ class ApplicationTest {
 
     @Test
     fun testAddConceptWrongConstructorKey() = testApplication {
-        val open = assertNotNull(mockTu.dCalls["open"])
+        val open = assertNotNull(mockTu.allCalls["open"])
 
         application { configureWebconsole(mockService) }
         val client = createClient { install(ContentNegotiation) { json() } }

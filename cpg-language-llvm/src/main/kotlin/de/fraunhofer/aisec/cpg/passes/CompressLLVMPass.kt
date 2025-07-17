@@ -91,7 +91,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun handleBlock(node: Block, gotosToReplace: List<GotoStatement>) {
         val goto = node.statements.lastOrNull() as? GotoStatement ?: return
         val gotoSubstatement = goto.targetLabel?.subStatement as? Block ?: return
-        if (goto in gotosToReplace && node !in gotoSubstatement.descendants<Block>()) {
+        if (goto in gotosToReplace && node !in gotoSubstatement.allDescendants<Block>()) {
             val newStatements = node.statements.dropLast(1).toMutableList()
             newStatements.addAll(gotoSubstatement.statements)
             node.statements = newStatements
@@ -125,12 +125,12 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // Replace the then-statement
         val thenGoto = (node.thenStatement as? GotoStatement)?.targetLabel?.subStatement
-        if (node.thenStatement in gotosToReplace && node !in thenGoto.descendants<IfStatement>()) {
+        if (node.thenStatement in gotosToReplace && node !in thenGoto.allDescendants<IfStatement>()) {
             node.thenStatement = thenGoto
         }
         // Replace the else-statement
         val elseGoto = (node.elseStatement as? GotoStatement)?.targetLabel?.subStatement
-        if (node.elseStatement in gotosToReplace && node !in elseGoto.descendants<IfStatement>()) {
+        if (node.elseStatement in gotosToReplace && node !in elseGoto.allDescendants<IfStatement>()) {
             node.elseStatement = elseGoto
         }
     }

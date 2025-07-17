@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.descendants
+import de.fraunhofer.aisec.cpg.graph.allDescendants
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -125,6 +125,6 @@ class ComprehensionExpression : Expression(), ArgumentHolder {
     }
 
     override fun getExitNextEOG(): Collection<Node> {
-        return this.nextEOG.filter { it !in iterable.descendants<Node> { true } }
+        return this.nextEOG.filter { it !in iterable.allDescendants<Node> { true } }
     }
 }

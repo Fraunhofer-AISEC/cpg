@@ -74,7 +74,7 @@ internal class SubgraphWalkerTest : BaseTest() {
         val namespace = tu.namespaces["compiling"]
         assertNotNull(namespace)
 
-        val recordDeclaration = namespace.dRecords["compiling.SimpleClass"]
+        val recordDeclaration = namespace.allRecords["compiling.SimpleClass"]
         assertNotNull(recordDeclaration)
 
         // This calls SubgraphWalker.getAstChildren()

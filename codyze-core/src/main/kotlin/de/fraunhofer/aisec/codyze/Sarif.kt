@@ -218,7 +218,7 @@ fun Node?.toSarifLocation(
         }
         ?.let {
             Location(
-                physicalLocation = it.toSarif(pComponent),
+                physicalLocation = it.toSarif(parentComponent),
                 logicalLocations =
                     listOf(
                         LogicalLocation(

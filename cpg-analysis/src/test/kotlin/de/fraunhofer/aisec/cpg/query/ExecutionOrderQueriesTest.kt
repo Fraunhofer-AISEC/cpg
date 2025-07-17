@@ -39,7 +39,7 @@ class ExecutionOrderQueriesTest {
     @Test
     fun testLoopDetection() {
         val result = FlowQueriesTest.loopDetection()
-        val start = result.dLiterals.singleOrNull { it.value == "start" }
+        val start = result.allLiterals.singleOrNull { it.value == "start" }
         assertNotNull(start)
         val executionPath =
             executionPath(
@@ -61,13 +61,13 @@ class ExecutionOrderQueriesTest {
     fun testIntraproceduralExecutionOrderForward() {
         val result = FlowQueriesTest.verySimpleDataflow()
 
-        val literal5 = result.dLiterals.singleOrNull { it.value == 5 }
+        val literal5 = result.allLiterals.singleOrNull { it.value == 5 }
         assertNotNull(literal5)
 
-        val literal10 = result.dLiterals.singleOrNull { it.value == 10 }
+        val literal10 = result.allLiterals.singleOrNull { it.value == 10 }
         assertNotNull(literal10)
 
-        val callBaz = result.dCalls["baz"]
+        val callBaz = result.allCalls["baz"]
         assertNotNull(callBaz)
 
         val value5MayReach10 =
@@ -111,13 +111,13 @@ class ExecutionOrderQueriesTest {
     fun testIntraproceduralExecutionOrderBackward() {
         val result = FlowQueriesTest.verySimpleDataflow()
 
-        val literal5 = result.dLiterals.singleOrNull { it.value == 5 }
+        val literal5 = result.allLiterals.singleOrNull { it.value == 5 }
         assertNotNull(literal5)
 
-        val literal10 = result.dLiterals.singleOrNull { it.value == 10 }
+        val literal10 = result.allLiterals.singleOrNull { it.value == 10 }
         assertNotNull(literal10)
 
-        val callBaz = result.dCalls["baz"]
+        val callBaz = result.allCalls["baz"]
         assertNotNull(callBaz)
         val callBazMayReach10 =
             executionPath(
@@ -163,13 +163,13 @@ class ExecutionOrderQueriesTest {
     fun testIntraproceduralExecutionOrderBidirectional() {
         val result = FlowQueriesTest.verySimpleDataflow()
 
-        val literal5 = result.dLiterals.singleOrNull { it.value == 5 }
+        val literal5 = result.allLiterals.singleOrNull { it.value == 5 }
         assertNotNull(literal5)
 
-        val literal10 = result.dLiterals.singleOrNull { it.value == 10 }
+        val literal10 = result.allLiterals.singleOrNull { it.value == 10 }
         assertNotNull(literal10)
 
-        val callBaz = result.dCalls["baz"]
+        val callBaz = result.allCalls["baz"]
         assertNotNull(callBaz)
 
         val literal10MayReachBaz =

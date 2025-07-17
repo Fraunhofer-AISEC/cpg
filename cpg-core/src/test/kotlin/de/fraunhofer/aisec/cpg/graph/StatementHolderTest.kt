@@ -38,7 +38,7 @@ class StatementHolderTest {
 
         val forEachStatement = GraphExamples.getForEachWithElseAndBreak()
 
-        val forEachStmt = forEachStatement.dForEachLoops.firstOrNull()
+        val forEachStmt = forEachStatement.allForEachLoops.firstOrNull()
         assertNotNull(forEachStmt)
 
         val statements = forEachStmt.statements
@@ -52,7 +52,7 @@ class StatementHolderTest {
 
         val forStatement = GraphExamples.getForWithElseAndBreak()
 
-        val forStmt = forStatement.dForLoops.firstOrNull()
+        val forStmt = forStatement.allForLoops.firstOrNull()
         assertNotNull(forStmt)
 
         val statements = forStmt.statements
@@ -66,7 +66,7 @@ class StatementHolderTest {
 
         val labelStatement = GraphExamples.getLabeledBreakContinueLoopDFG()
 
-        val labelStmt = labelStatement.dLabels.firstOrNull()
+        val labelStmt = labelStatement.allLabels.firstOrNull()
         assertNotNull(labelStmt)
 
         val statements = labelStmt.statements

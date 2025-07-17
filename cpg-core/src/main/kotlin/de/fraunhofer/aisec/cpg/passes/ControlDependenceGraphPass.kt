@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.cyclomaticComplexity
-import de.fraunhofer.aisec.cpg.graph.descendants
+import de.fraunhofer.aisec.cpg.graph.allDescendants
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
@@ -118,7 +118,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                     .filter { (k, _) ->
                         (k as? BranchingNode)?.branchedBy == node ||
                             node in
-                                ((k as? BranchingNode)?.branchedBy?.descendants<Node>() ?: listOf())
+                                ((k as? BranchingNode)?.branchedBy?.allDescendants<Node>() ?: listOf())
                     }
                     .map { (k, _) -> k }
             if (conditionKeys.isNotEmpty()) {
@@ -236,9 +236,9 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             // For the function declaration, there's only the path through the function declaration
             // itself.
             Pair(functionDeclaration, setOf(functionDeclaration)),
-            *(functionDeclaration.descendants<BranchingNode>() +
-                    functionDeclaration.descendants<CollectionComprehension>() +
-                    functionDeclaration.descendants<
+            *(functionDeclaration.allDescendants<BranchingNode>() +
+                    functionDeclaration.allDescendants<CollectionComprehension>() +
+                    functionDeclaration.allDescendants<
                         ComprehensionExpression
                     >()) // TODO: May be simplified when resolving issue 2027
                 .filterIsInstance<Node>()
@@ -354,7 +354,7 @@ private val IfStatement.nextUnconditionalNode: Node?
     get() = this.nextEOGEdges.firstOrNull { it.branch == null }?.end
 
 private fun IfStatement.allBranchesFromMyThenBranchGoThrough(node: Node?): Boolean {
-    if (this.thenStatement.descendants<ReturnStatement>().isNotEmpty()) return false
+    if (this.thenStatement.allDescendants<ReturnStatement>().isNotEmpty()) return false
 
     if (node == null) return true
 

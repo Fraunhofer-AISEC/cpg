@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.dVariables
+import de.fraunhofer.aisec.cpg.graph.allVariables
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
@@ -49,7 +49,7 @@ class DeclarationTest {
         val main = tu.namespaces["main"]
         assertNotNull(main)
 
-        val myStruct = main.dRecords["main.MyStruct"]
+        val myStruct = main.allRecords["main.MyStruct"]
         assertNotNull(myStruct)
 
         // Receiver should be null since its unnamed
@@ -71,7 +71,7 @@ class DeclarationTest {
         assertNotNull(main)
 
         // Parameter should be there but not have a name
-        val myGlobalFunc = main.dFunctions["MyGlobalFunc"]
+        val myGlobalFunc = main.allFunctions["MyGlobalFunc"]
         assertNotNull(myGlobalFunc)
 
         val param = myGlobalFunc.parameters.firstOrNull()
@@ -89,14 +89,14 @@ class DeclarationTest {
         assertNotNull(tu)
 
         // we should have this pseudo-record in the global scope
-        val structFieldInt = tu.dRecords["struct{field int}"]
+        val structFieldInt = tu.allRecords["struct{field int}"]
         assertNotNull(structFieldInt)
         assertIs<GlobalScope>(structFieldInt.scope)
 
         val p = tu.namespaces["p"]
         assertNotNull(p)
 
-        val myStruct = p.dRecords["MyStruct"]
+        val myStruct = p.allRecords["MyStruct"]
         assertNotNull(myStruct)
         assertEquals("struct", myStruct.kind)
 
@@ -118,7 +118,7 @@ class DeclarationTest {
         assertLocalName("MyField", myField)
         assertEquals(tu.primitiveType("int"), myField.type)
 
-        val myInterface = p.dRecords["p.MyInterface"]
+        val myInterface = p.allRecords["p.MyInterface"]
         assertNotNull(myInterface)
         assertEquals("interface", myInterface.kind)
 
@@ -131,7 +131,7 @@ class DeclarationTest {
         assertLocalName("MyFunc", myFunc)
         assertLocalName("func() string", myFunc.type)
 
-        val newMyStruct = p.dFunctions["NewMyStruct"]
+        val newMyStruct = p.allFunctions["NewMyStruct"]
         assertNotNull(newMyStruct)
 
         val body = newMyStruct.body as? Block
@@ -143,7 +143,7 @@ class DeclarationTest {
         val returnValue = `return`.returnValue as? UnaryOperator
         assertNotNull(returnValue)
 
-        val s = p.dVariables["p.s"]
+        val s = p.allVariables["p.s"]
         assertNotNull(s)
 
         val type = s.type
@@ -179,10 +179,10 @@ class DeclarationTest {
         val main = tu.namespaces["main"]
         assertNotNull(main)
 
-        val myInterface = main.dRecords["main.MyInterface"]
+        val myInterface = main.allRecords["main.MyInterface"]
         assertNotNull(myInterface)
 
-        val myOtherInterface = main.dRecords["main.MyOtherInterface"]
+        val myOtherInterface = main.allRecords["main.MyOtherInterface"]
         assertNotNull(myOtherInterface)
 
         // MyOtherInterface should be in the superClasses and superTypeDeclarations of MyInterface,
@@ -200,47 +200,47 @@ class DeclarationTest {
             }
         assertNotNull(tu)
 
-        val main = tu.dFunctions["main.main"]
+        val main = tu.allFunctions["main.main"]
         assertNotNull(main)
 
         // We should have 10 variables (a, b, c, d, (e,f), e, f, g, h, i)
-        assertEquals(10, main.dVariables.size)
+        assertEquals(10, main.allVariables.size)
 
         // Four should have (literal) initializers
-        val a = main.dVariables["a"]
+        val a = main.allVariables["a"]
         assertLiteralValue(1, a?.initializer)
 
-        val b = main.dVariables["b"]
+        val b = main.allVariables["b"]
         assertLiteralValue(2, b?.initializer)
 
-        val c = main.dVariables["c"]
+        val c = main.allVariables["c"]
         assertLiteralValue(3, c?.initializer)
 
-        val d = main.dVariables["d"]
+        val d = main.allVariables["d"]
         assertLiteralValue(4, d?.initializer)
 
-        val e = main.dVariables["e"]
+        val e = main.allVariables["e"]
         assertNotNull(e)
         // e does not have a direct initializer, since it is initialized through the tuple
         // declaration (e,f)
         assertNull(e.initializer)
 
         // The tuple (e,f) does have an initializer
-        val ef = main.descendants<TupleDeclaration> { it.name.toString() == "(e,f)" }.firstOrNull()
+        val ef = main.allDescendants<TupleDeclaration> { it.name.toString() == "(e,f)" }.firstOrNull()
         assertNotNull(ef)
         assertIs<CallExpression>(ef.initializer)
         assertEquals(ef, e.astParent)
 
         // The next two variables are using a short assignment, therefore they do not have an
         // initializer, but we can use the firstAssignment function
-        val g = main.dVariables["g"]
-        assertLiteralValue(5, g?.dFirstAssignment)
+        val g = main.allVariables["g"]
+        assertLiteralValue(5, g?.firstAssignment)
 
-        val h = main.dVariables["h"]
-        assertLiteralValue(6, h?.dFirstAssignment)
+        val h = main.allVariables["h"]
+        assertLiteralValue(6, h?.firstAssignment)
 
         // And they should all be connected to the arguments of the Printf call
-        val printf = main.dCalls["Printf"]
+        val printf = main.allCalls["Printf"]
         assertNotNull(printf)
 
         printf.arguments.drop(1).forEach {
@@ -249,7 +249,7 @@ class DeclarationTest {
         }
 
         // We have eight assignments in total (7 initializers + 2 assign expressions)
-        assertEquals(9, tu.dAssignments.size)
+        assertEquals(9, tu.allAssignments.size)
     }
 
     @Test
@@ -265,10 +265,10 @@ class DeclarationTest {
             }
         assertNotNull(tu)
 
-        val myStruct = tu.dRecords["MyStruct"]
+        val myStruct = tu.allRecords["MyStruct"]
         assertNotNull(myStruct)
 
-        val myInterface = tu.dRecords["MyInterface"]
+        val myInterface = tu.allRecords["MyInterface"]
         assertNotNull(myInterface)
     }
 
@@ -304,7 +304,7 @@ class DeclarationTest {
                     "onehundredandfive" to Pair(105, assertResolvedType("int")),
                 )
             values.forEach {
-                val variable = dVariables[it.key]
+                val variable = allVariables[it.key]
                 assertNotNull(variable, "variable \"${it.key}\" not found")
                 assertEquals(it.value.first, variable.evaluate(), "${it.key} does not match")
                 assertEquals(it.value.second, variable.type, "${it.key} has the wrong type")
@@ -327,17 +327,17 @@ class DeclarationTest {
             }
         assertNotNull(result)
 
-        val printf = result.dFunctions["fmt.Printf"]
+        val printf = result.allFunctions["fmt.Printf"]
         assertNotNull(printf)
 
-        val callPrintf = result.dCalls["fmtother.Printf"]
+        val callPrintf = result.allCalls["fmtother.Printf"]
         assertNotNull(callPrintf)
         assertInvokes(callPrintf, printf)
 
-        val expr = result.descendants<MemberExpression>().firstOrNull()
+        val expr = result.allDescendants<MemberExpression>().firstOrNull()
         assertNotNull(expr)
 
-        val fmt = result.dVariables["fmt"]
+        val fmt = result.allVariables["fmt"]
         assertNotNull(fmt)
 
         val base = expr.base
@@ -361,13 +361,13 @@ class DeclarationTest {
             }
         assertNotNull(result)
 
-        val inner = result.dRecords["inner"]
+        val inner = result.allRecords["inner"]
         assertNotNull(inner)
 
         val field = inner.fields["field"]
         assertNotNull(field)
 
-        val assign = result.dAssignments.firstOrNull()
+        val assign = result.allAssignments.firstOrNull()
         assertNotNull(assign)
 
         val mce = assign.target

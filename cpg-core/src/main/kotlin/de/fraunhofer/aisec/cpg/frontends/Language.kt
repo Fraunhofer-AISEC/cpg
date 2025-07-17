@@ -45,7 +45,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.TemplateArguments
-import de.fraunhofer.aisec.cpg.graph.pComponent
+import de.fraunhofer.aisec.cpg.graph.parentComponent
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -496,11 +496,11 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
         // component.
         val component =
             if (source !is Type) {
-                source.pComponent
+                source.parentComponent
                     ?: provider.ctx.currentComponent
-                    ?: source.scope?.astNode?.pComponent
+                    ?: source.scope?.astNode?.parentComponent
             } else {
-                provider.ctx.currentComponent ?: source.scope?.astNode?.pComponent
+                provider.ctx.currentComponent ?: source.scope?.astNode?.parentComponent
             }
         if (component == null) {
             val msg =

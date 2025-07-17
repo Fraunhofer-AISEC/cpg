@@ -84,11 +84,11 @@ class StatementBuilderTest {
                 }
             }
 
-        val globalA = result.dVariables["a"]
+        val globalA = result.allVariables["a"]
         assertNotNull(globalA)
         assertIs<GlobalScope>(globalA.scope)
 
-        val a = result.dRefs["a"]
+        val a = result.allRefs["a"]
         assertRefersTo(a, globalA)
     }
 }

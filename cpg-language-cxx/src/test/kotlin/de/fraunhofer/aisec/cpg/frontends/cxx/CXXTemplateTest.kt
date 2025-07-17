@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
-import de.fraunhofer.aisec.cpg.graph.dFunctions
-import de.fraunhofer.aisec.cpg.graph.dMethods
+import de.fraunhofer.aisec.cpg.graph.allFunctions
+import de.fraunhofer.aisec.cpg.graph.allMethods
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.test.*
@@ -51,7 +51,7 @@ class CXXTemplateTest {
 
         // We should have two constructors with a "double-reference" type
         var method =
-            tu.dMethods.firstOrNull { it.signature == "MyTemplateClass(T&&)MyTemplateClass" }
+            tu.allMethods.firstOrNull { it.signature == "MyTemplateClass(T&&)MyTemplateClass" }
         assertIs<ConstructorDeclaration>(method)
         assertNotNull(method)
 
@@ -59,7 +59,7 @@ class CXXTemplateTest {
         assertIs<ParameterizedType>(paramType)
         assertLocalName("T", paramType)
 
-        method = tu.dMethods.firstOrNull { it.signature == "MyClass(MyClass&&)MyClass" }
+        method = tu.allMethods.firstOrNull { it.signature == "MyClass(MyClass&&)MyClass" }
         assertIs<ConstructorDeclaration>(method)
         assertNotNull(method)
     }
@@ -72,6 +72,6 @@ class CXXTemplateTest {
                 it.registerLanguage<CPPLanguage>()
             }
         assertNotNull(tu)
-        assertTrue(tu.dFunctions.all { !it.isInferred })
+        assertTrue(tu.allFunctions.all { !it.isInferred })
     }
 }

@@ -575,7 +575,7 @@ val KClass<out Pass<*>>.hardExecuteBefore: Set<KClass<out Pass<*>>>
  * need to be re-analyzed by a specific pass. The pass is specified by the type parameter [T].
  */
 inline fun <reified T : Pass<*>> Node.markDirty() {
-    pTranslationResult?.markDirty(this, T::class)
+    parentTranslationResult?.markDirty(this, T::class)
 }
 
 /**
@@ -584,5 +584,5 @@ inline fun <reified T : Pass<*>> Node.markDirty() {
  */
 context(pass: Pass<*>)
 fun Node.markClean() {
-    pTranslationResult?.markClean(this, pass::class)
+    parentTranslationResult?.markClean(this, pass::class)
 }

@@ -60,9 +60,9 @@ class ExceptionsTest : BaseTest() {
 
     @Test
     fun testWithExceptionAndTry() {
-        val function = result.dFunctions["raise_in_try"]
+        val function = result.allFunctions["raise_in_try"]
         assertNotNull(function)
-        val throwStmt = function.dThrows.singleOrNull()
+        val throwStmt = function.allThrows.singleOrNull()
         assertNotNull(throwStmt)
 
         val exception = throwStmt.exception
@@ -72,7 +72,7 @@ class ExceptionsTest : BaseTest() {
         assertEquals(listOf<Node>(exception), throwStmt.prevEOG)
 
         val catchClause =
-            function.dTrys.singleOrNull()?.catchClauses?.singleOrNull {
+            function.allTrys.singleOrNull()?.catchClauses?.singleOrNull {
                 it.parameter?.type?.name?.localName == "Exception"
             }
         assertNotNull(catchClause)
@@ -81,9 +81,9 @@ class ExceptionsTest : BaseTest() {
 
     @Test
     fun testWithExceptionAndTry2() {
-        val function = result.dFunctions["raise_in_try2"]
+        val function = result.allFunctions["raise_in_try2"]
         assertNotNull(function)
-        val throwStmt = function.dThrows.singleOrNull()
+        val throwStmt = function.allThrows.singleOrNull()
         assertNotNull(throwStmt)
 
         val exception = throwStmt.exception
@@ -93,7 +93,7 @@ class ExceptionsTest : BaseTest() {
         assertEquals(listOf<Node>(exception), throwStmt.prevEOG)
 
         val catchClause =
-            function.dTrys.singleOrNull()?.catchClauses?.singleOrNull {
+            function.allTrys.singleOrNull()?.catchClauses?.singleOrNull {
                 it.parameter?.type?.name?.localName == "Exception"
             }
         assertNotNull(catchClause)
@@ -102,9 +102,9 @@ class ExceptionsTest : BaseTest() {
 
     @Test
     fun testWithoutTry() {
-        val function = result.dFunctions["raise_without_try"]
+        val function = result.allFunctions["raise_without_try"]
         assertNotNull(function)
-        val throwStmt = function.dThrows.singleOrNull()
+        val throwStmt = function.allThrows.singleOrNull()
         assertNotNull(throwStmt)
 
         val exception = throwStmt.exception
@@ -120,9 +120,9 @@ class ExceptionsTest : BaseTest() {
 
     @Test
     fun testWithParent() {
-        val function = result.dFunctions["raise_with_parent"]
+        val function = result.allFunctions["raise_with_parent"]
         assertNotNull(function)
-        val throwStmt = function.dThrows.singleOrNull()
+        val throwStmt = function.allThrows.singleOrNull()
         assertNotNull(throwStmt)
 
         val exception = throwStmt.exception
@@ -141,9 +141,9 @@ class ExceptionsTest : BaseTest() {
 
     @Test
     fun testEmpty() {
-        val function = result.dFunctions["raise_empty"]
+        val function = result.allFunctions["raise_empty"]
         assertNotNull(function)
-        val throwStmt = function.dThrows.singleOrNull()
+        val throwStmt = function.allThrows.singleOrNull()
         assertNotNull(throwStmt)
 
         assertNull(throwStmt.exception)
