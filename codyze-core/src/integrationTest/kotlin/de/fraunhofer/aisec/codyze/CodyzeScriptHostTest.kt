@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.codyze
 
-import de.fraunhofer.aisec.cpg.graph.dCalls
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
+import de.fraunhofer.aisec.cpg.graph.dCalls
 import de.fraunhofer.aisec.cpg.graph.dFunctions
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.query.*

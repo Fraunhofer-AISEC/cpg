@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.frontends.python.statementHandler
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.dParameters
+import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.nio.file.Path
 import kotlin.collections.component1

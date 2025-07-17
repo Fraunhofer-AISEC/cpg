@@ -34,9 +34,9 @@ import de.fraunhofer.aisec.cpg.graph.concepts.policy.Equals
 import de.fraunhofer.aisec.cpg.graph.concepts.policy.ExitBoundary
 import de.fraunhofer.aisec.cpg.graph.concepts.policy.Principal
 import de.fraunhofer.aisec.cpg.graph.concepts.policy.ProtectedAsset
+import de.fraunhofer.aisec.cpg.graph.dReturns
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.dReturns
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
