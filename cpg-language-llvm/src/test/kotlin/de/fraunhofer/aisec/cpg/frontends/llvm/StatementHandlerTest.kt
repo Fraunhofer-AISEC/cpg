@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
-import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.allFunctions
 import de.fraunhofer.aisec.cpg.graph.allVariables
+import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement

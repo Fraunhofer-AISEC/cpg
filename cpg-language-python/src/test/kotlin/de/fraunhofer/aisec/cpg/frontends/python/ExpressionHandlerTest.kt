@@ -53,7 +53,8 @@ class ExpressionHandlerTest {
         // We expect that lhs comes first in the EOG and then the rhs.
         assertContains(twoBoolOpCondition.lhs.nextEOG, twoBoolOpCondition.rhs)
 
-        val threeBoolOpCondition = result.allFunctions["threeBoolOp"]?.allIfs?.singleOrNull()?.condition
+        val threeBoolOpCondition =
+            result.allFunctions["threeBoolOp"]?.allIfs?.singleOrNull()?.condition
         assertIs<BinaryOperator>(threeBoolOpCondition)
         assertEquals("and", threeBoolOpCondition.operatorCode)
         assertLocalName("a", threeBoolOpCondition.lhs)

@@ -45,7 +45,8 @@ class CXXDeclarationTest {
             }
         assertNotNull(result)
 
-        val declaration = result.allFunctions[{ it.name.localName == "function" && !it.isDefinition }]
+        val declaration =
+            result.allFunctions[{ it.name.localName == "function" && !it.isDefinition }]
         assertNotNull(declaration)
 
         val definition = result.allFunctions[{ it.name.localName == "function" && it.isDefinition }]

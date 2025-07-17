@@ -618,7 +618,9 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
 
         // Look for an "argument holder". These can be different kind of nodes
         val holder =
-            ctx.currentComponent.allDescendants<ArgumentHolder> { it.hasArgument(hint) }.singleOrNull()
+            ctx.currentComponent
+                .allDescendants<ArgumentHolder> { it.hasArgument(hint) }
+                .singleOrNull()
         when (holder) {
             is UnaryOperator -> {
                 // If it's a boolean operator, the return type is probably a boolean

@@ -49,7 +49,9 @@ class SymbolResolverTest {
                 it.disableTypeObserver()
             }
         assertNotNull(result)
-        result.allRefs.forEach { assertNotNull(it.refersTo, "$it should not have an empty refersTo") }
+        result.allRefs.forEach {
+            assertNotNull(it.refersTo, "$it should not have an empty refersTo")
+        }
 
         val ifCondition = result.allIfs.firstOrNull()?.condition
         assertNotNull(ifCondition)

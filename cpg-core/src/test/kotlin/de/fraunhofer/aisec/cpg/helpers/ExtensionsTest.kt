@@ -30,6 +30,8 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.allProblems
+import de.fraunhofer.aisec.cpg.graph.allVariables
 import de.fraunhofer.aisec.cpg.graph.applyWithScope
 import de.fraunhofer.aisec.cpg.graph.builder.body
 import de.fraunhofer.aisec.cpg.graph.builder.declare
@@ -37,8 +39,6 @@ import de.fraunhofer.aisec.cpg.graph.builder.function
 import de.fraunhofer.aisec.cpg.graph.builder.problemDecl
 import de.fraunhofer.aisec.cpg.graph.builder.translationResult
 import de.fraunhofer.aisec.cpg.graph.builder.translationUnit
-import de.fraunhofer.aisec.cpg.graph.allProblems
-import de.fraunhofer.aisec.cpg.graph.allVariables
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression

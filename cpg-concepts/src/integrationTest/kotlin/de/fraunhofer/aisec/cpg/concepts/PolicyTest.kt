@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.concepts
 
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
+import de.fraunhofer.aisec.cpg.graph.allReturns
 import de.fraunhofer.aisec.cpg.graph.concepts.policy.Boundary
 import de.fraunhofer.aisec.cpg.graph.concepts.policy.CheckAccess
 import de.fraunhofer.aisec.cpg.graph.concepts.policy.Context
@@ -34,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.concepts.policy.Equals
 import de.fraunhofer.aisec.cpg.graph.concepts.policy.ExitBoundary
 import de.fraunhofer.aisec.cpg.graph.concepts.policy.Principal
 import de.fraunhofer.aisec.cpg.graph.concepts.policy.ProtectedAsset
-import de.fraunhofer.aisec.cpg.graph.allReturns
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement

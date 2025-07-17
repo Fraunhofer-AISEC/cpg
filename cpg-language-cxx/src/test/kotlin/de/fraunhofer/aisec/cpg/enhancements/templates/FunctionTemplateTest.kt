@@ -138,7 +138,8 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(typeT, `val`.type)
 
         // Check the invokes
-        val callInt2 = findByUniquePredicate(result.allCalls) { it.location!!.region.startLine == 12 }
+        val callInt2 =
+            findByUniquePredicate(result.allCalls) { it.location!!.region.startLine == 12 }
         assertEquals(1, callInt2.invokes.size)
         assertEquals(fixedMultiply, callInt2.invokes[0])
 

@@ -956,7 +956,9 @@ class PythonFrontendTest : BaseTest() {
         ) // including one dummy variable introduced for the loop var
         assertEquals(
             4,
-            p.allVariables.filter { !it.name.localName.contains(PythonHandler.LOOP_VAR_PREFIX) }.size,
+            p.allVariables
+                .filter { !it.name.localName.contains(PythonHandler.LOOP_VAR_PREFIX) }
+                .size,
         )
         assertEquals(2, p.statements.size)
 

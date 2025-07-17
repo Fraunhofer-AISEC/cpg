@@ -159,7 +159,9 @@ class CallResolverTest : BaseTest() {
 
         // Test functions (not methods!)
         val functions =
-            result.allFunctions { it.name.localName == "functionTarget" && it !is MethodDeclaration }
+            result.allFunctions {
+                it.name.localName == "functionTarget" && it !is MethodDeclaration
+            }
         val calls = findByName(result.allCalls, "functionTarget")
         checkCalls(intType, stringType, functions, calls)
         ensureNoUnknownClassDummies(records)

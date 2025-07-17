@@ -266,7 +266,8 @@ class DFGFunctionSummariesTest {
         assertNotNull(prevDfgOfParam0)
         assertEquals(param1, prevDfgOfParam0.start)
 
-        val returnA = main.allDescendants<ReturnStatement>().singleOrNull()?.returnValue as? Reference
+        val returnA =
+            main.allDescendants<ReturnStatement>().singleOrNull()?.returnValue as? Reference
         assertNotNull(returnA)
 
         assertEquals(mutableSetOf<Node>(returnA), param0.nextDFG)
@@ -332,7 +333,8 @@ class DFGFunctionSummariesTest {
         assertNotNull(prevDfgOfParam0)
         assertEquals(param1, prevDfgOfParam0.start)
 
-        val returnA = main.allDescendants<ReturnStatement>().singleOrNull()?.returnValue as? Reference
+        val returnA =
+            main.allDescendants<ReturnStatement>().singleOrNull()?.returnValue as? Reference
         assertNotNull(returnA)
 
         assertEquals(mutableSetOf<Node>(argA), param0.nextDFG)

@@ -27,9 +27,9 @@ package de.fraunhofer.aisec.cpg.enhancements
 
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.allDescendants
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.allDescendants
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -774,7 +774,9 @@ internal class EOGTest : BaseTest() {
 
         // Test If-Block
         val firstIf =
-            result.allDescendants<IfStatement>().filter { l -> l.location?.region?.startLine == 6 }[0]
+            result
+                .allDescendants<IfStatement>()
+                .filter { l -> l.location?.region?.startLine == 6 }[0]
         val a =
             result.allRefs[
                     { l: Reference ->

@@ -216,7 +216,9 @@ class MemoryTest {
     fun TranslationResult.mapNodesToConcepts(mapToFunctionDeclaration: Boolean) {
         // Secrets (key) concepts
         val keyRefLine1 =
-            allRefs.singleOrNull { it.name.localName == "key" && it.location?.region?.startLine == 1 }
+            allRefs.singleOrNull {
+                it.name.localName == "key" && it.location?.region?.startLine == 1
+            }
         val key = newSecret(underlyingNode = assertNotNull(keyRefLine1), connect = true)
         val getSecretFromServer =
             if (mapToFunctionDeclaration) {

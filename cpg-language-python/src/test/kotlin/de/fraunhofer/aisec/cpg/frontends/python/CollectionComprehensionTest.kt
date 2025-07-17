@@ -1082,7 +1082,8 @@ class CollectionComprehensionTest {
      * are used in an `AssignExpr`. See https://peps.python.org/pep-0572/#scope-of-the-target
      */
     fun testCompBindingAssignExpr() {
-        val compBindingAssignExprFunctionDeclaration = result.allFunctions["comp_binding_assign_expr"]
+        val compBindingAssignExprFunctionDeclaration =
+            result.allFunctions["comp_binding_assign_expr"]
         assertIs<FunctionDeclaration>(
             compBindingAssignExprFunctionDeclaration,
             "There must be a function called \"comp_binding_assign_expr\" in the file. It must be neither null nor any other class than a FunctionDeclaration.",

@@ -149,8 +149,10 @@ internal class ClassTemplateTest : BaseTest() {
                 "template<class Type1, class Type2> class Pair",
             )
         val pair = findByUniqueName(result.allRecords, "Pair")
-        val type1 = findByUniqueName(result.allDescendants<TypeParameterDeclaration>(), "class Type1")
-        val type2 = findByUniqueName(result.allDescendants<TypeParameterDeclaration>(), "class Type2")
+        val type1 =
+            findByUniqueName(result.allDescendants<TypeParameterDeclaration>(), "class Type1")
+        val type2 =
+            findByUniqueName(result.allDescendants<TypeParameterDeclaration>(), "class Type2")
         val first = findByUniqueName(result.allFields, "first")
         val second = findByUniqueName(result.allFields, "second")
         val constructor = pair.constructors["Pair"]
@@ -213,7 +215,9 @@ internal class ClassTemplateTest : BaseTest() {
         val pairConstructorDecl =
             findByUniqueName(result.allDescendants<ConstructorDeclaration>(), "Pair")
         val constructExpr =
-            findByUniquePredicate(result.allDescendants<ConstructExpression>()) { it.code == "Pair()" }
+            findByUniquePredicate(result.allDescendants<ConstructExpression>()) {
+                it.code == "Pair()"
+            }
         val literal3 = findByUniquePredicate(result.allLiterals) { it.value == 3 && !it.isImplicit }
         val literal3Implicit =
             findByUniquePredicate(result.allLiterals) { it.value == 3 && it.isImplicit }
@@ -300,14 +304,20 @@ internal class ClassTemplateTest : BaseTest() {
         val pair = findByUniqueName(result.allRecords, "Pair")
         val pairConstructorDecl =
             findByUniqueName(result.allDescendants<ConstructorDeclaration>(), "Pair")
-        val type1 = findByUniqueName(result.allDescendants<TypeParameterDeclaration>(), "class Type1")
+        val type1 =
+            findByUniqueName(result.allDescendants<TypeParameterDeclaration>(), "class Type1")
         val type2 =
-            findByUniqueName(result.allDescendants<TypeParameterDeclaration>(), "class Type2 = Type1")
+            findByUniqueName(
+                result.allDescendants<TypeParameterDeclaration>(),
+                "class Type2 = Type1",
+            )
         val first = findByUniqueName(result.allFields, "first")
         val second = findByUniqueName(result.allFields, "second")
         val point1 = findByUniqueName(result.allVariables, "point1")
         val constructExpr =
-            findByUniquePredicate(result.allDescendants<ConstructExpression>()) { it.code == "Pair()" }
+            findByUniquePredicate(result.allDescendants<ConstructExpression>()) {
+                it.code == "Pair()"
+            }
         assertEquals(1, template.realizations.size)
         assertEquals(pair, template.realizations[0])
         assertEquals(2, template.parameters.size)
@@ -358,7 +368,9 @@ internal class ClassTemplateTest : BaseTest() {
             )
         val pair = findByUniqueName(result.allRecords, "Pair")
         val constructExpr =
-            findByUniquePredicate(result.allDescendants<ConstructExpression>()) { it.code == "Pair()" }
+            findByUniquePredicate(result.allDescendants<ConstructExpression>()) {
+                it.code == "Pair()"
+            }
         val literal2 = findByUniquePredicate(result.allLiterals) { it.value == 2 && !it.isImplicit }
         assertNotNull(literal2)
         val literal2Implicit =
@@ -470,7 +482,8 @@ internal class ClassTemplateTest : BaseTest() {
             )
         val array = findByUniqueName(result.allRecords, "Array")
         val paramN = findByUniqueName(result.allParameters, "N")
-        val paramT = findByUniqueName(result.allDescendants<TypeParameterDeclaration>(), "typename T")
+        val paramT =
+            findByUniqueName(result.allDescendants<TypeParameterDeclaration>(), "typename T")
         val literal10 = findByUniquePredicate(result.allLiterals) { it.value == 10 }
         val mArray = findByUniqueName(result.allFields, "m_Array")
         assertEquals(2, template.parameters.size)

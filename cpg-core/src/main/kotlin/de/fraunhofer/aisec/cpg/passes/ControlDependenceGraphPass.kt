@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.allDescendants
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.cyclomaticComplexity
-import de.fraunhofer.aisec.cpg.graph.allDescendants
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
@@ -118,7 +118,8 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                     .filter { (k, _) ->
                         (k as? BranchingNode)?.branchedBy == node ||
                             node in
-                                ((k as? BranchingNode)?.branchedBy?.allDescendants<Node>() ?: listOf())
+                                ((k as? BranchingNode)?.branchedBy?.allDescendants<Node>()
+                                    ?: listOf())
                     }
                     .map { (k, _) -> k }
             if (conditionKeys.isNotEmpty()) {

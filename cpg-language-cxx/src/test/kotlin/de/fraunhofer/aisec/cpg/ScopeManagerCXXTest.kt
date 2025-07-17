@@ -52,7 +52,8 @@ internal class ScopeManagerTest : BaseTest() {
         val ctx = TranslationContext(config)
         val frontend = CXXLanguageFrontend(ctx, CPPLanguage())
         val tu = frontend.parse(File("src/test/resources/cxx/recordstmt.cpp"))
-        val methods = tu.allDescendants<MethodDeclaration>().filter { it !is ConstructorDeclaration }
+        val methods =
+            tu.allDescendants<MethodDeclaration>().filter { it !is ConstructorDeclaration }
         assertFalse(methods.isEmpty())
 
         methods.forEach {

@@ -125,12 +125,16 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // Replace the then-statement
         val thenGoto = (node.thenStatement as? GotoStatement)?.targetLabel?.subStatement
-        if (node.thenStatement in gotosToReplace && node !in thenGoto.allDescendants<IfStatement>()) {
+        if (
+            node.thenStatement in gotosToReplace && node !in thenGoto.allDescendants<IfStatement>()
+        ) {
             node.thenStatement = thenGoto
         }
         // Replace the else-statement
         val elseGoto = (node.elseStatement as? GotoStatement)?.targetLabel?.subStatement
-        if (node.elseStatement in gotosToReplace && node !in elseGoto.allDescendants<IfStatement>()) {
+        if (
+            node.elseStatement in gotosToReplace && node !in elseGoto.allDescendants<IfStatement>()
+        ) {
             node.elseStatement = elseGoto
         }
     }

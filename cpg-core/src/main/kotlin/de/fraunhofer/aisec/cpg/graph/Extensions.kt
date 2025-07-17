@@ -1334,7 +1334,8 @@ val Node?.allAssignments: List<Assignment>
 val VariableDeclaration.firstAssignment: Expression?
     get() {
         val start = this.scope?.astNode ?: return null
-        val assignments = start.allAssignments.filter { (it.target as? Reference)?.refersTo == this }
+        val assignments =
+            start.allAssignments.filter { (it.target as? Reference)?.refersTo == this }
 
         // We need to measure the distance between the start and each assignment value
         return assignments

@@ -247,7 +247,8 @@ class WithStatementTest : BaseTest() {
 
     @Test
     fun testWithContextManager() {
-        val testFunction = result.allFunctions.firstOrNull { it -> it.name.contains("test_function") }
+        val testFunction =
+            result.allFunctions.firstOrNull { it -> it.name.contains("test_function") }
         assertNotNull(testFunction)
 
         val withBlock =
@@ -340,7 +341,8 @@ class WithStatementTest : BaseTest() {
 
     @Test
     fun testMultiple() {
-        val testFunction = result.allFunctions.firstOrNull { it -> it.name.contains("test_multiple") }
+        val testFunction =
+            result.allFunctions.firstOrNull { it -> it.name.contains("test_multiple") }
         assertNotNull(testFunction)
 
         val withBlock =

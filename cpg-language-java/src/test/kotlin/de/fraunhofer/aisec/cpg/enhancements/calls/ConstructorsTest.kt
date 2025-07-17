@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.enhancements.calls
 
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
+import de.fraunhofer.aisec.cpg.graph.allDescendants
 import de.fraunhofer.aisec.cpg.graph.allVariables
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
-import de.fraunhofer.aisec.cpg.graph.allDescendants
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
