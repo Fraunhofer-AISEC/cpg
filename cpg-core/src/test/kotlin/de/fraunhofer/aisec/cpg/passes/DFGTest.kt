@@ -48,7 +48,8 @@ class DFGTest {
     fun testConditionalExpression() {
         val result = GraphExamples.getConditionalExpression()
 
-        val bJoin = result.dRefs[{ it.name.localName == "b" && it.location?.region?.startLine == 6 }]
+        val bJoin =
+            result.dRefs[{ it.name.localName == "b" && it.location?.region?.startLine == 6 }]
         val a5 =
             result.dRefs[
                     {

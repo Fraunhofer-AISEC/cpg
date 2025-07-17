@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationManager
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.dNodes
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 
 /**
  * This should ideally only be called once. It constructs a new global scope, which is not
