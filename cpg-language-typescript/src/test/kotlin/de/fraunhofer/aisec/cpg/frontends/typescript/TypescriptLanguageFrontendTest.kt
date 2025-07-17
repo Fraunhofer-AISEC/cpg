@@ -112,10 +112,10 @@ class TypeScriptLanguageFrontendTest {
 
         assertNotNull(tu)
 
-        val doJsx = tu.functions["doJsx"]
+        val doJsx = tu.dFunctions["doJsx"]
         assertNotNull(doJsx)
 
-        val returnStatement = doJsx.returns.firstOrNull()
+        val returnStatement = doJsx.dReturns.firstOrNull()
         assertNotNull(returnStatement)
 
         // check the return statement for the TSX statements
@@ -137,15 +137,15 @@ class TypeScriptLanguageFrontendTest {
 
         assertNotNull(tu)
 
-        val function = tu.functions["handleSubmit"]
+        val function = tu.dFunctions["handleSubmit"]
         assertNotNull(function)
 
-        val preventDefault = function.mcalls["preventDefault"]
+        val preventDefault = function.dMCalls["preventDefault"]
         assertNotNull(preventDefault)
         assertLocalName("preventDefault", preventDefault)
         assertLocalName("event", preventDefault.base)
 
-        val apiUrl = function.variables["apiUrl"]
+        val apiUrl = function.dVariables["apiUrl"]
         assertNotNull(apiUrl)
         assertLocalName("apiUrl", apiUrl)
 
@@ -154,7 +154,7 @@ class TypeScriptLanguageFrontendTest {
 
         assertEquals("/api/v1/groups", literalInitializer.value)
 
-        val token = function.variables["token"]
+        val token = function.dVariables["token"]
         assertNotNull(token)
         assertLocalName("token", token)
 
@@ -232,7 +232,7 @@ class TypeScriptLanguageFrontendTest {
 
         assertNotNull(tu)
 
-        val user = tu.records["User"]
+        val user = tu.dRecords["User"]
         assertNotNull(user)
         assertEquals("interface", user.kind)
         assertLocalName("User", user)
@@ -244,7 +244,7 @@ class TypeScriptLanguageFrontendTest {
         assertLocalName("lastName", lastName)
         assertEquals(tu.primitiveType("string"), lastName.type)
 
-        val usersState = tu.records["UsersState"]
+        val usersState = tu.dRecords["UsersState"]
         assertNotNull(usersState)
         assertEquals("interface", usersState.kind)
         assertLocalName("UsersState", usersState)
@@ -257,7 +257,7 @@ class TypeScriptLanguageFrontendTest {
         assertIs<PointerType>(users.type)
         assertLocalName("User[]", users.type)
 
-        val usersComponent = tu.records["Users"]
+        val usersComponent = tu.dRecords["Users"]
         assertNotNull(usersComponent)
         assertLocalName("Users", usersComponent)
         assertEquals(1, usersComponent.constructors.size)
@@ -267,7 +267,7 @@ class TypeScriptLanguageFrontendTest {
         val render = usersComponent.methods["render"]
         assertNotNull(render)
 
-        val returnStatement = render.returns.firstOrNull()
+        val returnStatement = render.dReturns.firstOrNull()
         assertNotNull(returnStatement)
 
         // check the return statement for the TSX statements
@@ -293,13 +293,13 @@ class TypeScriptLanguageFrontendTest {
 
         assertNotNull(tu)
 
-        val loginForm = tu.variables["LoginForm"]
+        val loginForm = tu.dVariables["LoginForm"]
         assertNotNull(loginForm)
 
         val lambdaFunction = (loginForm.initializer as? LambdaExpression)?.function
         assertNotNull(lambdaFunction)
 
-        val validateForm = lambdaFunction.functions["validateForm"]
+        val validateForm = lambdaFunction.dFunctions["validateForm"]
         assertNotNull(validateForm)
         assertLocalName("validateForm", validateForm)
     }
@@ -318,7 +318,7 @@ class TypeScriptLanguageFrontendTest {
 
         assertNotNull(tu)
 
-        val myClass = tu.records["MyClass"]
+        val myClass = tu.dRecords["MyClass"]
         assertNotNull(myClass)
         assertLocalName("awesome", myClass.annotations.firstOrNull())
 
@@ -384,7 +384,7 @@ class TypeScriptLanguageFrontendTest {
         assertNotNull(componentTU)
         assertNotNull(functionTu)
 
-        val users = componentTU.records["Users"]
+        val users = componentTU.dRecords["Users"]
         assertNotNull(users)
         assertEquals("Comment on a record", users.comment)
 
@@ -396,15 +396,15 @@ class TypeScriptLanguageFrontendTest {
         assertNotNull(j)
         assertEquals("Multiline comment inside of a file", j.comment)
 
-        var function = functionTu.functions["someFunction"]
+        var function = functionTu.dFunctions["someFunction"]
         assertNotNull(function)
         assertEquals("Block comment on a function", function.comment)
 
-        val variableDeclaration = function.allChildren<DeclarationStatement>().firstOrNull()
+        val variableDeclaration = function.descendants<DeclarationStatement>().firstOrNull()
         assertNotNull(variableDeclaration)
         assertEquals("Comment on a variable", variableDeclaration.comment)
 
-        function = functionTu.functions["someOtherFunction"]
+        function = functionTu.dFunctions["someOtherFunction"]
         assertNotNull(function)
         assertEquals("Comment on a Function", function.comment)
     }
