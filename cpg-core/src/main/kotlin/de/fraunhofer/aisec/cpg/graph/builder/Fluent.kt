@@ -823,7 +823,9 @@ fun LanguageFrontend<*, *>.loopBody(init: Block.() -> Unit): Block {
  */
 context(stmt: ForEachStatement)
 fun LanguageFrontend<*, *>.variable(init: ForEachStatement.() -> Statement): Statement {
-    return init(stmt)
+    val variable = init(stmt)
+    stmt.variable = variable
+    return variable
 }
 
 /**
@@ -833,7 +835,9 @@ fun LanguageFrontend<*, *>.variable(init: ForEachStatement.() -> Statement): Sta
  */
 context(stmt: ForEachStatement)
 fun LanguageFrontend<*, *>.iterable(init: ForEachStatement.() -> Statement): Statement {
-    return init(stmt)
+    val iterable = init(stmt)
+    stmt.iterable = iterable
+    return iterable
 }
 
 /**
