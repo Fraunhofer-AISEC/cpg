@@ -67,7 +67,9 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
     }
 
     // Get list of AbstractRepresentation of OWL classes
-    fun getAbstractRepresentationOfOWL(packageName: String?): List<ClassAbstractRepresentation> {
+    fun getAbstractRepresentationOfOWL(
+        packageName: String?
+    ): MutableList<ClassAbstractRepresentation> {
         val classes = ontology!!.classesInSignature
         val abstractRepresentationList: MutableList<ClassAbstractRepresentation> = ArrayList()
 

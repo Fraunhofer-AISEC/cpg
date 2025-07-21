@@ -26,11 +26,11 @@
 package de.fraunhofer.aisec.cpg.models
 
 class ClassAbstractRepresentation(val name: String, val parentClass: String) {
-    var objectProperties: List<Properties> = listOf()
-    var dataProperties: List<Properties> = listOf()
-    var resourceTypes: List<String> = listOf()
+    var objectProperties: List<Properties> = mutableListOf()
+    var dataProperties: List<Properties> = mutableListOf()
+    var resourceTypes: List<String> = mutableListOf()
 
-    var allParents: Set<ClassAbstractRepresentation> = setOf()
+    var allParents: Set<ClassAbstractRepresentation> = mutableSetOf()
 
     var packageName: String? = null
     var structDescription: String? = null

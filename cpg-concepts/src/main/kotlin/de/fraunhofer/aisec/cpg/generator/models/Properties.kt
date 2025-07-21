@@ -25,11 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.models
 
-class Properties {
+open class Properties {
     var propertyType: String = ""
     var propertyName: String = ""
     var propertyProperty: String = ""
     var propertyDescription: String = "" // needed ?
     var isRootClassNameResource = false
     var isInterface = false
+
+    constructor(propertyType: String = "", propertyName: String = "") {
+        this.propertyType = propertyType
+        this.propertyName = propertyName
+    }
 }
