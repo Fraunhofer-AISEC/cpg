@@ -224,6 +224,7 @@ class AbstractIntervalEvaluator {
                 ),
                 TupleStateElement(DeclarationStateElement(), NewIntervalStateElement()),
                 node,
+                null,
                 targetName,
             )
     }

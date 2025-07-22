@@ -65,6 +65,7 @@ class ArrayValueTest {
                         NewIntervalStateElement(),
                     ),
                     correctDeclaration,
+                    null,
                     name.localName,
                 ),
         )
@@ -91,6 +92,7 @@ class ArrayValueTest {
                         NewIntervalStateElement(),
                     ),
                     wrongNameDeclaration,
+                    null,
                     name.localName,
                 ),
         )
@@ -114,6 +116,7 @@ class ArrayValueTest {
                         NewIntervalStateElement(),
                     ),
                     noInitializerDeclaration,
+                    null,
                     name.localName,
                 ),
         )

@@ -46,6 +46,14 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
             LatticeInterval.Bound.INFINITE,
         )
 
+    fun duplicate(): LatticeInterval {
+        return when (this) {
+            is BOTTOM -> BOTTOM
+            is TOP -> TOP
+            is Bounded -> Bounded(lower, upper)
+        }
+    }
+
     /**
      * Explicit representation of an interval with a minimal value [lower] and a maximal value
      * [upper].
@@ -120,6 +128,30 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
                 is Value -> value.toString()
                 is INFINITE -> "INFINITE"
                 is NEGATIVE_INFINITE -> "NEGATIVE_INFINITE"
+            }
+        }
+
+        // Addition operator
+        operator fun plus(other: Bound): Bound {
+            return when {
+                this is INFINITE || other is INFINITE -> INFINITE
+                this is NEGATIVE_INFINITE || other is NEGATIVE_INFINITE -> NEGATIVE_INFINITE
+                this is Value && other is Value -> {
+                    Value(this.value + other.value)
+                }
+                else -> throw IllegalArgumentException("Unsupported bound type")
+            }
+        }
+
+        // Subtraction operator
+        operator fun minus(other: Bound): Bound {
+            return when {
+                this is INFINITE || other is NEGATIVE_INFINITE -> INFINITE
+                this is NEGATIVE_INFINITE || other is INFINITE -> NEGATIVE_INFINITE
+                this is Value && other is Value -> {
+                    Value(this.value - other.value)
+                }
+                else -> throw IllegalArgumentException("Unsupported bound type")
             }
         }
     }

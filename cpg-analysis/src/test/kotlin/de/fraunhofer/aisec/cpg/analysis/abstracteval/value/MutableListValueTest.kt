@@ -69,6 +69,7 @@ class MutableListValueTest {
                         NewIntervalStateElement(),
                     ),
                     correctDeclaration,
+                    null,
                     name.localName,
                 ),
         )
@@ -95,6 +96,7 @@ class MutableListValueTest {
                         NewIntervalStateElement(),
                     ),
                     wrongNameDeclaration,
+                    null,
                     name.localName,
                 ),
         )
@@ -118,6 +120,7 @@ class MutableListValueTest {
                         NewIntervalStateElement(),
                     ),
                     noInitializerDeclaration,
+                    null,
                     name.localName,
                 ),
         )
@@ -147,6 +150,7 @@ class MutableListValueTest {
                         NewIntervalStateElement(),
                     ),
                     add,
+                    null,
                     name.localName,
                 ),
         )
@@ -173,6 +177,7 @@ class MutableListValueTest {
                         NewIntervalStateElement(),
                     ),
                     addAll,
+                    null,
                     name.localName,
                 ),
         )
@@ -199,6 +204,7 @@ class MutableListValueTest {
                         NewIntervalStateElement(),
                     ),
                     clear,
+                    null,
                     name.localName,
                 ),
         )
@@ -228,6 +234,7 @@ class MutableListValueTest {
                         NewIntervalStateElement(),
                     ),
                     removeInt,
+                    null,
                     name.localName,
                 ),
         )
@@ -256,6 +263,7 @@ class MutableListValueTest {
                         NewIntervalStateElement(),
                     ),
                     removeObject,
+                    null,
                     name.localName,
                 ),
         )
@@ -282,6 +290,7 @@ class MutableListValueTest {
                         NewIntervalStateElement(),
                     ),
                     removeAll,
+                    null,
                     name.localName,
                 ),
         )
@@ -307,6 +316,7 @@ class MutableListValueTest {
                         NewIntervalStateElement(),
                     ),
                     wrongName,
+                    null,
                     name.localName,
                 ),
         )

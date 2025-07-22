@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
@@ -45,6 +46,7 @@ class ArrayValue : Value<LatticeInterval> {
         lattice: TupleState<Any>,
         state: TupleStateElement<Any>,
         node: Node,
+        edge: EvaluationOrder?,
         name: String?,
         computeWithoutPush: Boolean,
     ): LatticeInterval {

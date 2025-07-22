@@ -246,7 +246,12 @@ class NewAbstractIntervalEvaluator {
 
         analysisType
             .createInstance()
-            .applyEffect(lattice = lattice as TupleState<Any>, state = newState, node = currentNode)
+            .applyEffect(
+                lattice = lattice as TupleState<Any>,
+                state = newState,
+                node = currentNode,
+                edge = currentEdge,
+            )
 
         return newState
     }
