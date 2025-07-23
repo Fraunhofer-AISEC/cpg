@@ -52,7 +52,8 @@ fun writeKotlinClassesToFolder(
     outputBase: String,
     owl3: OWLCloudOntologyReader,
 ) {
-    // This method adds the Concept class to the ontology, which is necessary for the root nodes to extend from it.
+    // This method adds the Concept class to the ontology, which is necessary for the root nodes to
+    // extend from it.
     // The Concept class is not defined in the ontology, so we have to add it manually.
     // For Code generation this class will be ignored. Can be seen as a helper
     addConceptClassToOntology(sources)
@@ -60,7 +61,8 @@ fun writeKotlinClassesToFolder(
     var filepath: String
     for (ktSource in sources) {
 
-        // This is necessary to avoid writing the Concept class (which is already defined in another package)
+        // This is necessary to avoid writing the Concept class (which is already defined in another
+        // package)
         if (ktSource.name.equals("Concept")) continue
 
         filepath = outputBase + "/" + ktSource.name + ".kt"
