@@ -569,9 +569,10 @@ class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
                     "$other should be of type TupleLattice.Element<S, T> but is of type ${other.javaClass}"
                 )
 
-            val result1 = this.first.compare(other.first)
+            /*val result1 = this.first.compare(other.first)
             val result2 = this.second.compare(other.second)
-            return compareMultiple(result1, result2)
+            return compareMultiple(result1, result2)*/
+            return this.second.compare(other.second)
         }
 
         override fun duplicate(): Element<S, T> {
