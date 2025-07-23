@@ -1,0 +1,168 @@
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: strcpy
+  dataFlows:
+    - from: param1.deref
+      to: param0.deref
+      dfgType: full
+    - from: param0.deref
+      to: return
+      dfgType: full
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: memcpy
+  dataFlows:
+    - from: param1.deref
+      to: param0.deref
+      dfgType: full
+    - from: param0.deref
+      to: return
+      dfgType: full
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: memcpy_verw
+  dataFlows:
+    - from: param1.deref
+      to: param0.deref
+      dfgType: full
+    - from: param0.deref
+      to: return
+      dfgType: full
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: memcpy_s
+  dataFlows:
+    - from: param2.deref
+      to: param0.deref
+      dfgType: full
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: memcpy_verw_s
+  dataFlows:
+    - from: param2.deref
+      to: param0.deref
+      dfgType: full
+
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: sgx_sha256_update
+  dataFlows:
+    - from: param0.deref
+      to: param2.deref
+      dfgType: full
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: sgx_sha256_init
+  dataFlows:
+    - from: param0.deref
+      to: param0.deref
+      dfgType: full
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: sgx_ocall
+  dataFlows:
+    - from: param1.deref
+      to: param1.deref
+      dfgType: full
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: fread
+  dataFlows:
+    - from: param1.deref
+      to: param1.deref
+      dfgType: full
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: memset
+  dataFlows:
+    - from: param1
+      to: param0.deref
+      dfgType: full
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: malloc
+  dataFlows:
+    - from: NewMemoryAddress0
+      to: param0.deref
+      dfgType: full
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: ocall_malloc
+  dataFlows:
+    - from: param0.deref
+      to: param0.deref
+      dfgType: full
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: sgx_get_key
+  dataFlows:
+    - from: sgx_get_key.secret
+      to: param1.deref
+      dfgType: full
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: sgx_read_rand
+  dataFlows:
+    - from: sgx_read_rand.secret
+      to: param0.deref
+      dfgType: full
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: sgx_ra_get_keys
+  dataFlows:
+    - from: sgx_ra_get_keys.secret
+      to: param2.deref
+      dfgType: full
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: sgx_unseal_data
+  dataFlows:
+    - from: sgx_unseal_data.secret
+      to: param3.deref
+      dfgType: full
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: strncpy
+  dataFlows:
+    - from: param1.deref
+      to: param0.deref
+      dfgType: full
+
+
+- functionDeclaration:
+    language: CPPLanguage
+    methodName: allocTest
+    signature:
+      - void
+      - void
+  dataFlows:
+    - from: NewMemoryAddress0
+      to: param0.deref
+      dfgType: partial
+    - from: NewMemoryAddress0
+      to: param1.deref
+      dfgType: partial
+
+- functionDeclaration:
+    language: GhidraCPPLanguage
+    methodName: sgx_ocall
+  dataFlows:
+    - from: ocall
+      to: param1.deref
+      dfgType: full

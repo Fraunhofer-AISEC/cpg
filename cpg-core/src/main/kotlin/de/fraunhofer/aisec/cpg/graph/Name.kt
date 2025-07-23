@@ -38,7 +38,7 @@ import kotlin.uuid.Uuid
  */
 class Name(
     /** The local name (sometimes also called simple name) without any namespace information. */
-    val localName: String,
+    var localName: String,
     /** The parent name, e.g., the namespace this name lives in. */
     val parent: Name? = null,
     /** A potential namespace delimiter, usually either `.` or `::`. */
