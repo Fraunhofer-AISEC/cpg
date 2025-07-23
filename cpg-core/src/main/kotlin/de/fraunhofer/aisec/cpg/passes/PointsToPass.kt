@@ -640,14 +640,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     ),
             )
 
-        if (currentNode is CallExpression && currentNode.location?.region?.startLine == 14672)
-            println("Analyzing CE in 14672")
-        if (currentNode is CallExpression && currentNode.location?.region?.startLine == 14679)
-            println("Analyzing CE in 14679")
-        /*        println(
-            "${Runtime.getRuntime().freeMemory()} - ${Runtime.getRuntime().totalMemory()} - ${Runtime.getRuntime().maxMemory()}"
-        )*/
-
         doubleState =
             when (currentNode) {
                 is Declaration,
