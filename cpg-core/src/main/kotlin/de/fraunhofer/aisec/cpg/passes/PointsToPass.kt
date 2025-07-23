@@ -52,6 +52,8 @@ import kotlin.let
 import kotlin.text.contains
 
 val nodesCreatingUnknownValues = ConcurrentHashMap<Pair<Node, Name>, MemoryAddress>()
+var totalFunctionDeclarationCount = 0
+var analyzedFunctionDeclarationCount = 0
 
 typealias GeneralStateEntry =
     TripleLattice<
@@ -224,6 +226,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             return
         }
 
+        // If we haven't done so yet, set the total number of functions
+        if (totalFunctionDeclarationCount == 0)
+            totalFunctionDeclarationCount =
+                node.firstParentOrNull<TranslationUnitDeclaration>().functions.size
+
+        analyzedFunctionDeclarationCount++
         functionSummaryAnalysisChain.add(node)
 
         // Calculate the complexity of the function and see, if it exceeds our threshold
@@ -239,7 +247,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
 
         log.info(
-            "Analyzing function ${node.name}. Complexity: ${NumberFormat.getNumberInstance(Locale.US).format(c)}"
+            "Analyzing function ${node.name}. Complexity: ${NumberFormat.getNumberInstance(Locale.US).format(c)}. (Function $analyzedFunctionDeclarationCount / $totalFunctionDeclarationCount)"
         )
 
         val lattice =
