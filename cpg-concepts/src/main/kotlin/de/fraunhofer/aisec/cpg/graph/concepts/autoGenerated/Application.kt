@@ -7,8 +7,8 @@ import kotlin.String
 import kotlin.collections.MutableMap
 
 public abstract class Application(
-  programmingVersion: String,
   programmingLanguage: String,
+  programmingVersion: String,
   translationUnits: List<String>,
   automaticUpdates: AutomaticUpdates,
   compute: Compute,

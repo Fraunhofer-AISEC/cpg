@@ -7,8 +7,8 @@ import kotlin.String
 import kotlin.collections.MutableMap
 
 public abstract class MachineLearningModel(
-  explainability: Float,
   privacyLevel: Float,
+  explainability: Float,
   poisonLevel: Float,
   robustness: Float,
   adv_robustness: Float,

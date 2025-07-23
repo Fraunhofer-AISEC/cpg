@@ -7,8 +7,8 @@ import kotlin.String
 import kotlin.collections.MutableMap
 
 public abstract class Secret(
-  notBeforeDate: ZonedDateTime,
   expirationDate: ZonedDateTime,
+  notBeforeDate: ZonedDateTime,
   enabled: Boolean,
   isManaged: Boolean,
   usedByMultiple: Infrastructure,
@@ -25,6 +25,6 @@ public abstract class Secret(
   id: String,
   parent: Resource,
   underlyingNode: Node,
-) : Credential(notBeforeDate, expirationDate, enabled, isManaged, usedByMultiple,
+) : Credential(expirationDate, notBeforeDate, enabled, isManaged, usedByMultiple,
     internetAccessibleEndpoint, redundancies, loggings, geoLocation, usageStatistics, raw,
     creation_time, labels, name, description, id, parent, underlyingNode)

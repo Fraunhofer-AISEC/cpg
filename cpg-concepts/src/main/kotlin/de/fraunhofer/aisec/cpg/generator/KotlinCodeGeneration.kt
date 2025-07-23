@@ -128,6 +128,16 @@ private fun createKtSourceCodeString(
                 .addModifiers(KModifier.ABSTRACT)
     }
 
+    if (
+        ktSource.allParents.find { it.name == "Concept" } != null && ktSource.allParents.size == 1
+    ) {
+        // All root nodes have to inherit from the Concept class
+        classBuilder =
+            TypeSpec.classBuilder(ktSource.name)
+                .superclass(ClassName("de.fraunhofer.aisec.cpg.graph.concepts", "Concept"))
+                .addModifiers(KModifier.ABSTRACT)
+    }
+
     // Create a constructor builder for adding parameters.
     val constructorBuilder = FunSpec.constructorBuilder()
 

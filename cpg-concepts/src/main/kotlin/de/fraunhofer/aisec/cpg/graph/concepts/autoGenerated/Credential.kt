@@ -7,8 +7,8 @@ import kotlin.String
 import kotlin.collections.MutableMap
 
 public abstract class Credential(
-  notBeforeDate: ZonedDateTime,
   expirationDate: ZonedDateTime,
+  notBeforeDate: ZonedDateTime,
   enabled: Boolean,
   isManaged: Boolean,
   usedByMultiple: Infrastructure,
