@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.graph.allNodes
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import kotlin.math.min
@@ -84,7 +84,7 @@ fun TranslationResult.getNodesByRegion(
     location: PhysicalLocation,
     clsName: String? = null,
 ): List<Node> {
-    return this.nodes.filter { node ->
+    return this.allNodes.filter { node ->
         node.location == location && (clsName == null || node.javaClass.name == clsName)
     }
 }

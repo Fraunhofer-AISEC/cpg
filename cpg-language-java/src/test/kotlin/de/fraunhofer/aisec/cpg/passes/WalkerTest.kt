@@ -73,7 +73,7 @@ class WalkerTest {
             }
         }
 
-        val i2 = result.fields["i2"]
+        val i2 = result.allFields["i2"]
         assertNotNull(i2)
         assertContains(visitedNodes, i2)
     }

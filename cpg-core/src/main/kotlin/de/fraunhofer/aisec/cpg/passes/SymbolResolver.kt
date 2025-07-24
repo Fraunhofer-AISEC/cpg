@@ -481,7 +481,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
                     call,
                     true,
                     ctx,
-                    call.translationUnit,
+                    call.parentTranslationUnit,
                     false,
                 )
             if (ok) {

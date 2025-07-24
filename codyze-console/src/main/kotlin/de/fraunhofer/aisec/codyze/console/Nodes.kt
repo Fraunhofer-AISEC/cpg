@@ -308,7 +308,7 @@ fun AnalysisResult.toJSON(): AnalysisResultJSON =
     with(translationResult) {
         AnalysisResultJSON(
             components = components.map { it.toJSON() },
-            totalNodes = nodes.size,
+            totalNodes = allNodes.size,
             analysisResult = this@toJSON,
             sourceDir = config.sourceLocations.first().absolutePath,
             findings = sarif.runs.flatMap { it.results?.map { it.toJSON() } ?: emptyList() },
@@ -335,7 +335,7 @@ fun AnalysisProject.toJSON(): AnalysisProjectJSON {
 context(_: ContextProvider)
 fun TranslationUnitDeclaration.toJSON(): TranslationUnitJSON {
     val localName =
-        component?.topLevel()?.let {
+        parentComponent?.topLevel()?.let {
             this.location?.artifactLocation?.uri?.toPath()?.toFile()?.relativeToOrNull(it)
         }
 
@@ -378,8 +378,8 @@ fun Node.toJSON(noEdges: Boolean = false): NodeJSON {
         astChildren = if (noEdges) emptyList() else this.astChildren.map { it.toJSON() },
         prevDFG = if (noEdges) emptyList() else this.prevDFGEdges.map { it.toJSON() },
         nextDFG = if (noEdges) emptyList() else this.nextDFGEdges.map { it.toJSON() },
-        translationUnitId = this.translationUnit?.id,
-        componentName = this.component?.name?.toString(),
+        translationUnitId = this.parentTranslationUnit?.id,
+        componentName = this.parentComponent?.name?.toString(),
     )
 }
 
@@ -422,7 +422,7 @@ fun Result.toJSON(): FindingsJSON {
     return FindingsJSON(
         kind = this.kind?.name ?: "",
         path = path.toString(),
-        component = translationUnit?.component?.name?.toString(),
+        component = translationUnit?.parentComponent?.name?.toString(),
         rule = this.ruleID,
         startLine = this.locations?.firstOrNull()?.physicalLocation?.region?.startLine ?: -1,
         startColumn = this.locations?.firstOrNull()?.physicalLocation?.region?.startColumn ?: -1,

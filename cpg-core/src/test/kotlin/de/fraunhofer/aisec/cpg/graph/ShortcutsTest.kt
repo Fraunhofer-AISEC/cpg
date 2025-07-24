@@ -49,8 +49,8 @@ class ShortcutsTest {
             result.components
                 .flatMap { it.translationUnits }
                 .first()
-                .records["Dataflow"]
-                .methods["print"]
+                .allRecords["Dataflow"]
+                .allMethods["print"]
 
         val (fulfilled, failed) =
             toStringCall.followNextFullDFGEdgesUntilHit { it == printDecl?.parameters?.first() }
@@ -61,10 +61,10 @@ class ShortcutsTest {
 
     @Test
     fun testCalls() {
-        val actual = shortcutClassResult.calls
+        val actual = shortcutClassResult.allCalls
 
         val expected = mutableListOf<CallExpression>()
-        val classDecl = shortcutClassResult.records["ShortcutClass"]
+        val classDecl = shortcutClassResult.allRecords["ShortcutClass"]
         assertNotNull(classDecl)
 
         val main = classDecl.methods["main"]
@@ -114,7 +114,7 @@ class ShortcutsTest {
         val actual = result.callsByName("print")
 
         val expected = mutableListOf<CallExpression>()
-        val classDecl = result.records["ShortcutClass"]
+        val classDecl = result.allRecords["ShortcutClass"]
         assertNotNull(classDecl)
 
         val main = classDecl.methods["main"]
@@ -131,7 +131,7 @@ class ShortcutsTest {
     @Test
     fun testCalleesOf() {
         val expected = mutableListOf<FunctionDeclaration>()
-        val classDecl = shortcutClassResult.records["ShortcutClass"]
+        val classDecl = shortcutClassResult.allRecords["ShortcutClass"]
         assertNotNull(classDecl)
 
         val print = classDecl.methods["print"]
@@ -170,22 +170,22 @@ class ShortcutsTest {
 
     @Test
     fun testCallersOf() {
-        val classDecl = shortcutClassResult.records["ShortcutClass"]
+        val classDecl = shortcutClassResult.allRecords["ShortcutClass"]
         assertNotNull(classDecl)
         val print = classDecl.methods["print"]
         assertNotNull(print)
 
         val expected = mutableListOf<FunctionDeclaration>()
-        val main = classDecl.functions["main"]
+        val main = classDecl.allFunctions["main"]
         assertNotNull(main)
 
-        val scRefs = main.refs("sc")
+        val scRefs = main.allRefs("sc")
         scRefs.forEach {
             assertNotNull(it)
             assertLocalName("ShortcutClass", it.type)
         }
 
-        val printCall = main.calls["print"]
+        val printCall = main.allCalls["print"]
         assertFullName("ShortcutClass.print", printCall)
         expected.add(main)
 
@@ -198,7 +198,7 @@ class ShortcutsTest {
     @Test
     fun testControls() {
         val expected = mutableListOf<Node>()
-        val classDecl = shortcutClassResult.records["ShortcutClass"]
+        val classDecl = shortcutClassResult.allRecords["ShortcutClass"]
         assertNotNull(classDecl)
 
         val magic = classDecl.methods["magic"]
@@ -281,7 +281,7 @@ class ShortcutsTest {
             )
 
         val expected = mutableListOf<Node>()
-        val classDecl = result.records["ShortcutClass"]
+        val classDecl = result.allRecords["ShortcutClass"]
         assertNotNull(classDecl)
 
         val magic = classDecl.methods["magic"]
@@ -310,7 +310,7 @@ class ShortcutsTest {
 
     @Test
     fun testFollowPrevDFGEdgesUntilHit() {
-        val classDecl = shortcutClassResult.records["ShortcutClass"]
+        val classDecl = shortcutClassResult.allRecords["ShortcutClass"]
         assertNotNull(classDecl)
 
         val magic2 = classDecl.methods["magic2"]
@@ -358,7 +358,7 @@ class ShortcutsTest {
 
     @Test
     fun testFollowPrevEOGEdgesUntilHit() {
-        val classDecl = shortcutClassResult.records["ShortcutClass"]
+        val classDecl = shortcutClassResult.allRecords["ShortcutClass"]
         assertNotNull(classDecl)
 
         val magic = classDecl.methods["magic"]
@@ -388,7 +388,7 @@ class ShortcutsTest {
 
     @Test
     fun testFollowNextEOGEdgesUntilHit() {
-        val classDecl = shortcutClassResult.records["ShortcutClass"]
+        val classDecl = shortcutClassResult.allRecords["ShortcutClass"]
         assertNotNull(classDecl)
 
         val magic = classDecl.methods["magic"]
@@ -438,7 +438,7 @@ class ShortcutsTest {
 
     @Test
     fun testFollowPrevDFGEdges() {
-        val classDecl = shortcutClassResult.records["ShortcutClass"]
+        val classDecl = shortcutClassResult.allRecords["ShortcutClass"]
         assertNotNull(classDecl)
 
         val magic = classDecl.methods["magic"]

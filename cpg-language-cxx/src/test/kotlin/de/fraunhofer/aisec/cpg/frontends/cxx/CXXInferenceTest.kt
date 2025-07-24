@@ -46,7 +46,7 @@ class CXXInferenceTest {
             }
         assertNotNull(tu)
 
-        val global = tu.variables["somethingGlobal"]
+        val global = tu.allVariables["somethingGlobal"]
         assertNotNull(global)
 
         assertContains(tu.declarations, global)
@@ -66,7 +66,7 @@ class CXXInferenceTest {
         val util = tu.namespaces["util"]
         assertNotNull(util)
 
-        val someClass = util.records["SomeClass"]
+        val someClass = util.allRecords["SomeClass"]
         assertNotNull(someClass)
     }
 
@@ -88,7 +88,7 @@ class CXXInferenceTest {
         assertNotNull(some)
         assertTrue(some.isInferred)
 
-        val json = some.records["json"]
+        val json = some.allRecords["json"]
         assertNotNull(json)
         assertTrue(json.isInferred)
 
@@ -121,7 +121,7 @@ class CXXInferenceTest {
         assertTrue(isValid.isInferred)
         assertIs<BooleanType>(isValid.returnTypes.singleOrNull())
 
-        val log = tu.functions["log"]
+        val log = tu.allFunctions["log"]
         assertNotNull(log)
         assertIsNot<MethodDeclaration>(log)
         assertIs<GlobalScope>(log.scope)
@@ -141,31 +141,31 @@ class CXXInferenceTest {
             }
         assertNotNull(result)
 
-        val a = result.records["A"]
+        val a = result.allRecords["A"]
         assertNotNull(a)
         assertTrue(a.isInferred)
 
-        val n = result.namespaces["N"]
+        val n = result.allNamespaces["N"]
         assertNotNull(n)
         assertTrue(n.isInferred)
 
-        val b = n.records["N::B"]
+        val b = n.allRecords["N::B"]
         assertNotNull(b)
         assertTrue(b.isInferred)
 
-        val m = result.namespaces["M"]
+        val m = result.allNamespaces["M"]
         assertNotNull(m)
         assertTrue(m.isInferred)
 
-        val c = m.namespaces["M::C"]
+        val c = m.allNamespaces["M::C"]
         assertNotNull(c)
         assertTrue(c.isInferred)
 
-        val d = c.records["M::C::D"]
+        val d = c.allRecords["M::C::D"]
         assertNotNull(d)
         assertTrue(d.isInferred)
 
-        val e = result.records["E"]
+        val e = result.allRecords["E"]
         assertNotNull(e)
         assertTrue(e.isInferred)
     }
@@ -187,7 +187,7 @@ class CXXInferenceTest {
             val pairType = assertResolvedType("Pair")
             assertNotNull(pairType)
 
-            val pair = result.functions["Pair"]
+            val pair = result.allFunctions["Pair"]
             assertNotNull(pair)
             assertTrue(pair.isInferred)
             assertEquals(pairType, pair.returnTypes.singleOrNull())
@@ -208,16 +208,16 @@ class CXXInferenceTest {
         val util = tu.namespaces["ABC"]
         assertNotNull(util)
 
-        val recordABCA = util.records["A"]
+        val recordABCA = util.allRecords["A"]
         assertNotNull(recordABCA)
         assertTrue(recordABCA.isInferred)
 
-        val recordA = tu.records["A"]
+        val recordA = tu.allRecords["A"]
         assertNotNull(recordA)
-        val funcFoo = recordA.functions["foo"]
+        val funcFoo = recordA.allFunctions["foo"]
         assertNotNull(funcFoo)
         assertTrue(funcFoo.isInferred)
-        val funcBar = recordA.functions["bar"]
+        val funcBar = recordA.allFunctions["bar"]
         assertNotNull(funcBar)
         assertFalse(funcBar.isInferred)
     }

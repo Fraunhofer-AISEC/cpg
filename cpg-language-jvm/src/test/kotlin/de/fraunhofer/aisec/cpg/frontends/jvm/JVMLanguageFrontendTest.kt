@@ -54,7 +54,7 @@ class JVMLanguageFrontendTest {
             }
         assertNotNull(tu)
 
-        val helloWorld = tu.records["HelloWorld"]
+        val helloWorld = tu.allRecords["HelloWorld"]
         assertNotNull(helloWorld)
 
         val constructor = helloWorld.constructors.firstOrNull()
@@ -62,7 +62,7 @@ class JVMLanguageFrontendTest {
 
         // All references should be resolved (except Object.<init>, which should be a construct
         // expression anyway)
-        val refs = constructor.refs.filter { it.name.toString() != "java.lang.Object.<init>" }
+        val refs = constructor.allRefs.filter { it.name.toString() != "java.lang.Object.<init>" }
         refs.forEach {
             val refersTo = it.refersTo
             assertNotNull(refersTo, "${it.name} could not be resolved")
@@ -76,7 +76,7 @@ class JVMLanguageFrontendTest {
         assertNotNull(main)
         assertTrue(main.isStatic)
 
-        val param0 = main.refs["@parameter0"]
+        val param0 = main.allRefs["@parameter0"]
         assertNotNull(param0)
 
         val refersTo = param0.refersTo
@@ -98,29 +98,29 @@ class JVMLanguageFrontendTest {
                 it.registerLanguage<JVMLanguage>()
             }
         assertNotNull(tu)
-        assertEquals(0, tu.problems.size)
+        assertEquals(0, tu.allProblems.size)
 
         val pkg = tu.namespaces["mypackage"]
         assertNotNull(pkg)
 
-        val adder = pkg.records["Adder"]
+        val adder = pkg.allRecords["Adder"]
         assertNotNull(adder)
 
         val add = adder.methods["add"]
         assertNotNull(add)
 
-        val main = pkg.methods["Main.main"]
+        val main = pkg.allMethods["Main.main"]
         assertNotNull(main)
 
         println(main.code)
 
         // r5 contains our adder
-        val r5 = main.variables["r5"]
+        val r5 = main.allVariables["r5"]
         assertNotNull(r5)
         assertFullName("mypackage.Adder", r5.type)
 
         // r3 should be the result of the add call
-        val r3 = main.variables["r3"]
+        val r3 = main.allVariables["r3"]
         assertNotNull(r3)
 
         val r3ref = r3.usages.firstOrNull { it.access == AccessValues.WRITE }
@@ -134,7 +134,7 @@ class JVMLanguageFrontendTest {
         assertEquals(listOf("Integer", "Integer"), call.arguments.map { it.type.name.localName })
 
         // All references (which are not part of a call) and not to the stdlib should be resolved
-        val refs = tu.refs
+        val refs = tu.allRefs
         refs
             .filter { it.astParent !is CallExpression }
             .filter { !it.name.startsWith("java.") }
@@ -163,12 +163,12 @@ class JVMLanguageFrontendTest {
             }
         assertNotNull(result)
 
-        result.methods.forEach {
+        result.allMethods.forEach {
             println(it.name)
             println(it.code)
         }
 
-        assertEquals(0, result.problems.size)
+        assertEquals(0, result.allProblems.size)
     }
 
     @Test
@@ -185,8 +185,8 @@ class JVMLanguageFrontendTest {
                 it.registerLanguage<JVMLanguage>()
             }
         assertNotNull(tu)
-        assertEquals(0, tu.problems.size)
-        tu.methods.forEach { println(it.code) }
+        assertEquals(0, tu.allProblems.size)
+        tu.allMethods.forEach { println(it.code) }
     }
 
     @Test
@@ -203,23 +203,23 @@ class JVMLanguageFrontendTest {
                 it.registerLanguage<JVMLanguage>()
             }
         assertNotNull(tu)
-        tu.methods.forEach { println(it.code) }
-        assertEquals(0, tu.problems.size)
+        tu.allMethods.forEach { println(it.code) }
+        assertEquals(0, tu.allProblems.size)
 
-        val myInterface = tu.records["mypackage.MyInterface"]
+        val myInterface = tu.allRecords["mypackage.MyInterface"]
         assertNotNull(myInterface)
         assertEquals("interface", myInterface.kind)
 
-        val baseClass = tu.records["mypackage.BaseClass"]
+        val baseClass = tu.allRecords["mypackage.BaseClass"]
         assertNotNull(baseClass)
 
-        val extendedClass = tu.records["mypackage.ExtendedClass"]
+        val extendedClass = tu.allRecords["mypackage.ExtendedClass"]
         assertNotNull(extendedClass)
         assertContains(extendedClass.implementedInterfaces, myInterface.toType())
         assertContains(extendedClass.superTypeDeclarations, baseClass)
         assertContains(extendedClass.superTypeDeclarations, myInterface)
 
-        val anotherExtendedClass = tu.records["mypackage.AnotherExtendedClass"]
+        val anotherExtendedClass = tu.allRecords["mypackage.AnotherExtendedClass"]
         assertNotNull(anotherExtendedClass)
         assertContains(anotherExtendedClass.superTypeDeclarations, baseClass)
 
@@ -228,25 +228,25 @@ class JVMLanguageFrontendTest {
             listOf(extendedClass.toType(), anotherExtendedClass.toType()).commonType,
         )
 
-        val appInit = tu.methods["mypackage.Application.<init>"]
+        val appInit = tu.allMethods["mypackage.Application.<init>"]
         assertNotNull(appInit)
 
-        val appDoSomething = tu.methods["mypackage.Application.doSomething"]
+        val appDoSomething = tu.allMethods["mypackage.Application.doSomething"]
         assertNotNull(appDoSomething)
         assertLocalName("MyInterface", appDoSomething.parameters.firstOrNull()?.type)
 
         // Call doSomething in Application.<init> with an object of ExtendedClass, which should
         // fulfill the MyInterface of the needed parameter
-        val doSomethingCall1 = appInit.calls["doSomething"]
+        val doSomethingCall1 = appInit.allCalls["doSomething"]
         assertNotNull(doSomethingCall1)
         assertLocalName("ExtendedClass", doSomethingCall1.arguments.firstOrNull()?.type)
         assertInvokes(doSomethingCall1, appDoSomething)
 
-        val extended = appInit.variables["r4"]
+        val extended = appInit.allVariables["r4"]
         assertNotNull(extended)
 
         val getMyProperty =
-            appInit.calls[
+            appInit.allCalls[
                     {
                         it.name.localName == "getMyProperty" &&
                             it is MemberCallExpression &&
@@ -256,7 +256,7 @@ class JVMLanguageFrontendTest {
         assertInvokes(getMyProperty, baseClass.methods["getMyProperty"])
 
         val setMyProperty =
-            appInit.calls[
+            appInit.allCalls[
                     {
                         it.name.localName == "setMyProperty" &&
                             it is MemberCallExpression &&
@@ -280,10 +280,10 @@ class JVMLanguageFrontendTest {
                 it.registerLanguage<JVMLanguage>()
             }
         assertNotNull(tu)
-        assertEquals(0, tu.problems.size)
-        tu.methods.forEach { println(it.code) }
+        assertEquals(0, tu.allProblems.size)
+        tu.allMethods.forEach { println(it.code) }
 
-        val refs = tu.refs.filterIsInstance<MemberExpression>()
+        val refs = tu.allRefs.filterIsInstance<MemberExpression>()
         refs.forEach {
             val refersTo = it.refersTo
             assertNotNull(refersTo, "${it.name} could not be resolved")
@@ -293,7 +293,7 @@ class JVMLanguageFrontendTest {
             )
         }
 
-        val setACall = tu.calls["setA"]
+        val setACall = tu.allCalls["setA"]
         assertNotNull(setACall)
 
         val lit10 = setACall.arguments.firstOrNull()
@@ -317,7 +317,7 @@ class JVMLanguageFrontendTest {
             }
         assertNotNull(tu)
 
-        val haveFun = tu.methods["haveFunWithLiterals"]
+        val haveFun = tu.allMethods["haveFunWithLiterals"]
         assertNotNull(haveFun)
 
         println(haveFun.code)
@@ -337,13 +337,13 @@ class JVMLanguageFrontendTest {
                 it.registerLanguage<JVMLanguage>()
             }
         assertNotNull(tu)
-        tu.methods.forEach { println(it.code) }
-        assertEquals(0, tu.problems.size)
+        tu.allMethods.forEach { println(it.code) }
+        assertEquals(0, tu.allProblems.size)
 
-        val create = tu.methods["create"]
+        val create = tu.allMethods["create"]
         assertNotNull(create)
 
-        val r3 = create.variables["r3"]
+        val r3 = create.allVariables["r3"]
         assertNotNull(r3)
 
         var arrayType = r3.type
@@ -358,11 +358,11 @@ class JVMLanguageFrontendTest {
         assertIs<NewArrayExpression>(expr)
         assertLiteralValue(2, expr.dimensions.singleOrNull())
 
-        var r1 = create.variables["r1"]
+        var r1 = create.allVariables["r1"]
         assertNotNull(r1)
         assertEquals(arrayType.elementType, r1.type)
 
-        val r2 = create.variables["r2"]
+        val r2 = create.allVariables["r2"]
         assertNotNull(r2)
         assertEquals(arrayType.elementType, r2.type)
 
@@ -373,10 +373,10 @@ class JVMLanguageFrontendTest {
         assertIs<SubscriptExpression>(prevDFG)
         assertRefersTo(prevDFG.arrayExpression, r3)
 
-        val createMulti = tu.methods["createMulti"]
+        val createMulti = tu.allMethods["createMulti"]
         assertNotNull(createMulti)
 
-        r1 = createMulti.variables["r1"]
+        r1 = createMulti.allVariables["r1"]
         assertNotNull(r1)
 
         arrayType = r1.type
@@ -407,6 +407,6 @@ class JVMLanguageFrontendTest {
                 it.registerLanguage<JVMLanguage>()
             }
         assertNotNull(tu)
-        tu.methods.forEach { println(it.code) }
+        tu.allMethods.forEach { println(it.code) }
     }
 }

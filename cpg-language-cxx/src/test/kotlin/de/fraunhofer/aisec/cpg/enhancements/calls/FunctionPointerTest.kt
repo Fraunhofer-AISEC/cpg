@@ -55,9 +55,9 @@ internal class FunctionPointerTest : BaseTest() {
     @Throws(Exception::class)
     fun test(language: String, configModifier: Consumer<TranslationConfiguration.Builder>? = null) {
         val result = analyze(language, configModifier)
-        val functions = result.functions
+        val functions = result.allFunctions
         val main = functions["main", SearchModifier.UNIQUE]
-        val calls = main.calls
+        val calls = main.allCalls
         val noParam =
             functions[
                 { it.name.localName == "target" && it.parameters.isEmpty() }, SearchModifier.UNIQUE]
@@ -129,7 +129,7 @@ internal class FunctionPointerTest : BaseTest() {
                 }
                 else -> fail("Unexpected call $callName")
             }
-            val variables = result.variables
+            val variables = result.allVariables
 
             for (variable in variables) {
                 when (variable.name.localName) {

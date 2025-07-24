@@ -46,10 +46,10 @@ class UnreachableEOGPassTest {
 
     @Test
     fun testIfBothPossible() {
-        val method = tu.functions["ifBothPossible"]
+        val method = tu.allFunctions["ifBothPossible"]
         assertNotNull(method)
 
-        val ifStatement = method.ifs.firstOrNull()
+        val ifStatement = method.allIfs.firstOrNull()
         assertNotNull(ifStatement)
 
         for (edge in ifStatement.nextEOGEdges) {
@@ -59,10 +59,10 @@ class UnreachableEOGPassTest {
 
     @Test
     fun testIfTrue() {
-        val method = tu.functions["ifTrue"]
+        val method = tu.allFunctions["ifTrue"]
         assertNotNull(method)
 
-        val ifStatement = method.ifs.firstOrNull()
+        val ifStatement = method.allIfs.firstOrNull()
         assertNotNull(ifStatement)
 
         // Check if the then-branch is set as reachable including all the edges until reaching the
@@ -109,10 +109,10 @@ class UnreachableEOGPassTest {
 
     @Test
     fun testIfFalse() {
-        val method = tu.functions["ifFalse"]
+        val method = tu.allFunctions["ifFalse"]
         assertNotNull(method)
 
-        val ifStatement = method.ifs.firstOrNull()
+        val ifStatement = method.allIfs.firstOrNull()
         assertNotNull(ifStatement)
 
         assertFalse(ifStatement.nextEOGEdges[1].unreachable)
@@ -121,10 +121,10 @@ class UnreachableEOGPassTest {
 
     @Test
     fun testIfTrueComputed() {
-        val method = tu.functions["ifTrueComputed"]
+        val method = tu.allFunctions["ifTrueComputed"]
         assertNotNull(method)
 
-        val ifStatement = method.ifs.firstOrNull()
+        val ifStatement = method.allIfs.firstOrNull()
         assertNotNull(ifStatement)
 
         assertFalse(ifStatement.nextEOGEdges[0].unreachable)
@@ -133,10 +133,10 @@ class UnreachableEOGPassTest {
 
     @Test
     fun testIfFalseComputed() {
-        val method = tu.functions["ifFalseComputed"]
+        val method = tu.allFunctions["ifFalseComputed"]
         assertNotNull(method)
 
-        val ifStatement = method.ifs.firstOrNull()
+        val ifStatement = method.allIfs.firstOrNull()
         assertNotNull(ifStatement)
 
         assertFalse(ifStatement.nextEOGEdges[1].unreachable)
@@ -145,10 +145,10 @@ class UnreachableEOGPassTest {
 
     @Test
     fun testWhileTrueEndless() {
-        val method = tu.functions["whileTrueEndless"]
+        val method = tu.allFunctions["whileTrueEndless"]
         assertNotNull(method)
 
-        val whileStatement = method.whileLoops.firstOrNull()
+        val whileStatement = method.allWhileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
         assertFalse(whileStatement.nextEOGEdges[0].unreachable)
@@ -157,10 +157,10 @@ class UnreachableEOGPassTest {
 
     @Test
     fun testWhileTrue() {
-        val method = tu.functions["whileTrue"]
+        val method = tu.allFunctions["whileTrue"]
         assertNotNull(method)
 
-        val whileStatement = method.whileLoops.firstOrNull()
+        val whileStatement = method.allWhileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
         assertFalse(whileStatement.nextEOGEdges[0].unreachable)
@@ -169,10 +169,10 @@ class UnreachableEOGPassTest {
 
     @Test
     fun testWhileComputedTrue() {
-        val method = tu.functions["whileComputedTrue"]
+        val method = tu.allFunctions["whileComputedTrue"]
         assertNotNull(method)
 
-        val whileStatement = method.whileLoops.firstOrNull()
+        val whileStatement = method.allWhileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
         assertFalse(whileStatement.nextEOGEdges[0].unreachable)
@@ -181,10 +181,10 @@ class UnreachableEOGPassTest {
 
     @Test
     fun testWhileFalse() {
-        val method = tu.functions["whileFalse"]
+        val method = tu.allFunctions["whileFalse"]
         assertNotNull(method)
 
-        val whileStatement = method.whileLoops.firstOrNull()
+        val whileStatement = method.allWhileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
         assertFalse(whileStatement.nextEOGEdges[1].unreachable)
@@ -193,10 +193,10 @@ class UnreachableEOGPassTest {
 
     @Test
     fun testWhileComputedFalse() {
-        val method = tu.functions["whileComputedFalse"]
+        val method = tu.allFunctions["whileComputedFalse"]
         assertNotNull(method)
 
-        val whileStatement = method.whileLoops.firstOrNull()
+        val whileStatement = method.allWhileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
         assertFalse(whileStatement.nextEOGEdges[1].unreachable)
@@ -205,10 +205,10 @@ class UnreachableEOGPassTest {
 
     @Test
     fun testWhileUnknown() {
-        val method = tu.functions["whileUnknown"]
+        val method = tu.allFunctions["whileUnknown"]
         assertNotNull(method)
 
-        val whileStatement = method.whileLoops.firstOrNull()
+        val whileStatement = method.allWhileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
         assertFalse(whileStatement.nextEOGEdges[1].unreachable)

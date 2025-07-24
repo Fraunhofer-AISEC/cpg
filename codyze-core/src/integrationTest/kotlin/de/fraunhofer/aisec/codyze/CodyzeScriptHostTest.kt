@@ -25,10 +25,10 @@
  */
 package de.fraunhofer.aisec.codyze
 
-import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.allCalls
+import de.fraunhofer.aisec.cpg.graph.allFunctions
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
-import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.query.*
 import de.fraunhofer.aisec.cpg.test.assertInvokes
@@ -50,13 +50,13 @@ class CodyzeExecutorTest {
         val result = project.analyze()
         assertNotNull(result)
 
-        val foo = result.translationResult.functions["foo"]
+        val foo = result.translationResult.allFunctions["foo"]
         assertNotNull(foo)
 
-        val encrypt = result.translationResult.functions["encrypt"]
+        val encrypt = result.translationResult.allFunctions["encrypt"]
         assertNotNull(encrypt)
 
-        val specialFunc = result.translationResult.functions["special_func"]
+        val specialFunc = result.translationResult.allFunctions["special_func"]
         assertNotNull(specialFunc)
         assertFalse(specialFunc.isInferred)
 
@@ -66,11 +66,11 @@ class CodyzeExecutorTest {
         assertEquals(true, result.requirementsResults["RQ-ENCRYPTION-002"]?.value)
         assertEquals(AcceptedResult, result.requirementsResults["RQ-ENCRYPTION-002"]?.confidence)
 
-        val myFuncCall = result.translationResult.calls["special_func"]
+        val myFuncCall = result.translationResult.allCalls["special_func"]
         assertNotNull(myFuncCall)
         assertInvokes(myFuncCall, specialFunc)
 
-        val getSecretCall = result.translationResult.calls["get_secret_from_server"]
+        val getSecretCall = result.translationResult.allCalls["get_secret_from_server"]
         assertNotNull(getSecretCall)
 
         val secret = getSecretCall.conceptNodes.filterIsInstance<Secret>().singleOrNull()

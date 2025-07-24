@@ -64,7 +64,7 @@ class SimpleDFAOrderEvaluationTest {
 
     @Test
     fun testSuccessForFSM() {
-        val functionOk = tu.records["SimpleOrder"].functions["ok"]
+        val functionOk = tu.allRecords["SimpleOrder"].allFunctions["ok"]
         assertNotNull(functionOk)
 
         val p4Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
@@ -83,7 +83,7 @@ class SimpleDFAOrderEvaluationTest {
 
     @Test
     fun testSuccessWithIgnoredFunctionFSM() {
-        val functionOk = tu.records["SimpleOrder"].functions["ok2"]
+        val functionOk = tu.allRecords["SimpleOrder"].allFunctions["ok2"]
         assertNotNull(functionOk)
 
         val p4Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
@@ -103,7 +103,7 @@ class SimpleDFAOrderEvaluationTest {
 
     @Test
     fun testSuccessWithIfElseFSM() {
-        val functionOk = tu.records["SimpleOrder"].functions["ok3"]
+        val functionOk = tu.allRecords["SimpleOrder"].allFunctions["ok3"]
         assertNotNull(functionOk)
 
         val p4Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
@@ -132,7 +132,7 @@ class SimpleDFAOrderEvaluationTest {
 
     @Test
     fun testFailWrongStartFSM() {
-        val functionOk = tu.records["SimpleOrder"].functions["nok1"]
+        val functionOk = tu.allRecords["SimpleOrder"].allFunctions["nok1"]
         assertNotNull(functionOk)
 
         val pDecl = functionOk.bodyOrNull<DeclarationStatement>(0)
@@ -154,7 +154,7 @@ class SimpleDFAOrderEvaluationTest {
 
     @Test
     fun testFailIncompleteFSM() {
-        val functionOk = tu.records["SimpleOrder"].functions["nok2"]
+        val functionOk = tu.allRecords["SimpleOrder"].allFunctions["nok2"]
         assertNotNull(functionOk)
 
         val p2Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
@@ -172,7 +172,7 @@ class SimpleDFAOrderEvaluationTest {
 
     @Test
     fun testFailConditionallyIncompleteFSM() {
-        val functionOk = tu.records["SimpleOrder"].functions["nok3"]
+        val functionOk = tu.allRecords["SimpleOrder"].allFunctions["nok3"]
         assertNotNull(functionOk)
 
         val p3Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
@@ -194,7 +194,7 @@ class SimpleDFAOrderEvaluationTest {
 
     @Test
     fun testFailDoubleInitFSM() {
-        val functionOk = tu.records["SimpleOrder"].functions["nok4"]
+        val functionOk = tu.allRecords["SimpleOrder"].allFunctions["nok4"]
         assertNotNull(functionOk)
 
         val p4Decl = functionOk.bodyOrNull<DeclarationStatement>(0)

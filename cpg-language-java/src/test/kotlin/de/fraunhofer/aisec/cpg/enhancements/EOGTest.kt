@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.enhancements
 
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.allChildren
+import de.fraunhofer.aisec.cpg.graph.allDescendants
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -558,10 +558,10 @@ internal class EOGTest : BaseTest() {
             nodes.filterIsInstance<FunctionDeclaration>().filter { it !is ConstructorDeclaration }
 
         // main()
-        var swch = functions[0].allChildren<SwitchStatement>()[0]
+        var swch = functions[0].allDescendants<SwitchStatement>()[0]
         var prints = Util.subnodesOfCode(functions[0], refNodeString)
-        var cases = swch.allChildren<CaseStatement>()
-        var defaults = swch.allChildren<DefaultStatement>()
+        var cases = swch.allDescendants<CaseStatement>()
+        var defaults = swch.allDescendants<DefaultStatement>()
         assertTrue(
             Util.eogConnect(
                 edgeDirection = Util.Edge.EXITS,
@@ -614,7 +614,7 @@ internal class EOGTest : BaseTest() {
         }
 
         // Assert: All breaks inside of switch connect to the switch root node
-        for (b in swch.allChildren<BreakStatement>()) assertTrue(
+        for (b in swch.allDescendants<BreakStatement>()) assertTrue(
             Util.eogConnect(
                 Util.Quantifier.ALL,
                 Connect.SUBTREE,
@@ -626,11 +626,11 @@ internal class EOGTest : BaseTest() {
         )
 
         // whileswitch
-        swch = functions[1].allChildren<SwitchStatement>()[0]
+        swch = functions[1].allDescendants<SwitchStatement>()[0]
         prints = Util.subnodesOfCode(functions[1], refNodeString)
-        cases = swch.allChildren<CaseStatement>()
-        defaults = swch.allChildren<DefaultStatement>()
-        val wstat = functions[1].allChildren<WhileStatement>().firstOrNull()
+        cases = swch.allDescendants<CaseStatement>()
+        defaults = swch.allDescendants<DefaultStatement>()
+        val wstat = functions[1].allDescendants<WhileStatement>().firstOrNull()
         assertNotNull(wstat)
         assertTrue(
             Util.eogConnect(
@@ -668,7 +668,7 @@ internal class EOGTest : BaseTest() {
         )
 
         // switch-while
-        swch = functions[2].allChildren<SwitchStatement>()[0]
+        swch = functions[2].allDescendants<SwitchStatement>()[0]
         prints = Util.subnodesOfCode(functions[2], refNodeString)
         assertTrue(
             Util.eogConnect(
@@ -693,9 +693,9 @@ internal class EOGTest : BaseTest() {
                 endNodes = listOf(swch),
             )
         )
-        swch = functions[1].allChildren<SwitchStatement>()[0]
+        swch = functions[1].allDescendants<SwitchStatement>()[0]
         prints = Util.subnodesOfCode(functions[1], refNodeString)
-        var breaks = swch.allChildren<BreakStatement>()
+        var breaks = swch.allDescendants<BreakStatement>()
 
         // Assert: while-switch, all breaks inside the switch connect to the containing switch
         // unless it has a label which connects the break to the  while
@@ -721,8 +721,8 @@ internal class EOGTest : BaseTest() {
             }
         }
         prints = Util.subnodesOfCode(functions[2], refNodeString)
-        val whiles = functions[2].allChildren<WhileStatement>()[0]
-        breaks = whiles.allChildren<BreakStatement>()
+        val whiles = functions[2].allDescendants<WhileStatement>()[0]
+        breaks = whiles.allDescendants<BreakStatement>()
 
         // Assert: switch-while, all breaks inside the while connect to the containing while unless
         // it has a label which connects the break to the switch
@@ -774,14 +774,16 @@ internal class EOGTest : BaseTest() {
 
         // Test If-Block
         val firstIf =
-            result.allChildren<IfStatement>().filter { l -> l.location?.region?.startLine == 6 }[0]
+            result
+                .allDescendants<IfStatement>()
+                .filter { l -> l.location?.region?.startLine == 6 }[0]
         val a =
-            result.refs[
+            result.allRefs[
                     { l: Reference ->
                         l.location?.region?.startLine == 8 && l.name.localName == "a"
                     }]
         assertNotNull(a)
-        val b = result.refs[{ it.location?.region?.startLine == 7 && it.name.localName == "b" }]
+        val b = result.allRefs[{ it.location?.region?.startLine == 7 && it.name.localName == "b" }]
         assertNotNull(b)
         var nextEOG = firstIf.nextEOGEdges
         assertEquals(2, nextEOG.size)
@@ -798,12 +800,12 @@ internal class EOGTest : BaseTest() {
         }
         val elseIf: IfStatement =
             result
-                .allChildren<IfStatement>()
+                .allDescendants<IfStatement>()
                 .filter { l: IfStatement -> l.location?.region?.startLine == 8 }[0]
         assertEquals(elseIf, firstIf.elseStatement)
-        val b2 = result.refs[{ it.location?.region?.startLine == 9 && it.name.localName == "b" }]
+        val b2 = result.allRefs[{ it.location?.region?.startLine == 9 && it.name.localName == "b" }]
         assertNotNull(b2)
-        val x = result.refs[{ it.location?.region?.startLine == 11 && it.name.localName == "x" }]
+        val x = result.allRefs[{ it.location?.region?.startLine == 11 && it.name.localName == "x" }]
         assertNotNull(x)
         nextEOG = elseIf.nextEOGEdges
         assertEquals(2, nextEOG.size)

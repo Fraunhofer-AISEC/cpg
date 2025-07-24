@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.concepts
 
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
-import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.allCalls
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.file.File
 import de.fraunhofer.aisec.cpg.graph.invoke
@@ -62,7 +62,7 @@ class LoadPersistedConceptsTest : BaseTest() {
         val fileConcept = result.conceptNodes.singleOrNull { it is File }
         assertIs<File>(fileConcept)
 
-        val openCall = result.calls("open").singleOrNull()
+        val openCall = result.allCalls("open").singleOrNull()
         assertNotNull(openCall)
 
         assertTrue(
@@ -102,7 +102,7 @@ class LoadPersistedConceptsTest : BaseTest() {
         val fileConcept = result.conceptNodes.singleOrNull { it is File }
         assertIs<File>(fileConcept)
 
-        val openCall = result.calls("open").singleOrNull()
+        val openCall = result.allCalls("open").singleOrNull()
         assertNotNull(openCall)
 
         assertTrue(

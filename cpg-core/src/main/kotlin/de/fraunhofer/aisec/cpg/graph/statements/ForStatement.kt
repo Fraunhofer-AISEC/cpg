@@ -112,7 +112,7 @@ class ForStatement : LoopStatement(), BranchingNode, StatementHolder {
     }
 
     override fun getStartingPrevEOG(): Collection<Node> {
-        val astChildren = this.allChildren<Node> { true }
+        val astChildren = this.allDescendants<Node> { true }
         return initializerStatement?.getStartingPrevEOG()
             ?: this.condition?.getStartingPrevEOG()?.filter { it !in astChildren }
             ?: this.conditionDeclaration?.getStartingPrevEOG()?.filter { it !in astChildren }
@@ -120,6 +120,6 @@ class ForStatement : LoopStatement(), BranchingNode, StatementHolder {
     }
 
     override fun getExitNextEOG(): Collection<Node> {
-        return this.nextEOG.filter { it !in statement.allChildren<Node> { true } }
+        return this.nextEOG.filter { it !in statement.allDescendants<Node> { true } }
     }
 }

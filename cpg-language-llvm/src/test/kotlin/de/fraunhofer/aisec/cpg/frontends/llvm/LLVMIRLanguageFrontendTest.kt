@@ -75,7 +75,7 @@ class LLVMIRLanguageFrontendTest {
 
         assertEquals(1, tu.declarations.size)
 
-        val main = tu.functions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
         assertLocalName("i32", main.type)
 
@@ -106,10 +106,10 @@ class LLVMIRLanguageFrontendTest {
 
         assertNotNull(tu)
 
-        val rt = tu.records["struct.RT"]
+        val rt = tu.allRecords["struct.RT"]
         assertNotNull(rt)
 
-        val st = tu.records["struct.ST"]
+        val st = tu.allRecords["struct.ST"]
         assertNotNull(st)
 
         assertEquals(3, st.fields.size)
@@ -127,13 +127,13 @@ class LLVMIRLanguageFrontendTest {
         assertLocalName("struct.RT", field.type)
         assertSame(rt, (field.type as? ObjectType)?.recordDeclaration)
 
-        val foo = tu.functions["foo"]
+        val foo = tu.allFunctions["foo"]
         assertNotNull(foo)
 
         val s = foo.parameters.firstOrNull { it.name.localName == "s" }
         assertNotNull(s)
 
-        val arrayidx = foo.variables["arrayidx"]
+        val arrayidx = foo.allVariables["arrayidx"]
         assertNotNull(arrayidx)
 
         // arrayidx will be assigned to a chain of the following expressions:
@@ -194,32 +194,32 @@ class LLVMIRLanguageFrontendTest {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
-        val main = tu.functions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
-        val onzeroLabel = main.labels.getOrNull(0)
+        val onzeroLabel = main.allLabels.getOrNull(0)
         assertNotNull(onzeroLabel)
         assertLocalName("onzero", onzeroLabel)
         assertIs<Block>(onzeroLabel.subStatement)
 
-        val ononeLabel = main.labels.getOrNull(1)
+        val ononeLabel = main.allLabels.getOrNull(1)
         assertNotNull(ononeLabel)
         assertLocalName("onone", ononeLabel)
         assertIs<Block>(ononeLabel.subStatement)
 
-        val defaultLabel = main.labels.getOrNull(2)
+        val defaultLabel = main.allLabels.getOrNull(2)
         assertNotNull(defaultLabel)
         assertLocalName("otherwise", defaultLabel)
         assertIs<Block>(defaultLabel.subStatement)
 
         // Check that the type of %a is i32
-        val a = main.variables["a"]
+        val a = main.allVariables["a"]
         assertNotNull(a)
         assertLocalName("a", a)
         assertEquals("i32", a.type.typeName)
 
         // Check that the jump targets are set correctly
-        val switchStatement = main.switches.firstOrNull()
+        val switchStatement = main.allSwitches.firstOrNull()
         assertNotNull(switchStatement)
 
         // Check that we have switch(a)
@@ -254,7 +254,7 @@ class LLVMIRLanguageFrontendTest {
 
         assertEquals(2, tu.declarations.size)
 
-        val main = tu.functions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
         // Test that the types and values of the comparison expression are correct
@@ -278,7 +278,7 @@ class LLVMIRLanguageFrontendTest {
         assertSame(tu.primitiveType("i32"), lhsDeclaration.type)
 
         // Check that the jump targets are set correctly
-        val ifStatement = main.ifs.firstOrNull()
+        val ifStatement = main.allIfs.firstOrNull()
         assertNotNull(ifStatement)
         val elseStatement = ifStatement.elseStatement
         assertIs<GotoStatement>(elseStatement)
@@ -345,7 +345,7 @@ class LLVMIRLanguageFrontendTest {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
-        val foo = tu.functions["foo"]
+        val foo = tu.allFunctions["foo"]
         assertNotNull(foo)
 
         val cmpxchgStatement = foo.bodyOrNull<Block>(10)
@@ -400,7 +400,7 @@ class LLVMIRLanguageFrontendTest {
         assertLocalName("ptr", thenExprLhs.input)
         assertIs<Reference>(thenExpr.rhs.first())
         assertLocalName("old1", thenExpr.rhs.first())
-        assertRefersTo(thenExpr.rhs.first(), tu.variables["old1"])
+        assertRefersTo(thenExpr.rhs.first(), tu.allVariables["old1"])
     }
 
     @Test
@@ -415,10 +415,10 @@ class LLVMIRLanguageFrontendTest {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
-        val foo = tu.functions["foo"]
+        val foo = tu.allFunctions["foo"]
         assertNotNull(foo)
 
-        val declaration = foo.variables["value_loaded"]
+        val declaration = foo.allVariables["value_loaded"]
         assertNotNull(declaration)
         assertLocalName("i1", declaration.type)
 
@@ -443,7 +443,7 @@ class LLVMIRLanguageFrontendTest {
 
         assertNotNull(tu)
 
-        val foo = tu.functions["foo"]
+        val foo = tu.allFunctions["foo"]
         assertNotNull(foo)
         val fooType = foo.type
         assertIs<ObjectType>(fooType)
@@ -453,7 +453,7 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(record)
         assertEquals(2, record.fields.size)
 
-        val returnStatement = foo.returns.singleOrNull()
+        val returnStatement = foo.allReturns.singleOrNull()
         assertNotNull(returnStatement)
 
         val construct = returnStatement.returnValue
@@ -481,14 +481,14 @@ class LLVMIRLanguageFrontendTest {
 
         assertNotNull(tu)
 
-        val main = tu.functions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
-        val globalX = tu.variables["x"]
+        val globalX = tu.allVariables["x"]
         assertNotNull(globalX)
         assertEquals("i32*", globalX.type.typeName)
 
-        val globalA = tu.variables["a"]
+        val globalA = tu.allVariables["a"]
         assertNotNull(globalA)
         assertEquals("i32*", globalA.type.typeName)
 
@@ -532,7 +532,7 @@ class LLVMIRLanguageFrontendTest {
 
         assertNotNull(tu)
 
-        val main = tu.functions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
         // %ptr = alloca i32
@@ -544,7 +544,7 @@ class LLVMIRLanguageFrontendTest {
         assertEquals("i32*", alloca.type.typeName)
 
         // store i32 3, i32* %ptr
-        val store = main.assigns.firstOrNull()
+        val store = main.allAssigns.firstOrNull()
         assertNotNull(store)
         assertEquals("=", store.operatorCode)
 
@@ -576,7 +576,7 @@ class LLVMIRLanguageFrontendTest {
 
         assertNotNull(tu)
 
-        val foo = tu.functions["foo"]
+        val foo = tu.allFunctions["foo"]
         assertNotNull(foo)
         assertEquals("literal_i32_i8", foo.type.typeName)
 
@@ -600,17 +600,17 @@ class LLVMIRLanguageFrontendTest {
         assertLiteralValue(100L, args[0])
         assertLiteralValue(null, args[1])
 
-        val block = foo.blocks.firstOrNull()
+        val block = foo.allBlocks.firstOrNull()
         assertNotNull(block)
 
         // First copy a to b
-        val b = block.variables["b"]
+        val b = block.allVariables["b"]
         assertNotNull(b)
         assertLocalName("b", b)
         assertEquals("literal_i32_i8", b.type.typeName)
 
         // Now, we set b.field_1 to 7
-        val assign = block.assigns.firstOrNull()
+        val assign = block.allAssigns.firstOrNull()
         assertNotNull(assign)
 
         assertEquals("=", assign.operatorCode)
@@ -636,9 +636,9 @@ class LLVMIRLanguageFrontendTest {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
-        val throwingFoo = tu.functions["throwingFoo"]
+        val throwingFoo = tu.allFunctions["throwingFoo"]
 
-        val main = tu.functions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
         val mainBody = main.body
@@ -688,7 +688,7 @@ class LLVMIRLanguageFrontendTest {
             analyzeAndGetFirstTU(listOf(topLevel.resolve("loopPhi.ll").toFile()), topLevel, true) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
-        val main = tu.functions["loopPhi"]
+        val main = tu.allFunctions["loopPhi"]
         assertNotNull(main)
     }
 
@@ -699,7 +699,7 @@ class LLVMIRLanguageFrontendTest {
             analyzeAndGetFirstTU(listOf(topLevel.resolve("phi.ll").toFile()), topLevel, true) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
-        val main = tu.functions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
         val mainBody = main.body
@@ -757,7 +757,7 @@ class LLVMIRLanguageFrontendTest {
             analyzeAndGetFirstTU(listOf(topLevel.resolve("vector.ll").toFile()), topLevel, true) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
-        val main = tu.functions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
         // Test that x is initialized correctly
@@ -849,7 +849,7 @@ class LLVMIRLanguageFrontendTest {
             analyzeAndGetFirstTU(listOf(topLevel.resolve("fence.ll").toFile()), topLevel, true) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
-        val main = tu.functions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
         // Test that x is initialized correctly
@@ -881,10 +881,10 @@ class LLVMIRLanguageFrontendTest {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
-        val funcF = tu.functions["f"]
+        val funcF = tu.allFunctions["f"]
         assertNotNull(funcF)
 
-        val tryStatement = funcF.bodyOrNull<LabelStatement>(0)?.subStatement?.trys?.firstOrNull()
+        val tryStatement = funcF.bodyOrNull<LabelStatement>(0)?.subStatement?.allTrys?.firstOrNull()
         assertNotNull(tryStatement)
         val tryBlock = tryStatement.tryBlock
         assertNotNull(tryBlock)

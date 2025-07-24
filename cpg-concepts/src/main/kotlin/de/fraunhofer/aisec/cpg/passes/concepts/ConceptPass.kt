@@ -28,11 +28,11 @@ package de.fraunhofer.aisec.cpg.passes.concepts
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allEOGStarters
-import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.parentComponent
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.TranslationUnitPass
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
@@ -49,7 +49,7 @@ abstract class ConceptPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     lateinit var walker: SubgraphWalker.ScopedWalker
 
     override fun accept(tu: TranslationUnitDeclaration) {
-        ctx.currentComponent = tu.component
+        ctx.currentComponent = tu.parentComponent
         walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
         walker.strategy = Strategy::EOG_FORWARD
         walker.registerHandler { node -> handleNode(node, tu) }

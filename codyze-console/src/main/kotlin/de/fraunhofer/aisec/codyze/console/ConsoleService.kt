@@ -31,10 +31,10 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.graph.allNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConcepts
@@ -258,7 +258,7 @@ class ConsoleService {
         val node =
             analysisResult.components
                 .flatMap { it.translationUnits }
-                .flatMap { it.cpgTU.nodes }
+                .flatMap { it.cpgTU.allNodes }
                 .singleOrNull { it.id == request.nodeId }
                 ?: throw IllegalArgumentException("Unique target node not found.")
 
@@ -300,7 +300,7 @@ class ConsoleService {
         overlayNodes: Boolean,
     ): List<NodeJSON> {
         return if (overlayNodes) {
-            tu.nodes.flatMap { it.overlays }.map { it.toJSON() }
+            tu.allNodes.flatMap { it.overlays }.map { it.toJSON() }
         } else {
             tu.declarations.map { it.toJSON() } + tu.statements.map { it.toJSON() }
         }

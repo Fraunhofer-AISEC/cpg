@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.graph.allNodes
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.nodes
 
 /**
  * This should ideally only be called once. It constructs a new global scope, which is not
@@ -62,7 +62,7 @@ class GlobalScope() : Scope(null) {
             symbols.mergeFrom(other.symbols)
             wildcardImports.addAll(other.wildcardImports)
 
-            for (node in other.astNode?.nodes ?: listOf()) {
+            for (node in other.astNode?.allNodes ?: listOf()) {
                 if (node.scope is GlobalScope) {
                     node.scope = this
                 }

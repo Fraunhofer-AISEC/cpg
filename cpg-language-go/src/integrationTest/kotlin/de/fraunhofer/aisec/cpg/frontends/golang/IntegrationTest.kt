@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
-import de.fraunhofer.aisec.cpg.graph.calls
-import de.fraunhofer.aisec.cpg.graph.functions
+import de.fraunhofer.aisec.cpg.graph.allCalls
+import de.fraunhofer.aisec.cpg.graph.allFunctions
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.test.analyzeWithBuilder
 import de.fraunhofer.aisec.cpg.test.assertInvokes
@@ -70,13 +70,13 @@ class IntegrationTest {
         val printTU = tus.firstOrNull { it.name.endsWith("fmt/print.go") }
         assertNotNull(printTU)
 
-        val printf = printTU.functions["Printf"]
+        val printf = printTU.allFunctions["Printf"]
         assertNotNull(printf)
 
         val mainTU = tus.firstOrNull { it.name.endsWith("main.go") }
         assertNotNull(mainTU)
 
-        val printfCall = mainTU.calls["fmt.Printf"]
+        val printfCall = mainTU.allCalls["fmt.Printf"]
         assertNotNull(printfCall)
         assertInvokes(printfCall, printf)
     }

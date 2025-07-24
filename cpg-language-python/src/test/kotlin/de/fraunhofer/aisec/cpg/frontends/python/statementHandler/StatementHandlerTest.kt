@@ -66,7 +66,7 @@ class StatementHandlerTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val tryAll = tu.functions["tryAll"]?.trys?.singleOrNull()
+        val tryAll = tu.allFunctions["tryAll"]?.allTrys?.singleOrNull()
         assertNotNull(tryAll)
 
         assertEquals(1, tryAll.tryBlock?.statements?.size)
@@ -79,7 +79,7 @@ class StatementHandlerTest : BaseTest() {
         assertEquals(1, tryAll.elseBlock?.statements?.size)
         assertEquals(1, tryAll.finallyBlock?.statements?.size)
 
-        val tryOnlyFinally = tu.functions["tryOnlyFinally"]?.trys?.singleOrNull()
+        val tryOnlyFinally = tu.allFunctions["tryOnlyFinally"]?.allTrys?.singleOrNull()
         assertNotNull(tryOnlyFinally)
 
         assertEquals(1, tryOnlyFinally.tryBlock?.statements?.size)
@@ -89,7 +89,7 @@ class StatementHandlerTest : BaseTest() {
         assertNull(tryOnlyFinally.elseBlock)
         assertEquals(1, tryOnlyFinally.finallyBlock?.statements?.size)
 
-        val tryOnlyExcept = tu.functions["tryOnlyExcept"]?.trys?.singleOrNull()
+        val tryOnlyExcept = tu.allFunctions["tryOnlyExcept"]?.allTrys?.singleOrNull()
         assertNotNull(tryOnlyExcept)
 
         assertEquals(1, tryOnlyExcept.tryBlock?.statements?.size)
@@ -129,11 +129,11 @@ class StatementHandlerTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val myFunc = tu.functions["my_func"]
+        val myFunc = tu.allFunctions["my_func"]
         assertNotNull(myFunc)
         assertEquals(1, myFunc.parameters.size)
 
-        val myOtherFunc = tu.functions["my_other_func"]
+        val myOtherFunc = tu.allFunctions["my_other_func"]
         assertNotNull(myOtherFunc)
         assertEquals(1, myOtherFunc.parameters.size)
     }
@@ -147,20 +147,20 @@ class StatementHandlerTest : BaseTest() {
             val strType = assertResolvedType("str")
 
             // we should have an operator call to __add__ (+) now
-            var opCall = result.operatorCalls("+").getOrNull(0)
+            var opCall = result.allOperatorCalls("+").getOrNull(0)
             assertNotNull(opCall)
             assertEquals(numberType, opCall.type)
 
-            val add = result.operators["__add__"]
+            val add = result.allOperators["__add__"]
             assertNotNull(add)
             assertInvokes(opCall, add)
 
             // ... and one to __pos__ (+)
-            opCall = result.operatorCalls("+").getOrNull(1)
+            opCall = result.allOperatorCalls("+").getOrNull(1)
             assertNotNull(opCall)
             assertEquals(strType, opCall.type)
 
-            val pos = result.operators["__pos__"]
+            val pos = result.allOperators["__pos__"]
             assertNotNull(pos)
             assertInvokes(opCall, pos)
         }
@@ -170,10 +170,10 @@ class StatementHandlerTest : BaseTest() {
     fun testAssert() {
         analyzeFile("assert.py")
 
-        val func = result.functions["test_assert"]
+        val func = result.allFunctions["test_assert"]
         assertNotNull(func, "Function 'test_assert' should be found")
 
-        val assertStatement = func.body.statements.firstOrNull { it is AssertStatement }
+        val assertStatement = func.body.allStatements.firstOrNull { it is AssertStatement }
         assertIs<AssertStatement>(assertStatement, "Assert statement should be found")
 
         val condition = assertStatement.condition
@@ -189,7 +189,7 @@ class StatementHandlerTest : BaseTest() {
     fun testDeleteStatements() {
         analyzeFile("delete.py")
 
-        val deleteExpressions = result.statements.filterIsInstance<DeleteExpression>()
+        val deleteExpressions = result.allStatements.filterIsInstance<DeleteExpression>()
         assertEquals(4, deleteExpressions.size)
 
         // Test for `del a`
@@ -220,12 +220,12 @@ class StatementHandlerTest : BaseTest() {
         analyzeFile("type_hints.py")
         with(result) {
             // type comments
-            val a = result.refs["a"]
+            val a = result.allRefs["a"]
             assertNotNull(a)
             assertContains(a.assignedTypes, assertResolvedType("int"))
 
             // type annotation
-            val b = result.refs["b"]
+            val b = result.allRefs["b"]
             assertNotNull(b)
             assertContains(b.assignedTypes, assertResolvedType("str"))
         }
@@ -238,7 +238,7 @@ class StatementHandlerTest : BaseTest() {
         assertNotNull(result)
 
         // There should be three variable declarations, two local and one global
-        var cVariables = result.variables("c")
+        var cVariables = result.allVariables("c")
         assertEquals(3, cVariables.size)
 
         // Our scopes do not match 1:1 to python scopes, but rather the python "global" scope is a
@@ -257,24 +257,24 @@ class StatementHandlerTest : BaseTest() {
         assertNotNull(localC2)
 
         // In global_write, all references should point to global c
-        var cRefs = result.functions["global_write"]?.refs("c")
+        var cRefs = result.allFunctions["global_write"]?.allRefs("c")
         assertNotNull(cRefs)
         cRefs.forEach { assertRefersTo(it, globalC) }
 
         // In global_read, all references should point to global c
-        cRefs = result.functions["global_read"]?.refs("c")
+        cRefs = result.allFunctions["global_read"]?.allRefs("c")
         assertNotNull(cRefs)
         cRefs.forEach { assertRefersTo(it, globalC) }
 
         // In local_write, all references should point to local c
-        cRefs = result.functions["local_write"]?.refs("c")
+        cRefs = result.allFunctions["local_write"]?.allRefs("c")
         assertNotNull(cRefs)
         cRefs.forEach { assertRefersTo(it, localC1) }
 
         // In error_write, all references will point to local c; even though the c on the right side
         // SHOULD be unresolved - but this a general shortcoming because the resolving will not take
         // the EOG into consideration (yet)
-        cRefs = result.functions["error_write"]?.refs("c")
+        cRefs = result.allFunctions["error_write"]?.allRefs("c")
         assertNotNull(cRefs)
         cRefs.forEach { assertRefersTo(it, localC2) }
     }
@@ -286,7 +286,7 @@ class StatementHandlerTest : BaseTest() {
         assertNotNull(result)
 
         // There should be three variable declarations, two local and one global
-        var cVariables = result.variables("c")
+        var cVariables = result.allVariables("c")
         assertEquals(3, cVariables.size)
     }
 }

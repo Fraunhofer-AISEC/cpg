@@ -58,25 +58,25 @@ class ControlFlowSensitiveDFGPassTest {
         val test = GraphExamples.getSimpleFieldDataflow()
         assertNotNull(test)
 
-        val field1 = test.records["myStruct"].fields["field1"]
+        val field1 = test.allRecords["myStruct"].allFields["field1"]
         assertNotNull(field1)
 
-        val i = test.functions["doSomething"].parameters["i"]
+        val i = test.allFunctions["doSomething"].allParameters["i"]
         assertNotNull(i)
 
-        val main = test.functions["main"]
+        val main = test.allFunctions["main"]
         assertNotNull(main)
 
-        val s1 = main.variables["s1"]
+        val s1 = main.allVariables["s1"]
         assertNotNull(s1)
-        val s2 = main.variables["s2"]
+        val s2 = main.allVariables["s2"]
         assertNotNull(s2)
 
         // Just some debugging output
         println(s1.printDFG())
 
         // Gather all calls of doSomething (in order: line 11, 15, 16)
-        val calls = main.calls("doSomething")
+        val calls = main.allCalls("doSomething")
         assertEquals(listOf(11, 15, 16), calls.map { it.location?.region?.startLine })
 
         with(s1) {
@@ -194,28 +194,28 @@ class ControlFlowSensitiveDFGPassTest {
         val test = GraphExamples.getNestedFieldDataflow()
         assertNotNull(test)
 
-        val `in` = test.records["outer"].fields["in"]
+        val `in` = test.allRecords["outer"].allFields["in"]
         assertNotNull(`in`)
 
-        val field = test.records["inner"].fields["field"]
+        val field = test.allRecords["inner"].allFields["field"]
         assertNotNull(field)
 
-        val i = test.functions["doSomething"].parameters["i"]
+        val i = test.allFunctions["doSomething"].allParameters["i"]
         assertNotNull(i)
 
-        val main = test.functions["main"]
+        val main = test.allFunctions["main"]
         assertNotNull(main)
 
-        val o = main.variables["o"]
+        val o = main.allVariables["o"]
         assertNotNull(o)
 
-        val meFields = main.memberExpressions("field")
+        val meFields = main.allMemberExpressions("field")
         assertEquals(2, meFields.size)
 
-        val meIn = main.memberExpressions("in")
+        val meIn = main.allMemberExpressions("in")
         assertEquals(2, meIn.size)
 
-        val refO = main.refs("o")
+        val refO = main.allRefs("o")
         assertEquals(2, refO.size)
 
         // There should be a full flow from each first individual ref and member expression (line

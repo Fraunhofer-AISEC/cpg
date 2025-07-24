@@ -44,33 +44,33 @@ class SymbolResolverTest {
         val result = GraphExamples.getCombinedVariableAndCallTest()
 
         with(result) {
-            val type = result.records["TestClass"]?.toType()
+            val type = result.allRecords["TestClass"]?.toType()
             assertNotNull(type)
 
-            val method1 = result.methods["method1"]
+            val method1 = result.allMethods["method1"]
             assertNotNull(method1)
 
-            val method2 = result.methods["method2"]
+            val method2 = result.allMethods["method2"]
             assertNotNull(method2)
 
-            val constructor = result.methods["TestClass"]
+            val constructor = result.allMethods["TestClass"]
             assertNotNull(constructor)
 
-            val variable = method2.variables["variable"]
+            val variable = method2.allVariables["variable"]
             assertEquals(type, variable?.type)
 
-            val ref = method2.refs["variable"]
+            val ref = method2.allRefs["variable"]
             assertEquals(type, ref?.type)
 
-            val callmethod1 = method2.calls["method1"]
+            val callmethod1 = method2.allCalls["method1"]
             assertIs<MemberCallExpression>(callmethod1)
             assertRefersTo(callmethod1.base, method2.receiver)
             assertInvokes(callmethod1, method1)
 
-            val callmethod2 = method2.calls["method2"]
+            val callmethod2 = method2.allCalls["method2"]
             assertInvokes(callmethod2, method2)
 
-            val construct = method1.calls { it is ConstructExpression }.firstOrNull()
+            val construct = method1.allCalls { it is ConstructExpression }.firstOrNull()
             assertNotNull(construct)
             assertInvokes(construct, constructor)
         }
@@ -82,7 +82,7 @@ class SymbolResolverTest {
 
         val map = mutableMapOf<ReferenceTag, MutableList<Reference>>()
 
-        val refs = result.refs
+        val refs = result.allRefs
         refs.forEach {
             // Build a unique tag based on the scope of the reference is in (since this is usually
             // the start scope)

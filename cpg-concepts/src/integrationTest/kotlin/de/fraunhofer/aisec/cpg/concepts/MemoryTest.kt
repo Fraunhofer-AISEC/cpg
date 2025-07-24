@@ -216,13 +216,15 @@ class MemoryTest {
     fun TranslationResult.mapNodesToConcepts(mapToFunctionDeclaration: Boolean) {
         // Secrets (key) concepts
         val keyRefLine1 =
-            refs.singleOrNull { it.name.localName == "key" && it.location?.region?.startLine == 1 }
+            allRefs.singleOrNull {
+                it.name.localName == "key" && it.location?.region?.startLine == 1
+            }
         val key = newSecret(underlyingNode = assertNotNull(keyRefLine1), connect = true)
         val getSecretFromServer =
             if (mapToFunctionDeclaration) {
-                functions["get_secret_from_server"]
+                allFunctions["get_secret_from_server"]
             } else {
-                calls["get_secret_from_server"]
+                allCalls["get_secret_from_server"]
             }
         val getSecret =
             newGetSecret(
@@ -235,7 +237,7 @@ class MemoryTest {
         val cipher =
             newCipher(
                 underlyingNode =
-                    assertNotNull(assertNotNull(calls["encrypt"]).argumentEdges["cipher"]?.end),
+                    assertNotNull(assertNotNull(allCalls["encrypt"]).argumentEdges["cipher"]?.end),
                 connect = true,
             )
         val cipherAndSize = (cipher.underlyingNode?.evaluate() as? String)?.split("-")
@@ -244,7 +246,7 @@ class MemoryTest {
         assertEquals("AES", cipher.cipherName)
         assertEquals(256, cipher.blockSize)
         newEncryptOperation(
-            underlyingNode = assertNotNull(calls["encrypt"]),
+            underlyingNode = assertNotNull(allCalls["encrypt"]),
             concept = cipher,
             key = key,
             connect = true,
@@ -257,7 +259,7 @@ class MemoryTest {
                 mode = MemoryManagementMode.MANAGED_WITH_GARBAGE_COLLECTION,
                 connect = true,
             )
-        allChildren<DeleteExpression>().flatMap { delete ->
+        allDescendants<DeleteExpression>().flatMap { delete ->
             delete.operands.map {
                 newDeallocate(underlyingNode = delete, concept = memory, what = it, connect = true)
                     .apply { this.prevDFG += it }

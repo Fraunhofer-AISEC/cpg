@@ -52,11 +52,11 @@ class ExpressionHandlerTest {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
-        val globalX = tu.variables["x"]
+        val globalX = tu.allVariables["x"]
         assertNotNull(globalX)
         assertLiteralValue(1.25, globalX.initializer)
 
-        val a = tu.variables["a"]
+        val a = tu.allVariables["a"]
         assertNotNull(a)
         val aInit = a.initializer
         assertIs<BinaryOperator>(aInit)
@@ -76,10 +76,10 @@ class ExpressionHandlerTest {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
-        val globalX = tu.variables["x"]
+        val globalX = tu.allVariables["x"]
         assertNotNull(globalX)
 
-        val aInitCall = tu.variables["a"]?.initializer
+        val aInitCall = tu.allVariables["a"]?.initializer
         assertIs<CallExpression>(aInitCall)
         assertLocalName("foo", aInitCall)
         val argumentA = aInitCall.arguments.singleOrNull()
@@ -90,7 +90,7 @@ class ExpressionHandlerTest {
         assertRefersTo(argumentAX.expression, globalX)
         assertLiteralValue(5L, argumentA.rhs)
 
-        val bInitCall = tu.variables["b"]?.initializer
+        val bInitCall = tu.allVariables["b"]?.initializer
         assertIs<CallExpression>(bInitCall)
         assertLocalName("foo", bInitCall)
         val argumentB = bInitCall.arguments.singleOrNull()
@@ -101,7 +101,7 @@ class ExpressionHandlerTest {
         assertRefersTo(argumenBtX.expression, globalX)
         assertLiteralValue(5L, argumentB.rhs)
 
-        val cInitCall = tu.variables["c"]?.initializer
+        val cInitCall = tu.allVariables["c"]?.initializer
         assertIs<CallExpression>(cInitCall)
         assertLocalName("foo", cInitCall)
         val argumentC = cInitCall.arguments.singleOrNull()
@@ -112,7 +112,7 @@ class ExpressionHandlerTest {
         assertRefersTo(argumentCX.expression, globalX)
         assertLiteralValue(5L, argumentC.rhs)
 
-        val dInitCall = tu.variables["d"]?.initializer
+        val dInitCall = tu.allVariables["d"]?.initializer
         assertIs<CallExpression>(dInitCall)
         assertLocalName("foo", dInitCall)
         val argumentD = dInitCall.arguments.singleOrNull()
@@ -123,7 +123,7 @@ class ExpressionHandlerTest {
         assertRefersTo(argumentDX.expression, globalX)
         assertLiteralValue(5L, argumentD.rhs)
 
-        val eInitCall = tu.variables["e"]?.initializer
+        val eInitCall = tu.allVariables["e"]?.initializer
         assertIs<CallExpression>(eInitCall)
         assertLocalName("foo", eInitCall)
         val argumentE = eInitCall.arguments.singleOrNull()
@@ -134,7 +134,7 @@ class ExpressionHandlerTest {
         assertRefersTo(argumentEX.expression, globalX)
         assertLiteralValue(5L, argumentE.rhs)
 
-        val fInitCall = tu.variables["f"]?.initializer
+        val fInitCall = tu.allVariables["f"]?.initializer
         assertIs<CallExpression>(fInitCall)
         assertLocalName("foo", fInitCall)
         val argumentF = fInitCall.arguments.singleOrNull()
@@ -145,7 +145,7 @@ class ExpressionHandlerTest {
         assertRefersTo(argumentFX.expression, globalX)
         assertLiteralValue(5L, argumentF.rhs)
 
-        val gInitCall = tu.variables["g"]?.initializer
+        val gInitCall = tu.allVariables["g"]?.initializer
         assertIs<CallExpression>(gInitCall)
         assertLocalName("foo1", gInitCall)
         val argumentG = gInitCall.arguments.singleOrNull()

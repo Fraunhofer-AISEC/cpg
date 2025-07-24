@@ -49,13 +49,13 @@ class ExpressionTest {
         val main = tu.namespaces["main"]
         assertNotNull(main)
 
-        val mainFunc = main.functions["main"]
+        val mainFunc = main.allFunctions["main"]
         assertNotNull(mainFunc)
 
-        val f = mainFunc.variables["f"]
+        val f = mainFunc.allVariables["f"]
         assertNotNull(f)
 
-        val s = mainFunc.variables["s"]
+        val s = mainFunc.allVariables["s"]
         assertNotNull(s)
 
         val cast = s.initializer as? CastExpression
@@ -63,7 +63,7 @@ class ExpressionTest {
         assertFullName("main.MyStruct", cast.castType)
         assertSame(f, (cast.expression as? Reference)?.refersTo)
 
-        val ignored = main.variables("_")
+        val ignored = main.allVariables("_")
         ignored.forEach { assertIs<CastExpression>(it.initializer) }
     }
 
@@ -76,11 +76,11 @@ class ExpressionTest {
             }
         assertNotNull(tu)
 
-        val a = tu.variables["a"]
+        val a = tu.allVariables["a"]
         assertNotNull(a)
         assertLocalName("int[]", a.type)
 
-        val b = tu.variables["b"]
+        val b = tu.allVariables["b"]
         assertNotNull(b)
         assertLocalName("int[]", b.type)
 
@@ -93,7 +93,7 @@ class ExpressionTest {
         assertLiteralValue(1, slice.ceiling)
         assertNull(slice.third)
 
-        val c = tu.variables["c"]
+        val c = tu.allVariables["c"]
         assertNotNull(c)
         assertLocalName("int[]", c.type)
 
@@ -103,7 +103,7 @@ class ExpressionTest {
         assertNull(slice.ceiling)
         assertNull(slice.third)
 
-        val d = tu.variables["d"]
+        val d = tu.allVariables["d"]
         assertNotNull(d)
         assertLocalName("int[]", d.type)
 
@@ -113,7 +113,7 @@ class ExpressionTest {
         assertLiteralValue(1, slice.ceiling)
         assertNull(slice.third)
 
-        val e = tu.variables["e"]
+        val e = tu.allVariables["e"]
         assertNotNull(e)
         assertLocalName("int[]", e.type)
 
@@ -134,14 +134,14 @@ class ExpressionTest {
         assertNotNull(tu)
 
         with(tu) {
-            val main = tu.functions["main"]
+            val main = tu.allFunctions["main"]
             assertNotNull(main)
 
-            val v = main.variables["v"]
+            val v = main.allVariables["v"]
             assertNotNull(v)
             assertEquals(primitiveType("int"), v.type)
 
-            val ch = main.variables["ch"]
+            val ch = main.allVariables["ch"]
             assertNotNull(ch)
             assertEquals(objectType("chan", generics = listOf(primitiveType("int"))), ch.type)
 
@@ -169,11 +169,11 @@ class ExpressionTest {
             }
         assertNotNull(tu)
 
-        val lit5 = tu.literals.firstOrNull()
+        val lit5 = tu.allLiterals.firstOrNull()
         assertNotNull(lit5)
         println(lit5.printDFG())
 
-        val x = tu.refs("x").lastOrNull()
+        val x = tu.allRefs("x").lastOrNull()
         assertNotNull(x)
 
         val paths = x.followPrevFullDFGEdgesUntilHit { it == lit5 }

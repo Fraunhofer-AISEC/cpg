@@ -49,7 +49,7 @@ fun shouldContinueSearchInParent(recordDeclaration: RecordDeclaration?, name: St
             "(" + Pattern.quote(recordDeclaration?.name.toString()) + "\\.)?" + Pattern.quote(name)
         )
     val invocationCandidate =
-        recordDeclaration.methods.filter { namePattern.matcher(it.name.toString()).matches() }
+        recordDeclaration.allMethods.filter { namePattern.matcher(it.name.toString()).matches() }
     return invocationCandidate.isEmpty()
 }
 

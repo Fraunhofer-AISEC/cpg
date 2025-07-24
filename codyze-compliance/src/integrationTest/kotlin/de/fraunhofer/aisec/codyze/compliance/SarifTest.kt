@@ -44,7 +44,7 @@ class SarifTest {
 
         val result = project.analyze()
         val tr = result.translationResult
-        val webappMain = tr.namespaces["webapp.main"]
+        val webappMain = tr.allNamespaces["webapp.main"]
         assertNotNull(webappMain)
 
         val tmpFile = createTempFile(prefix = "findings", suffix = ".sarif").toFile()
