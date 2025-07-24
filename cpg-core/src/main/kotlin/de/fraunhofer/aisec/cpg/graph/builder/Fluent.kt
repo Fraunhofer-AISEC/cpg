@@ -657,6 +657,18 @@ fun LanguageFrontend<*, *>.forCondition(init: ForStatement.() -> Expression): Ex
  * the created node itself.
  */
 context(stmt: ForStatement)
+fun LanguageFrontend<*, *>.forInitializerExpr(init: ForStatement.() -> Statement): Statement {
+    val node = init(stmt)
+    stmt.initializerStatement = node
+    return node
+}
+
+/**
+ * Configures the [ForStatement.condition] in the Fluent Node DSL of the nearest enclosing
+ * [ForStatement]. The [init] block can be used to create further sub-nodes as well as configuring
+ * the created node itself.
+ */
+context(stmt: ForStatement)
 fun LanguageFrontend<*, *>.forInitializer(
     init: ForStatement.() -> DeclarationStatement
 ): DeclarationStatement {

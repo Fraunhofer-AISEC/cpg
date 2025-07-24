@@ -29,6 +29,9 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.builder.*
+import de.fraunhofer.aisec.cpg.graph.newBinaryOperator
+import de.fraunhofer.aisec.cpg.graph.newLiteral
+import de.fraunhofer.aisec.cpg.graph.newReference
 import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
 
 abstract class AbstractEvaluationTests {
@@ -201,6 +204,37 @@ abstract class AbstractEvaluationTests {
                                     }
 
                                     memberCall("f", ref("Bar")) { ref("a") }
+                                }
+                            }
+                            method("f6") {
+                                body {
+                                    declare { variable("i", t("int")) { literal(0, t("int")) } }
+
+                                    forStmt {
+                                        forInitializerExpr { ref("i") assign literal(0, t("int")) }
+                                        forCondition { ref("i") lt literal(5, t("int")) }
+                                        forIteration { ref("i").inc() }
+
+                                        loopBody {
+                                            ifStmt {
+                                                condition {
+                                                    val tmp =
+                                                        this@build.newBinaryOperator("<").apply {
+                                                            lhs = newReference("i")
+                                                            rhs = newLiteral(3, t("int"))
+                                                        }
+                                                    condition = tmp
+                                                    tmp
+                                                    // ref("i") lt literal(3, t("int"))
+                                                }
+                                                thenStmt { call("lessThanThree") { ref("i") } }
+                                                elseStmt { call("greaterEqualThree") { ref("i") } }
+                                            }
+                                            call("println") { ref("i") }
+                                        }
+                                    }
+
+                                    call("afterLoop") { ref("i") }
                                 }
                             }
                         }

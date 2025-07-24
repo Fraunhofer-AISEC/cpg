@@ -199,4 +199,56 @@ class AbstractEvaluatorTest {
         val value = evaluator.evaluate(refA, IntegerValue::class)
         assertEquals(LatticeInterval.Bounded(5, LatticeInterval.Bound.INFINITE), value)
     }
+
+    /*
+       int i = 0;
+       for (i = 0; i < 5; i++) {
+           if(i < 3) {
+               lessThanThree(i);
+           } else {
+               greaterEqualThree(i);
+           }
+           println(i);
+       }
+
+       afterLoop(i);
+    */
+    @Test
+    fun testFancyLoopInteger() {
+        val mainClass = tu.records["Foo"]
+        assertNotNull(mainClass)
+        val f6 = mainClass.methods["f6"]
+        assertNotNull(f6)
+
+        val iLessThanThree = f6.calls["lessThanThree"]?.arguments?.singleOrNull()
+        assertNotNull(iLessThanThree, "There should be an argument for the call to lessThanThree")
+
+        var evaluatorI = NewAbstractIntervalEvaluator()
+        var valueI = evaluatorI.evaluate(iLessThanThree, IntegerValue::class)
+        assertEquals(LatticeInterval.Bounded(0, 2), valueI)
+
+        val iGreaterEqualThree = f6.calls["greaterEqualThree"]?.arguments?.singleOrNull()
+        assertNotNull(
+            iGreaterEqualThree,
+            "There should be an argument for the call to greaterEqualThree",
+        )
+
+        evaluatorI = NewAbstractIntervalEvaluator()
+        valueI = evaluatorI.evaluate(iGreaterEqualThree, IntegerValue::class)
+        assertEquals(LatticeInterval.Bounded(3, 4), valueI)
+
+        val refI = f6.calls["println"]?.arguments?.singleOrNull()
+        assertNotNull(refI, "There should be an argument for the call to println")
+
+        evaluatorI = NewAbstractIntervalEvaluator()
+        valueI = evaluatorI.evaluate(refI, IntegerValue::class)
+        assertEquals(LatticeInterval.Bounded(0, 4), valueI)
+
+        val iAfterLoop = f6.calls["afterLoop"]?.arguments?.firstOrNull()
+        assertNotNull(iAfterLoop, "There should be an argument for the call to afterLoop")
+
+        val evaluator = NewAbstractIntervalEvaluator()
+        val value = evaluator.evaluate(iAfterLoop, IntegerValue::class)
+        assertEquals(LatticeInterval.Bounded(5, LatticeInterval.Bound.INFINITE), value)
+    }
 }

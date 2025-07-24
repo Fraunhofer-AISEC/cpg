@@ -98,7 +98,7 @@ class IntegerValue : Value<LatticeInterval> {
                     }
                     ">" -> {
                         val newLower =
-                            minOf(lhsValue.lower, rhsValue.lower + LatticeInterval.Bound.Value(1))
+                            maxOf(lhsValue.lower, rhsValue.lower + LatticeInterval.Bound.Value(1))
                         if (newLower > lhsValue.upper) {
                             LatticeInterval.BOTTOM
                         } else {
@@ -106,7 +106,7 @@ class IntegerValue : Value<LatticeInterval> {
                         }
                     }
                     ">=" -> {
-                        val newLower = minOf(lhsValue.lower, rhsValue.lower)
+                        val newLower = maxOf(lhsValue.lower, rhsValue.lower)
                         if (newLower > lhsValue.upper) {
                             LatticeInterval.BOTTOM
                         } else {
@@ -180,9 +180,18 @@ class IntegerValue : Value<LatticeInterval> {
                     )
                 } else if (edge.branch == false && condition is BinaryOperator) {
                     // The "else" branch is taken, so the condition is false, and we have to
-                    // calculate
-                    // the negation of the condition.
-                    state
+                    // calculate the negation of the condition.
+                    val invertedOperator =
+                        when (condition.operatorCode) {
+                            "==" -> "!="
+                            "!=" -> "=="
+                            "<" -> ">="
+                            "<=" -> ">"
+                            ">" -> "<="
+                            ">=" -> "<"
+                            else -> condition.operatorCode
+                        }
+                    simpleComparison(condition.lhs, condition.rhs, invertedOperator, lattice, state)
                 } else {
                     // Unknown branch. Continue with the current state.
                     state
