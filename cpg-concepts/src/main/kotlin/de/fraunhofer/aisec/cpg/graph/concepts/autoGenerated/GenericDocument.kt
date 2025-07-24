@@ -7,18 +7,18 @@ import kotlin.collections.MutableMap
 
 public abstract class GenericDocument(
   filetype: String,
-  validatedBy: SchemaValidation,
   documentChecksums: DocumentChecksum,
-  securityFeatures: SecurityFeature,
   documentSignatures: DocumentSignature,
+  securityFeatures: SecurityFeature,
+  validatedBy: SchemaValidation,
   dataLocation: DataLocation,
-  raw: String,
   creation_time: ZonedDateTime,
-  labels: MutableMap<String, String>,
-  name: String,
   description: String,
   id: String,
+  labels: MutableMap<String, String>,
+  name: String,
+  raw: String,
   parent: Resource,
   underlyingNode: Node,
-) : Document(filetype, validatedBy, documentChecksums, securityFeatures, documentSignatures,
-    dataLocation, raw, creation_time, labels, name, description, id, parent, underlyingNode)
+) : Document(filetype, documentChecksums, documentSignatures, securityFeatures, validatedBy,
+    dataLocation, creation_time, description, id, labels, name, raw, parent, underlyingNode)

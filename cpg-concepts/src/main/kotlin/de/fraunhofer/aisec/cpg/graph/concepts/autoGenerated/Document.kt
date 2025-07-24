@@ -7,17 +7,17 @@ import kotlin.collections.MutableMap
 
 public abstract class Document(
   filetype: String,
-  validatedBy: SchemaValidation,
   documentChecksums: DocumentChecksum,
-  securityFeatures: SecurityFeature,
   documentSignatures: DocumentSignature,
+  securityFeatures: SecurityFeature,
+  validatedBy: SchemaValidation,
   dataLocation: DataLocation,
-  raw: String,
   creation_time: ZonedDateTime,
-  labels: MutableMap<String, String>,
-  name: String,
   description: String,
   id: String,
+  labels: MutableMap<String, String>,
+  name: String,
+  raw: String,
   parent: Resource,
   underlyingNode: Node,
-) : Data(dataLocation, raw, creation_time, labels, name, description, id, parent, underlyingNode)
+) : Data(dataLocation, creation_time, description, id, labels, name, raw, parent, underlyingNode)

@@ -156,7 +156,7 @@ private fun getParentClassName(parentClass: String): String {
     return parentClassSplit[parentClassSplit.size - 1]
 }
 
-private fun getObjectPropertiesForGoSource(properties: List<Properties>): String {
+private fun getObjectPropertiesForGoSource(properties: LinkedHashSet<Properties>): String {
 
     var propertiesStringSource = ""
     for (property in properties) {
@@ -210,7 +210,7 @@ private fun getObjectPropertiesForGoSource(properties: List<Properties>): String
     return propertiesStringSource
 }
 
-private fun getDataPropertiesForGoSource(properties: List<Properties>): String {
+private fun getDataPropertiesForGoSource(properties: LinkedHashSet<Properties>): String {
     var propertiesStringSource = ""
     for (property in properties) {
         if (property.propertyDescription != "")

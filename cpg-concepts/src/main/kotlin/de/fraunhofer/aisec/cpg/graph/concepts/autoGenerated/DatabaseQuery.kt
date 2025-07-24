@@ -8,8 +8,8 @@ import kotlin.String
 public abstract class DatabaseQuery(
   modify: Boolean,
   calls: List<String>,
-  storage: DatabaseStorage,
   databaseService: DatabaseService,
+  storage: DatabaseStorage,
   codeRegion: CodeRegion,
   underlyingNode: Node,
-) : DatabaseOperation(calls, storage, databaseService, codeRegion, underlyingNode)
+) : DatabaseOperation(calls, databaseService, storage, codeRegion, underlyingNode)

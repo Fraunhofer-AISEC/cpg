@@ -9,7 +9,7 @@ public abstract class HttpEndpoint(
   path: String,
   url: String,
   authenticity: Authenticity,
-  transportEncryption: TransportEncryption,
   proxyTarget: HttpEndpoint,
+  transportEncryption: TransportEncryption,
   underlyingNode: Node,
 ) : Functionality(underlyingNode)

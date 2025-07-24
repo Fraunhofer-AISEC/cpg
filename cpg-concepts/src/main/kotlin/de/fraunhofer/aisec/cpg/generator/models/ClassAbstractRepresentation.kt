@@ -26,12 +26,19 @@
 package de.fraunhofer.aisec.cpg.models
 
 class ClassAbstractRepresentation(val name: String, val parentClass: String) {
-    var objectProperties: List<Properties> = mutableListOf()
-    var dataProperties: List<Properties> = mutableListOf()
+    var objectProperties: LinkedHashSet<Properties> = linkedSetOf()
+
+    var dataProperties: LinkedHashSet<Properties> = linkedSetOf()
+
     var resourceTypes: List<String> = mutableListOf()
 
-    var allParents: Set<ClassAbstractRepresentation> = mutableSetOf()
-
+    var allParents: LinkedHashSet<ClassAbstractRepresentation> = linkedSetOf()
     var packageName: String? = null
     var structDescription: String? = null
+
+    val sortedObjectProperties: List<Properties>
+        get() = objectProperties.sortedBy { it.propertyName }
+
+    val sortedDataProperties: List<Properties>
+        get() = dataProperties.sortedBy { it.propertyName }
 }

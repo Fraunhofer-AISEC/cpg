@@ -5,8 +5,8 @@ import kotlin.Boolean
 import kotlin.String
 
 public abstract class ManagedKeyEncryption(
-  enabled: Boolean,
   algorithm: String,
+  enabled: Boolean,
   keyUrl: String,
   underlyingNode: Node,
-) : AtRestEncryption(enabled, algorithm, keyUrl, underlyingNode)
+) : AtRestEncryption(algorithm, enabled, keyUrl, underlyingNode)

@@ -5,9 +5,9 @@ import java.time.Duration
 import kotlin.Boolean
 
 public abstract class Logging(
-  retentionPeriod: Duration,
   enabled: Boolean,
   monitoringEnabled: Boolean,
+  retentionPeriod: Duration,
   securityAlertsEnabled: Boolean,
   loggingService: LoggingService,
   underlyingNode: Node,

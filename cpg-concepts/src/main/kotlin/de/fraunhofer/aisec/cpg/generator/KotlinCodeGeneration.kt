@@ -48,7 +48,7 @@ import java.io.IOException
 import kotlin.collections.plus
 
 fun writeKotlinClassesToFolder(
-    sources: MutableList<ClassAbstractRepresentation>,
+    sources: LinkedHashSet<ClassAbstractRepresentation>,
     outputBase: String,
     owl3: OWLCloudOntologyReader,
 ) {
@@ -59,6 +59,19 @@ fun writeKotlinClassesToFolder(
     addConceptClassToOntology(sources)
 
     var filepath: String
+
+    for (ktSource in sources) {
+        findAllParentsAndSaveToClassAbstraction(ktSource, sources)
+    }
+
+    // sort all data props and object props of each class
+    for (ktSource in sources) {
+        ktSource.dataProperties =
+            ktSource.dataProperties.sortedBy { it.propertyName }.toCollection(linkedSetOf())
+        ktSource.objectProperties =
+            ktSource.objectProperties.sortedBy { it.propertyName }.toCollection(linkedSetOf())
+    }
+
     for (ktSource in sources) {
 
         // This is necessary to avoid writing the Concept class (which is already defined in another
@@ -86,7 +99,7 @@ fun writeKotlinClassesToFolder(
 
 // This function is needed to add let the root nodes inherit from concept class since this is not
 // reflected in the ontology
-private fun addConceptClassToOntology(sources: MutableList<ClassAbstractRepresentation>) {
+private fun addConceptClassToOntology(sources: LinkedHashSet<ClassAbstractRepresentation>) {
     // Create a new ClassAbstractRepresentation for the Concept class
     val conceptClass = ClassAbstractRepresentation(name = "Concept", parentClass = "")
 
@@ -94,22 +107,25 @@ private fun addConceptClassToOntology(sources: MutableList<ClassAbstractRepresen
     conceptClass.objectProperties += Properties("Node", "underlyingNode")
     conceptClass.packageName = "de.fraunhofer.aisec.cpg.graph"
 
+    sources.add(conceptClass)
+
     // Iterate over all sources and add the Concept class to every class which does not have a
     // parent class
     for (ktSource in sources) {
-        if (ktSource.parentClass == "" || ktSource.parentClass == "owl:Thing") {
+        if (
+            (ktSource.parentClass == "" || ktSource.parentClass == "owl:Thing") &&
+                ktSource.name != "Concept"
+        ) {
             // If the class has no parent, add the Concept class as a parent
             ktSource.allParents += conceptClass
         }
     }
-    // Add the Concept class to the sources list
-    sources.add(0, conceptClass) // Add it at the beginning to ensure it is processed first
 }
 
 private fun createKtSourceCodeString(
     ktSource: ClassAbstractRepresentation,
     owl3: OWLCloudOntologyReader,
-    otherClassAbstractions: List<ClassAbstractRepresentation>,
+    otherClassAbstractions: LinkedHashSet<ClassAbstractRepresentation>,
 ): String {
     if (ktSource.name == "owl:Thing") {
         return ""
@@ -150,8 +166,7 @@ private fun createKtSourceCodeString(
         ktSource.name,
     )
 
-    // Retrieve parents recursively and add them to the class.
-    findAllParentsAndSaveToClassAbstraction(ktSource, otherClassAbstractions)
+    // findAllParentsAndSaveToClassAbstraction(ktSource, otherClassAbstractions)
 
     // Now we have to add each object and data property of all parents to the constructor of
     // ktSource
@@ -179,13 +194,14 @@ private fun createKtSourceCodeString(
 }
 
 private fun addPropertiesToClass(
-    dataProperties: List<Properties>,
-    objectProperties: List<Properties>,
+    dataProperties: LinkedHashSet<Properties>,
+    objectProperties: LinkedHashSet<Properties>,
     constructorBuilder: FunSpec.Builder,
     classBuilder: TypeSpec.Builder,
     className: String,
     isParent: Boolean = false,
 ) {
+
     // Loop over the data properties.
     for (dataProp in dataProperties) {
         // Determine the correct TypeName based on the property type string.
@@ -230,9 +246,9 @@ private fun addPropertiesToClass(
     }
 }
 
-private fun findAllParentsAndSaveToClassAbstraction(
+public fun findAllParentsAndSaveToClassAbstraction(
     abstraction: ClassAbstractRepresentation,
-    classAbstractions: List<ClassAbstractRepresentation>,
+    classAbstractions: LinkedHashSet<ClassAbstractRepresentation>,
 ): ClassAbstractRepresentation? {
     // Find direct parent
     val directParent = classAbstractions.find { it.name == abstraction.parentClass }
@@ -245,14 +261,8 @@ private fun findAllParentsAndSaveToClassAbstraction(
         findAllParentsAndSaveToClassAbstraction(directParent, classAbstractions)
 
         // Add all parents of parent to this abstraction's allParents
-        abstraction.allParents += directParent.allParents
-
-        //        if (abstraction.name != "owl:Thing") {
-        //            println(
-        //                "Found all parents of ${abstraction.name}:
-        // ${abstraction.allParents.joinToString { it.name }}"
-        //            )
-        //        }
+        val parentsToAdd = directParent.allParents
+        abstraction.allParents += parentsToAdd
 
         return directParent
     }

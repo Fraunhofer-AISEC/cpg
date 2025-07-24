@@ -6,8 +6,8 @@ import kotlin.String
 
 public abstract class DatabaseOperation(
   calls: List<String>,
-  storage: DatabaseStorage,
   databaseService: DatabaseService,
+  storage: DatabaseStorage,
   codeRegion: CodeRegion,
   underlyingNode: Node,
 ) : Operation(codeRegion, underlyingNode)

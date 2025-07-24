@@ -5,10 +5,10 @@ import java.time.Duration
 import kotlin.Boolean
 
 public abstract class Backup(
-  retentionPeriod: Duration,
-  interval: Duration,
   enabled: Boolean,
-  transportEncryption: Boolean,
+  interval: Duration,
+  retentionPeriod: Duration,
   storage: Storage,
+  transportEncryption: Boolean,
   underlyingNode: Node,
 ) : Availability(underlyingNode)

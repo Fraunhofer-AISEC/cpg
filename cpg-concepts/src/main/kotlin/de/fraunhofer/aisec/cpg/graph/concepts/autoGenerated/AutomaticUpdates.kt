@@ -6,7 +6,7 @@ import kotlin.Boolean
 
 public abstract class AutomaticUpdates(
   enabled: Boolean,
-  securityOnly: Boolean,
   interval: Duration,
+  securityOnly: Boolean,
   underlyingNode: Node,
 ) : Integrity(underlyingNode)

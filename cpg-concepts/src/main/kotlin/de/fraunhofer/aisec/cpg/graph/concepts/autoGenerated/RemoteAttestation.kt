@@ -5,8 +5,8 @@ import java.time.ZonedDateTime
 import kotlin.Boolean
 
 public abstract class RemoteAttestation(
-  status: Boolean,
   creation_time: ZonedDateTime,
+  status: Boolean,
   enabled: Boolean,
   underlyingNode: Node,
 ) : Attestation(enabled, underlyingNode)

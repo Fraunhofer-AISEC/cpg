@@ -8,16 +8,16 @@ import kotlin.collections.MutableMap
 public abstract class Library(
   vulnerabilities: Vulnerability,
   libraries: Library,
+  codeModules: CodeModule,
   codeRepository: CodeRepository,
   functionalities: Functionality,
-  codeModules: CodeModule,
-  raw: String,
   creation_time: ZonedDateTime,
-  labels: MutableMap<String, String>,
-  name: String,
   description: String,
   id: String,
+  labels: MutableMap<String, String>,
+  name: String,
+  raw: String,
   parent: Resource,
   underlyingNode: Node,
-) : Component(libraries, codeRepository, functionalities, codeModules, raw, creation_time, labels,
-    name, description, id, parent, underlyingNode)
+) : Component(libraries, codeModules, codeRepository, functionalities, creation_time, description,
+    id, labels, name, raw, parent, underlyingNode)

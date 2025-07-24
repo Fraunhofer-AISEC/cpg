@@ -8,17 +8,17 @@ import kotlin.collections.MutableMap
 
 public abstract class CodeRepository(
   internetAccessibleEndpoint: Boolean,
-  redundancies: Redundancy,
-  loggings: Logging,
   geoLocation: GeoLocation,
+  loggings: Logging,
+  redundancies: Redundancy,
   usageStatistics: UsageStatistics,
-  raw: String,
   creation_time: ZonedDateTime,
-  labels: MutableMap<String, String>,
-  name: String,
   description: String,
   id: String,
+  labels: MutableMap<String, String>,
+  name: String,
+  raw: String,
   parent: Resource,
   underlyingNode: Node,
-) : Infrastructure(internetAccessibleEndpoint, redundancies, loggings, geoLocation, usageStatistics,
-    raw, creation_time, labels, name, description, id, parent, underlyingNode)
+) : Infrastructure(internetAccessibleEndpoint, geoLocation, loggings, redundancies, usageStatistics,
+    creation_time, description, id, labels, name, raw, parent, underlyingNode)

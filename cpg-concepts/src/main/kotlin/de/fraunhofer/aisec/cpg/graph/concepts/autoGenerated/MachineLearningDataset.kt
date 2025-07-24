@@ -7,16 +7,16 @@ import kotlin.String
 import kotlin.collections.MutableMap
 
 public abstract class MachineLearningDataset(
-  type: String,
   size: Int,
+  type: String,
   dataLocation: DataLocation,
-  raw: String,
   creation_time: ZonedDateTime,
-  labels: MutableMap<String, String>,
-  name: String,
   description: String,
   id: String,
+  labels: MutableMap<String, String>,
+  name: String,
+  raw: String,
   parent: Resource,
   underlyingNode: Node,
-) : MachineLearning(dataLocation, raw, creation_time, labels, name, description, id, parent,
+) : MachineLearning(dataLocation, creation_time, description, id, labels, name, raw, parent,
     underlyingNode)

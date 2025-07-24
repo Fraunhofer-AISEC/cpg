@@ -5,11 +5,11 @@ import java.time.Duration
 import kotlin.Boolean
 
 public abstract class OSLogging(
-  retentionPeriod: Duration,
   enabled: Boolean,
   monitoringEnabled: Boolean,
+  retentionPeriod: Duration,
   securityAlertsEnabled: Boolean,
   loggingService: LoggingService,
   underlyingNode: Node,
-) : Logging(retentionPeriod, enabled, monitoringEnabled, securityAlertsEnabled, loggingService,
+) : Logging(enabled, monitoringEnabled, retentionPeriod, securityAlertsEnabled, loggingService,
     underlyingNode)

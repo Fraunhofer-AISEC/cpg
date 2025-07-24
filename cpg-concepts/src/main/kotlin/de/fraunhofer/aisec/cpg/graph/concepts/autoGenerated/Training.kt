@@ -9,12 +9,12 @@ import kotlin.collections.MutableMap
 public abstract class Training(
   annualUpdateCompleted: Boolean,
   successfullyCompletedPercentage: Boolean,
-  raw: String,
   creation_time: ZonedDateTime,
-  labels: MutableMap<String, String>,
-  name: String,
   description: String,
   id: String,
+  labels: MutableMap<String, String>,
+  name: String,
+  raw: String,
   parent: Resource,
   underlyingNode: Node,
-) : HumanResources(raw, creation_time, labels, name, description, id, parent, underlyingNode)
+) : HumanResources(creation_time, description, id, labels, name, raw, parent, underlyingNode)

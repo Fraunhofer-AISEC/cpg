@@ -4,8 +4,8 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.String
 
 public abstract class HttpRequest(
-  reqBody: String,
   call: String,
+  reqBody: String,
   httpEndpoint: HttpEndpoint,
   codeRegion: CodeRegion,
   underlyingNode: Node,

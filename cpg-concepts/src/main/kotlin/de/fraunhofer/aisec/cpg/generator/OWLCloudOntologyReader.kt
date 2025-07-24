@@ -69,10 +69,9 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
     // Get list of AbstractRepresentation of OWL classes
     fun getAbstractRepresentationOfOWL(
         packageName: String?
-    ): MutableList<ClassAbstractRepresentation> {
+    ): LinkedHashSet<ClassAbstractRepresentation> {
         val classes = ontology!!.classesInSignature
-        val abstractRepresentationList: MutableList<ClassAbstractRepresentation> = ArrayList()
-
+        val abstractRepresentationList: LinkedHashSet<ClassAbstractRepresentation> = linkedSetOf()
         for (clazz in classes) {
             // skip owl:Thing
             if (clazz.isOWLThing) continue
@@ -81,6 +80,7 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
             gs.structDescription = getClassDescription(clazz, ontology)
             abstractRepresentationList.add(gs)
         }
+
         return abstractRepresentationList
     }
 
@@ -405,7 +405,7 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
         gs: ClassAbstractRepresentation,
         clazz: OWLClass,
     ): ClassAbstractRepresentation {
-        val propertiesList: MutableList<Properties> = ArrayList()
+        val propertiesList: LinkedHashSet<Properties> = linkedSetOf()
 
         // Get Set of OWLClassAxioms
         val tempAx = ontology!!.getAxioms(clazz, Imports.EXCLUDED)
@@ -544,7 +544,7 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
         clazz: OWLClass,
         classes: Set<OWLClass>,
     ): ClassAbstractRepresentation {
-        val propertiesList: MutableList<Properties> = ArrayList()
+        val propertiesList: LinkedHashSet<Properties> = linkedSetOf()
 
         // Get sorted List of OWLClassAxioms
         val tempAx =

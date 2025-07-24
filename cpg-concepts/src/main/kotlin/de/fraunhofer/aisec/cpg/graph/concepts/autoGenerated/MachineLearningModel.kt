@@ -7,21 +7,21 @@ import kotlin.String
 import kotlin.collections.MutableMap
 
 public abstract class MachineLearningModel(
-  privacyLevel: Float,
+  adv_robustness: Float,
   explainability: Float,
   poisonLevel: Float,
-  robustness: Float,
-  adv_robustness: Float,
   privacyLabel: Float,
+  privacyLevel: Float,
+  robustness: Float,
   vulnerabilities: Vulnerability,
   dataLocation: DataLocation,
-  raw: String,
   creation_time: ZonedDateTime,
-  labels: MutableMap<String, String>,
-  name: String,
   description: String,
   id: String,
+  labels: MutableMap<String, String>,
+  name: String,
+  raw: String,
   parent: Resource,
   underlyingNode: Node,
-) : MachineLearning(dataLocation, raw, creation_time, labels, name, description, id, parent,
+) : MachineLearning(dataLocation, creation_time, description, id, labels, name, raw, parent,
     underlyingNode)

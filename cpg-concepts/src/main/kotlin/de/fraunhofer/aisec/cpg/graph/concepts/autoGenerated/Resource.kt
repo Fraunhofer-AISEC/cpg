@@ -7,12 +7,12 @@ import kotlin.String
 import kotlin.collections.MutableMap
 
 public abstract class Resource(
-  raw: String,
   creation_time: ZonedDateTime,
-  labels: MutableMap<String, String>,
-  name: String,
   description: String,
   id: String,
+  labels: MutableMap<String, String>,
+  name: String,
+  raw: String,
   parent: Resource,
   underlyingNode: Node,
 ) : Concept(underlyingNode)

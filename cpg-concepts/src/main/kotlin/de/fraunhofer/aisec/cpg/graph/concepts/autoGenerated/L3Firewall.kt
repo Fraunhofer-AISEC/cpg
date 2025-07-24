@@ -5,8 +5,8 @@ import kotlin.Boolean
 import kotlin.String
 
 public abstract class L3Firewall(
-  inbound: Boolean,
   enabled: Boolean,
+  inbound: Boolean,
   restrictedPorts: String,
   underlyingNode: Node,
 ) : Firewall(underlyingNode)

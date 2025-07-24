@@ -4,9 +4,9 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.String
 
 public abstract class CipherSuite(
-  sessionCipher: String,
-  macAlgorithm: String,
-  keyExchangeAlgorithm: String,
   authenticationMechanism: String,
+  keyExchangeAlgorithm: String,
+  macAlgorithm: String,
+  sessionCipher: String,
   underlyingNode: Node,
 ) : Functionality(underlyingNode)
