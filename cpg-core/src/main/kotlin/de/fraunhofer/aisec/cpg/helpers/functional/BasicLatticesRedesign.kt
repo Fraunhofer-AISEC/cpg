@@ -538,13 +538,13 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
  * Implements the [Lattice] for a lattice over two other lattices which are represented by
  * [innerLattice1] and [innerLattice2].
  */
-class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
+open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
     val innerLattice1: Lattice<S>,
     val innerLattice2: Lattice<T>,
 ) : Lattice<TupleLattice.Element<S, T>> {
     override lateinit var elements: Set<Element<S, T>>
 
-    class Element<S : Lattice.Element, T : Lattice.Element>(val first: S, val second: T) :
+    open class Element<S : Lattice.Element, T : Lattice.Element>(val first: S, val second: T) :
         Serializable, Lattice.Element {
         override fun toString(): String = "($first, $second)"
 

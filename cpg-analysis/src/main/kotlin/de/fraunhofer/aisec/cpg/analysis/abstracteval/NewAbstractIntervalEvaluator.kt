@@ -31,13 +31,49 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.helpers.functional.*
+import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice.Element
 import de.fraunhofer.aisec.cpg.passes.objectIdentifier
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 import kotlin.to
 
-typealias TupleState<NodeId> =
-    TupleLattice<DeclarationStateElement<NodeId>, NewIntervalStateElement>
+class TupleState<NodeId>(
+    innerLattice1: Lattice<DeclarationStateElement<NodeId>>,
+    innerLattice2: Lattice<NewIntervalStateElement>,
+) :
+    TupleLattice<DeclarationStateElement<NodeId>, NewIntervalStateElement>(
+        innerLattice1,
+        innerLattice2,
+    ) {
+
+    override fun lub(
+        one: TupleStateElement<NodeId>,
+        two: TupleStateElement<NodeId>,
+        allowModify: Boolean,
+        widen: Boolean,
+    ): TupleStateElement<NodeId> {
+        return if (allowModify) {
+            innerLattice1.lub(one = one.first, two = two.first, allowModify = true, widen = widen)
+            innerLattice2.lub(one = one.second, two = two.second, allowModify = true, widen = false)
+            one
+        } else {
+            Element(
+                innerLattice1.lub(
+                    one = one.first,
+                    two = two.first,
+                    allowModify = false,
+                    widen = widen,
+                ),
+                innerLattice2.lub(
+                    one = one.second,
+                    two = two.second,
+                    allowModify = false,
+                    widen = false,
+                ),
+            )
+        }
+    }
+}
 
 typealias TupleStateElement<NodeId> =
     TupleLattice.Element<DeclarationStateElement<NodeId>, NewIntervalStateElement>
