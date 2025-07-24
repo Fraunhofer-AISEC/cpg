@@ -9,6 +9,7 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 include(":cpg-core")
 include(":cpg-analysis")
 include(":cpg-neo4j")
+include(":cpg-mcp")
 include(":cpg-concepts")
 
 include(":codyze")
