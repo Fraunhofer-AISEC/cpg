@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -42,283 +43,216 @@ import kotlin.test.assertEquals
 class MutableListValueTest {
     private val name = Name("testVariable")
     private val current = LatticeInterval.Bounded(1, 1)
+    private val lattice =
+        TupleState<Any>(
+            DeclarationState(NewIntervalLattice()),
+            NewIntervalState(NewIntervalLattice()),
+        )
 
     @Test
     fun applyDeclarationTest() {
-        val correctDeclaration = run {
-            val decl = VariableDeclaration()
-            val init = MemberCallExpression()
-            val lit = Literal<Int>()
-            lit.value = 5
-            init.arguments = mutableListOf(lit, lit)
-            decl.name = name
-            decl.initializer = init
-            decl
-        }
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val correctDeclaration =
+            VariableDeclaration().apply {
+                this.name = name
+                this.initializer =
+                    MemberCallExpression().apply {
+                        this.arguments += Literal<Int>().apply { this.value = 5 }
+                        this.arguments += Literal<Int>().apply { this.value = 5 }
+                    }
+            }
+
         assertEquals(
             LatticeInterval.Bounded(2, 2),
-            MutableListValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    correctDeclaration,
-                    null,
-                    name.localName,
-                ),
-        )
-
-        val wrongNameDeclaration = run {
-            val decl = VariableDeclaration()
-            val init = Literal<Int>()
-            init.value = 5
-            decl.name = Name("otherVariable")
-            decl.initializer = init
-            decl
-        }
-        assertEquals(
-            LatticeInterval.Bounded(1, 1),
-            MutableListValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    wrongNameDeclaration,
-                    null,
-                    name.localName,
-                ),
-        )
-
-        val noInitializerDeclaration = run {
-            val decl = VariableDeclaration()
-            decl.name = name
-            decl
-        }
-        assertEquals(
-            LatticeInterval.Bounded(1, 1),
-            MutableListValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    noInitializerDeclaration,
-                    null,
-                    name.localName,
-                ),
+            MutableListSize()
+                .applyEffect(lattice = lattice, state = startState, node = correctDeclaration),
         )
     }
 
     @Test
-    fun applyDirectCallTest() {
-        val add = run {
-            val expr = MemberCallExpression()
-            val member = MemberExpression()
-            member.base.code = name.localName
-            member.name = Name("add")
-            expr.callee = member
-            expr
-        }
+    fun applyDeclarationNoInitializerTest() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val noInitializerDeclaration = VariableDeclaration().apply { this.name = name }
+
+        assertEquals(
+            LatticeInterval.BOTTOM,
+            MutableListSize()
+                .applyEffect(lattice = lattice, state = startState, node = noInitializerDeclaration),
+        )
+    }
+
+    @Test
+    fun applyAddTest() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val decl = VariableDeclaration().apply { this.name = name }
+        lattice.pushToDeclarationState(startState, decl, LatticeInterval.Bounded(1, 1))
+
+        val add =
+            MemberCallExpression().apply {
+                this.name = Name("add")
+                callee =
+                    MemberExpression().apply {
+                        this.name = Name("add")
+                        base =
+                            Reference().apply {
+                                this.name = name
+                                this.refersTo = decl
+                            }
+                    }
+                this.arguments += Literal<Int>().apply { this.value = 5 }
+            }
+
         assertEquals(
             LatticeInterval.Bounded(2, 2),
-            MutableListValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    add,
-                    null,
-                    name.localName,
-                ),
+            MutableListSize().applyEffect(lattice = lattice, state = startState, node = add),
         )
+    }
 
-        val addAll = run {
-            val expr = MemberCallExpression()
-            val member = MemberExpression()
-            member.base.code = name.localName
-            member.name = Name("addAll")
-            expr.callee = member
-            expr
-        }
+    @Test
+    fun applyAddAllTest() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val decl = VariableDeclaration().apply { this.name = name }
+        lattice.pushToDeclarationState(startState, decl, LatticeInterval.Bounded(1, 1))
+
+        val addAll =
+            MemberCallExpression().apply {
+                this.name = Name("addAll")
+                callee =
+                    MemberExpression().apply {
+                        this.name = Name("addAll")
+                        base =
+                            Reference().apply {
+                                this.name = name
+                                this.refersTo = decl
+                            }
+                    }
+                this.arguments += Literal<Int>().apply { this.value = 5 }
+                this.arguments += Literal<Int>().apply { this.value = 10 }
+            }
+
         assertEquals(
-            LatticeInterval.Bounded(1, INFINITE),
-            MutableListValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    addAll,
-                    null,
-                    name.localName,
-                ),
+            LatticeInterval.Bounded(3, 3),
+            MutableListSize().applyEffect(lattice = lattice, state = startState, node = addAll),
         )
+    }
 
-        val clear = run {
-            val expr = MemberCallExpression()
-            val member = MemberExpression()
-            member.base.code = name.localName
-            member.name = Name("clear")
-            expr.callee = member
-            expr
-        }
-        assertEquals(
-            LatticeInterval.Bounded(0, 0),
-            MutableListValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    clear,
-                    null,
-                    name.localName,
-                ),
-        )
+    @Test
+    fun applyClearTest() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val decl = VariableDeclaration().apply { this.name = name }
+        lattice.pushToDeclarationState(startState, decl, LatticeInterval.Bounded(3, 3))
 
-        val removeInt = run {
-            val expr = MemberCallExpression()
-            val lit = Literal<Int>()
-            val member = MemberExpression()
-            member.base.code = name.localName
-            member.name = Name("remove")
-            lit.type = IntegerType(language = TestLanguage())
-            expr.callee = member
-            expr.arguments = mutableListOf(lit)
-            expr
-        }
+        val clear =
+            MemberCallExpression().apply {
+                this.name = Name("clear")
+                callee =
+                    MemberExpression().apply {
+                        this.name = Name("clear")
+                        base =
+                            Reference().apply {
+                                this.name = name
+                                this.refersTo = decl
+                            }
+                    }
+            }
+
         assertEquals(
             LatticeInterval.Bounded(0, 0),
-            MutableListValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    removeInt,
-                    null,
-                    name.localName,
-                ),
+            MutableListSize().applyEffect(lattice = lattice, state = startState, node = clear),
         )
+    }
 
-        val removeObject = run {
-            val expr = MemberCallExpression()
-            val lit = Literal<Any>()
-            val member = MemberExpression()
-            member.base.code = name.localName
-            member.name = Name("remove")
-            expr.callee = member
-            expr.arguments = mutableListOf(lit)
-            expr
-        }
+    @Test
+    fun applyRemoveIndexedTest() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val decl = VariableDeclaration().apply { this.name = name }
+        lattice.pushToDeclarationState(startState, decl, LatticeInterval.Bounded(3, 3))
+
+        val removeInt =
+            MemberCallExpression().apply {
+                this.name = Name("remove")
+                callee =
+                    MemberExpression().apply {
+                        this.name = Name("remove")
+                        base =
+                            Reference().apply {
+                                this.name = name
+                                this.refersTo = decl
+                            }
+                    }
+                this.arguments +=
+                    Literal<Int>().apply {
+                        this.value = 5
+                        this.type = IntegerType(language = TestLanguage())
+                    }
+            }
+
         assertEquals(
-            LatticeInterval.Bounded(0, 1),
-            MutableListValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    removeObject,
-                    null,
-                    name.localName,
-                ),
+            LatticeInterval.Bounded(2, 2),
+            MutableListSize().applyEffect(lattice = lattice, state = startState, node = removeInt),
         )
+    }
 
-        val removeAll = run {
-            val expr = MemberCallExpression()
-            val member = MemberExpression()
-            member.base.code = name.localName
-            member.name = Name("removeAll")
-            expr.callee = member
-            expr
-        }
+    @Test
+    fun applyRemoveObjectTest() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val decl = VariableDeclaration().apply { this.name = name }
+        lattice.pushToDeclarationState(startState, decl, LatticeInterval.Bounded(3, 3))
+
+        val removeObject =
+            MemberCallExpression().apply {
+                this.name = Name("remove")
+                callee =
+                    MemberExpression().apply {
+                        this.name = Name("remove")
+                        base =
+                            Reference().apply {
+                                this.name = name
+                                this.refersTo = decl
+                            }
+                    }
+                this.arguments += Literal<Int>().apply { this.value = 5 }
+            }
+
         assertEquals(
-            LatticeInterval.Bounded(0, 1),
-            MutableListValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    removeAll,
-                    null,
-                    name.localName,
-                ),
+            LatticeInterval.Bounded(2, 3),
+            MutableListSize()
+                .applyEffect(lattice = lattice, state = startState, node = removeObject),
         )
+    }
 
-        val wrongName = run {
-            val expr = MemberCallExpression()
-            val member = MemberExpression()
-            member.name = Name("add")
-            expr.callee = member
-            expr
-        }
+    @Test
+    fun applyRemoveAllTest() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val decl = VariableDeclaration().apply { this.name = name }
+        lattice.pushToDeclarationState(startState, decl, LatticeInterval.Bounded(3, 3))
+
+        val removeAll =
+            MemberCallExpression().apply {
+                this.name = Name("removeAll")
+                callee =
+                    MemberExpression().apply {
+                        this.name = Name("removeAll")
+                        base =
+                            Reference().apply {
+                                this.name = name
+                                this.refersTo = decl
+                            }
+                    }
+                this.arguments += Literal<Int>().apply { this.value = 5 }
+                this.arguments += Literal<Int>().apply { this.value = 10 }
+            }
         assertEquals(
-            LatticeInterval.Bounded(1, 1),
-            MutableListValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    wrongName,
-                    null,
-                    name.localName,
-                ),
+            LatticeInterval.Bounded(1, 3),
+            MutableListSize().applyEffect(lattice = lattice, state = startState, node = removeAll),
         )
     }
 }

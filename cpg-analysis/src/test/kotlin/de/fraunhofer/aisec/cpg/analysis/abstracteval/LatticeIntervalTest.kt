@@ -72,7 +72,6 @@ class LatticeIntervalTest {
     @Test
     fun testEquals() {
         // comparison with BOTTOM
-        assertFalse(BOTTOM.equals(AbstractIntervalEvaluator()))
         assertFalse(BOTTOM.equals(null))
         assertFalse(BOTTOM.equals(Bounded(0, 0)))
         assertFalse(Bounded(0, 0).equals(BOTTOM))
