@@ -49,12 +49,10 @@ import de.fraunhofer.aisec.cpg.query.value
  */
 class ArrayValue : Value<LatticeInterval> {
     override fun applyEffect(
-        current: LatticeInterval?,
         lattice: TupleState<Any>,
         state: TupleStateElement<Any>,
         node: Node,
         edge: EvaluationOrder?,
-        name: String?,
         computeWithoutPush: Boolean,
     ): LatticeInterval {
         var size: LatticeInterval = LatticeInterval.BOTTOM

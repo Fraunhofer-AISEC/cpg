@@ -48,12 +48,10 @@ import de.fraunhofer.aisec.cpg.graph.types.ListType
 @Suppress("UNUSED")
 class MutableListSize() : MutableCollectionSize() {
     override fun applyEffect(
-        current: LatticeInterval?,
         lattice: TupleState<Any>,
         state: TupleStateElement<Any>,
         node: Node,
         edge: EvaluationOrder?,
-        name: String?,
         computeWithoutPush: Boolean,
     ): LatticeInterval {
         var target: Node? = null

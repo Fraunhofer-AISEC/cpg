@@ -41,12 +41,10 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 interface Value<T> {
     /** Applies the effect of a Node to the interval containing its possible values. */
     fun applyEffect(
-        current: T? = null,
         lattice: TupleState<Any>,
         state: TupleStateElement<Any>,
         node: Node,
         edge: EvaluationOrder? = null,
-        name: String? = null,
         computeWithoutPush: Boolean = false,
     ): T
 

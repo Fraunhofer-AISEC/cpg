@@ -154,12 +154,10 @@ class IntegerValue : Value<LatticeInterval> {
     }
 
     override fun applyEffect(
-        current: LatticeInterval?,
         lattice: TupleState<Any>,
         state: TupleStateElement<Any>,
         node: Node,
         edge: EvaluationOrder?,
-        name: String?,
         computeWithoutPush: Boolean,
     ): LatticeInterval {
         val prevNode = edge?.start
@@ -201,7 +199,7 @@ class IntegerValue : Value<LatticeInterval> {
             }
 
         if (node is Literal<*>) {
-            val value = node.value as? Number ?: return current ?: state.intervalOf(node)
+            val value = node.value as? Number ?: return state.intervalOf(node)
 
             val interval = LatticeInterval.Bounded(value.toLong(), value.toLong())
             if (!computeWithoutPush) {
@@ -213,15 +211,7 @@ class IntegerValue : Value<LatticeInterval> {
         else if (node is VariableDeclaration) {
             val initializerValue =
                 node.initializer?.let {
-                    this.applyEffect(
-                        current,
-                        lattice,
-                        state,
-                        it,
-                        null,
-                        name,
-                        computeWithoutPush = true,
-                    )
+                    this.applyEffect(lattice, state, it, null, computeWithoutPush = true)
                 } ?: LatticeInterval.TOP
             lattice.pushToDeclarationState(state, node, initializerValue)
             lattice.pushToGeneralState(state, node, initializerValue)
