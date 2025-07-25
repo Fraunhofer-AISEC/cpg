@@ -29,12 +29,16 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.*
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval.Bound.*
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.NewIntervalLattice
+import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.types.ListType
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.SetType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -60,7 +64,91 @@ class MutableSetValueTest {
             }
 
         assertEquals(
-            LatticeInterval.Bounded(2, 2),
+            LatticeInterval.Bounded(1, 2),
+            MutableSetSize()
+                .applyEffect(lattice = lattice, state = startState, node = correctDeclaration),
+        )
+    }
+
+    @Test
+    fun applyDeclarationFromListTest() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val existingDecl =
+            VariableDeclaration().apply {
+                this.name = Name("existingDecl")
+                this.type = ListType("list", elementType = ObjectType(), language = TestLanguage())
+            }
+        lattice.pushToDeclarationState(startState, existingDecl, LatticeInterval.Bounded(2, 3))
+
+        val correctDeclaration =
+            VariableDeclaration().apply {
+                this.name = name
+                this.initializer =
+                    MemberCallExpression().apply {
+                        this.name = Name("toSet")
+                        this.callee =
+                            MemberExpression().apply {
+                                this.name = Name("toSet")
+                                this.base =
+                                    Reference().apply {
+                                        this.type =
+                                            ListType(
+                                                "list",
+                                                elementType = ObjectType(),
+                                                language = TestLanguage(),
+                                            )
+                                        this.name = Name("existingDecl")
+                                        this.refersTo = existingDecl
+                                    }
+                            }
+                    }
+            }
+
+        assertEquals(
+            LatticeInterval.Bounded(1, 3),
+            MutableSetSize()
+                .applyEffect(lattice = lattice, state = startState, node = correctDeclaration),
+        )
+    }
+
+    @Test
+    fun applyDeclarationFromSetTest() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val existingDecl =
+            VariableDeclaration().apply {
+                this.name = Name("existingDecl")
+                this.type = SetType("set", elementType = ObjectType(), language = TestLanguage())
+            }
+        lattice.pushToDeclarationState(startState, existingDecl, LatticeInterval.Bounded(2, 3))
+
+        val correctDeclaration =
+            VariableDeclaration().apply {
+                this.name = name
+                this.initializer =
+                    MemberCallExpression().apply {
+                        this.name = Name("toSet")
+                        this.callee =
+                            MemberExpression().apply {
+                                this.name = Name("toSet")
+                                this.base =
+                                    Reference().apply {
+                                        this.type =
+                                            SetType(
+                                                "set",
+                                                elementType = ObjectType(),
+                                                language = TestLanguage(),
+                                            )
+                                        this.name = Name("existingDecl")
+                                        this.refersTo = existingDecl
+                                    }
+                            }
+                    }
+            }
+
+        assertEquals(
+            LatticeInterval.Bounded(2, 3),
             MutableSetSize()
                 .applyEffect(lattice = lattice, state = startState, node = correctDeclaration),
         )

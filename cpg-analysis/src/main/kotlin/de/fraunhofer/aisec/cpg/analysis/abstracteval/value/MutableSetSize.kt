@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewExpression
 import de.fraunhofer.aisec.cpg.graph.types.ListType
+import de.fraunhofer.aisec.cpg.graph.types.SetType
 
 /**
  * This class implements the [Value] interface for mutable Lists, tracking the size of the
@@ -60,12 +61,28 @@ class MutableSetSize() : MutableCollectionSize() {
             variableSize =
                 when (val init = node.initializer) {
                     is MemberCallExpression -> {
-                        if (init.base?.type is ListType) { // TODO: check the function name
-                            // This is a List copying the base, we can use the size of the base
+                        if (init.base?.type is SetType) { // TODO: check the function name
+                            // This is a set copying the base, we can use the size of the base
                             createWithElementsFromElement(init.base!!, state)
+                        } else if (init.base?.type is ListType) { // TODO: check the function name
+                            // This is a set copying the base but as set. This may remove some
+                            // elements!
+                            val tmp = createWithElementsFromElement(init.base!!, state)
+                            if (
+                                tmp is LatticeInterval.Bounded &&
+                                    tmp.upper > LatticeInterval.Bound.Value(0)
+                            ) {
+                                LatticeInterval.Bounded(LatticeInterval.Bound.Value(1), tmp.upper)
+                            } else {
+                                LatticeInterval.Bounded(0, 0)
+                            }
                         } else {
                             val size = init.arguments.size.toLong()
-                            LatticeInterval.Bounded(size, size)
+                            if (size > 0) {
+                                LatticeInterval.Bounded(1, size)
+                            } else {
+                                LatticeInterval.Bounded(0, 0)
+                            }
                         }
                     }
                     is NewExpression -> {
