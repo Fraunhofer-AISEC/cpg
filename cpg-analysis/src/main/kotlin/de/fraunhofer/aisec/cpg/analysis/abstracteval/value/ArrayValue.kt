@@ -28,12 +28,19 @@ package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.intervalOf
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToDeclarationState
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToGeneralState
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
+import de.fraunhofer.aisec.cpg.query.size
 import de.fraunhofer.aisec.cpg.query.value
 
 /**
@@ -50,34 +57,62 @@ class ArrayValue : Value<LatticeInterval> {
         name: String?,
         computeWithoutPush: Boolean,
     ): LatticeInterval {
-        current ?: TODO()
-        // (Re-)Declaration
-        if (
-            node is VariableDeclaration && node.initializer != null && node.name.localName == name
-        ) {
-            val initValue = getSize(node.initializer!!)
-            return LatticeInterval.Bounded(initValue, initValue)
+        var size: LatticeInterval = LatticeInterval.BOTTOM
+        var target: Node? = null
+        if (node is VariableDeclaration && node.initializer != null && node.type is PointerType) {
+            size = getSize(node.initializer!!)
+            target = node
+        } else if (node is AssignExpression && node.rhs.size == 1 && node.lhs.size == 1) {
+            size = getSize(node.rhs.single())
+            target = node.lhs.single()
         }
-        return current
+        if (target != null) {
+            lattice.pushToGeneralState(state, target, size)
+            lattice.pushToDeclarationState(state, target, size)
+            lattice.pushToGeneralState(state, node, state.intervalOf(node))
+            return size
+        }
+
+        lattice.pushToGeneralState(state, node, state.intervalOf(node))
+        return state.intervalOf(node)
     }
 
-    private fun getSize(node: Node): Long {
+    private fun getSize(node: Node): LatticeInterval {
         return when (node) {
-            // TODO: depending on the desired behavior we could distinguish between included types
-            // (e.g. String and Int Literals)
             is Literal<*> -> {
-                1
+                if (node.value is String) {
+                    // For strings, we return the length of the string
+                    val length = (node.value as String).length.toLong()
+                    LatticeInterval.Bounded(length, length)
+                } else {
+                    // Otherwise, we assume that the size is 1.
+                    LatticeInterval.Bounded(1, 1)
+                }
             }
             is InitializerListExpression -> {
-                node.initializers.fold(0L) { acc, init -> acc + getSize(init) }
+                // The number of elements in the initializer list
+                val length = node.initializers.size.toLong()
+                LatticeInterval.Bounded(length, length)
+                // node.initializers.fold(0L) { acc, init -> acc + getSize(init) }
             }
             is NewArrayExpression -> {
                 if (node.initializer != null) {
                     getSize(node.initializer!!)
                 } else {
-                    node.dimensions
-                        .map { (it.value.value as Number).toLong() }
-                        .reduce { acc, dimension -> acc * dimension }
+                    val length =
+                        node.dimensions
+                            .map { (it.value.value as Number).toLong() }
+                            .reduce { acc, dimension -> acc * dimension }
+                    LatticeInterval.Bounded(length, length)
+                }
+            }
+            is CallExpression -> {
+                if (node.name.localName == "malloc") {
+                    val length = (node.arguments.singleOrNull()?.value?.value as? Number)?.toLong()
+                    length?.let { LatticeInterval.Bounded(length, length) }
+                        ?: LatticeInterval.BOTTOM
+                } else {
+                    LatticeInterval.BOTTOM
                 }
             }
             else -> TODO()

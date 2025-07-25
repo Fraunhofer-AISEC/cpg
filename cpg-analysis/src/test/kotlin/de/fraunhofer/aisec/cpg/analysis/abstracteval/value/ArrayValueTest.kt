@@ -28,97 +28,86 @@ package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.*
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.NewIntervalLattice
-import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.graph.array
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class ArrayValueTest {
-    private val name = Name("testVariable")
-    private val current = LatticeInterval.Bounded(1, 1)
+    private val lattice =
+        TupleState<Any>(
+            DeclarationState(NewIntervalLattice()),
+            NewIntervalState(NewIntervalLattice()),
+        )
 
     @Test
     fun applyDeclarationTest() {
-        val correctDeclaration = run {
-            val decl = VariableDeclaration()
-            val init = NewArrayExpression()
-            val lit = Literal<Int>()
-            lit.value = 5
-            init.dimensions = mutableListOf(lit)
-            decl.name = name
-            decl.initializer = init
-            decl
-        }
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+
+        val correctDeclaration =
+            VariableDeclaration().apply {
+                this.name = name
+                this.type = IntegerType(language = TestLanguage()).array()
+                this.initializer =
+                    NewArrayExpression().apply {
+                        this.dimensions += Literal<Int>().apply { this.value = 5 }
+                    }
+            }
+
         assertEquals(
             LatticeInterval.Bounded(5, 5),
             ArrayValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    correctDeclaration,
-                    null,
-                    name.localName,
-                ),
+                .applyEffect(lattice = lattice, state = startState, node = correctDeclaration),
         )
+    }
 
-        val wrongNameDeclaration = run {
-            val decl = VariableDeclaration()
-            val init = Literal<Int>()
-            init.value = 5
-            decl.name = Name("otherVariable")
-            decl.initializer = init
-            decl
-        }
+    @Test
+    fun applyReferenceTest() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+
+        val decl =
+            VariableDeclaration().apply {
+                this.name = name
+                this.type = IntegerType(language = TestLanguage()).array()
+                this.initializer =
+                    NewArrayExpression().apply {
+                        this.dimensions += Literal<Int>().apply { this.value = 5 }
+                    }
+            }
+        lattice.pushToDeclarationState(startState, decl, LatticeInterval.Bounded(5, 5))
+        val reference =
+            Reference().apply {
+                this.name = name
+                this.refersTo = decl
+            }
+
         assertEquals(
-            LatticeInterval.Bounded(1, 1),
-            ArrayValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    wrongNameDeclaration,
-                    null,
-                    name.localName,
-                ),
+            LatticeInterval.Bounded(5, 5),
+            ArrayValue().applyEffect(lattice = lattice, state = startState, node = reference),
         )
+    }
 
-        val noInitializerDeclaration = run {
-            val decl = VariableDeclaration()
-            decl.name = name
-            decl
-        }
+    @Test
+    fun applyDeclarationWithoutInitializerTest() {
+        val startState =
+            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+        val noInitializerDeclaration =
+            VariableDeclaration().apply {
+                this.name = name
+                this.type = IntegerType(language = TestLanguage()).array()
+            }
+
         assertEquals(
-            LatticeInterval.Bounded(1, 1),
+            LatticeInterval.TOP,
             ArrayValue()
-                .applyEffect(
-                    current,
-                    TupleState(
-                        DeclarationState(NewIntervalLattice()),
-                        NewIntervalState(NewIntervalLattice()),
-                    ),
-                    de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement(
-                        DeclarationStateElement(),
-                        NewIntervalStateElement(),
-                    ),
-                    noInitializerDeclaration,
-                    null,
-                    name.localName,
-                ),
+                .applyEffect(lattice = lattice, state = startState, node = noInitializerDeclaration),
         )
     }
 }
