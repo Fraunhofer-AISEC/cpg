@@ -50,7 +50,7 @@ abstract class MutableCollectionSize : Value<LatticeInterval> {
         return LatticeInterval.Bounded(elements.size, elements.size)
     }
 
-    fun addSingleElementWithoutElementeCheck(
+    fun addSingleElementWithoutElementCheck(
         target: Node,
         state: TupleStateElement<Any>,
     ): LatticeInterval {
@@ -134,13 +134,13 @@ abstract class MutableCollectionSize : Value<LatticeInterval> {
 
     fun removeMultipleElementsWithoutElementCheck(
         target: Node,
-        element: Node,
         state: TupleStateElement<Any>,
     ): LatticeInterval {
-        val result = state.intervalOf(target) - state.intervalOf(element)
+        // We could remove all elements if all are similar, so we only know that the new size will
+        // be somewhere between 0 and the current maximal size
+        val result = state.intervalOf(target)
 
-        // If the lower bound is less than 0, we set it to 0 as negative sizes do not make sense
-        if (result is LatticeInterval.Bounded && result.lower < LatticeInterval.Bound.Value(0)) {
+        if (result is LatticeInterval.Bounded) {
             return LatticeInterval.Bounded(LatticeInterval.Bound.Value(0), result.upper)
         }
         return result

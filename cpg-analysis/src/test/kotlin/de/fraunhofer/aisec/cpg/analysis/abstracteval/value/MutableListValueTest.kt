@@ -249,7 +249,7 @@ class MutableListValueTest {
                 this.arguments += Literal<Int>().apply { this.value = 10 }
             }
         assertEquals(
-            LatticeInterval.Bounded(1, 3),
+            LatticeInterval.Bounded(0, 3),
             MutableListSize().applyEffect(lattice = lattice, state = startState, node = removeAll),
         )
     }

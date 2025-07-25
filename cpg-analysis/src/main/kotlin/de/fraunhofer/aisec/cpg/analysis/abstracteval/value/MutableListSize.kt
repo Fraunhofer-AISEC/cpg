@@ -45,7 +45,6 @@ import de.fraunhofer.aisec.cpg.graph.types.ListType
  * re-declaring it. NOTE: This is an unpolished example implementation. Before actual usage consider
  * the below TODOs and write a test file.
  */
-@Suppress("UNUSED")
 class MutableListSize() : MutableCollectionSize() {
     override fun applyEffect(
         lattice: TupleState<Any>,
@@ -101,7 +100,7 @@ class MutableListSize() : MutableCollectionSize() {
             variableSize =
                 when (node.name.localName) {
                     "add" -> {
-                        addSingleElementWithoutElementeCheck(target, state)
+                        addSingleElementWithoutElementCheck(target, state)
                     }
 
                     "addAll" -> {
@@ -131,7 +130,7 @@ class MutableListSize() : MutableCollectionSize() {
                     }
 
                     "removeAll" -> {
-                        removeMultipleElementsWithElementCheck(target, node.arguments, state)
+                        removeMultipleElementsWithoutElementCheck(target, state)
                     }
 
                     else -> LatticeInterval.BOTTOM
