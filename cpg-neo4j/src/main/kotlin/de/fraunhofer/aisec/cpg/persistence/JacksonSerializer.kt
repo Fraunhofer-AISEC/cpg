@@ -41,6 +41,8 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.parseName
+import java.io.IOException
+import kotlin.reflect.KClass
 
 class NameKeySerializer : JsonSerializer<Name>() {
     override fun serialize(value: Name, gen: JsonGenerator, serializers: SerializerProvider) {
@@ -105,6 +107,31 @@ class NodeKeyDeserializers(@JacksonInject val registry: NodeRegistry) : SimpleKe
     override fun isCachable(): Boolean = true
 }*/
 
+class PairKeySerializer : JsonSerializer<Pair<KClass<*>, KClass<*>>>() {
+    @Throws(IOException::class)
+    override fun serialize(value: Pair<KClass<*>, KClass<*>>, gen: JsonGenerator, serializers: SerializerProvider) {
+        // Convert the pair to a string key (ensure uniqueness and reversibility)
+        val keyStr = "${value.first.qualifiedName}|${value.second.qualifiedName}"
+        gen.writeFieldName(keyStr)
+    }
+}
+
+class PairKeyDeserializer : KeyDeserializer() {
+    @Throws(IOException::class)
+    override fun deserializeKey(key: String, ctxt: com.fasterxml.jackson.databind.DeserializationContext): Any {
+        // Expected format: "com.package.ClassA|com.package.ClassB"
+        val parts = key.split("|")
+        if (parts.size != 2) {
+            throw IllegalArgumentException("Invalid key format: $key")
+        }
+
+        val kclass1 = Class.forName(parts[0]).kotlin
+        val kclass2 = Class.forName(parts[1]).kotlin
+
+        return Pair(kclass1, kclass2)
+    }
+}
+
 class NodeDelegatingDeserializer(
     private var delegate: JsonDeserializer<*>,
     private val registry: NodeRegistry,
@@ -162,7 +189,10 @@ fun serializeToJson(translationResult: TranslationResult): String {
     return objectMapper
         .apply {
             val module =
-                SimpleModule().apply { addKeySerializer(Name::class.java, NameKeySerializer()) }
+                SimpleModule().apply {
+                    addKeySerializer(Name::class.java, NameKeySerializer())
+                    addKeySerializer(Pair::class.java, PairKeySerializer())
+                }
             //    module.setSerializerModifier(DepthLimitingModifier(maxDepth = 5))
             registerModule(module)
         }
