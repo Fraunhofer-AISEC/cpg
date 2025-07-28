@@ -50,6 +50,7 @@ import kotlin.collections.filter
 import kotlin.collections.map
 import kotlin.let
 import kotlin.text.contains
+import kotlinx.coroutines.*
 
 val nodesCreatingUnknownValues = ConcurrentHashMap<Pair<Node, Name>, MemoryAddress>()
 var totalFunctionDeclarationCount = 0
@@ -976,8 +977,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         val callingContextOut = CallingContextOut(mutableListOf(currentNode))
         mapDstToSrc.forEach { (dstAddr, values) ->
-            doubleState =
-                writeMapEntriesToState(lattice, doubleState, dstAddr, values, callingContextOut)
+            runBlocking {
+                doubleState =
+                    writeMapEntriesToState(lattice, doubleState, dstAddr, values, callingContextOut)
+            }
         }
 
         return doubleState
@@ -1043,7 +1046,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return invoke
     }
 
-    private fun writeMapEntriesToState(
+    private suspend fun writeMapEntriesToState(
         lattice: PointsToState,
         doubleState: PointsToStateElement,
         dstAddr: Node,
@@ -1063,42 +1066,58 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val lastWrites = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
         val destinations = identitySetOf<Node>()
 
+        val parentJob = Job()
+        val limitedDispatcher = Dispatchers.Default.limitedParallelism(100)
+        val scope = CoroutineScope(limitedDispatcher + parentJob)
+
         values.forEach { value ->
-            value.lastWrites.forEach { (lw, lwProps) ->
-                // For short FunctionSummaries (AKA one of the lastWrite properties set to 'true',
-                // we don't add the callingcontext
-                val lwPropertySet = EqualLinkedHashSet<Any>()
-                lwPropertySet.addAll(value.propertySet)
-                // If this is not a shortFS edge, we add the new callingcontext and have to check if
-                // we already have a list of callingcontexts in the properties
-                if (value.propertySet.none { it == true }) {
-                    val existingCallingContext =
-                        lwProps.filterIsInstance<CallingContextOut>().singleOrNull()
-                    if (existingCallingContext != null) {
-                        if (
-                            callingContext.calls.any { call ->
-                                call !in existingCallingContext.calls
+            scope.launch {
+                value.lastWrites.forEach { (lw, lwProps) ->
+                    // For short FunctionSummaries (AKA one of the lastWrite properties set to
+                    // 'true',
+                    // we don't add the callingcontext
+                    val lwPropertySet = EqualLinkedHashSet<Any>()
+                    lwPropertySet.addAll(value.propertySet)
+                    // If this is not a shortFS edge, we add the new callingcontext and have to
+                    // check if
+                    // we already have a list of callingcontexts in the properties
+                    if (value.propertySet.none { it == true }) {
+                        val existingCallingContext =
+                            lwProps.filterIsInstance<CallingContextOut>().singleOrNull()
+                        if (existingCallingContext != null) {
+                            if (
+                                callingContext.calls.any { call ->
+                                    call !in existingCallingContext.calls
+                                }
+                            ) {
+                                val cpy = existingCallingContext.calls.toMutableList()
+                                cpy.addAll(callingContext.calls)
+                                lwPropertySet.add(CallingContextOut(cpy))
                             }
-                        ) {
-                            val cpy = existingCallingContext.calls.toMutableList()
-                            cpy.addAll(callingContext.calls)
-                            lwPropertySet.add(CallingContextOut(cpy))
-                        }
-                    } else lwPropertySet.add(callingContext)
-                }
-                // Add all other previous properties
-                lwPropertySet.addAll(lwProps.filter { it !is CallingContextOut })
-                // Add them to the set of lastWrites if there is no same element in there yet
-                if (
-                    lastWrites.none {
-                        it.first == lw &&
-                            it.second.all { it in lwPropertySet } &&
-                            it.second.size == lwPropertySet.size
+                        } else lwPropertySet.add(callingContext)
                     }
-                )
-                    lastWrites.add(Pair(lw, lwPropertySet))
+                    // Add all other previous properties
+                    lwPropertySet.addAll(lwProps.filter { it !is CallingContextOut })
+                    // Add them to the set of lastWrites if there is no same element in there yet
+                    synchronized(lastWrites) {
+                        if (
+                            lastWrites.none {
+                                it.first == lw &&
+                                    it.second.all { it in lwPropertySet } &&
+                                    it.second.size == lwPropertySet.size
+                            }
+                        )
+                            lastWrites.add(Pair(lw, lwPropertySet))
+                    }
+                }
             }
-            destinations.addAll(value.dst)
+            synchronized(destinations) { destinations.addAll(value.dst) }
+        }
+
+        runBlocking {
+            parentJob.children.forEach { it.join() } // Wait for all child coroutines to finish
+            parentJob.complete() // Ensure parentJob is completed
+            parentJob.join() // Wait for the parentJob to complete
         }
 
         return doubleState.updateValues(
