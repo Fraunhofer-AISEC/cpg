@@ -887,92 +887,121 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         var doubleState = doubleState
         var mapDstToSrc = mutableMapOf<Node, IdentitySet<MapDstToSrcEntry>>()
 
+        val parentJob = Job()
+        val limitedDispatcher = Dispatchers.Default.limitedParallelism(100)
+        val scope = CoroutineScope(limitedDispatcher + parentJob)
+
         var i = 0
         // The toIdentitySet avoids having the same elements multiple times
         val invokes = currentNode.invokes.toIdentitySet().toList()
         while (i < invokes.size) {
             val invoke = calculateFunctionSummaries(invokes[i])
+            i++
 
-            if (invoke == null) break
-
-            doubleState =
-                calculateIncomingCallingContexts(lattice, invoke, currentNode, doubleState)
-
-            // If we have a FunctionSummary, we push the values of the arguments and return value
-            // after executing the function call to our doubleState.
-            for ((param, fsEntries) in invoke.functionSummary) {
-                val argument =
-                    when (param) {
-                        is ParameterDeclaration -> {
-                            // Dereference the parameter
-                            if (param.argumentIndex < currentNode.arguments.size) {
-                                currentNode.arguments[param.argumentIndex]
-                            } else null
-                        }
-                        is ReturnStatement,
-                        is FunctionDeclaration -> {
-                            currentNode
-                        }
-                        else -> null
+            scope.launch {
+                if (invoke == null) cancel()
+                else {
+                    synchronized(doubleState) {
+                        doubleState =
+                            calculateIncomingCallingContexts(
+                                lattice,
+                                invoke,
+                                currentNode,
+                                doubleState,
+                            )
                     }
-                if (argument != null) {
-                    fsEntries
-                        .sortedBy { it.destValueDepth }
-                        .forEach {
-                            (
-                                dstValueDepth,
-                                srcNode,
-                                srcValueDepth,
-                                subAccessName,
-                                lastWrites,
-                                properties,
-                            ) ->
-                            val shortFS = properties.any { it == true }
-                            val (destinationAddresses, destinations) =
-                                calculateCallExpressionDestinations(
-                                    doubleState,
-                                    mapDstToSrc,
-                                    dstValueDepth,
-                                    subAccessName,
-                                    argument,
-                                    properties,
-                                )
-                            // Collect the properties for the  DeclarationStateEntry
-                            val propertySet = equalLinkedHashSetOf<Any>()
-                            propertySet.addAll(properties)
-                            if (subAccessName.isNotEmpty()) {
-                                propertySet.add(
-                                    PartialDataflowGranularity(
-                                        FieldDeclaration().apply { name = Name(subAccessName) }
-                                    )
-                                )
-                            }
 
-                            // Especially for shortFS, we need to update the prevDFGs with
-                            // information we didn't have when creating the functionSummary.
-                            // calculatePrev does this for us
-                            val prev = calculatePrevDFGs(lastWrites, shortFS, currentNode, invoke)
-                            mapDstToSrc =
-                                addEntryToMap(
-                                    doubleState,
-                                    mapDstToSrc,
-                                    destinationAddresses,
-                                    destinations,
-                                    // To ensure that we have a unique Node, we take the
-                                    // callExpression if the FS said the srcNode is the
-                                    // FunctionDeclaration
-                                    if (srcNode is FunctionDeclaration) currentNode else srcNode,
-                                    shortFS,
-                                    srcValueDepth,
-                                    param,
-                                    propertySet,
-                                    currentNode,
-                                    prev,
-                                )
+                    // If we have a FunctionSummary, we push the values of the arguments and return
+                    // value
+                    // after executing the function call to our doubleState.
+                    for ((param, fsEntries) in invoke.functionSummary) {
+                        val argument =
+                            when (param) {
+                                is ParameterDeclaration -> {
+                                    // Dereference the parameter
+                                    if (param.argumentIndex < currentNode.arguments.size) {
+                                        currentNode.arguments[param.argumentIndex]
+                                    } else null
+                                }
+
+                                is ReturnStatement,
+                                is FunctionDeclaration -> {
+                                    currentNode
+                                }
+
+                                else -> null
+                            }
+                        if (argument != null) {
+                            fsEntries
+                                .sortedBy { it.destValueDepth }
+                                .forEach {
+                                    (
+                                        dstValueDepth,
+                                        srcNode,
+                                        srcValueDepth,
+                                        subAccessName,
+                                        lastWrites,
+                                        properties,
+                                    ) ->
+                                    val shortFS = properties.any { it == true }
+                                    val (destinationAddresses, destinations) =
+                                        calculateCallExpressionDestinations(
+                                            doubleState,
+                                            mapDstToSrc,
+                                            dstValueDepth,
+                                            subAccessName,
+                                            argument,
+                                            properties,
+                                        )
+                                    // Collect the properties for the  DeclarationStateEntry
+                                    val propertySet = equalLinkedHashSetOf<Any>()
+                                    propertySet.addAll(properties)
+                                    if (subAccessName.isNotEmpty()) {
+                                        propertySet.add(
+                                            PartialDataflowGranularity(
+                                                FieldDeclaration().apply {
+                                                    name = Name(subAccessName)
+                                                }
+                                            )
+                                        )
+                                    }
+
+                                    // Especially for shortFS, we need to update the prevDFGs with
+                                    // information we didn't have when creating the functionSummary.
+                                    // calculatePrev does this for us
+                                    val prev =
+                                        calculatePrevDFGs(lastWrites, shortFS, currentNode, invoke)
+                                    synchronized(mapDstToSrc) {
+                                        mapDstToSrc =
+                                            addEntryToMap(
+                                                doubleState,
+                                                mapDstToSrc,
+                                                destinationAddresses,
+                                                destinations,
+                                                // To ensure that we have a unique Node, we take the
+                                                // callExpression if the FS said the srcNode is the
+                                                // FunctionDeclaration
+                                                if (srcNode is FunctionDeclaration) currentNode
+                                                else srcNode,
+                                                shortFS,
+                                                srcValueDepth,
+                                                param,
+                                                propertySet,
+                                                currentNode,
+                                                prev,
+                                            )
+                                    }
+                                }
                         }
+                    }
                 }
             }
-            i++
+        }
+
+        runBlocking {
+            parentJob.children.forEach { it.join() } // Wait for all child coroutines to finish
+            parentJob.complete() // Ensure parentJob is completed
+            parentJob.join() // Wait for the parentJob to complete
         }
 
         val callingContextOut = CallingContextOut(mutableListOf(currentNode))
