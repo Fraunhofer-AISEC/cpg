@@ -87,6 +87,14 @@ class NodeKeyDeserializers(@JacksonInject val registry: NodeRegistry) : SimpleKe
             NodeKeyDeserializer(registry)
         } else if (Name::class.java.isAssignableFrom(raw)) {
             NameKeyDeserializer()
+        } else if (
+            Pair::class.java.isAssignableFrom(raw)
+        ) { // || Pair::class.java.isAssignableFrom(type.type)
+            PairKeyDeserializer()
+        } else if (
+            KClass::class.java.isAssignableFrom(raw)
+        ) { // || Pair::class.java.isAssignableFrom(type.type)
+            KClassKeyDeserializer()
         } else {
             null
         }
@@ -107,18 +115,44 @@ class NodeKeyDeserializers(@JacksonInject val registry: NodeRegistry) : SimpleKe
     override fun isCachable(): Boolean = true
 }*/
 
-class PairKeySerializer : JsonSerializer<Pair<KClass<*>, KClass<*>>>() {
+class KClassKeySerializer : JsonSerializer<KClass<*>>() {
     @Throws(IOException::class)
-    override fun serialize(value: Pair<KClass<*>, KClass<*>>, gen: JsonGenerator, serializers: SerializerProvider) {
+    override fun serialize(value: KClass<*>, gen: JsonGenerator, serializers: SerializerProvider) {
+        gen.writeFieldName(value.qualifiedName)
+    }
+}
+
+class KClassKeyDeserializer : KeyDeserializer() {
+    @Throws(IOException::class)
+    override fun deserializeKey(
+        key: String,
+        ctxt: com.fasterxml.jackson.databind.DeserializationContext,
+    ): Any {
+
+        val kclass = Class.forName(key).kotlin
+
+        return kclass
+    }
+}
+
+// KClass<*>
+class PairKeySerializer : JsonSerializer<Pair<*, *>>() {
+    @Throws(IOException::class)
+    override fun serialize(value: Pair<*, *>, gen: JsonGenerator, serializers: SerializerProvider) {
         // Convert the pair to a string key (ensure uniqueness and reversibility)
-        val keyStr = "${value.first.qualifiedName}|${value.second.qualifiedName}"
+        val first = (value.first as? KClass<*>)?.qualifiedName ?: value.first.toString()
+        val second = (value.second as? KClass<*>)?.qualifiedName ?: value.second.toString()
+        val keyStr = "${first}|${second}"
         gen.writeFieldName(keyStr)
     }
 }
 
 class PairKeyDeserializer : KeyDeserializer() {
     @Throws(IOException::class)
-    override fun deserializeKey(key: String, ctxt: com.fasterxml.jackson.databind.DeserializationContext): Any {
+    override fun deserializeKey(
+        key: String,
+        ctxt: com.fasterxml.jackson.databind.DeserializationContext,
+    ): Any {
         // Expected format: "com.package.ClassA|com.package.ClassB"
         val parts = key.split("|")
         if (parts.size != 2) {
@@ -192,11 +226,12 @@ fun serializeToJson(translationResult: TranslationResult): String {
                 SimpleModule().apply {
                     addKeySerializer(Name::class.java, NameKeySerializer())
                     addKeySerializer(Pair::class.java, PairKeySerializer())
+                    addKeySerializer(KClass::class.java, KClassKeySerializer())
                 }
             //    module.setSerializerModifier(DepthLimitingModifier(maxDepth = 5))
             registerModule(module)
         }
-        // .writerWithDefaultPrettyPrinter()
+        .writerWithDefaultPrettyPrinter()
         .writeValueAsString(translationResult)
 }
 
