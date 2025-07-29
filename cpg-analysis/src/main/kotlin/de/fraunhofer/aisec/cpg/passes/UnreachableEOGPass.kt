@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Order
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import kotlinx.coroutines.runBlocking
 
 /**
  * A [Pass] which uses a simple logic to determine constant values and mark unreachable code regions
@@ -258,6 +259,12 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
         }
 
         override fun compare(other: Lattice.Element): Order {
+            val ret: Order
+            runBlocking { ret = innerCompare(other) }
+            return ret
+        }
+
+        override suspend fun innerCompare(other: Lattice.Element): Order {
             return when {
                 other !is Element ->
                     throw IllegalArgumentException(
@@ -291,7 +298,9 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
 
     override fun lub(one: Element, two: Element, allowModify: Boolean): Element {
         return if (allowModify) {
-            when (compare(one, two)) {
+            val ret: Order
+            runBlocking { ret = compare(one, two) }
+            when (ret) {
                 Order.EQUAL -> one
                 Order.GREATER -> one
                 Order.LESSER -> {
@@ -310,8 +319,8 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
         return Element(minOf(one.reachability, two.reachability))
     }
 
-    override fun compare(one: Element, two: Element): Order {
-        return one.compare(two)
+    override suspend fun compare(one: Element, two: Element): Order {
+        return one.innerCompare(two)
     }
 
     override fun duplicate(one: Element): Element {

@@ -1075,7 +1075,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return invoke
     }
 
-    private suspend fun writeMapEntriesToState(
+    private fun writeMapEntriesToState(
         lattice: PointsToState,
         doubleState: PointsToStateElement,
         dstAddr: Node,

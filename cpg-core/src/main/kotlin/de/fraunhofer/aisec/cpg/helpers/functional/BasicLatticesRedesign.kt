@@ -36,6 +36,15 @@ import kotlin.collections.fold
 import kotlin.collections.plusAssign
 import kotlin.collections.set
 import kotlin.math.ceil
+import kotlin.sequences.forEach
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
     override fun equals(other: Any?): Boolean {
@@ -109,6 +118,9 @@ interface Lattice<T : Lattice.Element> {
          */
         fun compare(other: Element): Order
 
+        /** Does the actual, concurrent work */
+        suspend fun innerCompare(other: Element): Order
+
         /** Duplicates this element, i.e., it creates a new object with equal contents. */
         fun duplicate(): Element
     }
@@ -140,7 +152,7 @@ interface Lattice<T : Lattice.Element> {
      * - [Order.UNEQUAL] in all other cases (this also means that `one != two` and `two != lub(one,
      *   two) != one` and `two != glb(one, two) != one`).
      */
-    fun compare(one: T, two: T): Order
+    suspend fun compare(one: T, two: T): Order
 
     /** Returns a copy of [one]. */
     fun duplicate(one: T): T
@@ -227,6 +239,7 @@ interface Lattice<T : Lattice.Element> {
                         this.lub(newState, old, isNotNearStartOrEndOfBasicBlock)
                     } ?: newState)
                 globalState[it] = newGlobalIt
+
                 if (
                     it !in currentBBEdgesList &&
                         it !in potentialNextBBEdgesList &&
@@ -296,6 +309,12 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
         }
 
         override fun compare(other: Lattice.Element): Order {
+            var ret: Order
+            runBlocking { ret = innerCompare(other) }
+            return ret
+        }
+
+        override suspend fun innerCompare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
             if (other !is Element<T>)
@@ -371,8 +390,8 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
         return Element(one.intersect(two))
     }
 
-    override fun compare(one: Element<T>, two: Element<T>): Order {
-        return one.compare(two)
+    override suspend fun compare(one: Element<T>, two: Element<T>): Order {
+        return one.innerCompare(two)
     }
 
     override fun duplicate(one: Element<T>): Element<T> {
@@ -410,6 +429,13 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         }
 
         override fun compare(other: Lattice.Element): Order {
+            var ret: Order
+            runBlocking { ret = innerCompare(other) }
+            return ret
+        }
+
+        @OptIn(ExperimentalCoroutinesApi::class)
+        override suspend fun innerCompare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
             if (other !is Element<K, V>)
@@ -422,36 +448,68 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
             // We can check if the entries are equal, greater or lesser
             var someGreater = false
             var someLesser = otherKeySetIsBigger
+
+            val parentJob = Job()
+            val limitedDispatcher = Dispatchers.Default.limitedParallelism(100)
+            val scope = CoroutineScope(limitedDispatcher + parentJob)
+            val mutex = Mutex()
+
+            var ret: Order? = null
+
             this.entries.forEach { (k, v) ->
-                val otherV = other[k]
-                if (otherV != null) {
-                    when (v.compare(otherV)) {
-                        Order.EQUAL -> {
-                            /* Nothing to do*/
-                        }
-                        Order.GREATER -> {
-                            if (someLesser) {
-                                return Order.UNEQUAL
-                            }
-                            someGreater = true
-                        }
-                        Order.LESSER -> {
-                            if (someGreater) {
-                                return Order.UNEQUAL
-                            }
-                            someLesser = true
-                        }
-                        Order.UNEQUAL -> {
-                            return Order.UNEQUAL
-                        }
-                    }
+                // We can't return in the coroutines, so we only set the return value
+                // there. If we have a return value, we can stop here
+                if (ret != null) {
+                    /*                   parentJob.children.forEach {
+                        it.join()
+                    } // Wait for all child coroutines to finish
+                    parentJob.complete() // Ensure parentJob is completed
+                    parentJob.join() // Wait for the parentJob to complete*/
+                    return ret
                 } else {
-                    if (someLesser) {
-                        return Order.UNEQUAL
+                    scope.launch {
+                        val otherV = other[k]
+                        if (otherV != null) {
+                            when (v.innerCompare(otherV)) {
+                                Order.EQUAL -> {
+                                    /* Nothing to do*/
+                                }
+
+                                Order.GREATER -> {
+                                    if (someLesser) {
+                                        mutex.withLock { ret = Order.UNEQUAL }
+                                    }
+                                    someGreater = true
+                                }
+
+                                Order.LESSER -> {
+                                    if (someGreater) {
+                                        mutex.withLock { ret = Order.UNEQUAL }
+                                    }
+                                    someLesser = true
+                                }
+
+                                Order.UNEQUAL -> {
+                                    mutex.withLock { ret = Order.UNEQUAL }
+                                }
+                            }
+                        } else {
+                            if (someLesser) {
+                                mutex.withLock { ret = Order.UNEQUAL }
+                            }
+                            mutex.withLock {
+                                // key is missing in other, so this is greater
+                                someGreater = true
+                            }
+                        }
                     }
-                    someGreater = true // key is missing in other, so this is greater
                 }
             }
+
+            parentJob.children.forEach { it.join() } // Wait for all child coroutines to finish
+            parentJob.complete() // Ensure parentJob is completed
+            parentJob.join() // Wait for the parentJob to complete
+
             return if (!someGreater && !someLesser) {
                 // All entries are the same, so the maps are equal
                 Order.EQUAL
@@ -527,8 +585,8 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         return newMap
     }
 
-    override fun compare(one: Element<K, V>, two: Element<K, V>): Order {
-        return one.compare(two)
+    override suspend fun compare(one: Element<K, V>, two: Element<K, V>): Order {
+        return one.innerCompare(two)
     }
 
     override fun duplicate(one: Element<K, V>): Element<K, V> {
@@ -562,6 +620,12 @@ class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
         }
 
         override fun compare(other: Lattice.Element): Order {
+            var ret: Order
+            runBlocking { ret = innerCompare(other) }
+            return ret
+        }
+
+        override suspend fun innerCompare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
             if (other !is Element<S, T>)
@@ -569,10 +633,7 @@ class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
                     "$other should be of type TupleLattice.Element<S, T> but is of type ${other.javaClass}"
                 )
 
-            /*val result1 = this.first.compare(other.first)
-            val result2 = this.second.compare(other.second)
-            return compareMultiple(result1, result2)*/
-            return this.second.compare(other.second)
+            return this.second.innerCompare(other.second)
         }
 
         override fun duplicate(): Element<S, T> {
@@ -607,8 +668,8 @@ class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
         )
     }
 
-    override fun compare(one: Element<S, T>, two: Element<S, T>): Order {
-        return one.compare(two)
+    override suspend fun compare(one: Element<S, T>, two: Element<S, T>): Order {
+        return one.innerCompare(two)
     }
 
     override fun duplicate(one: Element<S, T>): Element<S, T> {
@@ -645,6 +706,12 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
         }
 
         override fun compare(other: Lattice.Element): Order {
+            var ret: Order
+            runBlocking { ret = innerCompare(other) }
+            return ret
+        }
+
+        override suspend fun innerCompare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
             if (other !is Element<R, S, T>)
@@ -652,9 +719,9 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
                     "$other should be of type TripleLattice.Element<R, S, T> but is of type ${other.javaClass}"
                 )
 
-            val result1 = this.first.compare(other.first)
-            val result2 = this.second.compare(other.second)
-            val result3 = this.third.compare(other.third)
+            val result1 = this.first.innerCompare(other.first)
+            val result2 = this.second.innerCompare(other.second)
+            val result3 = this.third.innerCompare(other.third)
             return compareMultiple(result1, result2, result3)
         }
 
@@ -697,8 +764,8 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
         )
     }
 
-    override fun compare(one: Element<R, S, T>, two: Element<R, S, T>): Order {
-        return one.compare(two)
+    override suspend fun compare(one: Element<R, S, T>, two: Element<R, S, T>): Order {
+        return one.innerCompare(two)
     }
 
     override fun duplicate(one: Element<R, S, T>): Element<R, S, T> {
