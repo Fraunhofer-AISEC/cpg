@@ -1625,47 +1625,40 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             }
 
                         // Let's see if we can deref once more
-                        val derefValues =
-                            doubleState
-                                .fetchValueFromDeclarationState(
-                                    node = value,
-                                    excludeShortFSValues = true,
-                                )
-                                .map { it.value }
-                                .forEach { derefValue ->
-                                    if (doubleState.hasDeclarationStateEntry(derefValue)) {
-                                        doubleState
-                                            .fetchValueFromDeclarationState(derefValue)
-                                            .forEach { (derefDerefValue, _, _) ->
-                                                doubleState
-                                                    .getLastWrites(derefValue)
-                                                    .filter { it.second.none { it == true } }
-                                                    .forEach {
-                                                        prevDFGs.add(
-                                                            Pair(
-                                                                it.first,
-                                                                equalLinkedHashSetOf<Any>(
-                                                                    PointerDataflowGranularity(
-                                                                        PointerAccess
-                                                                            .currentDerefDerefValue
-                                                                    ),
-                                                                    // Here again, filter the
-                                                                    // FullDataflowGranularity since
-                                                                    // we indicate a
-                                                                    // currentDerefDerefValue
-                                                                    *it.second
-                                                                        .filter {
-                                                                            it !is
-                                                                                FullDataflowGranularity
-                                                                        }
-                                                                        .toTypedArray(),
-                                                                ),
-                                                            )
-                                                        )
-                                                    }
-                                            }
-                                    }
+                        doubleState
+                            .fetchValueFromDeclarationState(
+                                node = value,
+                                excludeShortFSValues = true,
+                            )
+                            .map { it.value }
+                            .forEach { derefValue ->
+                                if (doubleState.hasDeclarationStateEntry(derefValue)) {
+                                    doubleState
+                                        .getLastWrites(derefValue)
+                                        .filter { it.second.none { it == true } }
+                                        .forEach {
+                                            prevDFGs.add(
+                                                Pair(
+                                                    it.first,
+                                                    equalLinkedHashSetOf<Any>(
+                                                        PointerDataflowGranularity(
+                                                            PointerAccess.currentDerefDerefValue
+                                                        ),
+                                                        // Here again, filter the
+                                                        // FullDataflowGranularity since
+                                                        // we indicate a
+                                                        // currentDerefDerefValue
+                                                        *it.second
+                                                            .filter {
+                                                                it !is FullDataflowGranularity
+                                                            }
+                                                            .toTypedArray(),
+                                                    ),
+                                                )
+                                            )
+                                        }
                                 }
+                            }
                     }
             }
 
@@ -1877,28 +1870,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     }
 }
 
-/**
- * It's most likely a stub if it calls the same method and has only a call and return and maximum
- * one more statement.
- */
-fun FunctionDeclaration.isStub(): Boolean {
-    val bodySize = (body as? Block)?.statements?.size
-    return body == null ||
-        (bodySize != null &&
-            bodySize <= 3 &&
-            this.calls.singleOrNull()?.name == this.name &&
-            this.returns.singleOrNull() != null)
-}
-
 val PointsToStateElement.generalState: SingleGeneralStateElement
     get() = this.first
 
 val PointsToStateElement.declarationsState: SingleDeclarationStateElement
     get() = this.second
-
-/*fun PointsToStateElement.get(key: Node): StateEntryElement? {
-    return this.generalState[key] ?: this.declarationsState[key]
-}*/
 
 fun PointsToStateElement.getFromDecl(key: Node): DeclarationStateEntryElement? {
     return this.declarationsState[key]
@@ -1965,7 +1941,7 @@ fun PointsToStateElement.hasDeclarationStateEntry(
     else (this.declarationsState[node]?.second?.isNotEmpty() == true)
 }
 
-data class fetchElementFromDeclarationStateEntry(
+data class FetchElementFromDeclarationStateEntry(
     val value: Node,
     val shortFS: Boolean,
     val subAccessName: String,
@@ -1984,13 +1960,6 @@ fun PointsToStateElement.fetchValueFromGeneralState(
     return this.generalState[node]?.second ?: PowersetLattice.Element()
 }
 
-/** Fetch the lastWrite for `node` from the GeneralState */
-fun PointsToStateElement.fetchLastWriteFromGeneralState(
-    node: Node
-): PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>> {
-    return this.generalState[node]?.third ?: PowersetLattice.Element()
-}
-
 /**
  * Fetch the value entry for `node` from the DeclarationState. If there isn't any, create an
  * UnknownMemoryValue
@@ -1999,8 +1968,8 @@ fun PointsToStateElement.fetchValueFromDeclarationState(
     node: Node,
     fetchFields: Boolean = false,
     excludeShortFSValues: Boolean = false,
-): IdentitySet<fetchElementFromDeclarationStateEntry> {
-    val ret = identitySetOf<fetchElementFromDeclarationStateEntry>()
+): IdentitySet<FetchElementFromDeclarationStateEntry> {
+    val ret = identitySetOf<FetchElementFromDeclarationStateEntry>()
 
     // For global nodes, we check the globalDerefs map
     if (isGlobal(node)) {
@@ -2008,7 +1977,7 @@ fun PointsToStateElement.fetchValueFromDeclarationState(
         if (element != null)
             element.map {
                 ret.add(
-                    fetchElementFromDeclarationStateEntry(
+                    FetchElementFromDeclarationStateEntry(
                         it.first,
                         false,
                         "",
@@ -2025,7 +1994,7 @@ fun PointsToStateElement.fetchValueFromDeclarationState(
             // TODO: Check if the boolean should be true sometimes
             globalDerefs[node] = PowersetLattice.Element(Pair(newEntry, false))
             ret.add(
-                fetchElementFromDeclarationStateEntry(
+                FetchElementFromDeclarationStateEntry(
                     newEntry,
                     false,
                     "",
@@ -2062,7 +2031,7 @@ fun PointsToStateElement.fetchValueFromDeclarationState(
                 newElements?.add(newPair)
             }
             ret.add(
-                fetchElementFromDeclarationStateEntry(
+                FetchElementFromDeclarationStateEntry(
                     newEntry,
                     false,
                     "",
@@ -2072,7 +2041,7 @@ fun PointsToStateElement.fetchValueFromDeclarationState(
         } else
             elements.map {
                 ret.add(
-                    fetchElementFromDeclarationStateEntry(
+                    FetchElementFromDeclarationStateEntry(
                         it.first,
                         it.second,
                         "",
@@ -2095,7 +2064,7 @@ fun PointsToStateElement.fetchValueFromDeclarationState(
                     ?.let {
                         it.map {
                             ret.add(
-                                fetchElementFromDeclarationStateEntry(
+                                FetchElementFromDeclarationStateEntry(
                                     it.first,
                                     it.second,
                                     field.name.localName,
@@ -2182,7 +2151,7 @@ fun PointsToStateElement.getLastWrites(
                     this.declarationsState[it]?.third?.isNotEmpty() == true
                 }
                 .flatMapTo(PowersetLattice.Element()) {
-                    this.declarationsState[it]?.third?.mapNotNull {
+                    this.declarationsState[it]?.third?.map {
                         Pair(
                             it.first,
                             it.second.filterTo(EqualLinkedHashSet()) {
@@ -2210,13 +2179,9 @@ fun PointsToStateElement.getLastWrites(
         else ->
             // For the rest, we read the declarationState to determine when the memoryAddress of the
             // node was last written to
-            this.getAddresses(node, node)
-                /*                .filterTo(PowersetLattice.Element()) {
-                    this.declarationsState[it]?.third?.isNotEmpty() == true
-                }*/
-                .flatMapTo(PowersetLattice.Element()) {
-                    this.declarationsState[it]?.third?.map { Pair(it.first, it.second) } ?: setOf()
-                }
+            this.getAddresses(node, node).flatMapTo(PowersetLattice.Element()) {
+                this.declarationsState[it]?.third?.map { Pair(it.first, it.second) } ?: setOf()
+            }
     }
 }
 
@@ -2342,7 +2307,6 @@ fun PointsToStateElement.getValues(
                         if (node !in SubgraphWalker.flattenAST(valueParentAssignExpression))
                             retVals.add(v)
                     }
-                    //                   retVals.addAll(this.getValues(addr))
                 }
             }
             return retVals
@@ -2490,9 +2454,7 @@ fun PointsToStateElement.getNestedValues(
         )
             PowersetLattice.Element()
         else
-            getValues(node, node).filterTo(
-                PowersetLattice.Element()
-            ) { /*it.second != excludeShortFSValues*/
+            getValues(node, node).filterTo(PowersetLattice.Element()) {
                 if (excludeShortFSValues) !it.second else true
             }
     for (i in 1..<nestingDepth) {
@@ -2590,9 +2552,7 @@ fun PointsToStateElement.updateValues(
             // Check if we have any full writes
             val fullSourcesExist = sources.any { !it.third }
 
-            /* val newPrevDFG =
             // TODO: Do we also need to fetch some properties here?
-            lastWrites.mapTo(IdentitySet()) { Pair(it, false) }*/
             // If we already have exactly this value in the state for the prevDFGs, we take that in
             // order not to confuse the iterateEOG function
             val prevDFG = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
@@ -2633,7 +2593,7 @@ fun PointsToStateElement.updateValues(
             /* Also update the generalState for dst (if we have any destinations) */
             // If the lastWrites are in the sources or destinations, we don't have to set the
             // prevDFG edges
-            // Except for callexpressions w/o invokes body for which we have to do this to create
+            // Except for callExpressions w/o invokes body for which we have to do this to create
             // the short FS paths
             val newLastWrites = lastWrites
             newLastWrites.removeIf { lw ->
