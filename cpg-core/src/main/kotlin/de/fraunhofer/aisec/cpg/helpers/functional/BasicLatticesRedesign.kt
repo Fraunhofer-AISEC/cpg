@@ -142,14 +142,22 @@ interface Lattice<T : Lattice.Element> {
         for (startEdge in startEdges) {
             globalState[startEdge] = startState
         }
+        // This list contains the edge(s) (probably only one unless we made a mistake) of the
+        // current basic block that we are currently processing. We select this one with priority
+        // over the other options.
         val currentBBEdgesList = mutableListOf<EvaluationOrder>()
-        val potentialNextBBEdgesList = mutableListOf<EvaluationOrder>()
+        // This list contains the edge(s) that are the next branch(es) to process. We process these
+        // after the current basic block has been processed.
+        val nextBranchEdgesList = mutableListOf<EvaluationOrder>()
+        // This list contains the merge points that we have to process. We process these after the
+        // current basic block and the next branches have been processed to reduce the amount of
+        // merges.
         val mergePointsEdgesList = mutableListOf<EvaluationOrder>()
-        startEdges.forEach { potentialNextBBEdgesList.add(it) }
+        startEdges.forEach { nextBranchEdgesList.add(it) }
 
         while (
             currentBBEdgesList.isNotEmpty() ||
-                potentialNextBBEdgesList.isNotEmpty() ||
+                nextBranchEdgesList.isNotEmpty() ||
                 mergePointsEdgesList.isNotEmpty()
         ) {
             val nextEdge =
@@ -157,12 +165,12 @@ interface Lattice<T : Lattice.Element> {
                     // If we have edges in the current basic block, we take these. We prefer to
                     // finish with the whole Basic Block before moving somewhere else.
                     currentBBEdgesList.removeFirst()
-                } else if (potentialNextBBEdgesList.isNotEmpty()) {
+                } else if (nextBranchEdgesList.isNotEmpty()) {
                     // If we have points splitting up the EOG, we prefer to process these before
                     // merging the EOG again. This is to hopefully reduce the number of merges that
                     // we have to compute and that we hopefully reduce the number of re-processing
                     // the same basic blocks.
-                    potentialNextBBEdgesList.removeFirst()
+                    nextBranchEdgesList.removeFirst()
                 } else {
                     // We have a merge point, we try to process this after having processed all
                     // branches leading there.
@@ -209,7 +217,7 @@ interface Lattice<T : Lattice.Element> {
                 globalState[it] = newGlobalIt
                 if (
                     it !in currentBBEdgesList &&
-                        it !in potentialNextBBEdgesList &&
+                        it !in nextBranchEdgesList &&
                         it !in mergePointsEdgesList &&
                         (isNoBranchingPoint ||
                             oldGlobalIt == null ||
@@ -224,7 +232,7 @@ interface Lattice<T : Lattice.Element> {
                         // a next basic block.
                         // We will process these after the current basic block has been processed
                         // (probably very soon).
-                        potentialNextBBEdgesList.add(0, it)
+                        nextBranchEdgesList.add(0, it)
                     } else {
                         // If we have only one next edge, we add it to the current basic block edges
                         // list.
@@ -236,7 +244,7 @@ interface Lattice<T : Lattice.Element> {
             if (
                 nextEdge.end.nextEOGEdges.isEmpty() ||
                     (currentBBEdgesList.isEmpty() &&
-                        potentialNextBBEdgesList.isEmpty() &&
+                        nextBranchEdgesList.isEmpty() &&
                         mergePointsEdgesList.isEmpty())
             ) {
                 finalState = this.lub(finalState, newState, false)
