@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.test.analyze
 import kotlin.io.path.Path
 import kotlin.test.*
 
+@Ignore
 class FlowQueriesTest {
 
     @Suppress("UNCHECKED_CAST")

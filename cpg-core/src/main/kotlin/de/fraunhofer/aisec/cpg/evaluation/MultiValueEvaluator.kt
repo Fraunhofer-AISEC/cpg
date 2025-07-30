@@ -68,6 +68,8 @@ class MultiValueEvaluator : ValueEvaluator() {
         this.path += node
 
         when (node) {
+            is PointerDereference -> evaluateInternal(node.input, depth + 1)
+            is PointerReference -> evaluateInternal(node.input, depth + 1)
             is FieldDeclaration -> return handleHasInitializer(node, depth)
             is NewArrayExpression -> return handleHasInitializer(node, depth)
             is VariableDeclaration -> return handleHasInitializer(node, depth)
@@ -201,8 +203,6 @@ class MultiValueEvaluator : ValueEvaluator() {
                     }
                 }
             }
-            "*" -> evaluateInternal(expr.input, depth + 1)
-            "&" -> evaluateInternal(expr.input, depth + 1)
             else -> super.handleUnaryOp(expr, depth)
         }
     }
