@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.helpers.functional
 
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
@@ -166,7 +167,9 @@ interface Lattice<T : Lattice.Element> {
     fun iterateEOG(
         startEdges: List<EvaluationOrder>,
         startState: T,
-        transformation: (Lattice<T>, EvaluationOrder, T) -> T,
+        transformation: (Lattice<T>, EvaluationOrder, T, MutableList<FunctionDeclaration>) -> T,
+        functionSummaryAnalysisChain: MutableList<FunctionDeclaration> =
+            mutableListOf<FunctionDeclaration>(),
     ): T {
         val globalState = IdentityHashMap<EvaluationOrder, T>()
         var finalState: T = this.bottom
@@ -227,7 +230,9 @@ interface Lattice<T : Lattice.Element> {
                 transformation(
                     this,
                     nextEdge,
-                    if (isNotNearStartOrEndOfBasicBlock) nextGlobal else nextGlobal.duplicate() as T,
+                    if (isNotNearStartOrEndOfBasicBlock) nextGlobal
+                    else nextGlobal.duplicate() as T,
+                    functionSummaryAnalysisChain,
                 )
             nextEdge.end.nextEOGEdges.forEach {
                 // We continue with the nextEOG edge if we haven't seen it before or if we updated

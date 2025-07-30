@@ -449,6 +449,7 @@ fun transfer(
     lattice: Lattice<PrevEOGStateElement>,
     currentEdge: EvaluationOrder,
     currentState: PrevEOGStateElement,
+    functionSummaryAnalysisChain: MutableList<FunctionDeclaration>,
 ): PrevEOGStateElement {
     val lattice = lattice as? PrevEOGState ?: return currentState
     var newState = currentState
