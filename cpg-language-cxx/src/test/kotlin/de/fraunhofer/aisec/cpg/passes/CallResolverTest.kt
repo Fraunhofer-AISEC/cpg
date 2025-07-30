@@ -48,17 +48,17 @@ class CallResolverTest : BaseTest() {
         val externalRecord = findByUniqueName(records, "External")
         val superClassRecord = findByUniqueName(records, "SuperClass")
         val innerMethods = findByName(callsRecord.methods, "innerTarget")
-        val innerCalls = findByName(callsRecord.calls, "innerTarget")
+        val innerCalls = findByName(callsRecord.allCalls, "innerTarget")
         checkCalls(intType, stringType, innerMethods, innerCalls)
         val superMethods = findByName(superClassRecord.methods, "superTarget").toMutableList()
         // We can't infer that a call to superTarget(int, int, int) is intended to be part of the
         // superclass. It looks like a call to a member of Calls.java, thus we need to add these
         // methods to the lookup
         superMethods.addAll(findByName(callsRecord.methods, "superTarget"))
-        val superCalls = findByName(callsRecord.calls, "superTarget")
+        val superCalls = findByName(callsRecord.allCalls, "superTarget")
         checkCalls(intType, stringType, superMethods, superCalls)
         val externalMethods = findByName(externalRecord.methods, "externalTarget")
-        val externalCalls = findByName(callsRecord.calls, "externalTarget")
+        val externalCalls = findByName(callsRecord.allCalls, "externalTarget")
         checkCalls(intType, stringType, externalMethods, externalCalls)
     }
 
@@ -66,7 +66,7 @@ class CallResolverTest : BaseTest() {
         val callsRecord = findByUniqueName(records, "Calls")
         assertTrue(records.stream().noneMatch { it.name.localName == "Unknown" })
 
-        val unknownCall = findByUniqueName(callsRecord.calls, "unknownTarget")
+        val unknownCall = findByUniqueName(callsRecord.allCalls, "unknownTarget")
         assertEquals(listOf<Any>(), unknownCall.invokes)
     }
 
@@ -82,7 +82,7 @@ class CallResolverTest : BaseTest() {
         for (declaration in tu.declarations) {
             assertNotEquals("invoke", declaration.name.localName)
         }
-        val callExpressions = result.calls
+        val callExpressions = result.allCalls
         val invoke = findByUniqueName(callExpressions, "invoke")
         assertEquals(1, invoke.invokes.size)
         assertTrue(invoke.invokes[0] is MethodDeclaration)
@@ -125,7 +125,7 @@ class CallResolverTest : BaseTest() {
         val superClassRecord = findByUniqueName(records, "SuperClass")
         val originalMethod = findByUniqueName(superClassRecord.methods, "overridingTarget")
         val overridingMethod = findByUniqueName(externalRecord.methods, "overridingTarget")
-        val call = findByUniqueName(callsRecord.calls, "overridingTarget")
+        val call = findByUniqueName(callsRecord.allCalls, "overridingTarget")
 
         // TODO related to #204: Currently we have both the original and the overriding method in
         //  the invokes list. This check needs to be adjusted to the choice we make on solving #204
@@ -150,7 +150,7 @@ class CallResolverTest : BaseTest() {
         val tu = result.components.flatMap { it.translationUnits }.firstOrNull()
         assertNotNull(tu)
 
-        val records = result.records
+        val records = result.allRecords
 
         val intType = tu.primitiveType("int")
         val stringType = tu.primitiveType("char").reference(PointerType.PointerOrigin.POINTER)
@@ -159,8 +159,10 @@ class CallResolverTest : BaseTest() {
 
         // Test functions (not methods!)
         val functions =
-            result.functions { it.name.localName == "functionTarget" && it !is MethodDeclaration }
-        val calls = findByName(result.calls, "functionTarget")
+            result.allFunctions {
+                it.name.localName == "functionTarget" && it !is MethodDeclaration
+            }
+        val calls = findByName(result.allCalls, "functionTarget")
         checkCalls(intType, stringType, functions, calls)
         ensureNoUnknownClassDummies(records)
         ensureInvocationOfMethodsInFunction(result)
@@ -180,8 +182,8 @@ class CallResolverTest : BaseTest() {
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val functionDeclarations = result.functions
-        val callExpressions = result.calls
+        val functionDeclarations = result.allFunctions
+        val callExpressions = result.allCalls
 
         // Check resolution of calc
         val calc = findByUniqueName(callExpressions, "calc")
@@ -218,7 +220,7 @@ class CallResolverTest : BaseTest() {
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val callExpressions = result.calls
+        val callExpressions = result.allCalls
 
         // Check resolution of implicit cast
         val multiply = findByUniqueName(callExpressions, "multiply")
@@ -264,8 +266,8 @@ class CallResolverTest : BaseTest() {
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val calls = result.calls
-        val functionDeclarations = result.functions
+        val calls = result.allCalls
+        val functionDeclarations = result.allFunctions
         val displayDeclaration =
             findByUniquePredicate(functionDeclarations) { f: FunctionDeclaration ->
                 f.name.localName == "display" && !f.isDefinition && !f.isImplicit
@@ -348,14 +350,14 @@ class CallResolverTest : BaseTest() {
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val calls = result.calls
-        val functionDeclarations = result.functions
+        val calls = result.allCalls
+        val functionDeclarations = result.allFunctions
         val displayFunction =
             findByUniquePredicate(functionDeclarations) { f: FunctionDeclaration ->
                 f.name.localName == "display" && !f.isImplicit
             }
-        val literalStar = findByUniquePredicate(result.literals) { it.value == '*' }
-        val literal3 = findByUniquePredicate(result.literals) { it.value == 3 }
+        val literalStar = findByUniquePredicate(result.allLiterals) { it.value == '*' }
+        val literal3 = findByUniquePredicate(result.allLiterals) { it.value == 3 }
         // Check defaults edge of ParameterDeclaration
         assertTrue(displayFunction.defaultParameters[0] is Literal<*>)
         assertTrue(displayFunction.defaultParameters[1] is Literal<*>)
@@ -414,8 +416,8 @@ class CallResolverTest : BaseTest() {
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val calls = result.calls
-        val functionDeclarations = result.functions
+        val calls = result.allCalls
+        val functionDeclarations = result.allFunctions
         val addFunction =
             findByUniquePredicate(functionDeclarations) { f: FunctionDeclaration ->
                 f.name.localName == "add" && !f.isInferred
@@ -486,9 +488,9 @@ class CallResolverTest : BaseTest() {
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val calls = result.calls
-        val functionDeclarations = result.functions
-        val declaredReferenceExpressions = result.refs
+        val calls = result.allCalls
+        val functionDeclarations = result.allFunctions
+        val declaredReferenceExpressions = result.allRefs
 
         // Check calc call
         val calc =
@@ -497,7 +499,7 @@ class CallResolverTest : BaseTest() {
             }
         val callCalc = findByUniquePredicate(calls) { it.name.localName == "calc" }
         val x = findByUniquePredicate(declaredReferenceExpressions) { it.name.localName == "x" }
-        val literal5 = findByUniquePredicate(result.literals) { it.value == 5 }
+        val literal5 = findByUniquePredicate(result.allLiterals) { it.value == 5 }
         assertEquals(1, callCalc.invokes.size)
         assertEquals(calc, callCalc.invokes[0])
         assertEquals(x, callCalc.arguments[0])
@@ -510,8 +512,8 @@ class CallResolverTest : BaseTest() {
             }
         val callDoSmth =
             findByUniquePredicate(calls) { f: CallExpression -> f.name.localName == "doSmth" }
-        val literal1 = findByUniquePredicate(result.literals) { it.value == 1 }
-        val literal2 = findByUniquePredicate(result.literals) { it.value == 2 }
+        val literal1 = findByUniquePredicate(result.allLiterals) { it.value == 1 }
+        val literal2 = findByUniquePredicate(result.allLiterals) { it.value == 2 }
         assertEquals(1, callDoSmth.invokes.size)
         assertEquals(doSmth, callDoSmth.invokes[0])
         assertTrue(doSmth.nextEOG.contains(literal1))
@@ -530,10 +532,10 @@ class CallResolverTest : BaseTest() {
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val calls = result.calls
+        val calls = result.allCalls
         assertEquals(1, calls.size)
 
-        val functionDeclarations = result.functions
+        val functionDeclarations = result.allFunctions
         assertEquals(2, functionDeclarations.size)
         assertEquals(1, calls[0].invokes.size)
         assertLocalName("f", calls[0].invokes[0])
@@ -550,10 +552,10 @@ class CallResolverTest : BaseTest() {
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val calls = result.calls
+        val calls = result.allCalls
         assertEquals(1, calls.size)
 
-        val functionDeclarations = result.functions
+        val functionDeclarations = result.allFunctions
         assertEquals(2, functionDeclarations.size)
         assertEquals(1, calls[0].invokes.size)
         assertFalse(calls[0].invokes[0].isImplicit)
@@ -569,7 +571,7 @@ class CallResolverTest : BaseTest() {
                 calls,
                 Predicate { c: CallExpression -> c.location!!.region.startLine == 4 },
             )
-        val literal7 = findByUniquePredicate(result.literals) { it.value == 7 }
+        val literal7 = findByUniquePredicate(result.allLiterals) { it.value == 7 }
         assertEquals(1, fh.invokes.size)
         assertFalse(fh.invokes[0].isImplicit)
         assertEquals(2, fh.invokes[0].location!!.region.startLine)
@@ -599,7 +601,7 @@ class CallResolverTest : BaseTest() {
                 calls,
                 Predicate { c: CallExpression -> c.location!!.region.startLine == 10 },
             )
-        val literal5 = findByUniquePredicate(result.literals) { it.value == 5 }
+        val literal5 = findByUniquePredicate(result.allLiterals) { it.value == 5 }
         assertEquals(1, fm2.invokes.size)
         assertEquals(9, fm2.invokes[0].location!!.region.startLine)
         assertEquals(1, fm2.arguments.size)
@@ -615,7 +617,7 @@ class CallResolverTest : BaseTest() {
         calls: List<CallExpression>,
     ) {
         val fn = findByUniquePredicate(calls, Predicate { it.location?.region?.startLine == 13 })
-        val literal7 = findByUniquePredicate(result.literals) { it.value == 7 }
+        val literal7 = findByUniquePredicate(result.allLiterals) { it.value == 7 }
         assertEquals(1, fn.invokes.size)
         assertFalse(fn.invokes[0].isImplicit)
         assertEquals(2, fn.invokes[0].location!!.region.startLine)
@@ -645,7 +647,7 @@ class CallResolverTest : BaseTest() {
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val calls = result.calls
+        val calls = result.allCalls
         testScopedFunctionResolutionFunctionGlobal(result, calls)
         testScopedFunctionResolutionRedeclaration(result, calls)
         testScopedFunctionResolutionAfterRedeclaration(result, calls)
@@ -670,8 +672,8 @@ class CallResolverTest : BaseTest() {
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val calls = result.calls
-        val methodDeclarations = result.methods
+        val calls = result.allCalls
+        val methodDeclarations = result.allMethods
         val calcOverload: FunctionDeclaration =
             findByUniquePredicate(methodDeclarations) { c: MethodDeclaration ->
                 c.recordDeclaration!!.name.localName == "Overload" && c !is ConstructorDeclaration
@@ -719,7 +721,7 @@ class CallResolverTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
                 it.inferenceConfiguration(InferenceConfiguration.builder().enabled(false).build())
             }
-        val calls = result.calls
+        val calls = result.allCalls
 
         val calcCall =
             findByUniquePredicate(calls) {
@@ -765,8 +767,8 @@ class CallResolverTest : BaseTest() {
             }
         assertNotNull(result)
 
-        result.refs.forEach { assertNotNull(it.refersTo) }
-        result.calls.forEach { assertTrue(it.invokes.isNotEmpty()) }
+        result.allRefs.forEach { assertNotNull(it.refersTo) }
+        result.allCalls.forEach { assertTrue(it.invokes.isNotEmpty()) }
     }
 
     companion object {

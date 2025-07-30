@@ -148,7 +148,7 @@ class DFGFunctionSummariesTest {
 
         // Explicitly specified. Easiest case. Base class, directly specified. Overloaded things
         // don't match. Child entries don't match.
-        val listAddAllTwoArgs = code.methods["test.List.addAll"]
+        val listAddAllTwoArgs = code.allMethods["test.List.addAll"]
         assertNotNull(listAddAllTwoArgs)
         assertEquals(2, listAddAllTwoArgs.parameters.size)
         assertEquals(
@@ -163,7 +163,7 @@ class DFGFunctionSummariesTest {
         // Specified by parent class' method List.addAll(int, Object). Test that parent of base is
         // also taken into account.
         val specialListAddAllTwoArgs =
-            code.methods("test.SpecialList.addAll").first {
+            code.allMethods("test.SpecialList.addAll").first {
                 it.parameters[1].type.name.lastPartsMatch("test.Object")
             }
         assertNotNull(specialListAddAllTwoArgs)
@@ -180,7 +180,7 @@ class DFGFunctionSummariesTest {
         // Specified by parent class' method List.addAll(int, List). Tests the most precise
         // signature matching in case of function overloading.
         val specialListAddAllSpecializedArgs =
-            code.methods("test.SpecialList.addAll").first {
+            code.allMethods("test.SpecialList.addAll").first {
                 it.parameters[1].type.name.lastPartsMatch("test.List")
             }
         assertNotNull(specialListAddAllSpecializedArgs)
@@ -198,7 +198,7 @@ class DFGFunctionSummariesTest {
         // Specified by VerySpecialList.addAll(int, Object), overrides List.addAll(int, Object).
         // Tests that we take the most precise base class. The entry of List.addAll(int, Object) is
         // also applicable but isn't the most precise one (due to the base)
-        val verySpecialListAddAllSpecializedArgs = code.methods["test.VerySpecialList.addAll"]
+        val verySpecialListAddAllSpecializedArgs = code.allMethods["test.VerySpecialList.addAll"]
         assertNotNull(verySpecialListAddAllSpecializedArgs)
         assertEquals(2, verySpecialListAddAllSpecializedArgs.parameters.size)
         // Very weird data flow specified: receiver to param0 and param1 to return.
@@ -212,7 +212,7 @@ class DFGFunctionSummariesTest {
         )
 
         // Not specified => Default behavior (param0 and param1 and receiver to method declaration).
-        val randomTypeAddAllTwoArgs = code.methods["random.Type.addAll"]
+        val randomTypeAddAllTwoArgs = code.allMethods["random.Type.addAll"]
         assertNotNull(randomTypeAddAllTwoArgs)
         assertEquals(2, randomTypeAddAllTwoArgs.parameters.size)
         assertEquals(
@@ -230,15 +230,15 @@ class DFGFunctionSummariesTest {
         val dfgTest = getDfgInferredCall() { defaultPasses() }
         assertNotNull(dfgTest)
 
-        val main = dfgTest.functions["main"]
+        val main = dfgTest.allFunctions["main"]
         assertNotNull(main)
 
-        val memcpy = dfgTest.functions["memcpy"]
+        val memcpy = dfgTest.allFunctions["memcpy"]
         assertNotNull(memcpy)
         val param0 = memcpy.parameters[0]
         val param1 = memcpy.parameters[1]
 
-        val call = main.calls["memcpy"]
+        val call = main.allCalls["memcpy"]
         assertNotNull(call)
 
         val argA = call.arguments[0]
@@ -258,7 +258,7 @@ class DFGFunctionSummariesTest {
         )
         assertEquals(param0, nextDfg.end)
 
-        val variableA = main.variables["a"]
+        val variableA = main.allVariables["a"]
         assertNotNull(variableA)
         assertEquals(mutableSetOf<Node>(variableA), argA.prevDFG)
 
@@ -266,7 +266,8 @@ class DFGFunctionSummariesTest {
         assertNotNull(prevDfgOfParam0)
         assertEquals(param1, prevDfgOfParam0.start)
 
-        val returnA = main.allChildren<ReturnStatement>().singleOrNull()?.returnValue as? Reference
+        val returnA =
+            main.allDescendants<ReturnStatement>().singleOrNull()?.returnValue as? Reference
         assertNotNull(returnA)
 
         assertEquals(mutableSetOf<Node>(returnA), param0.nextDFG)
@@ -294,15 +295,15 @@ class DFGFunctionSummariesTest {
         }
         assertNotNull(dfgTest)
 
-        val main = dfgTest.functions["main"]
+        val main = dfgTest.allFunctions["main"]
         assertNotNull(main)
 
-        val memcpy = dfgTest.functions["memcpy"]
+        val memcpy = dfgTest.allFunctions["memcpy"]
         assertNotNull(memcpy)
         val param0 = memcpy.parameters[0]
         val param1 = memcpy.parameters[1]
 
-        val call = main.calls["memcpy"]
+        val call = main.allCalls["memcpy"]
         assertNotNull(call)
 
         val argA = call.arguments[0]
@@ -324,7 +325,7 @@ class DFGFunctionSummariesTest {
         assertNotNull(nextDfg)
         assertEquals(param0, nextDfg.end)
 
-        val variableA = main.variables["a"]
+        val variableA = main.allVariables["a"]
         assertNotNull(variableA)
         assertEquals(mutableSetOf<Node>(variableA, param0), argA.prevDFG)
 
@@ -332,7 +333,8 @@ class DFGFunctionSummariesTest {
         assertNotNull(prevDfgOfParam0)
         assertEquals(param1, prevDfgOfParam0.start)
 
-        val returnA = main.allChildren<ReturnStatement>().singleOrNull()?.returnValue as? Reference
+        val returnA =
+            main.allDescendants<ReturnStatement>().singleOrNull()?.returnValue as? Reference
         assertNotNull(returnA)
 
         assertEquals(mutableSetOf<Node>(argA), param0.nextDFG)

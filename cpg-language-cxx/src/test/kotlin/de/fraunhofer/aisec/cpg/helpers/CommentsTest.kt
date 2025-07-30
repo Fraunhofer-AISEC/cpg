@@ -45,15 +45,15 @@ class CommentsTest {
             }
         assertNotNull(tu)
 
-        val functionDoc = tu.functions["functionDoc"]
+        val functionDoc = tu.allFunctions["functionDoc"]
         assertNotNull(functionDoc)
         assertEquals("/**\n * Documentation comment\n */", functionDoc.comment)
 
-        val functionMultiline = tu.functions["functionMultiline"]
+        val functionMultiline = tu.allFunctions["functionMultiline"]
         assertNotNull(functionMultiline)
         assertEquals("/*\n * Multi-line\n * comment\n */", functionMultiline.comment)
 
-        val functionSimple = tu.functions["functionSimple"]
+        val functionSimple = tu.allFunctions["functionSimple"]
         assertNotNull(functionSimple)
         assertEquals("// Simple comment", functionSimple.comment)
     }

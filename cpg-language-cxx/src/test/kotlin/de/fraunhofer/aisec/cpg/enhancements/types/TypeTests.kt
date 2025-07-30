@@ -136,7 +136,7 @@ internal class TypeTests : BaseTest() {
                 language,
                 IntegerType("int", 32, language, NumericType.Modifier.SIGNED),
             )
-        val variables = result.variables
+        val variables = result.allVariables
         val localTwoParam = findByUniqueName(variables, "local_two_param")
         assertNotNull(localTwoParam)
         assertEquals(twoParamType, localTwoParam.type)
@@ -174,12 +174,12 @@ internal class TypeTests : BaseTest() {
                 analyze("simple_inheritance.cpp", topLevel, true) {
                     it.registerLanguage<CPPLanguage>()
                 }
-            val root = assertNotNull(result.records["Root"]).toType()
-            val level0 = assertNotNull(result.records["Level0"]).toType()
-            val level1 = assertNotNull(result.records["Level1"]).toType()
-            val level1b = assertNotNull(result.records["Level1B"]).toType()
-            val level2 = assertNotNull(result.records["Level2"]).toType()
-            val unrelated = assertNotNull(result.records["Unrelated"]).toType()
+            val root = assertNotNull(result.allRecords["Root"]).toType()
+            val level0 = assertNotNull(result.allRecords["Level0"]).toType()
+            val level1 = assertNotNull(result.allRecords["Level1"]).toType()
+            val level1b = assertNotNull(result.allRecords["Level1B"]).toType()
+            val level2 = assertNotNull(result.allRecords["Level2"]).toType()
+            val unrelated = assertNotNull(result.allRecords["Unrelated"]).toType()
             getCommonTypeTestGeneral(root, level0, level1, level1b, level2, unrelated)
         }
     }
@@ -192,14 +192,14 @@ internal class TypeTests : BaseTest() {
         val result =
             analyze("multi_inheritance.cpp", topLevel, true) { it.registerLanguage<CPPLanguage>() }
 
-        val root = assertNotNull(result.records["Root"]).toType()
-        val level0 = assertNotNull(result.records["Level0"]).toType()
-        val level0b = assertNotNull(result.records["Level0B"]).toType()
-        val level1 = assertNotNull(result.records["Level1"]).toType()
-        val level1b = assertNotNull(result.records["Level1B"]).toType()
-        val level1c = assertNotNull(result.records["Level1C"]).toType()
-        val level2 = assertNotNull(result.records["Level2"]).toType()
-        val level2b = assertNotNull(result.records["Level2B"]).toType()
+        val root = assertNotNull(result.allRecords["Root"]).toType()
+        val level0 = assertNotNull(result.allRecords["Level0"]).toType()
+        val level0b = assertNotNull(result.allRecords["Level0B"]).toType()
+        val level1 = assertNotNull(result.allRecords["Level1"]).toType()
+        val level1b = assertNotNull(result.allRecords["Level1B"]).toType()
+        val level1c = assertNotNull(result.allRecords["Level1C"]).toType()
+        val level2 = assertNotNull(result.allRecords["Level2"]).toType()
+        val level2b = assertNotNull(result.allRecords["Level2B"]).toType()
 
         /*
         Type hierarchy:
@@ -232,7 +232,7 @@ internal class TypeTests : BaseTest() {
     fun graphTest() {
         val topLevel = Path.of("src", "test", "resources", "types")
         val result = analyze("cpp", topLevel, true) { it.registerLanguage<CPPLanguage>() }
-        val variableDeclarations = result.variables
+        val variableDeclarations = result.allVariables
 
         // Test PointerType chain with pointer
         val regularInt = findByUniqueName(variableDeclarations, "regularInt")

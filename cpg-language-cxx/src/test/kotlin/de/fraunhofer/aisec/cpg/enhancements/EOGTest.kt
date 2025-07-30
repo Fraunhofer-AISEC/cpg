@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.SearchModifier.UNIQUE
-import de.fraunhofer.aisec.cpg.graph.allChildren
+import de.fraunhofer.aisec.cpg.graph.allDescendants
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -597,10 +597,10 @@ internal class EOGTest : BaseTest() {
             nodes.filterIsInstance<FunctionDeclaration>().filter { it !is ConstructorDeclaration }
 
         // main()
-        var swch = functions[0].allChildren<SwitchStatement>()[0]
+        var swch = functions[0].allDescendants<SwitchStatement>()[0]
         var prints = Util.subnodesOfCode(functions[0], refNodeString)
-        var cases = swch.allChildren<CaseStatement>()
-        var defaults = swch.allChildren<DefaultStatement>()
+        var cases = swch.allDescendants<CaseStatement>()
+        var defaults = swch.allDescendants<DefaultStatement>()
         assertTrue(
             Util.eogConnect(
                 edgeDirection = Util.Edge.EXITS,
@@ -653,7 +653,7 @@ internal class EOGTest : BaseTest() {
         }
 
         // Assert: All breaks inside of switch connect to the switch root node
-        for (b in swch.allChildren<BreakStatement>()) assertTrue(
+        for (b in swch.allDescendants<BreakStatement>()) assertTrue(
             Util.eogConnect(
                 Util.Quantifier.ALL,
                 Connect.SUBTREE,
@@ -665,11 +665,11 @@ internal class EOGTest : BaseTest() {
         )
 
         // whileswitch
-        swch = functions[1].allChildren<SwitchStatement>()[0]
+        swch = functions[1].allDescendants<SwitchStatement>()[0]
         prints = Util.subnodesOfCode(functions[1], refNodeString)
-        cases = swch.allChildren<CaseStatement>()
-        defaults = swch.allChildren<DefaultStatement>()
-        val wstat = functions[1].allChildren<WhileStatement>().firstOrNull()
+        cases = swch.allDescendants<CaseStatement>()
+        defaults = swch.allDescendants<DefaultStatement>()
+        val wstat = functions[1].allDescendants<WhileStatement>().firstOrNull()
         assertNotNull(wstat)
         assertTrue(
             Util.eogConnect(
@@ -707,7 +707,7 @@ internal class EOGTest : BaseTest() {
         )
 
         // switch-while
-        swch = functions[2].allChildren<SwitchStatement>()[0]
+        swch = functions[2].allDescendants<SwitchStatement>()[0]
         prints = Util.subnodesOfCode(functions[2], refNodeString)
         assertTrue(
             Util.eogConnect(
@@ -732,9 +732,9 @@ internal class EOGTest : BaseTest() {
                 endNodes = listOf(swch),
             )
         )
-        swch = functions[1].allChildren<SwitchStatement>()[0]
+        swch = functions[1].allDescendants<SwitchStatement>()[0]
         prints = Util.subnodesOfCode(functions[1], refNodeString)
-        var breaks = swch.allChildren<BreakStatement>()
+        var breaks = swch.allDescendants<BreakStatement>()
 
         // Assert: while-switch, all breaks inside the switch connect to the containing switch
         // unless it has a label which connects the break to the  while
@@ -760,8 +760,8 @@ internal class EOGTest : BaseTest() {
             }
         }
         prints = Util.subnodesOfCode(functions[2], refNodeString)
-        val whiles = functions[2].allChildren<WhileStatement>()[0]
-        breaks = whiles.allChildren<BreakStatement>()
+        val whiles = functions[2].allDescendants<WhileStatement>()[0]
+        breaks = whiles.allDescendants<BreakStatement>()
 
         // Assert: switch-while, all breaks inside the while connect to the containing while unless
         // it has a label which connects the break to the switch
@@ -952,17 +952,17 @@ internal class EOGTest : BaseTest() {
         val result = analyzer.analyze().get()
 
         assertNotNull(result)
-        val function = result.functions["lambda2"]
+        val function = result.allFunctions["lambda2"]
         assertNotNull(function)
 
-        val lambdaVar = function.variables["this_is_a_lambda"]
+        val lambdaVar = function.allVariables["this_is_a_lambda"]
         assertNotNull(lambdaVar)
         val lambda = lambdaVar.initializer as? LambdaExpression
         assertNotNull(lambda)
 
         // The "outer" EOG is assembled correctly.
         assertTrue(lambda in lambdaVar.nextEOG)
-        val printFunctionCall = function.calls["print_function"]
+        val printFunctionCall = function.allCalls["print_function"]
         assertNotNull(printFunctionCall)
         assertTrue(printFunctionCall in lambdaVar.prevEOG)
 

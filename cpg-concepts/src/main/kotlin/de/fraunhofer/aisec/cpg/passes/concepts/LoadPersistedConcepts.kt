@@ -33,8 +33,8 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.allCalls
 import de.fraunhofer.aisec.cpg.graph.byFQN
-import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -129,7 +129,7 @@ class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx
      * @return A list of nodes matching the provided [SignatureEntry].
      */
     private fun TranslationResult.getNodesBySignature(signature: SignatureEntry): List<Node> {
-        return this.calls.byFQN(signature.fqn)
+        return this.allCalls.byFQN(signature.fqn)
     }
 
     /**

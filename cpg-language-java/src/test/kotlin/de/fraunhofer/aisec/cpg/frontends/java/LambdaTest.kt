@@ -27,14 +27,14 @@ package de.fraunhofer.aisec.cpg.frontends.java
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
-import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.allCalls
+import de.fraunhofer.aisec.cpg.graph.allVariables
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.variables
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -55,26 +55,26 @@ class JavaLambdaTest {
 
         assertNotNull(result)
 
-        val foreachArg = result.calls["forEach"]?.arguments?.first()
+        val foreachArg = result.allCalls["forEach"]?.arguments?.first()
         assertTrue(foreachArg is LambdaExpression)
         assertNotNull(foreachArg.function)
 
-        val replaceAllArg = result.calls["replaceAll"]?.arguments?.first()
+        val replaceAllArg = result.allCalls["replaceAll"]?.arguments?.first()
         assertTrue(replaceAllArg is LambdaExpression)
         assertNotNull(replaceAllArg.function)
 
-        val mapArg = result.calls["map"]?.arguments?.first()
+        val mapArg = result.allCalls["map"]?.arguments?.first()
         assertTrue(mapArg is LambdaExpression)
         assertNotNull(mapArg.function)
 
         val mapBody = mapArg.function?.body as? BinaryOperator
         assertNotNull(mapBody)
-        val outerVar = result.variables["outerVar"]
+        val outerVar = result.allVariables["outerVar"]
         assertNotNull(outerVar)
         assertEquals(outerVar, (mapBody.lhs as? Reference)?.refersTo)
 
         val testfunctionArg =
-            result.calls { it.name.localName == "testFunction" }[0].arguments.first()
+            result.allCalls { it.name.localName == "testFunction" }[0].arguments.first()
         assertTrue(testfunctionArg is Reference)
         assertTrue(
             (testfunctionArg.refersTo as? VariableDeclaration)?.initializer is LambdaExpression
@@ -84,7 +84,7 @@ class JavaLambdaTest {
         assertNotNull(testfunctionBody)
         assertEquals(outerVar, (testfunctionBody.lhs as? Reference)?.refersTo)
 
-        val lambdaVar = result.variables["lambdaVar"]
+        val lambdaVar = result.allVariables["lambdaVar"]
         assertNotNull(lambdaVar)
         val constructExpr =
             (lambdaVar.initializer as? NewExpression)?.initializer as? ConstructExpression

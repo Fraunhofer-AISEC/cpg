@@ -25,9 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
+import de.fraunhofer.aisec.cpg.graph.allFunctions
+import de.fraunhofer.aisec.cpg.graph.allVariables
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
 import de.fraunhofer.aisec.cpg.graph.statements.CaseStatement
@@ -43,7 +44,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpressio
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
-import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertFullName
 import de.fraunhofer.aisec.cpg.test.assertLiteralValue
@@ -73,15 +73,15 @@ class StatementHandlerTest {
 
         assertEquals(2, tu.declarations.size)
 
-        val main = tu.functions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
         assertLocalName("i32", main.type)
 
-        val rand = tu.functions["rand"]
+        val rand = tu.allFunctions["rand"]
         assertNotNull(rand)
         assertNull(rand.body)
 
-        val xDeclaration = tu.variables["x"]
+        val xDeclaration = tu.allVariables["x"]
         assertNotNull(xDeclaration)
 
         val call = xDeclaration.initializer
@@ -237,15 +237,15 @@ class StatementHandlerTest {
 
         assertEquals(2, tu.declarations.size)
 
-        val main = tu.functions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
         assertLocalName("half", main.type)
 
-        val rand = tu.functions["rand"]
+        val rand = tu.allFunctions["rand"]
         assertNotNull(rand)
         assertNull(rand.body)
 
-        val xDeclaration = tu.variables["x"]
+        val xDeclaration = tu.allVariables["x"]
         assertNotNull(xDeclaration)
 
         val call = xDeclaration.initializer
@@ -341,15 +341,15 @@ class StatementHandlerTest {
 
         assertEquals(2, tu.declarations.size)
 
-        val main = tu.functions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
         assertLocalName("i32", main.type)
 
-        val rand = tu.functions["rand"]
+        val rand = tu.allFunctions["rand"]
         assertNotNull(rand)
         assertNull(rand.body)
 
-        val xDeclaration = tu.variables["x"]
+        val xDeclaration = tu.allVariables["x"]
         assertNotNull(xDeclaration)
 
         val call = xDeclaration.initializer
@@ -494,17 +494,17 @@ class StatementHandlerTest {
         // main, rand and inferred dummy function "isunordered"
         assertEquals(3, tu.declarations.size)
 
-        val main = tu.functions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
         assertLocalName("half", main.type)
 
-        val rand = tu.functions["rand"]
+        val rand = tu.allFunctions["rand"]
         assertNotNull(rand)
         assertNull(rand.body)
 
-        val xDeclaration = tu.variables["x"]
+        val xDeclaration = tu.allVariables["x"]
         assertNotNull(xDeclaration)
-        val yDeclaration = tu.variables["y"]
+        val yDeclaration = tu.allVariables["y"]
         assertNotNull(yDeclaration)
 
         val call = xDeclaration.initializer
@@ -715,12 +715,12 @@ class StatementHandlerTest {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
-        val main = tu.functions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
         val mainBody = main.body
         assertIs<Block>(mainBody)
-        val wDeclaration = main.variables["w"]
+        val wDeclaration = main.allVariables["w"]
         assertNotNull(wDeclaration)
 
         val freezeInstructionDeclaration = mainBody.statements[3]
@@ -772,7 +772,7 @@ class StatementHandlerTest {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
-        val foo = tu.functions["foo"]
+        val foo = tu.allFunctions["foo"]
         assertNotNull(foo)
 
         val fooBody = foo.body
@@ -941,7 +941,7 @@ class StatementHandlerTest {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
-        val main = tu.functions["main"]
+        val main = tu.allFunctions["main"]
         assertNotNull(main)
 
         val mainBody = main.body
@@ -962,7 +962,7 @@ class StatementHandlerTest {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
-        val foo = tu.functions["foo"]
+        val foo = tu.allFunctions["foo"]
         assertNotNull(foo)
 
         val fooBody = foo.body

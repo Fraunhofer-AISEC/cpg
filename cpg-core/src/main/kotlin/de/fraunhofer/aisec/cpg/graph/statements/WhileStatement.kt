@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.allChildren
+import de.fraunhofer.aisec.cpg.graph.allDescendants
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -87,13 +87,13 @@ class WhileStatement : LoopStatement(), BranchingNode, ArgumentHolder {
     override fun hashCode() = Objects.hash(super.hashCode(), conditionDeclaration, condition)
 
     override fun getStartingPrevEOG(): Collection<Node> {
-        val astChildren = this.allChildren<Node> { true }
+        val astChildren = this.allDescendants<Node> { true }
         return condition?.getStartingPrevEOG()?.filter { it !in astChildren }
             ?: conditionDeclaration?.getStartingPrevEOG()
             ?: setOf()
     }
 
     override fun getExitNextEOG(): Collection<Node> {
-        return this.nextEOG.filter { it !in statement.allChildren<Node> { true } }
+        return this.nextEOG.filter { it !in statement.allDescendants<Node> { true } }
     }
 }

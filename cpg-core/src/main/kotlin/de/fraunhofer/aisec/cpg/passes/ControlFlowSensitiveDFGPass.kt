@@ -171,7 +171,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         // the scope which we can reach. We also do not want to touch anything related to
         // FunctionTemplateDeclarations.
         val allChildrenOfFunction =
-            node.allChildren<Node>(
+            node.allDescendants<Node>(
                 stopAtNode = {
                     it is FunctionTemplateDeclaration ||
                         it is VariableDeclaration && it.prevEOG.isEmpty() && !it.isImplicit ||
@@ -367,7 +367,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     is DeclarationStatement -> {
                         if (variable.isSingleDeclaration()) {
                             variable.singleDeclaration
-                        } else if (variable.variables.size == 2) {
+                        } else if (variable.allVariables.size == 2) {
                             // If there are two variables, we just blindly assume that the order is
                             // (key, value), so we return the second one
                             variable.declarations[1]
@@ -398,7 +398,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     currentNode.nextEOGEdges.filter {
                         it.unreachable != true &&
                             it.end != currentNode.statement &&
-                            it.end !in currentNode.statement.allChildren<Node>()
+                            it.end !in currentNode.statement.allDescendants<Node>()
                     }
                 nodesOutsideTheLoop.forEach { worklist.push(it, state.duplicate()) }
             }

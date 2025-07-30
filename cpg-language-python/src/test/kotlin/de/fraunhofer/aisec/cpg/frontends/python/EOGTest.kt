@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
-import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.allCalls
 import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.query.executionPath
 import de.fraunhofer.aisec.cpg.test.analyze
@@ -44,10 +44,10 @@ class EOGTest {
             }
         assertNotNull(result)
 
-        val read = result.calls("read").singleOrNull()
+        val read = result.allCalls("read").singleOrNull()
         assertNotNull(read, "Expected to find a `read` call.")
 
-        val print = result.calls("print").singleOrNull()
+        val print = result.allCalls("print").singleOrNull()
         assertNotNull(print, "Expected to find a `print` call.")
 
         assertTrue(

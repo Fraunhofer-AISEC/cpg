@@ -65,7 +65,7 @@ class LoggingConceptTest : BaseTest() {
         val loggingNodes = result.conceptNodes
         assertTrue(loggingNodes.isNotEmpty())
 
-        val warnLiteral = result.literals.singleOrNull { it.value.toString() == "WARN" }
+        val warnLiteral = result.allLiterals.singleOrNull { it.value.toString() == "WARN" }
         assertLiteralValue("WARN", warnLiteral)
 
         val logDFG =
@@ -81,7 +81,7 @@ class LoggingConceptTest : BaseTest() {
         assertIs<LogWrite>(logOp)
         assertEquals(LogLevel.WARN, logOp.logLevel)
 
-        val getSecretCall = result.calls("get_secret").singleOrNull()
+        val getSecretCall = result.allCalls("get_secret").singleOrNull()
         assertIs<CallExpression>(getSecretCall)
         val nextDFG = getSecretCall.nextDFG
         assertTrue(nextDFG.isNotEmpty())
@@ -116,7 +116,7 @@ class LoggingConceptTest : BaseTest() {
             "Expected to find 2 logging nodes. One from the `import logging` declaration (not used directly for logging) and one from the `logging.getLogger()` call (used with `logger.error(...)`).",
         )
 
-        val literalERROR = result.literals.singleOrNull { it.value.toString() == "ERROR" }
+        val literalERROR = result.allLiterals.singleOrNull { it.value.toString() == "ERROR" }
         assertNotNull(literalERROR)
 
         assertTrue(
@@ -149,7 +149,7 @@ class LoggingConceptTest : BaseTest() {
             "Expected to find 2 logging nodes. One from the `import logging as log` declaration (used with `log.info()`) and one from the `log.getLogger()` call (used with `logger.error(...)`).",
         )
 
-        val literalINFO = result.literals.singleOrNull { it.value.toString() == "INFO" }
+        val literalINFO = result.allLiterals.singleOrNull { it.value.toString() == "INFO" }
         assertNotNull(literalINFO)
 
         assertTrue(
@@ -160,7 +160,7 @@ class LoggingConceptTest : BaseTest() {
             "Expected to find a dataflow from the literal \"INFO\" to the logging node based on the import declaration.",
         )
 
-        val literalERROR = result.literals.singleOrNull { it.value.toString() == "ERROR" }
+        val literalERROR = result.allLiterals.singleOrNull { it.value.toString() == "ERROR" }
         assertNotNull(literalERROR)
 
         assertTrue(
@@ -221,7 +221,7 @@ class LoggingConceptTest : BaseTest() {
             val goodLogger = it.value
             val badLoggers = allLoggers.filter { it !== goodLogger }
 
-            val literals = result.literals.filter { it.value == literalString }
+            val literals = result.allLiterals.filter { it.value == literalString }
             literals.forEach { currentLit ->
                 assertTrue(
                     dataFlow(startNode = currentLit) { end -> end == goodLogger }.value,

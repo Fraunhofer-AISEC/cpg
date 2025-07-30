@@ -30,8 +30,8 @@ package de.fraunhofer.aisec.cpg.persistence
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Persistable
+import de.fraunhofer.aisec.cpg.graph.allNodes
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
-import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
@@ -85,7 +85,7 @@ context(_: Session)
 fun TranslationResult.persist() {
     val b = Benchmark(Persistable::class.java, "Persisting translation result")
 
-    val astNodes = this@persist.nodes
+    val astNodes = this@persist.allNodes
     val connected = astNodes.flatMap { it.connectedNodes }.toSet()
     val nodes = (astNodes + connected).distinct()
 

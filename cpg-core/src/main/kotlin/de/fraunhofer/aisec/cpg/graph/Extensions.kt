@@ -54,7 +54,7 @@ import kotlin.math.absoluteValue
  * @param predicate Indicates if the node should be included in the result.
  */
 @JvmOverloads
-inline fun <reified T> Node?.allChildren(
+inline fun <reified T> Node?.allDescendants(
     noinline stopAtNode: (Node) -> Boolean = { false },
     noinline predicate: ((T) -> Boolean)? = null,
 ): List<T> {
@@ -120,7 +120,7 @@ inline fun <reified T : OverlayNode> Node.hasOverlay(): Boolean {
  */
 val Node.allEOGStarters: List<Node>
     get() {
-        return this.allChildren<EOGStarterHolder>().flatMap { it.eogStarters }.distinct()
+        return this.allDescendants<EOGStarterHolder>().flatMap { it.eogStarters }.distinct()
     }
 
 /**
@@ -715,7 +715,7 @@ fun Node.followNextPDGUntilHit(
         x = { currentNode, ctx, _, loopingPaths ->
             val nextNodes = currentNode.nextPDG.toMutableList()
             if (interproceduralAnalysis) {
-                nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
+                nextNodes.addAll((currentNode as? CallExpression)?.allCalls ?: listOf())
             }
             nextNodes.map { it to ctx }
         },
@@ -746,7 +746,7 @@ fun Node.followNextCDGUntilHit(
         x = { currentNode, ctx, _, loopingPaths ->
             val nextNodes = currentNode.nextCDG.toMutableList()
             if (interproceduralAnalysis) {
-                nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
+                nextNodes.addAll((currentNode as? CallExpression)?.allCalls ?: listOf())
             }
             nextNodes.map { it to ctx }
         },
@@ -1118,132 +1118,132 @@ fun Node.followPrevDFG(predicate: (Node) -> Boolean): NodePath? {
 }
 
 /** Returns all [Node] children in the AST-subgraph, starting with this [Node]. */
-val Node?.nodes: List<Node>
-    get() = this.allChildren()
+val Node?.allNodes: List<Node>
+    get() = this.allDescendants()
 
 /** Returns all [CallExpression] children in this graph, starting with this [Node]. */
-val Node?.calls: List<CallExpression>
-    get() = this.allChildren()
+val Node?.allCalls: List<CallExpression>
+    get() = this.allDescendants()
 
 /** Returns all [OperatorCallExpression] children in this graph, starting with this [Node]. */
-val Node?.operatorCalls: List<OperatorCallExpression>
-    get() = this.allChildren()
+val Node?.allOperatorCalls: List<OperatorCallExpression>
+    get() = this.allDescendants()
 
 /** Returns all [MemberCallExpression] children in this graph, starting with this [Node]. */
-val Node?.mcalls: List<MemberCallExpression>
-    get() = this.allChildren()
+val Node?.allMCalls: List<MemberCallExpression>
+    get() = this.allDescendants()
 
 /** Returns all [CastExpression] children in this graph, starting with this [Node]. */
-val Node?.casts: List<CastExpression>
-    get() = this.allChildren()
+val Node?.allCasts: List<CastExpression>
+    get() = this.allDescendants()
 
 /** Returns all [MethodDeclaration] children in this graph, starting with this [Node]. */
-val Node?.methods: List<MethodDeclaration>
-    get() = this.allChildren()
+val Node?.allMethods: List<MethodDeclaration>
+    get() = this.allDescendants()
 
 /** Returns all [OperatorDeclaration] children in this graph, starting with this [Node]. */
-val Node?.operators: List<OperatorDeclaration>
-    get() = this.allChildren()
+val Node?.allOperators: List<OperatorDeclaration>
+    get() = this.allDescendants()
 
 /** Returns all [FieldDeclaration] children in this graph, starting with this [Node]. */
-val Node?.fields: List<FieldDeclaration>
-    get() = this.allChildren()
+val Node?.allFields: List<FieldDeclaration>
+    get() = this.allDescendants()
 
 /** Returns all [ParameterDeclaration] children in this graph, starting with this [Node]. */
-val Node?.parameters: List<ParameterDeclaration>
-    get() = this.allChildren()
+val Node?.allParameters: List<ParameterDeclaration>
+    get() = this.allDescendants()
 
 /** Returns all [FunctionDeclaration] children in this graph, starting with this [Node]. */
-val Node?.functions: List<FunctionDeclaration>
-    get() = this.allChildren()
+val Node?.allFunctions: List<FunctionDeclaration>
+    get() = this.allDescendants()
 
 /** Returns all [RecordDeclaration] children in this graph, starting with this [Node]. */
-val Node?.records: List<RecordDeclaration>
-    get() = this.allChildren()
+val Node?.allRecords: List<RecordDeclaration>
+    get() = this.allDescendants()
 
 /** Returns all [RecordDeclaration] children in this graph, starting with this [Node]. */
-val Node?.namespaces: List<NamespaceDeclaration>
-    get() = this.allChildren()
+val Node?.allNamespaces: List<NamespaceDeclaration>
+    get() = this.allDescendants()
 
 /** Returns all [ImportDeclaration] children in this graph, starting with this [Node]. */
-val Node?.imports: List<ImportDeclaration>
-    get() = this.allChildren()
+val Node?.allImports: List<ImportDeclaration>
+    get() = this.allDescendants()
 
 /** Returns all [VariableDeclaration] children in this graph, starting with this [Node]. */
-val Node?.variables: List<VariableDeclaration>
-    get() = this.allChildren()
+val Node?.allVariables: List<VariableDeclaration>
+    get() = this.allDescendants()
 
 /** Returns all [Literal] children in this graph, starting with this [Node]. */
-val Node?.literals: List<Literal<*>>
-    get() = this.allChildren()
+val Node?.allLiterals: List<Literal<*>>
+    get() = this.allDescendants()
 
 /** Returns all [Block] child edges in this graph, starting with this [Node]. */
-val Node?.blocks: List<Block>
-    get() = this.allChildren()
+val Node?.allBlocks: List<Block>
+    get() = this.allDescendants()
 
 /** Returns all [Reference] children in this graph, starting with this [Node]. */
-val Node?.refs: List<Reference>
-    get() = this.allChildren()
+val Node?.allRefs: List<Reference>
+    get() = this.allDescendants()
 
 /** Returns all [MemberExpression] children in this graph, starting with this [Node]. */
-val Node?.memberExpressions: List<MemberExpression>
-    get() = this.allChildren()
+val Node?.allMemberExpressions: List<MemberExpression>
+    get() = this.allDescendants()
 
 /** Returns all [Statement] child edges in this graph, starting with this [Node]. */
-val Node?.statements: List<Statement>
-    get() = this.allChildren()
+val Node?.allStatements: List<Statement>
+    get() = this.allDescendants()
 
 /** Returns all [ForStatement] child edges in this graph, starting with this [Node]. */
-val Node?.forLoops: List<ForStatement>
-    get() = this.allChildren()
+val Node?.allForLoops: List<ForStatement>
+    get() = this.allDescendants()
 
 /** Returns all [TryStatement] child edges in this graph, starting with this [Node]. */
-val Node?.trys: List<TryStatement>
-    get() = this.allChildren()
+val Node?.allTrys: List<TryStatement>
+    get() = this.allDescendants()
 
 /** Returns all [ThrowExpression] child edges in this graph, starting with this [Node]. */
-val Node?.throws: List<ThrowExpression>
-    get() = this.allChildren()
+val Node?.allThrows: List<ThrowExpression>
+    get() = this.allDescendants()
 
 /** Returns all [ForEachStatement] child edges in this graph, starting with this [Node]. */
-val Node?.forEachLoops: List<ForEachStatement>
-    get() = this.allChildren()
+val Node?.allForEachLoops: List<ForEachStatement>
+    get() = this.allDescendants()
 
 /** Returns all [SwitchStatement] child edges in this graph, starting with this [Node]. */
-val Node?.switches: List<SwitchStatement>
-    get() = this.allChildren()
+val Node?.allSwitches: List<SwitchStatement>
+    get() = this.allDescendants()
 
 /** Returns all [WhileStatement] child edges in this graph, starting with this [Node]. */
-val Node?.whileLoops: List<WhileStatement>
-    get() = this.allChildren()
+val Node?.allWhileLoops: List<WhileStatement>
+    get() = this.allDescendants()
 
 /** Returns all [DoStatement] child edges in this graph, starting with this [Node]. */
-val Node?.doLoops: List<DoStatement>
-    get() = this.allChildren()
+val Node?.allDoLoops: List<DoStatement>
+    get() = this.allDescendants()
 
 /** Returns all [BreakStatement] child edges in this graph, starting with this [Node]. */
-val Node?.breaks: List<BreakStatement>
-    get() = this.allChildren()
+val Node?.allBreaks: List<BreakStatement>
+    get() = this.allDescendants()
 
 /** Returns all [ContinueStatement] child edges in this graph, starting with this [Node]. */
-val Node?.continues: List<ContinueStatement>
-    get() = this.allChildren()
+val Node?.allContinues: List<ContinueStatement>
+    get() = this.allDescendants()
 
 /** Returns all [IfStatement] child edges in this graph, starting with this [Node]. */
-val Node?.ifs: List<IfStatement>
-    get() = this.allChildren()
+val Node?.allIfs: List<IfStatement>
+    get() = this.allDescendants()
 
 /** Returns all [LabelStatement] child edges in this graph, starting with this [Node]. */
-val Node?.labels: List<LabelStatement>
-    get() = this.allChildren()
+val Node?.allLabels: List<LabelStatement>
+    get() = this.allDescendants()
 
 /** Returns all [ReturnStatement] child edges in this graph, starting with this [Node]. */
-val Node?.returns: List<ReturnStatement>
-    get() = this.allChildren()
+val Node?.allReturns: List<ReturnStatement>
+    get() = this.allDescendants()
 
 /** Returns all [AssignExpression] child edges in this graph, starting with this [Node]. */
-val Node?.assigns: List<AssignExpression>
-    get() = this.allChildren()
+val Node?.allAssigns: List<AssignExpression>
+    get() = this.allDescendants()
 
 /**
  * This function tries to find the first parent node of type [T] that satisfies the optional
@@ -1300,10 +1300,10 @@ inline fun <reified T : Scope> Scope.firstScopeParentOrNull(
  * Return all [ProblemNode] children in this graph (either stored directly or in
  * [Node.additionalProblems]), starting with this [Node].
  */
-val Node?.problems: List<ProblemNode>
+val Node?.allProblems: List<ProblemNode>
     get() {
         val relevantNodes =
-            this.allChildren<Node> { it is ProblemNode || it.additionalProblems.isNotEmpty() }
+            this.allDescendants<Node> { it is ProblemNode || it.additionalProblems.isNotEmpty() }
 
         val result = mutableListOf<ProblemNode>()
 
@@ -1320,9 +1320,9 @@ val Node?.problems: List<ProblemNode>
     }
 
 /** Returns all [Assignment] child edges in this graph, starting with this [Node]. */
-val Node?.assignments: List<Assignment>
+val Node?.allAssignments: List<Assignment>
     get() {
-        return this?.allChildren<Node>()?.filterIsInstance<AssignmentHolder>()?.flatMap {
+        return this?.allDescendants<Node>()?.filterIsInstance<AssignmentHolder>()?.flatMap {
             it.assignments
         } ?: listOf()
     }
@@ -1334,7 +1334,8 @@ val Node?.assignments: List<Assignment>
 val VariableDeclaration.firstAssignment: Expression?
     get() {
         val start = this.scope?.astNode ?: return null
-        val assignments = start.assignments.filter { (it.target as? Reference)?.refersTo == this }
+        val assignments =
+            start.allAssignments.filter { (it.target as? Reference)?.refersTo == this }
 
         // We need to measure the distance between the start and each assignment value
         return assignments
@@ -1364,7 +1365,7 @@ fun TranslationResult.callsByName(name: String): List<CallExpression> {
 /** Set of all functions which are called from this function */
 val FunctionDeclaration.callees: Set<FunctionDeclaration>
     get() {
-        return this.calls
+        return this.allCalls
             .map { it.invokes }
             .foldRight(mutableListOf<FunctionDeclaration>()) { l, res ->
                 res.addAll(l)
@@ -1388,7 +1389,7 @@ operator fun FunctionDeclaration.get(n: Int): Statement? {
 
 /** Set of all functions calling [function] */
 fun TranslationResult.callersOf(function: FunctionDeclaration): Set<FunctionDeclaration> {
-    return this.functions.filter { function in it.callees }.toSet()
+    return this.allFunctions.filter { function in it.callees }.toSet()
 }
 
 /** All nodes which depend on this if statement */
@@ -1467,7 +1468,7 @@ fun Expression?.unwrapReference(): Reference? {
  *
  * If this is an [OverlayNode], we start searching in the [OverlayNode.underlyingNode].
  */
-val Node.translationUnit: TranslationUnitDeclaration?
+val Node.parentTranslationUnit: TranslationUnitDeclaration?
     get() {
         return this as? TranslationUnitDeclaration
             ?: if (this is OverlayNode) {
@@ -1482,7 +1483,7 @@ val Node.translationUnit: TranslationUnitDeclaration?
  *
  * If this is an [OverlayNode], we start searching in the [OverlayNode.underlyingNode].
  */
-val Node.translationResult: TranslationResult?
+val Node.parentTranslationResult: TranslationResult?
     get() {
         return this as? TranslationResult
             ?: if (this is OverlayNode) {
@@ -1497,7 +1498,7 @@ val Node.translationResult: TranslationResult?
  *
  * If this is an [OverlayNode], we start searching in the [OverlayNode.underlyingNode].
  */
-val Node.component: Component?
+val Node.parentComponent: Component?
     get() {
         return this as? Component
             ?: if (this is OverlayNode) {
@@ -1521,7 +1522,7 @@ val Expression.importedFrom: List<ImportDeclaration>
         } else if (this is MemberExpression) {
             return this.base.importedFrom
         } else if (this is Reference) {
-            val imports = this.translationUnit.imports
+            val imports = this.parentTranslationUnit.allImports
 
             return if (name.parent == null) {
                 // If the name does not have a parent, this reference could directly be the name

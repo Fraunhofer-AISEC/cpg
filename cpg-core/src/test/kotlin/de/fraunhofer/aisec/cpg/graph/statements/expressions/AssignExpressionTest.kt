@@ -89,10 +89,10 @@ class AssignExpressionTest {
 
             val tu = result.components.flatMap { it.translationUnits }.firstOrNull()
             with(tu) {
-                val call = tu.calls["func"]
-                val func = tu.functions["func"]
-                val refA = tu.refs["a"]
-                val refErr = tu.refs["err"]
+                val call = tu.allCalls["func"]
+                val func = tu.allFunctions["func"]
+                val refA = tu.allRefs["a"]
+                val refErr = tu.allRefs["err"]
 
                 assertNotNull(call)
                 assertNotNull(func)
@@ -115,7 +115,7 @@ class AssignExpressionTest {
                 assertTrue(refA.prevDFG.contains(call))
                 assertTrue(refErr.prevDFG.contains(call))
 
-                val assignments = tu.assignments
+                val assignments = tu.allAssignments
                 assertEquals(2, assignments.size)
             }
         }

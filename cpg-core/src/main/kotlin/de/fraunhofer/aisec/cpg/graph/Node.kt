@@ -152,7 +152,7 @@ abstract class Node() :
      * retrieve the appropriate nodes.
      *
      * Note: This only returns the *direct* children of this node. If you want to have *all*
-     * children, e.g., a flattened AST, you need to call [Node.allChildren].
+     * children, e.g., a flattened AST, you need to call [Node.allDescendants].
      *
      * For Neo4J OGM, this relationship will be automatically filled by a pre-save event before OGM
      * persistence. Therefore, this property is a `var` and not a `val`.
@@ -291,7 +291,7 @@ abstract class Node() :
      * Currently, of the [Component].
      */
     override fun relevantAssumptions(): Set<Assumption> {
-        return super.relevantAssumptions() + (component?.relevantAssumptions() ?: emptySet())
+        return super.relevantAssumptions() + (parentComponent?.relevantAssumptions() ?: emptySet())
     }
 
     /**

@@ -62,7 +62,7 @@ class PythonFrontendTest : BaseTest() {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu1)
-        val myClass1 = tu1.records["fields.MyClass"]
+        val myClass1 = tu1.allRecords["fields.MyClass"]
         assertNotNull(myClass1)
 
         val tu2 =
@@ -70,7 +70,7 @@ class PythonFrontendTest : BaseTest() {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(tu2)
-        val myClass2 = tu2.records["fields.MyClass"]
+        val myClass2 = tu2.allRecords["fields.MyClass"]
         assertNotNull(myClass2)
         assertEquals(
             myClass1.id,
@@ -107,18 +107,18 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
         // Check that all three functions exist
-        val level1 = tu.functions["level1"]
+        val level1 = tu.allFunctions["level1"]
         assertNotNull(level1)
-        val level2 = tu.functions["level2"]
+        val level2 = tu.allFunctions["level2"]
         assertNotNull(level2)
-        val level3 = tu.functions["level3"]
+        val level3 = tu.allFunctions["level3"]
         assertNotNull(level3)
         // Only level2 and level3 are children of level1
-        assertEquals(setOf(level2, level3), level1.body.functions.toSet())
+        assertEquals(setOf(level2, level3), level1.body.allFunctions.toSet())
         // Only level3 is child of level2
-        assertEquals(setOf(level3), level2.body.functions.toSet())
+        assertEquals(setOf(level3), level2.body.allFunctions.toSet())
         // No child for level3
-        assertEquals(setOf(), level3.body.functions.toSet())
+        assertEquals(setOf(), level3.body.allFunctions.toSet())
     }
 
     @Test
@@ -130,11 +130,11 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(result)
         with(result) {
-            val p = namespaces["literal"]
+            val p = allNamespaces["literal"]
             assertNotNull(p)
             assertLocalName("literal", p)
 
-            val b = p.variables["b"]
+            val b = p.allVariables["b"]
             assertNotNull(b)
             assertLocalName("b", b)
             assertEquals(assertResolvedType("bool"), b.type)
@@ -142,7 +142,7 @@ class PythonFrontendTest : BaseTest() {
             assertIs<Literal<*>>(bFirstAssignment)
             assertEquals(true, bFirstAssignment.value)
 
-            val i = p.variables["i"]
+            val i = p.allVariables["i"]
             assertNotNull(i)
             assertLocalName("i", i)
             assertEquals(assertResolvedType("int"), i.type)
@@ -150,7 +150,7 @@ class PythonFrontendTest : BaseTest() {
             assertIs<Literal<*>>(iFirstAssignment)
             assertEquals(42L, iFirstAssignment.value)
 
-            val f = p.variables["f"]
+            val f = p.allVariables["f"]
             assertNotNull(f)
             assertLocalName("f", f)
             assertEquals(assertResolvedType("float"), f.type)
@@ -158,14 +158,14 @@ class PythonFrontendTest : BaseTest() {
             assertIs<Literal<*>>(fFirstAssignment)
             assertEquals(1.0, fFirstAssignment.value)
 
-            val c = p.variables["c"]
+            val c = p.allVariables["c"]
             assertNotNull(c)
             assertLocalName("c", c)
             // assertEquals(tu.primitiveType("complex"), c.type) TODO: this is currently "UNKNOWN"
             // assertEquals("(3+5j)", (c.firstAssignment as? Literal<*>)?.value) // TODO: this is
             // currently a binary op
 
-            val t = p.variables["t"]
+            val t = p.allVariables["t"]
             assertNotNull(t)
             assertLocalName("t", t)
             assertEquals(assertResolvedType("str"), t.type)
@@ -173,7 +173,7 @@ class PythonFrontendTest : BaseTest() {
             assertIs<Literal<*>>(tAssignment)
             assertEquals("Hello", tAssignment.value)
 
-            val n = p.variables["n"]
+            val n = p.allVariables["n"]
             assertNotNull(n)
             assertLocalName("n", n)
             assertEquals(assertResolvedType("None"), n.type)
@@ -272,11 +272,11 @@ class PythonFrontendTest : BaseTest() {
         val r = compStmt.statements[3]
         assertIs<ReturnStatement>(r)
 
-        val s3 = tu.variables["s3"]
+        val s3 = tu.allVariables["s3"]
         assertNotNull(s3)
         assertLocalName("str", s3.type)
 
-        val baz = tu.functions["baz"]
+        val baz = tu.allFunctions["baz"]
         assertNotNull(baz)
         assertLocalName("str", baz.returnTypes.singleOrNull())
     }
@@ -291,7 +291,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(tu)
 
         val p = tu.namespaces["if"]
-        val main = p.functions["foo"]
+        val main = p.allFunctions["foo"]
         assertNotNull(main)
 
         val body = main.body
@@ -329,10 +329,10 @@ class PythonFrontendTest : BaseTest() {
         val p = tu.namespaces["simple_class"]
         assertNotNull(p)
 
-        val cls = p.records["SomeClass"]
+        val cls = p.allRecords["SomeClass"]
         assertNotNull(cls)
 
-        val foo = p.functions["foo"]
+        val foo = p.allFunctions["foo"]
         assertNotNull(foo)
 
         assertLocalName("SomeClass", cls)
@@ -379,7 +379,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(tu)
 
         val p = tu.namespaces["ifexpr"]
-        val main = p.functions["foo"]
+        val main = p.allFunctions["foo"]
         assertNotNull(main)
 
         val mainBody = main.body
@@ -431,7 +431,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(tu)
 
         val p = tu.namespaces["class_fields"]
-        val recordFoo = p.records["Foo"]
+        val recordFoo = p.allRecords["Foo"]
         assertNotNull(recordFoo)
         assertLocalName("Foo", recordFoo)
         assertEquals(4, recordFoo.fields.size)
@@ -493,7 +493,7 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val recordFoo = tu.records["class_self.Foo"]
+        val recordFoo = tu.allRecords["class_self.Foo"]
         assertNotNull(recordFoo)
         assertLocalName("Foo", recordFoo)
 
@@ -530,7 +530,7 @@ class PythonFrontendTest : BaseTest() {
         assertIs<Block>(barBody)
         val barBodyFirstStmt = barBody.statements[0]
         assertIs<AssignExpression>(barBodyFirstStmt)
-        val someVarDeclaration = recordFoo.variables.firstOrNull()
+        val someVarDeclaration = recordFoo.allVariables.firstOrNull()
         assertIs<FieldDeclaration>(someVarDeclaration)
         assertLocalName("somevar", someVarDeclaration)
         assertRefersTo(someVarDeclaration.firstAssignment, i)
@@ -563,15 +563,15 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val other = tu.records["Other"]
+        val other = tu.allRecords["Other"]
         assertNotNull(other)
         assertFullName("class_type_annotations.Other", other.toType())
 
-        val foo = tu.records["Foo"]
+        val foo = tu.allRecords["Foo"]
         assertNotNull(foo)
         assertFullName("class_type_annotations.Foo", foo.toType())
 
-        val fromOther = tu.functions["from_other"]
+        val fromOther = tu.allFunctions["from_other"]
         assertNotNull(fromOther)
 
         val param = fromOther.parameters.firstOrNull()
@@ -596,7 +596,7 @@ class PythonFrontendTest : BaseTest() {
         val p = tu.namespaces["class_ctor"]
         assertNotNull(p)
 
-        val recordFoo = p.records["Foo"]
+        val recordFoo = p.allRecords["Foo"]
         assertNotNull(recordFoo)
         assertLocalName("Foo", recordFoo)
 
@@ -610,7 +610,7 @@ class PythonFrontendTest : BaseTest() {
         assertLocalName(PythonLanguage.IDENTIFIER_INIT, fooCtor)
         assertLocalName("foobar", foobar)
 
-        val bar = p.functions["bar"]
+        val bar = p.allFunctions["bar"]
         assertNotNull(bar)
         assertLocalName("bar", bar)
 
@@ -649,13 +649,13 @@ class PythonFrontendTest : BaseTest() {
         val p = tu.namespaces["issue432"]
         assertNotNull(p)
 
-        val clsCounter = p.records["counter"]
+        val clsCounter = p.allRecords["counter"]
         assertNotNull(clsCounter)
 
-        val methCount = p.functions["count"]
+        val methCount = p.allFunctions["count"]
         assertNotNull(methCount)
 
-        val clsC1 = p.records["c1"]
+        val clsC1 = p.allRecords["c1"]
         assertNotNull(clsC1)
 
         // class counter
@@ -756,7 +756,7 @@ class PythonFrontendTest : BaseTest() {
         val p = tu.namespaces["vars"]
         assertNotNull(p)
 
-        val clsFoo = p.records["Foo"]
+        val clsFoo = p.allRecords["Foo"]
         assertNotNull(clsFoo)
 
         val methBar = clsFoo.methods[0]
@@ -774,17 +774,17 @@ class PythonFrontendTest : BaseTest() {
         assertNull(classFieldNoInitializer.initializer)
 
         val localClassFieldNoInitializer =
-            methBar.variables[
+            methBar.allVariables[
                     { it.name.localName == "classFieldNoInitializer" && it !is FieldDeclaration }]
         assertNotNull(localClassFieldNoInitializer)
 
         val localClassFieldWithInit =
-            methBar.variables[
+            methBar.allVariables[
                     { it.name.localName == "classFieldWithInit" && it !is FieldDeclaration }]
         assertNotNull(localClassFieldNoInitializer)
 
         val localClassFieldDeclaredInFunction =
-            methBar.variables[
+            methBar.allVariables[
                     {
                         it.name.localName == "classFieldDeclaredInFunction" &&
                             it !is FieldDeclaration
@@ -859,7 +859,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(p)
 
         assertEquals(Region(1, 1, 1, 9), (p.statements[0]).location?.region)
-        assertEquals(Region(1, 5, 1, 9), (p.variables["b"])?.firstAssignment?.location?.region)
+        assertEquals(Region(1, 5, 1, 9), (p.allVariables["b"])?.firstAssignment?.location?.region)
         assertEquals(Region(2, 1, 2, 7), (p.statements[1]).location?.region)
         assertEquals(Region(3, 1, 3, 8), (p.statements[2]).location?.region)
         assertEquals(Region(4, 1, 4, 11), (p.statements[3]).location?.region)
@@ -884,7 +884,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(p)
 
         // foo = bar.baz.zzz("hello")
-        val foo = p.variables["foo"]
+        val foo = p.allVariables["foo"]
         assertNotNull(foo)
 
         val firstAssignment = foo.firstAssignment
@@ -915,7 +915,7 @@ class PythonFrontendTest : BaseTest() {
         val p = tu.namespaces["issue598"]
         assertNotNull(p)
 
-        val main = p.functions["main"]
+        val main = p.allFunctions["main"]
         assertNotNull(main)
 
         val mainBody = main.body
@@ -952,16 +952,18 @@ class PythonFrontendTest : BaseTest() {
 
         assertEquals(
             5,
-            p.variables.size,
+            p.allVariables.size,
         ) // including one dummy variable introduced for the loop var
         assertEquals(
             4,
-            p.variables.filter { !it.name.localName.contains(PythonHandler.LOOP_VAR_PREFIX) }.size,
+            p.allVariables
+                .filter { !it.name.localName.contains(PythonHandler.LOOP_VAR_PREFIX) }
+                .size,
         )
         assertEquals(2, p.statements.size)
 
         // test = [(1, 2, 3)]
-        val testDeclaration = p.variables[0]
+        val testDeclaration = p.allVariables[0]
         assertNotNull(testDeclaration)
         assertLocalName("test", testDeclaration)
         val testDeclStmt = p.statements[0]
@@ -1148,7 +1150,7 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val annotations = tu.allChildren<Annotation>()
+        val annotations = tu.allDescendants<Annotation>()
         assertEquals(
             listOf("app.route", "some.otherannotation", "other_func"),
             annotations.map { it.name.toString() },
@@ -1164,13 +1166,13 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val forloopFunc = tu.functions["forloop"]
+        val forloopFunc = tu.allFunctions["forloop"]
         assertNotNull(forloopFunc)
 
-        val varDefinedBeforeLoop = forloopFunc.variables["varDefinedBeforeLoop"]
+        val varDefinedBeforeLoop = forloopFunc.allVariables["varDefinedBeforeLoop"]
         assertNotNull(varDefinedBeforeLoop)
 
-        val varDefinedInLoop = forloopFunc.variables["varDefinedInLoop"]
+        val varDefinedInLoop = forloopFunc.allVariables["varDefinedInLoop"]
         assertNotNull(varDefinedInLoop)
 
         val functionBody = forloopFunc.body
@@ -1236,14 +1238,14 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val a = tu.refs["a"]
+        val a = tu.allRefs["a"]
         assertNotNull(a)
 
         val result = a.evaluate(PythonValueEvaluator())
         assertEquals(16.0, result)
 
         val bAugAssign =
-            tu.allChildren<AssignExpression>().singleOrNull {
+            tu.allDescendants<AssignExpression>().singleOrNull {
                 val itLhs = it.lhs.singleOrNull()
                 assertIs<Reference>(itLhs)
                 itLhs.name.localName == "b" && it.location?.region?.startLine == 4
@@ -1257,7 +1259,7 @@ class PythonFrontendTest : BaseTest() {
 
         // c = (not True and False) or True
         val cAssign =
-            tu.allChildren<AssignExpression>()
+            tu.allDescendants<AssignExpression>()
                 .singleOrNull {
                     val itLhs = it.lhs.singleOrNull()
                     assertIs<Reference>(itLhs)
@@ -1285,7 +1287,7 @@ class PythonFrontendTest : BaseTest() {
 
         // d = ((-5 >> 2) & ~7 | (+4 << 1)) ^ 0xffff
         val dAssign =
-            tu.allChildren<AssignExpression>()
+            tu.allDescendants<AssignExpression>()
                 .singleOrNull {
                     val itLhs = it.lhs.singleOrNull()
                     assertIs<Reference>(itLhs)
@@ -1424,8 +1426,8 @@ class PythonFrontendTest : BaseTest() {
                 it.registerLanguage<PythonLanguage>()
             }
         assertNotNull(result)
-        assertEquals(1, result.variables.size)
-        assertEquals(listOf("mypi"), result.variables.map { it.name.localName })
+        assertEquals(1, result.allVariables.size)
+        assertEquals(listOf("mypi"), result.allVariables.map { it.name.localName })
     }
 
     @Test
@@ -1447,7 +1449,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(result)
 
         // import a
-        val importA = result.imports["a"]
+        val importA = result.allImports["a"]
         assertNotNull(importA)
         assertEquals(ImportStyle.IMPORT_NAMESPACE, importA.style)
         assertContains(
@@ -1456,21 +1458,21 @@ class PythonFrontendTest : BaseTest() {
         )
 
         // from c import *
-        val importC = result.imports["c"]
+        val importC = result.allImports["c"]
         assertNotNull(importC)
         assertEquals(ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE, importC.style)
         // assertEquals(result.namespaces["c"], importC.importedFrom)
 
-        val aFunc = result.functions["a.func"]
+        val aFunc = result.allFunctions["a.func"]
         assertNotNull(aFunc)
 
-        val bFunc = result.functions["b.func"]
+        val bFunc = result.allFunctions["b.func"]
         assertNotNull(bFunc)
 
-        val cCompletelyDifferentFunc = result.functions["c.completely_different_func"]
+        val cCompletelyDifferentFunc = result.allFunctions["c.completely_different_func"]
         assertNotNull(cCompletelyDifferentFunc)
 
-        var calls = result.calls("a.func")
+        var calls = result.allCalls("a.func")
         assertEquals(2, calls.size)
 
         var call = calls.firstOrNull()
@@ -1479,15 +1481,15 @@ class PythonFrontendTest : BaseTest() {
 
         assertTrue(call.isImported)
 
-        call = result.calls["b.func"]
+        call = result.allCalls["b.func"]
         assertNotNull(call)
         assertInvokes(call, bFunc)
 
-        call = result.calls["completely_different_func"]
+        call = result.allCalls["completely_different_func"]
         assertNotNull(call)
         assertInvokes(call, cCompletelyDifferentFunc)
 
-        call = result.calls["c.completely_different_func"]
+        call = result.allCalls["c.completely_different_func"]
         assertNotNull(call)
         assertInvokes(call, cCompletelyDifferentFunc)
         assertTrue(call.isImported)
@@ -1506,24 +1508,24 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val barCalls = tu.calls("bar")
+        val barCalls = tu.allCalls("bar")
         assertEquals(2, barCalls.size)
         barCalls.forEach { barCall ->
             assertIs<CallExpression>(barCall)
             assertTrue(barCall.isImported)
         }
 
-        val bazCall = tu.calls["baz"]
+        val bazCall = tu.allCalls["baz"]
         assertNull(
             bazCall,
             "We should not have a baz() call anymore, since it should be harmonized",
         )
 
-        val fooCall = tu.calls["foo"]
+        val fooCall = tu.allCalls["foo"]
         assertIs<CallExpression>(fooCall)
         assertTrue(fooCall.isImported)
 
-        val foo3Call = tu.calls["foo3"]
+        val foo3Call = tu.allCalls["foo3"]
         assertIs<CallExpression>(foo3Call)
         assertTrue(foo3Call.isImported)
     }
@@ -1537,7 +1539,7 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(result)
         with(result) {
-            val foo = records["Foo"]
+            val foo = allRecords["Foo"]
             assertNotNull(foo)
 
             val bar = foo.methods["bar"]
@@ -1559,10 +1561,10 @@ class PythonFrontendTest : BaseTest() {
             analyze(listOf(topLevel.resolve("named_expressions.py").toFile()), topLevel, true) {
                 it.registerLanguage<PythonLanguage>()
             }
-        val namedExpression = result.functions["named_expression"]
+        val namedExpression = result.allFunctions["named_expression"]
         assertNotNull(namedExpression)
 
-        val assignExpression = result.statements[1]
+        val assignExpression = result.allStatements[1]
         assertIs<AssignExpression>(assignExpression)
         assertEquals(":=", assignExpression.operatorCode)
         assertEquals(true, assignExpression.usedAsExpression)
@@ -1589,13 +1591,13 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val normalFunc = tu.functions["normal_func"]
+        val normalFunc = tu.allFunctions["normal_func"]
         assertNotNull(normalFunc)
         // 11 chars (including whitespace) -> SARIF position = 12
         //     e = "e"
         assertEquals(12, normalFunc.body?.location?.region?.endColumn)
 
-        val unicodeFunc = tu.functions["unicode_func"]
+        val unicodeFunc = tu.allFunctions["unicode_func"]
         assertNotNull(unicodeFunc)
 
         // also 11 chars (including whitespace) -> SARIF position = 12
@@ -1631,31 +1633,31 @@ class PythonFrontendTest : BaseTest() {
                 "foobar.implementation.internal_bar",
                 "foobar.implementation.internal_foo",
             )
-        assertEquals(expected, result.namespaces.map { it.name.toString() }.distinct().toSet())
+        assertEquals(expected, result.allNamespaces.map { it.name.toString() }.distinct().toSet())
 
-        var bar = result.functions["bar"]
+        var bar = result.allFunctions["bar"]
         assertNotNull(bar)
         assertFullName("foobar.implementation.internal_bar.bar", bar)
 
-        var foo = result.functions["foo"]
+        var foo = result.allFunctions["foo"]
         assertNotNull(foo)
         assertFullName("foobar.implementation.internal_foo.foo", foo)
 
-        var barCall = result.calls["bar"]
+        var barCall = result.allCalls["bar"]
         assertNotNull(barCall)
         assertInvokes(barCall, bar)
 
-        var fooCalls = result.calls("foo")
+        var fooCalls = result.allCalls("foo")
         assertEquals(2, fooCalls.size)
         fooCalls.forEach { assertInvokes(it, foo) }
 
-        val refBarString = result.refs("bar_string")
+        val refBarString = result.allRefs("bar_string")
         refBarString.forEach {
             assertNotNull(it)
             assertNotNull(it.refersTo)
         }
 
-        val refFooString = result.refs("foo_string")
+        val refFooString = result.allRefs("foo_string")
         refFooString.forEach {
             assertNotNull(it)
             assertNotNull(it.refersTo)
@@ -1675,14 +1677,14 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val refs = tu.refs
+        val refs = tu.allRefs
         refs.forEach { assertIsNot<MemberExpression>(it, "{${it.name}} is a member expression") }
         assertEquals(
             setOf("a", "b", "pkg.module.foo", "pkg.another_module.foo"),
             refs.map { it.name.toString() }.toSet(),
         )
 
-        val imports = tu.imports
+        val imports = tu.allImports
         assertEquals(
             setOf("pkg", "pkg.module", "pkg.another_module"),
             imports.map { it.name.toString() }.toSet(),
@@ -1698,30 +1700,30 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val pkg = result.namespaces["pkg"]
+        val pkg = result.allNamespaces["pkg"]
         assertNotNull(pkg)
         assertTrue(pkg.isInferred)
 
-        val pkgThirdModule = result.namespaces["pkg.third_module"]
+        val pkgThirdModule = result.allNamespaces["pkg.third_module"]
         assertNotNull(pkgThirdModule)
         assertTrue(pkg.isInferred)
 
-        val pkgFunction = result.functions["pkg.function"]
+        val pkgFunction = result.allFunctions["pkg.function"]
         assertNotNull(pkgFunction)
         assertTrue(pkg.isInferred)
 
-        val anotherPkg = result.namespaces["another_pkg"]
+        val anotherPkg = result.allNamespaces["another_pkg"]
         assertNotNull(anotherPkg)
         assertTrue(pkg.isInferred)
 
-        val refs = result.refs
+        val refs = result.allRefs
 
         // All reference except the .field access should be reference and not a member expression
         refs.filter { it.name.localName != "field" }.forEach { assertIsNot<MemberExpression>(it) }
 
         assertEquals(
             listOf("pkg.function", "another_pkg.function", "another_pkg.function", "pkg.function"),
-            result.calls.map { it.name.toString() },
+            result.allCalls.map { it.name.toString() },
         )
 
         assertEquals(
@@ -1769,7 +1771,7 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(tu)
 
         // ensure, we have four functions and no inferred ones
-        val functions = tu.functions
+        val functions = tu.allFunctions
         assertEquals(4, functions.size)
 
         val inferred = functions.filter { it.isInferred }
@@ -1810,17 +1812,17 @@ class PythonFrontendTest : BaseTest() {
 
         val stdlib = result.components["stdlib"]
         assertNotNull(stdlib)
-        assertEquals(listOf("os"), stdlib.namespaces.map { it.name.toString() })
-        val osName = stdlib.namespaces["os"].variables["name"]
+        assertEquals(listOf("os"), stdlib.allNamespaces.map { it.name.toString() })
+        val osName = stdlib.allNamespaces["os"].allVariables["name"]
         assertNotNull(osName)
 
         val component1 = result.components["component1"]
         assertNotNull(component1)
         assertEquals(
             listOf("mypackage", "mypackage.module"),
-            component1.namespaces.map { it.name.toString() },
+            component1.allNamespaces.map { it.name.toString() },
         )
-        val a = component1.variables["a"]
+        val a = component1.allVariables["a"]
         assertNotNull(a)
         assertRefersTo(a.firstAssignment, osName)
 
@@ -1828,13 +1830,13 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(component2)
         assertEquals(
             listOf("otherpackage", "otherpackage.module"),
-            component2.namespaces.map { it.name.toString() },
+            component2.allNamespaces.map { it.name.toString() },
         )
-        val c = component2.variables["c"]
+        val c = component2.allVariables["c"]
         assertNotNull(c)
         assertRefersTo(c.firstAssignment, a)
 
-        val fooCall = component2.calls["foo"]
+        val fooCall = component2.allCalls["foo"]
         assertNotNull(fooCall)
 
         val barArgument = fooCall.argumentEdges["bar"]?.end
@@ -1854,35 +1856,35 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val someClass = tu.records["SomeClass"]
+        val someClass = tu.allRecords["SomeClass"]
         assertNotNull(someClass)
 
         val fieldX = someClass.fields["x"]
         assertNotNull(fieldX)
 
-        val method = tu.functions["method"]
+        val method = tu.allFunctions["method"]
         assertNotNull(method)
         // method has a local variables "b".
-        val variableB = method.variables["b"]
+        val variableB = method.allVariables["b"]
         assertNotNull(variableB)
         assertIsNot<FieldDeclaration>(variableB)
         assertEquals(1, someClass.fields.size)
 
-        val someClass2 = tu.records["SomeClass2"]
+        val someClass2 = tu.allRecords["SomeClass2"]
         assertNotNull(someClass2)
-        val staticMethod = tu.functions["static_method"]
+        val staticMethod = tu.allFunctions["static_method"]
         assertNotNull(staticMethod)
         // static_method has two local variables which are "b" and "x"
-        assertEquals(2, staticMethod.variables.filter { it !is FieldDeclaration }.size)
-        assertEquals(setOf("b", "x"), staticMethod.variables.map { it.name.localName }.toSet())
+        assertEquals(2, staticMethod.allVariables.filter { it !is FieldDeclaration }.size)
+        assertEquals(setOf("b", "x"), staticMethod.allVariables.map { it.name.localName }.toSet())
         assertTrue(someClass2.fields.isEmpty())
 
         // There is no field called "b" in the result.
-        assertNull(tu.fields["b"])
+        assertNull(tu.allFields["b"])
 
-        val foo = tu.functions["foo"]
+        val foo = tu.allFunctions["foo"]
         assertNotNull(foo)
-        val refersTo = foo.refs("fooA").map { it.refersTo }
+        val refersTo = foo.allRefs("fooA").map { it.refersTo }
         refersTo.forEach { refersTo -> assertIs<ParameterDeclaration>(refersTo) }
     }
 
@@ -1904,14 +1906,14 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val clsBase = result.records["base"]
+        val clsBase = result.allRecords["base"]
         assertNotNull(clsBase)
 
         val clsSuper = clsBase.superClasses.firstOrNull()
         assertNotNull(clsSuper)
         assertIs<ObjectType>(clsSuper)
 
-        val expectedSuper = result.records["Foobar"]
+        val expectedSuper = result.allRecords["Foobar"]
         assertNotNull(expectedSuper)
         assertEquals(expectedSuper, clsSuper.recordDeclaration)
     }
@@ -1934,14 +1936,14 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val clsBase = result.records["base"]
+        val clsBase = result.allRecords["base"]
         assertNotNull(clsBase)
 
         val clsSuper = clsBase.superClasses.firstOrNull()
         assertNotNull(clsSuper)
         assertIs<ObjectType>(clsSuper)
 
-        val expectedSuper = result.records["Foobar"]
+        val expectedSuper = result.allRecords["Foobar"]
         assertNotNull(expectedSuper)
         assertEquals(expectedSuper, clsSuper.recordDeclaration)
     }
@@ -1973,10 +1975,10 @@ class PythonFrontendTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val functionCall = result.calls["function"]
+        val functionCall = result.allCalls["function"]
         assertNotNull(functionCall)
 
-        val anotherFunctionCall = result.mcalls["another_function"]
+        val anotherFunctionCall = result.allMCalls["another_function"]
         assertNotNull(anotherFunctionCall)
         assertNotNull(anotherFunctionCall.astParent)
         assertSame(functionCall, anotherFunctionCall.astParent)

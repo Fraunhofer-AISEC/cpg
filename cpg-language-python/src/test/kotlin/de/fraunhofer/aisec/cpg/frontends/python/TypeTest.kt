@@ -42,25 +42,25 @@ class TypeTest {
             }
         assertNotNull(result)
 
-        val my = result.variables["my"]
+        val my = result.allVariables["my"]
         assertNotNull(my)
 
-        val funcBar = result.functions["bar"]
+        val funcBar = result.allFunctions["bar"]
         assertNotNull(funcBar)
         assertEquals(
             setOf("bar()dynamic", "bar()dfg_type.Bar"),
             funcBar.assignedTypes.map { it.typeName }.toSet(),
         )
 
-        val barCall = result.mcalls["bar"]
+        val barCall = result.allMCalls["bar"]
         assertNotNull(barCall)
         assertEquals(setOf("dfg_type.Bar"), barCall.assignedTypes.map { it.typeName }.toSet())
 
-        val bar = result.variables["bar"]
+        val bar = result.allVariables["bar"]
         assertNotNull(bar)
         assertEquals(setOf("dfg_type.Bar"), bar.assignedTypes.map { it.typeName }.toSet())
 
-        val a = result.variables["a"]
+        val a = result.allVariables["a"]
         assertNotNull(a)
         assertEquals(setOf("str", "int"), a.assignedTypes.map { it.typeName }.toSet())
     }
