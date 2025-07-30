@@ -210,12 +210,15 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
     override lateinit var elements: Set<Element<T>>
 
     class Element<T>(expectedMaxSize: Int) : IdentitySet<T>(expectedMaxSize), Lattice.Element {
+
+        // We make the new element a big bigger than the current size to avoid resizing
         constructor(set: Set<T>) : this(ceil(set.size * 1.5).toInt()) {
             addAllWithoutCheck(set as? IdentitySet<T> ?: set.toIdentitySet())
         }
 
         constructor() : this(16)
 
+        // We make the new element a big bigger than the current size to avoid resizing
         constructor(vararg entries: T) : this(ceil(entries.size * 1.5).toInt()) {
             addAll(entries)
         }
