@@ -105,7 +105,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         val experimentalEOGWorklist: Boolean = false,
     ) : PassConfiguration()
 
-    protected lateinit var walker: ScopedWalker
+    protected lateinit var walker: ScopedWalker<Node>
 
     protected val templateList = mutableListOf<TemplateDeclaration>()
 
@@ -137,16 +137,17 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         if (passConfig?.experimentalEOGWorklist == true && eogStarter is FunctionDeclaration) {
             acceptWithIterateEOG(eogStarter)
         } else {
-            walker = ScopedWalker(scopeManager)
+            walker =
+                ScopedWalker(
+                    scopeManager,
+                    if (passConfig?.skipUnreachableEOG == true) {
+                        Strategy::REACHABLE_EOG_FORWARD
+                    } else {
+                        Strategy::EOG_FORWARD
+                    },
+                )
 
             cacheTemplates(ctx.currentComponent)
-
-            walker.strategy =
-                if (passConfig?.skipUnreachableEOG == true) {
-                    Strategy::REACHABLE_EOG_FORWARD
-                } else {
-                    Strategy::EOG_FORWARD
-                }
             walker.clearCallbacks()
             walker.registerHandler(this::handle)
 
@@ -541,7 +542,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
                     addRecursiveDefaultTemplateArgs(constructExpression, template)
 
                     // Add missing defaults
-                    val missingNewParams: List<Node?> =
+                    val missingNewParams =
                         template.parameterDefaults.subList(
                             constructExpression.templateArguments.size,
                             template.parameterDefaults.size,

@@ -375,7 +375,9 @@ fun Node.toJSON(noEdges: Boolean = false): NodeJSON {
                 val path = uri.toString()
                 path.substringAfterLast('/').substringAfterLast('\\')
             },
-        astChildren = if (noEdges) emptyList() else this.astChildren.map { it.toJSON() },
+        astChildren =
+            if (noEdges) emptyList()
+            else (this as? AstNode)?.astChildren?.map { it.toJSON() } ?: emptyList(),
         prevDFG = if (noEdges) emptyList() else this.prevDFGEdges.map { it.toJSON() },
         nextDFG = if (noEdges) emptyList() else this.nextDFGEdges.map { it.toJSON() },
         translationUnitId = this.translationUnit?.id,

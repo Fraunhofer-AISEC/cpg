@@ -113,7 +113,7 @@ internal class FunctionTemplateTest : BaseTest() {
         val intType = IntegerType("int", 32, language, NumericType.Modifier.SIGNED)
         val floatType = FloatingPointType("float", 32, language, NumericType.Modifier.SIGNED)
         assertEquals(typeT, typeParamDeclaration.type)
-        assertEquals(intType, typeParamDeclaration.default)
+        assertEquals(intType, typeParamDeclaration.default?.type)
 
         val N = findByUniqueName(result.parameters, "N")
         val int2 = findByUniquePredicate(result.literals { it.value == 2 }) { it.value == 2 }

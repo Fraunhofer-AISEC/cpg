@@ -468,10 +468,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
      * @param node the node
      * @param owner the AST owner node
      */
-    fun processAnnotations(
-        node: de.fraunhofer.aisec.cpg.graph.Node,
-        owner: NodeWithAnnotations<*>,
-    ) {
+    fun processAnnotations(node: AstNode, owner: NodeWithAnnotations<*>) {
         if (config.processAnnotations) {
             node.annotations += handleAnnotations(owner)
         }

@@ -324,7 +324,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 typeParamDecl.type = parameterizedType
                 if (templateParameter.defaultType != null) {
                     val defaultType = frontend.typeOf(templateParameter.defaultType)
-                    typeParamDecl.default = defaultType
+                    typeParamDecl.default = newTypeExpression("", type = defaultType)
                 }
                 templateDeclaration.parameters += typeParamDecl
             } else if (templateParameter is CPPASTParameterDeclaration) {
@@ -590,13 +590,13 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     private fun extractTemplateParams(
         ctx: IASTSimpleDeclaration,
         declSpecifier: IASTDeclSpecifier,
-    ): MutableList<Node>? {
+    ): MutableList<AstNode>? {
         if (
             !ctx.isTypedef &&
                 declSpecifier is CPPASTNamedTypeSpecifier &&
                 declSpecifier.name is CPPASTTemplateId
         ) {
-            val templateParams = mutableListOf<Node>()
+            val templateParams = mutableListOf<AstNode>()
             val templateId = declSpecifier.name as CPPASTTemplateId
             for (templateArgument in templateId.templateArguments) {
                 if (templateArgument is CPPASTTypeId) {

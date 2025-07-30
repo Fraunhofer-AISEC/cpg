@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
 import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
  * A [Pass] collecting statistics for the graph. Currently, it collects the number of nodes and the
@@ -42,7 +43,7 @@ class StatisticsCollectionPass(ctx: TranslationContext) : TranslationResultPass(
     override fun accept(result: TranslationResult) {
         var problemNodes = 0
         var nodes = 0
-        val walker = ScopedWalker(ctx.scopeManager)
+        val walker = ScopedWalker(ctx.scopeManager, Strategy::AST_FORWARD)
         walker.registerHandler { node: Node ->
             nodes++
             if (node is ProblemNode) {
