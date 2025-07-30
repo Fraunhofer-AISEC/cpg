@@ -27,9 +27,13 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.methods
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
@@ -116,4 +120,35 @@ open class ObjectType : Type, HasSecondaryTypeEdge {
 
     override val secondaryTypes: List<Type>
         get() = generics
+
+    context(provider: ContextProvider)
+    val methods: Set<MethodDeclaration>
+        get() {
+            // We need to gather all methods that are in within the scope of the underlying record
+            // declaration, as well as their super types
+            val methods = mutableSetOf<MethodDeclaration>()
+
+            // Gather all methods of this type and its super-types
+            val worklist = mutableListOf<Type>(this)
+            val alreadySeen = identitySetOf<Type>()
+            while (worklist.isNotEmpty()) {
+                val next = worklist.removeFirst()
+
+                // Add all methods in the declaring scope
+                with(provider.ctx.scopeManager) {
+                    next.recordDeclaration
+                        ?.declaringScope
+                        ?.symbols
+                        ?.values
+                        ?.flatten()
+                        ?.filterIsInstanceTo(methods)
+                }
+
+                // Add super types
+                worklist += next.superTypes
+                alreadySeen.add(next)
+            }
+
+            return methods.toSet()
+        }
 }
