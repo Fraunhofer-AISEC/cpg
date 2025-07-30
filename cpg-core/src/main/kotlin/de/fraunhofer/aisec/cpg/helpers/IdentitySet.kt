@@ -84,18 +84,6 @@ open class IdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
      * Adds all [elements] to this [IdentitySet] without checking if they are already present. This
      * should only be used if this set is empty!
      */
-    fun addAllWithoutCheck(elements: Set<T>) {
-        // We rely on the input set and add everything without checking if an element is already
-        // present.
-        for (element in elements) {
-            map[element] = counter.addAndGet(1)
-        }
-    }
-
-    /**
-     * Adds all [elements] to this [IdentitySet] without checking if they are already present. This
-     * should only be used if this set is empty!
-     */
     fun addAllWithoutCheck(elements: IdentitySet<T>) {
         // We rely on the input set and add everything without checking if an element is already
         // present.
