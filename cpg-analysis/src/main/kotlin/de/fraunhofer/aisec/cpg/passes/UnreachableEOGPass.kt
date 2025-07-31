@@ -101,7 +101,6 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         lattice: Lattice<UnreachabilityStateElement>,
         currentEdge: EvaluationOrder,
         currentState: UnreachabilityStateElement,
-        functionSummaryAnalysisChain: MutableList<FunctionDeclaration>,
     ): UnreachabilityStateElement {
         val lattice = lattice as? UnreachabilityState ?: return currentState
         var newState = currentState

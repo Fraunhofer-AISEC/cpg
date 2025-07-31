@@ -247,7 +247,6 @@ fun SymbolResolver.transfer(
     lattice: Lattice<DeclarationStateElement>,
     currentEdge: EvaluationOrder,
     state: DeclarationStateElement,
-    functionSummaryAnalysisChain: MutableList<FunctionDeclaration>,
 ): DeclarationStateElement {
     val lattice = lattice as? DeclarationState ?: return state
     val node = currentEdge.end

@@ -199,18 +199,20 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         var drawCurrentDerefDFG: Boolean = true,
     ) : PassConfiguration()
 
+    // For recursive creation of FunctionSummaries, we have to make sure that we don't run in
+    // circles. Therefore, we store the chain of FunctionDeclarations we currently analyse
+    private val functionSummaryAnalysisChain = mutableListOf<FunctionDeclaration>()
+
     override fun cleanup() {
         // Nothing to do
     }
 
     override fun accept(node: Node) {
-        // For recursive creation of FunctionSummaries, we have to make sure that we don't run in
-        // circles. Therefore, we store the chain of FunctionDeclarations we currently analyse
-        val functionSummaryAnalysisChain = mutableListOf<FunctionDeclaration>()
-        return acceptInternal(node, functionSummaryAnalysisChain)
+        functionSummaryAnalysisChain.clear()
+        return acceptInternal(node)
     }
 
-    fun acceptInternal(node: Node, functionSummaryAnalysisChain: MutableList<FunctionDeclaration>) {
+    fun acceptInternal(node: Node) {
         // For now, we only execute this for function declarations, we will support all EOG starters
         // in the future.
         if (node !is FunctionDeclaration) {
@@ -277,12 +279,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             if (node.body == null) {
                 handleEmptyFunctionDeclaration(lattice, startState, node)
             } else {
-                lattice.iterateEOG(
-                    node.nextEOGEdges,
-                    startState,
-                    ::transfer,
-                    functionSummaryAnalysisChain,
-                )
+                lattice.iterateEOG(node.nextEOGEdges, startState, ::transfer)
             }
 
         for ((key, value) in finalState.generalState) {
@@ -675,7 +672,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         lattice: Lattice<PointsToStateElement>,
         currentEdge: EvaluationOrder,
         state: PointsToStateElement,
-        functionSummaryAnalysisChain: MutableList<FunctionDeclaration>,
     ): PointsToStateElement {
         val lattice = lattice as? PointsToState ?: return state
         val currentNode = currentEdge.end
@@ -701,13 +697,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 is MemoryAddress -> handleDeclaration(lattice, currentNode, doubleState)
                 is AssignExpression -> handleAssignExpression(lattice, currentNode, doubleState)
                 is UnaryOperator -> handleUnaryOperator(lattice, currentNode, doubleState)
-                is CallExpression ->
-                    handleCallExpression(
-                        lattice,
-                        currentNode,
-                        doubleState,
-                        functionSummaryAnalysisChain,
-                    )
+                is CallExpression -> handleCallExpression(lattice, currentNode, doubleState)
                 is Expression -> handleExpression(lattice, currentNode, doubleState)
                 is ReturnStatement -> handleReturnStatement(lattice, currentNode, doubleState)
                 else -> doubleState
@@ -943,7 +933,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         lattice: PointsToState,
         currentNode: CallExpression,
         doubleState: PointsToStateElement,
-        functionSummaryAnalysisChain: MutableList<FunctionDeclaration>,
     ): PointsToStateElement {
         var doubleState = doubleState
         var mapDstToSrc = mutableMapOf<Node, IdentitySet<MapDstToSrcEntry>>()
@@ -956,7 +945,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // The toIdentitySet avoids having the same elements multiple times
         val invokes = currentNode.invokes.toIdentitySet().toList()
         invokes.forEach { invoke ->
-            val inv = calculateFunctionSummaries(invoke, functionSummaryAnalysisChain)
+            val inv = calculateFunctionSummaries(invoke)
             if (inv != null) {
                 scope.launch {
                     synchronized(doubleState) {
@@ -1101,16 +1090,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return ret
     }
 
-    private fun calculateFunctionSummaries(
-        invoke: FunctionDeclaration,
-        functionSummaryAnalysisChain: MutableList<FunctionDeclaration>,
-    ): FunctionDeclaration? {
+    private fun calculateFunctionSummaries(invoke: FunctionDeclaration): FunctionDeclaration? {
         if (invoke.functionSummary.isEmpty()) {
             if (invoke.hasBody()) {
                 log.debug("functionSummaryAnalysisChain: {}", functionSummaryAnalysisChain)
                 if (invoke !in functionSummaryAnalysisChain) {
                     //                    val summaryCopy = functionSummaryAnalysisChain.toSet()
-                    acceptInternal(invoke, functionSummaryAnalysisChain)
+                    acceptInternal(invoke)
                     //                    functionSummaryAnalysisChain.addAll(summaryCopy)
                 } else {
                     log.error(
