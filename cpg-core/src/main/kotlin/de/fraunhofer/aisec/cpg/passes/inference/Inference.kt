@@ -302,7 +302,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
 
         val decl = newTypeParameterDeclaration(name)
         decl.code = name
-        decl.expression = newTypeExpression(name, type = parameterizedType)
+        decl.type = parameterizedType
 
         return decl
     }

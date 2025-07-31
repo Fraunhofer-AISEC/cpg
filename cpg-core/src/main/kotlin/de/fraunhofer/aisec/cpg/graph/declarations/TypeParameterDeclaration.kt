@@ -39,8 +39,6 @@ class TypeParameterDeclaration : ValueDeclaration(), HasDefault<TypeExpression?>
     /** TemplateParameters can define a default for the type parameter. */
     override var default by unwrapping(TypeParameterDeclaration::defaultEdge)
 
-    var expression: TypeExpression? = null
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || javaClass != other.javaClass) return false

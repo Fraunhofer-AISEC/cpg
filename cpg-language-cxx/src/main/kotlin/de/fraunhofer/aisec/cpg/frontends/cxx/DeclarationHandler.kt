@@ -321,8 +321,6 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                         templateParameter.name.toString(),
                         language,
                     )
-                typeParamDecl.expression =
-                    newTypeExpression(templateParameter.name.toString(), type = parameterizedType)
                 typeParamDecl.type = parameterizedType
                 if (templateParameter.defaultType != null) {
                     val defaultType = frontend.typeOf(templateParameter.defaultType)
