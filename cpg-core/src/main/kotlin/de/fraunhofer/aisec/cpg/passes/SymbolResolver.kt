@@ -45,6 +45,7 @@ import de.fraunhofer.aisec.cpg.passes.inference.tryFieldInference
 import de.fraunhofer.aisec.cpg.passes.inference.tryFunctionInference
 import de.fraunhofer.aisec.cpg.passes.inference.tryFunctionInferenceFromFunctionPointer
 import de.fraunhofer.aisec.cpg.passes.inference.tryVariableInference
+import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import kotlin.collections.firstOrNull
 import org.slf4j.Logger
@@ -137,6 +138,8 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         if (passConfig?.experimentalEOGWorklist == true && eogStarter is FunctionDeclaration) {
             acceptWithIterateEOG(eogStarter)
         } else {
+            cacheTemplates(ctx.currentComponent)
+
             walker =
                 ScopedWalker(
                     scopeManager,
@@ -147,7 +150,6 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
                     },
                 )
 
-            cacheTemplates(ctx.currentComponent)
             walker.clearCallbacks()
             walker.registerHandler(this::handle)
 
@@ -173,13 +175,20 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
             componentsToTemplates[component]?.let { templateList.addAll(it) }
             return
         }
-        walker.registerHandler { node ->
-            if (node is TemplateDeclaration) {
-                templateList.add(node)
-            }
-        }
+
         component?.let {
-            it.translationUnits.forEach { tu -> walker.iterate(tu) }
+            it.translationUnits.forEach { tu ->
+                tu.accept(
+                    Strategy::AST_FORWARD,
+                    object : IVisitor<AstNode>() {
+                        override fun visit(t: AstNode) {
+                            if (t is TemplateDeclaration) {
+                                templateList.add(t)
+                            }
+                        }
+                    },
+                )
+            }
             componentsToTemplates[it] = templateList
         }
     }
