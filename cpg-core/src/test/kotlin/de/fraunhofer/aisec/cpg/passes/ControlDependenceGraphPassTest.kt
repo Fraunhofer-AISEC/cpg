@@ -36,6 +36,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Assertions.assertFalse
 
 class ControlDependenceGraphPassTest {
 
@@ -107,10 +108,7 @@ class ControlDependenceGraphPassTest {
         assertNotNull(printAfterLoop)
         assertEquals(1, printAfterLoop.prevCDG.size)
         assertTrue(main in printAfterLoop.prevCDG)
-        /*assertTrue(
-            forEachStmt in printAfterLoop.prevCDG
-        )*/
-        // TODO: Is this really correct or should it be filtered out in the pass?
+        assertFalse(forEachStmt in printAfterLoop.prevCDG)
     }
 
     companion object {

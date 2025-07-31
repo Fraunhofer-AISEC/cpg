@@ -70,12 +70,12 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         // Nothing to do
     }
 
-    class BasicBlock(
-        val ingoingEOGEdges: MutableSet<EvaluationOrder> = mutableSetOf(),
-        val outgoingEOGEdges: MutableSet<EvaluationOrder> = mutableSetOf(),
-        val nodes: MutableList<Node> = mutableListOf<Node>(),
-        var startNode: Node,
-    ) : Node() {
+    /**
+     * A node representing a basic block, i.e. a sequence of nodes without any branching or merge
+     * points.
+     */
+    class BasicBlock(val nodes: MutableList<Node> = mutableListOf<Node>(), var startNode: Node) :
+        Node() {
         val endNode: Node?
             get() = nodes.lastOrNull()
 
@@ -127,8 +127,28 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         }
     }
 
+    /**
+     * Collects all basic blocks starting at the given [startNode]. We identify basic blocks by
+     * iterating through the EOG in O(n) and collecting all nodes which are reachable from the
+     * [startNode]. We identify basic blocks by merges and branches in the EOG but may not consider
+     * [ShortCircuitOperator]s as EOG-splitting nodes if we set [splitOnShortCircuitOperator] to
+     * `false`..
+     *
+     * It returns a triple containing:
+     * 1) The first basic block, which is the one starting at the [startNode].
+     * 2) A collection of all basic blocks which were collected.
+     * 3) A map from [Node] to the [BasicBlock] it belongs to. This is used to find out which basic
+     *    block a node belongs to, which is important when constructing the CDG.
+     *
+     * @param startNode The node to start the collection from, usually a [FunctionDeclaration].
+     * @param splitOnShortCircuitOperator If true, the basic blocks will be split on short-circuit
+     *   operators (e.g., `&&` or `||`). If false, the short-circuit operators will not be
+     *   considered, and the basic blocks will be collected as if they were not splitting up the
+     *   EOG.
+     */
     fun collectBasicBlocks(
-        startNode: Node
+        startNode: Node,
+        splitOnShortCircuitOperator: Boolean,
     ): Triple<BasicBlock, Collection<BasicBlock>, Map<Node, BasicBlock>> {
         val allBasicBlocks = mutableSetOf<BasicBlock>()
         val firstBB = BasicBlock(startNode = startNode)
@@ -157,7 +177,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                 // Set the end node of the old basic block to the last node on the path
                 basicBlock =
                     BasicBlock(startNode = currentStartNode).apply {
-                        ingoingEOGEdges.addAll(currentStartNode.prevEOGEdges)
+                        // ingoingEOGEdges.addAll(currentStartNode.prevEOGEdges)
                         // Save the relationships between the two basic blocks.
                         prevEOGEdges.add(basicBlock) {
                             this.branch = reachingEOGEdge?.branch
@@ -175,14 +195,20 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
 
             val shortCircuit = currentStartNode.astParent as? ShortCircuitOperator
             val nextRelevantEOGEdges =
-                if (currentStartNode.nextEOGEdges.size > 1 && shortCircuit != null) {
+                if (
+                    !splitOnShortCircuitOperator &&
+                        currentStartNode.nextEOGEdges.size > 1 &&
+                        shortCircuit != null
+                ) {
                     // For ShortCircuitOperators, we select only the branch which is not a shortcut
                     // because it's not really a CDG-relevant node, and we want to save the branches
                     // it introduces.
                     currentStartNode.nextEOGEdges.filter {
-                        (shortCircuit.language as? HasShortCircuitOperators)?.let {
-                            shortCircuit.operatorCode in it.conjunctiveOperators
-                        } == it.branch || it.branch == null
+                        shortCircuit.language !is HasShortCircuitOperators ||
+                            (shortCircuit.language as? HasShortCircuitOperators)?.let {
+                                shortCircuit.operatorCode in it.conjunctiveOperators
+                            } == it.branch ||
+                            it.branch == null
                     }
                 } else {
                     currentStartNode.nextEOGEdges
@@ -192,7 +218,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                 // If the currentStartNode splits up into multiple paths, the next nodes start a new
                 // basic block. We already generate this here. But currentStartNode is still part of
                 // the current basic block, so we add it before this if statement.
-                basicBlock.outgoingEOGEdges.addAll(nextRelevantEOGEdges)
+                // basicBlock.outgoingEOGEdges.addAll(nextRelevantEOGEdges)
                 worklist.addAll(
                     nextRelevantEOGEdges.mapNotNull {
                         if (it.end in alreadySeen) {
@@ -206,7 +232,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                                 it.end,
                                 it,
                                 BasicBlock(startNode = it.end).apply {
-                                    ingoingEOGEdges.add(it)
+                                    // ingoingEOGEdges.add(it)
                                     // Save the relationships between the two basic blocks.
                                     prevEOGEdges.add(basicBlock) {
                                         this.branch = it.branch
@@ -261,7 +287,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
 
         log.trace("Creating CDG for {} with complexity {}", startNode.name, c)
 
-        val (firstBasicBlock, basicBlocks, nodeToBBMap) = collectBasicBlocks(startNode)
+        val (firstBasicBlock, basicBlocks, nodeToBBMap) = collectBasicBlocks(startNode, false)
 
         log.trace("Retrieved network of BBs for {}", startNode.name)
 
