@@ -68,7 +68,6 @@ mavenPublishing {
 
 dependencies {
     implementation(libs.mcp)
-    implementation(libs.slf4j.nop)
     implementation(libs.ktor.serialization.kotlinx.json)
 
     // Command line interface support
@@ -86,4 +85,5 @@ dependencies {
     findProject(":cpg-language-cxx")?.also { integrationTestImplementation(it) }
     integrationTestImplementation(project(":cpg-concepts"))
     implementation(project(":cpg-concepts"))
+    implementation(project(":cpg-analysis"))
 }
