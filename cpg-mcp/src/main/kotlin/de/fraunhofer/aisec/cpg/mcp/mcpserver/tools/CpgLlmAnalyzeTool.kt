@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toNodeInfo
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
 import io.modelcontextprotocol.kotlin.sdk.Tool
@@ -36,7 +37,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toNodeInfo
 
 @Serializable data class CpgLlmAnalyzePayload(val description: String? = null)
 
@@ -82,11 +82,7 @@ fun Server.addCpgLlmAnalyzeTool() {
                 }
 
             val nodes =
-                if (globalAnalysisResult != null) {
-                    globalAnalysisResult!!.allChildren<Node>().map { it.toNodeInfo() }
-                } else {
-                    emptyList()
-                }
+                globalAnalysisResult?.allChildren<Node>()?.map { it.toNodeInfo() } ?: emptyList()
 
             val prompt = buildString {
                 appendLine("# Security Code Analysis Request")
@@ -95,12 +91,9 @@ fun Server.addCpgLlmAnalyzeTool() {
                     "Please take on the role of a security officer and analyze the provided code for security-relevant patterns " +
                         "and potential vulnerabilities."
                 )
-                appendLine()
-                appendLine("## Background and Example")
                 appendLine(
-                    "The CPG (Code Property Graph) analyzed the code . " +
-                        "For example, when we see code like `open('/etc/passwd', 'r')`, this represents accessing " +
-                        "sensitive system files and should be tagged with a 'Data' concept because it deals with " +
+                    "For example, when we see code like `open('/etc/passwd', 'r')`, this represents accessing " +
+                        "sensitive system files and should be tagged with a 'Data' concept because it handles " +
                         "sensitive information. Similarly, `requests.post()` calls represent HTTP requests that " +
                         "could send data outside the system boundary and should be tagged as 'HttpRequest' operations."
                 )
@@ -108,14 +101,15 @@ fun Server.addCpgLlmAnalyzeTool() {
                 appendLine("## Your Task")
                 appendLine("As a security officer, please:")
                 appendLine(
-                    "1. Research currently available concepts and operations in the Fraunhofer CPG repository, especially in the module cpg-concepts"
+                    "1. Research currently available concepts and operations in the GitHub Fraunhofer CPG repository, especially in the module cpg-concepts"
                 )
                 appendLine(
                     "2. Review the CPG documentation to understand the different concept types and their purposes"
                 )
                 appendLine("3. Analyze the nodes below from a security perspective")
                 appendLine(
-                    "4. Suggest appropriate security concepts and operations that should be applied to each relevant node"
+                    "4. Please suggest appropriate security concepts and operations from the CPG repository " +
+                        "that should be applied to each relevant node"
                 )
                 appendLine()
                 appendLine("Focus on identifying nodes that handle:")
@@ -142,13 +136,9 @@ fun Server.addCpgLlmAnalyzeTool() {
                             } else {
                                 ""
                             }
-                        appendLine("**Node ${node.nodeId}**: `${node.code}`$location")
-                    }
-                    if (nodes.size > 30) {
-                        appendLine("... and ${nodes.size - 30} more nodes (showing first 30)")
+                        appendLine("**Node ${node.name + (node.nodeId)}**: `${node.code}`$location")
                     }
                 } else {
-                    appendLine("## Status")
                     appendLine(
                         "No CPG analysis available. Please analyze a file first using cpg_analyze."
                     )
@@ -166,7 +156,8 @@ fun Server.addCpgLlmAnalyzeTool() {
   "analysis_summary": "Brief overview of security findings",
   "concept_suggestions": [
     {
-      "nodeId": "node_123",
+      "nodeId": "123",
+      "nodeName": "node"
       "conceptType": "Data|ReadData|Authentication|HttpRequest|etc",
       "reasoning": "Detailed security reasoning for this classification",
       "security_impact": "Potential security implications"

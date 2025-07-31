@@ -167,7 +167,6 @@ class ReadData(underlyingNode: Node? = null, concept: Privacy) :
     PrivacyOperation(underlyingNode, concept)
 
 fun createConcepts(conceptType: String, node: Node): OverlayNode? {
-    // Try to find the concept class in common packages
     val conceptClass = findConceptClass(conceptType)
     return conceptClass?.let { clazz ->
         val constructor =

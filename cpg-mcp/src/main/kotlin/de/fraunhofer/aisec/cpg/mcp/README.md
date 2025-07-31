@@ -106,93 +106,12 @@ The LLM is instructed to research the CPG documentation and suggest appropriate 
   "concept_suggestions": [
     {
       "nodeId": "node_123",
+      "nodeName": "node",
       "conceptType": "Data|ReadData|Authentication|HttpRequest|etc",
       "reasoning": "Detailed security reasoning for this classification",
       "security_impact": "Potential security implications"
     }
   ],
   "additional_recommendations": "Any additional security recommendations"
-}
-```
-
-### WIP: Step 3: Apply the Concepts (`cpg_apply_concepts`)
-
-
-**Example:**
-
-```json
-{
-  "tool": "cpg_apply_concepts",
-  "arguments": {
-    "applications": [
-      {
-        "nodeId": "12345",
-        "conceptType": "Data"
-      },
-      {
-        "nodeId": "12346",
-        "conceptType": "ReadData"
-      }
-    ]
-  }
-}
-```
-
-**Result:**
-
-```json
-[
-  "Applied Data to node 12345 (CallExpression)",
-  "Applied ReadData to node 12346 (FunctionDeclaration)"
-]
-```
-
-### WIP: Step 4: Analyze Data Flow (`cpg_dataflow`)
-
-**Example:**
-
-```json
-{
-  "tool": "cpg_dataflow",
-  "arguments": {
-    "from": "Data",
-    "to": "ReadData"
-  }
-}
-```
-
-**Response:**
-
-```json
-{
-  "fromConcept": "Data",
-  "toConcept": "ReadData",
-  "foundPaths": [
-    {
-      "id": "flow-123",
-      "value": "true",
-      "node": {
-        "nodeId": "12345",
-        "name": "open",
-        "code": "open('/etc/passwd')",
-        "fileName": "security_check.py",
-        "startLine": 2
-      },
-      "children": [
-        {
-          "id": "flow-124",
-          "value": "true",
-          "node": {
-            "nodeId": "12346",
-            "name": "f",
-            "code": "f.read()",
-            "fileName": "security_check.py",
-            "startLine": 3
-          },
-          "children": []
-        }
-      ]
-    }
-  ]
 }
 ```

@@ -30,13 +30,14 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toNodeInfo
 import de.fraunhofer.aisec.cpg.mcp.setupTranslationConfiguration
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
 import io.modelcontextprotocol.kotlin.sdk.Tool
 import io.modelcontextprotocol.kotlin.sdk.server.Server
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toNodeInfo
 import java.io.File
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -100,7 +101,7 @@ fun Server.addCpgAnalyzeTool() {
             // Store globally for other tools
             globalAnalysisResult = result
 
-            val allNodes = result.allChildren<Node>()
+            val allNodes = result.nodes
             val functions = result.allChildren<FunctionDeclaration>()
             val variables = result.allChildren<VariableDeclaration>()
             val callExpressions = result.allChildren<CallExpression>()
@@ -159,4 +160,3 @@ data class CpgAnalysisResult(
     val callExpressions: Int,
     val nodes: List<NodeInfo>,
 )
-

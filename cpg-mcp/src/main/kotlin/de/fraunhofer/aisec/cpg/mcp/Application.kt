@@ -25,10 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.mcp
 
-import de.fraunhofer.aisec.cpg.*
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.configureServer
 import io.ktor.server.cio.CIO
 import io.ktor.server.engine.embeddedServer
@@ -40,7 +36,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.io.asSink
 import kotlinx.io.asSource
 import kotlinx.io.buffered
-
 
 fun main() {
     runMcpServerUsingStdio()
