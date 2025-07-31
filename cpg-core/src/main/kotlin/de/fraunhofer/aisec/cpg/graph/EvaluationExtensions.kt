@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
-import de.fraunhofer.aisec.cpg.graph.edges.*
+import de.fraunhofer.aisec.cpg.graph.edges.get
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 
@@ -40,6 +40,20 @@ val NewArrayExpression.capacity: Int
     }
 
 /**
+ * A little helper function to find a [CallExpression]s argument [Node] by argument [name] or
+ * argument [position]. The function prioritizes resolution by [name] over the [position].
+ *
+ * @param this The [CallExpression] to analyze.
+ * @param name Optionally: the [CallExpression.arguments] name.
+ * @param position Optionally: the [CallExpression.arguments] position.
+ * @return The argument [Node] or `null` if not found.
+ */
+fun CallExpression.argumentByNameOrPosition(name: String? = null, position: Int? = null): Node? {
+    return name?.let { this.argumentEdges[it]?.end }
+        ?: position?.let { this.arguments.getOrNull(it) }
+}
+
+/**
  * A little helper function to find a [CallExpression]s argument first by [name] and if this fails
  * by [position]. The argument ist evaluated and the result is returned if it has the expected type
  * [T].
@@ -47,16 +61,13 @@ val NewArrayExpression.capacity: Int
  * @param this The [CallExpression] to analyze.
  * @param name Optionally: the [CallExpression.arguments] name.
  * @param position Optionally: the [CallExpression.arguments] position.
- * @param evaluator The [ValueEvaluator] to use for evaluation of the argument.
- * @return The evaluated result (of type [T]) or `null`.
+ * @return The evaluated result (of type [T]) or `null` on failure.
  */
 inline fun <reified T> CallExpression.argumentValueByNameOrPosition(
     name: String? = null,
     position: Int? = null,
-    evaluator: ValueEvaluator = ValueEvaluator(),
 ): T? {
-    val arg =
-        name?.let { this.argumentEdges[it]?.end } ?: position?.let { this.arguments.getOrNull(it) }
-    val value = evaluator.evaluateAs<T>(arg)
+    val arg = this.argumentByNameOrPosition(name, position) ?: return null
+    val value = this.language.evaluator.evaluateAs<T>(arg)
     return value
 }

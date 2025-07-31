@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
@@ -66,7 +67,9 @@ class LabelStatement : Statement(), StatementHolder {
             subStatement = value.toNodeCollection().firstOrNull()
         }
 
-    override var statements by unwrapping(LabelStatement::statementEdges)
+    override var statements: MutableList<Statement>
+        get() = unwrapping(LabelStatement::statementEdges)
+        set(value) {}
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -75,4 +78,12 @@ class LabelStatement : Statement(), StatementHolder {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), label)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.subStatement?.getStartingPrevEOG() ?: this.prevEOG
+    }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return this.subStatement?.getExitNextEOG() ?: this.nextEOG
+    }
 }

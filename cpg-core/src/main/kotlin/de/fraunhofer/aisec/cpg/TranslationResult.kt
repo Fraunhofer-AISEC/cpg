@@ -23,8 +23,11 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.multiLanguage
@@ -37,10 +40,12 @@ import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder
 import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.passes.executePassesSequentially
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
@@ -57,7 +62,7 @@ class TranslationResult(
      * dedicated [ScopeManager] each). This property will contain the final, merged context.
      */
     var finalCtx: TranslationContext,
-) : Node(), StatisticsHolder {
+) : Node(), StatisticsHolder, ContextProvider {
 
     @Relationship("COMPONENTS") val componentEdges = astEdgesOf<Component>()
     /**
@@ -73,6 +78,9 @@ class TranslationResult(
     @Transient
     @PopulatedByPass(ImportResolver::class)
     var componentDependencies: ImportDependencies<Component>? = null
+
+    /** Contains all languages that were considered in the translation process. */
+    @Transient val usedLanguages = mutableSetOf<Language<*>>()
 
     /**
      * Scratch storage that can be used by passes to store additional information in this result.
@@ -92,11 +100,6 @@ class TranslationResult(
 
     val isCancelled: Boolean
         get() = translationManager.isCancelled()
-
-    override var ctx: TranslationContext? = null
-        get() {
-            return finalCtx
-        }
 
     /**
      * Checks if only a single software component has been analyzed and returns its translation
@@ -133,7 +136,7 @@ class TranslationResult(
     )
     @Synchronized
     fun addTranslationUnit(tu: TranslationUnitDeclaration) {
-        var application = components[DEFAULT_APPLICATION_NAME]
+        val application = components[DEFAULT_APPLICATION_NAME]
         if (application == null) {
             // No application component exists, but it should be since it is automatically created
             // by the configuration, so something is wrong
@@ -177,8 +180,37 @@ class TranslationResult(
         }
         set(_) {}
 
+    override val ctx: TranslationContext
+        get() = finalCtx
+
     companion object {
         const val SOURCE_LOCATIONS_TO_FRONTEND = "sourceLocationsToFrontend"
         const val DEFAULT_APPLICATION_NAME = "application"
+    }
+
+    /**
+     * A map of nodes that are dirty for a specific pass. This is used to track which nodes need to
+     * be reprocessed again by a specific pass. The function [executePassesSequentially] will use
+     * this in order to populate the queue of passes accordingly.
+     *
+     * Users should not access this directly, but rather use the [markDirty] and [markClean] methods
+     * or the [Node.markDirty] and [Node.markClean] extension function.
+     */
+    @DoNotPersist val dirtyNodes = ConcurrentHashMap<Node, MutableList<KClass<out Pass<*>>>>()
+
+    /**
+     * Marks a node as dirty for a specific pass. This is used to indicate that the node needs to be
+     * reprocessed by the specified pass.
+     */
+    fun markDirty(node: Node, pass: KClass<out Pass<*>>) {
+        dirtyNodes.computeIfAbsent(node) { mutableListOf() }.add(pass)
+    }
+
+    /**
+     * Marks a node as clean for a specific pass. This is used to indicate that the node was
+     * reprocessed by the specified pass anymore.
+     */
+    fun markClean(node: Node, pass: KClass<out Pass<*>>) {
+        dirtyNodes.computeIfAbsent(node) { mutableListOf() }.remove(pass)
     }
 }

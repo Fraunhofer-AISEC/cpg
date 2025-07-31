@@ -289,6 +289,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
                     // all children and then filters them. Instead, we can directly filter for the
                     // child declarations.
                     it is NamespaceDeclaration &&
+                        !it.isInferred &&
                         it.declarations.filterIsInstance<NamespaceDeclaration>().isEmpty()
                 }
 

@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
+import de.fraunhofer.aisec.cpg.assumptions.assume
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
@@ -256,7 +258,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         functionSummaries: DFGFunctionSummaries,
     ) {
         if (node.isInferred) {
-            val summaryExists = functionSummaries.addFlowsToFunctionDeclaration(node)
+            val summaryExists = with(functionSummaries) { addFlowsToFunctionDeclaration(node) }
 
             if (!summaryExists) {
                 // If the function is inferred, we connect all parameters to the function
@@ -304,8 +306,14 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 }
             } else {
                 node.variable.variables.lastOrNull()?.prevDFGEdges += iterable
+                node.assume(
+                    AssumptionType.AmbiguityAssumption,
+                    "We assume that the last VariableDeclaration in the statement kept in \"variable\" is the variable we care about in the ForEachStatement if there is no DeclarationStatement related to the iterable.\n\n" +
+                        "To verify this assumption, we need to check if the last VariableDeclaration of the variable is indeed the one where we assign the iterable's elements to.",
+                )
             }
         }
+
         node.variable?.let { node.prevDFGEdges += it }
     }
 

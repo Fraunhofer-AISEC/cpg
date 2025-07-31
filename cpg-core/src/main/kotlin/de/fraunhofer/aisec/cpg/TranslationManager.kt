@@ -25,16 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
-import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import de.fraunhofer.aisec.cpg.passes.executePass
 import de.fraunhofer.aisec.cpg.passes.executePassesInParallel
+import de.fraunhofer.aisec.cpg.passes.executePassesSequentially
+import de.fraunhofer.aisec.cpg.sarif.toLocation
 import java.io.File
 import java.io.PrintWriter
 import java.lang.reflect.InvocationTargetException
@@ -76,7 +75,7 @@ private constructor(
         var executedFrontends = setOf<LanguageFrontend<*, *>>()
 
         // Build a new global translation context
-        val ctx = TranslationContext(config, ScopeManager(), TypeManager())
+        val ctx = TranslationContext(config)
 
         // Build a new translation result
         val result = TranslationResult(this, ctx)
@@ -99,13 +98,7 @@ private constructor(
                     }
                 }
             } else {
-                // Execute all passes in sequence
-                for (pass in config.registeredPasses.flatten()) {
-                    executePass(pass, ctx, result, executedFrontends)
-                    if (result.isCancelled) {
-                        log.warn("Analysis interrupted, stopping Pass evaluation")
-                    }
-                }
+                executePassesSequentially(ctx, result, executedFrontends)
             }
         } catch (ex: TranslationException) {
             throw CompletionException(ex)
@@ -155,8 +148,8 @@ private constructor(
 
         for (sc in ctx.config.softwareComponents.keys) {
             val component = Component()
-            component.ctx = ctx
             component.name = Name(sc)
+            component.location = with(ctx) { component.topLevel()?.toPath()?.toLocation() }
             result.addComponent(component)
 
             var sourceLocations: List<File> = ctx.config.softwareComponents[sc] ?: listOf()
@@ -263,6 +256,25 @@ private constructor(
                     parseSequentially(component, result, ctx, sourceLocations)
                 }
             )
+
+            // Collects all used languages used in the main analysis code
+            result.usedLanguages.addAll(
+                sourceLocations.mapNotNull { with(ctx) { it.language } }.toSet()
+            )
+        }
+
+        // Adds all languages provided as additional sources that may be relevant in the main code
+        result.usedLanguages.addAll(
+            ctx.additionalSources.mapNotNull { with(ctx) { it.relative.language } }.toSet()
+        )
+
+        result.usedLanguages.filterIsInstance<HasBuiltins>().forEach { hasBuiltins ->
+            // Includes a file in the analysis, if relative to its rootpath it matches the name of
+            // a builtins file candidate.
+            val builtinsCandidates = hasBuiltins.builtinsFileCandidates
+            ctx.additionalSources
+                .filter { builtinsCandidates.contains(it.relative) }
+                .forEach { ctx.importedSources.add(it) }
         }
 
         // A set of processed files from [TranslationContext.additionalSources] that is used as
@@ -287,8 +299,8 @@ private constructor(
                     var component = result.components.firstOrNull { it.name == compName }
                     if (component == null) {
                         component = Component()
-                        component.ctx = ctx
                         component.name = compName
+                        component.location = includePath.toLocation()
                         result.addComponent(component)
                         ctx.config.topLevels.put(includePath.name, includePath.toFile())
                     }
@@ -357,13 +369,7 @@ private constructor(
             // Build a new translation context for this parallel parsing process. We need to do this
             // until we can use a single scope manager concurrently. We can re-use the global
             // configuration and type manager.
-            val ctx =
-                TranslationContext(
-                    globalCtx.config,
-                    ScopeManager(),
-                    globalCtx.typeManager,
-                    component,
-                )
+            val ctx = TranslationContext(globalCtx.config, globalCtx.typeManager, component)
             parallelContexts.add(ctx)
 
             val future =
@@ -407,14 +413,6 @@ private constructor(
 
         // We want to merge everything into the final scope manager of the result
         globalCtx.scopeManager.mergeFrom(parallelContexts.map { it.scopeManager })
-
-        // We also need to update all types that point to one of the "old" global scopes
-        // TODO(oxisto): This is really messy and instead we should have ONE global scope
-        //  and individual file scopes beneath it
-        var newGlobalScope = globalCtx.scopeManager.globalScope
-        globalCtx.typeManager.firstOrderTypes.updateGlobalScope(newGlobalScope)
-        globalCtx.typeManager.secondOrderTypes.updateGlobalScope(newGlobalScope)
-
         b.stop()
 
         log.info("Parallel parsing completed")
@@ -505,9 +503,6 @@ private constructor(
 
         return if (language != null) {
             try {
-                // Make sure, that our simple types are also known to the type manager
-                language.builtInTypes.values.forEach { ctx.typeManager.registerType(it) }
-
                 // Return a new language frontend
                 language.newFrontend(ctx)
             } catch (e: Exception) {
@@ -581,5 +576,7 @@ private fun MutableList<Type>.updateGlobalScope(newGlobalScope: GlobalScope?) {
         if (type.scope is GlobalScope) {
             type.scope = newGlobalScope
         }
+
+        type.secondOrderTypes.updateGlobalScope(newGlobalScope)
     }
 }

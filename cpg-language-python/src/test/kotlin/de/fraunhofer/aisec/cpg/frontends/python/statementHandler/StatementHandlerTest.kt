@@ -222,12 +222,12 @@ class StatementHandlerTest : BaseTest() {
             // type comments
             val a = result.refs["a"]
             assertNotNull(a)
-            assertEquals(assertResolvedType("int"), a.type)
+            assertContains(a.assignedTypes, assertResolvedType("int"))
 
             // type annotation
             val b = result.refs["b"]
             assertNotNull(b)
-            assertEquals(assertResolvedType("str"), b.type)
+            assertContains(b.assignedTypes, assertResolvedType("str"))
         }
     }
 
@@ -288,35 +288,5 @@ class StatementHandlerTest : BaseTest() {
         // There should be three variable declarations, two local and one global
         var cVariables = result.variables("c")
         assertEquals(3, cVariables.size)
-    }
-
-    @Test
-    fun testToplevelCode() {
-        var file = topLevel.resolve("toplevel_code.py").toFile()
-        val result = analyze(listOf(file), topLevel, true) { it.registerLanguage<PythonLanguage>() }
-        assertNotNull(result)
-
-        val block = result.statements.firstOrNull()
-        assertNotNull(block)
-        val withStatement = result.trys.firstOrNull()
-        assertNotNull(withStatement)
-        val printStatement = result.calls("print").firstOrNull()
-        assertNotNull(printStatement)
-        assertTrue(
-            Util.eogConnect(
-                quantifier = Util.Quantifier.ANY,
-                startNode = withStatement,
-                edgeDirection = Util.Edge.EXITS,
-                connectEnd = Util.Connect.NODE,
-                endNodes = listOf(block),
-            )
-        )
-        assertTrue(
-            Util.eogConnect(
-                startNode = block,
-                edgeDirection = Util.Edge.EXITS,
-                endNodes = listOf(printStatement),
-            )
-        )
     }
 }

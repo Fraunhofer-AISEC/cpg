@@ -83,8 +83,16 @@ class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder, 
             // Add all top-level declarations
             list += declarations
             // Add all top-level statements
-            list += this
+            list += statements
 
             return list
         }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return setOf()
+    }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return setOf()
+    }
 }

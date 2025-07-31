@@ -82,8 +82,14 @@ open class ValueEvaluator(
     /**
      * Tries to evaluate this node and returns the result as the specified type [T]. If the
      * evaluation fails, the result is "null".
+     *
+     * @return The result of the evaluation. If the evaluation fails, the result is `null`.
      */
     inline fun <reified T> evaluateAs(node: Node?): T? {
+        if (node == null) return null // Nothing to do, return null right away
+        clearPath() // clear the path before evaluating or we may start with old data if re-using
+        // the ValueEvaluator object
+
         val result = evaluateInternal(node, 0)
         return if (result !is T) {
             Util.errorWithFileLocation(
@@ -126,12 +132,24 @@ open class ValueEvaluator(
             // easily be partly path-sensitive in a conditional expression
             is ConditionalExpression -> return handleConditionalExpression(node, depth)
             is AssignExpression -> return handleAssignExpression(node, depth)
+            is Reference -> return handleReference(node, depth)
+            is CallExpression -> return handleCallExpression(node, depth)
             else -> return handlePrevDFG(node, depth)
         }
 
         // At this point, we cannot evaluate, and we are calling our [cannotEvaluate] hook, maybe
         // this helps
         return cannotEvaluate(node, this)
+    }
+
+    /** Handles a [CallExpression]. Default behaviour is to call [handlePrevDFG] */
+    protected open fun handleCallExpression(node: CallExpression, depth: Int): Any? {
+        return handlePrevDFG(node, depth)
+    }
+
+    /** Handles a [Reference]. Default behaviour is to call [handlePrevDFG] */
+    protected open fun handleReference(node: Reference, depth: Int): Any? {
+        return handlePrevDFG(node, depth)
     }
 
     /**

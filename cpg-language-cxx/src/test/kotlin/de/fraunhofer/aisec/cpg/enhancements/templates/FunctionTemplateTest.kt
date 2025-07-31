@@ -96,6 +96,9 @@ internal class FunctionTemplateTest : BaseTest() {
         val language = result.finalCtx.availableLanguage<CPPLanguage>()
         assertNotNull(language)
 
+        val ctx = result.finalCtx
+        assertNotNull(ctx)
+
         // This test checks the structure of FunctionTemplates without the TemplateExpansionPass
         val functionTemplateDecl = result.allChildren<FunctionTemplateDeclaration>()[0]
 
@@ -198,6 +201,9 @@ internal class FunctionTemplateTest : BaseTest() {
             }
         val language = result.finalCtx.availableLanguage<CPPLanguage>()
         assertNotNull(language)
+
+        val ctx = result.finalCtx
+        assertNotNull(ctx)
 
         val templateDeclaration =
             findByUniquePredicate(result.allChildren<FunctionTemplateDeclaration>()) {
@@ -338,6 +344,9 @@ internal class FunctionTemplateTest : BaseTest() {
             }
         val language = result.finalCtx.availableLanguage<CPPLanguage>()
         assertNotNull(language)
+
+        val ctx = result.finalCtx
+        assertNotNull(ctx)
 
         val templateDeclaration =
             findByUniquePredicate(result.allChildren<FunctionTemplateDeclaration>()) {

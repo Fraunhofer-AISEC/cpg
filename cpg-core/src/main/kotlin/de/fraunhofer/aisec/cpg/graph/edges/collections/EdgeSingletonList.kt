@@ -91,7 +91,10 @@ open class EdgeSingletonList<
     }
 
     override fun clear() {
-        throw UnsupportedOperationException()
+        // Make a copy of our edge so we can pass a copy to our on-remove handler
+        val old = this.element
+        this.element = null
+        old?.let { handleOnRemove(it) }
     }
 
     override fun iterator(): MutableIterator<EdgeType> {
@@ -99,11 +102,21 @@ open class EdgeSingletonList<
     }
 
     override fun remove(element: EdgeType): Boolean {
-        throw UnsupportedOperationException()
+        if (this.element == element) {
+            clear()
+            return true
+        }
+
+        return false
     }
 
     override fun removeAll(elements: Collection<EdgeType>): Boolean {
-        throw UnsupportedOperationException()
+        if (this.element in elements) {
+            clear()
+            return true
+        }
+
+        return false
     }
 
     override fun retainAll(elements: Collection<EdgeType>): Boolean {
@@ -138,7 +151,7 @@ open class EdgeSingletonList<
         var hasNext = isNotEmpty()
 
         override fun remove() {
-            throw UnsupportedOperationException()
+            clear()
         }
 
         override fun hasNext(): Boolean {
@@ -183,7 +196,7 @@ open class EdgeSingletonList<
             return (if (outgoing) {
                 this@EdgeSingletonList.element?.end
             } else {
-                this@EdgeSingletonList.element?.start as NodeType
+                this@EdgeSingletonList.element?.start as NodeType?
             })
                 as NullableNodeType
         }

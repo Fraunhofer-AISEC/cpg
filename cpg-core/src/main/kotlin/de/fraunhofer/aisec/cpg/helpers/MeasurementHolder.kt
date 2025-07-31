@@ -93,17 +93,20 @@ interface StatisticsHolder {
 
 /**
  * Prints a table of values and headers in Markdown format. Table columns are automatically adjusted
- * to the longest column.
+ * to the longest column, with a maximum width of 80 characters. Longer content is truncated with
+ * `...`.
  */
 fun printMarkdown(table: List<List<Any>>, headers: List<String>) {
     val lengths = IntArray(headers.size)
+    val maxColumnLength = 80 // Maximum column width
 
-    // first, we need to calculate the longest column per line
+    // first, we need to calculate the longest column per line, capped at maxColumnLength
     for (row in table) {
         for (i in row.indices) {
             val value = row[i].toString()
-            if (value.length > lengths[i]) {
-                lengths[i] = value.length
+            val effectiveLength = minOf(value.length, maxColumnLength)
+            if (effectiveLength > lengths[i]) {
+                lengths[i] = effectiveLength
             }
         }
     }
@@ -111,7 +114,18 @@ fun printMarkdown(table: List<List<Any>>, headers: List<String>) {
     // table header
     val dash = lengths.joinToString(" | ", "| ", " |") { ("-".repeat(it)) }
     var i = 0
-    val header = headers.joinToString(" | ", "| ", " |") { it.padEnd(lengths[i++]) }
+    val header =
+        headers.joinToString(" | ", "| ", " |") {
+            val headerText = it
+            val effectiveLength = minOf(headerText.length, lengths[i])
+            val truncated =
+                if (headerText.length > effectiveLength) {
+                    headerText.substring(0, effectiveLength - 3) + "..."
+                } else {
+                    headerText
+                }
+            truncated.padEnd(lengths[i++])
+        }
 
     println()
     println(header)
@@ -120,7 +134,18 @@ fun printMarkdown(table: List<List<Any>>, headers: List<String>) {
     for (row in table) {
         var rowIndex = 0
         // TODO: Add pretty printing for objects (e.g. List, Map)
-        val line = row.joinToString(" | ", "| ", " |") { it.toString().padEnd(lengths[rowIndex++]) }
+        val line =
+            row.joinToString(" | ", "| ", " |") {
+                val value = it.toString()
+                val effectiveLength = minOf(value.length, lengths[rowIndex])
+                val truncated =
+                    if (value.length > effectiveLength) {
+                        value.substring(0, effectiveLength - 3) + "..."
+                    } else {
+                        value
+                    }
+                truncated.padEnd(lengths[rowIndex++])
+            }
         println(line)
     }
 

@@ -25,23 +25,40 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts
 
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
+import java.util.Objects
 
 /**
  * Represents an operation executed on/with a [Concept] (stored in [concept]). This is typically a
  * `write` on a file or log object or an `execute` on a database.
  */
 abstract class Operation(
-    underlyingNode: Node,
+    underlyingNode: Node? = null,
     /** The [Concept] this operation belongs to. */
-    concept: Concept,
+    open val concept: Concept,
 ) : OverlayNode() {
-
-    /** The [Concept] this operation belongs to. */
-    open val concept: Concept = concept.also { it.ops += this }
 
     init {
         this.underlyingNode = underlyingNode
+        this::class.simpleName?.let { name = Name(it) }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return other is Operation && super.equals(other) && other.concept == this.concept
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), concept)
+
+    /**
+     * This method can be overridden to set the data flow graph (DFG) for this [Operation]. Note
+     * that this must hold for all implementations of this node and that it should only use
+     * attributes of this [Operation].
+     *
+     * Note: The default implementation does nothing.
+     */
+    open fun setDFG() {
+        // The default implementation does nothing
     }
 }

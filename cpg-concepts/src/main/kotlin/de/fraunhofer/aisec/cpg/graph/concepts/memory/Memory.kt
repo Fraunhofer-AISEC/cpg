@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.concepts.memory
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import java.util.Objects
 
 /** The memory management mode of a memory concept. */
 enum class MemoryManagementMode {
@@ -51,34 +52,50 @@ enum class MemoryManagementMode {
  * @param underlyingNode The underlying node in the graph that represents this memory concept.
  * @param mode The memory management mode of the memory concept.
  */
-class Memory(underlyingNode: Node, mode: MemoryManagementMode) :
+open class Memory(underlyingNode: Node? = null, val mode: MemoryManagementMode) :
     Concept(underlyingNode = underlyingNode), IsMemory
 
 /** A common interface for the "memory" sub-graph. */
 interface IsMemory
 
 /** A common abstract class for memory operations. */
-abstract class MemoryOperation(underlyingNode: Node, concept: Concept) :
+abstract class MemoryOperation(underlyingNode: Node?, concept: Concept) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsMemory
 
 /**
  * Represents a memory allocation operation. This can be done using `malloc` in C or `new` in C++ or
  * by calling a constructor in managed languages.
  */
-class Allocate(
-    underlyingNode: Node,
+open class Allocate(
+    underlyingNode: Node? = null,
     concept: Concept,
     /** A reference to [what] is allocated, e.g., a variable. */
     var what: Node?,
-) : MemoryOperation(underlyingNode = underlyingNode, concept = concept)
+) : MemoryOperation(underlyingNode = underlyingNode, concept = concept) {
+    override fun equals(other: Any?): Boolean {
+        return other is Allocate && super.equals(other) && other.what == this.what
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hash(super.hashCode(), what)
+    }
+}
 
 /**
  * Represents a memory de-allocation operation. This can be done using `free` in C or `delete` in
  * C++ or by calling a destructor in managed languages.
  */
-class DeAllocate(
-    underlyingNode: Node,
+open class DeAllocate(
+    underlyingNode: Node? = null,
     concept: Concept,
     /** A reference to [what] is de-allocated, e.g., a variable. */
     var what: Node?,
-) : MemoryOperation(underlyingNode = underlyingNode, concept = concept)
+) : MemoryOperation(underlyingNode = underlyingNode, concept = concept) {
+    override fun equals(other: Any?): Boolean {
+        return other is Allocate && super.equals(other) && other.what == this.what
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hash(super.hashCode(), what)
+    }
+}

@@ -57,5 +57,5 @@ class LookupScopeStatement : Statement() {
         return super.equals(other) && symbols == other.symbols && targetScope == other.targetScope
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), symbols, targetScope)
+    override fun hashCode() = Objects.hash(super.hashCode(), symbols)
 }

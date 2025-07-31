@@ -38,7 +38,7 @@ import org.neo4j.ogm.annotation.Relationship
  * This is the main type in the Type system. ObjectTypes describe objects, as instances of a class.
  * This also includes primitive data types.
  */
-open class ObjectType : Type {
+open class ObjectType : Type, HasSecondaryTypeEdge {
     /**
      * Reference from the [ObjectType] to its class ([RecordDeclaration]), only if the class is
      * available. This is set by the [TypeResolver].
@@ -60,27 +60,31 @@ open class ObjectType : Type {
         typeName: CharSequence,
         generics: List<Type>,
         primitive: Boolean,
+        mutable: Boolean,
         language: Language<*>,
     ) : super(typeName, language) {
         this.generics = generics
-        isPrimitive = primitive
+        this.isPrimitive = primitive
+        this.isMutable = mutable
         this.language = language
     }
 
     constructor(
-        type: Type?,
+        typeName: CharSequence,
         generics: List<Type>,
         primitive: Boolean,
         language: Language<*>,
-    ) : super(type) {
-        this.language = language
+    ) : super(typeName, language) {
         this.generics = generics
-        isPrimitive = primitive
+        this.isPrimitive = primitive
+        this.isMutable = true
+        this.language = language
     }
 
     /** Empty default constructor for use in Neo4J persistence. */
     constructor() : super() {
-        isPrimitive = false
+        this.isPrimitive = false
+        this.isMutable = true
         this.generics = mutableListOf<Type>()
     }
 
@@ -109,4 +113,7 @@ open class ObjectType : Type {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), generics, isPrimitive)
+
+    override val secondaryTypes: List<Type>
+        get() = generics
 }

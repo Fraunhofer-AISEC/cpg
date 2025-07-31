@@ -23,9 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.frontends
 
-import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
@@ -37,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.*
+import java.io.File
 import kotlin.reflect.KClass
 
 /**
@@ -116,10 +118,9 @@ interface HasSuperClasses : LanguageTrait {
      */
     val superClassKeyword: String
 
-    fun handleSuperExpression(
+    fun SymbolResolver.handleSuperExpression(
         memberExpression: MemberExpression,
         curClass: RecordDeclaration,
-        scopeManager: ScopeManager,
     ): Boolean
 }
 
@@ -298,6 +299,9 @@ interface HasOperatorOverloading : LanguageTrait {
 interface HasBuiltins : LanguageTrait {
     /** Returns the namespace under which builtins exist. */
     val builtinsNamespace: Name
+
+    /** Name of files that may contain the builtin functions of a language */
+    val builtinsFileCandidates: Set<File>
 }
 
 /**
@@ -311,10 +315,10 @@ inline infix fun <reified T : HasOverloadedOperation> KClass<T>.of(
 }
 
 /** Checks whether the name for a function (as [CharSequence]) is a known operator name. */
-context(LanguageProvider)
+context(provider: LanguageProvider)
 val CharSequence.isKnownOperatorName: Boolean
     get() {
-        val language = language
+        val language = provider.language
         if (language !is HasOperatorOverloading) {
             return false
         }

@@ -27,8 +27,10 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 
 import com.fasterxml.jackson.annotation.JsonBackReference
 import de.fraunhofer.aisec.cpg.PopulatedByPass
+import de.fraunhofer.aisec.cpg.frontends.HasBuiltins
 import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
@@ -59,6 +61,7 @@ typealias SymbolMap = MutableMap<Symbol, MutableList<Declaration>>
  * Represent semantic scopes in the language. Depending on the language scopes can have visibility
  * restriction and can act as namespaces to avoid name collisions.
  */
+@Suppress("CONTEXT_RECEIVERS_DEPRECATED")
 @NodeEntity
 sealed class Scope(
     @Relationship(value = "SCOPE", direction = Relationship.Direction.INCOMING)
@@ -131,6 +134,7 @@ sealed class Scope(
     }
 
     /** Adds a [declaration] with the defined [symbol]. */
+    context(provider: ContextProvider)
     open fun addSymbol(symbol: Symbol, declaration: Declaration) {
         if (
             declaration is ImportDeclaration &&
@@ -150,7 +154,7 @@ sealed class Scope(
      * can be used for additional filtering.
      *
      * By default, the lookup algorithm will go to the [Scope.parent] if no match was found in the
-     * current scope. This behaviour can be turned off with [thisScopeOnly]. This is useful for
+     * current scope. This behaviour can be turned off with [qualifiedLookup]. This is useful for
      * qualified lookups, where we want to stay in our lookup-scope.
      *
      * We need to consider the language trait [HasImplicitReceiver] here as well. If the language
@@ -158,16 +162,18 @@ sealed class Scope(
      * are in a qualified lookup.
      *
      * @param symbol the symbol to lookup
-     * @param thisScopeOnly whether we should stay in the current scope for lookup or traverse to
-     *   its parents if no match was found.
+     * @param qualifiedLookup whether the lookup is looked to a specific namespace, and we therefore
+     *   should stay in the current scope for lookup. If the lookup is unqualified we traverse the
+     *   current scopes parents if no match was found.
      * @param replaceImports whether any symbols pointing to [ImportDeclaration.importedSymbols] or
      *   wildcards should be replaced with their actual nodes
      * @param predicate An optional predicate which should be used in the lookup.
      */
+    context(provider: ContextProvider)
     fun lookupSymbol(
         symbol: Symbol,
         languageOnly: Language<*>? = null,
-        thisScopeOnly: Boolean = false,
+        qualifiedLookup: Boolean = false,
         replaceImports: Boolean = true,
         predicate: ((Declaration) -> Boolean)? = null,
     ): List<Declaration> {
@@ -209,10 +215,11 @@ sealed class Scope(
                 break
             }
 
-            // If we do not have a hit, we can go up one scope, unless thisScopeOnly is set to true
+            // If we do not have a hit, we can go up one scope, unless [qualifiedLookup] is set to
+            // true
             // (or we had a modified scope)
             scope =
-                if (thisScopeOnly || modifiedScoped != null) {
+                if (qualifiedLookup || modifiedScoped != null) {
                     break
                 } else {
                     // If our language needs explicit lookup for fields (and other class members),
@@ -224,6 +231,32 @@ sealed class Scope(
                         scope.parent
                     }
                 }
+        }
+
+        // If the symbol was still not resolved, and we are performing an unqualified resolution, we
+        // search in the
+        // language's builtins scope for the symbol
+        val scopeManager = provider.ctx.scopeManager
+        if (list.isNullOrEmpty() && !qualifiedLookup && languageOnly is HasBuiltins) {
+            // If the language has builtins we can search there for the symbol
+            val builtinsNamespace = languageOnly.builtinsNamespace
+            // Retrieve the builtins scope from the builtins namespace
+            val builtinsScope = scopeManager.lookupScope(builtinsNamespace)
+            if (builtinsScope != null) {
+                // Obviously we don't want to search in the builtins scope if we already failed
+                // finding the symbol in the builtins scope
+                if (builtinsScope != this) {
+                    list =
+                        builtinsScope
+                            .lookupSymbol(
+                                symbol,
+                                languageOnly = languageOnly,
+                                replaceImports = replaceImports,
+                                predicate = predicate,
+                            )
+                            .toMutableList()
+                }
+            }
         }
 
         return list ?: listOf()

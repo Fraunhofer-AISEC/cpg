@@ -30,12 +30,19 @@ import de.fraunhofer.aisec.cpg.graph.unknownType
 
 /**
  * This type represents a [Type] that uses auto-inference (usually from an initializer) to determine
- * it's actual type. It is commonly used in dynamically typed languages or in languages that have a
- * special keyword, such as `auto` in C++.
+ * its actual type. It is commonly used in languages that have a special keyword, such as `auto` in
+ * C++.
  *
- * Note: This is intentionally a distinct type and not the [UnknownType].
+ * Things to consider:
+ * 1) This is intentionally a distinct type and not the [UnknownType]. The type is known to the
+ *    compiler (or to us) at some point, e.g., after an assignment, but it is not specifically
+ *    specified in the source-code.
+ * 2) This should not be used to languages that have dynamic types. Once auto-type who was assigned
+ *    to [Expression.type] is "resolved", it should be replaced by the actual type that it
+ *    represents. Contrary to that, a [DynamicType] can change its internal type representation at
+ *    any point, e.g., after the next assignment.
  */
-class AutoType(override var language: Language<*>) : Type("auto", language) {
+class AutoType(language: Language<*>) : Type("auto", language) {
     override fun reference(pointer: PointerType.PointerOrigin?): Type {
         return PointerType(this, pointer)
     }

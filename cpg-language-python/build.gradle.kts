@@ -23,19 +23,12 @@
  *                    \______/ \__|       \______/
  *
  */
-plugins {
-    id("cpg.frontend-conventions")
-}
+plugins { id("cpg.frontend-conventions") }
 
-publishing {
-    publications {
-        named<MavenPublication>("cpg-language-python") {
-            pom {
-                artifactId = "cpg-language-python"
-                name.set("Code Property Graph - Python Frontend")
-                description.set("A Python language frontend for the CPG")
-            }
-        }
+mavenPublishing {
+    pom {
+        name.set("Code Property Graph - Python Frontend")
+        description.set("A Python language frontend for the CPG")
     }
 }
 

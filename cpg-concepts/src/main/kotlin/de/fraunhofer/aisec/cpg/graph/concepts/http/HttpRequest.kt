@@ -26,14 +26,26 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.http
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import java.util.Objects
 
 /** Represents an [HttpRequest] from the [HttpClient]. */
-class HttpRequest(
-    underlyingNode: Node,
+open class HttpRequest(
+    underlyingNode: Node? = null,
     val url: String,
     val arguments: List<Node>,
     val httpMethod: HttpMethod,
     override val concept: HttpClient,
 ) : HttpClientOperation(underlyingNode = underlyingNode, concept = concept) {
     val to = mutableListOf<HttpEndpoint>()
+
+    override fun equals(other: Any?): Boolean {
+        return other is HttpRequest &&
+            super.equals(other) &&
+            other.url == this.url &&
+            other.arguments == this.arguments &&
+            other.httpMethod == this.httpMethod &&
+            other.to == this.to
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), url, arguments, httpMethod, to)
 }

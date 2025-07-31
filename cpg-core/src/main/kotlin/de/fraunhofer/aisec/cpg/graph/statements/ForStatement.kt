@@ -74,7 +74,9 @@ class ForStatement : LoopStatement(), BranchingNode, StatementHolder {
             // Nothing to do here
         }
 
-    override var statements by unwrapping(ForStatement::statementEdges)
+    override var statements: MutableList<Statement>
+        get() = unwrapping(ForStatement::statementEdges)
+        set(value) {}
 
     override fun toString() =
         ToStringBuilder(this, TO_STRING_STYLE)
@@ -107,5 +109,17 @@ class ForStatement : LoopStatement(), BranchingNode, StatementHolder {
             this.conditionDeclaration,
             this.iterationStatement,
         )
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        val astChildren = this.allChildren<Node> { true }
+        return initializerStatement?.getStartingPrevEOG()
+            ?: this.condition?.getStartingPrevEOG()?.filter { it !in astChildren }
+            ?: this.conditionDeclaration?.getStartingPrevEOG()?.filter { it !in astChildren }
+            ?: this.prevEOG
+    }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return this.nextEOG.filter { it !in statement.allChildren<Node> { true } }
     }
 }

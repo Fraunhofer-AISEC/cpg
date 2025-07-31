@@ -29,10 +29,17 @@ import com.github.ajalt.clikt.parameters.groups.OptionGroup
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.boolean
 import com.github.ajalt.clikt.parameters.types.path
+import de.fraunhofer.aisec.codyze.dsl.ProjectBuilder
+import de.fraunhofer.aisec.codyze.dsl.RequirementCategoryBuilder
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
+import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
+import de.fraunhofer.aisec.cpg.query.QueryTree
 import io.github.detekt.sarif4k.*
 import java.io.File
 import java.nio.file.Path
@@ -43,6 +50,11 @@ import kotlin.io.path.isDirectory
 class ProjectOptions : OptionGroup("Project Options") {
     val directory by
         option("--project-dir", help = "The project directory").path().default(Path("."))
+
+    val startConsole by
+        option("--console", help = "Starts the Codyze web console after the analysis")
+            .boolean()
+            .default(false)
 }
 
 /** Options common to all subcommands dealing with CPG translation. */
@@ -72,7 +84,12 @@ class TranslationOptions : OptionGroup("CPG Translation Options") {
  * @param translationResult The result of the CPG translation.
  * @param sarif The SARIF object, that contains findings.
  */
-data class AnalysisResult(val translationResult: TranslationResult, val sarif: SarifSchema210) {
+data class AnalysisResult(
+    val translationResult: TranslationResult,
+    val sarif: SarifSchema210 = SarifSchema210(version = Version.The210, runs = listOf()),
+    val requirementsResults: Map<String, QueryTree<Boolean>> = mutableMapOf(),
+    val project: AnalysisProject,
+) : ContextProvider by translationResult {
     fun writeSarifJson(file: File) {
         file.writeText(SarifSerializer.toJson(sarif))
     }
@@ -87,6 +104,11 @@ data class AnalysisResult(val translationResult: TranslationResult, val sarif: S
  * the project is the central entity for the analysis.
  */
 class AnalysisProject(
+    /**
+     * The builder for the project. Potentially null if this is a temporary project that was created
+     * using [AnalysisProject.temporary].
+     */
+    var builder: ProjectBuilder? = null,
     /** The project name. */
     var name: String,
     /** The project directory, if it exists on file. Null if the project is an ad-hoc project. */
@@ -107,41 +129,133 @@ class AnalysisProject(
      * if the namespace starts with mylibrary.
      */
     var librariesPath: Path? = projectDir?.resolve("libraries"),
+    var requirementFunctions: Map<String, TranslationResult.() -> QueryTree<Boolean>> = emptyMap(),
+    var requirementCategories: Map<String, RequirementCategoryBuilder> = emptyMap(),
+    var assumptionStatusFunctions: Map<(Assumption) -> Boolean, AssumptionStatus> = emptyMap(),
+    var suppressedQueryTreeIDs: Map<(QueryTree<*>) -> Boolean, Any> = emptyMap(),
     /** The translation configuration for the project. */
     var config: TranslationConfiguration,
+    /**
+     * Any post-process steps that can be applied to the analysis result. This can for example be
+     * used to fill [AnalysisResult.sarif].
+     */
+    var postProcess:
+        (AnalysisProject.(AnalysisResult) -> Pair<List<ReportingDescriptor>, List<Result>>)? =
+        null,
 ) {
 
     /** Analyzes the project and returns the result. */
-    fun analyze(
-        postProcess: ((TranslationResult) -> Pair<List<ReportingDescriptor>, List<Result>>)? = null
-    ): AnalysisResult {
+    fun analyze(): AnalysisResult {
+        // Propagate assumption status
+        assumptionStatusFunctions.forEach { (key, status) -> Assumption.states[key] = status }
+
+        // Propagate suppressed query tree IDs into translation result
+        QueryTree.suppressions += suppressedQueryTreeIDs
+
         val tr = TranslationManager.builder().config(config).build().analyze().get()
-        val (rules, results) = postProcess?.invoke(tr) ?: Pair(emptyList(), emptyList())
+
+        // Run requirements
+        val requirementsResults =
+            requirementFunctions.map { (name, func) -> Pair(name, func(tr)) }.associate { it }
+
+        // Prepare analysis result
+        val runs = mutableListOf<Run>()
+        val result =
+            AnalysisResult(
+                translationResult = tr,
+                sarif = SarifSchema210(version = Version.The210, runs = runs),
+                requirementsResults = requirementsResults,
+                project = this,
+            )
 
         // Create a new SARIF run, including a tool definition and rules corresponding to the
-        // individual security statements
+        // individual requirements
+        val (rules, results) = buildSarif(result)
         val run =
             Run(
                 tool =
                     Tool(driver = ToolComponent(name = "Codyze", version = "x.x.x", rules = rules)),
                 results = results,
+                originalURIBaseIDS =
+                    config.topLevels
+                        .mapNotNull { Pair(it.key, it.toSarifLocation()) }
+                        .associate { it },
             )
+        runs += run
 
-        return AnalysisResult(
-            translationResult = tr,
-            sarif = SarifSchema210(version = Version.The210, runs = listOf(run)),
-        )
+        return result
     }
 
     companion object {
-        /** Builds a translation configuration from the given project directory. */
-        fun from(
+        /**
+         * Builds a new [AnalysisProject] from a directory that contains a `project.codyze.kts`
+         * file.
+         */
+        fun fromDirectory(
+            projectDir: Path,
+            postProcess:
+                (AnalysisProject.(AnalysisResult) -> Pair<
+                        List<ReportingDescriptor>,
+                        List<Result>,
+                    >)? =
+                null,
+            configModifier:
+                ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
+                null,
+        ): AnalysisProject? {
+            return fromScript(
+                projectDir.resolve("project.codyze.kts"),
+                postProcess = postProcess,
+                configModifier = configModifier,
+            )
+        }
+
+        /**
+         * Builds a new [AnalysisProject] from a `.codyze.kts` file, which represents a
+         * [CodyzeScript].
+         */
+        fun fromScript(
+            file: Path,
+            postProcess:
+                (AnalysisProject.(AnalysisResult) -> Pair<
+                        List<ReportingDescriptor>,
+                        List<Result>,
+                    >)? =
+                null,
+            configModifier:
+                ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
+                null,
+        ): AnalysisProject? {
+            // We need to evaluate the script in order to invoke our project builder inside the
+            // script
+            val script = evaluateScriptAndIncludes(file)
+            if (script == null) {
+                return null
+            }
+
+            return script.projectBuilder.build(
+                postProcess = postProcess,
+                configModifier = configModifier,
+            )
+        }
+
+        /**
+         * Builds a temporary [AnalysisProject] from the given values without having a `.codyze.kts`
+         * file in place.
+         */
+        fun temporary(
             projectDir: Path,
             sources: List<Path>? = null,
             components: List<String>? = null,
             exclusionPatterns: List<String>? = null,
             librariesPath: Path? = projectDir.resolve("libraries"),
-            configBuilder:
+            postProcess:
+                (AnalysisProject.(AnalysisResult) -> Pair<
+                        List<ReportingDescriptor>,
+                        List<Result>,
+                    >)? =
+                null,
+            configModifier:
                 ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
                 null,
         ): AnalysisProject {
@@ -207,13 +321,14 @@ class AnalysisProject(
             }
 
             exclusionPatterns?.forEach { builder = builder.exclusionPatterns(it) }
-            configBuilder?.invoke(builder)
+            configModifier?.invoke(builder)
 
             return AnalysisProject(
                 config = builder.build(),
                 name = projectDir.fileName.toString(),
                 librariesPath = librariesPath,
                 projectDir = projectDir,
+                postProcess = postProcess,
             )
         }
 
@@ -221,17 +336,34 @@ class AnalysisProject(
         fun fromOptions(
             projectOptions: ProjectOptions,
             translationOptions: TranslationOptions,
+            postProcess:
+                (AnalysisProject.(AnalysisResult) -> Pair<
+                        List<ReportingDescriptor>,
+                        List<Result>,
+                    >)? =
+                null,
             configModifier:
                 ((TranslationConfiguration.Builder) -> TranslationConfiguration.Builder)? =
                 null,
         ): AnalysisProject {
-            return from(
-                projectOptions.directory,
-                translationOptions.sources,
-                translationOptions.components,
-                translationOptions.exclusionPatterns,
-                configBuilder = configModifier,
-            )
+            // Try to load a project from the given directory
+            val project =
+                fromDirectory(
+                    projectOptions.directory,
+                    postProcess = postProcess,
+                    configModifier = configModifier,
+                )
+            return project
+                ?: // If no project was found, we create a temporary project
+                // with the given options
+                temporary(
+                    projectOptions.directory,
+                    translationOptions.sources,
+                    translationOptions.components,
+                    translationOptions.exclusionPatterns,
+                    configModifier = configModifier,
+                    postProcess = postProcess,
+                )
         }
     }
 }

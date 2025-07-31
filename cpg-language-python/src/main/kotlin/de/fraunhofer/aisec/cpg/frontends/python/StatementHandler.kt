@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.frontends.python.Python.AST.IsAsync
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
@@ -256,9 +255,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
          * Prepares the `manager = ContextManager()` and returns the random name for the "manager"
          * as well as the assignment.
          */
-        fun generateManagerAssignment(withItem: Python.AST.withitem): Pair<AssignExpression, Name> {
-            // Create a temporary reference for the context manager
-            val managerName = Name.random(prefix = CONTEXT_MANAGER)
+        fun generateManagerAssignment(
+            withItem: Python.AST.withitem,
+            currentBlock: Block,
+        ): Pair<AssignExpression, Name> {
+            // Create a temporary unique reference for the context manager
+            val managerName =
+                Name.temporary(prefix = CONTEXT_MANAGER, separatorChar = '_', currentBlock)
             val manager = newReference(name = managerName).implicit()
 
             // Handle the 'context expression' (the part before 'as') and assign to tempRef
@@ -330,8 +333,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
          * tmpVal = manager.__enter__()
          * ```
          */
-        fun generateEnterCallAndAssignment(managerName: Name): Pair<AssignExpression, Name> {
-            val tmpValName = Name.random(prefix = WITH_TMP_VAL)
+        fun generateEnterCallAndAssignment(
+            managerName: Name,
+            managerAssignment: AssignExpression,
+        ): Pair<AssignExpression, Name> {
+            val tmpValName =
+                Name.temporary(prefix = WITH_TMP_VAL, separatorChar = '_', managerAssignment)
             val enterVar = newReference(name = tmpValName).implicit()
             val enterCall =
                 newMemberCallExpression(
@@ -366,11 +373,13 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         // For i > 1, we add context_manager[i] to the try-block of item[i-1]
         val currentBlock =
             node.items.fold(result) { currentBlock, withItem ->
-                val (managerAssignment, managerName) = generateManagerAssignment(withItem)
+                val (managerAssignment, managerName) =
+                    generateManagerAssignment(withItem, currentBlock)
 
                 currentBlock.statements.add(managerAssignment)
 
-                val (enterAssignment, tmpValName) = generateEnterCallAndAssignment(managerName)
+                val (enterAssignment, tmpValName) =
+                    generateEnterCallAndAssignment(managerName, managerAssignment)
                 currentBlock.statements.add(enterAssignment)
 
                 // Create the try statement with __exit__ calls in the finally block
@@ -657,13 +666,6 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      * manager.
      */
     private fun conditionallyAddAdditionalSourcesToAnalysis(importName: Name) {
-        val ctx = ctx
-        if (ctx == null) {
-            throw TranslationException(
-                "A translation context is needed for the import dependent addition of additional sources."
-            )
-        }
-
         var currentName: Name? = importName
         while (!currentName.isNullOrEmpty()) {
             // Build a set of candidates how files look like for the current name. They are a set of
@@ -774,7 +776,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     private fun getUnpackingNodes(
         loopVar: InitializerListExpression
     ): Pair<Reference, AssignExpression> {
-        val tempVarName = Name.random(prefix = LOOP_VAR_PREFIX)
+        val tempVarName = Name.temporary(prefix = LOOP_VAR_PREFIX, separatorChar = '_', loopVar)
         val tempRef = newReference(name = tempVarName).implicit().codeAndLocationFrom(loopVar)
         val assign =
             newAssignExpression(
@@ -797,7 +799,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      */
     private fun handleAnnAssign(node: Python.AST.AnnAssign): AssignExpression {
         val lhs = frontend.expressionHandler.handle(node.target)
-        lhs.type = frontend.typeOf(node.annotation)
+        lhs.assignedTypes += frontend.typeOf(node.annotation)
         val rhs = node.value?.let { listOf(frontend.expressionHandler.handle(it)) } ?: emptyList()
         return newAssignExpression(lhs = listOf(lhs), rhs = rhs, rawNode = node)
     }
@@ -834,7 +836,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         val lhs = node.targets.map { frontend.expressionHandler.handle(it) }
         node.type_comment?.let { typeComment ->
             val tpe = frontend.typeOf(typeComment)
-            lhs.forEach { it.type = tpe }
+            lhs.forEach { it.assignedTypes += tpe }
         }
         val rhs = frontend.expressionHandler.handle(node.value)
         if (rhs is List<*>)

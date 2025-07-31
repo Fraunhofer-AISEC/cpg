@@ -23,12 +23,13 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.persistence
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Persistable
-import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
@@ -80,7 +81,7 @@ internal typealias Relationship = Map<String, Any?>
  *   configuration.
  * - A [Session] context to perform persistence actions.
  */
-context(Session)
+context(_: Session)
 fun TranslationResult.persist() {
     val b = Benchmark(Persistable::class.java, "Persisting translation result")
 
@@ -118,13 +119,13 @@ fun TranslationResult.persist() {
  * The function uses the APOC library for creating nodes in the database. For each node in the list,
  * it extracts the labels and properties and executes the Cypher query to persist the node.
  */
-context(Session)
+context(session: Session)
 private fun List<Node>.persist() {
     this.chunked(nodeChunkSize).map { chunk ->
         val b = Benchmark(Persistable::class.java, "Persisting chunk of ${chunk.size} nodes")
         val params =
             mapOf("props" to chunk.map { mapOf("labels" to it::class.labels) + it.properties() })
-        this@Session.executeWrite { tx ->
+        session.executeWrite { tx ->
             tx.run(
                     """
                    UNWIND ${"$"}props AS map
@@ -158,40 +159,15 @@ private fun List<Node>.persist() {
  * - Edges are chunked to avoid overloading transactional operations.
  * - Relationship properties and labels are mapped before using database utilities for creation.
  */
-context(Session)
+context(session: Session)
 private fun Collection<Relationship>.persist() {
     // Create an index for the "id" field of node, because we are "MATCH"ing on it in the edge
     // creation. We need to wait for this to be finished
-    this@Session.executeWrite { tx ->
+    session.executeWrite { tx ->
         tx.run("CREATE INDEX IF NOT EXISTS FOR (n:Node) ON (n.id)").consume()
     }
 
-    this.chunked(edgeChunkSize).map { chunk -> createRelationships(chunk) }
-}
-
-context(Session)
-private fun Collection<Edge<*>>.persistEdgesOld() {
-    // Create an index for the "id" field of node, because we are "MATCH"ing on it in the edge
-    // creation. We need to wait for this to be finished
-    this@Session.executeWrite { tx ->
-        tx.run("CREATE INDEX IF NOT EXISTS FOR (n:Node) ON (n.id)").consume()
-    }
-
-    this.chunked(edgeChunkSize).map { chunk ->
-        createRelationships(
-            chunk.flatMap { edge ->
-                // Since Neo4J does not support multiple labels on edges, but we do internally, we
-                // duplicate the edge for each label
-                edge.labels.map { label ->
-                    mapOf(
-                        "startId" to edge.start.id.toString(),
-                        "endId" to edge.end.id.toString(),
-                        "type" to label,
-                    ) + edge.properties()
-                }
-            }
-        )
-    }
+    this.chunked(edgeChunkSize).map { chunk -> session.createRelationships(chunk) }
 }
 
 /**

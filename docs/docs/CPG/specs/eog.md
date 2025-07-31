@@ -25,7 +25,7 @@ The EOG is similar to a CFG which connects basic blocks of statements, but there
 ## General Structure
 
 The graphs in this specification abstract the representation of the handled graph, to formally specify how EOG edges are drawn between a parent node and the subgraphs rooted by its children.
-Therefore, a collection of AST children are represented as abstract nodes showing the multiplicity of the node with an indicator (n), in case of sets, or as several nodes showing how the position in a list can impact the construction of an EOG, e.g., nodes (i - 1) to i.
+Therefore, a collection of AST children are represented as abstract nodes showing the multiplicity of the node with an indicator (n), in case of sets, or as several nodes showing how the position in a list can impact the construction of an EOG, e.g., nodes `(i - 1)` to `i`.
 The EOG is constructed as postorder of the AST traversal.
 When building the EOG for the expression a + b, the entire expression is considered evaluated after the subexpression a and the subexpression b is evaluated, therefore EOG edges connect nodes of (a) and (b) before reaching the parent node (+).
 
@@ -593,7 +593,7 @@ Scheme:
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["expression"]
-  child1 --EOG--> parent
+  child1 --EOG--> parent(["SynchronizedStatement"])
   parent --EOG--> child2["block"]
   child2 --EOG--> next:::outer
   parent -.-> child1

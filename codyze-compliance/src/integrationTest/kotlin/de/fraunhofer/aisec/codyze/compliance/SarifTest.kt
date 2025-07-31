@@ -37,12 +37,12 @@ class SarifTest {
     @Test
     fun testSarifFindings() {
         val project =
-            AnalysisProject.from(
-                projectDir = Path("src/integrationTest/resources/demo-app"),
-                components = listOf("webapp"),
+            AnalysisProject.fromDirectory(
+                projectDir = Path("src/integrationTest/resources/demo-app")
             )
+        assertNotNull(project)
 
-        val result = project.analyzeWithGoals()
+        val result = project.analyze()
         val tr = result.translationResult
         val webappMain = tr.namespaces["webapp.main"]
         assertNotNull(webappMain)

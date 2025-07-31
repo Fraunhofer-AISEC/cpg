@@ -42,7 +42,6 @@ class TestCommon {
                 "argumentIndex",
                 "code",
                 "comment",
-                "file",
                 "id",
                 "isImplicit",
                 "isInferred",
@@ -73,6 +72,7 @@ class TestCommon {
                 "PDG",
                 "RETURN_TYPES",
                 "SCOPE",
+                "SECONDARY_TYPES",
                 "SIGNATURE_TYPES",
                 "THROWS_TYPES",
                 "TYPE",
@@ -95,6 +95,7 @@ class TestCommon {
                 "OVERLAY",
                 "PDG",
                 "SCOPE",
+                "USED_LANGUAGES",
             ),
             relationships.keys.sorted(),
         )

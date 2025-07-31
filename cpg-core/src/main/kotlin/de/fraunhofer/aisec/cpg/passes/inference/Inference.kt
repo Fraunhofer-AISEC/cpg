@@ -25,23 +25,21 @@
  */
 package de.fraunhofer.aisec.cpg.passes.inference
 
+import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TypeManager
+import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
+import de.fraunhofer.aisec.cpg.assumptions.assume
 import de.fraunhofer.aisec.cpg.frontends.HasClasses
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.TypeExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.helpers.Util.debugWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
 import java.util.*
@@ -102,79 +100,84 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         }
 
         return inferInScopeOf(start) {
-            val inferred: FunctionDeclaration =
-                if (record != null) {
-                    newMethodDeclaration(name ?: "", isStatic, record)
-                } else {
-                    newFunctionDeclaration(name ?: "")
+                val inferred: FunctionDeclaration =
+                    if (record != null) {
+                        newMethodDeclaration(name ?: "", isStatic, record)
+                    } else {
+                        newFunctionDeclaration(name ?: "")
+                    }
+                inferred.code = code
+
+                // Create parameter declarations and receiver (only for methods).
+                if (inferred is MethodDeclaration) {
+                    createInferredReceiver(inferred, record)
                 }
-            inferred.code = code
+                createInferredParameters(inferred, signature)
 
-            // Create parameter declarations and receiver (only for methods).
-            if (inferred is MethodDeclaration) {
-                createInferredReceiver(inferred, record)
-            }
-            createInferredParameters(inferred, signature)
+                // Set the type and return type(s)
+                val returnType =
+                    if (
+                        ctx.config.inferenceConfiguration.inferReturnTypes &&
+                            incomingReturnType is UnknownType &&
+                            hint != null
+                    ) {
+                        inferReturnType(hint) ?: unknownType()
+                    } else {
+                        incomingReturnType
+                    }
 
-            // Set the type and return type(s)
-            var returnType =
+                if (returnType is TupleType) {
+                    inferred.returnTypes = returnType.types
+                } else if (returnType != null) {
+                    inferred.returnTypes = listOf(returnType)
+                }
+
+                inferred.type = computeType(inferred)
+
+                debugWithFileLocation(
+                    hint,
+                    log,
+                    "Inferred a new {} declaration {} with parameter types {} and return types {} in {}",
+                    if (inferred is MethodDeclaration) "method" else "function",
+                    inferred.name,
+                    signature.map { it?.name },
+                    inferred.returnTypes.map { it.name },
+                    it,
+                )
+
+                // Add it to the scope
+                scopeManager.addDeclaration(inferred)
+                start.addDeclaration(inferred)
+
+                // Some magic that adds it to static imports. Not sure if this really needed
+                if (record != null && isStatic) {
+                    record.staticImports.add(inferred)
+                }
+
+                // Some more magic, that adds it to the AST. Note: this might not be 100 % compliant
+                // with the language, since in some languages the AST of a method declaration could
+                // be outside a method, but this will do for now
+                if (record != null && inferred is MethodDeclaration) {
+                    record.addMethod(inferred)
+                }
+
+                // "upgrade" our struct to a class, if it was inferred by us, since we are calling
+                // methods on it. But only if the language supports classes in the first place.
                 if (
-                    ctx.config.inferenceConfiguration.inferReturnTypes &&
-                        incomingReturnType is UnknownType &&
-                        hint != null
+                    record?.isInferred == true &&
+                        record.kind == "struct" &&
+                        record.language is HasClasses
                 ) {
-                    inferReturnType(hint) ?: unknownType()
-                } else {
-                    incomingReturnType
+                    record.kind = "class"
                 }
 
-            if (returnType is TupleType) {
-                inferred.returnTypes = returnType.types
-            } else if (returnType != null) {
-                inferred.returnTypes = listOf(returnType)
+                inferred
             }
-
-            inferred.type = FunctionType.computeType(inferred)
-
-            debugWithFileLocation(
-                hint,
-                log,
-                "Inferred a new {} declaration {} with parameter types {} and return types {} in {}",
-                if (inferred is MethodDeclaration) "method" else "function",
-                inferred.name,
-                signature.map { it?.name },
-                inferred.returnTypes.map { it.name },
-                it,
+            .assume(
+                AssumptionType.InferenceAssumption,
+                "We assume that the start of inference is a record, namespace or translation unit.\n\n" +
+                    "To verify this assumption, we should check if the function is indeed part of the parent where it was inferred in external code.",
             )
-
-            // Add it to the scope
-            scopeManager.addDeclaration(inferred)
-            start.addDeclaration(inferred)
-
-            // Some magic that adds it to static imports. Not sure if this really needed
-            if (record != null && isStatic) {
-                record.staticImports.add(inferred)
-            }
-
-            // Some more magic, that adds it to the AST. Note: this might not be 100 % compliant
-            // with the language, since in some languages the AST of a method declaration could be
-            // outside of a method, but this will do for now
-            if (record != null && inferred is MethodDeclaration) {
-                record.addMethod(inferred)
-            }
-
-            // "upgrade" our struct to a class, if it was inferred by us, since we are calling
-            // methods on it. But only if the language supports classes in the first place.
-            if (
-                record?.isInferred == true &&
-                    record.kind == "struct" &&
-                    record.language is HasClasses
-            ) {
-                record.kind = "class"
-            }
-
-            inferred
-        }
     }
 
     fun createInferredConstructor(signature: List<Type?>): ConstructorDeclaration {
@@ -434,6 +437,53 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
     }
 
     /**
+     * This infers a [FieldDeclaration] based on an unresolved [Reference], which is supplied as a
+     * [hint].
+     */
+    fun inferFieldDeclaration(hint: Reference): FieldDeclaration? {
+        if (!ctx.config.inferenceConfiguration.inferFields) {
+            return null
+        }
+
+        // We assume that the start is a record
+        val record = start as? RecordDeclaration
+        if (record == null) {
+            throw UnsupportedOperationException(
+                "Starting inference with the wrong type of start node"
+            )
+        }
+
+        return inferInScopeOf(record) {
+            val inferred =
+                newFieldDeclaration(
+                    hint.name.localName,
+                    // we will set the type later through the type inference observer
+                    record.unknownType(),
+                    listOf(),
+                    null,
+                    false,
+                )
+
+            debugWithFileLocation(
+                hint,
+                log,
+                "Inferred a new field declaration {} in $it",
+                inferred.name,
+            )
+
+            // Add it to the scope
+            scopeManager.addDeclaration(inferred)
+            record.addDeclaration(inferred)
+
+            // We might be able to resolve the type later (or better), if a type is
+            // assigned to our reference later
+            hint.registerTypeObserver(TypeInferenceObserver(inferred))
+
+            inferred
+        }
+    }
+
+    /**
      * This infers a [VariableDeclaration] based on an unresolved [Reference], which is supplied as
      * a [hint]. Currently, this is only used to infer global variables. In the future, we might
      * also infer static variables in namespaces.
@@ -560,7 +610,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
     fun inferReturnType(hint: CallExpression): Type? {
         // Try to find out, if the supplied hint is part of an assignment. If yes, we can use their
         // type as the return type of the function
-        var targetType =
+        val targetType =
             ctx.currentComponent.assignments.singleOrNull { it.value == hint }?.target?.type
         if (targetType != null && targetType !is UnknownType) {
             return targetType

@@ -34,5 +34,5 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Operation
  * @param underlyingNode The underlying CPG node.
  * @param concept The corresponding [Log] concept note, i.e. the log that is returned.
  */
-class LogGet(underlyingNode: Node, override val concept: Log) :
+open class LogGet(underlyingNode: Node? = null, override val concept: Log) :
     Operation(underlyingNode = underlyingNode, concept = concept), IsLogging

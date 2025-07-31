@@ -27,12 +27,14 @@ package de.fraunhofer.aisec.cpg.graph.edges.collections
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import java.util.Objects
 
 /**
  * An intelligent [MutableCollection] wrapper around an [EdgeCollection] which supports iterating,
  * adding and removing [Node] elements. Basis for [UnwrappedEdgeList] and [UnwrappedEdgeSet].
  */
-abstract class UnwrappedEdgeCollection<NodeType : Node, EdgeType : Edge<NodeType>>(
+@Suppress("EqualsOrHashCode")
+sealed class UnwrappedEdgeCollection<NodeType : Node, EdgeType : Edge<NodeType>>(
     var collection: EdgeCollection<NodeType, EdgeType>
 ) : MutableCollection<NodeType> {
 
@@ -101,7 +103,7 @@ abstract class UnwrappedEdgeCollection<NodeType : Node, EdgeType : Edge<NodeType
 
         @Suppress("UNCHECKED_CAST")
         override fun next(): NodeType {
-            var next = edgeIterator.next()
+            val next = edgeIterator.next()
             return if (collection.outgoing) {
                 next.end
             } else {
@@ -109,4 +111,19 @@ abstract class UnwrappedEdgeCollection<NodeType : Node, EdgeType : Edge<NodeType
             }
         }
     }
+
+    override fun hashCode(): Int {
+        // Calculating a real hash code is very performance intensive, so we just base the hash-code
+        // on the collection size. This will lead to some hash collisions, but it's not a problem
+        // since equal will be used to differentiate between two collections then.
+        //
+        // The hash-code implementation of the underlying list would directly
+        // access the element array data (and then the hashcode of the edge at the element
+        // position), but we cannot access this raw array. And we cannot directly use the list's
+        // hash-code either since we are not interested in the full edge but only the start/end node
+        // (depending on outgoing).
+        return Objects.hash(collection.size)
+    }
+
+    abstract override fun equals(other: Any?): Boolean
 }

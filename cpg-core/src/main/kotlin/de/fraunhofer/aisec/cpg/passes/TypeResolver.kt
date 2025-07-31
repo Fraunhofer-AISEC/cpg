@@ -23,21 +23,26 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.TypeManager
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
+import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
+import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
-import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.inference.tryRecordInference
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+import kotlin.collections.plusAssign
 
 /**
  * The purpose of this [Pass] is to establish a relationship between [Type] nodes (more specifically
@@ -50,20 +55,49 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     override fun accept(component: Component) {
         ctx.currentComponent = component
-        resolveFirstOrderTypes()
-        refreshNames()
-
-        val b =
-            Benchmark(
-                TypeResolver::class.java,
-                "Updating imported symbols for ${component.imports.size} imports",
-            )
-        b.stop()
+        walker = SubgraphWalker.ScopedWalker(scopeManager, strategy = Strategy::AST_FORWARD)
+        walker.registerHandler { handleNode(it) }
+        walker.iterate(component)
     }
 
-    private fun refreshNames() {
-        for (type in typeManager.secondOrderTypes) {
-            type.refreshNames()
+    /**
+     * This function is called for each [Node] in the component. It checks if the node has a type or
+     * declares a type. If so, it tries to resolve the type using [resolveType]. It also checks for
+     * secondary type edges (see [HasSecondaryTypeEdge] and resolves them as well.
+     *
+     * @param node The node to handle.
+     */
+    private fun handleNode(node: Node) {
+        if (node is HasType) {
+            var type = node.type.root
+            handleType(type)
+            node.assignedTypes.forEach { handleType(it.root) }
+        } else if (node is DeclaresType) {
+            handleType(node.declaredType)
+        }
+
+        if (node is HasSecondaryTypeEdge) {
+            node.secondaryTypes.forEach { handleType(it) }
+        }
+    }
+
+    /**
+     * This function is called for each [Type] in the component. It checks if the type is
+     * unresolved. If so, it tries to resolve the type using [resolveType]. It also checks for
+     * secondary type edges (see [HasSecondaryTypeEdge] and resolves them as well.
+     *
+     * @param type The type to handle.
+     */
+    private fun handleType(type: Type) {
+        if (
+            type is ObjectType && type.typeOrigin == Type.Origin.UNRESOLVED ||
+                type.typeOrigin == Type.Origin.GUESSED
+        ) {
+            resolveType(type)
+        }
+
+        if (type is HasSecondaryTypeEdge) {
+            type.secondaryTypes.filter { it.root != type }.forEach { handleType(it.root) }
         }
     }
 
@@ -88,6 +122,10 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
      *   [Type.typeOrigin] to [Type.Origin.RESOLVED].
      */
     fun resolveType(type: Type): Boolean {
+        // Because we still have multiple "global scopes" (one per parallel context), we need to
+        // make sure they all point to the final global scope
+        type.updateGlobalScope()
+
         // Check for a possible typedef
         var target = scopeManager.typedefFor(type.name, type.scope)
         if (target != null) {
@@ -102,6 +140,8 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             type.declaredFrom = originDeclares
             type.recordDeclaration = originDeclares
             type.typeOrigin = Type.Origin.RESOLVED
+            typeManager.resolvedTypes += type
+
             return true
         }
 
@@ -127,9 +167,12 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 declaredType.name,
             )
             type.name = declaredType.name
+            type.refreshNames()
             type.declaredFrom = declares
             type.recordDeclaration = declares as? RecordDeclaration
             type.typeOrigin = Type.Origin.RESOLVED
+            typeManager.resolvedTypes += type
+
             if (declaredType.superTypes.contains(type))
                 log.warn(
                     "Removing type {} from the list of its own supertypes. This would create a type cycle that is not allowed.",
@@ -148,6 +191,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     }
                 }
             )
+
             return true
         }
 
@@ -157,16 +201,16 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     override fun cleanup() {
         // Nothing to do
     }
+}
 
-    /** Resolves all types in [TypeManager.firstOrderTypes] using [resolveType]. */
-    fun resolveFirstOrderTypes() {
-        for (type in typeManager.firstOrderTypes.sortedBy { it.name }) {
-            if (
-                type is ObjectType && type.typeOrigin == Type.Origin.UNRESOLVED ||
-                    type.typeOrigin == Type.Origin.GUESSED
-            ) {
-                resolveType(type)
-            }
-        }
+/**
+ * This helper function sets the [Type.scope] to the current [ScopeManager.globalScope] if it has a
+ * [GlobalScope]. This is necessary because the parallel parsing introduces multiple global scopes.
+ */
+context(provider: ContextProvider)
+private fun Type.updateGlobalScope() {
+    if (scope is GlobalScope) {
+        scope = provider.ctx.scopeManager.globalScope
+        secondOrderTypes.forEach { it.updateGlobalScope() }
     }
 }

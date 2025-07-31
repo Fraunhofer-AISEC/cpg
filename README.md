@@ -80,10 +80,6 @@ For all builds on the `main` branch, an artefact is published in the [GitHub Pac
 
 To use the GitHub Gradle Registry, please refer to https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-gradle-registry#using-a-published-package
 
-### On Command Line
-
-The library can be used on the command line using the `cpg-console` subproject. Please refer to the [README.md](./cpg-console/README.md) of the `cpg-console` as well as our small [tutorial](./tutorial.md) for further details.
-
 ### Configuration
 
 The behavior of the library can be configured in several ways. Most of this is done through the `TranslationConfiguration`
@@ -177,7 +173,7 @@ Through the `JepSingleton`, the CPG library will look for well known paths on Li
 
 #### TypeScript
 
-For parsing TypeScript, the necessary NodeJS-based code can be found in the `src/main/nodejs` directory of the `cpg-language-typescript` submodule. Gradle should build the script automatically, provided NodeJS (>=16) is installed. The bundles script will be placed inside the jar's resources and should work out of the box.
+For parsing TypeScript, the necessary TypeScript-based code can be found in the `src/main/nodejs` directory of the `cpg-language-typescript` submodule. Gradle should build the script automatically. The bundles script will be placed inside the jar's resources and should work out of the box.
 
 ### Code Style
 
@@ -200,19 +196,9 @@ cp style/pre-commit .git/hooks
 
 ## Contributors
 
-The following authors have contributed to this project (in alphabetical order):
-* [fwendland](https://github.com/fwendland)
-* [JulianSchuette](https://github.com/JulianSchuette)
-* [konradweiss](https://github.com/konradweiss)
-* [KuechA](https://github.com/KuechA)
-* [Masrepus](https://github.com/Masrepus)
-* [maximiliankaul](https://github.com/maximiliankaul)
-* [maximilian-galanis](https://github.com/maximilian-galanis)
-* [obraunsdorf](https://github.com/obraunsdorf)
-* [oxisto](https://github.com/oxisto)
-* [peckto](https://github.com/peckto)
-* [titze](https://github.com/titze)
-* [vfsrfs](https://github.com/vfsrfs)
+The following authors have contributed to this project:
+
+<a href="https://github.com/Fraunhofer-AISEC/cpg/graphs/contributors"><img src="https://contrib.rocks/image?repo=Fraunhofer-AISEC/cpg" /></a>
 
 ## Contributing
 

@@ -36,13 +36,15 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.types.HasType.TypeObserver
 import de.fraunhofer.aisec.cpg.passes.*
-import de.fraunhofer.aisec.cpg.passes.configuration.*
+import de.fraunhofer.aisec.cpg.passes.configuration.PassOrderingHelper
+import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
+import de.fraunhofer.aisec.cpg.passes.configuration.ReplacePass
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.io.File
 import java.nio.file.Path
-import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.isSubclassOf
@@ -61,7 +63,7 @@ private constructor(
     val symbols: Map<String, String>,
     /** Source code files to parse. */
     val softwareComponents: Map<String, List<File>>,
-    val topLevels: MutableMap<String, File?>,
+    val topLevels: MutableMap<String, File>,
     /** Set to true to generate debug output for the parser. */
     val debugParser: Boolean,
     /**
@@ -105,11 +107,12 @@ private constructor(
      * passes. It can either be filled with the [Builder.replacePass] or by using the [ReplacePass]
      * annotation on a [LanguageFrontend].
      */
+    @JsonIgnore
     val replacedPasses:
         Map<Pair<KClass<out Pass<out Node>>, KClass<out Language<*>>>, KClass<out Pass<out Node>>>,
     /** This list contains the files with function summaries which should be considered. */
     val functionSummaries: DFGFunctionSummaries,
-    languages: List<KClass<out Language<*>>>,
+    languages: Set<KClass<out Language<*>>>,
     codeInNodes: Boolean,
     processAnnotations: Boolean,
     disableCleanup: Boolean,
@@ -121,13 +124,17 @@ private constructor(
     matchCommentsToNodes: Boolean,
     addIncludesToGraph: Boolean,
     passConfigurations: Map<KClass<out Pass<*>>, PassConfiguration>,
+    /** The maximum number a pass will get executed, in order to prevent loops. */
+    val maxPassExecutions: Int,
     /** A list of exclusion patterns used to filter files and directories. */
     val exclusionPatternsByString: List<String>,
     /** A list of exclusion patterns using regular expressions to filter files and directories. */
     val exclusionPatternsByRegex: List<Regex>,
+    /** Whether the type propagation system using [TypeObserver] should be disabled. */
+    val disableTypeObserver: Boolean,
 ) {
     /** This list contains all languages which we want to translate. */
-    @JsonIgnore val languages: List<KClass<out Language<*>>>
+    @JsonIgnore val languages: Set<KClass<out Language<*>>>
 
     /**
      * Switch off cleaning up TypeManager memory after analysis.
@@ -239,8 +246,8 @@ private constructor(
      */
     class Builder {
         private var softwareComponents: MutableMap<String, List<File>> = HashMap()
-        private val languages = mutableListOf<KClass<out Language<*>>>()
-        private var topLevels = mutableMapOf<String, File?>()
+        private val languages = mutableSetOf<KClass<out Language<*>>>()
+        private var topLevels = mutableMapOf<String, File>()
         private var debugParser = false
         private var failOnError = false
         private var loadIncludes = false
@@ -265,8 +272,10 @@ private constructor(
         private var useDefaultPasses = false
         private var passConfigurations: MutableMap<KClass<out Pass<*>>, PassConfiguration> =
             mutableMapOf()
+        private var maxPassExecutions = 5
         private val exclusionPatternsByRegex = mutableListOf<Regex>()
         private val exclusionPatternsByString = mutableListOf<String>()
+        private var disableTypeObserver = false
 
         fun symbols(symbols: Map<String, String>): Builder {
             this.symbols = symbols
@@ -314,12 +323,12 @@ private constructor(
             return this
         }
 
-        fun topLevel(topLevel: File?): Builder {
+        fun topLevel(topLevel: File): Builder {
             this.topLevels[DEFAULT_APPLICATION_NAME] = topLevel
             return this
         }
 
-        fun topLevels(topLevels: Map<String, File?>): Builder {
+        fun topLevels(topLevels: Map<String, File>): Builder {
             this.topLevels.clear()
             this.topLevels += topLevels
             return this
@@ -472,6 +481,15 @@ private constructor(
         }
 
         /**
+         * Sets the maximum number of times a pass will be executed. This is useful to prevent
+         * infinite loops in the pass execution, when one pass triggers the execution of another.
+         */
+        fun maxPassExecutions(max: Int): Builder {
+            this.maxPassExecutions = max
+            return this
+        }
+
+        /**
          * Adds exclusion patterns using regular expressions for filtering files and directories.
          *
          * @param patterns Exclusion patterns. Example:
@@ -538,7 +556,6 @@ private constructor(
          * - [DynamicInvokeResolver]
          * - [TypeResolver]
          * - [ControlFlowSensitiveDFGPass]
-         * - [FilenameMapper]
          * - [ResolveCallExpressionAmbiguityPass]
          * - [ResolveMemberExpressionAmbiguityPass]
          *
@@ -553,10 +570,15 @@ private constructor(
             registerPass<EvaluationOrderGraphPass>() // creates EOG
             registerPass<TypeResolver>()
             registerPass<ControlFlowSensitiveDFGPass>()
-            registerPass<FilenameMapper>()
             registerPass<ResolveCallExpressionAmbiguityPass>()
             registerPass<ResolveMemberExpressionAmbiguityPass>()
             useDefaultPasses = true
+            return this
+        }
+
+        /** Disables the type propagation system using [TypeObserver]. */
+        fun disableTypeObserver(): Builder {
+            disableTypeObserver = true
             return this
         }
 
@@ -696,8 +718,10 @@ private constructor(
                 matchCommentsToNodes,
                 addIncludesToGraph,
                 passConfigurations,
+                maxPassExecutions,
                 exclusionPatternsByString,
                 exclusionPatternsByRegex,
+                disableTypeObserver,
             )
         }
 
@@ -736,7 +760,7 @@ val KClass<out Language<*>>.frontend: KClass<out LanguageFrontend<*, *>>
     get() {
         // Instantiate a temporary object of the language class
         val instance =
-            constructors.firstOrNull()?.call(EmptyTranslationContext)
+            constructors.firstOrNull()?.call()
                 ?: throw IllegalArgumentException(
                     "Could not instantiate temporary object of language class ${this.simpleName}"
                 )

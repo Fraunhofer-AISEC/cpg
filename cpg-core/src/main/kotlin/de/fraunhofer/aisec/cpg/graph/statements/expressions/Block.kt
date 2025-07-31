@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
@@ -60,15 +61,17 @@ open class Block : Expression(), StatementHolder {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Block) return false
-        return super.equals(other) &&
-            this.statements == other.statements &&
-            Edge.propertyEqualsList(statementEdges, other.statementEdges)
+        return super.equals(other) && Edge.propertyEqualsList(statementEdges, other.statementEdges)
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), statements)
+    override fun hashCode() = Objects.hash(super.hashCode())
 
     /** Returns the [n]-th statement in this list of statements. */
     operator fun get(n: Int): Statement {
         return statements[n]
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.statements.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
     }
 }

@@ -23,6 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
@@ -34,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import kotlin.io.path.Path
 
 /**
  * Creates a new [TranslationUnitDeclaration]. This is the top-most [Node] that a [LanguageFrontend]
@@ -43,12 +46,26 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
  * argument.
  */
 @JvmOverloads
+context(provider: ContextProvider)
 fun MetadataProvider.newTranslationUnitDeclaration(
-    name: CharSequence?,
+    name: CharSequence,
     rawNode: Any? = null,
 ): TranslationUnitDeclaration {
     val node = TranslationUnitDeclaration()
-    node.applyMetadata(this, name, rawNode, true)
+    val path = Path(name.toString())
+
+    // We must avoid absolute path names as name for the translation unit, as this
+    // specific to the analysis machine and therefore make node IDs not comparable across
+    // machines.
+    val relativeName =
+        if (path.isAbsolute) {
+            val topLevel = path.topLevel
+            path.toFile().relativeToOrNull(topLevel)?.toString() ?: path.fileName?.toString()
+        } else {
+            name
+        }
+
+    node.applyMetadata(this, relativeName, rawNode, true)
 
     log(node)
     return node
@@ -67,7 +84,7 @@ fun MetadataProvider.newFunctionDeclaration(
     rawNode: Any? = null,
 ): FunctionDeclaration {
     val node = FunctionDeclaration()
-    node.applyMetadata(this@MetadataProvider, name, rawNode, localNameOnly)
+    node.applyMetadata(this, name, rawNode, localNameOnly)
 
     log(node)
     return node
@@ -125,6 +142,7 @@ fun MetadataProvider.newOperatorDeclaration(
  * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
  * prepended argument.
  */
+context(provider: ContextProvider)
 @JvmOverloads
 fun MetadataProvider.newConstructorDeclaration(
     name: CharSequence?,
@@ -136,6 +154,7 @@ fun MetadataProvider.newConstructorDeclaration(
     node.applyMetadata(this, name, rawNode, defaultNamespace = recordDeclaration?.name)
 
     node.recordDeclaration = recordDeclaration
+    node.type = recordDeclaration?.toType() ?: unknownType()
 
     log(node)
     return node
@@ -193,6 +212,7 @@ fun MetadataProvider.newVariableDeclaration(
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
+context(provider: ContextProvider)
 @JvmOverloads
 fun LanguageProvider.newTupleDeclaration(
     elements: List<VariableDeclaration>,

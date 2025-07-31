@@ -47,12 +47,7 @@ class TupleDeclarationTest {
     fun testTopLevelTuple() {
         with(
             TestLanguageFrontend(
-                ctx =
-                    TranslationContext(
-                        TranslationConfiguration.builder().defaultPasses().build(),
-                        ScopeManager(),
-                        TypeManager(),
-                    )
+                ctx = TranslationContext(TranslationConfiguration.builder().defaultPasses().build())
             )
         ) {
             val result = build {
@@ -71,7 +66,8 @@ class TupleDeclarationTest {
                                 newCallExpression(newReference("func")),
                             )
                         scopeManager.addDeclaration(tuple)
-                        declarations += tuple
+                        declare { this.singleDeclaration = tuple }
+                        // declarations += tuple
 
                         tuple.elements.forEach { scopeManager.addDeclaration(it) }
 
@@ -134,12 +130,7 @@ class TupleDeclarationTest {
     fun testFunctionLevelTuple() {
         with(
             TestLanguageFrontend(
-                ctx =
-                    TranslationContext(
-                        TranslationConfiguration.builder().defaultPasses().build(),
-                        ScopeManager(),
-                        TypeManager(),
-                    )
+                ctx = TranslationContext(TranslationConfiguration.builder().defaultPasses().build())
             )
         ) {
             val result = build {

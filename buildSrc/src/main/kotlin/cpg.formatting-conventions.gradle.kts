@@ -119,8 +119,11 @@ val headerWithHashes = """#
 spotless {
     kotlin {
         targetExclude("**/*.query.kts")
-        ktfmt().kotlinlangStyle()
+        ktfmt("0.55").kotlinlangStyle()
         licenseHeader(headerWithStars).yearSeparator(" - ")
+    }
+    kotlinGradle {
+        ktfmt().kotlinlangStyle()
     }
 
     format("golang") {

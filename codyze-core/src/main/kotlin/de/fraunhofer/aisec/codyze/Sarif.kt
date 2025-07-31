@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.codyze
 
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
@@ -33,59 +34,112 @@ import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.query.AcceptedResult
+import de.fraunhofer.aisec.cpg.query.NotYetEvaluated
 import de.fraunhofer.aisec.cpg.query.QueryTree
+import de.fraunhofer.aisec.cpg.query.SinglePathResult
+import de.fraunhofer.aisec.cpg.query.UndecidedResult
 import io.github.detekt.sarif4k.*
+import java.io.File
+import kotlin.io.path.relativeToOrSelf
+import kotlin.io.path.toPath
+
+/** Builds the SARIF report for the given [AnalysisResult.requirementsResults]. */
+fun AnalysisProject.buildSarif(
+    result: AnalysisResult
+): Pair<List<ReportingDescriptor>, List<Result>> {
+    val sarifRules = mutableListOf<ReportingDescriptor>()
+    val sarifResults = mutableListOf<Result>()
+
+    for ((requirementID, passFail) in result.requirementsResults) {
+        val sarifResult = passFail.toSarif(requirementID)
+        val req = builder?.allRequirements[requirementID]
+
+        val sarifRule =
+            ReportingDescriptor(
+                id = requirementID,
+                name = req?.name,
+                shortDescription = req?.description?.let { MultiformatMessageString(text = it) },
+            )
+
+        sarifResults += sarifResult
+        sarifRules += sarifRule
+    }
+
+    return Pair(sarifRules, sarifResults)
+}
 
 /**
  * Converts a [QueryTree] to a list of [Result]s. This expects that the query tree is of type
  * [Boolean] and that the [QueryTree.children] represent the individual findings.
  */
 fun QueryTree<Boolean>.toSarif(ruleID: String): List<Result> {
-    return this.children.map {
+    return this.children.map { child ->
+        val result = (child.value as? Boolean) ?: this.value
+
         Result(
             ruleID = ruleID,
             message =
-                if (this.value) {
-                    Message(text = "Query was successful")
+                if (result && child.confidence == AcceptedResult) {
+                    Message(text = "The query was successful")
+                } else if (child is NotYetEvaluated) {
+                    Message(text = "The query has not been evaluated yet")
                 } else {
-                    Message(text = "Query failed")
+                    Message(text = "The query failed")
                 },
             level =
-                if (this.value) {
+                if (result) {
                     Level.None
                 } else {
                     Level.Error
                 },
             kind =
-                if (this.value) {
+                if (result && child.confidence == AcceptedResult) {
                     ResultKind.Pass
+                } else if (child is NotYetEvaluated) {
+                    ResultKind.Open
+                } else if (child.confidence == UndecidedResult) {
+                    ResultKind.Review
                 } else {
                     ResultKind.Fail
                 },
-            locations = listOfNotNull(it.node?.toSarifLocation()),
-            stacks = it.node?.toSarifCallStack(),
+            locations = listOfNotNull(child.node?.toSarifLocation()),
+            stacks = child.node?.toSarifCallStack(),
+            properties =
+                if (child is SinglePathResult) {
+                    PropertyBag(mapOf("Termination reason" to child.terminationReason.toString()))
+                } else {
+                    null
+                },
             codeFlows =
-                it.children.mapNotNull { child ->
-                    if (child.value is List<*>) {
+                child.children
+                    .flatMap { it.getCodeflow() }
+                    .map {
                         CodeFlow(
                             threadFlows =
                                 listOf(
                                     ThreadFlow(
                                         message = Message(text = "Thread flow"),
-                                        locations =
-                                            (child.value as List<*>)
-                                                .filterIsInstance<Node>()
-                                                .toSarifThreadFlowLocation(),
+                                        locations = it.toSarifThreadFlowLocation(),
                                     )
                                 )
                         )
-                    } else {
-                        null
-                    }
-                },
+                    },
         )
+    }
+}
+
+/** Tries to extract the nodes which were visited to retrieve this result. */
+fun QueryTree<*>.getCodeflow(): List<List<Node>> {
+    return if (this is SinglePathResult) {
+        this.children.flatMap { it.getCodeflow() }
+    } else if (this.value is List<*>) {
+        listOf((this.value as Iterable<*>).filterIsInstance<Node>())
+    } else if (this.value is Boolean) {
+        this.children.flatMap { it.getCodeflow() }
+    } else {
+        listOf<List<Node>>()
     }
 }
 
@@ -164,7 +218,7 @@ fun Node?.toSarifLocation(
         }
         ?.let {
             Location(
-                physicalLocation = it.toSarif(),
+                physicalLocation = it.toSarif(component),
                 logicalLocations =
                     listOf(
                         LogicalLocation(
@@ -179,10 +233,31 @@ fun Node?.toSarifLocation(
         }
 }
 
+/**
+ * Converts a [File] to a [Location]. This is used for top-level locations in the SARIF output.
+ *
+ * We aim to provide all remaining locations in [PhysicalLocation] as relative URLs using
+ * [ArtifactLocation.uriBaseID].
+ */
+fun Map.Entry<String, File>.toSarifLocation(
+    message: Message = Message(text = "Top level location for component $key")
+): ArtifactLocation {
+    return ArtifactLocation(uri = value.absolutePath, description = message)
+}
+
 /** Converts a [de.fraunhofer.aisec.cpg.sarif.PhysicalLocation] to a [PhysicalLocation]. */
-fun de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.toSarif(): PhysicalLocation {
+fun de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.toSarif(
+    component: Component? = null
+): PhysicalLocation {
+    var uri = this.artifactLocation.uri.toPath()
+    val uriBase = component?.location?.artifactLocation?.uri?.toPath()
+    if (uriBase != null) {
+        uri = uri.relativeToOrSelf(uriBase)
+    }
+
     return PhysicalLocation(
-        artifactLocation = ArtifactLocation(uri = "file://${this.artifactLocation.uri.path}"),
+        artifactLocation =
+            ArtifactLocation(uri = uri.toString(), uriBaseID = component?.name?.localName),
         region =
             Region(
                 startLine = this.region.startLine.toLong(),

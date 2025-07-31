@@ -37,14 +37,7 @@ import kotlin.test.*
 internal class TypeTests : BaseTest() {
     @Test
     fun reference() {
-        val language =
-            CPPLanguage(
-                TranslationContext(
-                    TranslationConfiguration.builder().build(),
-                    ScopeManager(),
-                    TypeManager(),
-                )
-            )
+        val language = CPPLanguage()
 
         val objectType: Type = IntegerType("int", 32, language, NumericType.Modifier.SIGNED)
         val pointerType: Type = PointerType(objectType, PointerType.PointerOrigin.POINTER)
@@ -85,14 +78,7 @@ internal class TypeTests : BaseTest() {
 
     @Test
     fun dereference() {
-        val language =
-            CPPLanguage(
-                TranslationContext(
-                    TranslationConfiguration.builder().build(),
-                    ScopeManager(),
-                    TypeManager(),
-                )
-            )
+        val language = CPPLanguage()
 
         val objectType: Type = IntegerType("int", 32, language, NumericType.Modifier.SIGNED)
         val pointerType: Type = PointerType(objectType, PointerType.PointerOrigin.POINTER)
@@ -130,31 +116,27 @@ internal class TypeTests : BaseTest() {
     @Throws(Exception::class)
     fun testFunctionPointerTypes() {
         val topLevel = Path.of("src", "test", "resources", "types")
-        val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("fptr_type.cpp").toFile()),
-                topLevel,
-                true,
-            ) {
+        val result =
+            analyze(listOf(topLevel.resolve("fptr_type.cpp").toFile()), topLevel, true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val language = tu.ctx?.availableLanguage<CPPLanguage>()
+        val language = result.finalCtx.availableLanguage<CPPLanguage>()
         assertNotNull(language)
 
         val noParamType = FunctionPointerType(emptyList(), language, IncompleteType(language))
         val oneParamType =
             FunctionPointerType(
-                listOf<Type>(tu.primitiveType("int")),
+                listOf<Type>(result.primitiveType("int")),
                 language,
                 IncompleteType(language),
             )
         val twoParamType =
             FunctionPointerType(
-                listOf(tu.primitiveType("int"), tu.primitiveType("unsigned long int")),
+                listOf(result.primitiveType("int"), result.primitiveType("unsigned long int")),
                 language,
                 IntegerType("int", 32, language, NumericType.Modifier.SIGNED),
             )
-        val variables = tu.variables
+        val variables = result.variables
         val localTwoParam = findByUniqueName(variables, "local_two_param")
         assertNotNull(localTwoParam)
         assertEquals(twoParamType, localTwoParam.type)
@@ -183,14 +165,9 @@ internal class TypeTests : BaseTest() {
     @Throws(Exception::class)
     @Test
     fun testCommonTypeTestCpp() {
-        val ctx =
-            TranslationContext(
-                TranslationConfiguration.builder().build(),
-                ScopeManager(),
-                TypeManager(),
-            )
+        val ctx = TranslationContext()
 
-        with(CXXLanguageFrontend(ctx, CPPLanguage(ctx))) {
+        with(CXXLanguageFrontend(ctx, CPPLanguage())) {
             val topLevel =
                 Path.of("src", "test", "resources", "compiling", "hierarchy", "multistep")
             val result =

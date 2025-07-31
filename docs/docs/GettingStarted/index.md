@@ -13,10 +13,10 @@ description: >
 
 The CPG can be used in different ways:
 
-* [As a library for Kotlin/Java](./library)
-* [Via an interactive command line interface](./cli)
-* [With custom automated analyses using the Query API](./query)
-* [Via neo4j](./neo4j)
+* [Using Codyze](./codyze.md)
+* [As a library for Kotlin/Java](./library.md)
+* [With custom automated analyses using the Query API](./query.md)
+* [Via neo4j](./neo4j.md)
 
 
 In the first three cases, the [Shortcuts](./shortcuts) provide you a convenient way to

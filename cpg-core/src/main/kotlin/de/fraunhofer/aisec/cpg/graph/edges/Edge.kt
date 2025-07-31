@@ -27,11 +27,14 @@ package de.fraunhofer.aisec.cpg.graph.edges
 
 import com.fasterxml.jackson.annotation.JsonBackReference
 import com.fasterxml.jackson.annotation.JsonIgnore
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
+import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.TO_STRING_STYLE
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.Persistable
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.*
 import kotlin.reflect.KProperty
 import org.apache.commons.lang3.builder.ToStringBuilder
@@ -50,7 +53,7 @@ import org.neo4j.ogm.annotation.*
  * ```
  */
 @RelationshipEntity
-abstract class Edge<NodeType : Node> : Persistable, Cloneable {
+abstract class Edge<NodeType : Node> : Persistable, Cloneable, HasAssumptions {
     /** Required field for object graph mapping. It contains the node id. */
     @field:Id @field:GeneratedValue private val id: Long? = null
 
@@ -59,6 +62,8 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable {
 
     // Node where the edge is ingoing
     @JsonBackReference @field:EndNode var end: NodeType
+
+    @DoNotPersist override val assumptions: MutableSet<Assumption> = mutableSetOf()
 
     constructor(start: Node, end: NodeType) {
         this.start = start

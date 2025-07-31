@@ -26,8 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.java
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -38,12 +36,13 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
 
 /** The Java language. */
-open class JavaLanguage(ctx: TranslationContext) :
-    Language<JavaLanguageFrontend>(ctx),
+open class JavaLanguage :
+    Language<JavaLanguageFrontend>(),
     HasClasses,
     HasSuperClasses,
     HasGenerics,
@@ -104,21 +103,25 @@ open class JavaLanguage(ctx: TranslationContext) :
             "java.lang.String" to StringType("java.lang.String", this),
         )
 
-    override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
+    override fun propagateTypeOfBinaryOperation(
+        operatorCode: String?,
+        lhsType: Type,
+        rhsType: Type,
+        hint: BinaryOperator?,
+    ): Type {
         return if (
-            operation.operatorCode == "+" &&
-                (operation.lhs.type as? IntegerType)?.name?.localName?.equals("char") == true &&
-                (operation.rhs.type as? IntegerType)?.name?.localName?.equals("char") == true
+            operatorCode == "+" &&
+                (lhsType as? IntegerType)?.name?.localName?.equals("char") == true &&
+                (rhsType as? IntegerType)?.name?.localName?.equals("char") == true
         ) {
             getSimpleTypeOf("int") ?: UnknownType.getUnknownType(this)
-        } else super.propagateTypeOfBinaryOperation(operation)
+        } else super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
     }
 
-    override fun handleSuperExpression(
+    override fun SymbolResolver.handleSuperExpression(
         memberExpression: MemberExpression,
         curClass: RecordDeclaration,
-        scopeManager: ScopeManager,
-    ) = JavaCallResolverHelper.handleSuperExpression(memberExpression, curClass, scopeManager)
+    ) = handleSuperExpressionHelper(memberExpression, curClass)
 
     /**
      * This function handles some specifics of the Java language when choosing a reference target

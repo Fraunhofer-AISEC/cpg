@@ -30,16 +30,19 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 
 /** Represents a group of [HttpEndpoint]'s, commonly known as a Controller in some frameworks. */
-class HttpRequestHandler(
-    underlyingNode: Node,
+open class HttpRequestHandler(
+    underlyingNode: Node? = null,
     val basePath: String,
     val endpoints: MutableList<HttpEndpoint>,
 ) : Concept(underlyingNode = underlyingNode)
 
 /** Base class for Http operations. */
-abstract class HttpRequestHandlerOperation(underlyingNode: Node, concept: Concept) :
+abstract class HttpRequestHandlerOperation(underlyingNode: Node?, concept: Concept) :
     Operation(underlyingNode, concept) {}
 
 /** Registers an [HttpEndpoint]. */
-class RegisterHttpEndpoint(underlyingNode: Node, concept: Concept, val httpEndpoint: HttpEndpoint) :
-    HttpRequestHandlerOperation(underlyingNode, concept)
+class RegisterHttpEndpoint(
+    underlyingNode: Node? = null,
+    concept: Concept,
+    val httpEndpoint: HttpEndpoint,
+) : HttpRequestHandlerOperation(underlyingNode, concept)

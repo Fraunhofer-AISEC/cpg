@@ -27,23 +27,24 @@ package de.fraunhofer.aisec.cpg.graph.concepts.logging
 
 import de.fraunhofer.aisec.cpg.graph.MetadataProvider
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.NodeBuilder
-import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
+import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
 
 /**
  * Creates a [Log] with the same metadata as the [underlyingNode].
  *
  * @param underlyingNode The underlying CPG node (e.g. a call expression creating a log).
  * @param name The name of the logger.
+ * @param connect If `true`, the created [Concept] will be connected to the underlying node by
+ *   setting its `underlyingNode`.
  * @return The new [Log].
  */
-fun MetadataProvider.newLog(underlyingNode: Node, name: String): Log {
-    val node = Log(underlyingNode = underlyingNode)
-    node.codeAndLocationFrom(underlyingNode)
-
-    NodeBuilder.log(node)
-    return node
-}
+fun MetadataProvider.newLog(underlyingNode: Node, name: String, connect: Boolean) =
+    newConcept(::Log, underlyingNode = underlyingNode, connect = connect).apply {
+        this.logName = name
+    }
 
 /**
  * Creates a [LogWrite] node with the same metadata as the [underlyingNode].
@@ -53,48 +54,43 @@ fun MetadataProvider.newLog(underlyingNode: Node, name: String): Log {
  * given log" or "is the sensitive data flowing to a log".
  *
  * @param underlyingNode The underlying CPG node (e.g. a call expression writing to a log).
+ * @param concept The [Log] concept this operation belongs to.
  * @param level The [LogLevel] used for this write operation.
- * @param logger The corresponding [Log], i.e. the log where the underlying nodes is writing to.
  * @param logArguments The underlying CPG nodes of the logging arguments, i.e. what is written to
  *   the log.
+ * @param connect If `true`, the created [Operation] will be connected to the underlying node by
+ *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
+ *   [Concept.ops].
  * @return The new [Log].
  */
 fun MetadataProvider.newLogWrite(
     underlyingNode: Node,
+    concept: Log,
     level: LogLevel,
-    logger: Log,
     logArguments: List<Node>,
-): LogWrite {
-    val node =
-        LogWrite(
-            underlyingNode = underlyingNode,
-            concept = logger,
-            logArguments = logArguments,
-            logLevel = level,
-        )
-    node.codeAndLocationFrom(underlyingNode)
-
-    logger.ops += node
-
-    // connect DFG
-    logArguments.forEach { cpgArgNode -> cpgArgNode.nextDFG += node }
-    node.nextDFG += logger
-
-    NodeBuilder.log(node)
-    return node
-}
+    connect: Boolean,
+) =
+    newOperation(
+        { concept -> LogWrite(concept = concept, logArguments = logArguments, logLevel = level) },
+        underlyingNode = underlyingNode,
+        concept = concept,
+        connect = connect,
+    )
 
 /**
  * Creates a [LogGet] node with the same metadata as the [underlyingNode].
  *
  * @param underlyingNode The underlying CPG node (e.g. a call expression writing to a log).
- * @param logger The corresponding [Log], i.e. the log where the underlying nodes is writing to.
+ * @param concept The [Log] concept this operation belongs to.
+ * @param connect If `true`, the created [Operation] will be connected to the underlying node by
+ *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
+ *   [Concept.ops].
  * @return The new [LogGet].
  */
-fun MetadataProvider.newLogGet(underlyingNode: Node, logger: Log): LogGet {
-    val node = LogGet(underlyingNode = underlyingNode, concept = logger)
-    node.codeAndLocationFrom(underlyingNode)
-
-    NodeBuilder.log(node)
-    return node
-}
+fun MetadataProvider.newLogGet(underlyingNode: Node, concept: Log, connect: Boolean) =
+    newOperation(
+        { concept -> LogGet(concept = concept) },
+        underlyingNode = underlyingNode,
+        concept = concept,
+        connect = connect,
+    )

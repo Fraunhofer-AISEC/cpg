@@ -30,43 +30,37 @@ plugins {
     alias(libs.plugins.download)
 }
 
-publishing {
-    publications {
-        named<MavenPublication>("cpg-language-go") {
-            pom {
-                artifactId = "cpg-language-go"
-                name.set("Code Property Graph - Go Frontend")
-                description.set("A Go language frontend for the CPG")
-            }
-        }
+mavenPublishing {
+    pom {
+        name.set("Code Property Graph - Go Frontend")
+        description.set("A Go language frontend for the CPG")
     }
 }
 
 dependencies {
-    implementation("net.java.dev.jna:jna:5.16.0")
+    implementation("net.java.dev.jna:jna:5.17.0")
     testImplementation(project(":cpg-analysis"))
 }
 
 tasks {
-    val downloadLibGoAST by registering(Download::class) {
-        val version = "v0.0.5"
+    val downloadLibGoAST by
+        registering(Download::class) {
+            val version = "v0.0.5"
 
-        src(listOf(
-            "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-arm64.dylib",
-            "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.dylib",
-            "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-arm64.so",
-            "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.so",
-            "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.dll"
-        ))
-        dest(projectDir.resolve("src/main/resources"))
-        onlyIfModified(true)
-    }
+            src(
+                listOf(
+                    "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-arm64.dylib",
+                    "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.dylib",
+                    "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-arm64.so",
+                    "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.so",
+                    "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.dll",
+                )
+            )
+            dest(projectDir.resolve("src/main/resources"))
+            onlyIfModified(true)
+        }
 
-    processResources {
-        dependsOn(downloadLibGoAST)
-    }
+    processResources { dependsOn(downloadLibGoAST) }
 
-    sourcesJar {
-        dependsOn(downloadLibGoAST)
-    }
+    sourcesJar { dependsOn(downloadLibGoAST) }
 }

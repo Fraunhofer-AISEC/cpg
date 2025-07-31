@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes.concepts.memory.cxx
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.assumptions.addAssumptionDependence
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.OperatingSystemArchitecture
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.POSIX
@@ -35,6 +36,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.flows.LibraryEntryPoint
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.DynamicLoading
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadLibrary
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadSymbol
+import de.fraunhofer.aisec.cpg.graph.concepts.memory.newLoadLibrary
+import de.fraunhofer.aisec.cpg.graph.concepts.memory.newLoadSymbol
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
@@ -79,8 +82,6 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
                 "dlsym" -> handleLoadFunction(call, concept)
                 else -> return
             }
-
-        concept.ops += ops
     }
 
     /**
@@ -100,40 +101,50 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
             }
 
         val loadLibrary =
-            path?.lastOrNull()?.operationNodes?.filterIsInstance<LoadLibrary>()?.singleOrNull()
+            path
+                ?.nodes
+                ?.lastOrNull()
+                ?.operationNodes
+                ?.filterIsInstance<LoadLibrary>()
+                ?.singleOrNull()
 
         val symbolName = call.arguments.getOrNull(1)?.evaluate() as? String
         var candidates = loadLibrary?.findSymbol(symbolName)
 
         // We need to create one operation for each nextDFG (hopefully there is only one). This
         // helps us to determine the type of the operation.
-        return call.nextFullDFG.filterIsInstance<Expression>().map { assignee ->
-            val op =
-                if (assignee.type is FunctionPointerType) {
-                    candidates = candidates?.filterIsInstance<FunctionDeclaration>()
-                    LoadSymbol(
+        call.nextFullDFG.filterIsInstance<Expression>().forEach { assignee ->
+            if (assignee.type is FunctionPointerType) {
+                candidates = candidates?.filterIsInstance<FunctionDeclaration>()
+                newLoadSymbol(
                         underlyingNode = call,
                         concept = concept,
                         what = candidates?.singleOrNull(),
                         loader = loadLibrary,
+                        os = loadLibrary?.os,
+                        connect = true,
                     )
-                } else {
-                    candidates = candidates?.filterIsInstance<VariableDeclaration>()
-                    LoadSymbol(
+                    .apply { path?.let { addAssumptionDependence(path) } }
+            } else {
+                candidates = candidates?.filterIsInstance<VariableDeclaration>()
+                newLoadSymbol(
                         underlyingNode = call,
                         concept = concept,
                         what = candidates?.singleOrNull(),
                         loader = loadLibrary,
+                        os = loadLibrary?.os,
+                        connect = true,
                     )
-                }
+                    .apply { path?.let { addAssumptionDependence(path) } }
+            }
 
             // We can help the dynamic invoke resolver by adding a DFG path from the declaration to
             // the "return value" of dlsym
             candidates?.forEach {
                 call.prevDFGEdges.addContextSensitive(it, callingContext = CallingContextOut(call))
             }
-            op
         }
+        return listOf()
     }
 
     /**
@@ -164,16 +175,16 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
                 ?: emptyList()
 
         // Create the op
-        val op =
-            LoadLibrary(
-                underlyingNode = call,
-                concept = concept,
-                what = component,
-                entryPoints = entryPoints,
-                os = os,
-            )
+        newLoadLibrary(
+            underlyingNode = call,
+            concept = concept,
+            what = component,
+            entryPoints = entryPoints,
+            os = os,
+            connect = true,
+        )
 
-        return listOf(op)
+        return listOf()
     }
 
     fun TranslationResult.findComponentForLibrary(libraryName: String): Component? {

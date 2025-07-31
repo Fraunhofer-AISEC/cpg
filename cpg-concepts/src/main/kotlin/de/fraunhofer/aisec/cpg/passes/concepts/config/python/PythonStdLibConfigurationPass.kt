@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes.concepts.config.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.assumptions.addAssumptionDependence
 import de.fraunhofer.aisec.cpg.evaluation.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Backward
 import de.fraunhofer.aisec.cpg.graph.GraphToFollow
@@ -69,7 +70,7 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
      */
     private fun handleConstructExpression(expr: ConstructExpression): Configuration? {
         if (expr.name.toString() == "configparser.ConfigParser") {
-            val conf = Configuration(underlyingNode = expr)
+            val conf = newConfiguration(underlyingNode = expr, connect = true)
             expr.prevDFG += conf
             return conf
         }
@@ -89,11 +90,21 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
                 call.base?.followDFGEdgesUntilHit(direction = Backward(GraphToFollow.DFG)) {
                     it is Configuration
                 }
-            paths?.fulfilled?.map {
-                val conf = it.last() as Configuration
-                val op = LoadConfiguration(call, conf, fileExpression = firstArgument)
-                op
-            }
+            paths
+                ?.fulfilled
+                ?.map { Pair(it, it.nodes.lastOrNull() as? Configuration) }
+                ?.toSet()
+                ?.forEach { pathToConfig ->
+                    pathToConfig.second?.let {
+                        newLoadConfiguration(
+                                call,
+                                concept = it,
+                                fileExpression = firstArgument,
+                                connect = true,
+                            )
+                            .addAssumptionDependence(pathToConfig.first)
+                    }
+                }
         }
 
         return null
@@ -113,14 +124,14 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
         // We need to check, whether we access a group or an option
         val path =
             sub.arrayExpression.followPrevDFG { it is Configuration || it is ConfigurationGroup }
-        val last = path?.lastOrNull()
+        val last = path?.nodes?.lastOrNull()
         return when (last) {
             // If we can follow it directly to the configuration node, then we access a group
             is Configuration -> {
-                handleGroupAccess(last, sub)
+                handleGroupAccess(last, sub)?.onEach { it.addAssumptionDependence(path) }
             }
             is ConfigurationGroup -> {
-                handleOptionAccess(last, sub)
+                handleOptionAccess(last, sub).onEach { it.addAssumptionDependence(path) }
             }
             else -> null
         }
@@ -147,13 +158,14 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
         var group = conf.groups.find { it.name.localName == name }
         if (group == null) {
             // If it does not exist, we create it and implicitly add a registration operation
-            group = ConfigurationGroup(sub, conf = conf).also { it.name = Name(name) }.implicit()
-            val op = RegisterConfigurationGroup(sub, group = group).implicit()
-            ops += op
+            group =
+                newConfigurationGroup(sub, concept = conf, connect = true)
+                    .also { it.name = Name(name) }
+                    .implicit()
+            newRegisterConfigurationGroup(sub, concept = group, connect = true).implicit()
         }
 
-        val op = ReadConfigurationGroup(sub, group = group)
-        ops += op
+        newReadConfigurationGroup(sub, concept = group, connect = true)
 
         // Add an incoming DFG from the option group
         sub.prevDFGEdges.add(group)
@@ -163,7 +175,7 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
 
     /**
      * Translates an option access (`config["group"]["option"]`) into a [ReadConfigurationOption]
-     * opertion.
+     * operation.
      */
     private fun handleOptionAccess(
         group: ConfigurationGroup,
@@ -177,7 +189,7 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
             warnWithFileLocation(
                 sub,
                 log,
-                "We could not evaluate the configuration group name to a string",
+                "We could not evaluate the configuration option name to a string",
             )
             return ops
         }
@@ -186,15 +198,25 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
         if (option == null) {
             // If it does not exist, we create it and implicitly add a registration operation
             option =
-                ConfigurationOption(sub, group = group, key = sub)
+                newConfigurationOption(
+                        sub,
+                        key = sub,
+                        concept = group,
+                        value = null,
+                        connect = true,
+                    )
                     .also { it.name = group.name.fqn(name) }
                     .implicit()
-            val op = RegisterConfigurationOption(sub, option = option).implicit()
-            ops += op
+            newRegisterConfigurationOption(
+                    sub,
+                    concept = option,
+                    defaultValue = null,
+                    connect = true,
+                )
+                .implicit()
         }
 
-        val op = ReadConfigurationOption(sub, option = option)
-        ops += op
+        newReadConfigurationOption(sub, concept = option, connect = true)
 
         // Add an incoming DFG from the option
         sub.prevDFGEdges.add(option)

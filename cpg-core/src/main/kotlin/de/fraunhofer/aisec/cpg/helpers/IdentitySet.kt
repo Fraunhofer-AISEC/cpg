@@ -65,6 +65,7 @@ open class IdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
     }
 
     override fun equals(other: Any?): Boolean {
+        if (other === this) return true
         if (other !is Set<*>) return false
         return this.size == other.size && this.containsAll(other)
     }
@@ -77,6 +78,18 @@ open class IdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
         }
 
         return false
+    }
+
+    /**
+     * Adds all [elements] to this [IdentitySet] without checking if they are already present. This
+     * should only be used if this set is empty!
+     */
+    fun addAllWithoutCheck(elements: IdentitySet<T>) {
+        // We rely on the input set and add everything without checking if an element is already
+        // present.
+        for (element in elements) {
+            map[element] = counter.addAndGet(1)
+        }
     }
 
     override fun containsAll(elements: Collection<T>): Boolean {

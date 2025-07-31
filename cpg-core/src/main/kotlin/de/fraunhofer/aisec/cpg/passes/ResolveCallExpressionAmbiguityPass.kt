@@ -23,6 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
@@ -124,14 +126,14 @@ class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationU
     }
 }
 
-context(ContextProvider)
+context(provider: ContextProvider)
 fun SubgraphWalker.ScopedWalker.replaceCallWithCast(
     type: Type,
     parent: Node,
     call: CallExpression,
     pointer: Boolean,
 ) {
-    val cast = newCastExpression()
+    val cast = provider.newCastExpression()
     cast.code = call.code
     cast.language = call.language
     cast.location = call.location
@@ -147,7 +149,7 @@ fun SubgraphWalker.ScopedWalker.replaceCallWithCast(
     replace(parent, call, cast)
 }
 
-context(ContextProvider)
+context(_: ContextProvider)
 fun SubgraphWalker.ScopedWalker.replaceCallWithConstruct(
     type: ObjectType,
     parent: Node,

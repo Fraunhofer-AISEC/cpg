@@ -1,3 +1,6 @@
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.MavenPublishBaseExtension
+
 /*
  * Copyright (c) 2019-2021, Fraunhofer AISEC. All rights reserved.
  *
@@ -29,7 +32,7 @@
 //
 plugins {
     id("org.jetbrains.dokka")
-    id("io.github.gradle-nexus.publish-plugin")
+    id("test-report-aggregation")
 }
 
 // this is needed for the plugins block
@@ -75,22 +78,9 @@ fun generateDokkaWithVersionTag(dokkaMultiModuleTask: org.jetbrains.dokka.gradle
     dokkaMultiModuleTask.pluginsMapConfiguration.set(mapOf)
 }
 
-
-/**
- * Publishing to maven central
- */
-nexusPublishing {
-    repositories {
-        sonatype {
-            val mavenCentralUsername: String? by project
-            val mavenCentralPassword: String? by project
-
-            username.set(mavenCentralUsername)
-            password.set(mavenCentralPassword)
-        }
-    }
+dependencies {
+    testReportAggregation(project(":cpg-core"))
 }
-
 
 //
 // Load the properties that define which frontends to include

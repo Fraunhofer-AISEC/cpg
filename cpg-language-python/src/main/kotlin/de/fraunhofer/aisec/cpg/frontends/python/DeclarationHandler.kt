@@ -36,7 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
-import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.helpers.Util
 
 /**
@@ -155,7 +155,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
         } else {
             func.returnTypes = listOf(frontend.typeOf(s.returns))
         }
-        func.type = FunctionType.computeType(func)
+        func.type = computeType(func)
 
         handleArguments(s.args, func, recordDeclaration)
 
@@ -212,14 +212,14 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
         isKwoOnly: Boolean = false,
         defaultValue: Expression? = null,
     ): ParameterDeclaration {
-        val type = frontend.typeOf(node.annotation)
         val arg =
             newParameterDeclaration(
                 name = node.arg,
-                type = type,
+                type = dynamicType(),
                 variadic = isVariadic,
                 rawNode = node,
             )
+        arg.assignedTypes += frontend.typeOf(node.annotation)
         defaultValue?.let { arg.default = it }
         if (isPosOnly) {
             arg.modifiers += MODIFIER_POSITIONAL_ONLY_ARGUMENT

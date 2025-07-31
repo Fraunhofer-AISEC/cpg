@@ -27,5 +27,5 @@ package de.fraunhofer.aisec.cpg.graph.concepts.diskEncryption
 
 import de.fraunhofer.aisec.cpg.graph.Node
 
-class CreateEncryptedDisk(underlyingNode: Node, concept: DiskEncryption) :
+open class CreateEncryptedDisk(underlyingNode: Node? = null, concept: DiskEncryption) :
     DiskEncryptionOperation(underlyingNode = underlyingNode, concept = concept)

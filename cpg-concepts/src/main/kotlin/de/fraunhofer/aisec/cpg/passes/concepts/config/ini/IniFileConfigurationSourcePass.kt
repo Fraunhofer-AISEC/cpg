@@ -61,7 +61,9 @@ class IniFileConfigurationSourcePass(ctx: TranslationContext) : ConceptPass(ctx)
     }
 
     private fun handleTranslationUnit(tu: TranslationUnitDeclaration): ConfigurationSource {
-        return ConfigurationSource(underlyingNode = tu).also { it.name = tu.name }
+        return newConfigurationSource(underlyingNode = tu, connect = true).also {
+            it.name = tu.name
+        }
     }
 
     /**
@@ -84,9 +86,8 @@ class IniFileConfigurationSourcePass(ctx: TranslationContext) : ConceptPass(ctx)
         }
 
         val group =
-            ConfigurationGroupSource(underlyingNode = record, conf = conf).also {
-                it.name = record.name
-            }
+            newConfigurationGroupSource(underlyingNode = record, concept = conf, connect = true)
+                .also { it.name = record.name }
 
         // Add an incoming DFG edge from the record
         group.prevDFGEdges.add(record)
@@ -116,9 +117,8 @@ class IniFileConfigurationSourcePass(ctx: TranslationContext) : ConceptPass(ctx)
         }
 
         val option =
-            ConfigurationOptionSource(underlyingNode = field, group = group).also {
-                it.name = field.name
-            }
+            newConfigurationOptionSource(underlyingNode = field, concept = group, connect = true)
+                .also { it.name = field.name }
 
         // Add an incoming DFG edge from the field
         option.prevDFGEdges.add(field)

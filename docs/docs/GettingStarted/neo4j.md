@@ -1,6 +1,6 @@
 ---
-title: "Using the Interactive CLI"
-linkTitle: "Using the Interactive CLI"
+title: "Using neo4j"
+linkTitle: "Using neo4j"
 no_list: true
 weight: 2
 date: 2025-01-10
@@ -14,7 +14,7 @@ A simple tool to export a *code property graph* to a neo4j database.
 
 ## Requirements
 
-The application requires Java 17 or higher.
+The application requires Java 21.
 
 ## Build
 
@@ -113,6 +113,6 @@ There it's also possible to export only parts of the graph.
 - While importing sufficiently large projects with the parameter <code>--save-depth=-1</code> 
         a <code>java.lang.StackOverflowError</code> may occur.
     - This error could be solved by increasing the stack size with the JavaVM option: <code>-Xss4m</code>
-    - Otherwise the depth must be limited (e.g. 3 or 5)
+    - Otherwise, the depth must be limited (e.g. 3 or 5)
 
 - While pushing a constant value larger than 2^63 - 1 a <code>java.lang.IllegalArgumentException</code> occurs.

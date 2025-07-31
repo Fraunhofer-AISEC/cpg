@@ -49,42 +49,28 @@ fun LanguageProvider.incompleteType(): Type {
     return IncompleteType(this.language)
 }
 
+fun LanguageProvider.dynamicType(): Type {
+    return DynamicType(this.language)
+}
+
 /** Returns a [PointerType] that describes an array reference to the current type. */
-context(ContextProvider)
 fun Type.array(): Type {
-    val c =
-        (this@ContextProvider).ctx
-            ?: throw TranslationException(
-                "Could not create type: translation context not available"
-            )
     val type = this.reference(PointerType.PointerOrigin.ARRAY)
 
-    return c.typeManager.registerType(type)
+    return type
 }
 
 /** Returns a [PointerType] that describes a pointer reference to the current type. */
-context(ContextProvider)
 fun Type.pointer(): Type {
-    val c =
-        (this@ContextProvider).ctx
-            ?: throw TranslationException(
-                "Could not create type: translation context not available"
-            )
     val type = this.reference(PointerType.PointerOrigin.POINTER)
 
-    return c.typeManager.registerType(type)
+    return type
 }
 
-context(ContextProvider)
 fun Type.ref(): Type {
-    val c =
-        (this@ContextProvider).ctx
-            ?: throw TranslationException(
-                "Could not create type: translation context not available"
-            )
     val type = ReferenceType(this)
 
-    return c.typeManager.registerType(type)
+    return type
 }
 
 /**
@@ -106,23 +92,22 @@ fun LanguageProvider.objectType(
         return builtIn
     }
 
-    // Otherwise, we need to create a new type and register it at the type manager
-    val c =
-        (this as? ContextProvider)?.ctx
-            ?: throw TranslationException(
-                "Could not create type: translation context not available"
-            )
-
     // Otherwise, we either need to create the type because of the generics or because we do not
     // know the type yet.
-    var type = ObjectType(name, generics, false, language)
+    var type =
+        ObjectType(
+            typeName = name,
+            generics = generics,
+            primitive = false,
+            mutable = true,
+            language = language,
+        )
     // Apply our usual metadata, such as scope, code, location, if we have any. Make sure only
     // to refer by the local name because we will treat types as sort of references when
     // creating them and resolve them later.
     type.applyMetadata(this, name, rawNode = rawNode, doNotPrependNamespace = true)
 
-    // Piping it through register type will ensure that we know the type and can resolve it later
-    return c.typeManager.registerType(type)
+    return type
 }
 
 /**
@@ -137,9 +122,9 @@ fun LanguageProvider.objectType(
  * does a check, whether it is a known built-in type.
  */
 fun LanguageProvider.primitiveType(name: CharSequence): Type {
-    return language?.getSimpleTypeOf(name.toString())
+    return language.getSimpleTypeOf(name.toString())
         ?: throw TranslationException(
-            "Cannot find primitive type $name in language ${language?.name}. This is either an error in the language frontend or the language definition is missing a type definition."
+            "Cannot find primitive type $name in language ${language.name}. This is either an error in the language frontend or the language definition is missing a type definition."
         )
 }
 
@@ -148,5 +133,5 @@ fun LanguageProvider.primitiveType(name: CharSequence): Type {
  * [LanguageProvider].
  */
 fun LanguageProvider.isPrimitive(type: Type): Boolean {
-    return language?.primitiveTypeNames?.contains(type.typeName) == true
+    return language.primitiveTypeNames.contains(type.typeName)
 }
