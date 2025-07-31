@@ -56,13 +56,13 @@ fun SymbolResolver.addRecursiveDefaultTemplateArgs(
     do {
         // Handle Explicit Template Arguments
         templateParameters = constructExpression.templateArguments.size
-        val templateParametersExplicitInitialization = mutableMapOf<AstNode, AstNode>()
+        val templateParametersExplicitInitialization = mutableMapOf<Node, AstNode>()
         handleExplicitTemplateParameters(
             constructExpression,
             template,
             templateParametersExplicitInitialization,
         )
-        val templateParameterRealDefaultInitialization = mutableMapOf<AstNode, AstNode?>()
+        val templateParameterRealDefaultInitialization = mutableMapOf<Node, AstNode?>()
 
         // Handle defaults of parameters
         handleDefaultTemplateParameters(template, templateParameterRealDefaultInitialization)
@@ -88,13 +88,13 @@ fun SymbolResolver.addRecursiveDefaultTemplateArgs(
 fun handleExplicitTemplateParameters(
     constructExpression: ConstructExpression,
     template: RecordTemplateDeclaration,
-    templateParametersExplicitInitialization: MutableMap<AstNode, AstNode>,
+    templateParametersExplicitInitialization: MutableMap<Node, AstNode>,
 ) {
     for (i in constructExpression.templateArguments.indices) {
         val explicit = constructExpression.templateArguments[i]
         if (template.parameters[i] is TypeParameterDeclaration) {
             templateParametersExplicitInitialization[
-                (template.parameters[i] as TypeParameterDeclaration).expression!!] = explicit
+                (template.parameters[i] as TypeParameterDeclaration).type] = explicit
         } else if (template.parameters[i] is ParameterDeclaration) {
             templateParametersExplicitInitialization[template.parameters[i]] = explicit
         }
@@ -114,8 +114,8 @@ fun handleExplicitTemplateParameters(
 fun SymbolResolver.applyMissingParams(
     template: RecordTemplateDeclaration,
     constructExpression: ConstructExpression,
-    templateParametersExplicitInitialization: Map<AstNode, AstNode>,
-    templateParameterRealDefaultInitialization: Map<AstNode, AstNode?>,
+    templateParametersExplicitInitialization: Map<Node, AstNode>,
+    templateParameterRealDefaultInitialization: Map<Node, AstNode?>,
 ) {
     with(constructExpression) {
         val missingParams =
@@ -124,7 +124,7 @@ fun SymbolResolver.applyMissingParams(
                 template.parameterDefaults.size,
             )
         for (m in missingParams) {
-            var missingParam = m
+            var missingParam: Node? = m
             if (missingParam is Reference) {
                 if (missingParam.refersTo == null) {
                     val currentScope = scopeManager.currentScope
@@ -134,7 +134,11 @@ fun SymbolResolver.applyMissingParams(
                     scopeManager.jumpTo(currentScope)
                 }
                 missingParam = missingParam.refersTo
+            } else if (missingParam is TypeExpression) {
+                // If the missing parameter is a TypeExpression, we need to get the type
+                missingParam = missingParam.type
             }
+
             if (missingParam in templateParametersExplicitInitialization) {
                 // If default is a previously defined template argument that has been explicitly
                 // passed
@@ -184,7 +188,7 @@ fun SymbolResolver.applyMissingParams(
  */
 fun handleDefaultTemplateParameters(
     template: RecordTemplateDeclaration,
-    templateParameterRealDefaultInitialization: MutableMap<AstNode, AstNode?>,
+    templateParameterRealDefaultInitialization: MutableMap<Node, AstNode?>,
 ) {
     val declaredTemplateTypes = mutableListOf<Type?>()
     val declaredNonTypeTemplate = mutableListOf<ParameterDeclaration>()
@@ -196,8 +200,7 @@ fun handleDefaultTemplateParameters(
                 declaration.default?.type !in declaredTemplateTypes &&
                     declaration in parametersWithDefaults
             ) {
-                templateParameterRealDefaultInitialization[declaration.expression!!] =
-                    declaration.default
+                templateParameterRealDefaultInitialization[declaration.type] = declaration.default
             }
         } else if (declaration is ParameterDeclaration) {
             declaredNonTypeTemplate.add(declaration)
