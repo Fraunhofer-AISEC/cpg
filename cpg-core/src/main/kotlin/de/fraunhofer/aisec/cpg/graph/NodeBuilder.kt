@@ -307,9 +307,9 @@ fun <T : Node, AstNode> T.codeAndLocationFromOtherRawNode(rawNode: AstNode?): T 
  *   This is needed because the location block spanning the children usually comprises more than one
  *   line.
  */
-context(provider: CodeAndLocationProvider<AstNode>)
-fun <T : Node, AstNode> T.codeAndLocationFromChildren(
-    parentNode: AstNode,
+context(provider: CodeAndLocationProvider<AstNodeType>)
+fun <T : AstNode, AstNodeType> T.codeAndLocationFromChildren(
+    parentNode: AstNodeType,
     lineBreakSequence: CharSequence = "\n",
 ): T {
     var first: Node? = null
@@ -317,7 +317,7 @@ fun <T : Node, AstNode> T.codeAndLocationFromChildren(
 
     // Search through all children to find the first and last node based on region startLine and
     // startColumn
-    val worklist: MutableList<Node> = this.astChildren.toMutableList()
+    val worklist = this.astChildren.toMutableList()
     while (worklist.isNotEmpty()) {
         val current = worklist.removeFirst()
         if (current.location == null || current.location?.region == Region()) {

@@ -321,7 +321,7 @@ internal class ClassTemplateTest : BaseTest() {
 
         val type2ParameterizedType = type2.type as? ParameterizedType
         assertNotNull(type2ParameterizedType)
-        assertEquals(type1ParameterizedType, type2.default)
+        assertEquals(type1ParameterizedType, type2.default?.type)
 
         val pairType =
             (pairConstructorDecl.type as FunctionType).returnTypes.firstOrNull() as? ObjectType

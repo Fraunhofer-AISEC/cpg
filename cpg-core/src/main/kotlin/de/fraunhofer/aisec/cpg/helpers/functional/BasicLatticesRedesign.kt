@@ -35,6 +35,7 @@ import kotlin.collections.component2
 import kotlin.collections.fold
 import kotlin.collections.plusAssign
 import kotlin.collections.set
+import kotlin.math.ceil
 
 /** Used to identify the order of elements */
 enum class Order {
@@ -138,16 +139,44 @@ interface Lattice<T : Lattice.Element> {
         transformation: (Lattice<T>, EvaluationOrder, T) -> T,
     ): T {
         val globalState = IdentityHashMap<EvaluationOrder, T>()
-        val finalState: T = this.bottom
+        var finalState: T = this.bottom
         for (startEdge in startEdges) {
             globalState[startEdge] = startState
         }
-        val edgesList = mutableListOf<EvaluationOrder>()
-        startEdges.forEach { edgesList.add(it) }
+        // This list contains the edge(s) (probably only one unless we made a mistake) of the
+        // current basic block that we are currently processing. We select this one with priority
+        // over the other options.
+        val currentBBEdgesList = mutableListOf<EvaluationOrder>()
+        // This list contains the edge(s) that are the next branch(es) to process. We process these
+        // after the current basic block has been processed.
+        val nextBranchEdgesList = mutableListOf<EvaluationOrder>()
+        // This list contains the merge points that we have to process. We process these after the
+        // current basic block and the next branches have been processed to reduce the amount of
+        // merges.
+        val mergePointsEdgesList = mutableListOf<EvaluationOrder>()
+        startEdges.forEach { nextBranchEdgesList.add(it) }
 
-        while (edgesList.isNotEmpty()) {
-            val nextEdge = edgesList.first()
-            edgesList.removeFirst()
+        while (
+            currentBBEdgesList.isNotEmpty() ||
+                nextBranchEdgesList.isNotEmpty() ||
+                mergePointsEdgesList.isNotEmpty()
+        ) {
+            val nextEdge =
+                if (currentBBEdgesList.isNotEmpty()) {
+                    // If we have edges in the current basic block, we take these. We prefer to
+                    // finish with the whole Basic Block before moving somewhere else.
+                    currentBBEdgesList.removeFirst()
+                } else if (nextBranchEdgesList.isNotEmpty()) {
+                    // If we have points splitting up the EOG, we prefer to process these before
+                    // merging the EOG again. This is to hopefully reduce the number of merges that
+                    // we have to compute and that we hopefully reduce the number of re-processing
+                    // the same basic blocks.
+                    nextBranchEdgesList.removeFirst()
+                } else {
+                    // We have a merge point, we try to process this after having processed all
+                    // branches leading there.
+                    mergePointsEdgesList.removeFirst()
+                }
 
             // Compute the effects of "nextEdge" on the state by applying the transformation to its
             // state.
@@ -188,15 +217,38 @@ interface Lattice<T : Lattice.Element> {
                         ?: newState)
                 globalState[it] = newGlobalIt
                 if (
-                    it !in edgesList &&
-                        (isNoBranchingPoint || oldGlobalIt == null || newGlobalIt != oldGlobalIt)
+                    it !in currentBBEdgesList &&
+                        it !in nextBranchEdgesList &&
+                        it !in mergePointsEdgesList &&
+                        (isNoBranchingPoint ||
+                            oldGlobalIt == null ||
+                            newGlobalIt.compare(oldGlobalIt) == Order.GREATER)
                 ) {
-                    edgesList.add(0, it)
+                    if (it.start.prevEOGEdges.size > 1) {
+                        // This edge brings us to a merge point, so we add it to the list of merge
+                        // points.
+                        mergePointsEdgesList.add(0, it)
+                    } else if (nextEdge.end.nextEOGEdges.size > 1) {
+                        // If we have multiple next edges, we add this edge to the list of edges of
+                        // a next basic block.
+                        // We will process these after the current basic block has been processed
+                        // (probably very soon).
+                        nextBranchEdgesList.add(0, it)
+                    } else {
+                        // If we have only one next edge, we add it to the current basic block edges
+                        // list.
+                        currentBBEdgesList.add(0, it)
+                    }
                 }
             }
 
-            if (nextEdge.end.nextEOGEdges.isEmpty() || edgesList.isEmpty()) {
-                this.lub(finalState, newState, true)
+            if (
+                nextEdge.end.nextEOGEdges.isEmpty() ||
+                    (currentBBEdgesList.isEmpty() &&
+                        nextBranchEdgesList.isEmpty() &&
+                        mergePointsEdgesList.isEmpty())
+            ) {
+                finalState = this.lub(finalState, newState, false)
             }
         }
 
@@ -209,13 +261,16 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
     override lateinit var elements: Set<Element<T>>
 
     class Element<T>(expectedMaxSize: Int) : IdentitySet<T>(expectedMaxSize), Lattice.Element {
-        constructor(set: Set<T>) : this(set.size) {
-            addAll(set)
+
+        // We make the new element a big bigger than the current size to avoid resizing
+        constructor(set: Set<T>) : this(ceil(set.size * 1.5).toInt()) {
+            addAllWithoutCheck(set as? IdentitySet<T> ?: set.toIdentitySet())
         }
 
         constructor() : this(16)
 
-        constructor(vararg entries: T) : this(entries.size) {
+        // We make the new element a big bigger than the current size to avoid resizing
+        constructor(vararg entries: T) : this(ceil(entries.size * 1.5).toInt()) {
             addAll(entries)
         }
 
@@ -224,16 +279,36 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
         }
 
         override fun compare(other: Lattice.Element): Order {
+            if (this === other) return Order.EQUAL
+
+            if (other !is Element<T>)
+                throw IllegalArgumentException(
+                    "$other should be of type PowersetLattice.Element<T> but is of type ${other.javaClass}"
+                )
+            val otherOnly = Element(other)
+            val thisOnly =
+                this.filterTo(IdentitySet<T>()) { t ->
+                    !if (t is Pair<*, *>) {
+                        otherOnly.removeIf { o ->
+                            o is Pair<*, *> && o.first === t.first && o.second == t.second
+                        }
+                    } else otherOnly.remove(t)
+                }
             return when {
-                other !is Element<T> ->
-                    throw IllegalArgumentException(
-                        "$other should be of type PowersetLattice.Element<T> but is of type ${other.javaClass}"
-                    )
-                this === other -> Order.EQUAL
-                super<IdentitySet>.equals(other) -> Order.EQUAL
-                this.size > other.size && this.containsAll(other) -> Order.GREATER
-                other.size > this.size && other.containsAll(this) -> Order.LESSER
-                else -> Order.UNEQUAL
+                otherOnly.isEmpty() && thisOnly.isEmpty() -> {
+                    Order.EQUAL
+                }
+                thisOnly.isNotEmpty() && otherOnly.isNotEmpty() -> {
+                    Order.UNEQUAL
+                }
+                thisOnly.isNotEmpty() -> {
+                    // This set is greater than the other set
+                    Order.GREATER
+                }
+                else -> {
+                    // The other set is greater than this set
+                    Order.LESSER
+                }
             }
         }
 
@@ -254,17 +329,11 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
             one += two
             return one
         }
-        return when (compare(one, two)) {
-            Order.LESSER -> two.duplicate()
-            Order.EQUAL,
-            Order.GREATER -> one
-            Order.UNEQUAL -> {
-                val result = Element<T>(one.size + two.size)
-                result += one
-                result += two
-                result
-            }
-        }
+
+        val result = Element<T>(one.size + two.size)
+        result.addAllWithoutCheck(one)
+        result += two
+        return result
     }
 
     override fun glb(one: Element<T>, two: Element<T>): Element<T> {
@@ -297,6 +366,10 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
             putAll(m)
         }
 
+        constructor(entries: Collection<Pair<K, V>>) : this(entries.size) {
+            putAll(entries)
+        }
+
         constructor(vararg entries: Pair<K, V>) : this(entries.size) {
             putAll(entries)
         }
@@ -306,62 +379,46 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         }
 
         override fun compare(other: Lattice.Element): Order {
+            if (this === other) return Order.EQUAL
+
             if (other !is Element<K, V>)
                 throw IllegalArgumentException(
                     "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
                 )
 
-            if (this === other) return Order.EQUAL
-
-            val thisKeySetIsBiggerOrEqual = this.keys.containsAll(other.keys)
-            val otherKeySetIsBiggerOrEqual = other.keys.containsAll(this.keys)
-            if (!thisKeySetIsBiggerOrEqual && !otherKeySetIsBiggerOrEqual) {
-                // Each map has some keys that the other does not have, so the maps are unequal
-                return Order.UNEQUAL
-            }
+            val otherKeySetIsBigger = other.keys.any { it !in this.keys }
 
             // We can check if the entries are equal, greater or lesser
             var someGreater = false
-            var someLesser = false
-            if (thisKeySetIsBiggerOrEqual) {
-                this.entries.forEach { (k, v) ->
-                    val otherV = other[k]
-                    if (otherV != null) {
-                        when (v.compare(otherV)) {
-                            Order.EQUAL -> {
-                                /* Nothing to do*/
-                            }
-                            Order.GREATER -> someGreater = true
-                            Order.LESSER -> someLesser = true
-                            Order.UNEQUAL -> {
-                                someGreater = true
-                                someLesser = true
-                            }
+            var someLesser = otherKeySetIsBigger
+            this.entries.forEach { (k, v) ->
+                val otherV = other[k]
+                if (otherV != null) {
+                    when (v.compare(otherV)) {
+                        Order.EQUAL -> {
+                            /* Nothing to do*/
                         }
-                    } else {
-                        someGreater = true // key is missing in other, so this is greater
-                    }
-                }
-            } else {
-                // otherKeySetIsBiggerOrEqual is true, so we can iterate over the other map and
-                // basically invert the results from above
-                other.entries.forEach { (k, v) ->
-                    val thisV = this[k]
-                    if (thisV != null) {
-                        when (v.compare(thisV)) {
-                            Order.EQUAL -> {
-                                /* Nothing to do*/
+                        Order.GREATER -> {
+                            if (someLesser) {
+                                return Order.UNEQUAL
                             }
-                            Order.GREATER -> someLesser = true
-                            Order.LESSER -> someGreater = true
-                            Order.UNEQUAL -> {
-                                someLesser = true
-                                someGreater = true
-                            }
+                            someGreater = true
                         }
-                    } else {
-                        someLesser = true // key is missing in this, so this is lesser
+                        Order.LESSER -> {
+                            if (someGreater) {
+                                return Order.UNEQUAL
+                            }
+                            someLesser = true
+                        }
+                        Order.UNEQUAL -> {
+                            return Order.UNEQUAL
+                        }
                     }
+                } else {
+                    if (someLesser) {
+                        return Order.UNEQUAL
+                    }
+                    someGreater = true // key is missing in other, so this is greater
                 }
             }
             return if (!someGreater && !someLesser) {
@@ -382,7 +439,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         }
 
         override fun duplicate(): Element<K, V> {
-            return Element(*this.map { (k, v) -> Pair<K, V>(k, v.duplicate() as V) }.toTypedArray())
+            return Element(this.map { (k, v) -> Pair<K, V>(k, v.duplicate() as V) })
         }
 
         override fun hashCode(): Int {
@@ -407,31 +464,20 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
             return one
         }
 
-        return when (val comp = compare(one, two)) {
-            Order.EQUAL,
-            Order.GREATER -> one
-            Order.LESSER,
-            Order.UNEQUAL -> {
-                if (comp == Order.LESSER) {
-                    two.duplicate()
-                } else {
-                    val allKeys = one.keys.toIdentitySet()
-                    allKeys += two.keys
-                    val newMap =
-                        allKeys.fold(Element<K, V>(allKeys.size)) { current, key ->
-                            val otherValue = two[key]
-                            val thisValue = one[key]
-                            val newValue =
-                                if (thisValue != null && otherValue != null) {
-                                    innerLattice.lub(thisValue, otherValue)
-                                } else thisValue ?: otherValue
-                            newValue?.let { current[key] = it }
-                            current
-                        }
-                    newMap
-                }
+        val allKeys = one.keys.toIdentitySet()
+        allKeys += two.keys
+        val newMap =
+            allKeys.fold(Element<K, V>(allKeys.size)) { current, key ->
+                val otherValue = two[key]
+                val thisValue = one[key]
+                val newValue =
+                    if (thisValue != null && otherValue != null) {
+                        innerLattice.lub(thisValue, otherValue, allowModify)
+                    } else thisValue ?: otherValue
+                newValue?.let { current[key] = it }
+                current
             }
-        }
+        return newMap
     }
 
     override fun glb(one: Element<K, V>, two: Element<K, V>): Element<K, V> {
@@ -485,11 +531,12 @@ class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
         }
 
         override fun compare(other: Lattice.Element): Order {
+            if (this === other) return Order.EQUAL
+
             if (other !is Element<S, T>)
                 throw IllegalArgumentException(
                     "$other should be of type TupleLattice.Element<S, T> but is of type ${other.javaClass}"
                 )
-            if (this === other) return Order.EQUAL
 
             val result1 = this.first.compare(other.first)
             val result2 = this.second.compare(other.second)
@@ -566,11 +613,12 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
         }
 
         override fun compare(other: Lattice.Element): Order {
+            if (this === other) return Order.EQUAL
+
             if (other !is Element<R, S, T>)
                 throw IllegalArgumentException(
                     "$other should be of type TripleLattice.Element<R, S, T> but is of type ${other.javaClass}"
                 )
-            if (this === other) return Order.EQUAL
 
             val result1 = this.first.compare(other.first)
             val result2 = this.second.compare(other.second)

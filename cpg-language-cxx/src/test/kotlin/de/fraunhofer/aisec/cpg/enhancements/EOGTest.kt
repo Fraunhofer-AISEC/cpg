@@ -1017,7 +1017,7 @@ internal class EOGTest : BaseTest() {
      * - path for the file to test.
      */
     @Throws(Exception::class)
-    private fun translateToNodes(path: String): List<Node> {
+    private fun translateToNodes(path: String): List<AstNode> {
         val toTranslate = File(path)
         val topLevel = toTranslate.parentFile.toPath()
         val tu =

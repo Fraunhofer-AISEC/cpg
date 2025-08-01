@@ -25,10 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.AstNode
 
 /**
  * Scope of validity associated to the local statement. Variables declared inside this statement are
  * not visible outside.
  */
-class LocalScope(astNode: Node) : Scope(astNode)
+class LocalScope(astNode: AstNode) : Scope(astNode)

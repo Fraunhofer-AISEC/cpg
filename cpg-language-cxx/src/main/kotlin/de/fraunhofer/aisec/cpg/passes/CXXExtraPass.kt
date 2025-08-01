@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.helpers.replace
 import de.fraunhofer.aisec.cpg.nameIsType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
  * This [Pass] executes certain C++ specific conversions on initializers, that are only possible
@@ -50,10 +51,10 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 @DependsOn(TypeResolver::class)
 class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
-    private lateinit var walker: SubgraphWalker.ScopedWalker
+    private lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
 
     override fun accept(component: Component) {
-        walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
+        walker = SubgraphWalker.ScopedWalker(ctx.scopeManager, Strategy::AST_FORWARD)
 
         walker.registerHandler(::fixInitializers)
         walker.registerHandler { node ->

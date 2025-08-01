@@ -25,18 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
-import de.fraunhofer.aisec.cpg.graph.Node
 
 /**
  * A [BinaryOperator] which only evaluates [BinaryOperator.rhs] if [BinaryOperator.lhs] fulfils some
- * condition. For the operators in
- * [de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators.conjunctiveOperators], the rhs has to
+ * condition. For the operators in [HasShortCircuitOperators.conjunctiveOperators], the rhs has to
  * evaluate to "true" or so to continue on the lhs, whereas for the operators in
- * [de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators.disjunctiveOperators], the lhs has to
- * evaluate to "false" (or similar).
+ * [HasShortCircuitOperators.disjunctiveOperators], the lhs has to evaluate to "false" (or similar).
  */
 class ShortCircuitOperator : BinaryOperator(), BranchingNode {
-    override val branchedBy: Node
+    override val branchedBy
         get() = lhs
 }
