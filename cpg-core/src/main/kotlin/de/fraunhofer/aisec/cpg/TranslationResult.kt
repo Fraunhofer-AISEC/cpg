@@ -62,7 +62,7 @@ class TranslationResult(
      * dedicated [ScopeManager] each). This property will contain the final, merged context.
      */
     var finalCtx: TranslationContext,
-) : Node(), StatisticsHolder, ContextProvider {
+) : AstNode(), StatisticsHolder, ContextProvider {
 
     @Relationship("COMPONENTS") val componentEdges = astEdgesOf<Component>()
     /**

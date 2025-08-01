@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
@@ -39,6 +40,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Order
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
  * A [Pass] which uses a simple logic to determine constant values and mark unreachable code regions
@@ -52,9 +54,12 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     override fun accept(node: Node) {
-        val walker = SubgraphWalker.IterativeGraphWalker()
+        val walker = SubgraphWalker.IterativeGraphWalker(strategy = Strategy::AST_FORWARD)
         walker.registerOnNodeVisit(::handle)
-        walker.iterate(node)
+
+        if (node is AstNode) {
+            walker.iterate(node)
+        }
     }
 
     /**

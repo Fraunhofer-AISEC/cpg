@@ -45,7 +45,7 @@ class CatchClause : Statement(), BranchingNode, EOGStarterHolder {
     var body by unwrapping(CatchClause::bodyEdge)
 
     @DoNotPersist
-    override val branchedBy: Node?
+    override val branchedBy
         get() = parameter
 
     @DoNotPersist
