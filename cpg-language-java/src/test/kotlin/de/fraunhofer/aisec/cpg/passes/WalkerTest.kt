@@ -55,11 +55,9 @@ class WalkerTest {
         val result = analyzer.analyze().get()
         assertNotNull(result)
         val scopeManager = result.finalCtx.scopeManager
-        val walker = SubgraphWalker.ScopedWalker(scopeManager)
+        val walker = SubgraphWalker.ScopedWalker(scopeManager, Strategy::EOG_FORWARD)
 
         val visitedNodes = mutableSetOf<Node>()
-
-        walker.strategy = Strategy::EOG_FORWARD
         walker.registerHandler { node ->
             assertTrue(visitedNodes.add(node), "Visited node $node multiple times")
         }

@@ -116,7 +116,7 @@ class FrontendUtils {
          * the same line, the comment is matched to that closest predecessor.
          */
         fun matchCommentToNode(comment: String, location: Region, tu: TranslationUnitDeclaration) {
-            val nodes: List<Node> = SubgraphWalker.flattenAST(tu)
+            val nodes = SubgraphWalker.flattenAST(tu)
 
             // Get a List of all Nodes that enclose the comment
             var enclosingNodes =

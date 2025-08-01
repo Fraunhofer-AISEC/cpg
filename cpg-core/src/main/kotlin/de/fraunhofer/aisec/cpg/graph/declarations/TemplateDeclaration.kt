@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -69,9 +69,9 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
             return parametersWithDefaults
         }
 
-    val parameterDefaults: List<Node?>
+    val parameterDefaults: List<AstNode?>
         get() {
-            val defaults: MutableList<Node?> = ArrayList()
+            val defaults: MutableList<AstNode?> = ArrayList()
             for (declaration in parameters) {
                 if (declaration is TypeParameterDeclaration) {
                     defaults.add(declaration.default)

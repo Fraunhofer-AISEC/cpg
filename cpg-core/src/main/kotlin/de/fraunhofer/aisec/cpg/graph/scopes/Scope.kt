@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.HasBuiltins
 import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -66,7 +67,7 @@ typealias SymbolMap = MutableMap<Symbol, MutableList<Declaration>>
 sealed class Scope(
     @Relationship(value = "SCOPE", direction = Relationship.Direction.INCOMING)
     @JsonBackReference
-    open var astNode: Node?
+    open var astNode: AstNode?
 ) : Node() {
 
     /** FQN Name currently valid */

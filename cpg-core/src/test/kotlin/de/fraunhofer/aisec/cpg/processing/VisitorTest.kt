@@ -60,8 +60,8 @@ class VisitorTest : BaseTest() {
         // Let's visit
         tu.accept(
             Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
+            object : IVisitor<AstNode>() {
+                override fun visit(t: AstNode) {
                     visited += t
                 }
             },
@@ -104,8 +104,8 @@ class VisitorTest : BaseTest() {
         val nodeList = mutableListOf<Node>()
         recordDeclaration!!.accept(
             Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
+            object : IVisitor<AstNode>() {
+                override fun visit(t: AstNode) {
                     log.info("Node: $t")
                     nodeList.add(t)
                 }
@@ -125,7 +125,7 @@ class VisitorTest : BaseTest() {
 
         recordDeclaration!!.accept(
             Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
+            object : IVisitor<AstNode>() {
                 fun visit(r: ReturnStatement) {
                     returnStatements.add(r)
                 }
