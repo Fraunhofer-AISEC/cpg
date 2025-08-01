@@ -693,6 +693,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         doubleState =
             when (currentNode) {
+                is DeleteExpression -> handleDeleteExpression(lattice, currentNode, doubleState)
                 is Declaration,
                 is MemoryAddress -> handleDeclaration(lattice, currentNode, doubleState)
                 is AssignExpression -> handleAssignExpression(lattice, currentNode, doubleState)
@@ -703,6 +704,33 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 else -> doubleState
             }
 
+        return doubleState
+    }
+
+    protected fun handleDeleteExpression(
+        lattice: PointsToState,
+        currentNode: DeleteExpression,
+        doubleState: PointsToStateElement,
+    ): PointsToStateElement {
+        var doubleState = doubleState
+        val sources =
+            PowersetLattice.Element<Triple<Node?, Boolean, Boolean>>(
+                Triple(currentNode, false, false)
+            )
+        val destinations: IdentitySet<Node> = currentNode.operands.toIdentitySet()
+        val destinationsAddresses =
+            destinations.flatMapTo(IdentitySet()) { doubleState.getAddresses(it, it) }
+        val lastWrites =
+            PowersetLattice.Element(Pair(currentNode as Node, equalLinkedHashSetOf<Any>(false)))
+        doubleState =
+            doubleState.updateValues(
+                lattice,
+                doubleState,
+                sources,
+                destinations,
+                destinationsAddresses,
+                lastWrites,
+            )
         return doubleState
     }
 
