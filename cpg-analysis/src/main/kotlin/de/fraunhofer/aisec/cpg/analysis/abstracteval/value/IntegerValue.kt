@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.AbstractIntervalEvaluator
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement
@@ -32,6 +33,7 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.changeDeclarationState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.intervalOf
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToDeclarationState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToGeneralState
+import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -41,6 +43,18 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+
+/**
+ * A [ValueEvaluator] which evaluates the possible integer values as a range of a [Node]. It uses
+ * the [IntegerValue] class to track possible values.
+ */
+class IntegerIntervalEvaluator : ValueEvaluator() {
+    override fun evaluate(node: Any?): Any? {
+        if (node !is Node) return cannotEvaluate(null, this)
+
+        return AbstractIntervalEvaluator().evaluate(node, IntegerValue::class)
+    }
+}
 
 /** This class implements the [Value] interface for Integer values. */
 class IntegerValue : Value<LatticeInterval> {

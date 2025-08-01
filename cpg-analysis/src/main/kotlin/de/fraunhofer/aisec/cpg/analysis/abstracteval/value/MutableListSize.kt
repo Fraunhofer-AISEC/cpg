@@ -25,11 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.AbstractIntervalEvaluator
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToDeclarationState
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToGeneralState
+import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
@@ -38,6 +40,18 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewExpression
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.graph.types.ListType
+
+/**
+ * A [ValueEvaluator] which evaluates the size of mutable lists. It uses the [MutableSetSize] class
+ * to track the size of the collection.
+ */
+class ListSizeEvaluator : ValueEvaluator() {
+    override fun evaluate(node: Any?): Any? {
+        if (node !is Node) return cannotEvaluate(null, this)
+
+        return AbstractIntervalEvaluator().evaluate(node, MutableListSize::class)
+    }
+}
 
 /**
  * This class implements the [Value] interface for mutable Lists, tracking the size of the

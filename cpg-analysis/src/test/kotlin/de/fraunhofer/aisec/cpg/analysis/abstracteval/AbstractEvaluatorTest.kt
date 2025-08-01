@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.abstracteval
 
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.IntegerValue
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.IntegerIntervalEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.testcases.AbstractEvaluationTests
@@ -64,8 +64,7 @@ class AbstractEvaluatorTest {
         val refA = f1.mcalls["f"]?.arguments?.singleOrNull()
         assertNotNull(refA)
 
-        val evaluator = AbstractIntervalEvaluator()
-        val value = evaluator.evaluate(refA, IntegerValue::class)
+        val value = refA.evaluate(IntegerIntervalEvaluator())
         assertEquals(LatticeInterval.Bounded(1, 1), value)
     }
 
@@ -96,15 +95,14 @@ class AbstractEvaluatorTest {
 
         val refAMiddle = f2.mcalls["c"]?.arguments?.singleOrNull()
         assertNotNull(refAMiddle, "There should be an argument for the call to c")
-        val evaluatorMiddle = AbstractIntervalEvaluator()
-        val valueMiddle = evaluatorMiddle.evaluate(refAMiddle, IntegerValue::class)
+
+        val valueMiddle = refAMiddle.evaluate(IntegerIntervalEvaluator())
         assertEquals(LatticeInterval.Bounded(5, 5), valueMiddle)
 
         val refAEnd = f2.mcalls["f"]?.arguments?.singleOrNull()
         assertNotNull(refAEnd, "There should be an argument for the call to f")
 
-        val evaluatorEnd = AbstractIntervalEvaluator()
-        val valueEnd = evaluatorEnd.evaluate(refAEnd, IntegerValue::class)
+        val valueEnd = refAEnd.evaluate(IntegerIntervalEvaluator())
         assertEquals(LatticeInterval.Bounded(2, 2), valueEnd)
     }
 
@@ -128,15 +126,13 @@ class AbstractEvaluatorTest {
         val declA = f3.variables["a"]
         assertNotNull(declA, "There should be a variable declaration for a")
 
-        val evaluatorDecl = AbstractIntervalEvaluator()
-        val valueDecl = evaluatorDecl.evaluate(declA, IntegerValue::class)
+        val valueDecl = declA.evaluate(IntegerIntervalEvaluator())
         assertEquals(LatticeInterval.Bounded(5, 5), valueDecl)
 
         val refA = f3.mcalls["f"]?.arguments?.firstOrNull()
         assertNotNull(refA, "There should be an argument for the call to f")
 
-        val evaluator = AbstractIntervalEvaluator()
-        val value = evaluator.evaluate(refA, IntegerValue::class)
+        val value = refA.evaluate(IntegerIntervalEvaluator())
         assertEquals(LatticeInterval.Bounded(4, 5), value)
     }
 
@@ -162,8 +158,7 @@ class AbstractEvaluatorTest {
         val refA = f4.mcalls["f"]?.arguments?.firstOrNull()
         assertNotNull(refA, "There should be an argument for the call to f")
 
-        val evaluator = AbstractIntervalEvaluator()
-        val value = evaluator.evaluate(refA, IntegerValue::class)
+        val value = refA.evaluate(IntegerIntervalEvaluator())
         assertEquals(LatticeInterval.Bounded(3, 4), value)
     }
 
@@ -188,15 +183,13 @@ class AbstractEvaluatorTest {
         val refI = f5.calls["println"]?.arguments?.singleOrNull()
         assertNotNull(refI, "There should be an argument for the call to println")
 
-        val evaluatorI = AbstractIntervalEvaluator()
-        val valueI = evaluatorI.evaluate(refI, IntegerValue::class)
+        val valueI = refI.evaluate(IntegerIntervalEvaluator())
         assertEquals(LatticeInterval.Bounded(0, 4), valueI)
 
         val refA = f5.mcalls["f"]?.arguments?.firstOrNull()
         assertNotNull(refA, "There should be an argument for the call to f")
 
-        val evaluator = AbstractIntervalEvaluator()
-        val value = evaluator.evaluate(refA, IntegerValue::class)
+        val value = refA.evaluate(IntegerIntervalEvaluator())
         assertEquals(LatticeInterval.Bounded(5, LatticeInterval.Bound.INFINITE), value)
     }
 
@@ -223,8 +216,7 @@ class AbstractEvaluatorTest {
         val iLessThanThree = f6.calls["lessThanThree"]?.arguments?.singleOrNull()
         assertNotNull(iLessThanThree, "There should be an argument for the call to lessThanThree")
 
-        var evaluatorI = AbstractIntervalEvaluator()
-        var valueI = evaluatorI.evaluate(iLessThanThree, IntegerValue::class)
+        var valueI = iLessThanThree.evaluate(IntegerIntervalEvaluator())
         assertEquals(LatticeInterval.Bounded(0, 2), valueI)
 
         val iGreaterEqualThree = f6.calls["greaterEqualThree"]?.arguments?.singleOrNull()
@@ -233,22 +225,19 @@ class AbstractEvaluatorTest {
             "There should be an argument for the call to greaterEqualThree",
         )
 
-        evaluatorI = AbstractIntervalEvaluator()
-        valueI = evaluatorI.evaluate(iGreaterEqualThree, IntegerValue::class)
+        valueI = iGreaterEqualThree.evaluate(IntegerIntervalEvaluator())
         assertEquals(LatticeInterval.Bounded(3, 4), valueI)
 
         val refI = f6.calls["println"]?.arguments?.singleOrNull()
         assertNotNull(refI, "There should be an argument for the call to println")
 
-        evaluatorI = AbstractIntervalEvaluator()
-        valueI = evaluatorI.evaluate(refI, IntegerValue::class)
+        valueI = refI.evaluate(IntegerIntervalEvaluator())
         assertEquals(LatticeInterval.Bounded(0, 4), valueI)
 
         val iAfterLoop = f6.calls["afterLoop"]?.arguments?.firstOrNull()
         assertNotNull(iAfterLoop, "There should be an argument for the call to afterLoop")
 
-        val evaluator = AbstractIntervalEvaluator()
-        val value = evaluator.evaluate(iAfterLoop, IntegerValue::class)
+        val value = iAfterLoop.evaluate(IntegerIntervalEvaluator())
         assertEquals(LatticeInterval.Bounded(5, LatticeInterval.Bound.INFINITE), value)
     }
 }
