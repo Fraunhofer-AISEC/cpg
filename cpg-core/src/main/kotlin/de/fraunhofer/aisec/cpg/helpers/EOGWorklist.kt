@@ -149,18 +149,11 @@ open class State<K, V> : HashMap<K, LatticeElement<V>>() {
  */
 class Worklist<K : Any, N : Any, V>() {
     /** A mapping of nodes to the state which is currently available there. */
-    private var globalState = IdentityHashMap<K, State<N, V>>()
+    var globalState = IdentityHashMap<K, State<N, V>>()
+        private set
 
     /** A list of all nodes which have already been visited. */
     private val alreadySeen = IdentitySet<K>()
-
-    enum class EvaluationState {
-        WIDENING,
-        NARROWING,
-        DONE,
-    }
-
-    val evaluationStateMap = IdentityHashMap<K, EvaluationState>()
 
     constructor(
         globalState: IdentityHashMap<K, State<N, V>> = IdentityHashMap<K, State<N, V>>()
@@ -223,19 +216,6 @@ class Worklist<K : Any, N : Any, V>() {
         return node
     }
 
-    /** Checks if [currentNode] has already been visited before. */
-    fun hasAlreadySeen(currentNode: K) = currentNode in alreadySeen
-
-    /** Checks if [currentNode] needs to be widened. */
-    fun needsWidening(currentNode: K) = evaluationStateMap[currentNode] == EvaluationState.WIDENING
-
-    /** Checks if [currentNode] needs to be narrowed. */
-    fun needsNarrowing(currentNode: K) =
-        evaluationStateMap[currentNode] == EvaluationState.NARROWING
-
-    /** Checks if [currentNode] should not be changed anymore. */
-    fun isDone(currentNode: K) = evaluationStateMap[currentNode] == EvaluationState.DONE
-
     /** Computes the meet over paths for all the states in [globalState]. */
     fun mop(): State<N, V>? {
         val firstKey = globalState.keys.firstOrNull()
@@ -265,12 +245,48 @@ inline fun <reified K : Node, V> iterateEOG(
     return iterateEOG(startNode, startState) { k, s, _ -> transformation(k, s) }
 }
 
+/**
+ * Iterates through the worklist of the Evaluation Order Graph starting at [startNode] and with the
+ * [State] [startState]. For each node, the [transformation] is applied which should update the
+ * state.
+ *
+ * [transformation] receives the current [Node] popped from the worklist, the [State] at this node
+ * which is considered for this analysis and even the current [Worklist]. The worklist is given if
+ * we have to add more elements out-of-order e.g. because the EOG is traversed in an order which is
+ * not useful for this analysis. The [transformation] has to return the updated [State].
+ */
 inline fun <reified K : Node, V> iterateEOG(
     startNode: K,
     startState: State<K, V>,
     transformation: (K, State<K, V>, Worklist<K, K, V>) -> State<K, V>,
 ): State<K, V>? {
-    return iterateEOG(startNode, startState, transformation, null)
+    val initialState = IdentityHashMap<K, State<K, V>>()
+    initialState[startNode] = startState
+    val worklist = Worklist(initialState)
+    worklist.push(startNode, startState)
+
+    while (worklist.isNotEmpty()) {
+        val (nextNode, state) = worklist.pop()
+
+        // This should check if we're not near the beginning/end of a basic block (i.e., there are
+        // no merge points or branches of the EOG nearby). If that's the case, we just parse the
+        // whole basic block and do not want to duplicate the state. Near the beginning/end, we do
+        // want to copy the state to avoid terminating the iteration too early by messing up with
+        // the state-changing checks.
+        val insideBB =
+            (nextNode.nextEOGEdges.size == 1 &&
+                nextNode.prevEOGEdges.singleOrNull()?.start?.nextEOG?.size == 1)
+        val newState =
+            transformation(nextNode, if (insideBB) state else state.duplicate(), worklist)
+        if (worklist.update(nextNode, newState)) {
+            nextNode.nextEOGEdges.forEach {
+                if (it is K) {
+                    worklist.push(it, newState)
+                }
+            }
+        }
+    }
+    return worklist.mop()
 }
 
 inline fun <reified K : Edge<Node>, N : Any, V> iterateEOG(
@@ -310,51 +326,6 @@ inline fun <reified K : Edge<Node>, N : Any, V> iterateEOG(
         if (insideBB || worklist.update(nextEdge, newState)) {
             nextEdge.end.nextEOGEdges.forEach {
                 if (it is K) {
-                    worklist.push(it, newState)
-                }
-            }
-        }
-    }
-    return worklist.mop()
-}
-
-/**
- * Iterates through the worklist of the Evaluation Order Graph starting at [startNode] and with the
- * [State] [startState]. For each node, the [transformation] is applied which should update the
- * state. When the [until] node is reached, its successors are not added to the worklist.
- *
- * [transformation] receives the current [Node] popped from the worklist, the [State] at this node
- * which is considered for this analysis and even the current [Worklist]. The worklist is given if
- * we have to add more elements out-of-order e.g. because the EOG is traversed in an order which is
- * not useful for this analysis. The [transformation] has to return the updated [State].
- */
-inline fun <reified K : Node, V> iterateEOG(
-    startNode: K,
-    startState: State<K, V>,
-    transformation: (K, State<K, V>, Worklist<K, K, V>) -> State<K, V>,
-    until: Node?,
-): State<K, V>? {
-    val initialState = IdentityHashMap<K, State<K, V>>()
-    initialState[startNode] = startState
-    val worklist = Worklist(initialState)
-    worklist.push(startNode, startState)
-
-    while (worklist.isNotEmpty()) {
-        val (nextNode, state) = worklist.pop()
-
-        // This should check if we're not near the beginning/end of a basic block (i.e., there are
-        // no merge points or branches of the EOG nearby). If that's the case, we just parse the
-        // whole basic block and do not want to duplicate the state. Near the beginning/end, we do
-        // want to copy the state to avoid terminating the iteration too early by messing up with
-        // the state-changing checks.
-        val insideBB =
-            (nextNode.nextEOG.size == 1 && nextNode.prevEOG.singleOrNull()?.nextEOG?.size == 1)
-        val newState =
-            transformation(nextNode, if (insideBB) state else state.duplicate(), worklist)
-
-        if (worklist.update(nextNode, newState) && nextNode != until) {
-            nextNode.nextEOG.forEach {
-                if (it is K && !worklist.isDone(it)) {
                     worklist.push(it, newState)
                 }
             }
