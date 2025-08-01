@@ -33,9 +33,9 @@ import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.cyclomaticComplexity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.statements.DoStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.LoopStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ComprehensionExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
@@ -43,13 +43,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
-import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass.BasicBlock
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
-import de.fraunhofer.aisec.cpg.sarif.Region
-import java.net.URI
 import java.util.IdentityHashMap
-import java.util.Objects
 import kotlin.collections.component1
 import kotlin.collections.component2
 
@@ -68,63 +63,6 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
 
     override fun cleanup() {
         // Nothing to do
-    }
-
-    /**
-     * A node representing a basic block, i.e. a sequence of nodes without any branching or merge
-     * points.
-     */
-    class BasicBlock(val nodes: MutableList<Node> = mutableListOf<Node>(), var startNode: Node) :
-        Node() {
-        val endNode: Node?
-            get() = nodes.lastOrNull()
-
-        val branchingNode: Node?
-            get() =
-                if (
-                    endNode is BranchingNode ||
-                        endNode is LoopStatement ||
-                        endNode is ComprehensionExpression
-                ) {
-                    endNode as Node
-                } else null
-
-        override var location: PhysicalLocation? = null
-            get() {
-                return PhysicalLocation(
-                    uri = startNode.location?.artifactLocation?.uri ?: URI(""),
-                    region =
-                        Region(
-                            startLine =
-                                nodes.mapNotNull { it.location?.region?.startLine }.minOrNull()
-                                    ?: -1,
-                            startColumn =
-                                nodes.mapNotNull { it.location?.region?.startColumn }.minOrNull()
-                                    ?: -1,
-                            endLine =
-                                nodes.mapNotNull { it.location?.region?.endLine }.maxOrNull() ?: -1,
-                            endColumn =
-                                nodes.mapNotNull { it.location?.region?.endColumn }.maxOrNull()
-                                    ?: -1,
-                        ),
-                )
-            }
-
-        override fun hashCode(): Int {
-            return Objects.hash(super.hashCode(), nodes)
-        }
-
-        override fun equals(other: Any?): Boolean {
-            return other is BasicBlock &&
-                super.equals(other) &&
-                this.nodes == other.nodes &&
-                this.startNode == other.startNode &&
-                this.endNode == other.endNode
-        }
-
-        override fun toString(): String {
-            return "$startNode - $endNode"
-        }
     }
 
     /**
@@ -511,7 +449,7 @@ fun transfer(
  * "false" branch).
  */
 private fun EvaluationOrder.isConditionalBranch(): Boolean {
-    val startNode = (this.start as? ControlDependenceGraphPass.BasicBlock)?.endNode ?: this.start
+    val startNode = (this.start as? BasicBlock)?.endNode ?: this.start
     return if (branch == true) {
         true
     } else
