@@ -1121,7 +1121,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     private fun calculateFunctionSummaries(invoke: FunctionDeclaration): FunctionDeclaration? {
         if (invoke.functionSummary.isEmpty()) {
             if (invoke.hasBody()) {
-                log.debug("functionSummaryAnalysisChain: {}", functionSummaryAnalysisChain)
+                log.debug(
+                    "functionSummaryAnalysisChain: {}",
+                    functionSummaryAnalysisChain.map { it.name.localName },
+                )
                 if (invoke !in functionSummaryAnalysisChain) {
                     //                    val summaryCopy = functionSummaryAnalysisChain.toSet()
                     acceptInternal(invoke)

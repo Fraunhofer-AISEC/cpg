@@ -32,15 +32,16 @@ import java.io.Serializable
 import java.util.*
 import kotlin.collections.component1
 import kotlin.collections.component2
-import kotlin.collections.fold
 import kotlin.collections.plusAssign
 import kotlin.collections.set
 import kotlin.math.ceil
 import kotlin.sequences.forEach
+import kotlinx.coroutines.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
@@ -460,11 +461,6 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                 // We can't return in the coroutines, so we only set the return value
                 // there. If we have a return value, we can stop here
                 if (ret != null) {
-                    /*                   parentJob.children.forEach {
-                        it.join()
-                    } // Wait for all child coroutines to finish
-                    parentJob.complete() // Ensure parentJob is completed
-                    parentJob.join() // Wait for the parentJob to complete*/
                     return ret
                 } else {
                     scope.launch {
@@ -540,48 +536,80 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         get() = MapLattice.Element()
 
     override fun lub(one: Element<K, V>, two: Element<K, V>, allowModify: Boolean): Element<K, V> {
+        // Concurrency stuff
+        val parentJob = Job()
+        val limitedDispatcher = Dispatchers.Default.limitedParallelism(100)
+        val scope = CoroutineScope(limitedDispatcher + parentJob)
+
         if (allowModify) {
             two.forEach { (k, v) ->
-                if (!one.containsKey(k)) {
-                    // This key is not in "one", so we add the value from "two" to "one"
-                    one[k] = v
-                } else {
-                    // This key already exists in "one", so we have to compute the lub of the values
-                    one[k]?.let { oneValue -> innerLattice.lub(oneValue, v, true) }
+                scope.launch {
+                    if (!one.containsKey(k)) {
+                        // This key is not in "one", so we add the value from "two" to "one"
+                        synchronized(one) { one[k] = v }
+                    } else {
+                        // This key already exists in "one", so we have to compute the lub of the
+                        // values
+                        synchronized(one) {
+                            one[k]?.let { oneValue -> innerLattice.lub(oneValue, v, true) }
+                        }
+                    }
                 }
+            }
+            runBlocking {
+                parentJob.children.forEach { it.join() } // Wait for all child coroutines to finish
+                parentJob.complete() // Ensure parentJob is completed
+                parentJob.join() // Wait for the parentJob to complete
             }
             return one
         }
 
         val allKeys = one.keys.toIdentitySet()
         allKeys += two.keys
-        val newMap =
-            allKeys.fold(Element<K, V>(allKeys.size)) { current, key ->
-                val otherValue = two[key]
-                val thisValue = one[key]
-                val newValue =
-                    if (thisValue != null && otherValue != null) {
-                        innerLattice.lub(thisValue, otherValue, allowModify)
-                    } else thisValue ?: otherValue
-                newValue?.let { current[key] = it }
-                current
+        val newMap = Element<K, V>(allKeys.size)
+        runBlocking {
+            val concurrentProcesses =
+                allKeys.map { key ->
+                    async {
+                        val otherValue = two[key]
+                        val thisValue = one[key]
+                        val newValue =
+                            if (thisValue != null && otherValue != null) {
+                                innerLattice.lub(thisValue, otherValue, allowModify)
+                            } else thisValue ?: otherValue
+                        key to newValue
+                    }
+                }
+            concurrentProcesses.awaitAll().forEach { (key, value) ->
+                value?.let { newMap[key] = it }
             }
+        }
+
         return newMap
     }
 
     override fun glb(one: Element<K, V>, two: Element<K, V>): Element<K, V> {
         val allKeys = one.keys.intersect(two.keys).toIdentitySet()
-        val newMap =
-            allKeys.fold(Element<K, V>()) { current, key ->
-                val otherValue = two[key]
-                val thisValue = one[key]
-                val newValue =
-                    if (thisValue != null && otherValue != null) {
-                        innerLattice.glb(thisValue, otherValue)
-                    } else innerLattice.bottom
-                current[key] = newValue
-                current
+
+        val newMap = Element<K, V>(allKeys.size)
+        runBlocking {
+            val concurrentProcesses =
+                allKeys.map { key ->
+                    async {
+                        val otherValue = two[key]
+                        val thisValue = one[key]
+                        val newValue =
+                            if (thisValue != null && otherValue != null) {
+                                innerLattice.glb(thisValue, otherValue)
+                            } else innerLattice.bottom
+                        key to newValue
+                    }
+                }
+            concurrentProcesses.awaitAll().forEach { (key, value) ->
+                value.let { newMap[key] = it }
             }
+        }
+
         return newMap
     }
 
@@ -652,8 +680,18 @@ class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
         return if (allowModify) {
             innerLattice1.lub(one.first, two.first, true)
             innerLattice2.lub(one.second, two.second, true)
+            /*           runBlocking {
+                           val l1 = async { innerLattice1.lub(one.first, two.first, true) }
+            val l2 = async { innerLattice2.lub(one.second, two.second, true) }
+            awaitAll(l1, l2)*/
             one
+            //            }*/
         } else {
+            /*            runBlocking {
+                val l1 = async { innerLattice1.lub(one.first, two.first) }
+                val l2 = async { innerLattice2.lub(one.second, two.second) }
+                Element(l1.await(), l2.await())
+            }*/
             Element(
                 innerLattice1.lub(one.first, two.first),
                 innerLattice2.lub(one.second, two.second),
@@ -743,16 +781,28 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
         allowModify: Boolean,
     ): Element<R, S, T> {
         return if (allowModify) {
+            //            runBlocking {
+            /*                val l1 = async { innerLattice1.lub(one.first, two.first, true) }
+            val l2 = async { innerLattice2.lub(one.second, two.second, true) }
+            val l3 = async { innerLattice3.lub(one.third, two.third, true) }
+            awaitAll(l1, l2, l3)*/
             innerLattice1.lub(one.first, two.first, true)
             innerLattice2.lub(one.second, two.second, true)
             innerLattice3.lub(one.third, two.third, true)
             one
+            //            }
         } else {
+            /*            runBlocking {
+            val l1 = async { innerLattice1.lub(one.first, two.first) }
+            val l2 = async { innerLattice2.lub(one.second, two.second) }
+            val l3 = async { innerLattice3.lub(one.third, two.third) }
+            Element(l1.await(), l2.await(), l3.await())*/
             Element(
                 innerLattice1.lub(one.first, two.first),
                 innerLattice2.lub(one.second, two.second),
                 innerLattice3.lub(one.third, two.third),
             )
+            //            }
         }
     }
 
