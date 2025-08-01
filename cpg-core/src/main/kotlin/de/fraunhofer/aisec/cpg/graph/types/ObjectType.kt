@@ -28,9 +28,11 @@ package de.fraunhofer.aisec.cpg.graph.types
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.methods
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
@@ -121,34 +123,58 @@ open class ObjectType : Type, HasSecondaryTypeEdge {
     override val secondaryTypes: List<Type>
         get() = generics
 
+    /**
+     * Returns all methods that are declared in this type and its super types. See [findMembers] for
+     * more details.
+     */
     context(provider: ContextProvider)
     val methods: Set<MethodDeclaration>
         get() {
-            // We need to gather all methods that are in within the scope of the underlying record
-            // declaration, as well as their super types
-            val methods = mutableSetOf<MethodDeclaration>()
+            return findMembers<MethodDeclaration>()
+        }
 
-            // Gather all methods of this type and its super-types
-            val worklist = mutableListOf<Type>(this)
-            val alreadySeen = identitySetOf<Type>()
-            while (worklist.isNotEmpty()) {
-                val next = worklist.removeFirst()
+    /**
+     * Returns all fields that are declared in this type and its super types. See [findMembers] for
+     * more details.
+     */
+    context(provider: ContextProvider)
+    val fields: Set<FieldDeclaration>
+        get() {
+            return findMembers<FieldDeclaration>()
+        }
 
-                // Add all methods in the declaring scope
-                with(provider.ctx.scopeManager) {
-                    next.recordDeclaration
-                        ?.declaringScope
-                        ?.symbols
-                        ?.values
-                        ?.flatten()
-                        ?.filterIsInstanceTo(methods)
-                }
+    /**
+     * Returns all [Declaration] nodes (of type [T]) that are declared in this type and its super
+     * types. We use the underlying [recordDeclaration] of the type to find the [Scope] it declares
+     * and then look for appropriate symbols pointing to a [Declaration].
+     */
+    context(provider: ContextProvider)
+    private inline fun <reified T : Declaration> findMembers(): Set<T> {
+        // We need to gather all members that are in within the scope of the underlying record
+        // declaration, as well as their super types
+        val members = mutableSetOf<T>()
 
-                // Add super types
-                worklist += next.superTypes
-                alreadySeen.add(next)
+        // Gather all members of this type and its super-types
+        val worklist = mutableListOf<Type>(this)
+        val alreadySeen = identitySetOf<Type>()
+        while (worklist.isNotEmpty()) {
+            val next = worklist.removeFirst()
+
+            // Add all members in the declaring scope
+            with(provider.ctx.scopeManager) {
+                next.recordDeclaration
+                    ?.declaringScope
+                    ?.symbols
+                    ?.values
+                    ?.flatten()
+                    ?.filterIsInstanceTo(members)
             }
 
-            return methods.toSet()
+            // Add super types
+            worklist += next.superTypes
+            alreadySeen.add(next)
         }
+
+        return members.toSet()
+    }
 }
