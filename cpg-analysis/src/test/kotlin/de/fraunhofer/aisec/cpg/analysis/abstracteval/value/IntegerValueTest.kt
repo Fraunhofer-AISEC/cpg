@@ -51,7 +51,10 @@ class IntegerValueTest {
     @Test
     fun applyDeclarationTest() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val declaration =
             VariableDeclaration().apply {
                 name = this@IntegerValueTest.name
@@ -73,7 +76,10 @@ class IntegerValueTest {
     @Test
     fun applyUninitializedDeclarationTest() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val declaration = VariableDeclaration().apply { name = this@IntegerValueTest.name }
         assertEquals(
             LatticeInterval.Bounded(NEGATIVE_INFINITE, INFINITE),
@@ -84,7 +90,10 @@ class IntegerValueTest {
     @Test
     fun applyPrefixIncrement() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val reference =
             Reference().apply {
                 name = this@IntegerValueTest.name
@@ -106,7 +115,10 @@ class IntegerValueTest {
     @Test
     fun applyPostfixIncrement() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val reference =
             Reference().apply {
                 name = this@IntegerValueTest.name
@@ -128,7 +140,10 @@ class IntegerValueTest {
     @Test
     fun applyPrefixDecrement() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val reference =
             Reference().apply {
                 name = this@IntegerValueTest.name
@@ -150,7 +165,10 @@ class IntegerValueTest {
     @Test
     fun applyPostfixIncrementation() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val reference =
             Reference().apply {
                 name = this@IntegerValueTest.name
@@ -172,7 +190,10 @@ class IntegerValueTest {
     @Test
     fun applyUnaryStar() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val reference =
             Reference().apply {
                 name = this@IntegerValueTest.name
@@ -193,7 +214,10 @@ class IntegerValueTest {
     @Test
     fun applyAssignExpression() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val assignment =
             AssignExpression().apply {
                 operatorCode = "="
@@ -221,7 +245,10 @@ class IntegerValueTest {
     @Test
     fun testAssignUnresolved() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val assignment =
             AssignExpression().apply {
                 operatorCode = "="
@@ -241,7 +268,10 @@ class IntegerValueTest {
     @Test
     fun testAssignPlusLiteral() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val assignment =
             AssignExpression().apply {
                 operatorCode = "+="
@@ -269,7 +299,10 @@ class IntegerValueTest {
     @Test
     fun testAssignPlusUnresolved() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val assignment =
             AssignExpression().apply {
                 operatorCode = "+="
@@ -289,7 +322,10 @@ class IntegerValueTest {
     @Test
     fun testAssignMinusLiteral() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val assignment =
             AssignExpression().apply {
                 operatorCode = "-="
@@ -317,7 +353,10 @@ class IntegerValueTest {
     @Test
     fun testAssignMinusUnresolved() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val assignment =
             AssignExpression().apply {
                 operatorCode = "-="
@@ -337,7 +376,10 @@ class IntegerValueTest {
     @Test
     fun testAssignTimesLiteral() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val assignment =
             AssignExpression().apply {
                 operatorCode = "*="
@@ -365,7 +407,10 @@ class IntegerValueTest {
     @Test
     fun testAssignTimesUnresolved() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val assignment =
             AssignExpression().apply {
                 operatorCode = "*="
@@ -385,7 +430,10 @@ class IntegerValueTest {
     @Test
     fun testAssignDivLiteral() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val assignment =
             AssignExpression().apply {
                 operatorCode = "/="
@@ -413,7 +461,10 @@ class IntegerValueTest {
     @Test
     fun testAssignDivUnresolved() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val assignment =
             AssignExpression().apply {
                 operatorCode = "/="
@@ -433,7 +484,10 @@ class IntegerValueTest {
     @Test
     fun testAssignModLiteral() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val assignment =
             AssignExpression().apply {
                 operatorCode = "%="
@@ -461,7 +515,10 @@ class IntegerValueTest {
     @Test
     fun testAssignModUnresolved() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val assignment =
             AssignExpression().apply {
                 operatorCode = "%="

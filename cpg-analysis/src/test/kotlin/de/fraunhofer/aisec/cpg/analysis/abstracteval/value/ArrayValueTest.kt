@@ -48,7 +48,10 @@ class ArrayValueTest {
     @Test
     fun applyDeclarationTest() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
 
         val correctDeclaration =
             VariableDeclaration().apply {
@@ -70,7 +73,10 @@ class ArrayValueTest {
     @Test
     fun applyReferenceTest() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
 
         val decl =
             VariableDeclaration().apply {
@@ -97,7 +103,10 @@ class ArrayValueTest {
     @Test
     fun applyDeclarationWithoutInitializerTest() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val noInitializerDeclaration =
             VariableDeclaration().apply {
                 this.name = name

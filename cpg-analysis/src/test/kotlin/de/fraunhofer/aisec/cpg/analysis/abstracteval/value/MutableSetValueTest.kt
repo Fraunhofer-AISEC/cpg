@@ -52,7 +52,10 @@ class MutableSetValueTest {
     @Test
     fun applyDeclarationTest() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val correctDeclaration =
             VariableDeclaration().apply {
                 this.name = name
@@ -73,7 +76,10 @@ class MutableSetValueTest {
     @Test
     fun applyDeclarationFromListTest() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val existingDecl =
             VariableDeclaration().apply {
                 this.name = Name("existingDecl")
@@ -115,7 +121,10 @@ class MutableSetValueTest {
     @Test
     fun applyDeclarationFromSetTest() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val existingDecl =
             VariableDeclaration().apply {
                 this.name = Name("existingDecl")
@@ -157,7 +166,10 @@ class MutableSetValueTest {
     @Test
     fun applyDeclarationNoInitializerTest() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val noInitializerDeclaration = VariableDeclaration().apply { this.name = name }
 
         assertEquals(
@@ -170,7 +182,10 @@ class MutableSetValueTest {
     @Test
     fun applyAddTest() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val decl = VariableDeclaration().apply { this.name = name }
         lattice.pushToDeclarationState(startState, decl, LatticeInterval.Bounded(1, 1))
 
@@ -198,7 +213,10 @@ class MutableSetValueTest {
     @Test
     fun applyAddAllTest() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val decl = VariableDeclaration().apply { this.name = name }
         lattice.pushToDeclarationState(startState, decl, LatticeInterval.Bounded(1, 1))
 
@@ -227,7 +245,10 @@ class MutableSetValueTest {
     @Test
     fun applyClearTest() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val decl = VariableDeclaration().apply { this.name = name }
         lattice.pushToDeclarationState(startState, decl, LatticeInterval.Bounded(3, 3))
 
@@ -254,7 +275,10 @@ class MutableSetValueTest {
     @Test
     fun applyRemoveObjectTest() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val decl = VariableDeclaration().apply { this.name = name }
         lattice.pushToDeclarationState(startState, decl, LatticeInterval.Bounded(3, 3))
 
@@ -282,7 +306,10 @@ class MutableSetValueTest {
     @Test
     fun applyRemoveAllTest() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val decl = VariableDeclaration().apply { this.name = name }
         lattice.pushToDeclarationState(startState, decl, LatticeInterval.Bounded(3, 3))
 

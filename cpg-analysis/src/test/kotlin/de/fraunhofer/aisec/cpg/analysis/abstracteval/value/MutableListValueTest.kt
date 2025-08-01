@@ -50,7 +50,10 @@ class MutableListValueTest {
     @Test
     fun applyDeclarationTest() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val correctDeclaration =
             VariableDeclaration().apply {
                 this.name = name
@@ -71,7 +74,10 @@ class MutableListValueTest {
     @Test
     fun applyDeclarationNoInitializerTest() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val noInitializerDeclaration = VariableDeclaration().apply { this.name = name }
 
         assertEquals(
@@ -84,7 +90,10 @@ class MutableListValueTest {
     @Test
     fun applyAddTest() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val decl = VariableDeclaration().apply { this.name = name }
         lattice.pushToDeclarationState(startState, decl, LatticeInterval.Bounded(1, 1))
 
@@ -112,7 +121,10 @@ class MutableListValueTest {
     @Test
     fun applyAddAllTest() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val decl = VariableDeclaration().apply { this.name = name }
         lattice.pushToDeclarationState(startState, decl, LatticeInterval.Bounded(1, 1))
 
@@ -141,7 +153,10 @@ class MutableListValueTest {
     @Test
     fun applyClearTest() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val decl = VariableDeclaration().apply { this.name = name }
         lattice.pushToDeclarationState(startState, decl, LatticeInterval.Bounded(3, 3))
 
@@ -168,7 +183,10 @@ class MutableListValueTest {
     @Test
     fun applyRemoveIndexedTest() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val decl = VariableDeclaration().apply { this.name = name }
         lattice.pushToDeclarationState(startState, decl, LatticeInterval.Bounded(3, 3))
 
@@ -200,7 +218,10 @@ class MutableListValueTest {
     @Test
     fun applyRemoveObjectTest() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val decl = VariableDeclaration().apply { this.name = name }
         lattice.pushToDeclarationState(startState, decl, LatticeInterval.Bounded(3, 3))
 
@@ -229,7 +250,10 @@ class MutableListValueTest {
     @Test
     fun applyRemoveAllTest() {
         val startState =
-            TupleStateElement<Any>(DeclarationStateElement(), NewIntervalStateElement())
+            TupleStateElement<Any>(
+                DeclarationState.DeclarationStateElement(),
+                NewIntervalStateElement(),
+            )
         val decl = VariableDeclaration().apply { this.name = name }
         lattice.pushToDeclarationState(startState, decl, LatticeInterval.Bounded(3, 3))
 

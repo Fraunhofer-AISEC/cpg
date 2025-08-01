@@ -31,17 +31,22 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.helpers.functional.*
+import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice.Element
 import de.fraunhofer.aisec.cpg.passes.objectIdentifier
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.putAll
+import kotlin.collections.set
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 import kotlin.to
 
 class TupleState<NodeId>(
-    innerLattice1: Lattice<DeclarationStateElement<NodeId>>,
+    innerLattice1: DeclarationState<NodeId>,
     innerLattice2: Lattice<NewIntervalStateElement>,
 ) :
-    TupleLattice<DeclarationStateElement<NodeId>, NewIntervalStateElement>(
-        innerLattice1,
+    TupleLattice<DeclarationState.DeclarationStateElement<NodeId>, NewIntervalStateElement>(
+        innerLattice1 as Lattice<DeclarationState.DeclarationStateElement<NodeId>>,
         innerLattice2,
     ) {
 
@@ -75,11 +80,88 @@ class TupleState<NodeId>(
 }
 
 typealias TupleStateElement<NodeId> =
-    TupleLattice.Element<DeclarationStateElement<NodeId>, NewIntervalStateElement>
+    TupleLattice.Element<DeclarationState.DeclarationStateElement<NodeId>, NewIntervalStateElement>
 
-typealias DeclarationState<NodeId> = MapLattice<NodeId, NewIntervalLattice.Element>
+class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>) :
+    MapLattice<NodeId, NewIntervalLattice.Element>(innerLattice) {
+    override val bottom: DeclarationStateElement<NodeId>
+        get() = DeclarationStateElement()
 
-typealias DeclarationStateElement<NodeId> = MapLattice.Element<NodeId, NewIntervalLattice.Element>
+    override fun lub(
+        one: Element<NodeId, NewIntervalLattice.Element>,
+        two: Element<NodeId, NewIntervalLattice.Element>,
+        allowModify: Boolean,
+        widen: Boolean,
+    ): Element<NodeId, NewIntervalLattice.Element> {
+        val result = super.lub(one, two, allowModify, widen)
+        if (result is DeclarationStateElement<NodeId>) {
+            // If the result is a DeclarationStateElement, we can return it directly
+            return result
+        } else {
+            return DeclarationStateElement<NodeId>(result)
+        }
+    }
+
+    override fun glb(
+        one: Element<NodeId, NewIntervalLattice.Element>,
+        two: Element<NodeId, NewIntervalLattice.Element>,
+    ): Element<NodeId, NewIntervalLattice.Element> {
+        val result = super.glb(one, two)
+        if (result is DeclarationStateElement<NodeId>) {
+            // If the result is a DeclarationStateElement, we can return it directly
+            return result
+        } else {
+            return DeclarationStateElement<NodeId>(result)
+        }
+    }
+
+    class DeclarationStateElement<NodeId>(expectedMaxSize: Int) :
+        Element<NodeId, NewIntervalLattice.Element>(expectedMaxSize) {
+        constructor() : this(32)
+
+        constructor(m: Map<NodeId, NewIntervalLattice.Element>) : this(m.size) {
+            putAll(m)
+        }
+
+        constructor(
+            entries: Collection<Pair<NodeId, NewIntervalLattice.Element>>
+        ) : this(entries.size) {
+            putAll(entries)
+        }
+
+        constructor(vararg entries: Pair<NodeId, NewIntervalLattice.Element>) : this(entries.size) {
+            putAll(entries)
+        }
+
+        override fun equals(other: Any?): Boolean {
+            return other is DeclarationStateElement<NodeId> && this.compare(other) == Order.EQUAL
+        }
+
+        override fun hashCode(): Int {
+            return super.hashCode()
+        }
+
+        override fun duplicate(): DeclarationStateElement<NodeId> {
+            return DeclarationStateElement(
+                this.map { (k, v) -> Pair<NodeId, NewIntervalLattice.Element>(k, v.duplicate()) }
+            )
+        }
+
+        /**
+         * Retrieves the interval element for the given [nodeId] from the declaration state element.
+         *
+         * @param nodeId The identifier of the node.
+         * @return The [NewIntervalLattice.Element] for the node, or null if not found.
+         */
+        override operator fun get(nodeId: NodeId): NewIntervalLattice.Element? {
+            return if (nodeId is Integer) {
+                this.entries.singleOrNull { it.key == nodeId }?.value
+            } else {
+                this.entries.singleOrNull { it.key === nodeId }?.value
+            }
+        }
+    }
+}
 
 typealias NewIntervalState = MapLattice<Node, NewIntervalLattice.Element>
 
@@ -362,24 +444,10 @@ fun <NodeId> TupleState<NodeId>.pushToDeclarationState(
         } ?: node as NodeId ?: TODO()
     this.innerLattice1.lub(
         current.first,
-        DeclarationStateElement(id to NewIntervalLattice.Element(interval)),
+        DeclarationState.DeclarationStateElement(id to NewIntervalLattice.Element(interval)),
         allowModify = true,
     )
     return current
-}
-
-/**
- * Retrieves the interval element for the given [nodeId] from the declaration state element.
- *
- * @param nodeId The identifier of the node.
- * @return The [NewIntervalLattice.Element] for the node, or null if not found.
- */
-operator fun DeclarationStateElement<Any>.get(nodeId: Any): NewIntervalLattice.Element? {
-    return if (nodeId is Integer) {
-        this.entries.singleOrNull { it.key == nodeId }?.value
-    } else {
-        this.entries.singleOrNull { it.key === nodeId }?.value
-    }
 }
 
 /**
@@ -411,13 +479,13 @@ fun <NodeId> TupleState<NodeId>.pushToGeneralState(
  * @param interval The [LatticeInterval] to push.
  */
 private fun <NodeId> DeclarationState<NodeId>.push(
-    current: DeclarationStateElement<NodeId>,
+    current: DeclarationState.DeclarationStateElement<NodeId>,
     start: NodeId,
     interval: LatticeInterval,
 ) {
     this.lub(
         current,
-        DeclarationStateElement(start to NewIntervalLattice.Element(interval)),
+        DeclarationState.DeclarationStateElement(start to NewIntervalLattice.Element(interval)),
         allowModify = true,
     )
 }
