@@ -28,9 +28,16 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.ast.AstNode
+import de.fraunhofer.aisec.cpg.graph.ast.statements.CatchClause
+import de.fraunhofer.aisec.cpg.graph.ast.statements.GotoStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.LabelStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.SwitchStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ThrowExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.TryStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteFirst
@@ -204,7 +211,7 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Iterates through all [AstNode]s which are reachable from the catch clause. Note: When
+     * Iterates through all [ast.AstNode]s which are reachable from the catch clause. Note: When
      * reaching a `TryStatement`, we do not follow the path further. This is why we can't use the
      * `allChildren` extension.
      */

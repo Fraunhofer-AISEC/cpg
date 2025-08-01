@@ -39,7 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.config.ProvideConfiguration
 import de.fraunhofer.aisec.cpg.graph.concepts.config.newProvideConfiguration
 import de.fraunhofer.aisec.cpg.graph.concepts.config.newProvideConfigurationGroup
 import de.fraunhofer.aisec.cpg.graph.concepts.config.newProvideConfigurationOption
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.operationNodes
 import de.fraunhofer.aisec.cpg.graph.translationResult
 import de.fraunhofer.aisec.cpg.helpers.Util

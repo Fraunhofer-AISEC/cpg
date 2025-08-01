@@ -32,8 +32,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.arch.Win32
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.EntryPoint
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.newLibraryEntryPoint
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.newMain
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 
 /** A pass that fills the [EntryPoint] concept into the CPG. */

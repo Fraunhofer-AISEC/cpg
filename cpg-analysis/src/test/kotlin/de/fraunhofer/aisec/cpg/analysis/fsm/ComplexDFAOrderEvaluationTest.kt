@@ -26,11 +26,14 @@
 package de.fraunhofer.aisec.cpg.analysis.fsm
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.DoStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.WhileStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.testcases.GraphExamples
 import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll
@@ -76,7 +79,7 @@ class ComplexDFAOrderEvaluationTest {
         val functionOk = tu.functions["ok_minimal1"]
         assertNotNull(functionOk)
 
-        val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
+        val p1Decl = functionOk.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(0)
         assertNotNull(p1Decl)
         val consideredDecl = mutableSetOf(p1Decl.declarations[0])
 
@@ -97,7 +100,7 @@ class ComplexDFAOrderEvaluationTest {
         val functionOk = tu.functions["ok_minimal2"]
         assertNotNull(functionOk)
 
-        val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
+        val p1Decl = functionOk.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(0)
         assertNotNull(p1Decl)
         val consideredDecl = mutableSetOf(p1Decl.declarations[0])
 
@@ -119,7 +122,7 @@ class ComplexDFAOrderEvaluationTest {
         val functionOk = tu.functions["ok_minimal3"]
         assertNotNull(functionOk)
 
-        val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
+        val p1Decl = functionOk.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(0)
         assertNotNull(p1Decl)
         val consideredDecl = mutableSetOf(p1Decl.declarations[0])
 
@@ -142,7 +145,7 @@ class ComplexDFAOrderEvaluationTest {
         val functionOk = tu.functions["ok2"]
         assertNotNull(functionOk)
 
-        val p2Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
+        val p2Decl = functionOk.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(0)
         assertNotNull(p2Decl)
         val consideredDecl = mutableSetOf(p2Decl.declarations[0])
 
@@ -167,7 +170,7 @@ class ComplexDFAOrderEvaluationTest {
         val functionOk = tu.functions["ok3"]
         assertNotNull(functionOk)
 
-        val p3Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
+        val p3Decl = functionOk.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(0)
         assertNotNull(p3Decl)
         val consideredDecl = mutableSetOf(p3Decl.declarations[0])
 
@@ -192,7 +195,7 @@ class ComplexDFAOrderEvaluationTest {
         val functionOk = tu.functions["ok4"]
         assertNotNull(functionOk)
 
-        val p3Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
+        val p3Decl = functionOk.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(0)
         assertNotNull(p3Decl)
         val consideredDecl = mutableSetOf(p3Decl.declarations[0])
 
@@ -218,7 +221,7 @@ class ComplexDFAOrderEvaluationTest {
         val functionOk = tu.functions["nok1"]
         assertNotNull(functionOk)
 
-        val p5Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
+        val p5Decl = functionOk.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(0)
         assertNotNull(p5Decl)
         val consideredDecl = mutableSetOf(p5Decl.declarations[0])
 
@@ -239,7 +242,7 @@ class ComplexDFAOrderEvaluationTest {
         val functionOk = tu.functions["nok2"]
         assertNotNull(functionOk)
 
-        val p6Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
+        val p6Decl = functionOk.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(0)
         assertNotNull(p6Decl)
         val consideredDecl = mutableSetOf(p6Decl.declarations[0])
 
@@ -268,7 +271,7 @@ class ComplexDFAOrderEvaluationTest {
 
         assertNotNull(functionOk)
 
-        val p6Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
+        val p6Decl = functionOk.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(0)
         assertNotNull(p6Decl)
         val consideredDecl = mutableSetOf(p6Decl.declarations[0])
 
@@ -296,7 +299,7 @@ class ComplexDFAOrderEvaluationTest {
 
         assertNotNull(functionOk)
 
-        val p7Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
+        val p7Decl = functionOk.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(0)
         assertNotNull(p7Decl)
         val consideredDecl = mutableSetOf(p7Decl.declarations[0])
 
@@ -323,7 +326,7 @@ class ComplexDFAOrderEvaluationTest {
         val functionOk = tu.functions["okWhile2"]
         assertNotNull(functionOk)
 
-        val p7Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
+        val p7Decl = functionOk.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(0)
         assertNotNull(p7Decl)
         val consideredDecl = mutableSetOf(p7Decl.declarations[0])
 
@@ -350,7 +353,7 @@ class ComplexDFAOrderEvaluationTest {
         val functionOk = tu.functions["okWhile"]
         assertNotNull(functionOk)
 
-        val p8Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
+        val p8Decl = functionOk.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(0)
         assertNotNull(p8Decl)
         val consideredDecl = mutableSetOf(p8Decl.declarations[0])
 
@@ -380,7 +383,7 @@ class ComplexDFAOrderEvaluationTest {
         val functionOk = tu.functions["okDoWhile"]
         assertNotNull(functionOk)
 
-        val p6Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
+        val p6Decl = functionOk.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(0)
         assertNotNull(p6Decl)
         val consideredDecl = mutableSetOf(p6Decl.declarations[0])
 
@@ -406,7 +409,7 @@ class ComplexDFAOrderEvaluationTest {
         val functionOk = tu.functions["minimalInterprocUnclear"]
         assertNotNull(functionOk)
 
-        val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
+        val p1Decl = functionOk.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(0)
         assertNotNull(p1Decl)
         val consideredDecl = mutableSetOf(p1Decl.declarations[0])
 
@@ -480,7 +483,7 @@ class ComplexDFAOrderEvaluationTest {
         val functionOk = tu.functions["minimalInterprocUnclearReturn"]
         assertNotNull(functionOk)
 
-        val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
+        val p1Decl = functionOk.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(0)
         assertNotNull(p1Decl)
         val consideredDecl = mutableSetOf(p1Decl.declarations[0])
 
@@ -516,7 +519,7 @@ class ComplexDFAOrderEvaluationTest {
         val functionOk = tu.functions["minimalInterprocFail"]
         assertNotNull(functionOk)
 
-        val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
+        val p1Decl = functionOk.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(0)
         assertNotNull(p1Decl)
         val consideredDecl = mutableSetOf(p1Decl.declarations[0])
 
@@ -556,7 +559,7 @@ class ComplexDFAOrderEvaluationTest {
         val functionOk = tu.functions["minimalInterprocFail2"]
         assertNotNull(functionOk)
 
-        val p1Decl = functionOk.bodyOrNull<DeclarationStatement>(0)
+        val p1Decl = functionOk.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(0)
         assertNotNull(p1Decl)
         val consideredDecl = mutableSetOf(p1Decl.declarations[0])
 

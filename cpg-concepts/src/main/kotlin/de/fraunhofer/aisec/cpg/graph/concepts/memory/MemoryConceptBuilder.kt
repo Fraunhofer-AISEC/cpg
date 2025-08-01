@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.arch.OperatingSystemArchitecture
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.LibraryEntryPoint
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.Declaration
 
 /**
  * Creates a new [Memory] concept.

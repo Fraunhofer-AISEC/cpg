@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.OperatingSystemArchitecture
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.LibraryEntryPoint
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import java.util.Objects
 

@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.frontends.ruby
 
 import de.fraunhofer.aisec.cpg.frontends.*
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import kotlin.reflect.KClass

@@ -27,7 +27,12 @@ package de.fraunhofer.aisec.cpg.frontends.jvm
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.NewArrayExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.SubscriptExpression
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU

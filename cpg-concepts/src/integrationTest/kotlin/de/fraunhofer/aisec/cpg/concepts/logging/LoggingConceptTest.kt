@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.graph.concepts.logging.IsLogging
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.Log
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.LogLevel
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.LogWrite
-import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.passes.concepts.logging.python.PythonLoggingConceptPass
 import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.test.BaseTest

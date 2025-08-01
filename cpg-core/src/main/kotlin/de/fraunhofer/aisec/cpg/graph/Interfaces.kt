@@ -26,9 +26,10 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.declarations.OperatorDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.OperatorDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
@@ -59,7 +60,7 @@ interface HasScope : HasNameAndLocation {
 /** A simple interface to denote that the implementing class has some kind of [operatorCode]. */
 interface HasOperatorCode : HasScope {
 
-    /** The operator code, identifying an operation executed on one or more [Expression]s */
+    /** The operator code, identifying an operation executed on one or more [ast.statements.expressions.Expression]s */
     val operatorCode: String?
 }
 
@@ -87,7 +88,7 @@ interface HasDefault<T : Node?> : HasScope {
 }
 
 /**
- * Specifies that a certain node has an initializer. It is a special case of [ArgumentHolder], in
+ * Specifies that a certain node has an initializer. It is a special case of [ast.ArgumentHolder], in
  * which the initializer is treated as the first (and only) argument.
  */
 interface HasInitializer : HasScope, HasType, ArgumentHolder, AssignmentHolder {
@@ -132,7 +133,7 @@ interface HasAliases : HasScope {
 }
 
 /**
- * Specifies that this node (e.g. a [BinaryOperator]) contains an operation that can be overloaded
+ * Specifies that this node (e.g. a [ast.statements.expressions.BinaryOperator]) contains an operation that can be overloaded
  * by an [OperatorDeclaration].
  */
 interface HasOverloadedOperation : HasOperatorCode {

@@ -32,11 +32,12 @@ import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.scopes.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.*
 import java.io.File
 import kotlin.reflect.KClass
@@ -66,7 +67,7 @@ interface HasTemplates : HasGenerics {
     /**
      * This function can be used to fine-tune the resolution of template function calls.
      *
-     * Note: The function itself should NOT set the [CallExpression.invokes] but rather return a
+     * Note: The function itself should NOT set the [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression.invokes] but rather return a
      * list of possible candidates.
      *
      * @return a pair in which the first member denotes whether resolution was successful and the
@@ -241,7 +242,7 @@ sealed interface HasCallExpressionAmbiguity : LanguageTrait
 /**
  * A language trait, that specifies that the language has so-called functional style casts, meaning
  * that they look like regular call expressions. Since we can therefore not distinguish between a
- * [CallExpression] and a [CastExpression], we need to employ an additional pass
+ * [CallExpression] and a [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CastExpression], we need to employ an additional pass
  * ([ResolveCallExpressionAmbiguityPass]) after the initial language frontends are done.
  */
 interface HasFunctionStyleCasts : HasCallExpressionAmbiguity
@@ -251,7 +252,7 @@ interface HasFunctionStyleCasts : HasCallExpressionAmbiguity
  * meaning that constructor calls look like regular call expressions (usually meaning that the
  * language has no dedicated `new` keyword).
  *
- * Since we can therefore not distinguish between a [CallExpression] and a [ConstructExpression] in
+ * Since we can therefore not distinguish between a [CallExpression] and a [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ConstructExpression] in
  * the frontend, we need to employ an additional pass ([ResolveCallExpressionAmbiguityPass]) after
  * the initial language frontends are done.
  */

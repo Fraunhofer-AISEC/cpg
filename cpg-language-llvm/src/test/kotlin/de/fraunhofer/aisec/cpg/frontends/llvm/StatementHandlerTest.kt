@@ -26,23 +26,23 @@
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.graph.bodyOrNull
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
-import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
-import de.fraunhofer.aisec.cpg.graph.statements.CaseStatement
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.GotoStatement
-import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CastExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.ast.statements.BreakStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.CaseStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.GotoStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.SwitchStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CastExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ConditionalExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import de.fraunhofer.aisec.cpg.test.assertFullName
@@ -90,7 +90,7 @@ class StatementHandlerTest {
         assertContains(call.invokes, rand)
         assertEquals(0, call.arguments.size)
 
-        val mulStatement = main.bodyOrNull<DeclarationStatement>(2)
+        val mulStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(2)
         assertNotNull(mulStatement)
 
         val mulDeclaration = mulStatement.singleDeclaration
@@ -102,7 +102,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(mul)
         assertEquals("*", mul.operatorCode)
 
-        val addStatement = main.bodyOrNull<DeclarationStatement>(3)
+        val addStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(3)
         assertNotNull(addStatement)
 
         val addDeclaration = addStatement.singleDeclaration
@@ -114,7 +114,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(add)
         assertEquals("+", add.operatorCode)
 
-        val subStatement = main.bodyOrNull<DeclarationStatement>(4)
+        val subStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(4)
         assertNotNull(subStatement)
 
         val subDeclaration = subStatement.singleDeclaration
@@ -126,7 +126,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(sub)
         assertEquals("-", sub.operatorCode)
 
-        val divStatement = main.bodyOrNull<DeclarationStatement>(5)
+        val divStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(5)
         assertNotNull(divStatement)
 
         val divDeclaration = divStatement.singleDeclaration
@@ -138,7 +138,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(div)
         assertEquals("/", div.operatorCode)
 
-        val remStatement = main.bodyOrNull<DeclarationStatement>(6)
+        val remStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(6)
         assertNotNull(remStatement)
 
         val remDeclaration = remStatement.singleDeclaration
@@ -150,7 +150,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(rem)
         assertEquals("%", rem.operatorCode)
 
-        val xorStatement = main.bodyOrNull<DeclarationStatement>(7)
+        val xorStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(7)
         assertNotNull(xorStatement)
 
         val xorDeclaration = xorStatement.singleDeclaration
@@ -162,7 +162,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(xor)
         assertEquals("^", xor.operatorCode)
 
-        val udivStatement = main.bodyOrNull<DeclarationStatement>(8)
+        val udivStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(8)
         assertNotNull(udivStatement)
 
         val udivDeclaration = udivStatement.singleDeclaration
@@ -174,7 +174,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(udiv)
         assertEquals("/", udiv.operatorCode)
 
-        val uremStatement = main.bodyOrNull<DeclarationStatement>(9)
+        val uremStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(9)
         assertNotNull(uremStatement)
 
         val uremDeclaration = uremStatement.singleDeclaration
@@ -186,7 +186,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(urem)
         assertEquals("%", urem.operatorCode)
 
-        val shlStatement = main.bodyOrNull<DeclarationStatement>(10)
+        val shlStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(10)
         assertNotNull(shlStatement)
 
         val shlDeclaration = shlStatement.singleDeclaration
@@ -198,7 +198,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(shl)
         assertEquals("<<", shl.operatorCode)
 
-        val lshrStatement = main.bodyOrNull<DeclarationStatement>(11)
+        val lshrStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(11)
         assertNotNull(lshrStatement)
 
         val lshrDeclaration = lshrStatement.singleDeclaration
@@ -210,7 +210,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(lshr)
         assertEquals(">>", lshr.operatorCode)
 
-        val ashrStatement = main.bodyOrNull<DeclarationStatement>(12)
+        val ashrStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(12)
         assertNotNull(ashrStatement)
 
         val ashrDeclaration = ashrStatement.singleDeclaration
@@ -254,7 +254,7 @@ class StatementHandlerTest {
         assertContains(call.invokes, rand)
         assertEquals(0, call.arguments.size)
 
-        val fmulStatement = main.bodyOrNull<DeclarationStatement>(2)
+        val fmulStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(2)
         assertNotNull(fmulStatement)
 
         val fmulDeclaration = fmulStatement.singleDeclaration
@@ -266,7 +266,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(fmul)
         assertEquals("*", fmul.operatorCode)
 
-        val faddStatement = main.bodyOrNull<DeclarationStatement>(3)
+        val faddStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(3)
         assertNotNull(faddStatement)
 
         val faddDeclaration = faddStatement.singleDeclaration
@@ -278,7 +278,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(fadd)
         assertEquals("+", fadd.operatorCode)
 
-        val fsubStatement = main.bodyOrNull<DeclarationStatement>(4)
+        val fsubStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(4)
         assertNotNull(fsubStatement)
 
         val fsubDeclaration = fsubStatement.singleDeclaration
@@ -290,7 +290,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(fsub)
         assertEquals("-", fsub.operatorCode)
 
-        val fdivStatement = main.bodyOrNull<DeclarationStatement>(5)
+        val fdivStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(5)
         assertNotNull(fdivStatement)
 
         val fdivDeclaration = fdivStatement.singleDeclaration
@@ -302,7 +302,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(fdiv)
         assertEquals("/", fdiv.operatorCode)
 
-        val fremStatement = main.bodyOrNull<DeclarationStatement>(6)
+        val fremStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(6)
         assertNotNull(fremStatement)
 
         val fremDeclaration = fremStatement.singleDeclaration
@@ -314,7 +314,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(frem)
         assertEquals("%", frem.operatorCode)
 
-        val fnegStatement = main.bodyOrNull<DeclarationStatement>(7)
+        val fnegStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(7)
         assertNotNull(fnegStatement)
 
         val fnegDeclaration = fnegStatement.singleDeclaration
@@ -358,7 +358,7 @@ class StatementHandlerTest {
         assertContains(call.invokes, rand)
         assertEquals(0, call.arguments.size)
 
-        val cmpEqStatement = main.bodyOrNull<DeclarationStatement>(1)
+        val cmpEqStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(1)
         assertNotNull(cmpEqStatement)
 
         val cmpEqDeclaration = cmpEqStatement.singleDeclaration
@@ -370,7 +370,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(cmpEq)
         assertEquals("==", cmpEq.operatorCode)
 
-        val cmpNeqStatement = main.bodyOrNull<DeclarationStatement>(2)
+        val cmpNeqStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(2)
         assertNotNull(cmpNeqStatement)
 
         val cmpNeqDeclaration = cmpNeqStatement.singleDeclaration
@@ -382,7 +382,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(cmpNeq)
         assertEquals("!=", cmpNeq.operatorCode)
 
-        val cmpUgtStatement = main.bodyOrNull<DeclarationStatement>(3)
+        val cmpUgtStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(3)
         assertNotNull(cmpUgtStatement)
 
         val cmpUgtDeclaration = cmpUgtStatement.singleDeclaration
@@ -394,7 +394,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(cmpUgt)
         assertEquals(">", cmpUgt.operatorCode)
 
-        val cmpUltStatement = main.bodyOrNull<DeclarationStatement>(4)
+        val cmpUltStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(4)
         assertNotNull(cmpUltStatement)
 
         val cmpUltDeclaration = cmpUltStatement.singleDeclaration
@@ -406,7 +406,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(cmpUlt)
         assertEquals("<", cmpUlt.operatorCode)
 
-        val cmpUgeStatement = main.bodyOrNull<DeclarationStatement>(5)
+        val cmpUgeStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(5)
         assertNotNull(cmpUgeStatement)
 
         val cmpUgeDeclaration = cmpUgeStatement.singleDeclaration
@@ -418,7 +418,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(cmpUge)
         assertEquals(">=", cmpUge.operatorCode)
 
-        val cmpUleStatement = main.bodyOrNull<DeclarationStatement>(6)
+        val cmpUleStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(6)
         assertNotNull(cmpUleStatement)
 
         val cmpUleDeclaration = cmpUleStatement.singleDeclaration
@@ -430,7 +430,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(cmpUle)
         assertEquals("<=", cmpUle.operatorCode)
 
-        val cmpSgtStatement = main.bodyOrNull<DeclarationStatement>(7)
+        val cmpSgtStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(7)
         assertNotNull(cmpSgtStatement)
 
         val cmpSgtDeclaration = cmpSgtStatement.singleDeclaration
@@ -442,7 +442,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(cmpSgt)
         assertEquals(">", cmpSgt.operatorCode)
 
-        val cmpSltStatement = main.bodyOrNull<DeclarationStatement>(8)
+        val cmpSltStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(8)
         assertNotNull(cmpSltStatement)
 
         val cmpSltDeclaration = cmpSltStatement.singleDeclaration
@@ -454,7 +454,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(cmpSlt)
         assertEquals("<", cmpSlt.operatorCode)
 
-        val cmpSgeStatement = main.bodyOrNull<DeclarationStatement>(9)
+        val cmpSgeStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(9)
         assertNotNull(cmpSgeStatement)
 
         val cmpSgeDeclaration = cmpSgeStatement.singleDeclaration
@@ -466,7 +466,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(cmpSge)
         assertEquals(">=", cmpSge.operatorCode)
 
-        val cmpSleStatement = main.bodyOrNull<DeclarationStatement>(10)
+        val cmpSleStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(10)
         assertNotNull(cmpSleStatement)
 
         val cmpSleDeclaration = cmpSleStatement.singleDeclaration
@@ -513,7 +513,7 @@ class StatementHandlerTest {
         assertContains(call.invokes, rand)
         assertEquals(0, call.arguments.size)
 
-        val cmpOeqStatement = main.bodyOrNull<DeclarationStatement>(2)
+        val cmpOeqStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(2)
         assertNotNull(cmpOeqStatement)
 
         val cmpOeqDeclaration = cmpOeqStatement.singleDeclaration
@@ -525,7 +525,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(cmpOeq)
         assertEquals("==", cmpOeq.operatorCode)
 
-        val cmpOneStatement = main.bodyOrNull<DeclarationStatement>(3)
+        val cmpOneStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(3)
         assertNotNull(cmpOneStatement)
 
         val cmpOneDeclaration = cmpOneStatement.singleDeclaration
@@ -537,7 +537,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(cmpOne)
         assertEquals("!=", cmpOne.operatorCode)
 
-        val cmpOgtStatement = main.bodyOrNull<DeclarationStatement>(4)
+        val cmpOgtStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(4)
         assertNotNull(cmpOgtStatement)
 
         val cmpOgtDeclaration = cmpOgtStatement.singleDeclaration
@@ -549,7 +549,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(cmpOgt)
         assertEquals(">", cmpOgt.operatorCode)
 
-        val cmpOltStatement = main.bodyOrNull<DeclarationStatement>(5)
+        val cmpOltStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(5)
         assertNotNull(cmpOltStatement)
 
         val cmpOltDeclaration = cmpOltStatement.singleDeclaration
@@ -561,7 +561,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(cmpOlt)
         assertEquals("<", cmpOlt.operatorCode)
 
-        val cmpOgeStatement = main.bodyOrNull<DeclarationStatement>(6)
+        val cmpOgeStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(6)
         assertNotNull(cmpOgeStatement)
 
         val cmpOgeDeclaration = cmpOgeStatement.singleDeclaration
@@ -573,7 +573,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(cmpOge)
         assertEquals(">=", cmpOge.operatorCode)
 
-        val cmpOleStatement = main.bodyOrNull<DeclarationStatement>(7)
+        val cmpOleStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(7)
         assertNotNull(cmpOleStatement)
 
         val cmpOleDeclaration = cmpOleStatement.singleDeclaration
@@ -585,7 +585,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(cmpOle)
         assertEquals("<=", cmpOle.operatorCode)
 
-        val cmpUgtStatement = main.bodyOrNull<DeclarationStatement>(8)
+        val cmpUgtStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(8)
         assertNotNull(cmpUgtStatement)
 
         val cmpUgtDeclaration = cmpUgtStatement.singleDeclaration
@@ -600,7 +600,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(cmpUgt)
         assertEquals(">", cmpUgt.operatorCode)
 
-        val cmpUltStatement = main.bodyOrNull<DeclarationStatement>(9)
+        val cmpUltStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(9)
         assertNotNull(cmpUltStatement)
 
         val cmpUltDeclaration = cmpUltStatement.singleDeclaration
@@ -615,7 +615,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(cmpUlt)
         assertEquals("<", cmpUlt.operatorCode)
 
-        val cmpUgeStatement = main.bodyOrNull<DeclarationStatement>(10)
+        val cmpUgeStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(10)
         assertNotNull(cmpUgeStatement)
 
         val cmpUgeDeclaration = cmpUgeStatement.singleDeclaration
@@ -630,7 +630,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(cmpUge)
         assertEquals(">=", cmpUge.operatorCode)
 
-        val cmpUleStatement = main.bodyOrNull<DeclarationStatement>(11)
+        val cmpUleStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(11)
         assertNotNull(cmpUleStatement)
 
         val cmpUleDeclaration = cmpUleStatement.singleDeclaration
@@ -645,7 +645,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(cmpUle)
         assertEquals("<=", cmpUle.operatorCode)
 
-        val cmpUeqStatement = main.bodyOrNull<DeclarationStatement>(12)
+        val cmpUeqStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(12)
         assertNotNull(cmpUeqStatement)
 
         val cmpUeqDeclaration = cmpUeqStatement.singleDeclaration
@@ -660,7 +660,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(cmpUeq)
         assertEquals("==", cmpUeq.operatorCode)
 
-        val cmpUneStatement = main.bodyOrNull<DeclarationStatement>(13)
+        val cmpUneStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(13)
         assertNotNull(cmpUneStatement)
 
         val cmpUneDeclaration = cmpUneStatement.singleDeclaration
@@ -675,7 +675,7 @@ class StatementHandlerTest {
         assertIs<BinaryOperator>(cmpUne)
         assertEquals("!=", cmpUne.operatorCode)
 
-        val cmpOrdStatement = main.bodyOrNull<DeclarationStatement>(14)
+        val cmpOrdStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(14)
         assertNotNull(cmpOrdStatement)
 
         val cmpOrdDeclaration = cmpOrdStatement.singleDeclaration
@@ -692,7 +692,7 @@ class StatementHandlerTest {
         assertRefersTo(cmpOrd.arguments[0], xDeclaration)
         assertRefersTo(cmpOrd.arguments[1], yDeclaration)
 
-        val cmpUnoStatement = main.bodyOrNull<DeclarationStatement>(15)
+        val cmpUnoStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(15)
         assertNotNull(cmpUnoStatement)
 
         val cmpUnoDeclaration = cmpUnoStatement.singleDeclaration

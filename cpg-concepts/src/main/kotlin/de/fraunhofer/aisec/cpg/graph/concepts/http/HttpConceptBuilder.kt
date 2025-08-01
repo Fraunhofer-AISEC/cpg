@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.auth.Authorization
 import de.fraunhofer.aisec.cpg.graph.concepts.auth.RequestContext
 import de.fraunhofer.aisec.cpg.graph.concepts.newConcept
 import de.fraunhofer.aisec.cpg.graph.concepts.newOperation
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
 
 /**
  * Creates a new [HttpClient] concept.
