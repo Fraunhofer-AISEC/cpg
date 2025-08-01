@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.jvm
 
-import com.googlecode.dex2jar.tools.Dex2jarCmd
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -36,8 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
-import java.nio.file.Path
-import java.nio.file.Paths
 import sootup.apk.frontend.ApkAnalysisInputLocation
 import sootup.core.model.Body
 import sootup.core.model.SootMethod
@@ -52,8 +49,8 @@ import sootup.interceptors.CopyPropagator
 import sootup.interceptors.EmptySwitchEliminator
 import sootup.interceptors.LocalNameStandardizer
 import sootup.interceptors.NopEliminator
+import sootup.interceptors.TypeAssigner
 import sootup.interceptors.UnreachableCodeEliminator
-import sootup.java.bytecode.frontend.inputlocation.ArchiveBasedAnalysisInputLocation
 import sootup.java.bytecode.frontend.inputlocation.JavaClassPathAnalysisInputLocation
 import sootup.java.core.views.JavaView
 import sootup.java.frontend.inputlocation.JavaSourcePathAnalysisInputLocation
@@ -86,7 +83,7 @@ class JVMLanguageFrontend(
             CopyPropagator(),
             // ConditionalBranchFolder(),
             EmptySwitchEliminator(),
-            // TypeAssigner(),
+            TypeAssigner(),
             LocalNameStandardizer(),
         )
 
@@ -126,32 +123,6 @@ class JVMLanguageFrontend(
                     )
                 }
                 "apk" -> {
-                    class Dex2JarAnalysisInputLocation(
-                        path: Path,
-                        srcType: SourceType,
-                        bodyInterceptors: List<BodyInterceptor>,
-                    ) : ArchiveBasedAnalysisInputLocation(path, srcType, bodyInterceptors) {
-                        init {
-                            this.path = Paths.get(dex2jar(path))
-                        }
-
-                        private fun dex2jar(path: Path): String {
-                            val apkPath = path.toAbsolutePath().toString()
-                            val outDir = "./tmp/"
-                            val start = apkPath.lastIndexOf(File.separator)
-                            val end = apkPath.lastIndexOf(".apk")
-                            val outputFile = outDir + apkPath.substring(start + 1, end) + ".jar"
-                            Dex2jarCmd.main("-f", apkPath, "-o", outputFile)
-                            return outputFile
-                        }
-                    }
-                    /*val apkAnalysis =
-                    Dex2JarAnalysisInputLocation(
-                        file.toPath(),
-                        SourceType.Application,
-                        bodyInterceptors,
-                    )*/
-
                     val apkAnalysis = ApkAnalysisInputLocation(file.toPath(), "", bodyInterceptors)
 
                     JavaView(apkAnalysis)
