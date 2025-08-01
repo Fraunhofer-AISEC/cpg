@@ -31,27 +31,37 @@ import org.reflections.Reflections
 import org.reflections.scanners.Scanners.SubTypes
 
 /**
- * Retrieves a set of all [Concept] nodes associated with this [Node] and its AST children
- * ([Node.nodes]).
+ * Retrieves a set of all [Concept] nodes associated with this [Node] and its AST children (if this
+ * is an [AstNode], see [AstNode.nodes]).
  *
- * @return A set containing all [Concept] nodes found in the overlays of the [Node] and its
- *   children.
+ * @return A set containing all [Concept] nodes found in the overlays of the [Node] and its eventual
+ *   AST children.
  */
-val AstNode.conceptNodes: Set<Concept>
-    get() = this.nodes.flatMapTo(mutableSetOf()) { it.overlays.filterIsInstance<Concept>() }
+val Node.conceptNodes: Set<Concept>
+    get() {
+        return allOverlays<Concept>()
+    }
 
 /**
- * Retrieves a set of all [Operation] nodes associated with this [Node] and its AST children
- * ([Node.nodes]).
+ * Retrieves a set of all [Operation] nodes associated with this [Node] and its AST children (if
+ * this is an [AstNode], see [AstNode.nodes]).
  *
  * @return A set containing all [Operation] nodes found in the overlays of the [Node] and its
- *   children.
+ *   eventual AST children.
  */
 val Node.operationNodes: Set<Operation>
-    get() =
-        (this as? AstNode).nodes.flatMapTo(mutableSetOf()) {
-            it.overlays.filterIsInstance<Operation>()
-        }
+    get() {
+        return allOverlays<Operation>()
+    }
+
+/**
+ * Retrieves a set of all [T] overlay nodes associated with this [Node] and its AST children (if
+ * this is an [AstNode], see [AstNode.nodes]).
+ */
+inline fun <reified T : OverlayNode> Node.allOverlays(): Set<T> {
+    return (this as? AstNode)?.nodes?.flatMap { it.overlays }?.filterIsInstance<T>()?.toSet()
+        ?: emptySet()
+}
 
 /** Returns a [Set] of all subclasses of the class [T]. */
 inline fun <reified T : OverlayNode> listOverlayClasses(
