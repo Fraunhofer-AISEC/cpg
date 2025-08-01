@@ -30,10 +30,29 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationManager.Companion.builder
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.Annotation
-import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.ast.Annotation
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.EnumDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.CaseStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.DefaultStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.SwitchStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CastExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ExpressionList
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.InitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.NewArrayExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.SubscriptExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -174,7 +193,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val main = declaration.methods[0]
 
         // lets get our try statement
-        val tryStatement = main.bodyOrNull<TryStatement>(0)
+        val tryStatement =
+            main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.TryStatement>(0)
         assertNotNull(tryStatement)
 
         var scope = tryStatement.scope
@@ -889,7 +909,19 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val mainMethod = enum.methods["main"]
         assertNotNull(mainMethod)
         assertNotNull(mainMethod.parameters["args"])
-        assertNotNull(mainMethod.bodyOrNull<DeclarationStatement>(0))
-        assertNotNull(mainMethod.bodyOrNull<DeclarationStatement>(1))
+        assertNotNull(
+            mainMethod.bodyOrNull<
+                de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement
+            >(
+                0
+            )
+        )
+        assertNotNull(
+            mainMethod.bodyOrNull<
+                de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement
+            >(
+                1
+            )
+        )
     }
 }

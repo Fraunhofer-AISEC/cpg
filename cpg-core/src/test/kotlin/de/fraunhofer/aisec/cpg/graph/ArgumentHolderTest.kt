@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ProblemExpression
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue

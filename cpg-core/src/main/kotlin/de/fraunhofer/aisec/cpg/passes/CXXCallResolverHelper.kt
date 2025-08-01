@@ -27,8 +27,18 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.ast.AstNode
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionTemplateDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TemplateDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TypeParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CastExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.TypeExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.tryCast
 import java.util.HashMap
@@ -68,7 +78,7 @@ fun shouldContinueSearchInParent(recordDeclaration: RecordDeclaration?, name: St
  * @param initializationSignature mapping containing the all elements of the signature of the
  *   TemplateDeclaration as key and the Type/Expression the Parameter is initialized with.
  * @param initializationType mapping of the instantiation value to the instantiation type (depends
- *   on resolution [TemplateDeclaration.TemplateInitialization]
+ *   on resolution [ast.declarations.TemplateDeclaration.TemplateInitialization]
  * @param orderedInitializationSignature mapping of the ordering of the template parameters
  */
 fun applyTemplateInstantiation(
@@ -202,7 +212,7 @@ fun getParameterizedSignaturesFromInitialization(
  *   instantiated
  * @param templateCall callExpression that instantiates the template
  * @param instantiationType mapping of the instantiation value to the instantiation type (depends on
- *   resolution [TemplateDeclaration.TemplateInitialization]
+ *   resolution [ast.declarations.TemplateDeclaration.TemplateInitialization]
  * @param orderedInitializationSignature mapping of the ordering of the template parameters
  * @param explicitInstantiated list of all ParameterizedTypes which are explicitly instantiated
  * @return mapping containing the all elements of the signature of the TemplateDeclaration as key
@@ -262,7 +272,7 @@ fun getTemplateInitializationSignature(
  *   instantiated
  * @param templateCall callExpression that instantiates the template
  * @param instantiationType mapping of the instantiation value to the instantiation type (depends
- * * on resolution [TemplateDeclaration.TemplateInitialization]
+ * * on resolution [ast.declarations.TemplateDeclaration.TemplateInitialization]
  *
  * @param orderedInitializationSignature mapping of the ordering of the template parameters
  * @param explicitInstantiated list of all ParameterizedTypes which are explicitly instantiated
@@ -342,7 +352,7 @@ fun isInstantiated(callParameterArg: Node, templateParameter: Declaration?): Boo
  * @param instantiationSignature mapping of the Declaration representing a template parameter to the
  *   value that initializes that template parameter
  * @param instantiationType mapping of the instantiation value to the instantiation type (depends on
- *   resolution [TemplateDeclaration.TemplateInitialization]
+ *   resolution [ast.declarations.TemplateDeclaration.TemplateInitialization]
  * @param orderedInitializationSignature mapping of the ordering of the template parameters
  */
 fun handleImplicitTemplateParameter(

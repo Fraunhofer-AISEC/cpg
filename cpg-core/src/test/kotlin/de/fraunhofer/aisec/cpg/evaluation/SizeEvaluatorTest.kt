@@ -26,11 +26,10 @@
 package de.fraunhofer.aisec.cpg.evaluation
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.SubscriptExpression
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -53,7 +52,10 @@ class SizeEvaluatorTest {
         val main = mainClass.methods["main"]
         assertNotNull(main)
 
-        val array = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration
+        val array =
+            main
+                .bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>()
+                ?.singleDeclaration
         assertNotNull(array)
 
         val evaluator = SizeEvaluator()
@@ -75,7 +77,10 @@ class SizeEvaluatorTest {
         val main = mainClass.methods["main"]
         assertNotNull(main)
 
-        val array = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration
+        val array =
+            main
+                .bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>()
+                ?.singleDeclaration
         assertNotNull(array)
 
         val evaluator = SizeEvaluator()

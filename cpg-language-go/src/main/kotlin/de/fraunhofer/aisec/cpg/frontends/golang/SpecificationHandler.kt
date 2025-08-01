@@ -26,7 +26,11 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.DeclarationSequence
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ProblemDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -188,7 +192,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
     /**
      * // handleValueSpec handles parsing of an ast.ValueSpec, which is a variable declaration.
      * Since this can potentially declare multiple variables with one "spec", this returns a
-     * [DeclarationSequence].
+     * [ast.declarations.DeclarationSequence].
      */
     private fun handleValueSpec(valueSpec: GoStandardLibrary.Ast.ValueSpec): Declaration {
         // Increment iota value

@@ -35,17 +35,23 @@ import de.fraunhofer.aisec.cpg.frontends.HasStructs
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.calls
-import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.graph.methods
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.translationUnit
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -59,8 +65,9 @@ import de.fraunhofer.aisec.cpg.passes.getPossibleContainingTypes
 import kotlin.collections.forEach
 
 /**
- * Tries to infer a [NamespaceDeclaration] from a [Name]. This will return `null`, if inference was
- * not possible, or if it was turned off in the [InferenceConfiguration].
+ * Tries to infer a [de.fraunhofer.aisec.cpg.graph.ast.declarations.NamespaceDeclaration] from a
+ * [Name]. This will return `null`, if inference was not possible, or if it was turned off in the
+ * [InferenceConfiguration].
  */
 fun Pass<*>.tryNamespaceInference(name: Name, source: Node): NamespaceDeclaration? {
     // Determine the scope where we want to start our inference
@@ -87,8 +94,9 @@ fun Pass<*>.tryNamespaceInference(name: Name, source: Node): NamespaceDeclaratio
 }
 
 /**
- * Tries to infer a [RecordDeclaration] from an unresolved [Type]. This will return `null`, if
- * inference was not possible, or if it was turned off in the [InferenceConfiguration].
+ * Tries to infer a [de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration] from an
+ * unresolved [Type]. This will return `null`, if inference was not possible, or if it was turned
+ * off in the [InferenceConfiguration].
  */
 internal fun Pass<*>.tryRecordInference(type: Type, source: Node): RecordDeclaration? {
     val kind =
@@ -148,19 +156,22 @@ internal fun Pass<*>.tryRecordInference(type: Type, source: Node): RecordDeclara
 }
 
 /**
- * Tries to infer a [VariableDeclaration] (or [FieldDeclaration]) out of a [Reference]. This will
- * return `null`, if inference was not possible, or if it was turned off in the
+ * Tries to infer a [de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration] (or
+ * [de.fraunhofer.aisec.cpg.graph.ast.declarations.FieldDeclaration]) out of a [Reference]. This
+ * will return `null`, if inference was not possible, or if it was turned off in the
  * [InferenceConfiguration].
  *
  * We mainly try to infer global variables and fields here, since these are possibly parts of the
  * code we do not "see". We do not try to infer local variables, because we are under the assumption
  * that even with incomplete code, we at least have the complete current function code. We can
  * therefore differentiate between four scenarios:
- * - Inference of a [FieldDeclaration] if we have a language that allows implicit receivers, are
- *   inside a function and the ref is not qualified. This is then forwarded to [tryFieldInference].
- * - Inference of a top-level [VariableDeclaration] on a namespace level (this is not yet
- *   implemented)
- * - Inference of a global [VariableDeclaration] in the [GlobalScope].
+ * - Inference of a [de.fraunhofer.aisec.cpg.graph.ast.declarations.FieldDeclaration] if we have a
+ *   language that allows implicit receivers, are inside a function and the ref is not qualified.
+ *   This is then forwarded to [tryFieldInference].
+ * - Inference of a top-level [de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration]
+ *   on a namespace level (this is not yet implemented)
+ * - Inference of a global [de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration] in
+ *   the [GlobalScope].
  * - No inference, in any other cases since this would mean that we would infer a local variable.
  *   This is something we do not want to do see (see above).
  */
@@ -206,9 +217,10 @@ internal fun Pass<*>.tryVariableInference(ref: Reference): VariableDeclaration? 
 }
 
 /**
- * Tries to infer a [FieldDeclaration] from an unresolved [MemberExpression] or [Reference] (if the
- * language has [HasImplicitReceiver]). This will return `null`, if inference was not possible, or
- * if it was turned off in the [InferenceConfiguration].
+ * Tries to infer a [de.fraunhofer.aisec.cpg.graph.ast.declarations.FieldDeclaration] from an
+ * unresolved [MemberExpression] or [Reference] (if the language has [HasImplicitReceiver]). This
+ * will return `null`, if inference was not possible, or if it was turned off in the
+ * [InferenceConfiguration].
  *
  * It will also try to infer a [RecordDeclaration], if [targetType] does not have a declaration.
  * However, this is a very special corner-case that will most likely not be triggered, since the
@@ -249,15 +261,17 @@ internal fun Pass<*>.tryFieldInference(
 }
 
 /**
- * Tries to infer a [FunctionDeclaration] or a [MethodDeclaration] from a [CallExpression]. This
+ * Tries to infer a [de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration] or a
+ * [de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration] from a [CallExpression]. This
  * will return an empty list, if inference was not possible, or if it was turned off in the
  * [InferenceConfiguration].
  *
  * Depending on several factors, e.g., whether the callee has an FQN, was a [MemberExpression] or
  * whether the language supports [HasImplicitReceiver] we either infer
- * - a global [FunctionDeclaration]
- * - a [FunctionDeclaration] in a namespace
- * - a [MethodDeclaration] in a record using [tryMethodInference]
+ * - a global [de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration]
+ * - a [de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration] in a namespace
+ * - a [de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration] in a record using
+ *   [tryMethodInference]
  *
  * Since potentially multiple suitable bases exist for the inference of methods (derived by
  * [getPossibleContainingTypes]), we infer a method for all of them and return a list.
@@ -333,11 +347,11 @@ internal fun Pass<*>.tryFunctionInferenceFromFunctionPointer(
  * [RecordDeclaration]).
  *
  * There is a big challenge in this inference: We can not be 100 % sure, whether we really need to
- * infer a [MethodDeclaration] inside the [RecordDeclaration] or if this is a call to a global
- * function (if [call] is a simple [CallExpression] and not a [MemberCallExpression]). The reason
- * behind that is that most languages allow to omit `this` when calling methods in the current
- * class. So a call to `foo()` inside record `Bar` could either be a call to a global function `foo`
- * or a call to `Bar::foo`.
+ * infer a [de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration] inside the
+ * [RecordDeclaration] or if this is a call to a global function (if [call] is a simple
+ * [CallExpression] and not a [MemberCallExpression]). The reason behind that is that most languages
+ * allow to omit `this` when calling methods in the current class. So a call to `foo()` inside
+ * record `Bar` could either be a call to a global function `foo` or a call to `Bar::foo`.
  *
  * We need to decide whether we want to infer a global function or not; the heuristic is based on a
  * multitude of factors such as:

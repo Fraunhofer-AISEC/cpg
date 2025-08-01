@@ -25,10 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.graph.ast.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
 import de.fraunhofer.aisec.cpg.graph.edges.collections.UnwrappedEdgeList.Delegate
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
 
 /**
  * This interface denotes an AST node that can contain code. This code is stored as statements. This

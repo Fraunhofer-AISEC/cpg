@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
-import de.fraunhofer.aisec.cpg.graph.AstNode
+import de.fraunhofer.aisec.cpg.graph.ast.AstNode
 
 /**
  * Scope of validity associated to the local statement. Variables declared inside this statement are

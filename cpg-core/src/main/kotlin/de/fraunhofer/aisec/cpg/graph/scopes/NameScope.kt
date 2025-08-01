@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
-import de.fraunhofer.aisec.cpg.graph.AstNode
+import de.fraunhofer.aisec.cpg.graph.ast.AstNode
 
 /**
  * A scope which acts as a namespace with a certain name, which is prefixed to all local names

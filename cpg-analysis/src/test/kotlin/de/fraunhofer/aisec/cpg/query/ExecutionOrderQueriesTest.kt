@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.query
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.testcases.FlowQueriesTest
 import kotlin.test.Test
 import kotlin.test.assertEquals

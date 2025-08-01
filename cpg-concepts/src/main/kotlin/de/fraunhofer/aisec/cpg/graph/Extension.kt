@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.graph.ast.AstNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import org.reflections.Reflections
@@ -32,7 +33,7 @@ import org.reflections.scanners.Scanners.SubTypes
 
 /**
  * Retrieves a set of all [Concept] nodes associated with this [Node] and its AST children (if this
- * is an [AstNode], see [AstNode.nodes]).
+ * is an [ast.AstNode], see [ast.AstNode.nodes]).
  *
  * @return A set containing all [Concept] nodes found in the overlays of the [Node] and its eventual
  *   AST children.
@@ -44,7 +45,7 @@ val Node.conceptNodes: Set<Concept>
 
 /**
  * Retrieves a set of all [Operation] nodes associated with this [Node] and its AST children (if
- * this is an [AstNode], see [AstNode.nodes]).
+ * this is an [ast.AstNode], see [ast.AstNode.nodes]).
  *
  * @return A set containing all [Operation] nodes found in the overlays of the [Node] and its
  *   eventual AST children.
@@ -56,7 +57,7 @@ val Node.operationNodes: Set<Operation>
 
 /**
  * Retrieves a set of all [T] overlay nodes associated with this [Node] and its AST children (if
- * this is an [AstNode], see [AstNode.nodes]).
+ * this is an [ast.AstNode], see [ast.AstNode.nodes]).
  */
 inline fun <reified T : OverlayNode> Node.allOverlays(): Set<T> {
     return (this as? AstNode)?.nodes?.flatMap { it.overlays }?.filterIsInstance<T>()?.toSet()

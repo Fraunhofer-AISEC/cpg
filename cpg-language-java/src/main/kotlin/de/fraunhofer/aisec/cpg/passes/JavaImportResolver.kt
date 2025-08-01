@@ -28,7 +28,13 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.ast.AstNode
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.EnumConstantDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.EnumDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
@@ -41,7 +47,8 @@ import java.util.regex.Pattern
  * Some piece of legacy code that deals with Java imports. We need to convert this to the new import
  * system.
  *
- * We need to remove this class and use [ImportResolver] and [ImportDeclaration] instead.
+ * We need to remove this class and use [ImportResolver] and [ast.declarations.ImportDeclaration]
+ * instead.
  */
 @DependsOn(TypeHierarchyResolver::class)
 @RequiredFrontend(JavaLanguageFrontend::class)

@@ -27,9 +27,18 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.frontends.golang.GoStandardLibrary.Ast.BasicLit.Kind.*
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.KeyValueExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.LambdaExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.SubscriptExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -364,8 +373,9 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
 
     /**
      * This function handles a ast.SliceExpr, which is an extended version of ast.IndexExpr. We are
-     * modelling this as a combination of a [SubscriptExpression] that contains a [RangeExpression]
-     * as its subscriptExpression to share some code between this and an index expression.
+     * modelling this as a combination of a [ast.statements.expressions.SubscriptExpression] that
+     * contains a [ast.statements.expressions.RangeExpression] as its subscriptExpression to share
+     * some code between this and an index expression.
      */
     private fun handleSliceExpr(sliceExpr: GoStandardLibrary.Ast.SliceExpr): SubscriptExpression {
         val ase = newSubscriptExpression(rawNode = sliceExpr)

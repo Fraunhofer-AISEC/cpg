@@ -27,14 +27,33 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.ast.AstNode
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionTemplateDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TupleDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.cyclomaticComplexity
+import de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ComprehensionExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.InitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.SubscriptExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import kotlin.contracts.ExperimentalContracts
@@ -53,8 +72,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
     class Configuration(
         /**
          * This specifies the maximum complexity (as calculated per
-         * [Statement.cyclomaticComplexity]) a [FunctionDeclaration] must have in order to be
-         * considered.
+         * [ast.declarations.cyclomaticComplexity]) a [ast.declarations.FunctionDeclaration] must
+         * have in order to be considered.
          */
         var maxComplexity: Int? = null,
         /**
@@ -246,10 +265,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
     }
 
     /**
-     * Computes the previous write access of [currentEdge].end if it is a [Reference] or
-     * [ValueDeclaration] based on the given [state] (which maps all variables to its last write
-     * instruction). It also updates the [state] if [currentEdge].end performs a write-operation to
-     * a variable.
+     * Computes the previous write access of [currentEdge].end if it is a
+     * [ast.statements.expressions.Reference] or [ast.declarations.ValueDeclaration] based on the
+     * given [state] (which maps all variables to its last write instruction). It also updates the
+     * [state] if [currentEdge].end performs a write-operation to a variable.
      *
      * It further determines unnecessary implicit return statement which are added by some frontends
      * even if every path reaching this point already contains a return statement.
@@ -585,9 +604,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
     }
 
     /**
-     * Handles the propagation of data flows to the variables used in a [ComprehensionExpression].
-     * We have a write access to one or multiple [Declaration]s or [Reference]s here. Multiple
-     * values are supported through [InitializerListExpression].
+     * Handles the propagation of data flows to the variables used in a
+     * [ast.statements.expressions.ComprehensionExpression]. We have a write access to one or
+     * multiple [ast.declarations.Declaration]s or [ast.statements.expressions.Reference]s here.
+     * Multiple values are supported through [ast.statements.expressions.InitializerListExpression].
      */
     protected fun handleComprehensionExpression(
         currentNode: ComprehensionExpression,
@@ -691,11 +711,11 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
          */
         var generalState: State<Node, V> = State(),
         /**
-         * It's main purpose is to store the most recent mapping of a [Declaration] to its
-         * [LatticeElement]. However, it is also used to figure out if we have to continue with the
-         * iteration (something in the declarationState has changed) which is why we store all nodes
-         * here. However, since we never use them except from determining if we changed something,
-         * it won't affect the result.
+         * It's main purpose is to store the most recent mapping of a [ast.declarations.Declaration]
+         * to its [LatticeElement]. However, it is also used to figure out if we have to continue
+         * with the iteration (something in the declarationState has changed) which is why we store
+         * all nodes here. However, since we never use them except from determining if we changed
+         * something, it won't affect the result.
          */
         var declarationsState: State<Any?, V> = State(),
 
@@ -746,17 +766,17 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
 /**
  * The "object identifier" of a node can be used to differentiate different "objects" that a node
- * (most likely a [Reference]) refers to.
+ * (most likely a [ast.statements.expressions.Reference]) refers to.
  *
  * In the most basic use-case the [objectIdentifier] of a simple variable reference is the hash-code
- * of its [VariableDeclaration]. Consider the following code:
+ * of its [ast.declarations.VariableDeclaration]. Consider the following code:
  * ```c
  * int a = 1;
  * printf(a);
  * ```
  *
- * In this case, the "object identifier" of the [Reference] `a` in the second line is the hash-code
- * of the [VariableDeclaration] `a` in the first line.
+ * In this case, the "object identifier" of the [ast.statements.expressions.Reference] `a` in the
+ * second line is the hash-code of the [ast.declarations.VariableDeclaration] `a` in the first line.
  *
  * However, we also need to differentiate between different objects that are used as fields as well
  * as different instances of the fields. Consider the second example:
@@ -772,10 +792,11 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
  * b.field = 2;
  * ```
  *
- * In this case, the [objectIdentifier] of the [MemberExpression] `a` is a combination of the
- * hash-code of the [VariableDeclaration] `a` as well as the [FieldDeclaration] of `field`. The same
- * applies for `b`. If we would only rely on the [VariableDeclaration], we would not be sensitive to
- * fields, if we would only rely on the [FieldDeclaration], we would not be sensitive to different
+ * In this case, the [objectIdentifier] of the [ast.statements.expressions.MemberExpression] `a` is
+ * a combination of the hash-code of the [ast.declarations.VariableDeclaration] `a` as well as the
+ * [ast.declarations.FieldDeclaration] of `field`. The same applies for `b`. If we would only rely
+ * on the [ast.declarations.VariableDeclaration], we would not be sensitive to fields, if we would
+ * only rely on the [ast.declarations.FieldDeclaration], we would not be sensitive to different
  * object instances. Therefore, we consider both.
  *
  * Please note however, that this current, very basic implementation does not consider perform any
@@ -794,7 +815,7 @@ fun Node.objectIdentifier(): Int? {
     }
 }
 
-/** Implements [Node.objectIdentifier] for a [SubscriptExpression]. */
+/** Implements [Node.objectIdentifier] for a [ast.statements.expressions.SubscriptExpression]. */
 fun SubscriptExpression.objectIdentifier(): Int? {
     val ref = this.subscriptExpression.objectIdentifier()
     val baseIdentifier = base.objectIdentifier()
@@ -805,7 +826,7 @@ fun SubscriptExpression.objectIdentifier(): Int? {
     }
 }
 
-/** Implements [Node.objectIdentifier] for a [MemberExpression]. */
+/** Implements [Node.objectIdentifier] for a [ast.statements.expressions.MemberExpression]. */
 fun MemberExpression.objectIdentifier(): Int? {
     val ref = this.refersTo
     return if (ref == null) {
@@ -820,7 +841,7 @@ fun MemberExpression.objectIdentifier(): Int? {
     }
 }
 
-/** Implements [Node.objectIdentifier] for a [Reference]. */
+/** Implements [Node.objectIdentifier] for a [ast.statements.expressions.Reference]. */
 fun Reference.objectIdentifier(): Int? {
     return this.refersTo?.hashCode()
 }

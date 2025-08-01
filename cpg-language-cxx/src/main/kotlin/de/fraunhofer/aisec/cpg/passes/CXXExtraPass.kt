@@ -28,10 +28,15 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.AstNode
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.replace
@@ -72,10 +77,10 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     /**
      * In the frontend, we keep parenthesis around some expressions, so we can decide whether they
-     * are [CastExpression] nodes or just simply brackets with no syntactic value. The
-     * [CastExpression] conversion is done in [convertOperators], but in this function we are trying
-     * to get rid of those ()-unary operators that are meaningless, in order to reduce clutter to
-     * the graph.
+     * are [ast.statements.expressions.CastExpression] nodes or just simply brackets with no
+     * syntactic value. The [ast.statements.expressions.CastExpression] conversion is done in
+     * [convertOperators], but in this function we are trying to get rid of those ()-unary operators
+     * that are meaningless, in order to reduce clutter to the graph.
      */
     private fun removeBracketOperators(node: UnaryOperator) {
         val input = node.input
