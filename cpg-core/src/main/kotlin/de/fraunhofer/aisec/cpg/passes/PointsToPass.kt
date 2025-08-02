@@ -2626,7 +2626,8 @@ fun PointsToStateElement.updateValues(
             // prevDFG edges
             // Except for callExpressions w/o invokes body for which we have to do this to create
             // the short FS paths
-            val newLastWrites = lastWrites
+            val newLastWrites = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
+            newLastWrites.addAll(lastWrites)
             newLastWrites.removeIf { lw ->
                 destinations.none {
                     it is CallExpression && it.invokes.singleOrNull()?.body == null
