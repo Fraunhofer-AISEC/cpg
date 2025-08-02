@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.ast.statements
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 

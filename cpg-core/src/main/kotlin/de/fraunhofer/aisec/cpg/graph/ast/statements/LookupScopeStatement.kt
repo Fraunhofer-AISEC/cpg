@@ -25,10 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph.ast.statements
 
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.newLookupScopeStatement
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
-import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
 import java.util.Objects
 
 /**

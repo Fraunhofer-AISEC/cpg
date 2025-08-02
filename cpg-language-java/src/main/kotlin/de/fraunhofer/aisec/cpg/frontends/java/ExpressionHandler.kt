@@ -109,8 +109,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     }
 
     /**
-     * Creates a new [ast.statements.expressions.NewArrayExpression], which is usually used as an initializer of a
-     * [VariableDeclaration].
+     * Creates a new [ast.statements.expressions.NewArrayExpression], which is usually used as an
+     * initializer of a [VariableDeclaration].
      *
      * @param expr the expression
      * @return the [ast.statements.expressions.NewArrayExpression]
@@ -129,7 +129,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         // dimensions are only present if you specify them explicitly, such as new int[1]
         for (lvl in arrayCreationExpr.levels) {
             lvl.dimension.ifPresent {
-                (handle(it) as? de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression?)
+                (handle(it)
+                        as? de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression?)
                     ?.let { creationExpression.addDimension(it) }
             }
         }
@@ -374,8 +375,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
      * [expression name](https://docs.oracle.com/javase/specs/jls/se23/html/jls-6.html#jls-ExpressionName)
      * into an [Expression].
      *
-     * Since a name can be a multitude of different things the result can either be a [ast.statements.expressions.Reference] or
-     * a [ast.statements.expressions.MemberExpression].
+     * Since a name can be a multitude of different things the result can either be a
+     * [ast.statements.expressions.Reference] or a [ast.statements.expressions.MemberExpression].
      */
     private fun handleNameExpression(
         nameExpr: NameExpr
@@ -497,7 +498,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         if (o.isPresent) {
             val scope = o.get()
             base =
-                handle(scope) as de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression?
+                handle(scope)
+                    as de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression?
                     ?: newProblemExpression("Could not parse base")
 
             // If the base directly refers to a record, then this is a static call
@@ -590,7 +592,8 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         for (i in arguments.indices) {
             val argument =
                 handle(arguments[i])
-                    as? de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression ?: continue
+                    as? de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
+                    ?: continue
             argument.argumentIndex = i
             ctor.addArgument(argument)
         }

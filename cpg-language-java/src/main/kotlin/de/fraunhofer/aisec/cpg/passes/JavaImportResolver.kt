@@ -47,7 +47,8 @@ import java.util.regex.Pattern
  * Some piece of legacy code that deals with Java imports. We need to convert this to the new import
  * system.
  *
- * We need to remove this class and use [ImportResolver] and [ast.declarations.ImportDeclaration] instead.
+ * We need to remove this class and use [ImportResolver] and [ast.declarations.ImportDeclaration]
+ * instead.
  */
 @DependsOn(TypeHierarchyResolver::class)
 @RequiredFrontend(JavaLanguageFrontend::class)

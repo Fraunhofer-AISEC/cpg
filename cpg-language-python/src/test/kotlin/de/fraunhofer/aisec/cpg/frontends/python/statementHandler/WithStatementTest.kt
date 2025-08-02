@@ -30,8 +30,6 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonHandler
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.refs
-import de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.ast.statements.EmptyStatement
 import de.fraunhofer.aisec.cpg.graph.ast.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.ast.statements.TryStatement
@@ -41,6 +39,8 @@ import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.refs
+import de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertLocalName

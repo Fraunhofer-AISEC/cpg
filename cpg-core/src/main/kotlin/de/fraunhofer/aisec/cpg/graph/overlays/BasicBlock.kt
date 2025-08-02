@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.overlays
 
-import de.fraunhofer.aisec.cpg.graph.ast.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
+import de.fraunhofer.aisec.cpg.graph.ast.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.ast.statements.LoopStatement
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ComprehensionExpression
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation

@@ -27,11 +27,8 @@ package de.fraunhofer.aisec.cpg.frontends.java
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
-import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.get
-import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.graph.ast.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
@@ -39,6 +36,9 @@ import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ConstructExpress
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.LambdaExpression
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.NewExpression
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.get
+import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.graph.variables
 import java.io.File
 import kotlin.test.Test

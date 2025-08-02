@@ -25,11 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph.ast.declarations
 
-import de.fraunhofer.aisec.cpg.graph.ast.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.HasDefault
+import de.fraunhofer.aisec.cpg.graph.ast.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 

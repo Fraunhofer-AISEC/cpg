@@ -29,10 +29,10 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.ProcessedListener
-import de.fraunhofer.aisec.cpg.graph.ast.AstNode
 import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
+import de.fraunhofer.aisec.cpg.graph.ast.AstNode
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.IncludeDeclaration
@@ -145,18 +145,23 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected var nextEdgeBranch: Boolean? = null
 
     /**
-     * This maps nodes that have to handle throws, i.e. [de.fraunhofer.aisec.cpg.graph.ast.statements.TryStatement] and [de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration], to
-     * the [Type]s of errors that were thrown and the EOG exits of the throwing statements. Entries
-     * to the outer map will only be created if the node was identified to handle or relay a throw.
-     * Entries to the inner throw will only be created when the mapping type was thrown.
+     * This maps nodes that have to handle throws, i.e.
+     * [de.fraunhofer.aisec.cpg.graph.ast.statements.TryStatement] and
+     * [de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration], to the [Type]s of
+     * errors that were thrown and the EOG exits of the throwing statements. Entries to the outer
+     * map will only be created if the node was identified to handle or relay a throw. Entries to
+     * the inner throw will only be created when the mapping type was thrown.
      */
     val nodesToInternalThrows = mutableMapOf<Node, MutableMap<Type, MutableList<Node>>>()
 
     /**
-     * This maps nodes that have to handle [de.fraunhofer.aisec.cpg.graph.ast.statements.BreakStatement]s and [de.fraunhofer.aisec.cpg.graph.ast.statements.ContinueStatement]s, i.e.
-     * [de.fraunhofer.aisec.cpg.graph.ast.statements.LoopStatement]s and [de.fraunhofer.aisec.cpg.graph.ast.statements.SwitchStatement]s to the EOG exits of the node they have to handle. An
-     * entry will only be created if the statement was identified to handle the above-mentioned
-     * control flow statements.
+     * This maps nodes that have to handle
+     * [de.fraunhofer.aisec.cpg.graph.ast.statements.BreakStatement]s and
+     * [de.fraunhofer.aisec.cpg.graph.ast.statements.ContinueStatement]s, i.e.
+     * [de.fraunhofer.aisec.cpg.graph.ast.statements.LoopStatement]s and
+     * [de.fraunhofer.aisec.cpg.graph.ast.statements.SwitchStatement]s to the EOG exits of the node
+     * they have to handle. An entry will only be created if the statement was identified to handle
+     * the above-mentioned control flow statements.
      */
     val nodesWithContinuesAndBreaks = mutableMapOf<Node, MutableList<Node>>()
 
@@ -390,7 +395,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * stored in [currentPredecessors] contain the valid EOG exits of the subtree that will be
      * connected to the next handled subtree. Adding or removing nodes from the list allows for
      * custom adaptation of control flow behavior when handling nodes that influence control flow,
-     * e.g. [de.fraunhofer.aisec.cpg.graph.ast.statements.LoopStatement]s or [de.fraunhofer.aisec.cpg.graph.ast.statements.BreakStatement].
+     * e.g. [de.fraunhofer.aisec.cpg.graph.ast.statements.LoopStatement]s or
+     * [de.fraunhofer.aisec.cpg.graph.ast.statements.BreakStatement].
      */
     fun handleEOG(node: Node?) {
         if (node == null) {

@@ -56,8 +56,8 @@ open class CallExpression :
     ArgumentHolder,
     HasSecondaryTypeEdge {
     /**
-     * Connection to its [ast.declarations.FunctionDeclaration]. This will be populated by the [SymbolResolver]. This
-     * will have an effect on the [type]
+     * Connection to its [ast.declarations.FunctionDeclaration]. This will be populated by the
+     * [SymbolResolver]. This will have an effect on the [type]
      */
     @PopulatedByPass(SymbolResolver::class)
     @Relationship(value = "INVOKES", direction = Relationship.Direction.OUTGOING)

@@ -28,14 +28,14 @@ package de.fraunhofer.aisec.cpg.concepts.memory
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.DynamicLoading
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.newDynamicLoading
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.newLoadSymbol
-import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
@@ -79,7 +79,9 @@ class MockPythonDynamicPass(ctx: TranslationContext) : ConceptPass(ctx) {
                     node.prevDFG += construct
 
                     val loadSymbol =
-                        newLoadSymbol<de.fraunhofer.aisec.cpg.graph.ast.declarations.ConstructorDeclaration>(
+                        newLoadSymbol<
+                            de.fraunhofer.aisec.cpg.graph.ast.declarations.ConstructorDeclaration
+                        >(
                             node,
                             dynamicLoading,
                             what = null,

@@ -72,30 +72,37 @@ import org.slf4j.LoggerFactory
 /**
  * Creates new connections between the place where a variable is declared and where it is used.
  *
- * A field access is modeled with a [ast.statements.expressions.MemberExpression]. After AST building, its base and member
- * references are set to [ast.statements.expressions.Reference] stubs. This pass resolves those references and makes the member
- * point to the appropriate [ast.declarations.FieldDeclaration] and the base to the "this" [ast.declarations.FieldDeclaration] of the
- * containing class. It is also capable of resolving references to fields that are inherited from a
- * superclass and thus not declared in the actual base class. When base or member declarations are
- * not found in the graph, a new "inferred" [ast.declarations.FieldDeclaration] is being created that is then used to
- * collect all usages to the same unknown declaration. [ast.statements.expressions.Reference] stubs are removed from the graph
- * after being resolved.
+ * A field access is modeled with a [ast.statements.expressions.MemberExpression]. After AST
+ * building, its base and member references are set to [ast.statements.expressions.Reference] stubs.
+ * This pass resolves those references and makes the member point to the appropriate
+ * [ast.declarations.FieldDeclaration] and the base to the "this"
+ * [ast.declarations.FieldDeclaration] of the containing class. It is also capable of resolving
+ * references to fields that are inherited from a superclass and thus not declared in the actual
+ * base class. When base or member declarations are not found in the graph, a new "inferred"
+ * [ast.declarations.FieldDeclaration] is being created that is then used to collect all usages to
+ * the same unknown declaration. [ast.statements.expressions.Reference] stubs are removed from the
+ * graph after being resolved.
  *
- * Accessing a local variable is modeled directly with a [ast.statements.expressions.Reference]. This step of the pass doesn't
- * remove the [ast.statements.expressions.Reference] nodes like in the field usage case but rather makes their "refersTo" point
- * to the appropriate [ast.declarations.ValueDeclaration].
+ * Accessing a local variable is modeled directly with a [ast.statements.expressions.Reference].
+ * This step of the pass doesn't remove the [ast.statements.expressions.Reference] nodes like in the
+ * field usage case but rather makes their "refersTo" point to the appropriate
+ * [ast.declarations.ValueDeclaration].
  *
- * Resolves [ast.statements.expressions.CallExpression] and [ast.statements.expressions.NewExpression] targets.
+ * Resolves [ast.statements.expressions.CallExpression] and
+ * [ast.statements.expressions.NewExpression] targets.
  *
- * A [ast.statements.expressions.CallExpression] specifies the method that wants to be called via [ast.statements.expressions.CallExpression.name]. The
- * call target is a method of the same class the caller belongs to, so the name is resolved to the
- * appropriate [ast.declarations.MethodDeclaration]. This pass also takes into consideration that a method might not
- * be present in the current class, but rather has its implementation in a superclass, and sets the
- * pointer accordingly.
+ * A [ast.statements.expressions.CallExpression] specifies the method that wants to be called via
+ * [ast.statements.expressions.CallExpression.name]. The call target is a method of the same class
+ * the caller belongs to, so the name is resolved to the appropriate
+ * [ast.declarations.MethodDeclaration]. This pass also takes into consideration that a method might
+ * not be present in the current class, but rather has its implementation in a superclass, and sets
+ * the pointer accordingly.
  *
- * Constructor calls with [ast.statements.expressions.ConstructExpression] are resolved in such a way that their
- * [ast.statements.expressions.ConstructExpression.instantiates] points to the correct [ast.declarations.RecordDeclaration]. Additionally, the
- * [ast.statements.expressions.ConstructExpression.constructor] is set to the according [ast.declarations.ConstructorDeclaration].
+ * Constructor calls with [ast.statements.expressions.ConstructExpression] are resolved in such a
+ * way that their [ast.statements.expressions.ConstructExpression.instantiates] points to the
+ * correct [ast.declarations.RecordDeclaration]. Additionally, the
+ * [ast.statements.expressions.ConstructExpression.constructor] is set to the according
+ * [ast.declarations.ConstructorDeclaration].
  *
  * This pass should NOT use any DFG edges because they are computed / adjusted in a later stage.
  */
@@ -111,8 +118,8 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         val skipUnreachableEOG: Boolean = false,
 
         /**
-         * If set to true, the resolver will ignore [ast.declarations.Declaration] nodes that are on EOG paths that
-         * are [EvaluationOrder.unreachable].
+         * If set to true, the resolver will ignore [ast.declarations.Declaration] nodes that are on
+         * EOG paths that are [EvaluationOrder.unreachable].
          */
         val ignoreUnreachableDeclarations: Boolean = false,
 
@@ -184,9 +191,9 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * This function caches all [ast.declarations.TemplateDeclaration]s into [templateList]. It either fetches the
-     * existing result from [componentsToTemplates] or fills [templateList] for the first time and
-     * then stores this result.
+     * This function caches all [ast.declarations.TemplateDeclaration]s into [templateList]. It
+     * either fetches the existing result from [componentsToTemplates] or fills [templateList] for
+     * the first time and then stores this result.
      */
     private fun cacheTemplates(component: Component?) {
         if (component in componentsToTemplates) {
@@ -212,26 +219,28 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * This function handles symbol resolving for a [ast.statements.expressions.Reference]. After a successful lookup of the
-     * symbol contained in [ast.statements.expressions.Reference.name], the property [ast.statements.expressions.Reference.refersTo] is set to the best
-     * (or only) candidate.
+     * This function handles symbol resolving for a [ast.statements.expressions.Reference]. After a
+     * successful lookup of the symbol contained in [ast.statements.expressions.Reference.name], the
+     * property [ast.statements.expressions.Reference.refersTo] is set to the best (or only)
+     * candidate.
      *
      * On a high-level, it performs the following steps:
-     * - Use [ScopeManager.lookupSymbolByName] to retrieve [ast.declarations.Declaration] candidates based on the
-     *   [ast.statements.expressions.Reference.name]. This can either result in an "unqualified" or "qualified" lookup,
-     *   depending on the name.
-     * - The results of the lookup are stored in [ast.statements.expressions.Reference.candidates]. The purpose of this is
-     *   two-fold. First, it is a good way to debug potential symbol resolution errors. Second, it
-     *   is used by other functions, for example [handleCallExpression], which then picks the best
-     *   viable option out of the candidates (if the reference is part of the
-     *   [ast.statements.expressions.CallExpression.callee]).
+     * - Use [ScopeManager.lookupSymbolByName] to retrieve [ast.declarations.Declaration] candidates
+     *   based on the [ast.statements.expressions.Reference.name]. This can either result in an
+     *   "unqualified" or "qualified" lookup, depending on the name.
+     * - The results of the lookup are stored in [ast.statements.expressions.Reference.candidates].
+     *   The purpose of this is two-fold. First, it is a good way to debug potential symbol
+     *   resolution errors. Second, it is used by other functions, for example
+     *   [handleCallExpression], which then picks the best viable option out of the candidates (if
+     *   the reference is part of the [ast.statements.expressions.CallExpression.callee]).
      * - In the next step, we need to decide whether we are resolving a standalone reference (which
      *   most likely points to a [ast.declarations.VariableDeclaration]) or if we are part of a
-     *   [ast.statements.expressions.CallExpression.callee]. In the first case, we can directly assign [ast.statements.expressions.Reference.refersTo]
-     *   based on the candidates (at the moment we only assign it if we have exactly one candidate).
-     *   In the second case, we are finished and let [handleCallExpression] take care of the rest
-     *   once the EOG reaches the appropriate [ast.statements.expressions.CallExpression] (which should actually be just be the
-     *   next EOG node).
+     *   [ast.statements.expressions.CallExpression.callee]. In the first case, we can directly
+     *   assign [ast.statements.expressions.Reference.refersTo] based on the candidates (at the
+     *   moment we only assign it if we have exactly one candidate). In the second case, we are
+     *   finished and let [handleCallExpression] take care of the rest once the EOG reaches the
+     *   appropriate [ast.statements.expressions.CallExpression] (which should actually be just be
+     *   the next EOG node).
      */
     protected open fun handleReference(ref: Reference) {
         val language = ref.language
@@ -342,13 +351,13 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * This function handles resolving of a [ast.statements.expressions.MemberExpression] in the [ScopeManager.currentRecord].
-     * This works similar to [handleReference]. First, we set the [MemberExpression.candidates]
-     * based on [resolveMemberByName], which internally calls [ScopeManager.lookupSymbolByName]
-     * based on the current class and its parent classes. Then, if we resolve a
-     * [ast.statements.expressions.MemberCallExpression], we abort (and later pick up resolving in [handleCallExpression]). In
-     * case of a field access, we set the [MemberExpression.refersTo] based on
-     * [Language.bestViableReferenceCandidate].
+     * This function handles resolving of a [ast.statements.expressions.MemberExpression] in the
+     * [ScopeManager.currentRecord]. This works similar to [handleReference]. First, we set the
+     * [MemberExpression.candidates] based on [resolveMemberByName], which internally calls
+     * [ScopeManager.lookupSymbolByName] based on the current class and its parent classes. Then, if
+     * we resolve a [ast.statements.expressions.MemberCallExpression], we abort (and later pick up
+     * resolving in [handleCallExpression]). In case of a field access, we set the
+     * [MemberExpression.refersTo] based on [Language.bestViableReferenceCandidate].
      */
     protected open fun handleMemberExpression(current: MemberExpression) {
         // Some locals for easier smart casting
@@ -405,7 +414,8 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     /**
      * This function resolves a possible overloaded -> (arrow) operator, for languages which support
      * operator overloading. The implicit call to the overloaded operator function is inserted as
-     * base for the MemberExpression. This can be the case for a [ast.statements.expressions.MemberExpression] or
+     * base for the MemberExpression. This can be the case for a
+     * [ast.statements.expressions.MemberExpression] or
      * [ast.statements.expressions.MemberCallExpression]
      */
     private fun resolveOverloadedArrowOperator(ex: Expression): Type? {
@@ -450,19 +460,21 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * This function handles the resolution of a [ast.statements.expressions.CallExpression] based on a list of candidates. The
-     * candidates are taken from [ast.statements.expressions.CallExpression.callee] which are set either in [handleReference]
+     * This function handles the resolution of a [ast.statements.expressions.CallExpression] based
+     * on a list of candidates. The candidates are taken from
+     * [ast.statements.expressions.CallExpression.callee] which are set either in [handleReference]
      * or [handleMemberExpression], depending on the type.
      *
      * In any case, the candidates are then resolved with the arguments of the call expression using
-     * [resolveWithArguments]. The result of this resolution is stored in [ast.statements.expressions.CallExpression.invokes]
-     * and depending on [CallResolutionResult.SuccessKind] are warning is emitted if resolution was
-     * erroneous or ambiguous. Furthermore, the [ast.statements.expressions.CallExpression.callee]'s [ast.statements.expressions.Reference.refersTo] is
-     * also set.
+     * [resolveWithArguments]. The result of this resolution is stored in
+     * [ast.statements.expressions.CallExpression.invokes] and depending on
+     * [CallResolutionResult.SuccessKind] are warning is emitted if resolution was erroneous or
+     * ambiguous. Furthermore, the [ast.statements.expressions.CallExpression.callee]'s
+     * [ast.statements.expressions.Reference.refersTo] is also set.
      *
      * If the resolution was unsuccessful, we try to infer the function based on the information
-     * provided in the [CallResolutionResult] and the [ast.statements.expressions.CallExpression]. This is done in
-     * [tryFunctionInference].
+     * provided in the [CallResolutionResult] and the [ast.statements.expressions.CallExpression].
+     * This is done in [tryFunctionInference].
      *
      * @param call The [ast.statements.expressions.CallExpression] to resolve.
      */
@@ -746,9 +758,11 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         /**
          * Adds implicit duplicates of the TemplateParams to the implicit ConstructExpression
          *
-         * @param templateParams of the [ast.declarations.VariableDeclaration]/[ast.statements.expressions.NewExpression]
+         * @param templateParams of the
+         *   [ast.declarations.VariableDeclaration]/[ast.statements.expressions.NewExpression]
          * @param constructExpression duplicate TemplateParameters (implicit) to preserve AST, as
-         *   [ast.statements.expressions.ConstructExpression] uses AST as well as the [ast.declarations.VariableDeclaration]/[ast.statements.expressions.NewExpression]
+         *   [ast.statements.expressions.ConstructExpression] uses AST as well as the
+         *   [ast.declarations.VariableDeclaration]/[ast.statements.expressions.NewExpression]
          */
         fun addImplicitTemplateParametersToCall(
             templateParams: List<Node>,
@@ -766,9 +780,10 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 }
 
 /**
- * This function decides which functions to add to [ast.statements.expressions.CallExpression.invokes] based on the candidates
- * and the arguments. It uses [resolveWithArguments] to resolve the best viable function based on
- * the candidates and the arguments.
+ * This function decides which functions to add to
+ * [ast.statements.expressions.CallExpression.invokes] based on the candidates and the arguments. It
+ * uses [resolveWithArguments] to resolve the best viable function based on the candidates and the
+ * arguments.
  *
  * If the resolution is [SUCCESSFUL], it sets the invokes edge to the best viable functions. If it
  * is [AMBIGUOUS] or [PROBLEMATIC], it sets the invokes edge to all possible viable functions. If it
@@ -806,9 +821,9 @@ internal fun Pass<*>.decideInvokesBasedOnCandidates(callee: Reference, call: Cal
 }
 
 /**
- * Returns a set of types in which the [ast.statements.expressions.CallExpression.callee] (which is a [ast.statements.expressions.Reference]) could reside
- * in. More concretely, it returns a [Pair], where the first element is the set of types and the
- * second is our best guess.
+ * Returns a set of types in which the [ast.statements.expressions.CallExpression.callee] (which is
+ * a [ast.statements.expressions.Reference]) could reside in. More concretely, it returns a [Pair],
+ * where the first element is the set of types and the second is our best guess.
  */
 internal fun Pass<*>.getPossibleContainingTypes(ref: Reference): Pair<Set<Type>, Type?> {
     val possibleTypes = mutableSetOf<Type>()
@@ -830,14 +845,15 @@ internal fun Pass<*>.getPossibleContainingTypes(ref: Reference): Pair<Set<Type>,
 }
 
 /**
- * This function tries to resolve a set of [candidates] (e.g. coming from a [ast.statements.expressions.CallExpression.callee])
- * into the best matching [ast.declarations.FunctionDeclaration] (or multiple functions, if applicable) based on the
+ * This function tries to resolve a set of [candidates] (e.g. coming from a
+ * [ast.statements.expressions.CallExpression.callee]) into the best matching
+ * [ast.declarations.FunctionDeclaration] (or multiple functions, if applicable) based on the
  * supplied [arguments]. The result is returned in the form of a [CallResolutionResult] which holds
  * detail information about intermediate results as well as the kind of success the resolution had.
  *
  * The [source] expression specifies the node in the graph that triggered this resolution. This is
- * most likely a [ast.statements.expressions.CallExpression], but could be other node as well. It is also the source of the
- * scope and language used in the resolution.
+ * most likely a [ast.statements.expressions.CallExpression], but could be other node as well. It is
+ * also the source of the scope and language used in the resolution.
  */
 internal fun Pass<*>.resolveWithArguments(
     candidates: Set<Declaration>,

@@ -299,9 +299,9 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * Joins the [nodes] with a [ast.statements.expressions.BinaryOperator] with the [operatorCode]. Nests the whole thing,
-     * where the first element in [nodes] is the lhs of the root of the tree of binary operators.
-     * The last operands are further down the tree.
+     * Joins the [nodes] with a [ast.statements.expressions.BinaryOperator] with the [operatorCode].
+     * Nests the whole thing, where the first element in [nodes] is the lhs of the root of the tree
+     * of binary operators. The last operands are further down the tree.
      */
     internal fun joinListWithBinOp(
         operatorCode: String,
@@ -349,11 +349,13 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * This method handles the python
      * [`BoolOp`](https://docs.python.org/3/library/ast.html#ast.BoolOp).
      *
-     * Generates a (potentially nested) [ast.statements.expressions.BinaryOperator] from a `BoolOp`. Less than two operands in
-     * [Python.AST.BoolOp.values] don't make sense and will generate a [ProblemExpression]. If only
-     * two operands exist, a simple [ast.statements.expressions.BinaryOperator] will be generated. More than two operands will
-     * lead to a nested [ast.statements.expressions.BinaryOperator]. E.g., if [Python.AST.BoolOp.values] contains the operators
-     * `[a, b, c]`, the result will be `a OP (b OP c)`.
+     * Generates a (potentially nested) [ast.statements.expressions.BinaryOperator] from a `BoolOp`.
+     * Less than two operands in [Python.AST.BoolOp.values] don't make sense and will generate a
+     * [ProblemExpression]. If only two operands exist, a simple
+     * [ast.statements.expressions.BinaryOperator] will be generated. More than two operands will
+     * lead to a nested [ast.statements.expressions.BinaryOperator]. E.g., if
+     * [Python.AST.BoolOp.values] contains the operators `[a, b, c]`, the result will be `a OP (b OP
+     * c)`.
      */
     private fun handleBoolOp(node: Python.AST.BoolOp): Expression {
         val op =

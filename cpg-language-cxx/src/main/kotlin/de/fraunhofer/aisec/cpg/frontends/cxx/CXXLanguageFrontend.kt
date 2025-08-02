@@ -480,12 +480,13 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
      * innermost type, but all other type adjustments, such as creating a [PointerType] is done
      * within this method.
      *
-     * Optionally, a [hint] in the form of an existing [ast.declarations.Declaration] can be provided. The idea
-     * behind this, is that in some scenarios we create the [ast.declarations.Declaration] before the type and in
-     * some, we derive the declaration from the type. In the first one, we might get some necessary
-     * information from the declaration, that influences the type parsing. One such example is that
-     * we check, whether a declaration is a [ast.declarations.ConstructorDeclaration] and return an [ObjectType] that
-     * corresponds with the record name it instantiates.
+     * Optionally, a [hint] in the form of an existing [ast.declarations.Declaration] can be
+     * provided. The idea behind this, is that in some scenarios we create the
+     * [ast.declarations.Declaration] before the type and in some, we derive the declaration from
+     * the type. In the first one, we might get some necessary information from the declaration,
+     * that influences the type parsing. One such example is that we check, whether a declaration is
+     * a [ast.declarations.ConstructorDeclaration] and return an [ObjectType] that corresponds with
+     * the record name it instantiates.
      *
      * @param hint an optional [ast.declarations.Declaration], which serves as a parsing hint.
      */

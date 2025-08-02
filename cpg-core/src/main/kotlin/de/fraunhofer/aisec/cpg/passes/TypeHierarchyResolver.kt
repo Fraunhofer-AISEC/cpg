@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.ast.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.ast.AstNode
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.EnumDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration

@@ -52,7 +52,10 @@ class SizeEvaluatorTest {
         val main = mainClass.methods["main"]
         assertNotNull(main)
 
-        val array = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>()?.singleDeclaration
+        val array =
+            main
+                .bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>()
+                ?.singleDeclaration
         assertNotNull(array)
 
         val evaluator = SizeEvaluator()
@@ -74,7 +77,10 @@ class SizeEvaluatorTest {
         val main = mainClass.methods["main"]
         assertNotNull(main)
 
-        val array = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>()?.singleDeclaration
+        val array =
+            main
+                .bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>()
+                ?.singleDeclaration
         assertNotNull(array)
 
         val evaluator = SizeEvaluator()

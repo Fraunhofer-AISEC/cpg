@@ -39,9 +39,9 @@ import de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.helpers.Util
 
@@ -104,8 +104,9 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
      *       [ConstructorDeclaration]
      *     - a [FunctionDeclaration] if neither of the above apply
      *
-     * In case of a [ast.declarations.ConstructorDeclaration] or[ast.declarations.MethodDeclaration]: the first argument is the
-     * `receiver` (most often called `self`).
+     * In case of a [ast.declarations.ConstructorDeclaration]
+     * or[ast.declarations.MethodDeclaration]: the first argument is the `receiver` (most often
+     * called `self`).
      */
     private fun handleFunctionDef(s: Python.AST.NormalOrAsyncFunctionDef): FunctionDeclaration {
         var recordDeclaration =
@@ -208,7 +209,8 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
      * This function creates a [newParameterDeclaration] for the argument, setting any modifiers
      * (like positional-only or keyword-only) and [defaultValue] if applicable.
      *
-     * This also adds the [ast.declarations.ParameterDeclaration] to the [ast.declarations.FunctionDeclaration.parameters].
+     * This also adds the [ast.declarations.ParameterDeclaration] to the
+     * [ast.declarations.FunctionDeclaration.parameters].
      */
     internal fun handleArgument(
         func: FunctionDeclaration,

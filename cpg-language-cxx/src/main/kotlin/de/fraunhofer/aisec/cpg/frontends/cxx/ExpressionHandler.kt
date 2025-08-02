@@ -108,8 +108,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     /**
      * This handles a [CPPASTSimpleTypeConstructorExpression], which handles all cases of
      * [Explicit type conversion](https://en.cppreference.com/w/cpp/language/explicit_cast).
-     * Depending on the case, we either handle this as a [ast.statements.expressions.CastExpression] or a
-     * [ast.statements.expressions.ConstructExpression].
+     * Depending on the case, we either handle this as a [ast.statements.expressions.CastExpression]
+     * or a [ast.statements.expressions.ConstructExpression].
      */
     private fun handleSimpleTypeConstructorExpression(
         node: CPPASTSimpleTypeConstructorExpression
@@ -1015,8 +1015,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
     /**
      * In C++, the "this" expression is also modelled as a literal. In our case however, we want to
-     * return a [ast.statements.expressions.Reference], which is then later connected to the current method's
-     * [MethodDeclaration.receiver].
+     * return a [ast.statements.expressions.Reference], which is then later connected to the current
+     * method's [MethodDeclaration.receiver].
      */
     private fun handleThisLiteral(ctx: IASTLiteralExpression): Reference {
         // We should be in a record here. However since we are a fuzzy parser, maybe things went

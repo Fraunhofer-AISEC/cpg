@@ -240,7 +240,8 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * Handles a constant struct value, which belongs to the
      * [complex constants](https://llvm.org/docs/LangRef.html#complex-constants). Its type needs to
      * be a structure type (either identified or literal) and we currently map this to a
-     * [ast.statements.expressions.ConstructExpression], with the individual struct members being added as arguments.
+     * [ast.statements.expressions.ConstructExpression], with the individual struct members being
+     * added as arguments.
      */
     private fun handleConstantStructValue(value: LLVMValueRef): Expression {
         // retrieve the type
@@ -266,7 +267,8 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * Handles a constant array value, which belongs to the
      * [complex constants](https://llvm.org/docs/LangRef.html#complex-constants). Their element
      * types and number of elements needs to match the specified array type. We parse the array
-     * contents as an [ast.statements.expressions.InitializerListExpression], similar to the C syntax of `int a[] = { 1, 2 }`.
+     * contents as an [ast.statements.expressions.InitializerListExpression], similar to the C
+     * syntax of `int a[] = { 1, 2 }`.
      *
      * There is a special case, in which LLVM allows to represent the array as a double-quoted
      * string, prefixed with `c`. In this case we
@@ -330,7 +332,8 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     /**
-     * Recursively creates a structure of [type] and initializes all its fields with 0-[ast.statements.expressions.Literal].
+     * Recursively creates a structure of [type] and initializes all its fields with
+     * 0-[ast.statements.expressions.Literal].
      *
      * Returns a [ast.statements.expressions.ConstructExpression].
      */
@@ -369,10 +372,11 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * [`extractvalue`](https://llvm.org/docs/LangRef.html#extractvalue-instruction) instruction
      * which works in a similar way.
      *
-     * We try to convert it either into an [ast.statements.expressions.SubscriptExpression] or an [ast.statements.expressions.MemberExpression], depending
-     * on whether the accessed variable is a struct or an array. Furthermore, since `getelementptr`
-     * allows an (infinite) chain of sub-element access within a single instruction, we need to
-     * unwrap those into individual expressions.
+     * We try to convert it either into an [ast.statements.expressions.SubscriptExpression] or an
+     * [ast.statements.expressions.MemberExpression], depending on whether the accessed variable is
+     * a struct or an array. Furthermore, since `getelementptr` allows an (infinite) chain of
+     * sub-element access within a single instruction, we need to unwrap those into individual
+     * expressions.
      */
     internal fun handleGetElementPtr(instr: LLVMValueRef): Expression {
         val isGetElementPtr =

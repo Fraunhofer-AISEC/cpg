@@ -28,11 +28,11 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.graph.ast.ArgumentHolder
-import de.fraunhofer.aisec.cpg.graph.ast.AstNode
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
+import de.fraunhofer.aisec.cpg.graph.ast.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.ast.AstNode
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
@@ -400,9 +400,14 @@ object SubgraphWalker {
  *   replacement BEFORE any DFG edges are set. We are re-wiring EOG edges, but nothing else. If one
  *   tries to replace a node with existing [Node.nextDFG] or [Node.prevDFG], we fail.
  * - We also migrate [HasType.typeObservers] from the [old] to the [new] node.
- * - Lastly, if the [new] node is a [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression.callee] of a [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression] parent, and the
- *   [old] and [new] expressions are of different types (e.g., exchanging a simple [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference] for a
- *   [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression]), we also replace the [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression] with a [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberCallExpression].
+ * - Lastly, if the [new] node is a
+ *   [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression.callee] of a
+ *   [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression] parent, and the [old]
+ *   and [new] expressions are of different types (e.g., exchanging a simple
+ *   [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference] for a
+ *   [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression]), we also replace
+ *   the [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression] with a
+ *   [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberCallExpression].
  */
 context(provider: ContextProvider)
 fun SubgraphWalker.ScopedWalker<Node>.replace(
@@ -547,8 +552,9 @@ fun CallExpression.toMemberCallExpression(callee: MemberExpression): MemberCallE
 }
 
 /**
- * Creates a new [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ConstructExpression] with the same properties (e.g. ast children, etc.) except
- * from DFG and EOG edges as [this]. It sets the [ConstructExpression.callee] to [callee].
+ * Creates a new [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ConstructExpression] with
+ * the same properties (e.g. ast children, etc.) except from DFG and EOG edges as [this]. It sets
+ * the [ConstructExpression.callee] to [callee].
  */
 fun CallExpression.toConstructExpression(callee: Reference): ConstructExpression {
     val construct = ConstructExpression()

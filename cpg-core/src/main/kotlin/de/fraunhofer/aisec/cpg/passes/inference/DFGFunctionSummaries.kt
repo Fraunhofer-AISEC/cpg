@@ -63,9 +63,12 @@ class DFGFunctionSummaries {
     /**
      * Saves the information on which parameter(s) of a function are modified by the function. This
      * is interesting since we need to add DFG edges between the modified parameter and the
-     * respective argument(s). For each [de.fraunhofer.aisec.cpg.graph.ast.declarations.ParameterDeclaration] as well as the
-     * [de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration.receiver] that has some incoming DFG-edge within this
-     * [de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration], we store all previous DFG nodes.
+     * respective argument(s). For each
+     * [de.fraunhofer.aisec.cpg.graph.ast.declarations.ParameterDeclaration] as well as the
+     * [de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration.receiver] that has some
+     * incoming DFG-edge within this
+     * [de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration], we store all previous
+     * DFG nodes.
      */
     val functionToChangedParameters =
         mutableMapOf<FunctionDeclaration, MutableMap<ValueDeclaration, MutableSet<Node>>>()

@@ -77,10 +77,10 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     /**
      * In the frontend, we keep parenthesis around some expressions, so we can decide whether they
-     * are [ast.statements.expressions.CastExpression] nodes or just simply brackets with no syntactic value. The
-     * [ast.statements.expressions.CastExpression] conversion is done in [convertOperators], but in this function we are trying
-     * to get rid of those ()-unary operators that are meaningless, in order to reduce clutter to
-     * the graph.
+     * are [ast.statements.expressions.CastExpression] nodes or just simply brackets with no
+     * syntactic value. The [ast.statements.expressions.CastExpression] conversion is done in
+     * [convertOperators], but in this function we are trying to get rid of those ()-unary operators
+     * that are meaningless, in order to reduce clutter to the graph.
      */
     private fun removeBracketOperators(node: UnaryOperator) {
         val input = node.input

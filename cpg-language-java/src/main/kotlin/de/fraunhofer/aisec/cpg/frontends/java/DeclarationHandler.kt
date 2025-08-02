@@ -40,14 +40,14 @@ import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.DeclarationSequence
-import de.fraunhofer.aisec.cpg.graph.ast.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.EnumConstantDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.EnumDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.NewArrayExpression
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
@@ -336,7 +336,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             when (decl) {
                 is MethodDeclaration -> {
                     val md =
-                        handle(decl) as de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration
+                        handle(decl)
+                            as de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration
                     frontend.scopeManager.addDeclaration(md)
                     recordDeclaration.methods += md
                 }

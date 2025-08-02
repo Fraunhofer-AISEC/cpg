@@ -44,9 +44,10 @@ import org.neo4j.ogm.annotation.*
  * store additional information that relate to the relationship between the two nodes that belong to
  * neither of the two nodes directly.
  *
- * An example would be the name (in this case `a`) of an argument between a [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression] (`foo`)
- * and its argument (a [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal] of `2`) in languages that support keyword arguments, such as
- * Python:
+ * An example would be the name (in this case `a`) of an argument between a
+ * [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression] (`foo`) and its
+ * argument (a [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal] of `2`) in
+ * languages that support keyword arguments, such as Python:
  * ```python
  * foo("bar", a = 2)
  * ```

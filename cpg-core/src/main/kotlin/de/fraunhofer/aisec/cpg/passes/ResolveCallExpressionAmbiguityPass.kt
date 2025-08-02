@@ -55,11 +55,13 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
  * If a [Language] has the trait [HasCallExpressionAmbiguity], we cannot distinguish between
- * [ast.statements.expressions.CallExpression], [ast.statements.expressions.CastExpression] or [ast.statements.expressions.ConstructExpression] during the initial translation. This
- * stems from the fact that we might not know all the types yet. We therefore need to handle them as
- * regular call expression in a [LanguageFrontend] or [Handler] and then later replace them with a
- * [ast.statements.expressions.CastExpression] or [ast.statements.expressions.ConstructExpression], if the [ast.statements.expressions.CallExpression.callee] refers to name of a
- * [Type] / [RecordDeclaration] rather than a function.
+ * [ast.statements.expressions.CallExpression], [ast.statements.expressions.CastExpression] or
+ * [ast.statements.expressions.ConstructExpression] during the initial translation. This stems from
+ * the fact that we might not know all the types yet. We therefore need to handle them as regular
+ * call expression in a [LanguageFrontend] or [Handler] and then later replace them with a
+ * [ast.statements.expressions.CastExpression] or [ast.statements.expressions.ConstructExpression],
+ * if the [ast.statements.expressions.CallExpression.callee] refers to name of a [Type] /
+ * [RecordDeclaration] rather than a function.
  */
 @ExecuteBefore(EvaluationOrderGraphPass::class)
 @DependsOn(TypeResolver::class)

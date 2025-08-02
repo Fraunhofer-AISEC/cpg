@@ -29,11 +29,11 @@ import de.fraunhofer.aisec.cpg.graph.ast.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.ProblemDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.newFunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.newParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.newReturnStatement
-import de.fraunhofer.aisec.cpg.graph.ast.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
 import org.jruby.ast.ArgumentNode
 import org.jruby.ast.DefnNode
 import org.jruby.ast.Node

@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.ast.AstNode
 import de.fraunhofer.aisec.cpg.graph.ast.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.ast.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CollectionComprehension
@@ -43,6 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ComprehensionExp
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.types.InitializerTypePropagation
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker

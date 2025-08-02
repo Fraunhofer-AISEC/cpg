@@ -49,7 +49,6 @@ import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.TypeParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.ast.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
@@ -58,6 +57,7 @@ import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.TypeExpression
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.helpers.Util.debugWithFileLocation
@@ -72,9 +72,10 @@ import org.slf4j.LoggerFactory
  * only see parts of it).
  *
  * Each inference has a certain [start] point, which might depend on the type of inference. For
- * example, to infer a [ast.declarations.MethodDeclaration], the obvious start point would be a [ast.declarations.RecordDeclaration].
- * Since this class implements [IsInferredProvider], all nodes that are created using the node
- * builder functions, will automatically have [Node.isInferred] set to true.
+ * example, to infer a [ast.declarations.MethodDeclaration], the obvious start point would be a
+ * [ast.declarations.RecordDeclaration]. Since this class implements [IsInferredProvider], all nodes
+ * that are created using the node builder functions, will automatically have [Node.isInferred] set
+ * to true.
  */
 class Inference internal constructor(val start: Node, override val ctx: TranslationContext) :
     LanguageProvider,
@@ -215,9 +216,9 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
 
     /**
      * This wrapper should be used around any kind of inference code that actually creates a
-     * [ast.declarations.Declaration]. It takes cares of "jumping" to the appropriate scope of the [start] node,
-     * executing the commands in [init] (which needs to create an inferred node of [T]) as well as
-     * restoring the previous scope.
+     * [ast.declarations.Declaration]. It takes cares of "jumping" to the appropriate scope of the
+     * [start] node, executing the commands in [init] (which needs to create an inferred node of
+     * [T]) as well as restoring the previous scope.
      */
     private fun <T : Declaration> inferInScopeOf(start: Node, init: (scope: Scope?) -> T): T {
         return scopeManager.withScope(scopeManager.lookupScope(start), init)
@@ -225,8 +226,8 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
 
     /**
      * This function creates a [ast.declarations.VariableDeclaration], which acts as the
-     * [ast.declarations.MethodDeclaration.receiver], in order to hold all data flows to the object instance of this
-     * particular [method].
+     * [ast.declarations.MethodDeclaration.receiver], in order to hold all data flows to the object
+     * instance of this particular [method].
      */
     private fun createInferredReceiver(method: MethodDeclaration, record: RecordDeclaration?) {
         // We do not really know, how a receiver is called in a particular language, but we will
@@ -236,8 +237,8 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
     }
 
     /**
-     * This function creates a [ast.declarations.ParameterDeclaration] for each parameter in the [function]'s
-     * [signature].
+     * This function creates a [ast.declarations.ParameterDeclaration] for each parameter in the
+     * [function]'s [signature].
      */
     private fun createInferredParameters(function: FunctionDeclaration, signature: List<Type?>) {
         // To save some unnecessary scopes, we only want to "enter" the function if it is necessary,
@@ -457,8 +458,8 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
     }
 
     /**
-     * This infers a [ast.declarations.FieldDeclaration] based on an unresolved [ast.statements.expressions.Reference], which is supplied as a
-     * [hint].
+     * This infers a [ast.declarations.FieldDeclaration] based on an unresolved
+     * [ast.statements.expressions.Reference], which is supplied as a [hint].
      */
     fun inferFieldDeclaration(hint: Reference): FieldDeclaration? {
         if (!ctx.config.inferenceConfiguration.inferFields) {
@@ -504,9 +505,10 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
     }
 
     /**
-     * This infers a [ast.declarations.VariableDeclaration] based on an unresolved [ast.statements.expressions.Reference], which is supplied as
-     * a [hint]. Currently, this is only used to infer global variables. In the future, we might
-     * also infer static variables in namespaces.
+     * This infers a [ast.declarations.VariableDeclaration] based on an unresolved
+     * [ast.statements.expressions.Reference], which is supplied as a [hint]. Currently, this is
+     * only used to infer global variables. In the future, we might also infer static variables in
+     * namespaces.
      */
     fun inferVariableDeclaration(hint: Reference): VariableDeclaration? {
         if (!ctx.config.inferenceConfiguration.inferVariables) {
@@ -572,10 +574,11 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
 
     /**
      * This class implements a [HasType.TypeObserver] and uses the observed type to set the
-     * [ast.declarations.ValueDeclaration.type] of a [ast.declarations.ValueDeclaration], based on the types we see. It can be
-     * registered on objects that are used to "start" an inference, for example a
-     * [ast.statements.expressions.MemberExpression], which infers a [ast.declarations.FieldDeclaration]. Once the type of the member expression
-     * becomes known, we can use this information to set the type of the field.
+     * [ast.declarations.ValueDeclaration.type] of a [ast.declarations.ValueDeclaration], based on
+     * the types we see. It can be registered on objects that are used to "start" an inference, for
+     * example a [ast.statements.expressions.MemberExpression], which infers a
+     * [ast.declarations.FieldDeclaration]. Once the type of the member expression becomes known, we
+     * can use this information to set the type of the field.
      *
      * For now, this implementation uses the first type that we "see" and once the type of our
      * [declaration] is known, we ignore further updates. In a future implementation, we could try
@@ -624,8 +627,10 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
     }
 
     /**
-     * This function tries to infer a return type for an inferred [ast.declarations.FunctionDeclaration] based the
-     * original [ast.statements.expressions.CallExpression] (as the [hint]) parameter that was used to infer the function.
+     * This function tries to infer a return type for an inferred
+     * [ast.declarations.FunctionDeclaration] based the original
+     * [ast.statements.expressions.CallExpression] (as the [hint]) parameter that was used to infer
+     * the function.
      */
     fun inferReturnType(hint: CallExpression): Type? {
         // Try to find out, if the supplied hint is part of an assignment. If yes, we can use their
@@ -710,7 +715,10 @@ fun Node.startInference(ctx: TranslationContext): Inference? {
     return Inference(this, ctx)
 }
 
-/** Tries to infer a [ast.declarations.FunctionDeclaration] from a [ast.statements.expressions.CallExpression]. */
+/**
+ * Tries to infer a [ast.declarations.FunctionDeclaration] from a
+ * [ast.statements.expressions.CallExpression].
+ */
 fun TranslationUnitDeclaration.inferFunction(
     call: CallExpression,
     isStatic: Boolean = false,
@@ -728,7 +736,10 @@ fun TranslationUnitDeclaration.inferFunction(
         )
 }
 
-/** Tries to infer a [ast.declarations.FunctionDeclaration] from a [ast.statements.expressions.CallExpression]. */
+/**
+ * Tries to infer a [ast.declarations.FunctionDeclaration] from a
+ * [ast.statements.expressions.CallExpression].
+ */
 fun NamespaceDeclaration.inferFunction(
     call: CallExpression,
     isStatic: Boolean = false,
@@ -746,7 +757,10 @@ fun NamespaceDeclaration.inferFunction(
         )
 }
 
-/** Tries to infer a [ast.declarations.MethodDeclaration] from a [ast.statements.expressions.CallExpression]. */
+/**
+ * Tries to infer a [ast.declarations.MethodDeclaration] from a
+ * [ast.statements.expressions.CallExpression].
+ */
 fun RecordDeclaration.inferMethod(
     call: CallExpression,
     isStatic: Boolean = false,

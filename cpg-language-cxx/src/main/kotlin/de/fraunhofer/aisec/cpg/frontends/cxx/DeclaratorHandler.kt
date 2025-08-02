@@ -159,10 +159,10 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     }
 
     /**
-     * A small utility function that creates a [ast.declarations.ConstructorDeclaration], [ast.declarations.MethodDeclaration] or
-     * [ast.declarations.FunctionDeclaration] depending on which scope the function should live in. This basically
-     * checks if the scope is a namespace or a record and if the name matches to the record (in case
-     * of a constructor).
+     * A small utility function that creates a [ast.declarations.ConstructorDeclaration],
+     * [ast.declarations.MethodDeclaration] or [ast.declarations.FunctionDeclaration] depending on
+     * which scope the function should live in. This basically checks if the scope is a namespace or
+     * a record and if the name matches to the record (in case of a constructor).
      */
     private fun createAppropriateFunction(
         name: Name,

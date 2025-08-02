@@ -37,15 +37,15 @@ import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.statements.AssertStatement
-import de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.ast.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.ast.statements.BreakStatement
 import de.fraunhofer.aisec.cpg.graph.ast.statements.ContinueStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.ast.statements.DoStatement
 import de.fraunhofer.aisec.cpg.graph.ast.statements.EmptyStatement
 import de.fraunhofer.aisec.cpg.graph.ast.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.ast.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.ast.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.ast.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.ast.statements.SwitchStatement
 import de.fraunhofer.aisec.cpg.graph.ast.statements.SynchronizedStatement
@@ -63,10 +63,11 @@ import kotlin.collections.set
 import org.slf4j.LoggerFactory
 
 class StatementHandler(lang: JavaLanguageFrontend?) :
-    Handler<de.fraunhofer.aisec.cpg.graph.ast.statements.Statement, Statement, JavaLanguageFrontend>(
-        Supplier { ProblemExpression() },
-        lang!!,
-    ) {
+    Handler<
+        de.fraunhofer.aisec.cpg.graph.ast.statements.Statement,
+        Statement,
+        JavaLanguageFrontend,
+    >(Supplier { ProblemExpression() }, lang!!) {
     fun handleExpressionStatement(
         stmt: Statement
     ): de.fraunhofer.aisec.cpg.graph.ast.statements.Statement? {
@@ -480,7 +481,9 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val arguments =
             explicitConstructorInvocationStmt.arguments
                 .map(frontend.expressionHandler::handle)
-                .filterIsInstance<de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression>()
+                .filterIsInstance<
+                    de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
+                >()
                 .toMutableList()
         node.arguments = arguments
 

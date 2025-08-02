@@ -37,8 +37,8 @@ import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.ast.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.ast.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.Statement
 import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import de.fraunhofer.aisec.cpg.test.*

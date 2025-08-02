@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.IncompatibleSignature
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.AccessValues
-import de.fraunhofer.aisec.cpg.graph.ast.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.ast.AstNode
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.ParameterDeclaration
@@ -56,9 +56,10 @@ import java.util.*
 import java.util.function.Consumer
 
 /**
- * This [Pass] is responsible for resolving dynamic function invokes, i.e., [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression] nodes
- * that contain a reference/pointer to a function and are being "called". A common example includes
- * C/C++ function pointers.
+ * This [Pass] is responsible for resolving dynamic function invokes, i.e.,
+ * [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression] nodes that contain a
+ * reference/pointer to a function and are being "called". A common example includes C/C++ function
+ * pointers.
  *
  * This pass is intentionally split from the [SymbolResolver] because it depends on DFG edges. This
  * split allows the [SymbolResolver] to be run before any DFG passes, which in turn allow us to also
@@ -105,8 +106,9 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     /**
      * Resolves function pointers in a [MemberCallExpression]. In this case the
-     * [MemberCallExpression.callee] field is a binary operator on which [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.BinaryOperator.rhs] needs
-     * to have a [FunctionPointerType].
+     * [MemberCallExpression.callee] field is a binary operator on which
+     * [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.BinaryOperator.rhs] needs to have a
+     * [FunctionPointerType].
      */
     private fun handleMemberCallExpression(call: MemberCallExpression) {
         val callee = call.callee

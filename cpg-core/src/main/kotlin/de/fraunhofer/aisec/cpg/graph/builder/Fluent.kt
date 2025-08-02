@@ -65,20 +65,20 @@ import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CastExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CollectionComprehension
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ComprehensionExpression
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ConditionalExpression
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.InitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.NewExpression
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.SubscriptExpression
-import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CollectionComprehension
-import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ComprehensionExpression
-import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.IncompleteType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -110,9 +110,9 @@ fun LanguageFrontend<*, *>.translationResult(
 }
 
 /**
- * Creates a new [ast.declarations.TranslationUnitDeclaration] in the Fluent Node DSL with the given [name]. The
- * declaration will be set to the [ScopeManager.globalScope]. The [init] block can be used to create
- * further sub-nodes as well as configuring the created node itself.
+ * Creates a new [ast.declarations.TranslationUnitDeclaration] in the Fluent Node DSL with the given
+ * [name]. The declaration will be set to the [ScopeManager.globalScope]. The [init] block can be
+ * used to create further sub-nodes as well as configuring the created node itself.
  */
 context(result: TranslationResult)
 fun LanguageFrontend<*, *>.translationUnit(
@@ -129,9 +129,9 @@ fun LanguageFrontend<*, *>.translationUnit(
 }
 
 /**
- * Creates a new [ast.declarations.NamespaceDeclaration] in the Fluent Node DSL with the given [name]. The
- * declaration will be set to the [ScopeManager.globalScope]. The [init] block can be used to create
- * further sub-nodes as well as configuring the created node itself.
+ * Creates a new [ast.declarations.NamespaceDeclaration] in the Fluent Node DSL with the given
+ * [name]. The declaration will be set to the [ScopeManager.globalScope]. The [init] block can be
+ * used to create further sub-nodes as well as configuring the created node itself.
  */
 context(holder: DeclarationHolder)
 fun LanguageFrontend<*, *>.namespace(
@@ -150,9 +150,9 @@ fun LanguageFrontend<*, *>.namespace(
 }
 
 /**
- * Creates a new [ast.declarations.RecordDeclaration] in the Fluent Node DSL with the given [name]. The declaration
- * will be set to the [ScopeManager.currentRecord]. The [init] block can be used to create further
- * sub-nodes as well as configuring the created node itself.
+ * Creates a new [ast.declarations.RecordDeclaration] in the Fluent Node DSL with the given [name].
+ * The declaration will be set to the [ScopeManager.currentRecord]. The [init] block can be used to
+ * create further sub-nodes as well as configuring the created node itself.
  */
 context(holder: DeclarationHolder)
 fun LanguageFrontend<*, *>.record(
@@ -172,9 +172,9 @@ fun LanguageFrontend<*, *>.record(
 }
 
 /**
- * Creates a new [ast.declarations.FieldDeclaration] in the Fluent Node DSL with the given [name] and optional
- * [type]. The [init] block can be used to create further sub-nodes as well as configuring the
- * created node itself.
+ * Creates a new [ast.declarations.FieldDeclaration] in the Fluent Node DSL with the given [name]
+ * and optional [type]. The [init] block can be used to create further sub-nodes as well as
+ * configuring the created node itself.
  */
 context(holder: DeclarationHolder)
 fun LanguageFrontend<*, *>.field(
@@ -196,7 +196,8 @@ fun LanguageFrontend<*, *>.field(
 }
 
 /**
- * Creates a new [ast.declarations.IncludeDeclaration] and adds it to the surrounding [ast.declarations.TranslationUnitDeclaration].
+ * Creates a new [ast.declarations.IncludeDeclaration] and adds it to the surrounding
+ * [ast.declarations.TranslationUnitDeclaration].
  */
 context(tu: TranslationUnitDeclaration)
 fun LanguageFrontend<*, *>.import(name: CharSequence): IncludeDeclaration {
@@ -206,9 +207,9 @@ fun LanguageFrontend<*, *>.import(name: CharSequence): IncludeDeclaration {
 }
 
 /**
- * Creates a new [ast.declarations.FunctionDeclaration] in the Fluent Node DSL with the given [name] and optional
- * [returnType]. The [init] block can be used to create further sub-nodes as well as configuring the
- * created node itself.
+ * Creates a new [ast.declarations.FunctionDeclaration] in the Fluent Node DSL with the given [name]
+ * and optional [returnType]. The [init] block can be used to create further sub-nodes as well as
+ * configuring the created node itself.
  */
 context(holder: DeclarationHolder)
 fun LanguageFrontend<*, *>.function(
@@ -239,9 +240,9 @@ fun LanguageFrontend<*, *>.function(
 }
 
 /**
- * Creates a new [ast.declarations.MethodDeclaration] in the Fluent Node DSL with the given [name] and optional
- * [returnType]. The [init] block can be used to create further sub-nodes as well as configuring the
- * created node itself.
+ * Creates a new [ast.declarations.MethodDeclaration] in the Fluent Node DSL with the given [name]
+ * and optional [returnType]. The [init] block can be used to create further sub-nodes as well as
+ * configuring the created node itself.
  */
 context(record: RecordDeclaration)
 fun LanguageFrontend<*, *>.method(
@@ -267,8 +268,8 @@ fun LanguageFrontend<*, *>.method(
 
 /**
  * Creates a new [ast.declarations.ConstructorDeclaration] in the Fluent Node DSL for the enclosing
- * [ast.declarations.RecordDeclaration]. The [init] block can be used to create further sub-nodes as well as
- * configuring the created node itself.
+ * [ast.declarations.RecordDeclaration]. The [init] block can be used to create further sub-nodes as
+ * well as configuring the created node itself.
  */
 context(recordDeclaration: RecordDeclaration)
 fun LanguageFrontend<*, *>.constructor(
@@ -288,8 +289,9 @@ fun LanguageFrontend<*, *>.constructor(
 }
 
 /**
- * Creates a new [ast.statements.expressions.Block] in the Fluent Node DSL and sets it to the [ast.declarations.FunctionDeclaration.body] of the
- * nearest enclosing [ast.declarations.FunctionDeclaration]. The [init] block can be used to create further sub-nodes
+ * Creates a new [ast.statements.expressions.Block] in the Fluent Node DSL and sets it to the
+ * [ast.declarations.FunctionDeclaration.body] of the nearest enclosing
+ * [ast.declarations.FunctionDeclaration]. The [init] block can be used to create further sub-nodes
  * as well as configuring the created node itself.
  */
 context(func: FunctionDeclaration)
@@ -303,8 +305,9 @@ fun LanguageFrontend<*, *>.body(needsScope: Boolean = true, init: Block.() -> Un
 }
 
 /**
- * Creates a new [ast.statements.expressions.Block] in the Fluent Node DSL and sets it to the [ast.declarations.FunctionDeclaration.body] of the
- * nearest enclosing [ast.declarations.FunctionDeclaration]. The [init] block can be used to create further sub-nodes
+ * Creates a new [ast.statements.expressions.Block] in the Fluent Node DSL and sets it to the
+ * [ast.declarations.FunctionDeclaration.body] of the nearest enclosing
+ * [ast.declarations.FunctionDeclaration]. The [init] block can be used to create further sub-nodes
  * as well as configuring the created node itself.
  */
 context(holder: StatementHolder)
@@ -319,8 +322,9 @@ fun LanguageFrontend<*, *>.block(needsScope: Boolean = true, init: Block.() -> U
 
 /**
  * Creates a new [ast.declarations.ParameterDeclaration] in the Fluent Node DSL and adds it to the
- * [ast.declarations.FunctionDeclaration.parameters] of the nearest enclosing [ast.declarations.FunctionDeclaration]. The [init] block
- * can be used to create further sub-nodes as well as configuring the created node itself.
+ * [ast.declarations.FunctionDeclaration.parameters] of the nearest enclosing
+ * [ast.declarations.FunctionDeclaration]. The [init] block can be used to create further sub-nodes
+ * as well as configuring the created node itself.
  */
 context(func: FunctionDeclaration)
 fun LanguageFrontend<*, *>.param(
@@ -424,8 +428,8 @@ fun LanguageFrontend<*, *>.declare(init: DeclarationStatement.() -> Unit): Decla
 }
 
 /**
- * Creates a new [ast.statements.DeclarationStatement] in the Fluent Node DSL. The [init] block can be used to
- * create further sub-nodes as well as configuring the created node itself.
+ * Creates a new [ast.statements.DeclarationStatement] in the Fluent Node DSL. The [init] block can
+ * be used to create further sub-nodes as well as configuring the created node itself.
  */
 fun LanguageFrontend<*, *>.declareVar(
     name: String,
@@ -446,8 +450,9 @@ fun LanguageFrontend<*, *>.declareVar(
 
 /**
  * Creates a new [ast.declarations.VariableDeclaration] in the Fluent Node DSL and adds it to the
- * [ast.statements.DeclarationStatement.declarations] of the nearest enclosing [ast.statements.DeclarationStatement]. The [init]
- * block can be used to create further sub-nodes as well as configuring the created node itself.
+ * [ast.statements.DeclarationStatement.declarations] of the nearest enclosing
+ * [ast.statements.DeclarationStatement]. The [init] block can be used to create further sub-nodes
+ * as well as configuring the created node itself.
  */
 context(stmt: DeclarationStatement)
 fun LanguageFrontend<*, *>.variable(
@@ -466,8 +471,9 @@ fun LanguageFrontend<*, *>.variable(
 
 /**
  * Creates a new [ast.declarations.ProblemDeclaration] in the Fluent Node DSL and adds it to the
- * [ast.statements.DeclarationStatement.declarations] of the nearest enclosing [ast.statements.DeclarationStatement]. The [init]
- * block can be used to create further sub-nodes as well as configuring the created node itself.
+ * [ast.statements.DeclarationStatement.declarations] of the nearest enclosing
+ * [ast.statements.DeclarationStatement]. The [init] block can be used to create further sub-nodes
+ * as well as configuring the created node itself.
  */
 context(stmt: DeclarationStatement)
 fun LanguageFrontend<*, *>.problemDecl(
@@ -485,15 +491,17 @@ fun LanguageFrontend<*, *>.problemDecl(
 }
 
 /**
- * Creates a new [ast.statements.expressions.CallExpression] (or [ast.statements.expressions.MemberCallExpression]) in the Fluent Node DSL with the given
- * [name] and adds it to the nearest enclosing [Holder]. Depending on whether it is a
- * [StatementHolder] it is added to the list of [StatementHolder.statements] or in case of an
- * [ast.ArgumentHolder], the function [ast.ArgumentHolder.addArgument] is invoked.
+ * Creates a new [ast.statements.expressions.CallExpression] (or
+ * [ast.statements.expressions.MemberCallExpression]) in the Fluent Node DSL with the given [name]
+ * and adds it to the nearest enclosing [Holder]. Depending on whether it is a [StatementHolder] it
+ * is added to the list of [StatementHolder.statements] or in case of an [ast.ArgumentHolder], the
+ * function [ast.ArgumentHolder.addArgument] is invoked.
  *
  * The type of expression is determined whether [name] is either a [Name] with a [Name.parent] or if
  * it can be parsed as a FQN in the given language. It also automatically creates either a
- * [ast.statements.expressions.Reference] or [ast.statements.expressions.MemberExpression] and sets it as the [ast.statements.expressions.CallExpression.callee]. The [init] block
- * can be used to create further sub-nodes as well as configuring the created node itself.
+ * [ast.statements.expressions.Reference] or [ast.statements.expressions.MemberExpression] and sets
+ * it as the [ast.statements.expressions.CallExpression.callee]. The [init] block can be used to
+ * create further sub-nodes as well as configuring the created node itself.
  */
 context(holder: Holder<out Statement>)
 fun LanguageFrontend<*, *>.call(
@@ -526,15 +534,17 @@ fun LanguageFrontend<*, *>.call(
 }
 
 /**
- * Creates a new [ast.statements.expressions.CallExpression] (or [ast.statements.expressions.MemberCallExpression]) in the Fluent Node DSL with the given
+ * Creates a new [ast.statements.expressions.CallExpression] (or
+ * [ast.statements.expressions.MemberCallExpression]) in the Fluent Node DSL with the given
  * [localName] and adds it to the nearest enclosing [Holder]. Depending on whether it is a
  * [StatementHolder] it is added to the list of [StatementHolder.statements] or in case of an
  * [ast.ArgumentHolder], the function [ast.ArgumentHolder.addArgument] is invoked.
  *
  * The type of expression is determined whether [localName] is either a [Name] with a [Name.parent]
  * or if it can be parsed as a FQN in the given language. It also automatically creates either a
- * [ast.statements.expressions.Reference] or [ast.statements.expressions.MemberExpression] and sets it as the [ast.statements.expressions.CallExpression.callee]. The [init] block
- * can be used to create further sub-nodes as well as configuring the created node itself.
+ * [ast.statements.expressions.Reference] or [ast.statements.expressions.MemberExpression] and sets
+ * it as the [ast.statements.expressions.CallExpression.callee]. The [init] block can be used to
+ * create further sub-nodes as well as configuring the created node itself.
  */
 context(holder: Holder<out Statement>)
 fun LanguageFrontend<*, *>.memberCall(
@@ -559,11 +569,12 @@ fun LanguageFrontend<*, *>.memberCall(
 }
 
 /**
- * Creates a new [ast.statements.expressions.ConstructExpression] in the Fluent Node DSL for the translation record/type with
- * the given [name] and adds it to the nearest enclosing [Holder]. Depending on whether it is a
- * [StatementHolder] it is added to the list of [StatementHolder.statements] or in case of an
- * [ast.ArgumentHolder], the function [ast.ArgumentHolder.addArgument] is invoked. The [init] block can be
- * used to create further sub-nodes as well as configuring the created node itself.
+ * Creates a new [ast.statements.expressions.ConstructExpression] in the Fluent Node DSL for the
+ * translation record/type with the given [name] and adds it to the nearest enclosing [Holder].
+ * Depending on whether it is a [StatementHolder] it is added to the list of
+ * [StatementHolder.statements] or in case of an [ast.ArgumentHolder], the function
+ * [ast.ArgumentHolder.addArgument] is invoked. The [init] block can be used to create further
+ * sub-nodes as well as configuring the created node itself.
  */
 context(holder: Holder<out Statement>)
 fun LanguageFrontend<*, *>.construct(
@@ -681,9 +692,9 @@ fun LanguageFrontend<*, *>.forStmt(init: ForStatement.() -> Unit): ForStatement 
 }
 
 /**
- * Configures the [ast.statements.ForStatement.condition] in the Fluent Node DSL of the nearest enclosing
- * [ast.statements.ForStatement]. The [init] block can be used to create further sub-nodes as well as configuring
- * the created node itself.
+ * Configures the [ast.statements.ForStatement.condition] in the Fluent Node DSL of the nearest
+ * enclosing [ast.statements.ForStatement]. The [init] block can be used to create further sub-nodes
+ * as well as configuring the created node itself.
  */
 context(stmt: ForStatement)
 fun LanguageFrontend<*, *>.forCondition(init: ForStatement.() -> Expression): Expression {
@@ -695,9 +706,9 @@ fun LanguageFrontend<*, *>.forCondition(init: ForStatement.() -> Expression): Ex
 }
 
 /**
- * Configures the [ast.statements.ForStatement.condition] in the Fluent Node DSL of the nearest enclosing
- * [ast.statements.ForStatement]. The [init] block can be used to create further sub-nodes as well as configuring
- * the created node itself.
+ * Configures the [ast.statements.ForStatement.condition] in the Fluent Node DSL of the nearest
+ * enclosing [ast.statements.ForStatement]. The [init] block can be used to create further sub-nodes
+ * as well as configuring the created node itself.
  */
 context(stmt: ForStatement)
 fun LanguageFrontend<*, *>.forInitializer(
@@ -715,9 +726,9 @@ fun LanguageFrontend<*, *>.forInitializer(
 }
 
 /**
- * Configures the [ast.statements.ForStatement.iterationStatement] in the Fluent Node DSL of the nearest enclosing
- * [ast.statements.ForStatement]. The [init] block can be used to create further sub-nodes as well as configuring
- * the created node itself.
+ * Configures the [ast.statements.ForStatement.iterationStatement] in the Fluent Node DSL of the
+ * nearest enclosing [ast.statements.ForStatement]. The [init] block can be used to create further
+ * sub-nodes as well as configuring the created node itself.
  */
 context(stmt: ForStatement)
 fun LanguageFrontend<*, *>.forIteration(init: ForStatement.() -> Statement): Statement {
@@ -786,9 +797,9 @@ fun LanguageFrontend<*, *>.doStmt(
 // TODO: Combine the condition functions
 
 /**
- * Configures the [ast.statements.IfStatement.condition] in the Fluent Node DSL of the nearest enclosing
- * [ast.statements.IfStatement]. The [init] block can be used to create further sub-nodes as well as configuring
- * the created node itself.
+ * Configures the [ast.statements.IfStatement.condition] in the Fluent Node DSL of the nearest
+ * enclosing [ast.statements.IfStatement]. The [init] block can be used to create further sub-nodes
+ * as well as configuring the created node itself.
  */
 context(stmt: IfStatement)
 fun LanguageFrontend<*, *>.condition(init: IfStatement.() -> Expression): Expression {
@@ -796,9 +807,9 @@ fun LanguageFrontend<*, *>.condition(init: IfStatement.() -> Expression): Expres
 }
 
 /**
- * Configures the [ast.statements.WhileStatement.condition] in the Fluent Node DSL of the nearest enclosing
- * [ast.statements.WhileStatement]. The [init] block can be used to create further sub-nodes as well as configuring
- * the created node itself.
+ * Configures the [ast.statements.WhileStatement.condition] in the Fluent Node DSL of the nearest
+ * enclosing [ast.statements.WhileStatement]. The [init] block can be used to create further
+ * sub-nodes as well as configuring the created node itself.
  */
 context(stmt: WhileStatement)
 fun LanguageFrontend<*, *>.whileCondition(init: WhileStatement.() -> Expression): Expression {
@@ -806,9 +817,9 @@ fun LanguageFrontend<*, *>.whileCondition(init: WhileStatement.() -> Expression)
 }
 
 /**
- * Configures the [ast.statements.DoStatement.condition] in the Fluent Node DSL of the nearest enclosing
- * [ast.statements.DoStatement]. The [init] block can be used to create further sub-nodes as well as configuring
- * the created node itself.
+ * Configures the [ast.statements.DoStatement.condition] in the Fluent Node DSL of the nearest
+ * enclosing [ast.statements.DoStatement]. The [init] block can be used to create further sub-nodes
+ * as well as configuring the created node itself.
  */
 context(stmt: DoStatement)
 fun LanguageFrontend<*, *>.doCondition(init: DoStatement.() -> Expression): Expression {
@@ -816,9 +827,10 @@ fun LanguageFrontend<*, *>.doCondition(init: DoStatement.() -> Expression): Expr
 }
 
 /**
- * Creates a new [ast.statements.expressions.Block] in the Fluent Node DSL and sets it to the [ast.statements.IfStatement.thenStatement] of
- * the nearest enclosing [ast.statements.IfStatement]. The [init] block can be used to create further sub-nodes as
- * well as configuring the created node itself.
+ * Creates a new [ast.statements.expressions.Block] in the Fluent Node DSL and sets it to the
+ * [ast.statements.IfStatement.thenStatement] of the nearest enclosing [ast.statements.IfStatement].
+ * The [init] block can be used to create further sub-nodes as well as configuring the created node
+ * itself.
  */
 context(stmt: IfStatement)
 fun LanguageFrontend<*, *>.thenStmt(needsScope: Boolean = true, init: Block.() -> Unit): Block {
@@ -831,9 +843,10 @@ fun LanguageFrontend<*, *>.thenStmt(needsScope: Boolean = true, init: Block.() -
 }
 
 /**
- * Creates a new [ast.statements.IfStatement] in the Fluent Node DSL and sets it to the [ast.statements.IfStatement.elseStatement]
- * of the nearest enclosing [ast.statements.IfStatement]. This simulates an `else-if` scenario. The [init] block
- * can be used to create further sub-nodes as well as configuring the created node itself.
+ * Creates a new [ast.statements.IfStatement] in the Fluent Node DSL and sets it to the
+ * [ast.statements.IfStatement.elseStatement] of the nearest enclosing [ast.statements.IfStatement].
+ * This simulates an `else-if` scenario. The [init] block can be used to create further sub-nodes as
+ * well as configuring the created node itself.
  */
 context(stmt: IfStatement)
 fun LanguageFrontend<*, *>.elseIf(init: IfStatement.() -> Unit): IfStatement {
@@ -846,9 +859,10 @@ fun LanguageFrontend<*, *>.elseIf(init: IfStatement.() -> Unit): IfStatement {
 }
 
 /**
- * Creates a new [ast.statements.expressions.Block] in the Fluent Node DSL and sets it to the [ast.statements.LoopStatement.statement] of the
- * nearest enclosing [ast.statements.LoopStatement]. The [init] block can be used to create further sub-nodes as
- * well as configuring the created node itself.
+ * Creates a new [ast.statements.expressions.Block] in the Fluent Node DSL and sets it to the
+ * [ast.statements.LoopStatement.statement] of the nearest enclosing [ast.statements.LoopStatement].
+ * The [init] block can be used to create further sub-nodes as well as configuring the created node
+ * itself.
  */
 context(stmt: LoopStatement)
 fun LanguageFrontend<*, *>.loopBody(init: Block.() -> Unit): Block {
@@ -860,9 +874,9 @@ fun LanguageFrontend<*, *>.loopBody(init: Block.() -> Unit): Block {
 }
 
 /**
- * Configures the [ast.statements.ForEachStatement.variable] in the Fluent Node DSL of the nearest enclosing
- * [ast.statements.ForEachStatement]. The [init] block can be used to create further sub-nodes as well as
- * configuring the created node itself.
+ * Configures the [ast.statements.ForEachStatement.variable] in the Fluent Node DSL of the nearest
+ * enclosing [ast.statements.ForEachStatement]. The [init] block can be used to create further
+ * sub-nodes as well as configuring the created node itself.
  */
 context(stmt: ForEachStatement)
 fun LanguageFrontend<*, *>.variable(init: ForEachStatement.() -> Statement): Statement {
@@ -872,9 +886,9 @@ fun LanguageFrontend<*, *>.variable(init: ForEachStatement.() -> Statement): Sta
 }
 
 /**
- * Configures the [ast.statements.ForEachStatement.iterable] in the Fluent Node DSL of the nearest enclosing
- * [ast.statements.ForEachStatement]. The [init] block can be used to create further sub-nodes as well as
- * configuring the created node itself.
+ * Configures the [ast.statements.ForEachStatement.iterable] in the Fluent Node DSL of the nearest
+ * enclosing [ast.statements.ForEachStatement]. The [init] block can be used to create further
+ * sub-nodes as well as configuring the created node itself.
  */
 context(stmt: ForEachStatement)
 fun LanguageFrontend<*, *>.iterable(init: ForEachStatement.() -> Statement): Statement {
@@ -884,9 +898,9 @@ fun LanguageFrontend<*, *>.iterable(init: ForEachStatement.() -> Statement): Sta
 }
 
 /**
- * Configures the [ast.statements.ForStatement.initializerStatement] in the Fluent Node DSL of the nearest
- * enclosing [ast.statements.ForStatement]. The [init] block can be used to create further sub-nodes as well as
- * configuring the created node itself.
+ * Configures the [ast.statements.ForStatement.initializerStatement] in the Fluent Node DSL of the
+ * nearest enclosing [ast.statements.ForStatement]. The [init] block can be used to create further
+ * sub-nodes as well as configuring the created node itself.
  */
 context(stmt: ForStatement)
 fun LanguageFrontend<*, *>.initializer(init: ForStatement.() -> Expression): Expression {
@@ -894,9 +908,10 @@ fun LanguageFrontend<*, *>.initializer(init: ForStatement.() -> Expression): Exp
 }
 
 /**
- * Creates a new [ast.statements.expressions.Block] in the Fluent Node DSL and sets it to the [ast.statements.SwitchStatement.statement] of
- * the nearest enclosing [ast.statements.SwitchStatement]. The [init] block can be used to create further sub-nodes
- * as well as configuring the created node itself.
+ * Creates a new [ast.statements.expressions.Block] in the Fluent Node DSL and sets it to the
+ * [ast.statements.SwitchStatement.statement] of the nearest enclosing
+ * [ast.statements.SwitchStatement]. The [init] block can be used to create further sub-nodes as
+ * well as configuring the created node itself.
  */
 context(stmt: SwitchStatement)
 fun LanguageFrontend<*, *>.switchBody(init: Block.() -> Unit): Block {
@@ -908,9 +923,10 @@ fun LanguageFrontend<*, *>.switchBody(init: Block.() -> Unit): Block {
 }
 
 /**
- * Creates a new [ast.statements.expressions.Block] in the Fluent Node DSL and sets it to the [ast.statements.IfStatement.elseStatement] of
- * the nearest enclosing [ast.statements.IfStatement]. The [init] block can be used to create further sub-nodes as
- * well as configuring the created node itself.
+ * Creates a new [ast.statements.expressions.Block] in the Fluent Node DSL and sets it to the
+ * [ast.statements.IfStatement.elseStatement] of the nearest enclosing [ast.statements.IfStatement].
+ * The [init] block can be used to create further sub-nodes as well as configuring the created node
+ * itself.
  */
 context(stmt: IfStatement)
 fun LanguageFrontend<*, *>.elseStmt(needsScope: Boolean = true, init: Block.() -> Unit): Block {
@@ -923,9 +939,10 @@ fun LanguageFrontend<*, *>.elseStmt(needsScope: Boolean = true, init: Block.() -
 }
 
 /**
- * Creates a new [ast.statements.expressions.Block] in the Fluent Node DSL and sets it to the [ast.statements.LoopStatement.elseStatement] of
- * the nearest enclosing [ast.statements.LoopStatement]. The [init] block can be used to create further sub-nodes
- * as well as configuring the created node itself.
+ * Creates a new [ast.statements.expressions.Block] in the Fluent Node DSL and sets it to the
+ * [ast.statements.LoopStatement.elseStatement] of the nearest enclosing
+ * [ast.statements.LoopStatement]. The [init] block can be used to create further sub-nodes as well
+ * as configuring the created node itself.
  */
 context(stmt: LoopStatement)
 fun LanguageFrontend<*, *>.loopElseStmt(needsScope: Boolean = true, init: Block.() -> Unit): Block {
@@ -938,8 +955,8 @@ fun LanguageFrontend<*, *>.loopElseStmt(needsScope: Boolean = true, init: Block.
 }
 
 /**
- * Creates a new [ast.statements.LabelStatement] in the Fluent Node DSL and adds it to the nearest enclosing
- * [StatementHolder].
+ * Creates a new [ast.statements.LabelStatement] in the Fluent Node DSL and adds it to the nearest
+ * enclosing [StatementHolder].
  */
 context(holder: Holder<out Statement>)
 fun LanguageFrontend<*, *>.label(
@@ -961,8 +978,8 @@ fun LanguageFrontend<*, *>.label(
 }
 
 /**
- * Creates a new [ast.statements.ContinueStatement] in the Fluent Node DSL and adds it to the nearest enclosing
- * [StatementHolder].
+ * Creates a new [ast.statements.ContinueStatement] in the Fluent Node DSL and adds it to the
+ * nearest enclosing [StatementHolder].
  */
 context(holder: StatementHolder)
 fun LanguageFrontend<*, *>.continueStmt(label: String? = null): ContinueStatement {
@@ -975,8 +992,8 @@ fun LanguageFrontend<*, *>.continueStmt(label: String? = null): ContinueStatemen
 }
 
 /**
- * Creates a new [ast.statements.BreakStatement] in the Fluent Node DSL and adds it to the nearest enclosing
- * [Holder], but only if it is an [StatementHolder].
+ * Creates a new [ast.statements.BreakStatement] in the Fluent Node DSL and adds it to the nearest
+ * enclosing [Holder], but only if it is an [StatementHolder].
  */
 context(holder: Holder<out Statement>)
 fun LanguageFrontend<*, *>.breakStmt(label: String? = null): BreakStatement {
@@ -992,8 +1009,8 @@ fun LanguageFrontend<*, *>.breakStmt(label: String? = null): BreakStatement {
 }
 
 /**
- * Creates a new [ast.statements.CaseStatement] in the Fluent Node DSL and adds it to the nearest enclosing
- * [Holder], but only if it is an [StatementHolder].
+ * Creates a new [ast.statements.CaseStatement] in the Fluent Node DSL and adds it to the nearest
+ * enclosing [Holder], but only if it is an [StatementHolder].
  */
 context(holder: Holder<out Statement>)
 fun LanguageFrontend<*, *>.case(caseExpression: Expression? = null): CaseStatement {
@@ -1009,8 +1026,8 @@ fun LanguageFrontend<*, *>.case(caseExpression: Expression? = null): CaseStateme
 }
 
 /**
- * Creates a new [ast.statements.DefaultStatement] in the Fluent Node DSL and adds it to the nearest enclosing
- * [StatementHolder].
+ * Creates a new [ast.statements.DefaultStatement] in the Fluent Node DSL and adds it to the nearest
+ * enclosing [StatementHolder].
  */
 context(holder: Holder<out Statement>)
 fun LanguageFrontend<*, *>.default(): DefaultStatement {
@@ -1025,8 +1042,9 @@ fun LanguageFrontend<*, *>.default(): DefaultStatement {
 }
 
 /**
- * Creates a new [ast.statements.expressions.Literal] in the Fluent Node DSL and invokes [ast.ArgumentHolder.addArgument] of the
- * nearest enclosing [Holder], but only if it is an [ast.ArgumentHolder].
+ * Creates a new [ast.statements.expressions.Literal] in the Fluent Node DSL and invokes
+ * [ast.ArgumentHolder.addArgument] of the nearest enclosing [Holder], but only if it is an
+ * [ast.ArgumentHolder].
  */
 context(holder: Holder<out Statement>)
 fun <N> LanguageFrontend<*, *>.literal(value: N, type: Type = unknownType()): Literal<N> {
@@ -1041,8 +1059,8 @@ fun <N> LanguageFrontend<*, *>.literal(value: N, type: Type = unknownType()): Li
 }
 
 /**
- * Creates a new [ast.statements.expressions.InitializerListExpression] in the Fluent Node DSL and invokes
- * [ast.ArgumentHolder.addArgument] of the nearest enclosing [Holder], but only if it is an
+ * Creates a new [ast.statements.expressions.InitializerListExpression] in the Fluent Node DSL and
+ * invokes [ast.ArgumentHolder.addArgument] of the nearest enclosing [Holder], but only if it is an
  * [ast.ArgumentHolder].
  */
 context(holder: Holder<out Statement>)
@@ -1065,8 +1083,9 @@ fun LanguageFrontend<*, *>.ile(
 }
 
 /**
- * Creates a new [ast.statements.expressions.Reference] in the Fluent Node DSL and invokes [ast.ArgumentHolder.addArgument] of the
- * nearest enclosing [Holder], but only if it is an [ast.ArgumentHolder].
+ * Creates a new [ast.statements.expressions.Reference] in the Fluent Node DSL and invokes
+ * [ast.ArgumentHolder.addArgument] of the nearest enclosing [Holder], but only if it is an
+ * [ast.ArgumentHolder].
  */
 context(holder: Holder<out Statement>)
 fun LanguageFrontend<*, *>.ref(
@@ -1111,9 +1130,10 @@ fun Expression.line(i: Int): Expression {
 }
 
 /**
- * Creates a new [ast.statements.expressions.MemberExpression] in the Fluent Node DSL and invokes [ast.ArgumentHolder.addArgument]
- * of the nearest enclosing [Holder], but only if it is an [ast.ArgumentHolder]. If the [name] doesn't
- * already contain a fqn, we add an implicit "this" as base.
+ * Creates a new [ast.statements.expressions.MemberExpression] in the Fluent Node DSL and invokes
+ * [ast.ArgumentHolder.addArgument] of the nearest enclosing [Holder], but only if it is an
+ * [ast.ArgumentHolder]. If the [name] doesn't already contain a fqn, we add an implicit "this" as
+ * base.
  */
 context(holder: Holder<out Statement>)
 fun LanguageFrontend<*, *>.member(
@@ -1146,8 +1166,9 @@ fun LanguageFrontend<*, *>.member(
 }
 
 /**
- * Creates a new [ast.statements.expressions.BinaryOperator] with a `*` [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL
- * and invokes [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
+ * Creates a new [ast.statements.expressions.BinaryOperator] with a `*`
+ * [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL and invokes
+ * [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: ArgumentHolder)
 operator fun Expression.times(rhs: Expression): BinaryOperator {
@@ -1167,8 +1188,9 @@ operator fun Expression.times(rhs: Expression): BinaryOperator {
 }
 
 /**
- * Creates a new [ast.statements.expressions.UnaryOperator] with a `-` [ast.statements.expressions.UnaryOperator.operatorCode] in the Fluent Node DSL and
- * invokes [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
+ * Creates a new [ast.statements.expressions.UnaryOperator] with a `-`
+ * [ast.statements.expressions.UnaryOperator.operatorCode] in the Fluent Node DSL and invokes
+ * [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: ArgumentHolder)
 operator fun Expression.unaryMinus(): UnaryOperator {
@@ -1186,8 +1208,9 @@ operator fun Expression.unaryMinus(): UnaryOperator {
 }
 
 /**
- * Creates a new [ast.statements.expressions.BinaryOperator] with a `/` [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL
- * and invokes [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
+ * Creates a new [ast.statements.expressions.BinaryOperator] with a `/`
+ * [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL and invokes
+ * [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: ArgumentHolder)
 operator fun Expression.div(rhs: Expression): BinaryOperator {
@@ -1207,8 +1230,9 @@ operator fun Expression.div(rhs: Expression): BinaryOperator {
 }
 
 /**
- * Creates a new [ast.statements.expressions.BinaryOperator] with a `+` [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL
- * and invokes [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
+ * Creates a new [ast.statements.expressions.BinaryOperator] with a `+`
+ * [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL and invokes
+ * [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: ArgumentHolder)
 operator fun Expression.plus(rhs: Expression): BinaryOperator {
@@ -1228,8 +1252,9 @@ operator fun Expression.plus(rhs: Expression): BinaryOperator {
 }
 
 /**
- * Creates a new [ast.statements.expressions.BinaryOperator] with a `+` [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL
- * and adds it to the nearest enclosing [StatementHolder].
+ * Creates a new [ast.statements.expressions.BinaryOperator] with a `+`
+ * [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL and adds it to
+ * the nearest enclosing [StatementHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: StatementHolder)
 operator fun Expression.plusAssign(rhs: Expression) {
@@ -1239,8 +1264,9 @@ operator fun Expression.plusAssign(rhs: Expression) {
 }
 
 /**
- * Creates a new [ast.statements.expressions.BinaryOperator] with a `+` [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL
- * and invokes [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
+ * Creates a new [ast.statements.expressions.BinaryOperator] with a `+`
+ * [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL and invokes
+ * [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: ArgumentHolder)
 operator fun Expression.rem(rhs: Expression): BinaryOperator {
@@ -1260,8 +1286,9 @@ operator fun Expression.rem(rhs: Expression): BinaryOperator {
 }
 
 /**
- * Creates a new [ast.statements.expressions.BinaryOperator] with a `-` [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL
- * and invokes [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
+ * Creates a new [ast.statements.expressions.BinaryOperator] with a `-`
+ * [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL and invokes
+ * [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: ArgumentHolder)
 operator fun Expression.minus(rhs: Expression): BinaryOperator {
@@ -1275,8 +1302,9 @@ operator fun Expression.minus(rhs: Expression): BinaryOperator {
 }
 
 /**
- * Creates a new [ast.statements.expressions.UnaryOperator] with a `&` [ast.statements.expressions.UnaryOperator.operatorCode] in the Fluent Node DSL and
- * invokes [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
+ * Creates a new [ast.statements.expressions.UnaryOperator] with a `&`
+ * [ast.statements.expressions.UnaryOperator.operatorCode] in the Fluent Node DSL and invokes
+ * [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: ArgumentHolder)
 fun reference(input: Expression): UnaryOperator {
@@ -1289,8 +1317,9 @@ fun reference(input: Expression): UnaryOperator {
 }
 
 /**
- * Creates a new [ast.statements.expressions.UnaryOperator] with a `--` [ast.statements.expressions.UnaryOperator.operatorCode] in the Fluent Node DSL and
- * adds it to the nearest enclosing [StatementHolder].
+ * Creates a new [ast.statements.expressions.UnaryOperator] with a `--`
+ * [ast.statements.expressions.UnaryOperator.operatorCode] in the Fluent Node DSL and adds it to the
+ * nearest enclosing [StatementHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: Holder<out Statement>)
 operator fun Expression.dec(): UnaryOperator {
@@ -1305,8 +1334,9 @@ operator fun Expression.dec(): UnaryOperator {
 }
 
 /**
- * Creates a new [ast.statements.expressions.UnaryOperator] with a `++` [ast.statements.expressions.UnaryOperator.operatorCode] in the Fluent Node DSL and
- * invokes [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
+ * Creates a new [ast.statements.expressions.UnaryOperator] with a `++`
+ * [ast.statements.expressions.UnaryOperator.operatorCode] in the Fluent Node DSL and invokes
+ * [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: Holder<out Statement>)
 operator fun Expression.inc(): UnaryOperator {
@@ -1321,8 +1351,9 @@ operator fun Expression.inc(): UnaryOperator {
 }
 
 /**
- * Creates a new [ast.statements.expressions.UnaryOperator] with a `++` [ast.statements.expressions.UnaryOperator.operatorCode] in the Fluent Node DSL and
- * invokes [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
+ * Creates a new [ast.statements.expressions.UnaryOperator] with a `++`
+ * [ast.statements.expressions.UnaryOperator.operatorCode] in the Fluent Node DSL and invokes
+ * [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
  */
 context(frontend: LanguageFrontend<*, *>)
 fun Expression.incNoContext(): UnaryOperator {
@@ -1333,8 +1364,9 @@ fun Expression.incNoContext(): UnaryOperator {
 }
 
 /**
- * Creates a new [ast.statements.expressions.BinaryOperator] with a `==` [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL
- * and invokes [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
+ * Creates a new [ast.statements.expressions.BinaryOperator] with a `==`
+ * [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL and invokes
+ * [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: ArgumentHolder)
 infix fun Expression.eq(rhs: Expression): BinaryOperator {
@@ -1348,8 +1380,9 @@ infix fun Expression.eq(rhs: Expression): BinaryOperator {
 }
 
 /**
- * Creates a new [ast.statements.expressions.BinaryOperator] with a `>` [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL
- * and invokes [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
+ * Creates a new [ast.statements.expressions.BinaryOperator] with a `>`
+ * [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL and invokes
+ * [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: ArgumentHolder)
 infix fun Expression.gt(rhs: Expression): BinaryOperator {
@@ -1363,8 +1396,9 @@ infix fun Expression.gt(rhs: Expression): BinaryOperator {
 }
 
 /**
- * Creates a new [ast.statements.expressions.BinaryOperator] with a `>=` [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL
- * and invokes [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
+ * Creates a new [ast.statements.expressions.BinaryOperator] with a `>=`
+ * [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL and invokes
+ * [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: ArgumentHolder)
 infix fun Expression.ge(rhs: Expression): BinaryOperator {
@@ -1378,8 +1412,9 @@ infix fun Expression.ge(rhs: Expression): BinaryOperator {
 }
 
 /**
- * Creates a new [ast.statements.expressions.BinaryOperator] with a `<` [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL
- * and invokes [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
+ * Creates a new [ast.statements.expressions.BinaryOperator] with a `<`
+ * [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL and invokes
+ * [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
  */
 context(frontend: LanguageFrontend<*, *>)
 infix fun Expression.lt(rhs: Expression): BinaryOperator {
@@ -1391,8 +1426,9 @@ infix fun Expression.lt(rhs: Expression): BinaryOperator {
 }
 
 /**
- * Creates a new [ast.statements.expressions.BinaryOperator] with a `<=` [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL
- * and invokes [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
+ * Creates a new [ast.statements.expressions.BinaryOperator] with a `<=`
+ * [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL and invokes
+ * [ast.ArgumentHolder.addArgument] of the nearest enclosing [ast.ArgumentHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: ArgumentHolder)
 infix fun Expression.le(rhs: Expression): BinaryOperator {
@@ -1406,8 +1442,9 @@ infix fun Expression.le(rhs: Expression): BinaryOperator {
 }
 
 /**
- * Creates a new [ast.statements.expressions.ConditionalExpression] with a `=` [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node
- * DSL and adds it to the nearest enclosing [StatementHolder].
+ * Creates a new [ast.statements.expressions.ConditionalExpression] with a `=`
+ * [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL and adds it to
+ * the nearest enclosing [StatementHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: Holder<out Node>)
 fun Expression.conditional(
@@ -1427,8 +1464,9 @@ fun Expression.conditional(
 }
 
 /**
- * Creates a new [ast.statements.expressions.BinaryOperator] with a `=` [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL
- * and adds it to the nearest enclosing [StatementHolder].
+ * Creates a new [ast.statements.expressions.BinaryOperator] with a `=`
+ * [ast.statements.expressions.BinaryOperator.operatorCode] in the Fluent Node DSL and adds it to
+ * the nearest enclosing [StatementHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: StatementHolder)
 infix fun Expression.assign(init: AssignExpression.() -> Expression): AssignExpression {
@@ -1443,8 +1481,9 @@ infix fun Expression.assign(init: AssignExpression.() -> Expression): AssignExpr
 }
 
 /**
- * Creates a new [ast.statements.expressions.AssignExpression] with a `=` [ast.statements.expressions.AssignExpression.operatorCode] in the Fluent Node
- * DSL and adds it to the nearest enclosing [StatementHolder].
+ * Creates a new [ast.statements.expressions.AssignExpression] with a `=`
+ * [ast.statements.expressions.AssignExpression.operatorCode] in the Fluent Node DSL and adds it to
+ * the nearest enclosing [StatementHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: Holder<out Node>)
 infix fun Expression.assign(rhs: Expression): AssignExpression {
@@ -1458,8 +1497,9 @@ infix fun Expression.assign(rhs: Expression): AssignExpression {
 }
 
 /**
- * Creates a new [ast.statements.expressions.AssignExpression] with a `+=` [ast.statements.expressions.AssignExpression.operatorCode] in the Fluent Node
- * DSL and adds it to the nearest enclosing [StatementHolder].
+ * Creates a new [ast.statements.expressions.AssignExpression] with a `+=`
+ * [ast.statements.expressions.AssignExpression.operatorCode] in the Fluent Node DSL and adds it to
+ * the nearest enclosing [StatementHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: Holder<out Node>)
 infix fun Expression.assignPlus(rhs: Expression): AssignExpression {
@@ -1473,8 +1513,9 @@ infix fun Expression.assignPlus(rhs: Expression): AssignExpression {
 }
 
 /**
- * Creates a new [ast.statements.expressions.AssignExpression] with a `=` [ast.statements.expressions.AssignExpression.operatorCode] in the Fluent Node
- * DSL and adds it to the nearest enclosing [StatementHolder].
+ * Creates a new [ast.statements.expressions.AssignExpression] with a `=`
+ * [ast.statements.expressions.AssignExpression.operatorCode] in the Fluent Node DSL and adds it to
+ * the nearest enclosing [StatementHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: Holder<out Node>)
 infix fun Expression.assignAsExpr(rhs: Expression): AssignExpression {
@@ -1486,8 +1527,9 @@ infix fun Expression.assignAsExpr(rhs: Expression): AssignExpression {
 }
 
 /**
- * Creates a new [ast.statements.expressions.AssignExpression] with a `=` [ast.statements.expressions.AssignExpression.operatorCode] in the Fluent Node
- * DSL and adds it to the nearest enclosing [StatementHolder].
+ * Creates a new [ast.statements.expressions.AssignExpression] with a `=`
+ * [ast.statements.expressions.AssignExpression.operatorCode] in the Fluent Node DSL and adds it to
+ * the nearest enclosing [StatementHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: Holder<out Node>)
 infix fun Expression.assignAsExpr(rhs: AssignExpression.() -> Unit): AssignExpression {
@@ -1500,8 +1542,8 @@ infix fun Expression.assignAsExpr(rhs: AssignExpression.() -> Unit): AssignExpre
 }
 
 /**
- * Creates a new [ast.statements.ThrowExpression] in the Fluent Node DSL and adds it to the nearest enclosing
- * [StatementHolder].
+ * Creates a new [ast.statements.ThrowExpression] in the Fluent Node DSL and adds it to the nearest
+ * enclosing [StatementHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: Holder<out Node>)
 infix fun Expression.`throw`(init: (ThrowExpression.() -> Unit)?): ThrowExpression {

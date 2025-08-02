@@ -193,7 +193,8 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val main = declaration.methods[0]
 
         // lets get our try statement
-        val tryStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.TryStatement>(0)
+        val tryStatement =
+            main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.TryStatement>(0)
         assertNotNull(tryStatement)
 
         var scope = tryStatement.scope
@@ -908,7 +909,19 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val mainMethod = enum.methods["main"]
         assertNotNull(mainMethod)
         assertNotNull(mainMethod.parameters["args"])
-        assertNotNull(mainMethod.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(0))
-        assertNotNull(mainMethod.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(1))
+        assertNotNull(
+            mainMethod.bodyOrNull<
+                de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement
+            >(
+                0
+            )
+        )
+        assertNotNull(
+            mainMethod.bodyOrNull<
+                de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement
+            >(
+                1
+            )
+        )
     }
 }

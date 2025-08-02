@@ -25,18 +25,18 @@
  */
 package de.fraunhofer.aisec.cpg.graph.ast.statements
 
-import de.fraunhofer.aisec.cpg.graph.ast.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.ast.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
 import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
-import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
 import java.util.Objects
+import kotlin.collections.plusAssign
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
-import kotlin.collections.plusAssign
 
 /** Represents a statement that returns out of the current function. */
 class ReturnStatement : Statement(), ArgumentHolder {

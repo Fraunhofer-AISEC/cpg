@@ -277,7 +277,8 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(main)
 
         // Test that the types and values of the comparison expression are correct
-        val icmpStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(1)
+        val icmpStatement =
+            main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(1)
         assertNotNull(icmpStatement)
         val variableDecl = icmpStatement.declarations[0]
         assertIs<VariableDeclaration>(variableDecl)
@@ -511,7 +512,8 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(globalA)
         assertEquals("i32*", globalA.type.typeName)
 
-        val loadXStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(1)
+        val loadXStatement =
+            main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(1)
         assertNotNull(loadXStatement)
         assertLocalName("locX", loadXStatement.singleDeclaration)
 
@@ -526,7 +528,8 @@ class LLVMIRLanguageFrontendTest {
         assertLocalName("x", ref)
         assertRefersTo(ref, globalX)
 
-        val loadAStatement = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(2)
+        val loadAStatement =
+            main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(2)
         assertNotNull(loadAStatement)
         val loadADeclaration = loadAStatement.singleDeclaration
         assertIs<VariableDeclaration>(loadADeclaration)
@@ -555,7 +558,10 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(main)
 
         // %ptr = alloca i32
-        val ptr = main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>()?.singleDeclaration
+        val ptr =
+            main
+                .bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>()
+                ?.singleDeclaration
         assertIs<VariableDeclaration>(ptr)
 
         val alloca = ptr.initializer
@@ -605,7 +611,8 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(record)
         assertEquals(2, record.fields.size)
 
-        val declarationStatement = foo.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>()
+        val declarationStatement =
+            foo.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>()
         assertNotNull(declarationStatement)
 
         val varDeclaration = declarationStatement.singleDeclaration
@@ -903,7 +910,12 @@ class LLVMIRLanguageFrontendTest {
         val funcF = tu.functions["f"]
         assertNotNull(funcF)
 
-        val tryStatement = funcF.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.LabelStatement>(0)?.subStatement?.trys?.firstOrNull()
+        val tryStatement =
+            funcF
+                .bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.LabelStatement>(0)
+                ?.subStatement
+                ?.trys
+                ?.firstOrNull()
         assertNotNull(tryStatement)
         val tryBlock = tryStatement.tryBlock
         assertNotNull(tryBlock)

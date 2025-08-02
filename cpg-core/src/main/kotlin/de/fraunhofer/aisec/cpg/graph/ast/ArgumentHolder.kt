@@ -32,9 +32,9 @@ import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
 
 /**
- * This interfaces denotes that [de.fraunhofer.aisec.cpg.graph.Node] can accept arguments. The most famous example would be a
- * [CallExpression] to populate [CallExpression.arguments] or the [ReturnStatement.returnValue] of a
- * return statement.
+ * This interfaces denotes that [de.fraunhofer.aisec.cpg.graph.Node] can accept arguments. The most
+ * famous example would be a [CallExpression] to populate [CallExpression.arguments] or the
+ * [ReturnStatement.returnValue] of a return statement.
  *
  * We do have some use-cases where we are a little "relaxed" about what is an argument. For example,
  * we also consider the [BinaryOperator.lhs] and [BinaryOperator.rhs] of a binary operator as
