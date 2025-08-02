@@ -26,10 +26,16 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TupleDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.InitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.KeyValueExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.test.*

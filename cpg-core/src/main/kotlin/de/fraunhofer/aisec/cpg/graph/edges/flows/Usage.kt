@@ -27,10 +27,10 @@ package de.fraunhofer.aisec.cpg.graph.edges.flows
 
 import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import org.neo4j.ogm.annotation.RelationshipEntity
 
 /** This edge class denotes the usage of a [ValueDeclaration] in a [Reference]. */

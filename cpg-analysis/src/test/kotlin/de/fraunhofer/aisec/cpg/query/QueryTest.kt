@@ -29,8 +29,12 @@ import de.fraunhofer.aisec.cpg.evaluation.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.evaluation.NumberSet
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.NewArrayExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.SubscriptExpression
 import de.fraunhofer.aisec.cpg.testcases.Query
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

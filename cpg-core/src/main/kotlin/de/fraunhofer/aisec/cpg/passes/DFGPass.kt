@@ -29,13 +29,45 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.assumptions.assume
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TupleDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.DoStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ForStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.SwitchStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ThrowExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.WhileStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CastExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CollectionComprehension
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ComprehensionExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ConditionalExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ExpressionList
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.InitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.KeyValueExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.LambdaExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.NewArrayExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.NewExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.SubscriptExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.field
 import de.fraunhofer.aisec.cpg.graph.edges.flows.indexed
 import de.fraunhofer.aisec.cpg.graph.edges.flows.partial
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -68,8 +100,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     /**
      * For inferred functions which have function summaries encoded, we connect the arguments to
-     * modified parameter to propagate the changes to the arguments out of the [FunctionDeclaration]
-     * again.
+     * modified parameter to propagate the changes to the arguments out of the
+     * [ast.declarations.FunctionDeclaration] again.
      */
     private fun connectInferredCallArguments(functionSummaries: DFGFunctionSummaries) {
         for (call in callsInferredFunctions) {
@@ -174,7 +206,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         comprehension.predicate?.let { comprehension.prevDFG += it }
     }
 
-    /** Handle a [ThrowExpression]. The exception and parent exception flow into the node. */
+    /**
+     * Handle a [ast.statements.ThrowExpression]. The exception and parent exception flow into the
+     * node.
+     */
     protected fun handleThrowExpression(node: ThrowExpression) {
         node.exception?.let { node.prevDFGEdges += it }
         node.parentException?.let { node.prevDFGEdges += it }
@@ -204,8 +239,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * For a [MemberExpression], the base flows from/to the expression, depending on the
-     * [MemberExpression.access].
+     * For a [ast.statements.expressions.MemberExpression], the base flows from/to the expression,
+     * depending on the [MemberExpression.access].
      */
     protected fun handleMemberExpression(node: MemberExpression) {
         when (node.access) {
@@ -230,8 +265,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edges for a [TupleDeclaration]. The data flows from initializer to the tuple
-     * elements.
+     * Adds the DFG edges for a [ast.declarations.TupleDeclaration]. The data flows from initializer
+     * to the tuple elements.
      */
     protected fun handleTupleDeclaration(node: TupleDeclaration) {
         node.initializer?.let { initializer ->
@@ -243,16 +278,16 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge for a [VariableDeclaration]. The data flows from initializer to the
-     * variable.
+     * Adds the DFG edge for a [ast.declarations.VariableDeclaration]. The data flows from
+     * initializer to the variable.
      */
     protected fun handleVariableDeclaration(node: VariableDeclaration) {
         node.initializer?.let { node.prevDFGEdges += it }
     }
 
     /**
-     * Adds the DFG edge for a [FunctionDeclaration]. The data flows from the return statement(s) to
-     * the function.
+     * Adds the DFG edge for a [ast.declarations.FunctionDeclaration]. The data flows from the
+     * return statement(s) to the function.
      */
     protected fun handleFunctionDeclaration(
         node: FunctionDeclaration,
@@ -277,27 +312,29 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge for a [FieldDeclaration]. The data flows from the initializer to the field.
+     * Adds the DFG edge for a [ast.declarations.FieldDeclaration]. The data flows from the
+     * initializer to the field.
      */
     protected fun handleFieldDeclaration(node: FieldDeclaration) {
         node.initializer?.let { node.prevDFGEdges += it }
     }
 
     /**
-     * Adds the DFG edge for a [ReturnStatement]. The data flows from the return value to the
-     * statement.
+     * Adds the DFG edge for a [ast.statements.ReturnStatement]. The data flows from the return
+     * value to the statement.
      */
     protected fun handleReturnStatement(node: ReturnStatement) {
         node.returnValues.forEach { node.prevDFGEdges += it }
     }
 
     /**
-     * Adds the DFG edge for a [ForEachStatement]. The data flows from the
-     * [ForEachStatement.iterable] to the [ForEachStatement.variable]. However, since the
-     * [ForEachStatement.variable] is a [Statement], we have to identify the variable which is used
-     * in the loop. In most cases, we should have a [DeclarationStatement] which means that we can
-     * unwrap the [VariableDeclaration]. If this is not the case, we assume that the last
-     * [VariableDeclaration] in the statement is the one we care about.
+     * Adds the DFG edge for a [ast.statements.ForEachStatement]. The data flows from the
+     * [ast.statements.ForEachStatement.iterable] to the [ast.statements.ForEachStatement.variable].
+     * However, since the [ast.statements.ForEachStatement.variable] is a
+     * [ast.statements.Statement], we have to identify the variable which is used in the loop. In
+     * most cases, we should have a [ast.statements.DeclarationStatement] which means that we can
+     * unwrap the [ast.declarations.VariableDeclaration]. If this is not the case, we assume that
+     * the last [ast.declarations.VariableDeclaration] in the statement is the one we care about.
      */
     protected fun handleForEachStatement(node: ForEachStatement) {
         node.iterable?.let { iterable ->
@@ -319,17 +356,18 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge from [ForEachStatement.variable] to the [ForEachStatement] to show the
-     * dependence between data and the branching node.
+     * Adds the DFG edge from [ast.statements.ForEachStatement.variable] to the
+     * [ast.statements.ForEachStatement] to show the dependence between data and the branching node.
      */
     protected fun handleDoStatement(node: DoStatement) {
         node.condition?.let { node.prevDFGEdges += it }
     }
 
     /**
-     * Adds the DFG edge from [ForStatement.condition] or [ForStatement.conditionDeclaration] to the
-     * [ForStatement] to show the dependence between data and the branching node. Usage of one or
-     * the other in the statement is mutually exclusive.
+     * Adds the DFG edge from [ast.statements.ForStatement.condition] or
+     * [ast.statements.ForStatement.conditionDeclaration] to the [ast.statements.ForStatement] to
+     * show the dependence between data and the branching node. Usage of one or the other in the
+     * statement is mutually exclusive.
      */
     protected fun handleForStatement(node: ForStatement) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
@@ -340,9 +378,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge from [IfStatement.condition] or [IfStatement.conditionDeclaration] to the
-     * [IfStatement] to show the dependence between data and the branching node. Usage of one or the
-     * other in the statement is mutually exclusive.
+     * Adds the DFG edge from [ast.statements.IfStatement.condition] or
+     * [ast.statements.IfStatement.conditionDeclaration] to the [ast.statements.IfStatement] to show
+     * the dependence between data and the branching node. Usage of one or the other in the
+     * statement is mutually exclusive.
      */
     protected fun handleIfStatement(node: IfStatement) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
@@ -353,9 +392,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge from [SwitchStatement.selector] or [SwitchStatement.selectorDeclaration] to
-     * the [SwitchStatement] to show the dependence between data and the branching node. Usage of
-     * one or the other in the statement is mutually exclusive.
+     * Adds the DFG edge from [ast.statements.SwitchStatement.selector] or
+     * [ast.statements.SwitchStatement.selectorDeclaration] to the [ast.statements.SwitchStatement]
+     * to show the dependence between data and the branching node. Usage of one or the other in the
+     * statement is mutually exclusive.
      */
     protected fun handleSwitchStatement(node: SwitchStatement) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
@@ -366,9 +406,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge from [WhileStatement.condition] or [WhileStatement.conditionDeclaration] to
-     * the [WhileStatement] to show the dependence between data and the branching node. Usage of one
-     * or the other in the statement is mutually exclusive.
+     * Adds the DFG edge from [ast.statements.WhileStatement.condition] or
+     * [ast.statements.WhileStatement.conditionDeclaration] to the [ast.statements.WhileStatement]
+     * to show the dependence between data and the branching node. Usage of one or the other in the
+     * statement is mutually exclusive.
      */
     protected fun handleWhileStatement(node: WhileStatement) {
         Util.addDFGEdgesForMutuallyExclusiveBranchingExpression(
@@ -379,8 +420,9 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edges for an [UnaryOperator]. The data flow from the input to this node and, in
-     * case of the operators "++" and "--" also from the node back to the input.
+     * Adds the DFG edges for an [ast.statements.expressions.UnaryOperator]. The data flow from the
+     * input to this node and, in case of the operators "++" and "--" also from the node back to the
+     * input.
      */
     protected fun handleUnaryOperator(node: UnaryOperator) {
         node.input.let {
@@ -392,16 +434,16 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge for a [LambdaExpression]. The data flow from the function representing the
-     * lambda to the expression.
+     * Adds the DFG edge for a [ast.statements.expressions.LambdaExpression]. The data flow from the
+     * function representing the lambda to the expression.
      */
     protected fun handleLambdaExpression(node: LambdaExpression) {
         node.function?.let { node.prevDFGEdges += it }
     }
 
     /**
-     * Adds the DFG edges for an [KeyValueExpression]. The value flows to this expression. TODO:
-     * Check with python and JS implementation
+     * Adds the DFG edges for an [ast.statements.expressions.KeyValueExpression]. The value flows to
+     * this expression. TODO: Check with python and JS implementation
      */
     protected fun handleKeyValueExpression(node: KeyValueExpression) {
         // TODO: Doesn't the node also contain the key?? Should the value be "partial" or "full"?
@@ -409,8 +451,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edges for an [InitializerListExpression]. All values in the initializer flow to
-     * this expression.
+     * Adds the DFG edges for an [ast.statements.expressions.InitializerListExpression]. All values
+     * in the initializer flow to this expression.
      */
     protected fun handleInitializerListExpression(node: InitializerListExpression) {
         node.initializers.forEachIndexed { idx, it ->
@@ -429,23 +471,23 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge to an [ExpressionList]. The data of the last expression flow to the whole
-     * list.
+     * Adds the DFG edge to an [ast.statements.expressions.ExpressionList]. The data of the last
+     * expression flow to the whole list.
      */
     protected fun handleExpressionList(node: ExpressionList) {
         node.expressions.lastOrNull()?.let { node.prevDFGEdges += it }
     }
 
     /**
-     * Adds the DFG edge to an [NewExpression]. The data of the initializer flow to the whole
-     * expression.
+     * Adds the DFG edge to an [ast.statements.expressions.NewExpression]. The data of the
+     * initializer flow to the whole expression.
      */
     protected fun handleNewExpression(node: NewExpression) {
         node.initializer?.let { node.prevDFGEdges += it }
     }
 
     /**
-     * Adds the DFG edges to a [Reference] as follows:
+     * Adds the DFG edges to a [ast.statements.expressions.Reference] as follows:
      * - If the variable is written to, data flows from this node to the variable declaration.
      * - If the variable is read from, data flows from the variable declaration to this node.
      * - For a combined read and write, both edges for data flows are added.
@@ -464,8 +506,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge to a [ConditionalExpression]. Data flows from the then and the else
-     * expression to the whole expression.
+     * Adds the DFG edge to a [ast.statements.expressions.ConditionalExpression]. Data flows from
+     * the then and the else expression to the whole expression.
      */
     protected fun handleConditionalExpression(node: ConditionalExpression) {
         node.thenExpression?.let { node.prevDFGEdges += it }
@@ -473,8 +515,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge to an [SubscriptExpression]. The whole array `x` flows to the result `x[i]`
-     * or vice versa depending on the access value.
+     * Adds the DFG edge to an [ast.statements.expressions.SubscriptExpression]. The whole array `x`
+     * flows to the result `x[i]` or vice versa depending on the access value.
      */
     protected fun handleSubscriptExpression(node: SubscriptExpression) {
         if (node.access == AccessValues.WRITE) {
@@ -493,14 +535,17 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             }
     }
 
-    /** Adds the DFG edge to an [NewArrayExpression]. The initializer flows to the expression. */
+    /**
+     * Adds the DFG edge to an [ast.statements.expressions.NewArrayExpression]. The initializer
+     * flows to the expression.
+     */
     protected fun handleNewArrayExpression(node: NewArrayExpression) {
         node.initializer?.let { node.prevDFGEdges += it }
     }
 
     /**
-     * Adds the DFG edge to an [BinaryOperator]. The value flows to the target of an assignment or
-     * to the whole expression.
+     * Adds the DFG edge to an [ast.statements.expressions.BinaryOperator]. The value flows to the
+     * target of an assignment or to the whole expression.
      */
     protected fun handleBinaryOp(node: BinaryOperator, parent: Node?) {
         when (node.operatorCode) {
@@ -530,13 +575,14 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge to a [CastExpression]. The inner expression flows to the cast expression.
+     * Adds the DFG edge to a [ast.statements.expressions.CastExpression]. The inner expression
+     * flows to the cast expression.
      */
     protected fun handleCastExpression(castExpression: CastExpression) {
         castExpression.expression.let { castExpression.prevDFGEdges += it }
     }
 
-    /** Adds the DFG edges to a [CallExpression]. */
+    /** Adds the DFG edges to a [ast.statements.expressions.CallExpression]. */
     fun handleCallExpression(call: CallExpression, inferDfgForUnresolvedSymbols: Boolean) {
         // Remove existing DFG edges since they are no longer valid (e.g. after updating the
         // CallExpression with the invokes edges to the called functions)

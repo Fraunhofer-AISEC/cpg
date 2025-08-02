@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.evaluation.NumberSet
 import de.fraunhofer.aisec.cpg.evaluation.SizeEvaluator
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 
 /**

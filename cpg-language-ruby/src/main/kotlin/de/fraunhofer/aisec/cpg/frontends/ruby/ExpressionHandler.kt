@@ -26,8 +26,14 @@
 package de.fraunhofer.aisec.cpg.frontends.ruby
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.LambdaExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
 import org.jruby.ast.*
 import org.jruby.ast.Node
 import org.jruby.ast.types.INameNode
