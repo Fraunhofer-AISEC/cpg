@@ -26,15 +26,12 @@
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.allChildren
-import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
 import io.modelcontextprotocol.kotlin.sdk.Tool
 import io.modelcontextprotocol.kotlin.sdk.server.Server
-import kotlin.reflect.KClass
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.add
@@ -43,25 +40,30 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
-@Serializable data class CpgApplyConceptsPayload(val applications: List<ConceptApplication>)
+@Serializable data class CpgApplyConceptsPayload(val assignments: List<ConceptAssignment>)
 
-@Serializable data class ConceptApplication(val nodeId: String, val conceptType: String)
+@Serializable
+data class ConceptAssignment(
+    val nodeId: String,
+    val overlay: String, // FQN of concept or operation class
+)
 
 fun Server.addCpgApplyConceptsTool() {
     val toolDescription =
         """
-            Apply concept overlays to specific nodes in the CPG.
+            Apply concepts or operations to specific nodes in the CPG.
             
-            This tool attaches security concepts (like 'Data', 'ReadData', 'Authentication') 
-            to specific nodes in the graph.
+            This tool creates and attaches concepts or operations using their 
+            fully qualified class names (FQN) to specific nodes in the graph.
             
-            Available concepts: Data, ReadData, Authentication, HttpRequest, etc.
+            Example usage:
+            - "Apply concepts to the nodes you identified"
             
             Parameters:
-            - applications: List of concept applications to perform
-              Each application contains:
-              - nodeId: ID of the node to apply concept to
-              - conceptType: Type of concept to apply (e.g., 'Data', 'ReadData')
+            - assignments: List of overlay assignments to perform
+              Each assignment contains:
+              - nodeId: ID of the node to apply overlay to
+              - overlay: Fully qualified name of concept or operation class
         """
             .trimIndent()
 
@@ -69,32 +71,32 @@ fun Server.addCpgApplyConceptsTool() {
         Tool.Input(
             properties =
                 buildJsonObject {
-                    putJsonObject("applications") {
+                    putJsonObject("assignments") {
                         put("type", "array")
-                        put("description", "List of concept applications to perform")
+                        put("description", "List of concept assignments to perform")
                         putJsonObject("items") {
                             put("type", "object")
                             putJsonObject("properties") {
                                 putJsonObject("nodeId") {
                                     put("type", "string")
-                                    put("description", "ID of the node to apply concept to")
+                                    put("description", "ID of the node to apply overlay to")
                                 }
-                                putJsonObject("conceptType") {
+                                putJsonObject("overlay") {
                                     put("type", "string")
                                     put(
                                         "description",
-                                        "Type of concept to apply (e.g., 'Data', 'ReadData')",
+                                        "Fully qualified name of concept or operation class",
                                     )
                                 }
                             }
                             putJsonArray("required") {
                                 add("nodeId")
-                                add("conceptType")
+                                add("overlay")
                             }
                         }
                     }
                 },
-            required = listOf("applications"),
+            required = listOf("assignments"),
         )
 
     this.addTool(
@@ -121,28 +123,32 @@ fun Server.addCpgApplyConceptsTool() {
 
             val applied = mutableListOf<String>()
 
-            payload.applications.forEach { app ->
+            payload.assignments.forEach { assignment ->
                 // Find the node by ID
-                val node = result.allChildren<Node>().find { it.id.toString() == app.nodeId }
+                val node = result.allChildren<Node>().find { it.id.toString() == assignment.nodeId }
                 if (node != null) {
-                    val concept = createConcepts(app.conceptType, node)
-                    if (concept != null) {
-                        concept.underlyingNode = node
-                        applied.add(
-                            "Applied ${app.conceptType} to node ${app.nodeId} (${node::class.simpleName})"
+                    try {
+                        result.conceptBuildHelper(
+                            name = assignment.overlay,
+                            underlyingNode = node,
+                            connectDFGUnderlyingNodeToConcept = true,
                         )
-                    } else {
+
                         applied.add(
-                            "Failed to create concept ${app.conceptType} - concept type not found or invalid"
+                            "Applied ${assignment.overlay} to node ${assignment.nodeId} (${node::class.simpleName})"
+                        )
+                    } catch (e: Exception) {
+                        applied.add(
+                            "Failed to create ${assignment.overlay} for node ${assignment.nodeId}: ${e.message}"
                         )
                     }
                 } else {
-                    applied.add("Node ${app.nodeId} not found")
+                    applied.add("Node ${assignment.nodeId} not found")
                 }
             }
 
             val summary =
-                "Applied ${payload.applications.size} concept(s):\n" + applied.joinToString("\n")
+                "Applied ${payload.assignments.size} concept(s):\n" + applied.joinToString("\n")
 
             CallToolResult(content = listOf(TextContent(summary)))
         } catch (e: Exception) {
@@ -154,50 +160,4 @@ fun Server.addCpgApplyConceptsTool() {
             )
         }
     }
-}
-
-abstract class Privacy(underlyingNode: Node? = null) : Concept(underlyingNode)
-
-class Data(underlyingNode: Node? = null) : Privacy(underlyingNode)
-
-abstract class PrivacyOperation(underlyingNode: Node? = null, concept: Privacy) :
-    Operation(underlyingNode, concept)
-
-class ReadData(underlyingNode: Node? = null, concept: Privacy) :
-    PrivacyOperation(underlyingNode, concept)
-
-fun createConcepts(conceptType: String, node: Node): OverlayNode? {
-    val conceptClass = findConceptClass(conceptType)
-    return conceptClass?.let { clazz ->
-        val constructor =
-            clazz.constructors.find { constructor ->
-                constructor.parameters.size == 1 &&
-                    constructor.parameters[0].type.classifier == Node::class
-            }
-        constructor?.call(node) as? OverlayNode
-    }
-}
-
-fun findConceptClass(conceptType: String): KClass<*>? {
-    val packagePrefixes =
-        listOf(
-            "de.fraunhofer.aisec.cpg.graph.concepts.",
-            "de.fraunhofer.aisec.cpg.graph.concepts.auth.",
-            "de.fraunhofer.aisec.cpg.graph.concepts.config.",
-            "de.fraunhofer.aisec.cpg.graph.concepts.file.",
-            "de.fraunhofer.aisec.cpg.graph.concepts.http.",
-            "de.fraunhofer.aisec.cpg.graph.concepts.logging.",
-            "de.fraunhofer.aisec.cpg.graph.concepts.memory.",
-            "de.fraunhofer.aisec.cpg.graph.concepts.policy.",
-            "de.fraunhofer.aisec.cpg.mcp.",
-        )
-
-    for (prefix in packagePrefixes) {
-        val className = prefix + conceptType
-        val clazz = Class.forName(className).kotlin
-        if (OverlayNode::class.java.isAssignableFrom(clazz.java)) {
-            return clazz
-        }
-    }
-    return null
 }

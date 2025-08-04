@@ -56,6 +56,10 @@ fun Server.addCpgDataflowTool() {
         You must first apply concepts to nodes using cpg_apply_concepts 
         before running data flow analysis.
         
+        Example usage:
+        - Is there a data flow from sensitive data to HTTP Request?
+        - Track file reads to network calls
+        
         Parameters:
         - from: Source concept type (e.g., 'ReadData', 'Data', 'Authentication')
         - to: Target concept type (e.g., 'HttpRequest', 'CallExpression')

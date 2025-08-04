@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toNodeInfo
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
@@ -43,11 +45,18 @@ import kotlinx.serialization.json.putJsonObject
 fun Server.addCpgLlmAnalyzeTool() {
     val toolDescription =
         """
-        Generate a security analysis prompt asking the LLM to suggest concepts/operations for code review.
+        Generate a prompt asking the LLM to suggest concepts/operations
         
         This tool creates a prompt that asks the LLM to act as a security officer and analyze 
         the CPG analysis results, suggesting appropriate security concepts and operations based 
-        on the Fraunhofer CPG repository documentation.
+        on the Fraunhofer CPG repository documentation. After using this tool,
+        the LLM should analyze the prompt and provide JSON suggestions. The user should
+        review these suggestions before applying them with cpg_apply_concepts.
+        
+        Example usage:
+        - "Analyze this code for security vulnerabilities"
+        - "Focus on authentication vulnerabilities in this code"  
+        - "Check for payment processing security issues"
         
         Parameters:
         - description: Additional context for the security analysis (optional)
@@ -85,32 +94,50 @@ fun Server.addCpgLlmAnalyzeTool() {
                 globalAnalysisResult?.allChildren<Node>()?.map { it.toNodeInfo() } ?: emptyList()
 
             val prompt = buildString {
-                appendLine("# Security Code Analysis Request")
+                appendLine("# Code Analysis")
                 appendLine()
                 appendLine(
-                    "Please take on the role of a security officer and analyze the provided code for security-relevant patterns " +
+                    "Please take on the role of a security engineer and analyze the provided code for security-relevant patterns " +
                         "and potential vulnerabilities."
                 )
+                appendLine()
+
+                appendLine("## Concept vs Operation Guidelines:")
                 appendLine(
-                    "For example, when we see code like `open('/etc/passwd', 'r')`, this represents accessing " +
-                        "sensitive system files and should be tagged with a 'Data' concept because it handles " +
-                        "sensitive information. Similarly, `requests.post()` calls represent HTTP requests that " +
-                        "could send data outside the system boundary and should be tagged as 'HttpRequest' operations."
+                    "- **Concepts** (what something IS): Apply to data, variables, parameters. Examples:"
+                )
+                appendLine(
+                    "  - Data containing passwords, tokens, keys → Look for 'Data' or similar concepts"
+                )
+                appendLine(
+                    "  - Auth tokens/credentials → Look for 'Authentication' related concepts"
+                )
+                appendLine("  - HTTP endpoints → Look for 'HttpEndpoint' or similar concepts")
+                appendLine()
+                appendLine(
+                    "- **Operations** (what something DOES): Apply to function calls, expressions. Examples:"
+                )
+                appendLine(
+                    "  - Functions that read files/databases → Look for 'ReadData' or similar operations"
+                )
+                appendLine(
+                    "  - HTTP requests/API calls → Look for 'HttpRequest' or similar operations"
+                )
+                appendLine(
+                    "  - Login/auth functions → Look for 'Authenticate' or similar operations"
                 )
                 appendLine()
+                appendLine(
+                    "**IMPORTANT**: Research and use only concepts and operations available in the CPG repository. Do not invent new names."
+                )
+                appendLine()
+
                 appendLine("## Your Task")
-                appendLine("As a security officer, please:")
                 appendLine(
-                    "1. Research currently available concepts and operations in the GitHub Fraunhofer CPG repository, especially in the module cpg-concepts"
+                    "1. Research available concepts and operations in the CPG repository (cpg-concepts module)"
                 )
-                appendLine(
-                    "2. Review the CPG documentation to understand the different concept types and their purposes"
-                )
-                appendLine("3. Analyze the nodes below from a security perspective")
-                appendLine(
-                    "4. Please suggest appropriate security concepts and operations from the CPG repository " +
-                        "that should be applied to each relevant node"
-                )
+                appendLine("2. Analyze the nodes below from a security perspective")
+                appendLine("3. Suggest the appropriate overlays from the CPG repository by providing their fully qualified class names")
                 appendLine()
                 appendLine("Focus on identifying nodes that handle:")
                 appendLine("- Sensitive data access (files, environment variables, databases)")
@@ -118,7 +145,6 @@ fun Server.addCpgLlmAnalyzeTool() {
                 appendLine("- Authentication and authorization mechanisms")
                 appendLine("- Input validation and sanitization")
                 appendLine("- Cryptographic operations")
-                appendLine("- System resource access")
                 appendLine()
 
                 if (payload.description != null) {
@@ -136,7 +162,7 @@ fun Server.addCpgLlmAnalyzeTool() {
                             } else {
                                 ""
                             }
-                        appendLine("**Node ${node.name + (node.nodeId)}**: `${node.code}`$location")
+                        appendLine("**Node ${node.nodeId}**: `${node.code}`$location")
                     }
                 } else {
                     appendLine(
@@ -146,28 +172,23 @@ fun Server.addCpgLlmAnalyzeTool() {
 
                 appendLine()
                 appendLine("## Response Format")
-                appendLine(
-                    "Please provide your security analysis and concept suggestions in JSON format:"
-                )
+                appendLine("Please provide your security analysis in JSON format:")
                 appendLine(
                     """
 ```json
 {
-  "analysis_summary": "Brief overview of security findings",
-  "concept_suggestions": [
+  "overlaySuggestions": [
     {
       "nodeId": "123",
-      "nodeName": "node"
-      "conceptType": "Data|ReadData|Authentication|HttpRequest|etc",
+      "overlay": "de.fraunhofer.aisec.cpg.graph.concepts.Data",
       "reasoning": "Detailed security reasoning for this classification",
-      "security_impact": "Potential security implications"
+      "securityImpact": "Potential security implications"
     }
   ],
-  "additional_recommendations": "Any additional security recommendations"
 }
 ```
 
-Please research the CPG concept documentation first, then provide your analysis.
+**IMPORTANT**: After providing your analysis, WAIT for user approval before applying any concepts. Do not automatically execute cpg_apply_concepts.
                 """
                         .trimIndent()
                 )
@@ -179,10 +200,21 @@ Please research the CPG concept documentation first, then provide your analysis.
                 content =
                     listOf(
                         TextContent(
-                            "Error generating analysis prompt: ${e.message ?: e::class.simpleName}"
+                            "Error generating prompt: ${e.message ?: e::class.simpleName}"
                         )
                     )
             )
         }
     }
 }
+
+abstract class Privacy(underlyingNode: Node? = null) : Concept(underlyingNode)
+
+class Data(underlyingNode: Node? = null) : Privacy(underlyingNode)
+
+abstract class PrivacyOperation(underlyingNode: Node? = null, concept: Privacy) :
+    Operation(underlyingNode, concept)
+
+class ReadData(underlyingNode: Node? = null, concept: Privacy) :
+    PrivacyOperation(underlyingNode, concept)
+

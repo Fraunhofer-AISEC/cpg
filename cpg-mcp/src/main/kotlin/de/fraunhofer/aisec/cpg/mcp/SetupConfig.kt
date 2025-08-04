@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.mcp
 
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.PrepareSerialization
@@ -60,7 +61,12 @@ fun setupTranslationConfiguration(
         TranslationConfiguration.builder()
             .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
             .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
+            .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
+            .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage")
+            .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
             .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
+            .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage")
+            .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage")
             .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage")
             .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage")
             .loadIncludes(loadIncludes)
@@ -105,4 +111,19 @@ fun setupTranslationConfiguration(
         InferenceConfiguration.builder().inferRecords(true).build()
     )
     return translationConfiguration.build()
+}
+
+fun main() {
+    val file =
+        File(
+            "/home/shala/repos/cpg/cpg-mcp/src/main/kotlin/de/fraunhofer/aisec/cpg/mcp/test_example.py"
+        )
+    val config =
+        setupTranslationConfiguration(
+            topLevel = file,
+            files = listOf(file.absolutePath),
+            includePaths = emptyList(),
+        )
+    val analyzer = TranslationManager.builder().config(config).build()
+    val result = analyzer.analyze().get()
 }

@@ -57,6 +57,11 @@ fun Server.addCpgAnalyzeTool() {
         This tool parses source code and creates a comprehensive graph representation 
         containing all nodes, functions, variables, and call expressions.
         
+        Example usage:
+        - "Analyze this Python script for security issues"
+        - "Parse this code and show me the structure"
+        - "Load this C++ file and analyze its functions"
+        
         Parameters:
         - file: Path to the source code file to analyze (required)
     """
