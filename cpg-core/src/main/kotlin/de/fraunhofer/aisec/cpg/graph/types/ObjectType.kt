@@ -33,8 +33,8 @@ import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
 import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
-import java.util.*
 import org.neo4j.ogm.annotation.Relationship
+import java.util.*
 
 /**
  * This is the main type in the Type system. ObjectTypes describe objects, as instances of a class.
