@@ -151,7 +151,7 @@ fun min(n: Node?, eval: ValueEvaluator = IntegerIntervalEvaluator()): QueryTree<
         val result =
             ((evalRes as? LatticeInterval.Bounded)?.upper as? LatticeInterval.Bound.Value)?.value
                 ?: Long.MIN_VALUE
-        QueryTree(
+        return QueryTree(
             result,
             mutableListOf(QueryTree(n, operator = GenericQueryOperators.EVALUATE)),
             node = n,
@@ -194,13 +194,16 @@ fun min(n: List<Node>?, eval: ValueEvaluator = IntegerIntervalEvaluator()): Quer
         val evalRes = eval.evaluate(node)
         when (evalRes) {
             is LatticeInterval -> {
-                result =
+                val minValue =
                     ((evalRes as? LatticeInterval.Bounded)?.upper as? LatticeInterval.Bound.Value)
                         ?.value
                         ?: ((evalRes as? LatticeInterval.Bounded)?.upper
                                 as? LatticeInterval.Bound.INFINITE)
                             ?.let { Long.MIN_VALUE }
                         ?: Long.MAX_VALUE
+                if (minValue < result) {
+                    result = minValue
+                }
             }
 
             is Number if evalRes.toLong() < result -> {
@@ -234,13 +237,16 @@ fun max(n: List<Node>?, eval: ValueEvaluator = IntegerIntervalEvaluator()): Quer
         val evalRes = eval.evaluate(node)
         when (evalRes) {
             is LatticeInterval -> {
-                result =
+                val maxValue =
                     ((evalRes as? LatticeInterval.Bounded)?.upper as? LatticeInterval.Bound.Value)
                         ?.value
                         ?: ((evalRes as? LatticeInterval.Bounded)?.upper
                                 as? LatticeInterval.Bound.INFINITE)
                             ?.let { Long.MAX_VALUE }
                         ?: Long.MIN_VALUE
+                if (maxValue > result) {
+                    result = maxValue
+                }
             }
 
             is Number if evalRes.toLong() > result -> {
@@ -268,7 +274,7 @@ fun max(n: Node?, eval: ValueEvaluator = IntegerIntervalEvaluator()): QueryTree<
         val result =
             ((evalRes as? LatticeInterval.Bounded)?.upper as? LatticeInterval.Bound.Value)?.value
                 ?: Long.MAX_VALUE
-        QueryTree(
+        return QueryTree(
             result,
             mutableListOf(QueryTree(n, operator = GenericQueryOperators.EVALUATE)),
             node = n,
