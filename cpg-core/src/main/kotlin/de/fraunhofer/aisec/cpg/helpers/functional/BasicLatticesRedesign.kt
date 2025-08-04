@@ -535,7 +535,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                 // We can't return in the coroutines, so we only set the return value
                 // there. If we have a return value, we can stop here
                 if (ret != null) {
-                    return ret
+                    return@innerCompare ret
                 } else {
                     scope.launch {
                         val otherV = other[k]
@@ -561,6 +561,10 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
 
                                 Order.UNEQUAL -> {
                                     mutex.withLock { ret = Order.UNEQUAL }
+                                    mutex.withLock {
+                                        someLesser = true
+                                        someGreater = true
+                                    }
                                 }
                             }
                         } else {
