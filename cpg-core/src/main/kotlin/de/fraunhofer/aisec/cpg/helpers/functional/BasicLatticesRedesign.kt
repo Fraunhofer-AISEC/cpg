@@ -738,7 +738,7 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
             return ret
         }
 
-        override suspend fun innerCompare(other: Lattice.Element): Order {
+        open override suspend fun innerCompare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
             if (other !is Element<S, T>)
@@ -746,7 +746,9 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
                     "$other should be of type TupleLattice.Element<S, T> but is of type ${other.javaClass}"
                 )
 
-            return this.second.innerCompare(other.second)
+            val result1 = this.first.compare(other.first)
+            val result2 = this.second.innerCompare(other.second)
+            return compareMultiple(result1, result2)
         }
 
         override fun duplicate(): Element<S, T> {

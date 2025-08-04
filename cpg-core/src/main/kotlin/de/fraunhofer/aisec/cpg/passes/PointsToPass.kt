@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.functional.*
+import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice.Element
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -108,10 +109,71 @@ typealias SingleGeneralState = MapLattice<Node, GeneralStateEntryElement>
 
 typealias SingleDeclarationState = MapLattice<Node, DeclarationStateEntryElement>
 
-typealias PointsToStateElement =
-    TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>
+class PointsToState(
+    innerLattice1: Lattice<SingleGeneralStateElement>,
+    innerLattice2: Lattice<SingleDeclarationStateElement>,
+) :
+    TupleLattice<SingleGeneralStateElement, SingleDeclarationStateElement>(
+        innerLattice1,
+        innerLattice2,
+    ) {
+    infix fun <A : Lattice.Element, B : Lattice.Element> A.to(that: B): TupleLattice.Element<A, B> =
+        Element(this, that)
 
-typealias PointsToState = TupleLattice<SingleGeneralStateElement, SingleDeclarationStateElement>
+    override val bottom: Element
+        get() = Element(innerLattice1.bottom, innerLattice2.bottom)
+
+    override fun lub(
+        one: TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>,
+        two: TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>,
+        allowModify: Boolean,
+        widen: Boolean,
+    ): PointsToState.Element {
+        val result = super.lub(one = one, two = two, allowModify = allowModify, widen = widen)
+        return result as? PointsToState.Element ?: Element(result)
+    }
+
+    override fun glb(
+        one: TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>,
+        two: TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>,
+    ): PointsToState.Element {
+        val result = super.glb(one, two)
+        return result as? PointsToState.Element ?: Element(result)
+    }
+
+    override fun duplicate(
+        one: TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>
+    ): TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement> {
+        return Element(super.duplicate(one))
+    }
+
+    class Element(first: SingleGeneralStateElement, second: SingleDeclarationStateElement) :
+        TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>(
+            first,
+            second,
+        ) {
+        constructor(
+            tupleState:
+                TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>
+        ) : this(tupleState.first, tupleState.second)
+
+        override suspend fun innerCompare(other: Lattice.Element): Order {
+            if (this === other) return Order.EQUAL
+
+            if (other !is Element)
+                throw IllegalArgumentException(
+                    "$other should be of type Element but is of type ${other.javaClass}"
+                )
+
+            return this.second.innerCompare(other.second)
+        }
+
+        override fun duplicate():
+            TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement> {
+            return Element(super.duplicate())
+        }
+    }
+}
 
 /**
  * Returns a name that allows a human to identify the node. Mostly, this is simply the node's
@@ -280,6 +342,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 handleEmptyFunctionDeclaration(lattice, startState, node)
             } else {
                 lattice.iterateEOG(node.nextEOGEdges, startState, ::transfer)
+                    as PointsToState.Element
             }
 
         for ((key, value) in finalState.generalState) {
@@ -350,9 +413,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
      */
     private fun handleEmptyFunctionDeclaration(
         lattice: PointsToState,
-        startState: TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>,
+        startState: PointsToState.Element,
         functionDeclaration: FunctionDeclaration,
-    ): PointsToStateElement {
+    ): PointsToState.Element {
         var doubleState = startState
 
         // Concurrency stuff
@@ -472,7 +535,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return doubleState
     }
 
-    private fun storeFunctionSummary(node: FunctionDeclaration, doubleState: PointsToStateElement) {
+    private fun storeFunctionSummary(
+        node: FunctionDeclaration,
+        doubleState: PointsToState.Element,
+    ) {
         // Concurrency stuff
         val parentJob = Job()
         val limitedDispatcher = Dispatchers.Default.limitedParallelism(100)
@@ -669,14 +735,19 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     }
 
     protected fun transfer(
-        lattice: Lattice<PointsToStateElement>,
+        lattice:
+            Lattice<TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>>,
         currentEdge: EvaluationOrder,
-        state: PointsToStateElement,
-    ): PointsToStateElement {
+        state: TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>,
+    ): PointsToState.Element {
+        var doubleState =
+            state as? PointsToState.Element
+                ?: throw java.lang.IllegalArgumentException(
+                    "Expected the state to be of type PointsToState.Element"
+                )
+
         val lattice = lattice as? PointsToState ?: return state
         val currentNode = currentEdge.end
-
-        var doubleState = state
 
         // Used to keep iterating for steps which do not modify the alias-state otherwise
         doubleState =
@@ -710,8 +781,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     protected fun handleDeleteExpression(
         lattice: PointsToState,
         currentNode: DeleteExpression,
-        doubleState: PointsToStateElement,
-    ): PointsToStateElement {
+        doubleState: PointsToState.Element,
+    ): PointsToState.Element {
         var doubleState = doubleState
         val sources =
             PowersetLattice.Element<Triple<Node?, Boolean, Boolean>>(
@@ -737,8 +808,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     private fun handleReturnStatement(
         lattice: PointsToState,
         currentNode: ReturnStatement,
-        doubleState: PointsToStateElement,
-    ): PointsToStateElement {
+        doubleState: PointsToState.Element,
+    ): PointsToState.Element {
         /* For Return Statements, all we really want to do is to collect their return values
         to add them to the FunctionSummary */
         var doubleState = doubleState
@@ -774,8 +845,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         lattice: PointsToState,
         functionDeclaration: FunctionDeclaration,
         callExpression: CallExpression,
-        doubleState: PointsToStateElement,
-    ): PointsToStateElement {
+        doubleState: PointsToState.Element,
+    ): PointsToState.Element {
         var doubleState = doubleState
         var callingContext =
             CallingContextIn(
@@ -960,8 +1031,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     private fun handleCallExpression(
         lattice: PointsToState,
         currentNode: CallExpression,
-        doubleState: PointsToStateElement,
-    ): PointsToStateElement {
+        doubleState: PointsToState.Element,
+    ): PointsToState.Element {
         var doubleState = doubleState
         var mapDstToSrc = mutableMapOf<Node, IdentitySet<MapDstToSrcEntry>>()
 
@@ -1155,11 +1226,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     private fun writeMapEntriesToState(
         lattice: PointsToState,
-        doubleState: PointsToStateElement,
+        doubleState: PointsToState.Element,
         dstAddr: Node,
         values: IdentitySet<MapDstToSrcEntry>,
         callingContext: CallingContextOut,
-    ): PointsToStateElement {
+    ): PointsToState.Element {
         // A triple: the sourceNode, a flag if this is a shortFS, and a flag if this is a
         // partialWrite
         val sources =
@@ -1260,7 +1331,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
      * @return The updated map that tracks the source nodes for each destination node.
      */
     private fun addEntryToMap(
-        doubleState: PointsToStateElement,
+        doubleState: PointsToState.Element,
         mapDstToSrc: MutableMap<Node, IdentitySet<MapDstToSrcEntry>>,
         destinationAddresses: IdentitySet<Node?>,
         destinations: IdentitySet<Node>,
@@ -1430,7 +1501,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     /** Returns a Pair of destination (for the general State) and destinationAddresses */
     private fun calculateCallExpressionDestinations(
-        doubleState: PointsToStateElement,
+        doubleState: PointsToState.Element,
         mapDstToSrc: MutableMap<Node, IdentitySet<MapDstToSrcEntry>>,
         dstValueDepth: Int,
         subAccessName: String,
@@ -1506,8 +1577,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     private fun handleUnaryOperator(
         lattice: PointsToState,
         currentNode: UnaryOperator,
-        doubleState: PointsToStateElement,
-    ): PointsToStateElement {
+        doubleState: PointsToState.Element,
+    ): PointsToState.Element {
         var doubleState = doubleState
         /* For UnaryOperators, we have to update the value if it's a ++ or -- operator
         The edges are drawn by the DFGPass */
@@ -1544,7 +1615,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 )
             }
             doubleState =
-                PointsToStateElement(doubleState.generalState, MapLattice.Element(newDeclState))
+                PointsToState.Element(doubleState.generalState, MapLattice.Element(newDeclState))
         }
 
         doubleState =
@@ -1570,8 +1641,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     private fun handleAssignExpression(
         lattice: PointsToState,
         currentNode: AssignExpression,
-        doubleState: PointsToStateElement,
-    ): PointsToStateElement {
+        doubleState: PointsToState.Element,
+    ): PointsToState.Element {
         var doubleState = doubleState
         /* For AssignExpressions, we update the value of the lhs with the rhs
          * In C(++), both the lhs and the rhs should only have one element
@@ -1607,8 +1678,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     private fun handleExpression(
         lattice: PointsToState,
         currentNode: Expression,
-        doubleState: PointsToStateElement,
-    ): PointsToStateElement {
+        doubleState: PointsToState.Element,
+    ): PointsToState.Element {
         var doubleState = doubleState
 
         /* If we have an Expression that is written to, we handle it's values later and ignore it now */
@@ -1727,8 +1798,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     private fun handleDeclaration(
         lattice: PointsToState,
         currentNode: Node,
-        doubleState: PointsToStateElement,
-    ): PointsToStateElement {
+        doubleState: PointsToState.Element,
+    ): PointsToState.Element {
         var doubleState = doubleState
         /* No need to set the address, this already happens in the constructor */
         val addresses = doubleState.getAddresses(currentNode, currentNode)
@@ -1790,10 +1861,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     private fun initializeParameters(
         lattice: PointsToState,
         parameters: MutableList<ParameterDeclaration>,
-        doubleState: PointsToStateElement,
+        doubleState: PointsToState.Element,
         // Until which depth do we create ParameterMemoryValues
         depth: Int = 2,
-    ): PointsToStateElement {
+    ): PointsToState.Element {
         var doubleState = doubleState
         parameters
             .filter { it.memoryValues.filterIsInstance<ParameterMemoryValue>().isEmpty() }
@@ -1901,21 +1972,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     }
 }
 
-val PointsToStateElement.generalState: SingleGeneralStateElement
+val PointsToState.Element.generalState: SingleGeneralStateElement
     get() = this.first
 
-val PointsToStateElement.declarationsState: SingleDeclarationStateElement
+val PointsToState.Element.declarationsState: SingleDeclarationStateElement
     get() = this.second
 
-fun PointsToStateElement.getFromDecl(key: Node): DeclarationStateEntryElement? {
+fun PointsToState.Element.getFromDecl(key: Node): DeclarationStateEntryElement? {
     return this.declarationsState[key]
 }
 
 fun PointsToState.push(
-    currentState: PointsToStateElement,
+    currentState: PointsToState.Element,
     newNode: Node,
     newLatticeElement: GeneralStateEntryElement,
-): PointsToStateElement {
+): PointsToState.Element {
     // If we already have exactly that entry, no need to re-write it, otherwise we might confuse the
     // iterateEOG function
     val newLatticeCopy = newLatticeElement.duplicate()
@@ -1935,10 +2006,10 @@ fun PointsToState.push(
 
 /** Pushes the [newNode] and its [newLatticeElement] to the [declarationsState]. */
 fun PointsToState.pushToDeclarationsState(
-    currentState: PointsToStateElement,
+    currentState: PointsToState.Element,
     newNode: Node,
     newLatticeElement: DeclarationStateEntryElement,
-): PointsToStateElement {
+): PointsToState.Element {
     // If we already have exactly that entry, no need to re-write it, otherwise we might confuse the
     // iterateEOG function
     val newLatticeCopy = newLatticeElement.duplicate()
@@ -1962,7 +2033,7 @@ fun PointsToState.pushToDeclarationsState(
 }
 
 /** Check if `node` has an entry in the DeclarationState */
-fun PointsToStateElement.hasDeclarationStateEntry(
+fun PointsToState.Element.hasDeclarationStateEntry(
     node: Node,
     excludeShortFSValues: Boolean = true,
 ): Boolean {
@@ -1980,12 +2051,12 @@ data class FetchElementFromDeclarationStateEntry(
 )
 
 /** Fetch the address for `node` from the GeneralState */
-fun PointsToStateElement.fetchAddressFromGeneralState(node: Node): IdentitySet<Node> {
+fun PointsToState.Element.fetchAddressFromGeneralState(node: Node): IdentitySet<Node> {
     return this.generalState[node]?.first ?: PowersetLattice.Element()
 }
 
 /** Fetch the value for `node` from the GeneralState */
-fun PointsToStateElement.fetchValueFromGeneralState(
+fun PointsToState.Element.fetchValueFromGeneralState(
     node: Node
 ): PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>> {
     return this.generalState[node]?.second ?: PowersetLattice.Element()
@@ -1995,7 +2066,7 @@ fun PointsToStateElement.fetchValueFromGeneralState(
  * Fetch the value entry for `node` from the DeclarationState. If there isn't any, create an
  * UnknownMemoryValue
  */
-fun PointsToStateElement.fetchValueFromDeclarationState(
+fun PointsToState.Element.fetchValueFromDeclarationState(
     node: Node,
     fetchFields: Boolean = false,
     excludeShortFSValues: Boolean = false,
@@ -2112,7 +2183,7 @@ fun PointsToStateElement.fetchValueFromDeclarationState(
     return ret
 }
 
-fun PointsToStateElement.getLastWrites(
+fun PointsToState.Element.getLastWrites(
     node: Node
 ): PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>> {
     if (isGlobal(node)) {
@@ -2216,7 +2287,7 @@ fun PointsToStateElement.getLastWrites(
     }
 }
 
-fun PointsToStateElement.getValues(
+fun PointsToState.Element.getValues(
     node: Node,
     startNode: Node,
 ): PowersetLattice.Element<Pair<Node, Boolean>> {
@@ -2354,7 +2425,7 @@ fun PointsToStateElement.getValues(
     }
 }
 
-fun PointsToStateElement.getAddresses(node: Node, startNode: Node): IdentitySet<Node> {
+fun PointsToState.Element.getAddresses(node: Node, startNode: Node): IdentitySet<Node> {
     return when (node) {
         is Declaration -> {
             /*
@@ -2465,7 +2536,7 @@ fun PointsToStateElement.getAddresses(node: Node, startNode: Node): IdentitySet<
  * nestingDepth 0 gets the `node`'s address. 1 fetches the current value, 2 the dereference, 3 the
  * derefdereference, etc... -1 returns the node
  */
-fun PointsToStateElement.getNestedValues(
+fun PointsToState.Element.getNestedValues(
     node: Node,
     nestingDepth: Int,
     fetchFields: Boolean = false,
@@ -2503,7 +2574,7 @@ fun PointsToStateElement.getNestedValues(
     return ret
 }
 
-fun PointsToStateElement.fetchFieldAddresses(
+fun PointsToState.Element.fetchFieldAddresses(
     baseAddresses: IdentitySet<Node>,
     nodeName: Name,
 ): IdentitySet<Node> {
@@ -2549,15 +2620,15 @@ fun PointsToStateElement.fetchFieldAddresses(
  * Updates the declarationState at `destinationAddresses` to the values in `sources`. Additionally,
  * updates the generalstate at `destinations` if there is any
  */
-fun PointsToStateElement.updateValues(
+fun PointsToState.Element.updateValues(
     lattice: PointsToState,
-    doubleState: PointsToStateElement,
+    doubleState: PointsToState.Element,
     sources: PowersetLattice.Element<Triple<Node?, Boolean, Boolean>>,
     destinations: IdentitySet<Node>,
     // Node and short FS yes or no
     destinationAddresses: IdentitySet<Node>,
     lastWrites: PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
-): PointsToStateElement {
+): PointsToState.Element {
     var doubleState = doubleState
 
     /* Update the declarationState for the addresses */
@@ -2607,7 +2678,7 @@ fun PointsToStateElement.updateValues(
                         PowersetLattice.Element(newSources),
                         PowersetLattice.Element(prevDFG),
                     )
-                doubleState = PointsToStateElement(doubleState.generalState, newDeclState)
+                doubleState = PointsToState.Element(doubleState.generalState, newDeclState)
             } else {
                 doubleState =
                     lattice.pushToDeclarationsState(
@@ -2649,7 +2720,7 @@ fun PointsToStateElement.updateValues(
                         ),
                         PowersetLattice.Element(newLastWrites),
                     )
-                doubleState = PointsToStateElement(newGenState, doubleState.declarationsState)
+                doubleState = PointsToState.Element(newGenState, doubleState.declarationsState)
             }
         } else {
             // For globals, we draw a DFG Edge from the source to the destination
