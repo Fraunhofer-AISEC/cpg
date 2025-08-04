@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.newMethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.newRecordDeclaration
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
@@ -53,8 +54,26 @@ class ObjectTypeTest {
             val childType = child.toType()
 
             assertIs<ObjectType>(childType)
+
             val methods = childType.methods
             assertNotNull(methods)
+            assertEquals(
+                setOf(foo, bar),
+                methods,
+                "Child type should have methods from itself and parent",
+            )
+
+            val fields = childType.fields
+            assertNotNull(fields)
+            assertEquals(0, fields.size, "Child type should not have any fields defined")
+
+            val constructors = childType.constructors
+            assertNotNull(constructors)
+            assertEquals(
+                0,
+                constructors.size,
+                "Child type should not have any constructors defined",
+            )
         }
     }
 }

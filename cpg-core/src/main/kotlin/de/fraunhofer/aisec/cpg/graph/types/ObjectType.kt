@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
@@ -121,6 +122,15 @@ open class ObjectType : Type, HasSecondaryTypeEdge {
 
     override val secondaryTypes: List<Type>
         get() = generics
+
+    /**
+     * Returns all constructors that are declared in this type and its super types. See
+     * [findMembers] for more details.
+     */
+    val constructors: Set<ConstructorDeclaration>
+        get() {
+            return findMembers<ConstructorDeclaration>()
+        }
 
     /**
      * Returns all methods that are declared in this type and its super types. See [findMembers] for
