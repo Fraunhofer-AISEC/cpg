@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.helpers.functional.*
-import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice.Element
 import de.fraunhofer.aisec.cpg.passes.objectIdentifier
 import kotlin.collections.component1
 import kotlin.collections.component2
@@ -147,6 +146,28 @@ class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>
             )
         }
 
+        fun findKey(nodeId: NodeId): NodeId {
+            return if (nodeId is Integer) {
+                this.entries.singleOrNull { it.key == nodeId }?.key ?: nodeId
+            } else nodeId
+        }
+
+        override fun containsKey(key: NodeId?): Boolean {
+            return if (key is Integer) {
+                this.entries.singleOrNull { it.key == key } != null
+            } else {
+                super.containsKey(key)
+            }
+        }
+
+        override fun put(
+            key: NodeId?,
+            value: NewIntervalLattice.Element?,
+        ): NewIntervalLattice.Element? {
+            val actualKey = key?.let { findKey(it) }
+            return super.put(actualKey, value)
+        }
+
         /**
          * Retrieves the interval element for the given [nodeId] from the declaration state element.
          *
@@ -157,7 +178,7 @@ class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>
             return if (nodeId is Integer) {
                 this.entries.singleOrNull { it.key == nodeId }?.value
             } else {
-                this.entries.singleOrNull { it.key === nodeId }?.value
+                super.get(nodeId)
             }
         }
     }
