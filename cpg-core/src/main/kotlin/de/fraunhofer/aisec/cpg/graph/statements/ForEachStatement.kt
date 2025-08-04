@@ -65,7 +65,7 @@ class ForEachStatement : LoopStatement(), BranchingNode, StatementHolder {
     /** This field contains the iteration subject of the loop. */
     var iterable by unwrapping(ForEachStatement::iterableEdge)
 
-    override val branchedBy: Node?
+    override val branchedBy
         get() = iterable
 
     override var statementEdges: AstEdges<Statement, AstEdge<Statement>>

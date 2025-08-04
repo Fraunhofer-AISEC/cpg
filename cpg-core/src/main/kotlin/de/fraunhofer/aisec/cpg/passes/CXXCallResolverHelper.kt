@@ -75,12 +75,12 @@ fun applyTemplateInstantiation(
     templateCall: CallExpression,
     functionTemplateDeclaration: FunctionTemplateDeclaration?,
     function: FunctionDeclaration,
-    initializationSignature: Map<Declaration?, Node?>,
-    initializationType: Map<Node?, TemplateDeclaration.TemplateInitialization?>,
+    initializationSignature: Map<Declaration?, AstNode?>,
+    initializationType: Map<AstNode?, TemplateDeclaration.TemplateInitialization?>,
     orderedInitializationSignature: Map<Declaration, Int>,
 ): List<FunctionDeclaration> {
     val templateInstantiationParameters =
-        mutableListOf<Node>(*orderedInitializationSignature.keys.toTypedArray())
+        mutableListOf<AstNode>(*orderedInitializationSignature.keys.toTypedArray())
     for ((key, value) in orderedInitializationSignature) {
         initializationSignature[key]?.let { templateInstantiationParameters[value] = it }
     }
@@ -213,10 +213,10 @@ fun getParameterizedSignaturesFromInitialization(
 fun getTemplateInitializationSignature(
     functionTemplateDeclaration: FunctionTemplateDeclaration,
     templateCall: CallExpression,
-    instantiationType: MutableMap<Node?, TemplateDeclaration.TemplateInitialization?>,
+    instantiationType: MutableMap<AstNode?, TemplateDeclaration.TemplateInitialization?>,
     orderedInitializationSignature: MutableMap<Declaration, Int>,
     explicitInstantiated: MutableList<ParameterizedType>,
-): Map<Declaration?, Node?>? {
+): Map<Declaration?, AstNode?>? {
     // Construct Signature
     val signature =
         constructTemplateInitializationSignatureFromTemplateParameters(
@@ -274,11 +274,11 @@ fun getTemplateInitializationSignature(
 fun constructTemplateInitializationSignatureFromTemplateParameters(
     functionTemplateDeclaration: FunctionTemplateDeclaration,
     templateCall: CallExpression,
-    instantiationType: MutableMap<Node?, TemplateDeclaration.TemplateInitialization?>,
+    instantiationType: MutableMap<AstNode?, TemplateDeclaration.TemplateInitialization?>,
     orderedInitializationSignature: MutableMap<Declaration, Int>,
     explicitInstantiated: MutableList<ParameterizedType>,
-): MutableMap<Declaration?, Node?>? {
-    val instantiationSignature: MutableMap<Declaration?, Node?> = HashMap()
+): MutableMap<Declaration?, AstNode?>? {
+    val instantiationSignature: MutableMap<Declaration?, AstNode?> = HashMap()
     for (i in functionTemplateDeclaration.parameters.indices) {
         if (i < templateCall.templateArguments.size) {
             val callParameter = templateCall.templateArguments[i]
@@ -348,18 +348,19 @@ fun isInstantiated(callParameterArg: Node, templateParameter: Declaration?): Boo
 fun handleImplicitTemplateParameter(
     functionTemplateDeclaration: FunctionTemplateDeclaration,
     index: Int,
-    instantiationSignature: MutableMap<Declaration?, Node?>,
-    instantiationType: MutableMap<Node?, TemplateDeclaration.TemplateInitialization?>,
+    instantiationSignature: MutableMap<Declaration?, AstNode?>,
+    instantiationType: MutableMap<AstNode?, TemplateDeclaration.TemplateInitialization?>,
     orderedInitializationSignature: MutableMap<Declaration, Int>,
 ) {
     if ((functionTemplateDeclaration.parameters[index] as HasDefault<*>).default != null) {
         // If we have a default we fill it in
-        var defaultNode = (functionTemplateDeclaration.parameters[index] as HasDefault<*>).default
-        if (defaultNode is Type) {
+        var defaultNode =
+            (functionTemplateDeclaration.parameters[index] as HasDefault<*>).default as Expression
+        /*if (defaultNode is Type) {
             defaultNode =
                 functionTemplateDeclaration.newTypeExpression(defaultNode.name, defaultNode)
             defaultNode.isImplicit = true
-        }
+        }*/
         instantiationSignature[functionTemplateDeclaration.parameters[index]] = defaultNode
         instantiationType[defaultNode] = TemplateDeclaration.TemplateInitialization.DEFAULT
         orderedInitializationSignature[functionTemplateDeclaration.parameters[index]] = index

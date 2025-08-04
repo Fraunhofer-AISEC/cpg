@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
@@ -51,7 +52,7 @@ class WhileStatement : LoopStatement(), BranchingNode, ArgumentHolder {
     /** The condition that decides if the block is executed. */
     var condition by unwrapping(WhileStatement::conditionEdge)
 
-    override val branchedBy: Node?
+    override val branchedBy: AstNode?
         get() = condition ?: conditionDeclaration
 
     override fun toString(): String {

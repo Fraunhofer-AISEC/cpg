@@ -2237,7 +2237,7 @@ fun PointsToStateElement.getValues(
             val inputVals = this.fetchValueFromGeneralState(node.input).map { it.first }
             val retVal = PowersetLattice.Element<Pair<Node, Boolean>>()
             /* If the node is not the same as the startNode, we should have already assigned a value, so we fetch it from the generalstate */
-            if (node != startNode && node !in startNode.astChildren)
+            if (node != startNode && node !in ((startNode as? AstNode)?.astChildren ?: listOf()))
                 inputVals.forEach {
                     retVal.addAll(
                         fetchValueFromGeneralState(it).mapTo(PowersetLattice.Element()) {
@@ -2311,7 +2311,7 @@ fun PointsToStateElement.getValues(
         }
         is Reference -> {
             /* If the node is not the same as the startNode, we should have already assigned a value to the reference, so we fetch it from the generalstate */
-            if (node != startNode && node !in startNode.astChildren)
+            if (node != startNode && node !in ((startNode as? AstNode)?.astChildren ?: emptyList()))
                 return fetchValueFromGeneralState(node).mapTo(PowersetLattice.Element()) {
                     Pair(it.first, true in it.second)
                 }

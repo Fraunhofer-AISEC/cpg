@@ -304,7 +304,7 @@ fun LanguageFrontend<*, *>.returnStmt(init: ReturnStatement.() -> Unit): ReturnS
     val node = newReturnStatement()
     init(node)
 
-    (holder) += node
+    holder += node
 
     return node
 }
@@ -375,7 +375,7 @@ fun LanguageFrontend<*, *>.declare(init: DeclarationStatement.() -> Unit): Decla
     val node = newDeclarationStatement()
     init(node)
 
-    (holder) += node
+    holder += node
 
     return node
 }
@@ -599,7 +599,7 @@ fun LanguageFrontend<*, *>.ifStmt(init: IfStatement.() -> Unit): IfStatement {
     val node = newIfStatement()
     init(node)
 
-    (holder) += node
+    holder += node
 
     return node
 }
@@ -615,7 +615,7 @@ fun LanguageFrontend<*, *>.forEachStmt(init: ForEachStatement.() -> Unit): ForEa
 
     init(node)
 
-    (holder) += node
+    holder += node
 
     return node
 }
@@ -632,7 +632,7 @@ fun LanguageFrontend<*, *>.forStmt(init: ForStatement.() -> Unit): ForStatement 
 
     init(node)
 
-    (holder) += node
+    holder += node
 
     return node
 }
@@ -648,6 +648,18 @@ fun LanguageFrontend<*, *>.forCondition(init: ForStatement.() -> Expression): Ex
     var node = init(stmt)
     stmt.condition = node
 
+    return node
+}
+
+/**
+ * Configures the [ForStatement.condition] in the Fluent Node DSL of the nearest enclosing
+ * [ForStatement]. The [init] block can be used to create further sub-nodes as well as configuring
+ * the created node itself.
+ */
+context(stmt: ForStatement)
+fun LanguageFrontend<*, *>.forInitializerExpr(init: ForStatement.() -> Statement): Statement {
+    val node = init(stmt)
+    stmt.initializerStatement = node
     return node
 }
 
@@ -678,7 +690,7 @@ fun LanguageFrontend<*, *>.forInitializer(
  */
 context(stmt: ForStatement)
 fun LanguageFrontend<*, *>.forIteration(init: ForStatement.() -> Statement): Statement {
-    var node = init(stmt)
+    val node = init(stmt)
     stmt.iterationStatement = node
 
     return node
@@ -699,7 +711,7 @@ fun LanguageFrontend<*, *>.switchStmt(
     node.selector = selector
     scopeIfNecessary(needsScope, node, init)
 
-    (holder) += node
+    holder += node
 
     return node
 }
@@ -717,7 +729,7 @@ fun LanguageFrontend<*, *>.whileStmt(
     val node = newWhileStatement()
     scopeIfNecessary(needsScope, node, init)
 
-    (holder) += node
+    holder += node
 
     return node
 }
@@ -735,7 +747,7 @@ fun LanguageFrontend<*, *>.doStmt(
     val node = newDoStatement()
     scopeIfNecessary(needsScope, node, init)
 
-    (holder) += node
+    holder += node
 
     return node
 }
@@ -1034,6 +1046,7 @@ fun LanguageFrontend<*, *>.ref(
 ): Reference {
     val node = newReference(name)
     node.type = type
+    node.code = name.toString()
 
     if (init != null) {
         init(node)
@@ -1083,7 +1096,7 @@ fun LanguageFrontend<*, *>.member(
         if (parsedName.parent != null) {
             unknownType()
         } else {
-            var scope = ((holder) as? ScopeProvider)?.scope
+            var scope = (holder as? ScopeProvider)?.scope
             while (scope != null && scope !is RecordScope) {
                 scope = scope.parent
             }
@@ -1108,17 +1121,17 @@ fun LanguageFrontend<*, *>.member(
  */
 context(frontend: LanguageFrontend<*, *>, holder: ArgumentHolder)
 operator fun Expression.times(rhs: Expression): BinaryOperator {
-    val node = (frontend).newBinaryOperator("*")
+    val node = frontend.newBinaryOperator("*")
     node.lhs = this
     node.rhs = rhs
 
-    (holder) += node
+    holder += node
 
     // We need to do a little trick here. Because of the evaluation order, lhs and rhs might also
     // been added to the argument holders arguments (and we do not want that). However, we cannot
     // prevent it, so we need to remove them again
-    (holder) -= node.lhs
-    (holder) -= node.rhs
+    holder -= node.lhs
+    holder -= node.rhs
 
     return node
 }
@@ -1129,15 +1142,15 @@ operator fun Expression.times(rhs: Expression): BinaryOperator {
  */
 context(frontend: LanguageFrontend<*, *>, holder: ArgumentHolder)
 operator fun Expression.unaryMinus(): UnaryOperator {
-    val node = (frontend).newUnaryOperator("-", false, false)
+    val node = frontend.newUnaryOperator("-", false, false)
     node.input = this
 
-    (holder) += node
+    holder += node
 
     // We need to do a little trick here. Because of the evaluation order, lhs and rhs might also
     // been added to the argument holders arguments (and we do not want that). However, we cannot
     // prevent it, so we need to remove them again
-    (holder) -= node.input
+    holder -= node.input
 
     return node
 }
@@ -1167,17 +1180,17 @@ fun Expression.pointerReference(): PointerReference {
  */
 context(frontend: LanguageFrontend<*, *>, holder: ArgumentHolder)
 operator fun Expression.div(rhs: Expression): BinaryOperator {
-    val node = (frontend).newBinaryOperator("/")
+    val node = frontend.newBinaryOperator("/")
     node.lhs = this
     node.rhs = rhs
 
-    (holder) += node
+    holder += node
 
     // We need to do a little trick here. Because of the evaluation order, lhs and rhs might also
     // been added to the argument holders arguments (and we do not want that). However, we cannot
     // prevent it, so we need to remove them again
-    (holder) -= node.lhs
-    (holder) -= node.rhs
+    holder -= node.lhs
+    holder -= node.rhs
 
     return node
 }
@@ -1188,17 +1201,17 @@ operator fun Expression.div(rhs: Expression): BinaryOperator {
  */
 context(frontend: LanguageFrontend<*, *>, holder: ArgumentHolder)
 operator fun Expression.plus(rhs: Expression): BinaryOperator {
-    val node = (frontend).newBinaryOperator("+")
+    val node = frontend.newBinaryOperator("+")
     node.lhs = this
     node.rhs = rhs
 
-    (holder) += node
+    holder += node
 
     // We need to do a little trick here. Because of the evaluation order, lhs and rhs might also
     // been added to the argument holders arguments (and we do not want that). However, we cannot
     // prevent it, so we need to remove them again
-    (holder) -= node.lhs
-    (holder) -= node.rhs
+    holder -= node.lhs
+    holder -= node.rhs
 
     return node
 }
@@ -1209,9 +1222,9 @@ operator fun Expression.plus(rhs: Expression): BinaryOperator {
  */
 context(frontend: LanguageFrontend<*, *>, holder: StatementHolder)
 operator fun Expression.plusAssign(rhs: Expression) {
-    val node = (frontend).newAssignExpression("+=", listOf(this), listOf(rhs))
+    val node = frontend.newAssignExpression("+=", listOf(this), listOf(rhs))
 
-    (holder) += node
+    holder += node
 }
 
 /**
@@ -1220,17 +1233,17 @@ operator fun Expression.plusAssign(rhs: Expression) {
  */
 context(frontend: LanguageFrontend<*, *>, holder: ArgumentHolder)
 operator fun Expression.rem(rhs: Expression): BinaryOperator {
-    val node = (frontend).newBinaryOperator("%")
+    val node = frontend.newBinaryOperator("%")
     node.lhs = this
     node.rhs = rhs
 
-    (holder) += node
+    holder += node
 
     // We need to do a little trick here. Because of the evaluation order, lhs and rhs might also
     // been added to the argument holders arguments (and we do not want that). However, we cannot
     // prevent it, so we need to remove them again
-    (holder) -= node.lhs
-    (holder) -= node.rhs
+    holder -= node.lhs
+    holder -= node.rhs
 
     return node
 }
@@ -1241,11 +1254,11 @@ operator fun Expression.rem(rhs: Expression): BinaryOperator {
  */
 context(frontend: LanguageFrontend<*, *>, holder: ArgumentHolder)
 operator fun Expression.minus(rhs: Expression): BinaryOperator {
-    val node = (frontend).newBinaryOperator("-")
+    val node = frontend.newBinaryOperator("-")
     node.lhs = this
     node.rhs = rhs
 
-    (holder) += node
+    holder += node
 
     return node
 }
@@ -1256,7 +1269,7 @@ operator fun Expression.minus(rhs: Expression): BinaryOperator {
  */
 context(frontend: LanguageFrontend<*, *>, holder: ArgumentHolder)
 fun reference(input: Expression): UnaryOperator {
-    val node = (frontend).newUnaryOperator("&", false, false)
+    val node = frontend.newUnaryOperator("&", false, false)
     node.input = input
 
     holder += node
@@ -1265,12 +1278,12 @@ fun reference(input: Expression): UnaryOperator {
 }
 
 /**
- * Creates a new [UnaryOperator] with a `--` [UnaryOperator.operatorCode] in the Fluent Node DSL and
- * adds it to the nearest enclosing [StatementHolder].
+ * Creates a new [UnaryOperator] with a `--` postfix [UnaryOperator.operatorCode] in the Fluent Node
+ * DSL and adds it to the nearest enclosing [StatementHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: Holder<out Statement>)
 operator fun Expression.dec(): UnaryOperator {
-    val node = (frontend).newUnaryOperator("--", true, false)
+    val node = frontend.newUnaryOperator("--", true, false)
     node.input = this
 
     if (holder is StatementHolder) {
@@ -1281,12 +1294,44 @@ operator fun Expression.dec(): UnaryOperator {
 }
 
 /**
- * Creates a new [UnaryOperator] with a `++` [UnaryOperator.operatorCode] in the Fluent Node DSL and
- * invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
+ * Creates a new [UnaryOperator] with a `++` postfix [UnaryOperator.operatorCode] in the Fluent Node
+ * DSL and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: Holder<out Statement>)
 operator fun Expression.inc(): UnaryOperator {
-    val node = (frontend).newUnaryOperator("++", true, false)
+    val node = frontend.newUnaryOperator("++", true, false)
+    node.input = this
+
+    if (holder is StatementHolder) {
+        holder += node
+    }
+
+    return node
+}
+
+/**
+ * Creates a new [UnaryOperator] with a `--` prefix [UnaryOperator.operatorCode] in the Fluent Node
+ * DSL and adds it to the nearest enclosing [StatementHolder].
+ */
+context(frontend: LanguageFrontend<*, *>, holder: Holder<out Statement>)
+fun Expression.decPrefix(): UnaryOperator {
+    val node = frontend.newUnaryOperator("--", false, true)
+    node.input = this
+
+    if (holder is StatementHolder) {
+        holder += node
+    }
+
+    return node
+}
+
+/**
+ * Creates a new [UnaryOperator] with a `++` prefix [UnaryOperator.operatorCode] in the Fluent Node
+ * DSL and invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].
+ */
+context(frontend: LanguageFrontend<*, *>, holder: Holder<out Statement>)
+fun Expression.incPrefix(): UnaryOperator {
+    val node = frontend.newUnaryOperator("++", false, true)
     node.input = this
 
     if (holder is StatementHolder) {
@@ -1302,7 +1347,7 @@ operator fun Expression.inc(): UnaryOperator {
  */
 context(frontend: LanguageFrontend<*, *>)
 fun Expression.incNoContext(): UnaryOperator {
-    val node = (frontend).newUnaryOperator("++", true, false)
+    val node = frontend.newUnaryOperator("++", true, false)
     node.input = this
 
     return node
@@ -1314,11 +1359,11 @@ fun Expression.incNoContext(): UnaryOperator {
  */
 context(frontend: LanguageFrontend<*, *>, holder: ArgumentHolder)
 infix fun Expression.eq(rhs: Expression): BinaryOperator {
-    val node = (frontend).newBinaryOperator("==")
+    val node = frontend.newBinaryOperator("==")
     node.lhs = this
     node.rhs = rhs
 
-    (holder) += node
+    holder += node
 
     return node
 }
@@ -1329,11 +1374,11 @@ infix fun Expression.eq(rhs: Expression): BinaryOperator {
  */
 context(frontend: LanguageFrontend<*, *>, holder: ArgumentHolder)
 infix fun Expression.gt(rhs: Expression): BinaryOperator {
-    val node = (frontend).newBinaryOperator(">")
+    val node = frontend.newBinaryOperator(">")
     node.lhs = this
     node.rhs = rhs
 
-    (holder) += node
+    holder += node
 
     return node
 }
@@ -1344,11 +1389,11 @@ infix fun Expression.gt(rhs: Expression): BinaryOperator {
  */
 context(frontend: LanguageFrontend<*, *>, holder: ArgumentHolder)
 infix fun Expression.ge(rhs: Expression): BinaryOperator {
-    val node = (frontend).newBinaryOperator(">=")
+    val node = frontend.newBinaryOperator(">=")
     node.lhs = this
     node.rhs = rhs
 
-    (holder) += node
+    holder += node
 
     return node
 }
@@ -1359,7 +1404,7 @@ infix fun Expression.ge(rhs: Expression): BinaryOperator {
  */
 context(frontend: LanguageFrontend<*, *>)
 infix fun Expression.lt(rhs: Expression): BinaryOperator {
-    val node = (frontend).newBinaryOperator("<")
+    val node = frontend.newBinaryOperator("<")
     node.lhs = this
     node.rhs = rhs
 
@@ -1372,11 +1417,11 @@ infix fun Expression.lt(rhs: Expression): BinaryOperator {
  */
 context(frontend: LanguageFrontend<*, *>, holder: ArgumentHolder)
 infix fun Expression.le(rhs: Expression): BinaryOperator {
-    val node = (frontend).newBinaryOperator("<=")
+    val node = frontend.newBinaryOperator("<=")
     node.lhs = this
     node.rhs = rhs
 
-    (holder) += node
+    holder += node
 
     return node
 }
@@ -1391,10 +1436,10 @@ fun Expression.conditional(
     thenExpression: Expression,
     elseExpression: Expression,
 ): ConditionalExpression {
-    val node = (frontend).newConditionalExpression(condition, thenExpression, elseExpression)
+    val node = frontend.newConditionalExpression(condition, thenExpression, elseExpression)
 
     if (holder is StatementHolder) {
-        (holder) += node
+        holder += node
     } else if (holder is ArgumentHolder) {
         holder += node
     }
@@ -1408,12 +1453,12 @@ fun Expression.conditional(
  */
 context(frontend: LanguageFrontend<*, *>, holder: StatementHolder)
 infix fun Expression.assign(init: AssignExpression.() -> Expression): AssignExpression {
-    val node = (frontend).newAssignExpression("=")
+    val node = frontend.newAssignExpression("=")
     node.lhs = mutableListOf(this)
     init(node)
     // node.rhs = listOf(init(node))
 
-    (holder) += node
+    holder += node
 
     return node
 }
@@ -1424,7 +1469,7 @@ infix fun Expression.assign(init: AssignExpression.() -> Expression): AssignExpr
  */
 context(frontend: LanguageFrontend<*, *>, holder: Holder<out Node>)
 infix fun Expression.assign(rhs: Expression): AssignExpression {
-    val node = (frontend).newAssignExpression("=", listOf(this), listOf(rhs))
+    val node = frontend.newAssignExpression("=", listOf(this), listOf(rhs))
 
     if (holder is StatementHolder) {
         holder += node
@@ -1439,7 +1484,67 @@ infix fun Expression.assign(rhs: Expression): AssignExpression {
  */
 context(frontend: LanguageFrontend<*, *>, holder: Holder<out Node>)
 infix fun Expression.assignPlus(rhs: Expression): AssignExpression {
-    val node = (frontend).newAssignExpression("+=", listOf(this), listOf(rhs))
+    val node = frontend.newAssignExpression("+=", listOf(this), listOf(rhs))
+
+    if (holder is StatementHolder) {
+        holder += node
+    }
+
+    return node
+}
+
+/**
+ * Creates a new [AssignExpression] with a `-=` [AssignExpression.operatorCode] in the Fluent Node
+ * DSL and adds it to the nearest enclosing [StatementHolder].
+ */
+context(frontend: LanguageFrontend<*, *>, holder: Holder<out Node>)
+infix fun Expression.assignMinus(rhs: Expression): AssignExpression {
+    val node = frontend.newAssignExpression("-=", listOf(this), listOf(rhs))
+
+    if (holder is StatementHolder) {
+        holder += node
+    }
+
+    return node
+}
+
+/**
+ * Creates a new [AssignExpression] with a `*=` [AssignExpression.operatorCode] in the Fluent Node
+ * DSL and adds it to the nearest enclosing [StatementHolder].
+ */
+context(frontend: LanguageFrontend<*, *>, holder: Holder<out Node>)
+infix fun Expression.assignMult(rhs: Expression): AssignExpression {
+    val node = frontend.newAssignExpression("*=", listOf(this), listOf(rhs))
+
+    if (holder is StatementHolder) {
+        holder += node
+    }
+
+    return node
+}
+
+/**
+ * Creates a new [AssignExpression] with a `/=` [AssignExpression.operatorCode] in the Fluent Node
+ * DSL and adds it to the nearest enclosing [StatementHolder].
+ */
+context(frontend: LanguageFrontend<*, *>, holder: Holder<out Node>)
+infix fun Expression.assignDiv(rhs: Expression): AssignExpression {
+    val node = frontend.newAssignExpression("/=", listOf(this), listOf(rhs))
+
+    if (holder is StatementHolder) {
+        holder += node
+    }
+
+    return node
+}
+
+/**
+ * Creates a new [AssignExpression] with a `%=` [AssignExpression.operatorCode] in the Fluent Node
+ * DSL and adds it to the nearest enclosing [StatementHolder].
+ */
+context(frontend: LanguageFrontend<*, *>, holder: Holder<out Node>)
+infix fun Expression.assignMod(rhs: Expression): AssignExpression {
+    val node = frontend.newAssignExpression("%=", listOf(this), listOf(rhs))
 
     if (holder is StatementHolder) {
         holder += node
@@ -1454,7 +1559,7 @@ infix fun Expression.assignPlus(rhs: Expression): AssignExpression {
  */
 context(frontend: LanguageFrontend<*, *>, holder: Holder<out Node>)
 infix fun Expression.assignAsExpr(rhs: Expression): AssignExpression {
-    val node = (frontend).newAssignExpression("=", listOf(this), listOf(rhs))
+    val node = frontend.newAssignExpression("=", listOf(this), listOf(rhs))
 
     node.usedAsExpression = true
 
@@ -1467,7 +1572,7 @@ infix fun Expression.assignAsExpr(rhs: Expression): AssignExpression {
  */
 context(frontend: LanguageFrontend<*, *>, holder: Holder<out Node>)
 infix fun Expression.assignAsExpr(rhs: AssignExpression.() -> Unit): AssignExpression {
-    val node = (frontend).newAssignExpression("=", listOf(this))
+    val node = frontend.newAssignExpression("=", listOf(this))
     rhs(node)
 
     node.usedAsExpression = true
@@ -1481,7 +1586,7 @@ infix fun Expression.assignAsExpr(rhs: AssignExpression.() -> Unit): AssignExpre
  */
 context(frontend: LanguageFrontend<*, *>, holder: Holder<out Node>)
 infix fun Expression.`throw`(init: (ThrowExpression.() -> Unit)?): ThrowExpression {
-    val node = (frontend).newThrowExpression()
+    val node = frontend.newThrowExpression()
     if (init != null) init(node)
 
     val holder = holder

@@ -87,10 +87,10 @@ fun Node.printEOG(
 }
 
 /** Utility function to print the AST using [printGraph]. */
-fun Node.printAST(
+fun AstNode.printAST(
     maxConnections: Int = 25,
-    vararg strategies: (Node) -> Iterator<AstEdge<out Node>> =
-        arrayOf<(Node) -> Iterator<AstEdge<out Node>>>(
+    vararg strategies: (AstNode) -> Iterator<AstEdge<out AstNode>> =
+        arrayOf<(AstNode) -> Iterator<AstEdge<out AstNode>>>(
             Strategy::AST_EDGES_FORWARD,
             Strategy::AST_EDGES_BACKWARD,
         ),
@@ -261,9 +261,9 @@ fun <EdgeType : Edge<out Node>> Node.printGraphNew(
  *   implementations.
  * @return The Mermaid graph as a string encapsulated in triple-backticks.
  */
-fun <EdgeType : Edge<out Node>> Node.printGraph(
+fun <NodeType : Node, EdgeType : Edge<out NodeType>> NodeType.printGraph(
     maxConnections: Int = 25,
-    vararg strategies: (Node) -> Iterator<EdgeType>,
+    vararg strategies: (NodeType) -> Iterator<EdgeType>,
 ): String {
     val builder = StringBuilder()
 
@@ -303,7 +303,7 @@ fun <EdgeType : Edge<out Node>> Node.printGraph(
         // Add start and edges to the work-list.
         strategies.forEach { strategy ->
             worklist += strategy(end).asSequence().sortedBy { it.end.name }
-            worklist += strategy(start).asSequence().sortedBy { it.end.name }
+            worklist += strategy(start as NodeType).asSequence().sortedBy { it.end.name }
         }
     }
 

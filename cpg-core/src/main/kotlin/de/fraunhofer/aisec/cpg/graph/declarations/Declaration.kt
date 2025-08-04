@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.HasMemoryAddress
 import de.fraunhofer.aisec.cpg.graph.HasMemoryValue
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -48,7 +49,7 @@ import org.neo4j.ogm.annotation.Relationship
  * however clang does establish a connection between those nodes, we currently do not.
  */
 @NodeEntity
-abstract class Declaration : Node(), HasMemoryAddress, HasMemoryValue {
+abstract class Declaration : AstNode(), HasMemoryAddress, HasMemoryValue {
     @DoNotPersist
     val symbol: Symbol
         get() {

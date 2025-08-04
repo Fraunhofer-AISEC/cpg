@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
@@ -54,7 +55,7 @@ class IfStatement : Statement(), BranchingNode, ArgumentHolder {
     /** The condition to be evaluated. */
     var condition by unwrapping(IfStatement::conditionEdge)
 
-    override val branchedBy: Node?
+    override val branchedBy: AstNode?
         get() = condition ?: conditionDeclaration
 
     /** C++ constexpr construct. */

@@ -47,6 +47,7 @@ import de.fraunhofer.aisec.cpg.nameIsType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
  * If a [Language] has the trait [HasCallExpressionAmbiguity], we cannot distinguish between
@@ -60,10 +61,10 @@ import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
 @DependsOn(TypeResolver::class)
 @RequiresLanguageTrait(HasCallExpressionAmbiguity::class)
 class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
-    private lateinit var walker: SubgraphWalker.ScopedWalker
+    private lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
 
     override fun accept(tu: TranslationUnitDeclaration) {
-        walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
+        walker = SubgraphWalker.ScopedWalker(ctx.scopeManager, Strategy::AST_FORWARD)
         walker.registerHandler { node ->
             when (node) {
                 is CallExpression -> handleCall(node)
@@ -103,7 +104,7 @@ class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationU
         // functional-constructs)
         if (language is HasFunctionStyleConstruction) {
             // Check for our type. We are only interested in object types
-            var type = ref.nameIsType()
+            val type = ref.nameIsType()
             if (type is ObjectType && !type.isPrimitive) {
                 walker.replaceCallWithConstruct(type, parent, call)
             }
@@ -127,9 +128,9 @@ class ResolveCallExpressionAmbiguityPass(ctx: TranslationContext) : TranslationU
 }
 
 context(provider: ContextProvider)
-fun SubgraphWalker.ScopedWalker.replaceCallWithCast(
+fun SubgraphWalker.ScopedWalker<Node>.replaceCallWithCast(
     type: Type,
-    parent: Node,
+    parent: AstNode,
     call: CallExpression,
     pointer: Boolean,
 ) {
@@ -151,9 +152,9 @@ fun SubgraphWalker.ScopedWalker.replaceCallWithCast(
 }
 
 context(_: ContextProvider)
-fun SubgraphWalker.ScopedWalker.replaceCallWithConstruct(
+fun SubgraphWalker.ScopedWalker<Node>.replaceCallWithConstruct(
     type: ObjectType,
-    parent: Node,
+    parent: AstNode,
     call: CallExpression,
 ) {
     val callee = call.callee

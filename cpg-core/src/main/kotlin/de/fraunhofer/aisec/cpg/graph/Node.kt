@@ -38,14 +38,12 @@ import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.Overlays
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
 import de.fraunhofer.aisec.cpg.passes.*
@@ -66,7 +64,7 @@ import org.slf4j.LoggerFactory
 
 /** The base class for all graph objects that are going to be persisted in the database. */
 abstract class Node() :
-    IVisitable<Node>,
+    IVisitable,
     Persistable,
     LanguageProvider,
     ScopeProvider,
@@ -147,22 +145,7 @@ abstract class Node() :
 
     var prevCDG by unwrapping(Node::prevCDGEdges)
 
-    /**
-     * Virtual property to return a list of the node's children. Uses the [SubgraphWalker] to
-     * retrieve the appropriate nodes.
-     *
-     * Note: This only returns the *direct* children of this node. If you want to have *all*
-     * children, e.g., a flattened AST, you need to call [Node.allChildren].
-     *
-     * For Neo4J OGM, this relationship will be automatically filled by a pre-save event before OGM
-     * persistence. Therefore, this property is a `var` and not a `val`.
-     */
-    @Relationship("AST")
-    @JsonIgnore
-    var astChildren: List<Node> = listOf()
-        get() = SubgraphWalker.getAstChildren(this)
-
-    @DoNotPersist @Transient @JsonIgnore var astParent: Node? = null
+    @DoNotPersist @Transient @JsonIgnore var astParent: AstNode? = null
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class) var prevEOG by unwrapping(Node::prevEOGEdges)
@@ -300,10 +283,6 @@ abstract class Node() :
     /** Index of the argument if this node is used in a function call or parameter list. */
     var argumentIndex = 0
 
-    /** List of annotations associated with that node. */
-    @Relationship("ANNOTATIONS") var annotationEdges = astEdgesOf<Annotation>()
-    var annotations by unwrapping(Node::annotationEdges)
-
     /**
      * Additional problem nodes. These nodes represent problems which occurred during processing of
      * a node (i.e. only partially processed).
@@ -332,10 +311,7 @@ abstract class Node() :
      * ATTENTION! Please note that this might kill an entire subgraph, if the node to disconnect has
      * further children that have no alternative connection paths to the rest of the graph.
      */
-    fun disconnectFromGraph() {
-        // Disconnect all AST children first
-        astChildren.forEach { it.disconnectFromGraph() }
-
+    open fun disconnectFromGraph() {
         nextDFGEdges.clear()
         prevDFGEdges.clear()
         prevCDGEdges.clear()

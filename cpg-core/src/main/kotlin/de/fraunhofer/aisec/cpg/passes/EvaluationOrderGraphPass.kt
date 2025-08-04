@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.ProcessedListener
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
@@ -1397,7 +1398,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
          * @param n
          * @return
          */
-        fun checkEOGInvariant(n: Node): Boolean {
+        fun checkEOGInvariant(n: AstNode): Boolean {
             val allNodes = SubgraphWalker.flattenAST(n)
             var ret = true
             for (node in allNodes) {
@@ -1463,7 +1464,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * to be extended if new nodes are added that have a condition relevant as entry points when
      * looping.
      */
-    val Node.conditions: List<Node>
+    val Node.conditions: List<AstNode>
         get() =
             when (this) {
                 is WhileStatement ->
@@ -1499,7 +1500,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
     }
 
-    fun drawEOGToEntriesOf(from: List<Node>, toEntriesOf: Node?, branchLabel: Boolean? = null) {
+    fun drawEOGToEntriesOf(from: List<Node>, toEntriesOf: AstNode?, branchLabel: Boolean? = null) {
         val tmpBranchLabel = nextEdgeBranch
         branchLabel?.let { nextEdgeBranch = it }
         SubgraphWalker.getEOGPathEdges(toEntriesOf).entries.forEach { entrance ->

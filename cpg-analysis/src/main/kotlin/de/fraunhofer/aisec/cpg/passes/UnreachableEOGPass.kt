@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
@@ -39,6 +40,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Order
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -55,9 +57,12 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     override fun accept(node: Node) {
-        val walker = SubgraphWalker.IterativeGraphWalker()
+        val walker = SubgraphWalker.IterativeGraphWalker(strategy = Strategy::AST_FORWARD)
         walker.registerOnNodeVisit(::handle)
-        walker.iterate(node)
+
+        if (node is AstNode) {
+            walker.iterate(node)
+        }
     }
 
     /**
@@ -296,7 +301,7 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
     override val bottom: Element
         get() = Element(Reachability.BOTTOM)
 
-    override fun lub(one: Element, two: Element, allowModify: Boolean): Element {
+    override fun lub(one: Element, two: Element, allowModify: Boolean, widen: Boolean): Element {
         return if (allowModify) {
             val ret: Order
             runBlocking { ret = compare(one, two) }
@@ -319,8 +324,8 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
         return Element(minOf(one.reachability, two.reachability))
     }
 
-    override suspend fun compare(one: Element, two: Element): Order {
-        return one.innerCompare(two)
+    override fun compare(one: Element, two: Element): Order {
+        return one.compare(two)
     }
 
     override fun duplicate(one: Element): Element {

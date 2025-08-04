@@ -26,7 +26,9 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
@@ -47,8 +49,8 @@ object Util {
      * @param searchCode exact code that a node needs to have.
      * @return a list of nodes with the specified String.
      */
-    fun subnodesOfCode(node: Node?, searchCode: String): List<Node> {
-        return SubgraphWalker.flattenAST(node).filter { n: Node ->
+    fun subnodesOfCode(node: AstNode?, searchCode: String): List<AstNode> {
+        return SubgraphWalker.flattenAST(node).filter { n ->
             n.code != null && n.code == searchCode
         }
     }
@@ -81,10 +83,10 @@ object Util {
         quantifier: Quantifier = Quantifier.ALL,
         connectStart: Connect = Connect.SUBTREE,
         edgeDirection: Edge,
-        startNode: Node?,
+        startNode: AstNode?,
         connectEnd: Connect = Connect.SUBTREE,
         predicate: ((EvaluationOrder) -> Boolean)? = null,
-        endNodes: List<Node?>,
+        endNodes: List<AstNode?>,
     ): Boolean {
         if (startNode == null) {
             return false
@@ -94,7 +96,7 @@ object Util {
         val er = if (edgeDirection == Edge.ENTRIES) Edge.EXITS else Edge.ENTRIES
         var refSide = endNodes
         nodeSide =
-            if (connectStart == Connect.SUBTREE) {
+            (if (connectStart == Connect.SUBTREE) {
                 val border = SubgraphWalker.getEOGPathEdges(startNode)
                 if (edgeDirection == Edge.ENTRIES) {
                     val pe = border.entries.flatMap { it.prevEOGEdges }
@@ -114,9 +116,10 @@ object Util {
                         pe.filter { predicate?.invoke(it) != false }.map { it.start }
                     } else listOf(it)
                 }
-            }
+            })
+                as List<AstNode>
         refSide =
-            if (connectEnd == Connect.SUBTREE) {
+            (if (connectEnd == Connect.SUBTREE) {
                 val borders = endNodes.map { SubgraphWalker.getEOGPathEdges(it) }
 
                 borders.flatMap { border ->
@@ -142,7 +145,8 @@ object Util {
                         pe.filter { predicate?.invoke(it) != false }.map { it.start }
                     } else listOf(node)
                 }
-            }
+            })
+                as List<AstNode?>
         val refNodes = refSide
         return if (Quantifier.ANY == quantifier) nodeSide.any { it in refNodes }
         else refNodes.containsAll(nodeSide)
@@ -502,7 +506,7 @@ object Util {
      * @param incoming whether the node connected by an incoming or, if false, outgoing DFG edge
      * @return
      */
-    fun getAdjacentDFGNodes(n: Node?, incoming: Boolean): MutableList<Node> {
+    fun getAdjacentDFGNodes(n: AstNode, incoming: Boolean): MutableList<AstNode> {
         val subnodes = n?.astChildren ?: listOf()
         val adjacentNodes =
             if (incoming) {
@@ -524,10 +528,10 @@ object Util {
      */
     fun addDFGEdgesForMutuallyExclusiveBranchingExpression(
         n: Node,
-        branchingExp: Node?,
-        branchingDeclaration: Node?,
+        branchingExp: Expression?,
+        branchingDeclaration: Declaration?,
     ) {
-        var conditionNodes = mutableListOf<Node>()
+        var conditionNodes = mutableListOf<AstNode>()
         if (branchingExp != null) {
             conditionNodes = mutableListOf()
             conditionNodes.add(branchingExp)
