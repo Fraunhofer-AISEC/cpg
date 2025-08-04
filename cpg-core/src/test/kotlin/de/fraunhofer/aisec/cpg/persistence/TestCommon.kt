@@ -62,6 +62,7 @@ class TestCommon {
                 "AST",
                 "BODY",
                 "CDG",
+                "DECLARING_SCOPE",
                 "DEFINES",
                 "DFG",
                 "EOG",
