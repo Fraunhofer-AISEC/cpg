@@ -876,15 +876,6 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
     fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnitDeclaration {
         return source.language.translationUnitForInference<TypeToInfer>(source)
     }
-
-    /**
-     * Returns the [Scope] that this [Declaration] declares. For example, for a [RecordDeclaration],
-     * this will return the [RecordScope] of the particular record or class.
-     */
-    val Declaration.declaringScope: Scope?
-        get() {
-            return lookupScope(this)
-        }
 }
 
 fun <T : Declaration> ContextProvider.declare(declaration: T): T {
