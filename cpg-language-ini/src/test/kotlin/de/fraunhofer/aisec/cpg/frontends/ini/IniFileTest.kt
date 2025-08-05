@@ -63,29 +63,29 @@ class IniFileTest : BaseTest() {
 
         val sectionA = tu.records["SectionA"]
         assertIs<RecordDeclaration>(sectionA)
-        assertEquals(2, sectionA.fields.size, "Expected two fields")
+        assertEquals(2, sectionA.innerFields.size, "Expected two fields")
 
-        val sectionAEntry1 = sectionA.fields["key1"]
+        val sectionAEntry1 = sectionA.innerFields["key1"]
         assertIs<FieldDeclaration>(sectionAEntry1)
         assertLiteralValue("value1", sectionAEntry1.initializer)
 
-        val sectionAEntry2 = sectionA.fields["key2"]
+        val sectionAEntry2 = sectionA.innerFields["key2"]
         assertIs<FieldDeclaration>(sectionAEntry2)
         assertLiteralValue("value2", sectionAEntry2.initializer)
 
         val sectionB = tu.records["SectionB"]
         assertIs<RecordDeclaration>(sectionB)
-        assertEquals(3, sectionB.fields.size, "Expected three fields")
+        assertEquals(3, sectionB.innerFields.size, "Expected three fields")
 
-        val sectionBEntry1 = sectionB.fields["key1"]
+        val sectionBEntry1 = sectionB.innerFields["key1"]
         assertIs<FieldDeclaration>(sectionBEntry1)
         assertLiteralValue("123", sectionBEntry1.initializer)
 
-        val sectionBEntry2 = sectionB.fields["key2"]
+        val sectionBEntry2 = sectionB.innerFields["key2"]
         assertIs<FieldDeclaration>(sectionBEntry2)
         assertLiteralValue("1.2.3.4", sectionBEntry2.initializer)
 
-        val sectionBEntry3 = sectionB.fields["key3"]
+        val sectionBEntry3 = sectionB.innerFields["key3"]
         assertIs<FieldDeclaration>(sectionBEntry3)
         assertLiteralValue("\"abc\"", sectionBEntry3.initializer)
     }

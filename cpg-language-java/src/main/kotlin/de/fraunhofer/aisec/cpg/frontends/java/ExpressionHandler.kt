@@ -607,7 +607,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                 classBodyDecl?.let { anonymousRecord.addDeclaration(it) }
             }
 
-            if (anonymousRecord.constructors.isEmpty()) {
+            if (anonymousRecord.innerConstructors.isEmpty()) {
                 val constructorDeclaration =
                     newConstructorDeclaration(anonymousRecord.name.localName, anonymousRecord)
                         .implicit(anonymousRecord.name.localName)
@@ -617,7 +617,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                         newParameterDeclaration("arg${i}", arg.type)
                 }
                 frontend.scopeManager.addDeclaration(constructorDeclaration)
-                anonymousRecord.constructors += constructorDeclaration
+                anonymousRecord.innerConstructors += constructorDeclaration
                 ctor.anonymousClass = anonymousRecord
 
                 frontend.scopeManager.leaveScope(anonymousRecord)

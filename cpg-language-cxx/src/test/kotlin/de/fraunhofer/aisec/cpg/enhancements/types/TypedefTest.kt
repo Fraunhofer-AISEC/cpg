@@ -238,7 +238,7 @@ internal class TypedefTest : BaseTest() {
         val baseClass = result.records["BaseClass"]
         assertNotNull(baseClass)
 
-        val sizeField = baseClass.fields["size"]
+        val sizeField = baseClass.innerFields["size"]
         assertNotNull(sizeField)
         assertFalse(sizeField.isInferred)
 

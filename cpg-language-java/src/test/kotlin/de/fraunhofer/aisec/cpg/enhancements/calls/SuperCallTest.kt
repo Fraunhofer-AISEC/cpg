@@ -45,10 +45,10 @@ internal class SuperCallTest : BaseTest() {
         val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
         val records = result.records
         val superClass = findByUniqueName(records, "SuperClass")
-        val superMethods = superClass.methods
+        val superMethods = superClass.innerMethods
         val superTarget = findByUniqueName(superMethods, "target")
         val subClass = findByUniqueName(records, "SubClass")
-        val methods = subClass.methods
+        val methods = subClass.innerMethods
         val target = findByUniqueName(methods, "target")
         val calls = target.calls
         val superCall = findByUniquePredicate(calls) { "super.target();" == it.code }
@@ -61,13 +61,13 @@ internal class SuperCallTest : BaseTest() {
         val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
         val records = result.records
         val interface1 = findByUniqueName(records, "Interface1")
-        val interface1Methods = interface1.methods
+        val interface1Methods = interface1.innerMethods
         val interface1Target = findByUniqueName(interface1Methods, "target")
         val interface2 = findByUniqueName(records, "Interface2")
-        val interface2Methods = interface2.methods
+        val interface2Methods = interface2.innerMethods
         val interface2Target = findByUniqueName(interface2Methods, "target")
         val subClass = findByUniqueName(records, "SubClass")
-        val methods = subClass.methods
+        val methods = subClass.innerMethods
         val target = findByUniqueName(methods, "target")
         val calls = target.calls
         val interface1Call =
@@ -84,10 +84,10 @@ internal class SuperCallTest : BaseTest() {
         val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
         val records = result.records
         val superClass = findByUniqueName(records, "SuperClass")
-        val superField = findByUniqueName(superClass.fields, "field")
+        val superField = findByUniqueName(superClass.innerFields, "field")
         val subClass = findByUniqueName(records, "SubClass")
-        val methods = subClass.methods
-        val field = findByUniqueName(subClass.fields, "field")
+        val methods = subClass.innerMethods
+        val field = findByUniqueName(subClass.innerFields, "field")
         val getField = findByUniqueName(methods, "getField")
         var refs = getField.refs
         val fieldRef = findByUniquePredicate(refs) { "field" == it.code }
@@ -106,10 +106,10 @@ internal class SuperCallTest : BaseTest() {
         val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
         val records = result.records
         val superClass = findByUniqueName(records, "SuperClass")
-        val superMethods = superClass.methods
+        val superMethods = superClass.innerMethods
         val superTarget = findByUniqueName(superMethods, "target")
         val innerClass = findByUniqueName(records, "SubClass.Inner")
-        val methods = innerClass.methods
+        val methods = innerClass.innerMethods
         val target = findByUniqueName(methods, "inner")
         val calls = target.calls
         val superCall = findByUniquePredicate(calls) { "SubClass.super.target();" == it.code }
@@ -124,18 +124,18 @@ internal class SuperCallTest : BaseTest() {
 
         val superClass = records["SuperClass"]
         assertNotNull(superClass)
-        assertEquals(1, superClass.fields.size)
-        assertEquals(listOf("field"), superClass.fields.map { it.name.localName })
+        assertEquals(1, superClass.innerFields.size)
+        assertEquals(listOf("field"), superClass.innerFields.map { it.name.localName })
 
         val subClass = findByUniqueName(records, "SubClass")
-        assertEquals(1, subClass.fields.size)
-        assertEquals(listOf("field"), subClass.fields.map { it.name.localName })
+        assertEquals(1, subClass.innerFields.size)
+        assertEquals(listOf("field"), subClass.innerFields.map { it.name.localName })
 
         val inner = findByUniqueName(records, "SubClass.Inner")
-        assertEquals(1, inner.fields.size)
+        assertEquals(1, inner.innerFields.size)
         assertEquals(
             listOf("SubClass.Inner.this\$SubClass"),
-            inner.fields.map { it.name.toString() },
+            inner.innerFields.map { it.name.toString() },
         )
     }
 }

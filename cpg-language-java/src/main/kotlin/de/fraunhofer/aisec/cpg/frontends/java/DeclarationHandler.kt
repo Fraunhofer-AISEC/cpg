@@ -224,7 +224,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 this.newFieldDeclaration("this$" + scope.name.localName, fieldType, listOf())
                     .implicit("this$" + scope.name.localName)
             frontend.scopeManager.addDeclaration(field)
-            recordDeclaration.fields += field
+            recordDeclaration.innerFields += field
 
             frontend.scopeManager.leaveScope(recordDeclaration)
         }
@@ -335,13 +335,13 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     val md =
                         handle(decl) as de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
                     frontend.scopeManager.addDeclaration(md)
-                    recordDeclaration.methods += md
+                    recordDeclaration.innerMethods += md
                 }
                 is com.github.javaparser.ast.body.FieldDeclaration -> {
                     val seq = handle(decl) as DeclarationSequence
                     seq.declarations.filterIsInstance<FieldDeclaration>().forEach {
                         frontend.scopeManager.addDeclaration(it)
-                        recordDeclaration.fields += it
+                        recordDeclaration.innerFields += it
                     }
                 }
                 is ConstructorDeclaration -> {
@@ -349,17 +349,17 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                         handle(decl)
                             as de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
                     frontend.scopeManager.addDeclaration(c)
-                    recordDeclaration.constructors += c
+                    recordDeclaration.innerConstructors += c
                 }
                 is ClassOrInterfaceDeclaration -> {
                     val cls = handle(decl) as RecordDeclaration
                     frontend.scopeManager.addDeclaration(cls)
-                    recordDeclaration.records += cls
+                    recordDeclaration.innerRecords += cls
                 }
                 is com.github.javaparser.ast.body.EnumDeclaration -> {
                     val cls = handle(decl) as RecordDeclaration
                     frontend.scopeManager.addDeclaration(cls)
-                    recordDeclaration.records += cls
+                    recordDeclaration.innerRecords += cls
                 }
                 is InitializerDeclaration -> {
                     val initializerBlock = frontend.statementHandler.handleBlockStatement(decl.body)
@@ -376,12 +376,12 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 }
             }
         }
-        if (recordDeclaration.constructors.isEmpty()) {
+        if (recordDeclaration.innerConstructors.isEmpty()) {
             val constructorDeclaration =
                 this.newConstructorDeclaration(recordDeclaration.name.localName, recordDeclaration)
                     .implicit(recordDeclaration.name.localName)
             frontend.scopeManager.addDeclaration(constructorDeclaration)
-            recordDeclaration.constructors += constructorDeclaration
+            recordDeclaration.innerConstructors += constructorDeclaration
         }
         frontend.processAnnotations(recordDeclaration, typeDecl)
     }
@@ -421,7 +421,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             // processed the constructor yet. Should be cleaned up in the future but requires
             // changes to the starting points of call/symbol resolution.
             val matchingConstructor =
-                currentEnum?.constructors?.singleOrNull {
+                currentEnum?.innerConstructors?.singleOrNull {
                     it.matchesSignature(arguments.map { it.type }).isDirectMatch
                 }
 

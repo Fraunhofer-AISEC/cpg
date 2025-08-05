@@ -41,17 +41,17 @@ class CallResolverTest : BaseTest() {
         val callsRecord = findByUniqueName(records, "Calls")
         val externalRecord = findByUniqueName(records, "External")
         val superClassRecord = findByUniqueName(records, "SuperClass")
-        val innerMethods = findByName(callsRecord.methods, "innerTarget")
+        val innerMethods = findByName(callsRecord.innerMethods, "innerTarget")
         val innerCalls = findByName(callsRecord.calls, "innerTarget")
         checkCalls(intType, stringType, innerMethods, innerCalls)
-        val superMethods = findByName(superClassRecord.methods, "superTarget").toMutableList()
+        val superMethods = findByName(superClassRecord.innerMethods, "superTarget").toMutableList()
         // We can't infer that a call to superTarget(int, int, int) is intended to be part of the
         // superclass. It looks like a call to a member of Calls.java, thus we need to add these
         // methods to the lookup
-        superMethods.addAll(findByName(callsRecord.methods, "superTarget"))
+        superMethods.addAll(findByName(callsRecord.innerMethods, "superTarget"))
         val superCalls = findByName(callsRecord.calls, "superTarget")
         checkCalls(intType, stringType, superMethods, superCalls)
-        val externalMethods = findByName(externalRecord.methods, "externalTarget")
+        val externalMethods = findByName(externalRecord.innerMethods, "externalTarget")
         val externalCalls = findByName(callsRecord.calls, "externalTarget")
         checkCalls(intType, stringType, externalMethods, externalCalls)
     }
@@ -98,8 +98,8 @@ class CallResolverTest : BaseTest() {
         val callsRecord = findByUniqueName(records, "Calls")
         val externalRecord = findByUniqueName(records, "External")
         val superClassRecord = findByUniqueName(records, "SuperClass")
-        val originalMethod = findByUniqueName(superClassRecord.methods, "overridingTarget")
-        val overridingMethod = findByUniqueName(externalRecord.methods, "overridingTarget")
+        val originalMethod = findByUniqueName(superClassRecord.innerMethods, "overridingTarget")
+        val overridingMethod = findByUniqueName(externalRecord.innerMethods, "overridingTarget")
         val call = findByUniqueName(callsRecord.calls, "overridingTarget")
 
         // TODO related to #204: Currently we have both the original and the overriding method in

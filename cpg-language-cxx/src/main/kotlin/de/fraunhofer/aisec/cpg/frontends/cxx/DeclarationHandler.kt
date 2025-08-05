@@ -378,7 +378,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val parameterizedTypes = frontend.typeManager.getAllParameterizedType(templateDeclaration)
 
         // Loop through all the methods and adjust their receiver types
-        for (method in innerDeclaration.methods) {
+        for (method in innerDeclaration.innerMethods) {
             // Add ParameterizedTypes to type
             method.receiver?.let {
                 it.type = addParameterizedTypesToType(it.type, parameterizedTypes)
@@ -386,7 +386,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         }
 
         // Add parameterizedTypes to ConstructorDeclaration type and adjust their receiver types
-        for (constructor in innerDeclaration.constructors) {
+        for (constructor in innerDeclaration.innerConstructors) {
             constructor.receiver?.let {
                 it.type = addParameterizedTypesToType(it.type, parameterizedTypes)
             }

@@ -50,7 +50,7 @@ class SizeEvaluatorTest {
     fun testArraySize() {
         val mainClass = tu.records["MainClass"]
         assertNotNull(mainClass)
-        val main = mainClass.methods["main"]
+        val main = mainClass.innerMethods["main"]
         assertNotNull(main)
 
         val array = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration
@@ -72,7 +72,7 @@ class SizeEvaluatorTest {
         val mainClass = tu.records["MainClass"]
         assertNotNull(mainClass)
 
-        val main = mainClass.methods["main"]
+        val main = mainClass.innerMethods["main"]
         assertNotNull(main)
 
         val array = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration
@@ -99,7 +99,7 @@ class SizeEvaluatorTest {
         val mainClass = tu.records["MainClass"]
         assertNotNull(mainClass)
 
-        val main = mainClass.methods["main"]
+        val main = mainClass.innerMethods["main"]
         assertNotNull(main)
 
         val printCall = main.calls("println").getOrNull(1)

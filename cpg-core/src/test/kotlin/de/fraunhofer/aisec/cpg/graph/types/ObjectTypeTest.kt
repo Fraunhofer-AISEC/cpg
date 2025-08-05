@@ -41,13 +41,13 @@ class ObjectTypeTest {
             val parent = newRecordDeclaration("parent", kind = "class")
             scopeManager.enterScope(parent)
             val foo = declare(newMethodDeclaration("foo"))
-            parent.methods += foo
+            parent.innerMethods += foo
             scopeManager.leaveScope(parent)
 
             val child = newRecordDeclaration("child", kind = "class")
             scopeManager.enterScope(child)
             val bar = declare(newMethodDeclaration("bar"))
-            child.methods += bar
+            child.innerMethods += bar
             child.superClasses += parent.toType()
             scopeManager.leaveScope(child)
 

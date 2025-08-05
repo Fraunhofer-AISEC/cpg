@@ -65,7 +65,7 @@ class CXXAmbiguitiesTest {
         val myClass = tu.records["MyClass"]
         assertNotNull(myClass)
 
-        val someFunction = myClass.methods["someFunction"]
+        val someFunction = myClass.innerMethods["someFunction"]
         assertNotNull(someFunction)
 
         // CDT now (incorrectly) thinks the first line is a declaration statement, when in reality

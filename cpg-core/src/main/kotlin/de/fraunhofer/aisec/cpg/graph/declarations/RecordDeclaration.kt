@@ -50,21 +50,45 @@ open class RecordDeclaration :
     /** The kind, i.e. struct, class, union or enum. */
     var kind: String? = null
 
-    @Relationship(value = "FIELDS", direction = Relationship.Direction.OUTGOING)
-    var fieldEdges = astEdgesOf<FieldDeclaration>()
-    var fields by unwrapping(RecordDeclaration::fieldEdges)
+    /**
+     * The [FieldDeclaration]s that are directly contained in this record declaration's AST
+     * structure. This does not include any fields that might be declared in a base class or
+     * interface or fields that are declared outside the AST structure.
+     */
+    @Relationship(value = "INNER_FIELDS", direction = Relationship.Direction.OUTGOING)
+    var innerFieldEdges = astEdgesOf<FieldDeclaration>()
+    /** Virtual property to directly access the nodes in [innerFieldEdges]. */
+    var innerFields by unwrapping(RecordDeclaration::innerFieldEdges)
 
-    @Relationship(value = "METHODS", direction = Relationship.Direction.OUTGOING)
-    var methodEdges = astEdgesOf<MethodDeclaration>()
-    var methods by unwrapping(RecordDeclaration::methodEdges)
+    /**
+     * The [MethodDeclaration]s that are directly contained in this record declaration's AST
+     * structure. This does not include any methods that might be declared in a base class or
+     * interface or methods that are declared outside the AST structure.
+     */
+    @Relationship(value = "INNER_METHODS", direction = Relationship.Direction.OUTGOING)
+    var innerMethodEdges = astEdgesOf<MethodDeclaration>()
+    /** Virtual property to directly access the nodes in [innerMethods]. */
+    var innerMethods by unwrapping(RecordDeclaration::innerMethodEdges)
 
+    /**
+     * The [ConstructorDeclaration]s that are directly contained in this record declaration's AST
+     * structure. This does not include any constructors that might be declared in a base class or
+     * interface or constructors that are declared outside the AST structure.
+     */
     @Relationship(value = "CONSTRUCTORS", direction = Relationship.Direction.OUTGOING)
-    var constructorEdges = astEdgesOf<ConstructorDeclaration>()
-    var constructors by unwrapping(RecordDeclaration::constructorEdges)
+    var innerConstructorEdges = astEdgesOf<ConstructorDeclaration>()
+    /** Virtual property to directly access the nodes in [innerConstructors]. */
+    var innerConstructors by unwrapping(RecordDeclaration::innerConstructorEdges)
 
+    /**
+     * The [RecordDeclaration]s that are directly contained in this record declaration's AST
+     * structure. This does not include any records that might be declared in a base class or
+     * interface or records that are declared outside the AST structure.
+     */
     @Relationship(value = "RECORDS", direction = Relationship.Direction.OUTGOING)
-    var recordEdges = astEdgesOf<RecordDeclaration>()
-    var records by unwrapping(RecordDeclaration::recordEdges)
+    var innerRecordEdges = astEdgesOf<RecordDeclaration>()
+    /** Virtual property to directly access the nodes in [innerRecordEdges]. */
+    var innerRecords by unwrapping(RecordDeclaration::innerRecordEdges)
 
     @Relationship(value = "TEMPLATES", direction = Relationship.Direction.OUTGOING)
     var templateEdges = astEdgesOf<TemplateDeclaration>()
@@ -96,31 +120,31 @@ open class RecordDeclaration :
     @Relationship var staticImports: MutableSet<ValueDeclaration> = HashSet()
 
     fun addField(fieldDeclaration: FieldDeclaration) {
-        addIfNotContains(fieldEdges, fieldDeclaration)
+        addIfNotContains(innerFieldEdges, fieldDeclaration)
     }
 
     fun removeField(fieldDeclaration: FieldDeclaration) {
-        fieldEdges.removeIf { it.end == fieldDeclaration }
+        innerFieldEdges.removeIf { it.end == fieldDeclaration }
     }
 
     fun addMethod(methodDeclaration: MethodDeclaration) {
-        addIfNotContains(methodEdges, methodDeclaration)
+        addIfNotContains(innerMethodEdges, methodDeclaration)
     }
 
     fun removeMethod(methodDeclaration: MethodDeclaration?) {
-        methodEdges.removeIf { it.end == methodDeclaration }
+        innerMethodEdges.removeIf { it.end == methodDeclaration }
     }
 
     fun addConstructor(constructorDeclaration: ConstructorDeclaration) {
-        addIfNotContains(constructorEdges, constructorDeclaration)
+        addIfNotContains(innerConstructorEdges, constructorDeclaration)
     }
 
     fun removeConstructor(constructorDeclaration: ConstructorDeclaration?) {
-        constructorEdges.removeIf { it.end == constructorDeclaration }
+        innerConstructorEdges.removeIf { it.end == constructorDeclaration }
     }
 
     fun removeRecord(recordDeclaration: RecordDeclaration) {
-        recordEdges.removeIf { it.end == recordDeclaration }
+        innerRecordEdges.removeIf { it.end == recordDeclaration }
     }
 
     fun removeTemplate(templateDeclaration: TemplateDeclaration?) {
@@ -131,10 +155,10 @@ open class RecordDeclaration :
     override val declarations: List<Declaration>
         get() {
             val list = ArrayList<Declaration>()
-            list.addAll(fields)
-            list.addAll(methods)
-            list.addAll(constructors)
-            list.addAll(records)
+            list.addAll(innerFields)
+            list.addAll(innerMethods)
+            list.addAll(innerConstructors)
+            list.addAll(innerRecords)
             list.addAll(templates)
             return list
         }
@@ -163,10 +187,10 @@ open class RecordDeclaration :
             .append("name", name)
             .append("kind", kind)
             .append("superTypeDeclarations", superTypeDeclarations)
-            .append("fields", fields)
-            .append("methods", methods)
-            .append("constructors", constructors)
-            .append("records", records)
+            .append("fields", innerFields)
+            .append("methods", innerMethods)
+            .append("constructors", innerConstructors)
+            .append("records", innerRecords)
             .toString()
     }
 
@@ -175,9 +199,9 @@ open class RecordDeclaration :
         get() {
             val list = mutableListOf<Node>()
 
-            list += fields
-            list += methods
-            list += constructors
+            list += innerFields
+            list += innerMethods
+            list += innerConstructors
 
             return list
         }
@@ -187,14 +211,14 @@ open class RecordDeclaration :
         if (other !is RecordDeclaration) return false
         return super.equals(other) &&
             kind == other.kind &&
-            fields == other.fields &&
-            propertyEqualsList(fieldEdges, other.fieldEdges) &&
-            methods == other.methods &&
-            propertyEqualsList(methodEdges, other.methodEdges) &&
-            constructors == other.constructors &&
-            propertyEqualsList(constructorEdges, other.constructorEdges) &&
-            records == other.records &&
-            propertyEqualsList(recordEdges, other.recordEdges) &&
+            innerFields == other.innerFields &&
+            propertyEqualsList(innerFieldEdges, other.innerFieldEdges) &&
+            innerMethods == other.innerMethods &&
+            propertyEqualsList(innerMethodEdges, other.innerMethodEdges) &&
+            innerConstructors == other.innerConstructors &&
+            propertyEqualsList(innerConstructorEdges, other.innerConstructorEdges) &&
+            innerRecords == other.innerRecords &&
+            propertyEqualsList(innerRecordEdges, other.innerRecordEdges) &&
             superClasses == other.superClasses &&
             implementedInterfaces == other.implementedInterfaces &&
             superTypeDeclarations == other.superTypeDeclarations
@@ -204,10 +228,10 @@ open class RecordDeclaration :
 
     override fun addDeclaration(declaration: Declaration) {
         when (declaration) {
-            is ConstructorDeclaration -> addIfNotContains(constructorEdges, declaration)
-            is MethodDeclaration -> addIfNotContains(methodEdges, declaration)
-            is FieldDeclaration -> addIfNotContains(fieldEdges, declaration)
-            is RecordDeclaration -> addIfNotContains(recordEdges, declaration)
+            is ConstructorDeclaration -> addIfNotContains(innerConstructorEdges, declaration)
+            is MethodDeclaration -> addIfNotContains(innerMethodEdges, declaration)
+            is FieldDeclaration -> addIfNotContains(innerFieldEdges, declaration)
+            is RecordDeclaration -> addIfNotContains(innerRecordEdges, declaration)
             is TemplateDeclaration -> addIfNotContains(templateEdges, declaration)
         }
     }

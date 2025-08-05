@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
-import java.util.*
 
 /**
  * Transitively connect [RecordDeclaration] nodes with their supertypes' records.
@@ -98,7 +97,7 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     protected fun getAllMethodsFromSupertypes(
         supertypeRecords: Set<RecordDeclaration>
     ): List<MethodDeclaration> {
-        return supertypeRecords.map { it.methods }.flatten()
+        return supertypeRecords.map { it.innerMethods }.flatten()
     }
 
     protected fun findSupertypeRecords(
@@ -123,7 +122,7 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     ) {
         for (superMethod in allMethodsFromSupertypes) {
             val overrideCandidates =
-                declaration.methods.filter { superMethod.isOverrideCandidate(it) }
+                declaration.innerMethods.filter { superMethod.isOverrideCandidate(it) }
             superMethod.addOverriddenBy(overrideCandidates)
             overrideCandidates.forEach { it.addOverrides(superMethod) }
         }

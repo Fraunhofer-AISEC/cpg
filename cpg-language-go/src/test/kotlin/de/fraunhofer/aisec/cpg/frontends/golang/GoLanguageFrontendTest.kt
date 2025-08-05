@@ -247,7 +247,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val myStruct = tu.records["MyStruct"]
         assertNotNull(myStruct)
 
-        val field = myStruct.fields["Field"]
+        val field = myStruct.innerFields["Field"]
         assertNotNull(field)
 
         var composite =
@@ -461,7 +461,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val myStruct = p.records["MyStruct"]
         assertNotNull(myStruct)
 
-        val methods = myStruct.methods
+        val methods = myStruct.innerMethods
         val myFunc = methods.firstOrNull()
         assertNotNull(myFunc)
         assertLocalName("MyFunc", myFunc)
@@ -868,7 +868,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(s)
         assertEquals("comment before struct", s.comment)
 
-        val myField = s.fields["myField"]
+        val myField = s.innerFields["myField"]
         assertNotNull(myField)
         assertNotNull("comment before field", myField.comment)
     }
@@ -962,7 +962,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertIs<ObjectType>(type)
         assertLocalName("newType", type)
 
-        assertEquals(1, type.recordDeclaration?.methods?.size)
+        assertEquals(1, type.recordDeclaration?.innerMethods?.size)
     }
 
     @Test
@@ -1068,7 +1068,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val inner = result.records["inner"]
         assertNotNull(inner)
 
-        val field = inner.fields["field"]
+        val field = inner.innerFields["field"]
         assertNotNull(field)
 
         val assign = result.assignments.firstOrNull()
@@ -1091,7 +1091,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val type = tu.records["Type"]
         assertNotNull(type)
 
-        val elem = type.methods["Elem"]
+        val elem = type.innerMethods["Elem"]
         assertNotNull(elem)
 
         val call = tu.calls["Elem"]
