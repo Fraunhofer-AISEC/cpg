@@ -456,7 +456,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         processMembers(recordDeclaration, ctx)
 
-        if (recordDeclaration.constructors.isEmpty()) {
+        if (recordDeclaration.innerConstructors.isEmpty()) {
             // create an implicit constructor declaration with the same name as the record
             val constructorDeclaration =
                 newConstructorDeclaration(recordDeclaration.name.localName, recordDeclaration)
@@ -467,7 +467,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             // and set the type, constructors always have implicitly the return type of their class
             constructorDeclaration.type = computeType(constructorDeclaration)
             frontend.scopeManager.addDeclaration(constructorDeclaration)
-            recordDeclaration.constructors += constructorDeclaration
+            recordDeclaration.innerConstructors += constructorDeclaration
         }
 
         frontend.scopeManager.leaveScope(recordDeclaration)

@@ -37,10 +37,10 @@ class EdgesTest {
         with(TestLanguageFrontend()) {
             var record = newRecordDeclaration("myRecord", kind = "class")
             var method = newMethodDeclaration("myFunc")
-            record.methods += method
+            record.innerMethods += method
 
-            assertEquals(1, record.methods.size)
-            assertEquals(method, record.methods.firstOrNull())
+            assertEquals(1, record.innerMethods.size)
+            assertEquals(method, record.innerMethods.firstOrNull())
 
             assertEquals(
                 "RecordDeclaration[name=myRecord,location=<null>,name=myRecord,kind=class,superTypeDeclarations=[],fields=[],methods=[MethodDeclaration[name=myFunc,location=<null>,parameters=[]]],constructors=[],records=[]]",

@@ -53,7 +53,7 @@ class DeclarationTest {
         assertNotNull(myStruct)
 
         // Receiver should be null since its unnamed
-        val myFunc = myStruct.methods["MyFunc"]
+        val myFunc = myStruct.innerMethods["MyFunc"]
         assertNotNull(myFunc)
         assertNull(myFunc.receiver)
     }
@@ -100,13 +100,13 @@ class DeclarationTest {
         assertNotNull(myStruct)
         assertEquals("struct", myStruct.kind)
 
-        val fields = myStruct.fields
+        val fields = myStruct.innerFields
         assertEquals(
             listOf("MyField", "OtherStruct", "EvenAnotherStruct"),
             fields.map { it.name.localName },
         )
 
-        var methods = myStruct.methods
+        var methods = myStruct.innerMethods
 
         var myFunc = methods.firstOrNull()
         assertNotNull(myFunc)
@@ -122,7 +122,7 @@ class DeclarationTest {
         assertNotNull(myInterface)
         assertEquals("interface", myInterface.kind)
 
-        methods = myInterface.methods
+        methods = myInterface.innerMethods
 
         assertEquals(1, methods.size)
 
@@ -153,7 +153,7 @@ class DeclarationTest {
         assertNotNull(record)
         assertLocalName("struct{field int}", record)
 
-        val field = record.fields["field"]
+        val field = record.innerFields["field"]
         assertNotNull(field)
 
         val init = s.initializer
@@ -364,7 +364,7 @@ class DeclarationTest {
         val inner = result.records["inner"]
         assertNotNull(inner)
 
-        val field = inner.fields["field"]
+        val field = inner.innerFields["field"]
         assertNotNull(field)
 
         val assign = result.assignments.firstOrNull()

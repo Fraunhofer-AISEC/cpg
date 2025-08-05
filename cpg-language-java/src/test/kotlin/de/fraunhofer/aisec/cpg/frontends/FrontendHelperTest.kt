@@ -80,7 +80,7 @@ class FrontendHelperTest {
         assertFalse(classDeclaration.comment?.contains(comment3) == true)
 
         // 2 line comment in the constructor
-        val constructor = classDeclaration.constructors.first()
+        val constructor = classDeclaration.innerConstructors.first()
         val constructorAssignment = (constructor.body as Block).statements[0]
         assertNull(constructor.comment)
         constructorAssignment.comment = ""

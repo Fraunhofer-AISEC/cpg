@@ -288,7 +288,7 @@ class CXXDeclarationTest {
         val data = result.records["Data"]
         assertNotNull(data)
 
-        val size = data.fields["size"]
+        val size = data.innerFields["size"]
         assertNotNull(size)
 
         val p = result.refs["p"]
