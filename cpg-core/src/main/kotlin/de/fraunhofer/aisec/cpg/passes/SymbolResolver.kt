@@ -688,7 +688,12 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     ): Set<FunctionDeclaration> {
         return declaration.overriddenBy
             .filter { f ->
-                f is MethodDeclaration && f.recordDeclaration?.toType() in possibleSubTypes
+                if (f is MethodDeclaration) {
+                    val record = f.recordDeclaration
+                    record != null && record.toType() in possibleSubTypes
+                } else {
+                    false
+                }
             }
             .toSet()
     }

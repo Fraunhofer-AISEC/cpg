@@ -52,8 +52,8 @@ class DeclarationTest {
         val myStruct = main.records["main.MyStruct"]
         assertNotNull(myStruct)
 
-        // Receiver should be null since its unnamed
-        val myFunc = myStruct.innerMethods["MyFunc"]
+        // Receiver should be null because its unnamed
+        val myFunc = myStruct.toType().methods["MyFunc"]
         assertNotNull(myFunc)
         assertNull(myFunc.receiver)
     }
@@ -107,8 +107,14 @@ class DeclarationTest {
         )
 
         var methods = myStruct.innerMethods
+        assertEquals(
+            0,
+            methods.size,
+            "Expected no inner methods in struct MyStruct, since Go declares methods outside of the type",
+        )
 
-        var myFunc = methods.firstOrNull()
+        val typeMethods = myStruct.toType().methods
+        var myFunc = typeMethods.firstOrNull()
         assertNotNull(myFunc)
         assertFullName("p.MyStruct.MyFunc", myFunc)
 
