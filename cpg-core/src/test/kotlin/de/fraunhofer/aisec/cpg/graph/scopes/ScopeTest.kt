@@ -27,18 +27,20 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.newBlock
+import de.fraunhofer.aisec.cpg.graph.newFunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.newLookupScopeStatement
 import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 
 class ScopeTest {
     @Test
     fun testLookup() {
         with(TestLanguageFrontend()) {
             // some mock variable declarations, global and local
-            var globalA = newVariableDeclaration("a")
-            var localA = newVariableDeclaration("a")
+            val globalA = newVariableDeclaration("a")
+            val localA = newVariableDeclaration("a")
 
             // two scopes, global and local
             val globalScope = GlobalScope()
@@ -48,20 +50,32 @@ class ScopeTest {
             scope.addSymbol("a", localA)
 
             // if we try to resolve "a" now, this should point to the local A since we start there
-            // and
-            // move upwards
+            // and move upwards
             var result = scope.lookupSymbol("a")
             assertEquals(listOf(localA), result)
 
             // now, we pretend to have a lookup scope modifier for a symbol, e.g. through "global"
-            // in
-            // Python
-            var stmt = newLookupScopeStatement(listOf("a"), targetScope = globalScope)
+            // in Python
+            val stmt = newLookupScopeStatement(listOf("a"), targetScope = globalScope)
             scope.predefinedLookupScopes["a"] = stmt
 
             // let's try the lookup again, this time it should point to the global A
             result = scope.lookupSymbol("a")
             assertEquals(listOf(globalA), result)
+        }
+    }
+
+    @Test
+    fun testDeclaringScope() {
+        with(TestLanguageFrontend()) {
+            val func = newFunctionDeclaration("foo")
+            scopeManager.enterScope(func)
+
+            scopeManager.leaveScope(func)
+
+            val scope = func.declaringScope
+            assertIs<FunctionScope>(scope)
+            assertEquals(func, scope.astNode)
         }
     }
 }
