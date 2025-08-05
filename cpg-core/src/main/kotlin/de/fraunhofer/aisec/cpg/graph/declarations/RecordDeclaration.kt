@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
@@ -187,10 +188,10 @@ open class RecordDeclaration :
             .append("name", name)
             .append("kind", kind)
             .append("superTypeDeclarations", superTypeDeclarations)
-            .append("fields", innerFields)
-            .append("methods", innerMethods)
-            .append("constructors", innerConstructors)
-            .append("records", innerRecords)
+            .append("innerFields", innerFields)
+            .append("innerMethods", innerMethods)
+            .append("innerConstructors", innerConstructors)
+            .append("innerRecords", innerRecords)
             .toString()
     }
 
@@ -241,16 +242,18 @@ open class RecordDeclaration :
      *
      * @return the type
      */
-    fun toType(): Type {
+    fun toType(): ObjectType {
         val type = objectType(name)
         if (type is ObjectType) {
-            // as a shortcut, directly set the record declaration. This will be otherwise done
+            // As a shortcut, directly set the record declaration. This will be otherwise done
             // later by a pass, but for some frontends we need this immediately, so we set
             // this here.
             type.recordDeclaration = this
+            type.superTypes.addAll(this.superTypes)
+            return type
+        } else {
+            throw TranslationException("Cannot create type for $this, as it is not an ObjectType")
         }
-        type.superTypes.addAll(this.superTypes)
-        return type
     }
 
     override val declaredType: Type

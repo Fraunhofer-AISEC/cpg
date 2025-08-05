@@ -43,7 +43,7 @@ class EdgesTest {
             assertEquals(method, record.innerMethods.firstOrNull())
 
             assertEquals(
-                "RecordDeclaration[name=myRecord,location=<null>,name=myRecord,kind=class,superTypeDeclarations=[],fields=[],methods=[MethodDeclaration[name=myFunc,location=<null>,parameters=[]]],constructors=[],records=[]]",
+                "RecordDeclaration[name=myRecord,location=<null>,name=myRecord,kind=class,superTypeDeclarations=[],innerFields=[],innerMethods=[MethodDeclaration[name=myFunc,location=<null>,parameters=[]]],innerConstructors=[],innerRecords=[]]",
                 record.toString(),
             )
         }
