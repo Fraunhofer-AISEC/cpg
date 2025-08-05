@@ -94,7 +94,7 @@ fun LanguageProvider.objectType(
 
     // Otherwise, we either need to create the type because of the generics or because we do not
     // know the type yet.
-    var type =
+    val type =
         ObjectType(
             typeName = name,
             generics = generics,
