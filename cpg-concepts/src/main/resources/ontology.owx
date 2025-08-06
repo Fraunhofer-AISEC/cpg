@@ -34,6 +34,12 @@
         <Class IRI="#BlockStorageOperation"/>
     </Declaration>
     <Declaration>
+        <Class IRI="#Boundary"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#CheckAccess"/>
+    </Declaration>
+    <Declaration>
         <Class IRI="#Cipher"/>
     </Declaration>
     <Declaration>
@@ -76,6 +82,9 @@
         <Class IRI="#Darwin"/>
     </Declaration>
     <Declaration>
+        <Class IRI="#DeAllocate"/>
+    </Declaration>
+    <Declaration>
         <Class IRI="#DiskEncryption"/>
     </Declaration>
     <Declaration>
@@ -95,6 +104,12 @@
     </Declaration>
     <Declaration>
         <Class IRI="#EntryPoint"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#EqualityCheck"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#ExitBoundaryOperation"/>
     </Declaration>
     <Declaration>
         <Class IRI="#File"/>
@@ -127,6 +142,9 @@
         <Class IRI="#HttpRequestContext"/>
     </Declaration>
     <Declaration>
+        <Class IRI="#HttpRequestHandlerOperation"/>
+    </Declaration>
+    <Declaration>
         <Class IRI="#IssueJwt"/>
     </Declaration>
     <Declaration>
@@ -140,6 +158,12 @@
     </Declaration>
     <Declaration>
         <Class IRI="#LoadConfiguration"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#LoadLibrary"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#LoadSymbol"/>
     </Declaration>
     <Declaration>
         <Class IRI="#LocalEntryPoint"/>
@@ -175,6 +199,9 @@
         <Class IRI="#Policy"/>
     </Declaration>
     <Declaration>
+        <Class IRI="#PolicyOperation"/>
+    </Declaration>
+    <Declaration>
         <Class IRI="#PolicyRule"/>
     </Declaration>
     <Declaration>
@@ -182,6 +209,9 @@
     </Declaration>
     <Declaration>
         <Class IRI="#ProctectedAsset"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#ProtectedAssetOperation"/>
     </Declaration>
     <Declaration>
         <Class IRI="#ProvideConfiguration"/>
@@ -203,6 +233,9 @@
     </Declaration>
     <Declaration>
         <Class IRI="#RegisterConfigurationOption"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#RegisterHttpEndpoint"/>
     </Declaration>
     <Declaration>
         <Class IRI="#RemoteEntryPoint"/>
@@ -706,10 +739,16 @@
         <ObjectProperty IRI="#hasMultipleSet"/>
     </Declaration>
     <Declaration>
+        <ObjectProperty IRI="#leftPrincipal"/>
+    </Declaration>
+    <Declaration>
         <ObjectProperty IRI="#linkedConcept"/>
     </Declaration>
     <Declaration>
         <ObjectProperty IRI="#protects"/>
+    </Declaration>
+    <Declaration>
+        <ObjectProperty IRI="#rightPrincipal"/>
     </Declaration>
     <Declaration>
         <ObjectProperty IRI="https://ontology.emerald-he.eu/classes/basedOn"/>
@@ -1395,6 +1434,14 @@
         </ObjectSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
+        <Class IRI="#Boundary"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#CheckAccess"/>
+        <Class IRI="#ProtectedAssetOperation"/>
+    </SubClassOf>
+    <SubClassOf>
         <Class IRI="#Cipher"/>
         <Class IRI="https://ontology.emerald-he.eu/classes/Functionality"/>
     </SubClassOf>
@@ -1535,6 +1582,10 @@
         <Class IRI="#OperatingSystemArchitecture"/>
     </SubClassOf>
     <SubClassOf>
+        <Class IRI="#DeAllocate"/>
+        <Class IRI="#MemoryOperation"/>
+    </SubClassOf>
+    <SubClassOf>
         <Class IRI="#DiskEncryption"/>
         <Class IRI="https://ontology.emerald-he.eu/classes/AtRestEncryption"/>
     </SubClassOf>
@@ -1563,6 +1614,13 @@
     <SubClassOf>
         <Class IRI="#DynamicLoadingOperation"/>
         <Class IRI="#MemoryOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#DynamicLoadingOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+            <Class IRI="#OperatingSystemArchitecture"/>
+        </ObjectSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
         <Class IRI="#Encryption"/>
@@ -1596,6 +1654,35 @@
     <SubClassOf>
         <Class IRI="#EntryPoint"/>
         <Class IRI="https://ontology.emerald-he.eu/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#EqualityCheck"/>
+        <Class IRI="#PolicyOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#EqualityCheck"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="#leftPrincipal"/>
+            <Class IRI="#Principal"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#EqualityCheck"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="#rightPrincipal"/>
+            <Class IRI="#Principal"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ExitBoundaryOperation"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Operation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ExitBoundaryOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="#linkedConcept"/>
+            <Class IRI="#Boundary"/>
+        </ObjectSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
         <Class IRI="#File"/>
@@ -1666,6 +1753,17 @@
         <Class IRI="#Http"/>
     </SubClassOf>
     <SubClassOf>
+        <Class IRI="#HttpRequestHandlerOperation"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Operation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#HttpRequestHandlerOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="#linkedConcept"/>
+            <Class IRI="https://ontology.emerald-he.eu/classes/HttpRequestHandler"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
         <Class IRI="#IssueJwt"/>
         <Class IRI="#AuthenticationOperation"/>
     </SubClassOf>
@@ -1684,6 +1782,21 @@
     <SubClassOf>
         <Class IRI="#LoadConfiguration"/>
         <Class IRI="#ConfigurationOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#LoadLibrary"/>
+        <Class IRI="#DynamicLoadingOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#LoadLibrary"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/hasMultiple"/>
+            <Class IRI="#EntryPoint"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#LoadSymbol"/>
+        <Class IRI="#DynamicLoadingOperation"/>
     </SubClassOf>
     <SubClassOf>
         <Class IRI="#LocalEntryPoint"/>
@@ -1779,6 +1892,17 @@
         </ObjectSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
+        <Class IRI="#PolicyOperation"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Operation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#PolicyOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="#linkedConcept"/>
+            <Class IRI="#Policy"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
         <Class IRI="#PolicyRule"/>
         <Class IRI="https://ontology.emerald-he.eu/classes/Data"/>
     </SubClassOf>
@@ -1802,6 +1926,17 @@
         <ObjectSomeValuesFrom>
             <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/hasMultiple"/>
             <Class IRI="#Policy"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ProtectedAssetOperation"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Operation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ProtectedAssetOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="#linkedConcept"/>
+            <Class IRI="#ProctectedAsset"/>
         </ObjectSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
@@ -1900,6 +2035,17 @@
         <ObjectSomeValuesFrom>
             <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
             <Class IRI="#ConfigurationOption"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#RegisterHttpEndpoint"/>
+        <Class IRI="#HttpRequestHandlerOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#RegisterHttpEndpoint"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+            <Class IRI="https://ontology.emerald-he.eu/classes/HttpEndpoint"/>
         </ObjectSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
@@ -4456,7 +4602,15 @@ name = metadata.name</Literal>
         <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
     </SubObjectPropertyOf>
     <SubObjectPropertyOf>
+        <ObjectProperty IRI="#leftPrincipal"/>
+        <ObjectProperty abbreviatedIRI="owl:topObjectProperty"/>
+    </SubObjectPropertyOf>
+    <SubObjectPropertyOf>
         <ObjectProperty IRI="#protects"/>
+        <ObjectProperty abbreviatedIRI="owl:topObjectProperty"/>
+    </SubObjectPropertyOf>
+    <SubObjectPropertyOf>
+        <ObjectProperty IRI="#rightPrincipal"/>
         <ObjectProperty abbreviatedIRI="owl:topObjectProperty"/>
     </SubObjectPropertyOf>
     <SubObjectPropertyOf>
@@ -4645,6 +4799,26 @@ name = metadata.name</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#Boundary</IRI>
+        <Literal>Represents a boundary in data processing, which can be used to define the scope of a policy or the separation between different policies. For example, a boundary could be defined around an [HttpEndpoint], so that the policy applies once data either comes in or goes out of the HTTP endpoint.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#Boundary</IRI>
+        <Literal>Boundary</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#CheckAccess</IRI>
+        <Literal>Represents an operation that checks whether a user or principal has access to a protected</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#CheckAccess</IRI>
+        <Literal>CheckAccess</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
         <IRI>#Cipher</IRI>
         <Literal>Represents a cipher suite. E.g. `AES-XTS-plain64`.</Literal>
     </AnnotationAssertion>
@@ -4759,6 +4933,16 @@ name = metadata.name</Literal>
         <Literal>Darwin</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#DeAllocate</IRI>
+        <Literal>Represents a memory de-allocation operation. This can be done using `free` in C or `delete` in C++ or by calling a destructor in managed languages.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#DeAllocate</IRI>
+        <Literal>DeAllocate</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>#DiskEncryptionOperation</IRI>
         <Literal>DiskEncryptionOperation</Literal>
@@ -4772,6 +4956,16 @@ name = metadata.name</Literal>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>#DynamicLoading</IRI>
         <Literal>DynamicLoading</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#DynamicLoadingOperation</IRI>
+        <Literal>Represents an operation used by the [DynamicLoading] concept.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#DynamicLoadingOperation</IRI>
+        <Literal>DynamicLoadingOperation</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
@@ -4797,6 +4991,26 @@ name = metadata.name</Literal>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>#EntryPoint</IRI>
         <Literal>EntryPoint</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#EqualityCheck</IRI>
+        <Literal>Represents an operation that checks whether two principals are equal.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#EqualityCheck</IRI>
+        <Literal>EqualityCheck</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#ExitBoundaryOperation</IRI>
+        <Literal>Represents an exit operation that is part of a [Boundary]. This operation is used to define the point at which data leaves the boundary.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#ExitBoundaryOperation</IRI>
+        <Literal>ExitBoundaryOperation</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
@@ -4884,6 +5098,11 @@ name = metadata.name</Literal>
         <Literal>HttpRequestContext</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#HttpRequestHandlerOperation</IRI>
+        <Literal>HttpRequestHandlerOperation</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
         <IRI>#IssueJwt</IRI>
         <Literal>Represents an operation to issue a new JWT token.</Literal>
@@ -4932,6 +5151,26 @@ name = metadata.name</Literal>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>#LoadConfiguration</IRI>
         <Literal>LoadConfiguration</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#LoadLibrary</IRI>
+        <Literal>Represents an operation that loads a shared library during runtime. A common example would be a call to `dlopen` in C/C++.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#LoadLibrary</IRI>
+        <Literal>LoadLibrary</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#LoadSymbol</IRI>
+        <Literal>Represents an operation that loads a symbol during runtime. A common example would be a call to`dlsym` in C/C++.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#LoadSymbol</IRI>
+        <Literal>LoadSymbol</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
@@ -5030,6 +5269,16 @@ name = metadata.name</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#PolicyOperation</IRI>
+        <Literal>Represents an operation that is part of a policy. This can be used to define rules or checks that need to be performed to enforce the policy.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#PolicyOperation</IRI>
+        <Literal>PolicyOperation</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
         <IRI>#PolicyRule</IRI>
         <Literal>Represents a rule that is part of a policy. This can be used to define conditions that must be met for the policy to be enforced.</Literal>
     </AnnotationAssertion>
@@ -5057,6 +5306,16 @@ name = metadata.name</Literal>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>#ProctectedAsset</IRI>
         <Literal>ProtectedAsset</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#ProtectedAssetOperation</IRI>
+        <Literal>Base class for operations that involve protected assets. These operations can include checks for access permissions, modifications, or any other actions that require validation against a policy.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#ProtectedAssetOperation</IRI>
+        <Literal>ProtectedAssetOperation</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
@@ -5127,6 +5386,11 @@ name = metadata.name</Literal>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>#RegisterConfigurationOption</IRI>
         <Literal>RegisterConfigurationOption</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#RegisterHttpEndpoint</IRI>
+        <Literal>RegisterHttpEndpoint</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
