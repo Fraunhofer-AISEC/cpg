@@ -6,11 +6,228 @@
      xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
      xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
      ontologyIRI="http://www.semanticweb.org/ang95681/ontologies/2025/4/untitled-ontology-32">
+    <Prefix name="" IRI="http://www.w3.org/2002/07/owl#"/>
     <Prefix name="owl" IRI="http://www.w3.org/2002/07/owl#"/>
     <Prefix name="rdf" IRI="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
     <Prefix name="xml" IRI="http://www.w3.org/XML/1998/namespace"/>
     <Prefix name="xsd" IRI="http://www.w3.org/2001/XMLSchema#"/>
     <Prefix name="rdfs" IRI="http://www.w3.org/2000/01/rdf-schema#"/>
+    <Declaration>
+        <Class IRI="#Agnostic"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#Allocate"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#AndRule"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#Authenticate"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#AuthenticationOperation"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#AuthorizeJwt"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#BlockStorageOperation"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#Cipher"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#CipherOperation"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#Configuration"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#ConfigurationDocument"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#ConfigurationGroup"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#ConfigurationGroupSource"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#ConfigurationOperation"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#ConfigurationOption"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#ConfigurationOptionSource"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#ConfigurationSource"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#Context"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#CreateEncryptedDisk"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#CreateSecret"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#Darwin"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#DiskEncryption"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#DiskEncryptionOperation"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#DynamicLoading"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#DynamicLoadingOperation"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#Encryption"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#EncryptionOperation"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#EntryPoint"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#File"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#FileHandle"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#FileLikeObject"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#FileOperation"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#GetSecret"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#Http"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#HttpClient"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#HttpClientOperation"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#HttpEndpointOperation"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#HttpRequestContext"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#IssueJwt"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#JwtAuthentication"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#Key"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#LibraryEntryPoint"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#LoadConfiguration"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#LocalEntryPoint"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#LogDocument"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#LogGet"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#LogOperation"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#LogWrite"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#Main"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#Memory"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#MemoryOperation"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#OperatingSystemArchitecture"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#POSIX"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#Policy"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#PolicyRule"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#Principal"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#ProctectedAsset"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#ProvideConfiguration"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#ProvideConfigurationGroup"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#ProvideConfigurationOption"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#ReadConfiguration"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#ReadConfigurationOption"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#RegisterConfigurationGroup"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#RegisterConfigurationOption"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#RemoteEntryPoint"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#ReportDocument"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#SecretOperation"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#Token"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#UnlockEncryptedDisk"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#ValidateJwt"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#Value"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#Win32"/>
+    </Declaration>
     <Declaration>
         <Class IRI="https://ontology.emerald-he.eu/classes/ABAC"/>
     </Declaration>
@@ -486,6 +703,15 @@
         <Class IRI="https://ontology.emerald-he.eu/classes/ZoneRedundancy"/>
     </Declaration>
     <Declaration>
+        <ObjectProperty IRI="#hasMultipleSet"/>
+    </Declaration>
+    <Declaration>
+        <ObjectProperty IRI="#linkedConcept"/>
+    </Declaration>
+    <Declaration>
+        <ObjectProperty IRI="#protects"/>
+    </Declaration>
+    <Declaration>
         <ObjectProperty IRI="https://ontology.emerald-he.eu/classes/basedOn"/>
     </Declaration>
     <Declaration>
@@ -576,7 +802,31 @@
         <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/to"/>
     </Declaration>
     <Declaration>
+        <DataProperty IRI="#blockSize"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="#isTLS"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="#logLevel"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="#mode"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="https://ontology.emerald-he.eu/classes/OneQubitErrorRate"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="https://ontology.emerald-he.eu/classes/SpamErrorRate"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="https://ontology.emerald-he.eu/classes/TwoQubitErrorRate"/>
+    </Declaration>
+    <Declaration>
         <DataProperty IRI="https://ontology.emerald-he.eu/classes/adv_robustness"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="https://ontology.emerald-he.eu/classes/annualUpdateCompleted"/>
     </Declaration>
     <Declaration>
         <DataProperty IRI="https://ontology.emerald-he.eu/classes/apiHitsPerMonth"/>
@@ -622,6 +872,9 @@
     </Declaration>
     <Declaration>
         <DataProperty IRI="https://ontology.emerald-he.eu/classes/enforceMFA"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="https://ontology.emerald-he.eu/classes/errorCorrectionEnabled"/>
     </Declaration>
     <Declaration>
         <DataProperty IRI="https://ontology.emerald-he.eu/classes/expirationDate"/>
@@ -708,7 +961,16 @@
         <DataProperty IRI="https://ontology.emerald-he.eu/classes/overridePasswordPolicy"/>
     </Declaration>
     <Declaration>
+        <DataProperty IRI="https://ontology.emerald-he.eu/classes/poisonLevel"/>
+    </Declaration>
+    <Declaration>
         <DataProperty IRI="https://ontology.emerald-he.eu/classes/poison_level"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="https://ontology.emerald-he.eu/classes/privacyLabel"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="https://ontology.emerald-he.eu/classes/privacyLevel"/>
     </Declaration>
     <Declaration>
         <DataProperty IRI="https://ontology.emerald-he.eu/classes/privacy_level"/>
@@ -744,6 +1006,9 @@
         <DataProperty IRI="https://ontology.emerald-he.eu/classes/retentionPeriod"/>
     </Declaration>
     <Declaration>
+        <DataProperty IRI="https://ontology.emerald-he.eu/classes/robustness"/>
+    </Declaration>
+    <Declaration>
         <DataProperty IRI="https://ontology.emerald-he.eu/classes/runtimeLanguage"/>
     </Declaration>
     <Declaration>
@@ -765,6 +1030,9 @@
         <DataProperty IRI="https://ontology.emerald-he.eu/classes/sessionCipher"/>
     </Declaration>
     <Declaration>
+        <DataProperty IRI="https://ontology.emerald-he.eu/classes/size"/>
+    </Declaration>
+    <Declaration>
         <DataProperty IRI="https://ontology.emerald-he.eu/classes/startColumn"/>
     </Declaration>
     <Declaration>
@@ -772,6 +1040,12 @@
     </Declaration>
     <Declaration>
         <DataProperty IRI="https://ontology.emerald-he.eu/classes/status"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="https://ontology.emerald-he.eu/classes/successfullyCompletedPercentage"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="https://ontology.emerald-he.eu/classes/type"/>
     </Declaration>
     <Declaration>
         <DataProperty IRI="https://ontology.emerald-he.eu/classes/usesSalt"/>
@@ -1064,42 +1338,6 @@
     <Declaration>
         <Datatype abbreviatedIRI="xsd:listString"/>
     </Declaration>
-    <Declaration>
-        <DataProperty IRI="https://ontology.emerald-he.eu/classes/privacyLabel"/>
-    </Declaration>
-    <Declaration>
-        <DataProperty IRI="https://ontology.emerald-he.eu/classes/robustness"/>
-    </Declaration>
-    <Declaration>
-        <DataProperty IRI="https://ontology.emerald-he.eu/classes/OneQubitErrorRate"/>
-    </Declaration>
-    <Declaration>
-        <DataProperty IRI="https://ontology.emerald-he.eu/classes/type"/>
-    </Declaration>
-    <Declaration>
-        <DataProperty IRI="https://ontology.emerald-he.eu/classes/successfullyCompletedPercentage"/>
-    </Declaration>
-    <Declaration>
-        <DataProperty IRI="https://ontology.emerald-he.eu/classes/SpamErrorRate"/>
-    </Declaration>
-    <Declaration>
-        <DataProperty IRI="https://ontology.emerald-he.eu/classes/size"/>
-    </Declaration>
-    <Declaration>
-        <DataProperty IRI="https://ontology.emerald-he.eu/classes/privacyLevel"/>
-    </Declaration>
-    <Declaration>
-        <DataProperty IRI="https://ontology.emerald-he.eu/classes/poisonLevel"/>
-    </Declaration>
-    <Declaration>
-        <DataProperty IRI="https://ontology.emerald-he.eu/classes/errorCorrectionEnabled"/>
-    </Declaration>
-    <Declaration>
-        <DataProperty IRI="https://ontology.emerald-he.eu/classes/annualUpdateCompleted"/>
-    </Declaration>
-    <Declaration>
-        <DataProperty IRI="https://ontology.emerald-he.eu/classes/TwoQubitErrorRate"/>
-    </Declaration>
     <EquivalentClasses>
         <Class IRI="https://ontology.emerald-he.eu/classes/ResourceType"/>
         <ObjectOneOf>
@@ -1107,6 +1345,602 @@
             <NamedIndividual IRI="https://ontology.emerald-he.eu/classes/Specification"/>
         </ObjectOneOf>
     </EquivalentClasses>
+    <SubClassOf>
+        <Class IRI="#Agnostic"/>
+        <Class IRI="#OperatingSystemArchitecture"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Allocate"/>
+        <Class IRI="#MemoryOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#AndRule"/>
+        <Class IRI="#PolicyRule"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Authenticate"/>
+        <Class IRI="#AuthenticationOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Authenticate"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+            <Class IRI="https://ontology.emerald-he.eu/classes/Credential"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#AuthenticationOperation"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Operation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#AuthenticationOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="#linkedConcept"/>
+            <Class IRI="https://ontology.emerald-he.eu/classes/Authenticity"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#AuthorizeJwt"/>
+        <Class IRI="#AuthenticationOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#BlockStorageOperation"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Operation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#BlockStorageOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="#linkedConcept"/>
+            <Class IRI="https://ontology.emerald-he.eu/classes/BlockStorage"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Cipher"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Cipher"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="#blockSize"/>
+            <Datatype abbreviatedIRI="xsd:int"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Cipher"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="https://ontology.emerald-he.eu/classes/keySize"/>
+            <Datatype abbreviatedIRI="xsd:int"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Cipher"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="https://ontology.emerald-he.eu/classes/name"/>
+            <Datatype abbreviatedIRI="xsd:string"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#CipherOperation"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Operation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#CipherOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="#linkedConcept"/>
+            <Class IRI="#Cipher"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Configuration"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Data"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Configuration"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/hasMultiple"/>
+            <Class IRI="https://ontology.emerald-he.eu/classes/Operation"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ConfigurationDocument"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Document"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ConfigurationGroup"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Data"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ConfigurationGroup"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+            <Class IRI="#Configuration"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ConfigurationGroup"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/hasMultiple"/>
+            <Class IRI="#ConfigurationOption"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ConfigurationGroupSource"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Data"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ConfigurationOperation"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Operation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ConfigurationOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="#linkedConcept"/>
+            <Class IRI="#Configuration"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ConfigurationOption"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Data"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ConfigurationOption"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+            <Class IRI="#ConfigurationGroup"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ConfigurationOption"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+            <Class IRI="#Key"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ConfigurationOption"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+            <Class IRI="#Value"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ConfigurationOptionSource"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Data"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ConfigurationSource"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Data"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ConfigurationSource"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/hasMultiple"/>
+            <Class IRI="#ConfigurationGroupSource"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Context"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Data"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#CreateEncryptedDisk"/>
+        <Class IRI="#DiskEncryptionOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#CreateSecret"/>
+        <Class IRI="#SecretOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Darwin"/>
+        <Class IRI="#OperatingSystemArchitecture"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#DiskEncryption"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/AtRestEncryption"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#DiskEncryption"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/classes/target"/>
+            <Class IRI="https://ontology.emerald-he.eu/classes/BlockStorage"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#DiskEncryptionOperation"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Operation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#DiskEncryptionOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="#linkedConcept"/>
+            <Class IRI="#DiskEncryption"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#DynamicLoading"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#DynamicLoadingOperation"/>
+        <Class IRI="#MemoryOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Encryption"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Confidentiality"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Encryption"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/classes/basedOn"/>
+            <Class IRI="#Cipher"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Encryption"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+            <Class IRI="https://ontology.emerald-he.eu/classes/Secret"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#EncryptionOperation"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Operation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#EncryptionOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="#linkedConcept"/>
+            <Class IRI="#Encryption"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#EntryPoint"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#File"/>
+        <Class IRI="#FileLikeObject"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#FileHandle"/>
+        <Class IRI="#FileLikeObject"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#FileLikeObject"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Data"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#FileOperation"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Operation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#FileOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="#linkedConcept"/>
+            <Class IRI="#File"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#GetSecret"/>
+        <Class IRI="#SecretOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Http"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#HttpClient"/>
+        <Class IRI="#Http"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#HttpClient"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+            <Class IRI="https://ontology.emerald-he.eu/classes/Authenticity"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#HttpClient"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="#isTLS"/>
+            <Datatype abbreviatedIRI="xsd:boolean"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#HttpClientOperation"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Operation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#HttpClientOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="#linkedConcept"/>
+            <Class IRI="#HttpClient"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#HttpEndpointOperation"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Operation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#HttpRequestContext"/>
+        <Class IRI="#Http"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#IssueJwt"/>
+        <Class IRI="#AuthenticationOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#JwtAuthentication"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/JwtBasedAuthentication"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Key"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Data"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#LibraryEntryPoint"/>
+        <Class IRI="#LocalEntryPoint"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#LoadConfiguration"/>
+        <Class IRI="#ConfigurationOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#LocalEntryPoint"/>
+        <Class IRI="#EntryPoint"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#LocalEntryPoint"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/classes/target"/>
+            <Class IRI="#OperatingSystemArchitecture"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#LogDocument"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Document"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#LogGet"/>
+        <Class IRI="#LogOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#LogOperation"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Operation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#LogOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="#linkedConcept"/>
+            <Class IRI="https://ontology.emerald-he.eu/classes/Logging"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#LogWrite"/>
+        <Class IRI="#LogOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#LogWrite"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="#logLevel"/>
+            <Datatype abbreviatedIRI="xsd:string"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Main"/>
+        <Class IRI="#LocalEntryPoint"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Memory"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Resource"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Memory"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="#mode"/>
+            <Datatype abbreviatedIRI="xsd:string"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#MemoryOperation"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Operation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#MemoryOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="#linkedConcept"/>
+            <Class IRI="#Memory"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#OperatingSystemArchitecture"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/SoftwareResource"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#POSIX"/>
+        <Class IRI="#OperatingSystemArchitecture"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Policy"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Data"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Policy"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+            <Class IRI="#Context"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Policy"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/hasMultiple"/>
+            <Class IRI="#PolicyRule"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#PolicyRule"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Data"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Principal"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ProctectedAsset"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ProctectedAsset"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="#protects"/>
+            <Class IRI="https://ontology.emerald-he.eu/classes/Resource"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ProctectedAsset"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/hasMultiple"/>
+            <Class IRI="#Policy"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ProvideConfiguration"/>
+        <Class IRI="#ConfigurationOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ProvideConfiguration"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+            <Class IRI="#Configuration"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ProvideConfiguration"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+            <Class IRI="#ConfigurationSource"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ProvideConfigurationGroup"/>
+        <Class IRI="#ConfigurationOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ProvideConfigurationGroup"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+            <Class IRI="#ConfigurationGroup"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ProvideConfigurationGroup"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+            <Class IRI="#ConfigurationGroupSource"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ProvideConfigurationOption"/>
+        <Class IRI="#ConfigurationOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ProvideConfigurationOption"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+            <Class IRI="#ConfigurationOption"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ProvideConfigurationOption"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+            <Class IRI="#ConfigurationOptionSource"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ReadConfiguration"/>
+        <Class IRI="#ConfigurationOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ReadConfiguration"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="#linkedConcept"/>
+            <Class IRI="#ConfigurationGroup"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ReadConfigurationOption"/>
+        <Class IRI="#ConfigurationOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ReadConfigurationOption"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+            <Class IRI="#ConfigurationOption"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#RegisterConfigurationGroup"/>
+        <Class IRI="#ConfigurationOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#RegisterConfigurationGroup"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+            <Class IRI="#ConfigurationGroup"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#RegisterConfigurationOption"/>
+        <Class IRI="#ConfigurationOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#RegisterConfigurationOption"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+            <Class IRI="#ConfigurationOption"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#RemoteEntryPoint"/>
+        <Class IRI="#EntryPoint"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ReportDocument"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/GenericDocument"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#SecretOperation"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Operation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#SecretOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="#linkedConcept"/>
+            <Class IRI="https://ontology.emerald-he.eu/classes/Secret"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Token"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Data"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#UnlockEncryptedDisk"/>
+        <Class IRI="#DiskEncryptionOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#ValidateJwt"/>
+        <Class IRI="#AuthenticationOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Value"/>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Data"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Win32"/>
+        <Class IRI="#OperatingSystemArchitecture"/>
+    </SubClassOf>
     <SubClassOf>
         <Class IRI="https://ontology.emerald-he.eu/classes/ABAC"/>
         <Class IRI="https://ontology.emerald-he.eu/classes/Authorization"/>
@@ -1193,7 +2027,7 @@
     </SubClassOf>
     <SubClassOf>
         <Class IRI="https://ontology.emerald-he.eu/classes/AtRestEncryption"/>
-        <Class IRI="https://ontology.emerald-he.eu/classes/Confidentiality"/>
+        <Class IRI="#Encryption"/>
     </SubClassOf>
     <SubClassOf>
         <Class IRI="https://ontology.emerald-he.eu/classes/AtRestEncryption"/>
@@ -1355,6 +2189,13 @@
     </SubClassOf>
     <SubClassOf>
         <Class IRI="https://ontology.emerald-he.eu/classes/CipherSuite"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/hasMultiple"/>
+            <Class IRI="#Cipher"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="https://ontology.emerald-he.eu/classes/CipherSuite"/>
         <DataSomeValuesFrom>
             <DataProperty IRI="https://ontology.emerald-he.eu/classes/authenticationMechanism"/>
             <Datatype abbreviatedIRI="xsd:string"/>
@@ -1371,13 +2212,6 @@
         <Class IRI="https://ontology.emerald-he.eu/classes/CipherSuite"/>
         <DataSomeValuesFrom>
             <DataProperty IRI="https://ontology.emerald-he.eu/classes/macAlgorithm"/>
-            <Datatype abbreviatedIRI="xsd:string"/>
-        </DataSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="https://ontology.emerald-he.eu/classes/CipherSuite"/>
-        <DataSomeValuesFrom>
-            <DataProperty IRI="https://ontology.emerald-he.eu/classes/sessionCipher"/>
             <Datatype abbreviatedIRI="xsd:string"/>
         </DataSomeValuesFrom>
     </SubClassOf>
@@ -1627,6 +2461,13 @@
         <Class IRI="https://ontology.emerald-he.eu/classes/Operation"/>
     </SubClassOf>
     <SubClassOf>
+        <Class IRI="https://ontology.emerald-he.eu/classes/CryptographicOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="#linkedConcept"/>
+            <Class IRI="https://ontology.emerald-he.eu/classes/Confidentiality"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
         <Class IRI="https://ontology.emerald-he.eu/classes/CustomerKeyEncryption"/>
         <Class IRI="https://ontology.emerald-he.eu/classes/AtRestEncryption"/>
     </SubClassOf>
@@ -1734,7 +2575,14 @@
     </SubClassOf>
     <SubClassOf>
         <Class IRI="https://ontology.emerald-he.eu/classes/DecryptionOperation"/>
-        <Class IRI="https://ontology.emerald-he.eu/classes/CryptographicOperation"/>
+        <Class IRI="#CipherOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="https://ontology.emerald-he.eu/classes/DecryptionOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+            <Class IRI="https://ontology.emerald-he.eu/classes/Secret"/>
+        </ObjectSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
         <Class IRI="https://ontology.emerald-he.eu/classes/DecryptionOperation"/>
@@ -1803,7 +2651,14 @@
     </SubClassOf>
     <SubClassOf>
         <Class IRI="https://ontology.emerald-he.eu/classes/EncryptionOperation"/>
-        <Class IRI="https://ontology.emerald-he.eu/classes/CryptographicOperation"/>
+        <Class IRI="#CipherOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="https://ontology.emerald-he.eu/classes/EncryptionOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+            <Class IRI="https://ontology.emerald-he.eu/classes/Secret"/>
+        </ObjectSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
         <Class IRI="https://ontology.emerald-he.eu/classes/EncryptionOperation"/>
@@ -1941,13 +2796,27 @@
     </SubClassOf>
     <SubClassOf>
         <Class IRI="https://ontology.emerald-he.eu/classes/HttpEndpoint"/>
-        <Class IRI="https://ontology.emerald-he.eu/classes/Functionality"/>
+        <Class IRI="#RemoteEntryPoint"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="https://ontology.emerald-he.eu/classes/HttpEndpoint"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+            <Class IRI="#HttpRequestContext"/>
+        </ObjectSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
         <Class IRI="https://ontology.emerald-he.eu/classes/HttpEndpoint"/>
         <ObjectSomeValuesFrom>
             <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/offers"/>
             <Class IRI="https://ontology.emerald-he.eu/classes/Authenticity"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="https://ontology.emerald-he.eu/classes/HttpEndpoint"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/offers"/>
+            <Class IRI="https://ontology.emerald-he.eu/classes/Authorization"/>
         </ObjectSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
@@ -1994,7 +2863,7 @@
     </SubClassOf>
     <SubClassOf>
         <Class IRI="https://ontology.emerald-he.eu/classes/HttpRequest"/>
-        <Class IRI="https://ontology.emerald-he.eu/classes/Operation"/>
+        <Class IRI="#HttpClientOperation"/>
     </SubClassOf>
     <SubClassOf>
         <Class IRI="https://ontology.emerald-he.eu/classes/HttpRequest"/>
@@ -2019,7 +2888,7 @@
     </SubClassOf>
     <SubClassOf>
         <Class IRI="https://ontology.emerald-he.eu/classes/HttpRequestHandler"/>
-        <Class IRI="https://ontology.emerald-he.eu/classes/Functionality"/>
+        <Class IRI="#Http"/>
     </SubClassOf>
     <SubClassOf>
         <Class IRI="https://ontology.emerald-he.eu/classes/HttpRequestHandler"/>
@@ -2158,6 +3027,13 @@
     <SubClassOf>
         <Class IRI="https://ontology.emerald-he.eu/classes/JwtBasedAuthentication"/>
         <Class IRI="https://ontology.emerald-he.eu/classes/Authenticity"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="https://ontology.emerald-he.eu/classes/JwtBasedAuthentication"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+            <Class IRI="#Token"/>
+        </ObjectSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
         <Class IRI="https://ontology.emerald-he.eu/classes/JwtBasedAuthentication"/>
@@ -2338,6 +3214,13 @@
         <DataSomeValuesFrom>
             <DataProperty IRI="https://ontology.emerald-he.eu/classes/monitoringEnabled"/>
             <Datatype abbreviatedIRI="xsd:boolean"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Logging"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="https://ontology.emerald-he.eu/classes/name"/>
+            <Datatype abbreviatedIRI="xsd:string"/>
         </DataSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
@@ -2889,6 +3772,20 @@
         <Class IRI="https://ontology.emerald-he.eu/classes/Credential"/>
     </SubClassOf>
     <SubClassOf>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Secret"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="https://ontology.emerald-he.eu/classes/basedOn"/>
+            <Class IRI="#Cipher"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="https://ontology.emerald-he.eu/classes/Secret"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="https://ontology.emerald-he.eu/classes/keySize"/>
+            <Datatype abbreviatedIRI="xsd:int"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
         <Class IRI="https://ontology.emerald-he.eu/classes/SecurityAdvisoryDocument"/>
         <Class IRI="https://ontology.emerald-he.eu/classes/Document"/>
     </SubClassOf>
@@ -3079,7 +3976,7 @@
     </SubClassOf>
     <SubClassOf>
         <Class IRI="https://ontology.emerald-he.eu/classes/TransportEncryption"/>
-        <Class IRI="https://ontology.emerald-he.eu/classes/Confidentiality"/>
+        <Class IRI="#Encryption"/>
     </SubClassOf>
     <SubClassOf>
         <Class IRI="https://ontology.emerald-he.eu/classes/TransportEncryption"/>
@@ -3555,6 +4452,14 @@ ips += loadBalancerIP
 name = metadata.name</Literal>
     </DataPropertyAssertion>
     <SubObjectPropertyOf>
+        <ObjectProperty IRI="#hasMultipleSet"/>
+        <ObjectProperty IRI="https://ontology.emerald-he.eu/properties/has"/>
+    </SubObjectPropertyOf>
+    <SubObjectPropertyOf>
+        <ObjectProperty IRI="#protects"/>
+        <ObjectProperty abbreviatedIRI="owl:topObjectProperty"/>
+    </SubObjectPropertyOf>
+    <SubObjectPropertyOf>
         <ObjectProperty IRI="https://ontology.emerald-he.eu/classes/usedBy"/>
         <ObjectProperty abbreviatedIRI="owl:topObjectProperty"/>
     </SubObjectPropertyOf>
@@ -3598,6 +4503,22 @@ name = metadata.name</Literal>
         <ObjectProperty IRI="https://ontology.emerald-he.eu/classes/hasType"/>
         <Class IRI="https://ontology.emerald-he.eu/classes/ResourceType"/>
     </ObjectPropertyRange>
+    <SubDataPropertyOf>
+        <DataProperty IRI="#blockSize"/>
+        <DataProperty abbreviatedIRI="owl:topDataProperty"/>
+    </SubDataPropertyOf>
+    <SubDataPropertyOf>
+        <DataProperty IRI="#isTLS"/>
+        <DataProperty abbreviatedIRI="owl:topDataProperty"/>
+    </SubDataPropertyOf>
+    <SubDataPropertyOf>
+        <DataProperty IRI="#logLevel"/>
+        <DataProperty abbreviatedIRI="owl:topDataProperty"/>
+    </SubDataPropertyOf>
+    <SubDataPropertyOf>
+        <DataProperty IRI="https://ontology.emerald-he.eu/classes/keySize"/>
+        <DataProperty abbreviatedIRI="owl:topDataProperty"/>
+    </SubDataPropertyOf>
     <SubDataPropertyOf>
         <DataProperty IRI="https://ontology.emerald-he.eu/properties/algorithm"/>
         <DataProperty abbreviatedIRI="owl:topDataProperty"/>
@@ -3662,6 +4583,646 @@ name = metadata.name</Literal>
         <DataProperty IRI="https://ontology.emerald-he.eu/properties/enabled"/>
         <Datatype abbreviatedIRI="xsd:boolean"/>
     </DataPropertyRange>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#Agnostic</IRI>
+        <Literal>Represents an agnostic architecture, which is not tied to a specific operating system.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#Agnostic</IRI>
+        <Literal>Agnostic</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#Allocate</IRI>
+        <Literal>Allocate</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#AndRule</IRI>
+        <Literal>Represents a rule that combines two other rules using a logical AND operation. This means that both rules must be satisfied for the combined rule to be satisfied.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#AndRule</IRI>
+        <Literal>AndRule</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#Authenticate</IRI>
+        <Literal>Represents an authentication operation.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#Authenticate</IRI>
+        <Literal>Authenticate</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#AuthenticationOperation</IRI>
+        <Literal>Abstract base class for all authentication operations.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#AuthenticationOperation</IRI>
+        <Literal>AuthenticationOperation</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#AuthorizeJwt</IRI>
+        <Literal>Represents an authorization operation based on JWT tokens.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#AuthorizeJwt</IRI>
+        <Literal>AuthorizeJwt</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#BlockStorageOperation</IRI>
+        <Literal>BlockStorageOperation</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#Cipher</IRI>
+        <Literal>Represents a cipher suite. E.g. `AES-XTS-plain64`.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#Cipher</IRI>
+        <Literal>Cipher</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#CipherOperation</IRI>
+        <Literal>CipherOperation</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#Configuration</IRI>
+        <Literal>Represents the abstract concept of a &quot;configuration&quot;. This is a common pattern in many programming languages, where a data structure in code represents an aggregation of configuration values. For example, in Python, the [`configparser`](https://docs.python.org/3/library/configparser.html) module is used to read INI files, and the config values are represented as a dictionary-like object. Often, the configuration is loaded from multiple sources, such as INI files, environment variables, and command-line arguments.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#Configuration</IRI>
+        <Literal>Configuration</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#ConfigurationGroup</IRI>
+        <Literal>Represents a group of configuration values within one [conf]. Depending on the type of configuration data structure, there might only be one group (e.g., a &quot;default&quot; one), or there might be several groups. For example, when loading a config from an INI file, each section would be mapped to a [ConfigurationGroup], and each key-value pair would be mapped to an [ConfigurationOption] within this group.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#ConfigurationGroup</IRI>
+        <Literal>ConfigurationGroup</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#ConfigurationGroupSource</IRI>
+        <Literal>Represents a possible group source for a configuration group. For example, when loading an INI file with our INI file frontend, each section is presented as a [RecordDeclaration]. This record declaration would be the source of the configuration group.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#ConfigurationGroupSource</IRI>
+        <Literal>ConfigurationGroupSource</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#ConfigurationOperation</IRI>
+        <Literal>A common abstract class for configuration operations, such as reading options or a whole file.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#ConfigurationOperation</IRI>
+        <Literal>ConfigurationOperation</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#ConfigurationOption</IRI>
+        <Literal>Represents a configuration option within one [group]. Usually there is one option for each entry in a configuration data structure.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#ConfigurationOption</IRI>
+        <Literal>ConfigurationOption</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#ConfigurationOptionSource</IRI>
+        <Literal>Represents a possible option source for a configuration option. For example, when loading an INI file with our INI file frontend, each key-value pair is presented as a [FieldDeclaration]. This field declaration would be the source to the configuration option.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#ConfigurationOptionSource</IRI>
+        <Literal>ConfigurationOptionSource</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#ConfigurationSource</IRI>
+        <Literal>Represents a possible source for a configuration. For example, when loading an INI file with our INI file frontend, the whole file would be represented as a [TranslationUnitDeclaration]. This translation unit declaration would be the source of the configuration.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#ConfigurationSource</IRI>
+        <Literal>ConfigurationSource</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#Context</IRI>
+        <Literal>Represents a context in which a policy is applied. Typically, a context contains information about a user or some other form of identity (e.g. a [Principal]).</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#Context</IRI>
+        <Literal>Context</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#CreateEncryptedDisk</IRI>
+        <Literal>CreateEncryptedDisk</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#CreateSecret</IRI>
+        <Literal>CreateSecret</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#Darwin</IRI>
+        <Literal>Represents a Darwin architecture, commonly found on macOS systems. macOS is a certified. [UNIX](https://www.opengroup.org/openbrand/register/apple.htm) and is (mostly) POSIX compatible.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#Darwin</IRI>
+        <Literal>Darwin</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#DiskEncryptionOperation</IRI>
+        <Literal>DiskEncryptionOperation</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#DynamicLoading</IRI>
+        <Literal>Represents an entity that loads a piece of code dynamically during runtime. Examples include a class loader in Java, loading shared library code in C++. Interpreters, such as Python can also load code dynamically during runtime.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#DynamicLoading</IRI>
+        <Literal>DynamicLoading</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#Encryption</IRI>
+        <Literal>This represents an encryption.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#Encryption</IRI>
+        <Literal>Encryption</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#EncryptionOperation</IRI>
+        <Literal>EncryptionOperation</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#EntryPoint</IRI>
+        <Literal>Represents an entry point into the execution of the program. This can be a &quot;local&quot; entry point, such as a main function, a library initialization function or a &quot;remote&quot; entry point, such as a network endpoint.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#EntryPoint</IRI>
+        <Literal>EntryPoint</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#FileHandle</IRI>
+        <Literal>This class represents a file handle.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#FileHandle</IRI>
+        <Literal>FileHandle</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#FileLikeObject</IRI>
+        <Literal>This is the base class for all file-like objects. It provides the common properties and methods that are shared by all file-like objects.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#FileLikeObject</IRI>
+        <Literal>FileLikeObject</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#FileOperation</IRI>
+        <Literal>FileOperation</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#GetSecret</IRI>
+        <Literal>An operation that retrieves a secret from a (remote) location. This can be a local keystore, a remote key server or a hardware device such as a TPM or HSM.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#GetSecret</IRI>
+        <Literal>GetSecret</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#Http</IRI>
+        <Literal>Abstract class for all HTTP related functionalities.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#Http</IRI>
+        <Literal>Http</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#HttpClient</IRI>
+        <Literal>HTTP Client.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#HttpClient</IRI>
+        <Literal>HttpClient</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#HttpClientOperation</IRI>
+        <Literal>Base class for operations on an [HttpClient].</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#HttpClientOperation</IRI>
+        <Literal>HttpClientOperation</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#HttpEndpointOperation</IRI>
+        <Literal>Base class for operations on an [HttpEndpoint].</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#HttpEndpointOperation</IRI>
+        <Literal>HttpEndpointOperation</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#HttpRequestContext</IRI>
+        <Literal>Represents an abstract concept of request context. This usually holds the contextual information of a specific HTTP request.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#HttpRequestContext</IRI>
+        <Literal>HttpRequestContext</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#IssueJwt</IRI>
+        <Literal>Represents an operation to issue a new JWT token.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#IssueJwt</IRI>
+        <Literal>IssueJwt</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#JwtAuthentication</IRI>
+        <Literal>Represents a JWT-based authentication, which extends the [TokenBasedAuth].</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#JwtAuthentication</IRI>
+        <Literal>JwtAuthentication</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#Key</IRI>
+        <Literal>The node that represents the &quot;key&quot; of this option. For example, in an INI file, this would be the [FieldDeclaration] node that represents the key.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#Key</IRI>
+        <Literal>SelectorKey</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#LibraryEntryPoint</IRI>
+        <Literal>Represents an entry point that is triggered if the code is loaded as a (dynamic) library.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#LibraryEntryPoint</IRI>
+        <Literal>LibraryEntryPoint</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#LoadConfiguration</IRI>
+        <Literal>Represents an operation to load a configuration from a source, such as a file.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#LoadConfiguration</IRI>
+        <Literal>LoadConfiguration</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#LocalEntryPoint</IRI>
+        <Literal>Represents a local entry point into the execution of the program, such as a main function.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#LocalEntryPoint</IRI>
+        <Literal>LocalEntryPoint</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#LogGet</IRI>
+        <Literal>A log get operation e.g. `logging.getLogger(&quot;...&quot;)`.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#LogGet</IRI>
+        <Literal>LogGet</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#LogOperation</IRI>
+        <Literal>LogOperation</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#LogWrite</IRI>
+        <Literal>A log write operation e.g. `loggint.warn(&quot;...&quot;)`.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#LogWrite</IRI>
+        <Literal>LogWrite</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#Main</IRI>
+        <Literal>The main function of a program.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#Main</IRI>
+        <Literal>Main</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#Memory</IRI>
+        <Literal>A generic concept to describe memory operations with a program. This includes allocation and de-allocation of memory as well as copying memory regions.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#Memory</IRI>
+        <Literal>Memory</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#MemoryOperation</IRI>
+        <Literal>A common abstract class for memory operations.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#MemoryOperation</IRI>
+        <Literal>MemoryOperation</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#OperatingSystemArchitecture</IRI>
+        <Literal>Represents an architecture of an operating system.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#OperatingSystemArchitecture</IRI>
+        <Literal>OperatingSystemArchitecture</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#POSIX</IRI>
+        <Literal>Represents a POSIX architecture, commonly found on Linux systems.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#POSIX</IRI>
+        <Literal>POSIX</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#Policy</IRI>
+        <Literal>Represents a policy that can be applied to a resource or a set of resources. Policies can contain rules and operations that define how access to the resource is controlled.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#Policy</IRI>
+        <Literal>Policy</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#PolicyRule</IRI>
+        <Literal>Represents a rule that is part of a policy. This can be used to define conditions that must be met for the policy to be enforced.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#PolicyRule</IRI>
+        <Literal>PolicyRule</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#Principal</IRI>
+        <Literal>Represents a principal that is allowed to access a resource. This can for example be a (structure representing) a user or a group of users.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#Principal</IRI>
+        <Literal>Principal</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#ProctectedAsset</IRI>
+        <Literal>Represents an asset that is protected by a policy. This can be an in-memory data structure, a file, a database, or any other resource that requires access control.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#ProctectedAsset</IRI>
+        <Literal>ProtectedAsset</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#ProvideConfiguration</IRI>
+        <Literal>Represents an operation to provide a [Configuration], e.g., in the form of a configuration file (through a [ConfigurationSource]). When the configuration file is loaded, a [LoadConfiguration] operation would be found in the code component (matching the configuration file&apos;s name in [LoadConfiguration.fileExpression]) and the [ProvideConfiguration] operation would be found in the configuration component. But also other sources of configuration could be represented by a [ProvideConfiguration] operation, such as environment variables or command-line arguments. Note: The [ProvideConfiguration] operation is part of the [ConfigurationSource.ops] and not of the [Configuration.ops] as it&apos;s an operation of the source, not the target.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#ProvideConfiguration</IRI>
+        <Literal>ProvideConfiguration</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#ProvideConfigurationGroup</IRI>
+        <Literal>Represents an operation to provide a [ConfigurationGroup]. It connects a [ConfigurationGroupSource] with a [ConfigurationGroup].</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#ProvideConfigurationGroup</IRI>
+        <Literal>ProvideConfigurationGroup</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#ProvideConfigurationOption</IRI>
+        <Literal>Represents an operation to provide a [ConfigurationOption]. It connects a [ConfigurationOptionSource] with a [ConfigurationOption].</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#ProvideConfigurationOption</IRI>
+        <Literal>ProvideConfigurationOption</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#ReadConfiguration</IRI>
+        <Literal>Represents an operation to read a specific configuration group. Often this is done with a member access or a subscript operation on the configuration object, such as`conf.GROUP` or`conf[&quot;GROUP&quot;]`.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#ReadConfiguration</IRI>
+        <Literal>ReadConfigurationGroup</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#ReadConfigurationOption</IRI>
+        <Literal>Represents an operation to read a specific configuration option. Often this is done with a member access such as `group.option` or a subscript operation such as `group[&quot;option&quot;]`.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#ReadConfigurationOption</IRI>
+        <Literal>ReadConfigurationOption</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#RegisterConfigurationGroup</IRI>
+        <Literal>Represents an operation to register a new [ConfigurationGroup]. This is often done with a call, such as `conf.registerGroup(&quot;group&quot;)`. This might not be necessary for all configuration frameworks, some might allow to directly read the group (via [ReadConfigurationGroup]) without registering it first, or it is done implicitly. When code and configuration is interacting, we expect that the configuration file (such as an INI file) contains the [ConfigurationGroup] node and the code contains the [RegisterConfigurationGroup] and [ReadConfigurationGroup] nodes.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#RegisterConfigurationGroup</IRI>
+        <Literal>RegisterConfigurationGroup</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#RegisterConfigurationOption</IRI>
+        <Literal>Represents an operation to register a new [ConfigurationOption]. This is often done with a call, such as `conf.registerOption(&quot;option&quot;, &quot;defaultValue&quot;)`. This might not be necessary for all configuration frameworks, some might allow to directly read the group (via  [RegisterConfigurationOption]) without registering it first, or it is done implicitly. When code and configuration is interacting, we expect that the configuration file (such as an INI file) contains the [ConfigurationOption] node and the code contains the [RegisterConfigurationOption] and [ReadConfigurationOption] nodes.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#RegisterConfigurationOption</IRI>
+        <Literal>RegisterConfigurationOption</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#RemoteEntryPoint</IRI>
+        <Literal>Represents an entry point that can be triggered remotely, such as a network endpoint.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#RemoteEntryPoint</IRI>
+        <Literal>RemoteEntryPoint</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#SecretOperation</IRI>
+        <Literal>SecretOperation</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#Token</IRI>
+        <Literal>A Token used for TokenBasedAuthentication.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#Token</IRI>
+        <Literal>Token</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#UnlockEncryptedDisk</IRI>
+        <Literal>UnlockEncryptedDisk</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#ValidateJwt</IRI>
+        <Literal>Represents an operation to check the validity of a JWT token.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#ValidateJwt</IRI>
+        <Literal>ValidateJwt</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#Value</IRI>
+        <Literal>The node that represents the &quot;value&quot; of this option. For example, in an INI file, this would be the [FieldDeclaration.initializer] node that represents the value.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#Value</IRI>
+        <Literal>Value</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#Win32</IRI>
+        <Literal>Represents a Win32 architecture, commonly found on Windows systems.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#Win32</IRI>
+        <Literal>Win32</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#blockSize</IRI>
+        <Literal>Block size of a cipher.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#blockSize</IRI>
+        <Literal>blockSize</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#hasMultipleSet</IRI>
+        <Literal>hasMultipleSet</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#linkedConcept</IRI>
+        <Literal>Link to a concept of the CPG</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#linkedConcept</IRI>
+        <Literal>linkedConcept</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#mode</IRI>
+        <Literal>Describes the mode of a certain class in the ontology.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#mode</IRI>
+        <Literal>mode</Literal>
+    </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <AbbreviatedIRI>xsd:de.fraunhofer.aisec.cpg.graph.Node</AbbreviatedIRI>
@@ -4133,9 +5694,19 @@ name = metadata.name</Literal>
         <Literal xml:lang="english">Job</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>https://ontology.emerald-he.eu/classes/JwtBasedAuthentication</IRI>
+        <Literal>Represents a token-based authentication.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>https://ontology.emerald-he.eu/classes/JwtBasedAuthentication</IRI>
         <Literal>TokenBasedAuthentication</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>https://ontology.emerald-he.eu/classes/Key</IRI>
+        <Literal>Key</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
@@ -4386,6 +5957,11 @@ name = metadata.name</Literal>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>https://ontology.emerald-he.eu/classes/SchemaValidation</IRI>
         <Literal>SchemaValidation</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>https://ontology.emerald-he.eu/classes/Secret</IRI>
+        <Literal>Secret</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
@@ -4681,6 +6257,11 @@ name = metadata.name</Literal>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>https://ontology.emerald-he.eu/classes/keyExchangeAlgorithm</IRI>
         <Literal>keyExchangeAlgorithm</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>https://ontology.emerald-he.eu/classes/keySize</IRI>
+        <Literal>Key size refers to the length of a key used in an enryption.</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
