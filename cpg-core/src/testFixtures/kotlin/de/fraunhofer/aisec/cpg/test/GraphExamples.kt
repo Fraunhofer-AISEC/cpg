@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,17 +23,84 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg
+package de.fraunhofer.aisec.cpg.test
 
+import de.fraunhofer.aisec.cpg.InferenceConfiguration
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.ClassTestLanguage
 import de.fraunhofer.aisec.cpg.frontends.StructTestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.autoType
-import de.fraunhofer.aisec.cpg.graph.builder.*
+import de.fraunhofer.aisec.cpg.graph.builder.assign
+import de.fraunhofer.aisec.cpg.graph.builder.assignAsExpr
+import de.fraunhofer.aisec.cpg.graph.builder.body
+import de.fraunhofer.aisec.cpg.graph.builder.breakStmt
+import de.fraunhofer.aisec.cpg.graph.builder.call
+import de.fraunhofer.aisec.cpg.graph.builder.case
+import de.fraunhofer.aisec.cpg.graph.builder.compExpr
+import de.fraunhofer.aisec.cpg.graph.builder.condition
+import de.fraunhofer.aisec.cpg.graph.builder.conditional
+import de.fraunhofer.aisec.cpg.graph.builder.construct
+import de.fraunhofer.aisec.cpg.graph.builder.constructor
+import de.fraunhofer.aisec.cpg.graph.builder.continueStmt
+import de.fraunhofer.aisec.cpg.graph.builder.dec
+import de.fraunhofer.aisec.cpg.graph.builder.declare
+import de.fraunhofer.aisec.cpg.graph.builder.declareVar
+import de.fraunhofer.aisec.cpg.graph.builder.default
+import de.fraunhofer.aisec.cpg.graph.builder.doCondition
+import de.fraunhofer.aisec.cpg.graph.builder.doStmt
+import de.fraunhofer.aisec.cpg.graph.builder.elseIf
+import de.fraunhofer.aisec.cpg.graph.builder.elseStmt
+import de.fraunhofer.aisec.cpg.graph.builder.eq
+import de.fraunhofer.aisec.cpg.graph.builder.field
+import de.fraunhofer.aisec.cpg.graph.builder.forCondition
+import de.fraunhofer.aisec.cpg.graph.builder.forEachStmt
+import de.fraunhofer.aisec.cpg.graph.builder.forInitializer
+import de.fraunhofer.aisec.cpg.graph.builder.forIteration
+import de.fraunhofer.aisec.cpg.graph.builder.forStmt
+import de.fraunhofer.aisec.cpg.graph.builder.function
+import de.fraunhofer.aisec.cpg.graph.builder.gt
+import de.fraunhofer.aisec.cpg.graph.builder.ifStmt
+import de.fraunhofer.aisec.cpg.graph.builder.inc
+import de.fraunhofer.aisec.cpg.graph.builder.iterable
+import de.fraunhofer.aisec.cpg.graph.builder.label
+import de.fraunhofer.aisec.cpg.graph.builder.line
+import de.fraunhofer.aisec.cpg.graph.builder.listComp
+import de.fraunhofer.aisec.cpg.graph.builder.literal
+import de.fraunhofer.aisec.cpg.graph.builder.loopBody
+import de.fraunhofer.aisec.cpg.graph.builder.loopElseStmt
+import de.fraunhofer.aisec.cpg.graph.builder.lt
+import de.fraunhofer.aisec.cpg.graph.builder.member
+import de.fraunhofer.aisec.cpg.graph.builder.memberCall
+import de.fraunhofer.aisec.cpg.graph.builder.method
+import de.fraunhofer.aisec.cpg.graph.builder.minus
+import de.fraunhofer.aisec.cpg.graph.builder.namespace
+import de.fraunhofer.aisec.cpg.graph.builder.new
+import de.fraunhofer.aisec.cpg.graph.builder.param
+import de.fraunhofer.aisec.cpg.graph.builder.plus
+import de.fraunhofer.aisec.cpg.graph.builder.plusAssign
+import de.fraunhofer.aisec.cpg.graph.builder.receiver
+import de.fraunhofer.aisec.cpg.graph.builder.record
+import de.fraunhofer.aisec.cpg.graph.builder.ref
+import de.fraunhofer.aisec.cpg.graph.builder.reference
+import de.fraunhofer.aisec.cpg.graph.builder.rem
+import de.fraunhofer.aisec.cpg.graph.builder.returnStmt
+import de.fraunhofer.aisec.cpg.graph.builder.switchBody
+import de.fraunhofer.aisec.cpg.graph.builder.switchStmt
+import de.fraunhofer.aisec.cpg.graph.builder.t
+import de.fraunhofer.aisec.cpg.graph.builder.thenStmt
+import de.fraunhofer.aisec.cpg.graph.builder.`throw`
+import de.fraunhofer.aisec.cpg.graph.builder.times
+import de.fraunhofer.aisec.cpg.graph.builder.translationResult
+import de.fraunhofer.aisec.cpg.graph.builder.translationUnit
+import de.fraunhofer.aisec.cpg.graph.builder.unaryMinus
+import de.fraunhofer.aisec.cpg.graph.builder.variable
+import de.fraunhofer.aisec.cpg.graph.builder.whileCondition
+import de.fraunhofer.aisec.cpg.graph.builder.whileStmt
 import de.fraunhofer.aisec.cpg.graph.newInitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin.POINTER
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
@@ -42,7 +109,7 @@ class GraphExamples {
     companion object {
         fun getInitializerListExprDFG(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -69,7 +136,7 @@ class GraphExamples {
 
         fun getWhileWithElseAndBreak(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -112,7 +179,7 @@ class GraphExamples {
 
         fun getDoWithElseAndBreak(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -155,7 +222,7 @@ class GraphExamples {
 
         fun getForWithElseAndBreak(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -206,7 +273,7 @@ class GraphExamples {
 
         fun getForEachWithElseAndBreak(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -251,7 +318,7 @@ class GraphExamples {
 
         fun getNestedComprehensionExpressions(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -285,11 +352,11 @@ class GraphExamples {
 
         fun getInferenceRecordPtr(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<StructTestLanguage>()
                     .inferenceConfiguration(
-                        InferenceConfiguration.builder().inferRecords(true).build()
+                        InferenceConfiguration.Companion.builder().inferRecords(true).build()
                     )
                     .build()
         ) =
@@ -299,7 +366,12 @@ class GraphExamples {
                         // The main method
                         function("main", t("int")) {
                             body {
-                                declare { variable("node", t("T").reference(POINTER)) }
+                                declare {
+                                    variable(
+                                        "node",
+                                        t("T").reference(PointerType.PointerOrigin.POINTER),
+                                    )
+                                }
                                 member("value", ref("node"), "->") assign literal(42, t("int"))
                                 member("next", ref("node"), "->") assign ref("node")
                                 memberCall(
@@ -315,11 +387,11 @@ class GraphExamples {
 
         fun getInferenceRecord(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<StructTestLanguage>()
                     .inferenceConfiguration(
-                        InferenceConfiguration.builder().inferRecords(true).build()
+                        InferenceConfiguration.Companion.builder().inferRecords(true).build()
                     )
                     .build()
         ) =
@@ -341,11 +413,11 @@ class GraphExamples {
 
         fun getInferenceBinaryOperatorReturnType(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<StructTestLanguage>()
                     .inferenceConfiguration(
-                        InferenceConfiguration.builder()
+                        InferenceConfiguration.Companion.builder()
                             .inferRecords(true)
                             .inferReturnTypes(true)
                             .build()
@@ -369,11 +441,11 @@ class GraphExamples {
 
         fun getInferenceTupleReturnType(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<StructTestLanguage>()
                     .inferenceConfiguration(
-                        InferenceConfiguration.builder()
+                        InferenceConfiguration.Companion.builder()
                             .inferRecords(true)
                             .inferReturnTypes(true)
                             .build()
@@ -392,11 +464,11 @@ class GraphExamples {
 
         fun getInferenceUnaryOperatorReturnType(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<StructTestLanguage>()
                     .inferenceConfiguration(
-                        InferenceConfiguration.builder()
+                        InferenceConfiguration.Companion.builder()
                             .inferRecords(true)
                             .inferReturnTypes(true)
                             .build()
@@ -413,11 +485,11 @@ class GraphExamples {
 
         fun getInferenceNestedNamespace(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<ClassTestLanguage>()
                     .inferenceConfiguration(
-                        InferenceConfiguration.builder()
+                        InferenceConfiguration.Companion.builder()
                             .inferRecords(true)
                             .inferNamespaces(true)
                             .build()
@@ -441,7 +513,7 @@ class GraphExamples {
 
         fun getVariables(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -492,7 +564,7 @@ class GraphExamples {
 
         fun getUnaryOperator(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -514,7 +586,7 @@ class GraphExamples {
 
         fun getCompoundOperator(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -526,7 +598,7 @@ class GraphExamples {
                         function("somefunc") {
                             body {
                                 declare { variable("i", t("int")) { literal(0, t("int")) } }
-                                ref("i") += literal(0, t("int"))
+                                ref("i") plusAssign literal(0, t("int"))
                                 returnStmt { isImplicit = true }
                             }
                         }
@@ -536,7 +608,7 @@ class GraphExamples {
 
         fun getConditionalExpression(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -612,7 +684,7 @@ class GraphExamples {
 
         fun getBasicSlice(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -698,7 +770,7 @@ class GraphExamples {
 
         fun getControlFlowSensitiveDFGIfMerge(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -770,7 +842,7 @@ class GraphExamples {
 
         fun getControlFlowSesitiveDFGSwitch(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -844,7 +916,7 @@ class GraphExamples {
 
         fun getControlFlowSensitiveDFGIfNoMerge(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -882,7 +954,7 @@ class GraphExamples {
 
         fun getLabeledBreakContinueLoopDFG(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -963,7 +1035,7 @@ class GraphExamples {
 
         fun getLoopingDFG(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -1014,7 +1086,7 @@ class GraphExamples {
 
         fun getDelayedAssignmentAfterRHS(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -1040,7 +1112,7 @@ class GraphExamples {
 
         fun getReturnTest(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -1086,7 +1158,7 @@ class GraphExamples {
 
         fun getVisitorTest(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -1132,7 +1204,7 @@ class GraphExamples {
 
         fun getDataflowClass(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .useParallelPasses(true)
                     .registerLanguage<TestLanguage>()
@@ -1196,7 +1268,7 @@ class GraphExamples {
 
         fun getShortcutClass(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -1312,7 +1384,7 @@ class GraphExamples {
          */
         fun getCombinedVariableAndCallTest(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -1370,7 +1442,7 @@ class GraphExamples {
          */
         fun getSimpleFieldDataflow(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -1441,7 +1513,7 @@ class GraphExamples {
          */
         fun getNestedFieldDataflow(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
@@ -1479,7 +1551,7 @@ class GraphExamples {
 
         fun prepareThrowDFGTest(
             config: TranslationConfiguration =
-                TranslationConfiguration.builder()
+                TranslationConfiguration.Companion.builder()
                     .defaultPasses()
                     .registerLanguage<TestLanguage>()
                     .build()
