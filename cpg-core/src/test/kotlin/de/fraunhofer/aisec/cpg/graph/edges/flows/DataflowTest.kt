@@ -25,12 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edges.flows
 
-import de.fraunhofer.aisec.cpg.GraphExamples.Companion.prepareThrowDFGTest
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.ThrowExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.test.GraphExamples.Companion.prepareThrowDFGTest
 import kotlin.collections.firstOrNull
 import kotlin.test.Test
 import kotlin.test.assertContains
