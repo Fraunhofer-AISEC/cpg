@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.analysis.abstracteval
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.helpers.LatticeElement
 import de.fraunhofer.aisec.cpg.helpers.State
+import kotlin.math.pow
 
 /**
  * The [LatticeInterval] class implements the functionality of intervals that is needed for the
@@ -188,6 +189,39 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
                 }
             }
             else -> false
+        }
+    }
+
+    infix fun shl(other: LatticeInterval): LatticeInterval {
+        if (this is Bounded && other is Bounded) {
+            val thisLower = this.lower
+            val otherLower = other.lower
+            val thisUpper = this.upper
+            val otherUpper = other.upper
+            if (
+                thisLower is Bound.Value &&
+                    thisUpper is Bound.Value &&
+                    otherLower is Bound.Value &&
+                    otherUpper is Bound.Value
+            ) {
+                // Shift left by the lower bound of the right operand
+                if (otherLower.value < 0) {
+                    return TOP // Undefined behavior for negative shifts
+                } else {
+                    val min =
+                        if (thisLower.value < 0) {
+                            return TOP // Undefined behavior for negative shifts
+                        } else {
+                            2.toDouble().pow(otherLower.value.toDouble()).toLong() * thisLower.value
+                        }
+                    // upper value is always positive, so we can safely multiply
+                    val max =
+                        2.toDouble().pow(otherUpper.value.toDouble()).toLong() * thisUpper.value
+                    return Bounded(min, max)
+                }
+            } else return TOP
+        } else {
+            return TOP // Cannot determine bounds
         }
     }
 
