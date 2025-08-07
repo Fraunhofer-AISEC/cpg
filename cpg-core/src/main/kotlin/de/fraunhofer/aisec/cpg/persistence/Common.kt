@@ -387,8 +387,8 @@ fun List<Node>.collectRelationships(): List<CpgRelationship> {
                 relationships +=
                     value.map { edge ->
                         mapOf(
-                            "startId" to edge.start.id.toString(),
-                            "endId" to edge.end.id.toString(),
+                            "startId" to edge.start.legacyId,
+                            "endId" to edge.end.legacyId,
                             "type" to entry.key,
                         ) + edge.properties()
                     }
@@ -396,16 +396,16 @@ fun List<Node>.collectRelationships(): List<CpgRelationship> {
                 relationships +=
                     value.filterIsInstance<Node>().map { end ->
                         mapOf(
-                            "startId" to node.id.toString(),
-                            "endId" to end.id.toString(),
+                            "startId" to node.legacyId,
+                            "endId" to end.legacyId,
                             "type" to entry.key,
                         )
                     }
             } else if (value is Node) {
                 relationships +=
                     mapOf(
-                        "startId" to node.id.toString(),
-                        "endId" to value.id.toString(),
+                        "startId" to node.legacyId,
+                        "endId" to value.legacyId,
                         "type" to entry.key,
                     )
             }
