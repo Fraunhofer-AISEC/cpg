@@ -32,9 +32,14 @@ import de.fraunhofer.aisec.cpg.graph.Persistable
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import java.io.File
+import org.slf4j.LoggerFactory
 
+internal val log = LoggerFactory.getLogger("Persistence")
+
+/** Serialized cpg [Node] to be exported with jackson */
 data class JsonNode(val id: String, val labels: Set<String>, val properties: Map<String, Any?>)
 
+/** Serialized cpg Relation to be exported with jackson */
 data class JsonEdge(
     val id: Long,
     val type: String,
@@ -43,6 +48,7 @@ data class JsonEdge(
     val properties: Map<String, Any?>,
 )
 
+/** Container to hold serialized Nodes and Edge list of a cpg to be exported with jackson */
 data class JsonGraph(val nodes: List<JsonNode>, val edges: List<JsonEdge>)
 
 /** Serialise the cpg using the OGM as nodes and edge list. */
