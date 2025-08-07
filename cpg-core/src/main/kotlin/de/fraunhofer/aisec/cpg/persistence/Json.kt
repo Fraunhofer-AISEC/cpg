@@ -37,14 +37,14 @@ import org.slf4j.LoggerFactory
 internal val log = LoggerFactory.getLogger("Persistence")
 
 /** Serialized cpg [Node] to be exported with jackson */
-data class JsonNode(val id: String, val labels: Set<String>, val properties: Map<String, Any?>)
+data class JsonNode(val id: Long, val labels: Set<String>, val properties: Map<String, Any?>)
 
 /** Serialized cpg Relation to be exported with jackson */
 data class JsonEdge(
     val id: Long,
     val type: String,
-    val startNode: String,
-    val endNode: String,
+    val startNode: Long,
+    val endNode: Long,
     val properties: Map<String, Any?>,
 )
 
@@ -66,7 +66,7 @@ fun TranslationResult.createJsonGraph(): JsonGraph {
     val nodesJs =
         nodes.map {
             JsonNode(
-                it.id.toString(),
+                it.legacyId!!,
                 it::class.labels,
                 it.properties().filter { prop -> prop.key != "id" },
             )
@@ -79,8 +79,8 @@ fun TranslationResult.createJsonGraph(): JsonGraph {
             JsonEdge(
                 idx.toLong(),
                 rel["type"] as String,
-                rel["startId"] as String,
-                rel["endId"] as String,
+                rel["startId"] as Long,
+                rel["endId"] as Long,
                 rel.filterKeys { !arrayOf("type", "startId", "endId").contains(it) },
             )
         }
