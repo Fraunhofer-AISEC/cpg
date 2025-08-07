@@ -33,6 +33,8 @@ import de.fraunhofer.aisec.cpg.graph.edges.MemoryAddressEdges
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
 import de.fraunhofer.aisec.cpg.graph.edges.memoryAddressEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemoryAddress
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
@@ -90,6 +92,12 @@ abstract class Declaration : AstNode(), HasMemoryAddress, HasMemoryValue {
             outgoing = false,
         )
     override var memoryValues by unwrapping(Declaration::memoryValueEdges)
+
+    /**
+     * Returns the [Scope] that this [Declaration] declares (if it does). For example, for a
+     * [RecordDeclaration], this will return the [RecordScope] of the particular record or class.
+     */
+    var declaringScope: Scope? = null
 
     override fun getExitNextEOG(): Collection<Node> {
         return setOf()

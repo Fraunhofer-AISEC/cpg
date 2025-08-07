@@ -379,6 +379,26 @@ class IntegerValue : Value<LatticeInterval> {
                             LatticeInterval.TOP // Cannot determine bounds
                         }
                     }
+                    "<<" -> {
+                        // TODO: We can do better here, but for now we just return TOP
+                        lhsValue shl rhsValue
+                    }
+                    ">>" -> {
+                        // TODO: We can do better here, but for now we just return TOP
+                        LatticeInterval.TOP
+                    }
+                    "|" -> {
+                        // TODO: We can do better here, but for now we just return TOP
+                        LatticeInterval.TOP
+                    }
+                    "^" -> {
+                        // TODO: We can do better here, but for now we just return TOP
+                        LatticeInterval.TOP
+                    }
+                    "&" -> {
+                        // TODO: We can do better here, but for now we just return TOP
+                        LatticeInterval.TOP
+                    }
                     else -> TODO("Unsupported operator: ${node.operatorCode}")
                 }
             lattice.pushToGeneralState(state, node, newValue)

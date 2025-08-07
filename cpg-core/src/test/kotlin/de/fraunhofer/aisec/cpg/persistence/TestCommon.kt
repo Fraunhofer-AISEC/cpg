@@ -63,6 +63,7 @@ class TestCommon {
                 "BODY",
                 "CDG",
                 "CURRENT_DEREF_VALUES",
+                "DECLARING_SCOPE",
                 "DEFINES",
                 "DFG",
                 "EOG",
