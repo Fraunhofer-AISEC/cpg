@@ -30,33 +30,11 @@ import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.persistence.createJsonGraph
 import de.fraunhofer.aisec.cpg.persistence.persistJson
-import java.nio.file.Paths
+import de.fraunhofer.aisec.cpg.test.GraphExamples
 import kotlin.io.path.createTempFile
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Test
-
-fun createTranslationResult(file: String = "client.cpp"): TranslationResult {
-    val topLevel = Paths.get("src").resolve("integrationTest").resolve("resources").toAbsolutePath()
-    val path = topLevel.resolve(file).toAbsolutePath()
-
-    val result =
-        TranslationManager.builder()
-            .config(
-                TranslationConfiguration.builder()
-                    .topLevel(path.toFile())
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
-                    .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
-                    .sourceLocations(path.toFile())
-                    .defaultPasses()
-                    .build()
-            )
-            .build()
-            .analyze()
-            .get()
-
-    return result
-}
 
 /**
  * A class for integration tests. They depend on the C++ frontend, so we classify them as an
@@ -66,23 +44,22 @@ class IntegrationTest {
 
     @Test
     fun testBuildJsonGraph() {
-        val translationResult = createTranslationResult()
+        val translationResult = GraphExamples.getInitializerListExprDFG()
 
-        // 22 inferred functions, 1 inferred method, 2 inferred constructors, 11 regular functions
-        assertEquals(36, translationResult.functions.size)
+        assertEquals(2, translationResult.functions.size)
 
         val graph = translationResult.createJsonGraph()
         val connectToFuncDel =
             graph.nodes.firstOrNull {
                 it.labels.contains(FunctionDeclaration::class.simpleName) &&
-                    it.properties["name"] == "connectTo"
+                    it.properties["name"] == "foo"
             }
         assertNotNull(connectToFuncDel)
 
         val connectToCallExpr =
             graph.nodes.firstOrNull {
                 it.labels.contains(CallExpression::class.simpleName) &&
-                    it.properties["name"] == "connectTo"
+                    it.properties["name"] == "foo"
             }
         assertNotNull(connectToCallExpr)
 
@@ -97,9 +74,8 @@ class IntegrationTest {
 
     @Test
     fun testExportToJson() {
-        val translationResult = createTranslationResult()
-        // 22 inferred functions, 1 inferred method, 2 inferred constructors, 11 regular functions
-        assertEquals(36, translationResult.functions.size)
+        val translationResult = GraphExamples.getInitializerListExprDFG()
+        assertEquals(2, translationResult.functions.size)
         val path = createTempFile().toFile()
         translationResult.persistJson(path)
         assert(path.length() > 0)
