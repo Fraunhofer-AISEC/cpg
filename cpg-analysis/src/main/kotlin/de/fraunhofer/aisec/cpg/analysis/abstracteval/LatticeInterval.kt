@@ -299,6 +299,43 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
+    fun bitwiseAnd(other: LatticeInterval): LatticeInterval {
+        return when {
+            this is BOTTOM || other is BOTTOM -> BOTTOM
+            this is Bounded && other is Bounded -> {
+                val minUpper = min(this.upper, other.upper)
+                if (
+                    (this.lower as? Bound.Value)?.value?.let { it >= 0 } == true &&
+                        (other.lower as? Bound.Value)?.value?.let { it >= 0 } == true &&
+                        minUpper is Bound.Value &&
+                        minUpper.value > 0
+                ) {
+                    // We only compute this for non-negative values
+                    Bounded(Bound.Value(0), minUpper)
+                } else TOP
+            }
+            else -> throw IllegalArgumentException("Unsupported interval type")
+        }
+    }
+
+    fun bitwiseOr(other: LatticeInterval): LatticeInterval {
+        return when {
+            this is BOTTOM || other is BOTTOM -> BOTTOM
+            this is Bounded && other is Bounded -> {
+                val maxLower = max(this.lower, other.lower)
+                val maxUpper = max(this.upper, other.upper)
+                if (maxUpper is Bound.Value) {
+                    val upper =
+                        2.0.pow((maxUpper.value.takeHighestOneBit() + 1).toDouble()).toLong() - 1
+                    if (maxLower is Bound.Value && maxLower.value > 0) {
+                        Bounded(maxLower, upper)
+                    } else TOP
+                } else TOP
+            }
+            else -> throw IllegalArgumentException("Unsupported interval type")
+        }
+    }
+
     // Addition operator
     operator fun plus(other: LatticeInterval): LatticeInterval {
         return when {

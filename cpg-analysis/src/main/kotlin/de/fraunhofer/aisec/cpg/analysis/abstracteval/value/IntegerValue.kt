@@ -44,6 +44,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * A [ValueEvaluator] which evaluates the possible integer values as a range of a [Node]. It uses
@@ -59,6 +61,11 @@ class IntegerIntervalEvaluator : ValueEvaluator() {
 
 /** This class implements the [Value] interface for Integer values. */
 class IntegerValue : Value<LatticeInterval> {
+
+    companion object {
+        val log: Logger = LoggerFactory.getLogger(IntegerValue::class.java)
+    }
+
     private fun simpleComparison(
         lhs: Node,
         rhs: Node,
@@ -401,18 +408,19 @@ class IntegerValue : Value<LatticeInterval> {
                         )
                     }
                     "|" -> {
-                        // TODO: We can do better here, but for now we just return TOP
-                        LatticeInterval.TOP
+                        lhsValue.bitwiseOr(rhsValue)
                     }
                     "^" -> {
                         // TODO: We can do better here, but for now we just return TOP
                         LatticeInterval.TOP
                     }
                     "&" -> {
-                        // TODO: We can do better here, but for now we just return TOP
-                        LatticeInterval.TOP
+                        lhsValue.bitwiseAnd(rhsValue)
                     }
-                    else -> TODO("Unsupported operator: ${node.operatorCode}")
+                    else -> {
+                        log.info("Unsupported binary operator: ${node.operatorCode}")
+                        LatticeInterval.TOP // Cannot determine bounds
+                    }
                 }
             lattice.pushToGeneralState(state, node, newValue)
             lattice.pushToDeclarationState(state, node, newValue)
