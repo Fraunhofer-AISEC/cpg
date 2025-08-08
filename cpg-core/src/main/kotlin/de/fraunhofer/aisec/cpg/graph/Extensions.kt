@@ -48,10 +48,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 /**
  * Flattens the AST beginning with this node and returns all nodes of type [T]. For convenience, an
@@ -931,112 +928,119 @@ fun Node.followXUntilHit(
         return FulfilledAndFailedPaths(fulfilledPaths.toSet().toList(), failedPaths)
     }
     // As long as the worklist is not empty or there might be new entries incoming, keep running
-    while (runBlocking { worklist.isNotEmpty() || parentJob.children.any { it.isActive } }) {
+    while (
+        //        runBlocking {
+        worklist.isNotEmpty()
+    //                || parentJob.children.any { it.isActive } }
+    ) {
         // If the worklist is empty, no reason to start a new coroutine
-        if (
-            runBlocking {
-                worklist.isEmpty() || parentJob.children.filter { it.isActive }.count() > 100
-            }
-        )
-            continue
-        scope.launch {
-            val currentPath: List<Pair<Node, Context>>
-            mutex.withLock {
-                // The worklist might be empty by now, better check again
-                currentPath = worklist.maxByOrNull { it.size } ?: return@launch
-                worklist.remove(currentPath)
-            }
-            val currentNode = currentPath.last().first
-            val currentContext = currentPath.last().second
-            mutex.withLock { alreadySeenNodes.add(currentNode to currentContext) }
-            val currentPathNodes = currentPath.map { it.first }
-            // The last node of the path is where we continue. We get all of its outgoing CDG
-            // edges and follow them
-            val nextNodes = x(currentNode, currentContext, currentPath, loopingPaths)
+        //        if (
+        //            runBlocking {
+        //                worklist.isEmpty() || parentJob.children.filter { it.isActive }.count() >
+        // 100
+        //            }
+        //        )
+        //            continue
+        //        scope.launch {
+        val currentPath: List<Pair<Node, Context>> = worklist.first()
+        //            mutex.withLock {
+        // The worklist might be empty by now, better check again
+        //                currentPath = worklist.maxByOrNull { it.size } ?: return@launch
+        worklist.remove(currentPath)
+        //            }
+        val currentNode = currentPath.last().first
+        val currentContext = currentPath.last().second
+        //            mutex.withLock {
+        alreadySeenNodes.add(currentNode to currentContext)
+        //            }
+        val currentPathNodes = currentPath.map { it.first }
+        // The last node of the path is where we continue. We get all of its outgoing CDG
+        // edges and follow them
+        val nextNodes = x(currentNode, currentContext, currentPath, loopingPaths)
 
-            // No further nodes in the path and the path criteria are not satisfied.
-            if (nextNodes.isEmpty() && collectFailedPaths) {
-                // TODO: How to determine if this path is really at the end or if it exceeded
-                // the number of steps?
-                mutex.withLock {
-                    failedPaths.add(
-                        FailureReason.PATH_ENDED to
-                            NodePath(currentPath.map { it.first })
-                                .addAssumptionDependence(currentPath.map { it.second }.toList())
-                    )
-                }
-            }
+        // No further nodes in the path and the path criteria are not satisfied.
+        if (nextNodes.isEmpty() && collectFailedPaths) {
+            // TODO: How to determine if this path is really at the end or if it exceeded
+            // the number of steps?
+            //                mutex.withLock {
+            failedPaths.add(
+                FailureReason.PATH_ENDED to
+                    NodePath(currentPath.map { it.first })
+                        .addAssumptionDependence(currentPath.map { it.second }.toList())
+            )
+            //                }
+        }
 
-            for ((next, newContext) in nextNodes) {
-                // Copy the path for each outgoing edge and add the next node
-                if (predicate(next)) {
-                    // We ended up in the node fulfilling "predicate", so we're done for this
-                    // path.
-                    // Add the path to the results.
-                    mutex.withLock {
-                        fulfilledPaths.add(
-                            NodePath(currentPathNodes.toMutableList() + next)
-                                .addAssumptionDependence(currentPath.map { it.second } + newContext)
-                        )
-                    }
-                    continue // Don't add this path anymore. The requirement is satisfied.
-                }
-                if (earlyTermination(next, currentContext)) {
-                    mutex.withLock {
-                        failedPaths.add(
-                            FailureReason.HIT_EARLY_TERMINATION to
-                                NodePath(currentPath.map { it.first } + next)
-                                    .addAssumptionDependence(
-                                        currentPath.map { it.second } + newContext
-                                    )
-                        )
-                    }
-                    continue // Don't add this path anymore. We already failed.
-                }
-                // The next node is new in the current path (i.e., there's no loop), so we add
-                // the path with the next step to the worklist.
-                val isInAlreadySeenNodesStackPath =
-                    mutex.withLock { isNodeWithCallStackInPath(next, newContext, alreadySeenNodes) }
-                val anyInWorkListinStackPath =
-                    mutex.withLock {
-                        worklist.none { isNodeWithCallStackInPath(next, newContext, it) }
-                    }
-                if (
-                    !isNodeWithCallStackInPath(next, newContext, currentPath) &&
-                        // A hack that tries to ensure that we are not running in circles: Watch
-                        // out if the top of the newContext and the currentPath callStack are
-                        // the same
-                        // and not null, this could indicate a loop
-                        // However, if the newContext and the currentPath last's callStack are
-                        // the same, it should be fine I guess
-                        !newContext.callStack.clone().isLoop() &&
-                        (newContext.callStack.top != currentPath.last().second.callStack.top ||
-                            newContext.callStack.top == null ||
-                            newContext.callStack == currentPath.last().second.callStack) &&
-                        (findAllPossiblePaths ||
-                            (!isInAlreadySeenNodesStackPath && anyInWorkListinStackPath))
-                ) {
-                    mutex.withLock {
-                        worklist.add(currentPath.toMutableList() + (next to newContext.inc()))
-                    }
-                } else {
-                    // There's a loop.
-                    mutex.withLock {
-                        loopingPaths.add(
-                            NodePath(currentPathNodes + next)
-                                .addAssumptionDependence(currentPath.map { it.second } + newContext)
-                        )
-                    }
-                }
+        for ((next, newContext) in nextNodes) {
+            // Copy the path for each outgoing edge and add the next node
+            if (predicate(next)) {
+                // We ended up in the node fulfilling "predicate", so we're done for this
+                // path.
+                // Add the path to the results.
+                //                    mutex.withLock {
+                fulfilledPaths.add(
+                    NodePath(currentPathNodes.toMutableList() + next)
+                        .addAssumptionDependence(currentPath.map { it.second } + newContext)
+                )
+                //                    }
+                continue // Don't add this path anymore. The requirement is satisfied.
+            }
+            if (earlyTermination(next, currentContext)) {
+                //                    mutex.withLock {
+                failedPaths.add(
+                    FailureReason.HIT_EARLY_TERMINATION to
+                        NodePath(currentPath.map { it.first } + next)
+                            .addAssumptionDependence(currentPath.map { it.second } + newContext)
+                )
+                //                    }
+                continue // Don't add this path anymore. We already failed.
+            }
+            // The next node is new in the current path (i.e., there's no loop), so we add
+            // the path with the next step to the worklist.
+            val isInAlreadySeenNodesStackPath =
+                //                    mutex.withLock {
+                isNodeWithCallStackInPath(next, newContext, alreadySeenNodes)
+            //                    }
+            val anyInWorkListinStackPath =
+                //                    mutex.withLock {
+                worklist.none { isNodeWithCallStackInPath(next, newContext, it) }
+            //                    }
+            if (
+                !isNodeWithCallStackInPath(next, newContext, currentPath) &&
+                    // A hack that tries to ensure that we are not running in circles: Watch
+                    // out if the top of the newContext and the currentPath callStack are
+                    // the same
+                    // and not null, this could indicate a loop
+                    // However, if the newContext and the currentPath last's callStack are
+                    // the same, it should be fine I guess
+                    !newContext.callStack.clone().isLoop() &&
+                    (newContext.callStack.top != currentPath.last().second.callStack.top ||
+                        newContext.callStack.top == null ||
+                        newContext.callStack == currentPath.last().second.callStack) &&
+                    (findAllPossiblePaths ||
+                        (!isInAlreadySeenNodesStackPath && anyInWorkListinStackPath))
+            ) {
+                //                    mutex.withLock {
+                worklist.add(currentPath.toMutableList() + (next to newContext.inc()))
+                //                    }
+            } else {
+                // There's a loop.
+                //                    mutex.withLock {
+                loopingPaths.add(
+                    NodePath(currentPathNodes + next)
+                        .addAssumptionDependence(currentPath.map { it.second } + newContext)
+                )
+                //                    }
             }
         }
     }
+    //    }
 
-    runBlocking {
-        parentJob.children.forEach { it.join() } // Wait for all child coroutines to finish
-        parentJob.complete() // Ensure parentJob is completed
-        parentJob.join() // Wait for the parentJob to complete
-    }
+    //    runBlocking {
+    //        parentJob.children.forEach { it.join() } // Wait for all child coroutines to finish
+    //        parentJob.complete() // Ensure parentJob is completed
+    //        parentJob.join() // Wait for the parentJob to complete
+    //    }
 
     val failedLoops =
         loopingPaths
