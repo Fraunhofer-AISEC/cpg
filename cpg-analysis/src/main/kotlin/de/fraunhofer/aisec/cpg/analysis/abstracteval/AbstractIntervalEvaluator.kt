@@ -305,7 +305,7 @@ class NewIntervalLattice() :
         }
 
         override fun duplicate(): Element {
-            return Element(this.element) // TODO: Implement a deep copy
+            return Element(this.element) // TODO: Implement a deep copy!
         }
     }
 }
