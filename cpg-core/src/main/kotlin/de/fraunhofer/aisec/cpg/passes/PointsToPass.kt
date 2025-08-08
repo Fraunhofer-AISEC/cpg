@@ -157,7 +157,7 @@ class PointsToState(
                 TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>
         ) : this(tupleState.first, tupleState.second)
 
-        override suspend fun innerCompare(other: Lattice.Element): Order {
+        override fun compare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
             if (other !is Element)
@@ -165,7 +165,7 @@ class PointsToState(
                     "$other should be of type Element but is of type ${other.javaClass}"
                 )
 
-            return this.second.innerCompare(other.second)
+            return this.second.compare(other.second)
         }
 
         override fun duplicate():

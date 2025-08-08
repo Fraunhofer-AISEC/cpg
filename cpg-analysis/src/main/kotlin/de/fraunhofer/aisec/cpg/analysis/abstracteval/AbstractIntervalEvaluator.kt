@@ -39,7 +39,6 @@ import kotlin.collections.set
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 import kotlin.to
-import kotlinx.coroutines.runBlocking
 
 class TupleState<NodeId>(
     innerLattice1: DeclarationState<NodeId>,
@@ -276,12 +275,12 @@ class NewIntervalLattice() :
         }
 
         override fun compare(other: Lattice.Element): Order {
-            var ret: Order
-            runBlocking { ret = innerCompare(other) }
-            return ret
-        }
-
-        override suspend fun innerCompare(other: Lattice.Element): Order {
+            //            var ret: Order
+            //            runBlocking { ret = innerCompare(other) }
+            //            return ret
+            //        }
+            //
+            //        override suspend fun innerCompare(other: Lattice.Element): Order {
             if (other !is Element) {
                 throw IllegalArgumentException("Cannot compare IntervalLattice.Element with $other")
             }

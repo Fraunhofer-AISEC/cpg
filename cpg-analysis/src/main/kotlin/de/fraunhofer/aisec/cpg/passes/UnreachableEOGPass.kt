@@ -264,12 +264,12 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
         }
 
         override fun compare(other: Lattice.Element): Order {
-            val ret: Order
-            runBlocking { ret = innerCompare(other) }
-            return ret
-        }
-
-        override suspend fun innerCompare(other: Lattice.Element): Order {
+            //            val ret: Order
+            //            runBlocking { ret = innerCompare(other) }
+            //            return ret
+            //        }
+            //
+            //        override suspend fun innerCompare(other: Lattice.Element): Order {
             return when {
                 other !is Element ->
                     throw IllegalArgumentException(

@@ -38,15 +38,6 @@ import kotlin.collections.set
 import kotlin.math.ceil
 import kotlin.sequences.forEach
 import kotlinx.coroutines.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
     override fun equals(other: Any?): Boolean {
@@ -152,7 +143,7 @@ interface Lattice<T : Lattice.Element> {
         fun compare(other: Element): Order
 
         /** Does the actual, concurrent work */
-        suspend fun innerCompare(other: Element): Order
+        // suspend fun innerCompare(other: Element): Order
 
         /** Duplicates this element, i.e., it creates a new object with equal contents. */
         fun duplicate(): Element
@@ -379,12 +370,12 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
         }
 
         override fun compare(other: Lattice.Element): Order {
-            var ret: Order
-            runBlocking { ret = innerCompare(other) }
-            return ret
-        }
-
-        override suspend fun innerCompare(other: Lattice.Element): Order {
+            //            var ret: Order
+            //            runBlocking { ret = innerCompare(other) }
+            //            return ret
+            //        }
+            //
+            //        override suspend fun innerCompare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
             if (other !is Element<T>)
@@ -504,13 +495,13 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         }
 
         override fun compare(other: Lattice.Element): Order {
-            var ret: Order
-            runBlocking { ret = innerCompare(other) }
-            return ret
-        }
-
-        @OptIn(ExperimentalCoroutinesApi::class)
-        override suspend fun innerCompare(other: Lattice.Element): Order {
+            //            var ret: Order
+            //            runBlocking { ret = innerCompare(other) }
+            //            return ret
+            //        }
+            //
+            //        @OptIn(ExperimentalCoroutinesApi::class)
+            //        override suspend fun innerCompare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
             if (other !is Element<K, V>)
@@ -524,10 +515,10 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
             var someGreater = false
             var someLesser = otherKeySetIsBigger
 
-            val parentJob = Job()
-            val limitedDispatcher = Dispatchers.Default.limitedParallelism(100)
-            val scope = CoroutineScope(limitedDispatcher + parentJob)
-            val mutex = Mutex()
+            //            val parentJob = Job()
+            //            val limitedDispatcher = Dispatchers.Default.limitedParallelism(100)
+            //            val scope = CoroutineScope(limitedDispatcher + parentJob)
+            //            val mutex = Mutex()
 
             var ret: Order? = null
 
@@ -535,54 +526,63 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                 // We can't return in the coroutines, so we only set the return value
                 // there. If we have a return value, we can stop here
                 if (ret != null) {
-                    return@innerCompare ret
+                    return@compare ret
                 } else {
-                    scope.launch {
-                        val otherV = other[k]
-                        if (otherV != null) {
-                            when (v.innerCompare(otherV)) {
-                                Order.EQUAL -> {
-                                    /* Nothing to do*/
-                                }
-
-                                Order.GREATER -> {
-                                    if (someLesser) {
-                                        mutex.withLock { ret = Order.UNEQUAL }
-                                    }
-                                    someGreater = true
-                                }
-
-                                Order.LESSER -> {
-                                    if (someGreater) {
-                                        mutex.withLock { ret = Order.UNEQUAL }
-                                    }
-                                    someLesser = true
-                                }
-
-                                Order.UNEQUAL -> {
-                                    mutex.withLock { ret = Order.UNEQUAL }
-                                    mutex.withLock {
-                                        someLesser = true
-                                        someGreater = true
-                                    }
-                                }
+                    //                    scope.launch {
+                    val otherV = other[k]
+                    if (otherV != null) {
+                        when (v.compare(otherV)) {
+                            Order.EQUAL -> {
+                                /* Nothing to do*/
                             }
-                        } else {
-                            if (someLesser) {
-                                mutex.withLock { ret = Order.UNEQUAL }
-                            }
-                            mutex.withLock {
-                                // key is missing in other, so this is greater
+
+                            Order.GREATER -> {
+                                if (someLesser) {
+                                    //                                        mutex.withLock {
+                                    ret = Order.UNEQUAL
+                                    //                                    }
+                                }
                                 someGreater = true
                             }
+
+                            Order.LESSER -> {
+                                if (someGreater) {
+                                    //                                        mutex.withLock {
+                                    ret = Order.UNEQUAL
+                                    //                                        }
+                                }
+                                someLesser = true
+                            }
+
+                            Order.UNEQUAL -> {
+                                //                                    mutex.withLock {
+                                ret = Order.UNEQUAL
+                                //                                    }
+                                //                                    mutex.withLock {
+                                someLesser = true
+                                someGreater = true
+                                //                                    }
+                            }
                         }
+                    } else {
+                        if (someLesser) {
+                            //                                mutex.withLock {
+                            ret = Order.UNEQUAL
+                            //                                }
+                        }
+                        //                            mutex.withLock {
+                        // key is missing in other, so this is greater
+                        someGreater = true
+                        //                            }
                     }
+                    //                    }
                 }
             }
 
-            parentJob.children.forEach { it.join() } // Wait for all child coroutines to finish
-            parentJob.complete() // Ensure parentJob is completed
-            parentJob.join() // Wait for the parentJob to complete
+            //            parentJob.children.forEach { it.join() } // Wait for all child coroutines
+            // to finish
+            //            parentJob.complete() // Ensure parentJob is completed
+            //            parentJob.join() // Wait for the parentJob to complete
 
             return if (!someGreater && !someLesser) {
                 // All entries are the same, so the maps are equal
@@ -620,60 +620,63 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         widen: Boolean,
     ): Element<K, V> {
         // Concurrency stuff
-        val parentJob = Job()
-        val limitedDispatcher = Dispatchers.Default.limitedParallelism(100)
-        val scope = CoroutineScope(limitedDispatcher + parentJob)
+        //        val parentJob = Job()
+        //        val limitedDispatcher = Dispatchers.Default.limitedParallelism(100)
+        //        val scope = CoroutineScope(limitedDispatcher + parentJob)
 
         if (allowModify) {
             two.forEach { (k, v) ->
-                scope.launch {
-                    if (!one.containsKey(k)) {
-                        // This key is not in "one", so we add the value from "two" to "one"
-                        synchronized(one) { one[k] = v }
-                    } else {
-                        // This key already exists in "one", so we have to compute the lub of the
-                        // values
-                        synchronized(one) {
-                            one[k]?.let { oneValue ->
-                                innerLattice.lub(oneValue, v, allowModify = true, widen = widen)
-                            }
-                        }
+                //                scope.launch {
+                if (!one.containsKey(k)) {
+                    // This key is not in "one", so we add the value from "two" to "one"
+                    //                        synchronized(one) {
+                    one[k] = v
+                    //                        }
+                } else {
+                    // This key already exists in "one", so we have to compute the lub of the
+                    // values
+                    //                        synchronized(one) {
+                    one[k]?.let { oneValue ->
+                        innerLattice.lub(oneValue, v, allowModify = true, widen = widen)
                     }
+                    //                        }
                 }
+                //                }
             }
-            runBlocking {
-                parentJob.children.forEach { it.join() } // Wait for all child coroutines to finish
-                parentJob.complete() // Ensure parentJob is completed
-                parentJob.join() // Wait for the parentJob to complete
-            }
+            //            runBlocking {
+            //                parentJob.children.forEach { it.join() } // Wait for all child
+            // coroutines to finish
+            //                parentJob.complete() // Ensure parentJob is completed
+            //                parentJob.join() // Wait for the parentJob to complete
+            //            }
             return one
         }
 
         val allKeys = one.keys.toIdentitySet()
         allKeys += two.keys
         val newMap = Element<K, V>(allKeys.size)
-        runBlocking {
-            val concurrentProcesses =
-                allKeys.map { key ->
-                    async {
-                        val otherValue = two[key]
-                        val thisValue = one[key]
-                        val newValue =
-                            if (thisValue != null && otherValue != null) {
-                                innerLattice.lub(
-                                    one = thisValue,
-                                    two = otherValue,
-                                    allowModify = false,
-                                    widen = widen,
-                                )
-                            } else thisValue ?: otherValue
-                        key to newValue
-                    }
-                }
-            concurrentProcesses.awaitAll().forEach { (key, value) ->
-                value?.let { newMap[key] = it }
+        //        runBlocking {
+        //            val /concurrentProcesses =
+        allKeys
+            .map { key ->
+                //                    async {
+                val otherValue = two[key]
+                val thisValue = one[key]
+                val newValue =
+                    if (thisValue != null && otherValue != null) {
+                        innerLattice.lub(
+                            one = thisValue,
+                            two = otherValue,
+                            allowModify = false,
+                            widen = widen,
+                        )
+                    } else thisValue ?: otherValue
+                key to newValue
+                //                    }
             }
-        }
+            //            concurrentProcesses.awaitAll()
+            .forEach { (key, value) -> value?.let { newMap[key] = it } }
+        //        }
         return newMap
     }
 
@@ -681,23 +684,23 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         val allKeys = one.keys.intersect(two.keys).toIdentitySet()
 
         val newMap = Element<K, V>(allKeys.size)
-        runBlocking {
-            val concurrentProcesses =
-                allKeys.map { key ->
-                    async {
-                        val otherValue = two[key]
-                        val thisValue = one[key]
-                        val newValue =
-                            if (thisValue != null && otherValue != null) {
-                                innerLattice.glb(thisValue, otherValue)
-                            } else innerLattice.bottom
-                        key to newValue
-                    }
+        //        runBlocking {
+        val concurrentProcesses =
+            allKeys
+                .map { key ->
+                    //                    async {
+                    val otherValue = two[key]
+                    val thisValue = one[key]
+                    val newValue =
+                        if (thisValue != null && otherValue != null) {
+                            innerLattice.glb(thisValue, otherValue)
+                        } else innerLattice.bottom
+                    key to newValue
+                    //                    }
                 }
-            concurrentProcesses.awaitAll().forEach { (key, value) ->
-                value.let { newMap[key] = it }
-            }
-        }
+                //            concurrentProcesses.awaitAll()
+                .forEach { (key, value) -> value.let { newMap[key] = it } }
+        //        }
 
         return newMap
     }
@@ -737,12 +740,12 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
         }
 
         override fun compare(other: Lattice.Element): Order {
-            var ret: Order
-            runBlocking { ret = innerCompare(other) }
-            return ret
-        }
-
-        open override suspend fun innerCompare(other: Lattice.Element): Order {
+            //            var ret: Order
+            //            runBlocking { ret = innerCompare(other) }
+            //            return ret
+            //        }
+            //
+            //        open override suspend fun innerCompare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
             if (other !is Element<S, T>)
@@ -751,7 +754,7 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
                 )
 
             val result1 = this.first.compare(other.first)
-            val result2 = this.second.innerCompare(other.second)
+            val result2 = this.second.compare(other.second)
             return compareMultiple(result1, result2)
         }
 
@@ -850,12 +853,12 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
         }
 
         override fun compare(other: Lattice.Element): Order {
-            var ret: Order
-            runBlocking { ret = innerCompare(other) }
-            return ret
-        }
-
-        override suspend fun innerCompare(other: Lattice.Element): Order {
+            //            var ret: Order
+            //            runBlocking { ret = innerCompare(other) }
+            //            return ret
+            //        }
+            //
+            //        override suspend fun innerCompare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
             if (other !is Element<R, S, T>)
@@ -863,9 +866,9 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
                     "$other should be of type TripleLattice.Element<R, S, T> but is of type ${other.javaClass}"
                 )
 
-            val result1 = this.first.innerCompare(other.first)
-            val result2 = this.second.innerCompare(other.second)
-            val result3 = this.third.innerCompare(other.third)
+            val result1 = this.first.compare(other.first)
+            val result2 = this.second.compare(other.second)
+            val result3 = this.third.compare(other.third)
             return compareMultiple(result1, result2, result3)
         }
 
