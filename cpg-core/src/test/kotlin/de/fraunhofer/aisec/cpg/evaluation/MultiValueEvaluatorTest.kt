@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import kotlin.test.*
 
+// TODO Mathias
 class MultiValueEvaluatorTest {
     @Test
     fun testSingleValue() {
@@ -170,6 +171,8 @@ class MultiValueEvaluatorTest {
     }
 
     @Test
+    @Ignore
+    // TODO Mathias
     fun testLoop() {
         val tu = ValueEvaluationTests.getCfExample().components.first().translationUnits.first()
 

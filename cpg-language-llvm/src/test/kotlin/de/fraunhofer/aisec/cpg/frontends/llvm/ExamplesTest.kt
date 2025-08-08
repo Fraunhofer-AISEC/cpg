@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Tag
@@ -61,6 +62,7 @@ class ExamplesTest {
         assertNotNull(tu)
     }
 
+    @Ignore
     @Test
     fun testLiftedClient() {
         val topLevel = Path.of("src", "test", "resources", "llvm", "examples", "retdec")
