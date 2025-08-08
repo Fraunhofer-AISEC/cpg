@@ -43,6 +43,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 
 /**
  * A [ValueEvaluator] which evaluates the possible integer values as a range of a [Node]. It uses
@@ -380,12 +381,24 @@ class IntegerValue : Value<LatticeInterval> {
                         }
                     }
                     "<<" -> {
-                        // TODO: We can do better here, but for now we just return TOP
-                        lhsValue shl rhsValue
+                        // We need to know how many bits our value can have as this affects the
+                        // shift's outcome. If we do not know, we assume 32 bits.
+                        // TODO: Configure this better, e.g. based on the platform if we have
+                        // information about it.
+                        lhsValue.shl(
+                            rhsValue,
+                            maxBits = (node.type as? IntegerType)?.bitWidth ?: 32,
+                        )
                     }
                     ">>" -> {
-                        // TODO: We can do better here, but for now we just return TOP
-                        LatticeInterval.TOP
+                        // We need to know how many bits our value can have as this affects the
+                        // shift's outcome. If we do not know, we assume 32 bits.
+                        // TODO: Configure this better, e.g. based on the platform if we have
+                        // information about it.
+                        lhsValue.shr(
+                            rhsValue,
+                            maxBits = (node.type as? IntegerType)?.bitWidth ?: 32,
+                        )
                     }
                     "|" -> {
                         // TODO: We can do better here, but for now we just return TOP

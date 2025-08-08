@@ -192,7 +192,19 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    infix fun shl(other: LatticeInterval): LatticeInterval {
+    /**
+     * Implements the left shift operation for intervals. It shifts the lower and upper bounds
+     * according to the left shift operation defined by the [other] interval. The [maxBits]
+     * parameter defines the bitwidth of the resulting datatype. The result is [BOTTOM] if either of
+     * the values is [BOTTOM]. The result is [TOP] if either of the values is [TOP] or if the shift
+     * operation is undefined (e.g., shifting by a negative value or exceeding the maximum bits).
+     * Otherwise, we compute the new range by multiplying this interval with `[2^min(other),
+     * 2^max(other)]`.
+     */
+    fun shl(other: LatticeInterval, maxBits: Int): LatticeInterval {
+        if (this is BOTTOM || other is BOTTOM) return BOTTOM
+        if (this is TOP || other is TOP) return TOP
+
         if (this is Bounded && other is Bounded) {
             val thisLower = this.lower
             val otherLower = other.lower
@@ -204,20 +216,82 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
                     otherLower is Bound.Value &&
                     otherUpper is Bound.Value
             ) {
-                // Shift left by the lower bound of the right operand
-                if (otherLower.value < 0) {
-                    return TOP // Undefined behavior for negative shifts
-                } else {
-                    val min =
-                        if (thisLower.value < 0) {
-                            return TOP // Undefined behavior for negative shifts
-                        } else {
-                            2.toDouble().pow(otherLower.value.toDouble()).toLong() * thisLower.value
-                        }
-                    // upper value is always positive, so we can safely multiply
-                    val max =
-                        2.toDouble().pow(otherUpper.value.toDouble()).toLong() * thisUpper.value
-                    return Bounded(min, max)
+                return when {
+                    otherLower.value < 0 -> {
+                        TOP // Undefined behavior for negative shifts
+                    }
+                    otherUpper.value > maxBits -> {
+                        TOP // Undefined behavior if we exceed the maximum bits
+                    }
+                    thisLower.value < 0 -> {
+                        TOP // Undefined behavior for negative shifts
+                    }
+                    else -> {
+                        val result =
+                            this *
+                                Bounded(
+                                    2.toDouble().pow(otherLower.value.toDouble()).toLong(),
+                                    2.toDouble().pow(otherUpper.value.toDouble()).toLong(),
+                                )
+                        if (
+                            result is Bounded &&
+                                result.upper is Bound.Value &&
+                                result.upper.value >= 2.0.pow(maxBits - 1.0).toLong()
+                        ) {
+                            TOP // If the upper bound exceeds the maximum bits, we return TOP
+                        } else result
+                    }
+                }
+            } else return TOP
+        } else {
+            return TOP // Cannot determine bounds
+        }
+    }
+
+    /**
+     * Implements the right shift operation for intervals. It shifts the lower and upper bounds
+     * according to the right shift operation defined by the [other] interval. The [maxBits]
+     * parameter defines the bitwidth of the resulting datatype. The result is [BOTTOM] if either of
+     * the values is [BOTTOM]. The result is [TOP] if either of the values is [TOP] or if the shift
+     * operation is undefined (e.g., shifting by a negative value or exceeding the maximum bits).
+     * Otherwise, we compute the new range by dividing this interval with `[2^min(other),
+     * 2^max(other)]`.
+     */
+    fun shr(other: LatticeInterval, maxBits: Int): LatticeInterval {
+        if (this is BOTTOM || other is BOTTOM) return BOTTOM
+        if (this is TOP || other is TOP) return TOP
+
+        if (this is Bounded && other is Bounded) {
+            val thisLower = this.lower
+            val otherLower = other.lower
+            val thisUpper = this.upper
+            val otherUpper = other.upper
+            if (
+                thisLower is Bound.Value &&
+                    thisUpper is Bound.Value &&
+                    otherLower is Bound.Value &&
+                    otherUpper is Bound.Value
+            ) {
+                return when {
+                    otherLower.value < 0 -> {
+                        TOP // Undefined behavior for negative shifts
+                    }
+
+                    otherUpper.value > maxBits -> {
+                        TOP // Undefined behavior if we exceed the maximum bits
+                    }
+
+                    thisLower.value < 0 -> {
+                        TOP // Undefined behavior for negative shifts
+                    }
+
+                    else -> {
+                        return this /
+                            Bounded(
+                                2.toDouble().pow(otherLower.value.toDouble()).toLong(),
+                                2.toDouble().pow(otherUpper.value.toDouble()).toLong(),
+                            )
+                    }
                 }
             } else return TOP
         } else {
