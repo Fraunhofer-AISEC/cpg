@@ -3671,7 +3671,7 @@
     <SubClassOf>
         <Class IRI="/classes/ReadConfiguration"/>
         <ObjectSomeValuesFrom>
-            <ObjectProperty IRI="/classes/linkedConcept"/>
+            <ObjectProperty IRI="/properties/has"/>
             <Class IRI="/classes/ConfigurationGroup"/>
         </ObjectSomeValuesFrom>
     </SubClassOf>
@@ -5729,12 +5729,12 @@ name = metadata.name</Literal>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
         <IRI>/classes/LogOutput</IRI>
-        <Literal>A LogOperation is used by an application</Literal>
+        <Literal>A generic LogOutput.</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>/classes/LogOutput</IRI>
-        <Literal xml:lang="english">LogOperation</Literal>
+        <Literal>LogOutput</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:comment"/>

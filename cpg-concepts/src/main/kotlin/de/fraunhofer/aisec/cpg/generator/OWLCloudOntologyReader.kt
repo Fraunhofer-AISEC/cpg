@@ -578,12 +578,17 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
                     "has",
                     "runsOn",
                     "to",
-                    "linkedConcept",
-                    "leftPrincipal",
-                    "rightPrincipal",
                     "offers" -> {
                         property.propertyName =
                             decapitalizeString(formatString(getClassName(superClass, ontology)))
+                        decapitalizeString(formatString(getClassName(superClass, ontology)))
+                        property.propertyType = formatString(getClassName(superClass, ontology))
+                    }
+                    "linkedConcept",
+                    "leftPrincipal",
+                    "rightPrincipal",
+                    "protects" -> {
+                        property.propertyName = classRelationshipPropertyName
                         property.propertyType = formatString(getClassName(superClass, ontology))
                     }
                     "hasMultiple",
