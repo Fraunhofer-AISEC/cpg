@@ -515,7 +515,7 @@ class QueryTest {
 
     @Test
     fun testDivisionBy0() {
-        val result = Query.getVulnerable()
+        val result = Query.getDivBy0()
 
         val queryTreeResult =
             result.all<BinaryOperator>(
