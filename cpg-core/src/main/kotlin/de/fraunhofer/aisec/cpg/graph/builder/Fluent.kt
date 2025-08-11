@@ -1189,7 +1189,7 @@ operator fun Expression.plus(rhs: Expression): BinaryOperator {
  * and adds it to the nearest enclosing [StatementHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: StatementHolder)
-operator fun Expression.plusAssign(rhs: Expression) {
+infix operator fun Expression.plusAssign(rhs: Expression) {
     val node = (frontend).newAssignExpression("+=", listOf(this), listOf(rhs))
 
     (holder) += node
