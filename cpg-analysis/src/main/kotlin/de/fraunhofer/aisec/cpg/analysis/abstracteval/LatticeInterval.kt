@@ -29,6 +29,8 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.helpers.LatticeElement
 import de.fraunhofer.aisec.cpg.helpers.State
 import kotlin.math.pow
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * The [LatticeInterval] class implements the functionality of intervals that is needed for the
@@ -38,6 +40,10 @@ import kotlin.math.pow
  * [LatticeInterval].
  */
 sealed class LatticeInterval : Comparable<LatticeInterval> {
+    companion object {
+        val log: Logger = LoggerFactory.getLogger(LatticeInterval::class.java)
+    }
+
     /** Explicit representation of the bottom element of the lattice. */
     object BOTTOM : LatticeInterval()
 
@@ -140,7 +146,9 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
                 this is Value && other is Value -> {
                     Value(this.value + other.value)
                 }
-                else -> throw IllegalArgumentException("Unsupported bound type $this and $other")
+                else -> {
+                    throw IllegalArgumentException("Unsupported bound type $this and $other")
+                }
             }
         }
 
@@ -314,7 +322,10 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
                     Bounded(Bound.Value(0), minUpper)
                 } else TOP
             }
-            else -> throw IllegalArgumentException("Unsupported interval type $this and $other")
+            else -> {
+                log.warn("Unsupported interval type $this and $other")
+                TOP
+            }
         }
     }
 
@@ -332,7 +343,10 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
                     } else TOP
                 } else TOP
             }
-            else -> throw IllegalArgumentException("Unsupported interval type $this and $other")
+            else -> {
+                log.warn("Unsupported interval type $this and $other")
+                TOP
+            }
         }
     }
 
@@ -341,11 +355,20 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         return when {
             this is BOTTOM || other is BOTTOM -> BOTTOM
             this is Bounded && other is Bounded -> {
-                val newLower = addBounds(this.lower, other.lower, BoundType.LOWER)
-                val newUpper = addBounds(this.upper, other.upper, BoundType.UPPER)
-                Bounded(newLower, newUpper)
+                try {
+                    val newLower = addBounds(this.lower, other.lower, BoundType.LOWER)
+                    val newUpper = addBounds(this.upper, other.upper, BoundType.UPPER)
+                    Bounded(newLower, newUpper)
+                } catch (e: IllegalArgumentException) {
+                    // Catch the exception if the operation is not defined and return TOP
+                    log.warn("Plus not defined for $this and $other: ${e.message}")
+                    TOP
+                }
             }
-            else -> throw IllegalArgumentException("Unsupported interval type $this and $other")
+            else -> {
+                log.warn("Unsupported interval type $this and $other")
+                TOP
+            }
         }
     }
 
@@ -354,11 +377,20 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         return when {
             this is BOTTOM || other is BOTTOM -> BOTTOM
             this is Bounded && other is Bounded -> {
-                val newLower = subtractBounds(this.lower, other.upper)
-                val newUpper = subtractBounds(this.upper, other.lower)
-                Bounded(newLower, newUpper)
+                try {
+                    val newLower = subtractBounds(this.lower, other.upper)
+                    val newUpper = subtractBounds(this.upper, other.lower)
+                    Bounded(newLower, newUpper)
+                } catch (e: IllegalArgumentException) {
+                    // Catch the exception if the operation is not defined and return TOP
+                    log.warn("Minus not defined for $this and $other: ${e.message}")
+                    TOP
+                }
             }
-            else -> throw IllegalArgumentException("Unsupported interval type $this and $other")
+            else -> {
+                log.warn("Unsupported interval type $this and $other")
+                TOP
+            }
         }
     }
 
@@ -367,11 +399,20 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         return when {
             this is BOTTOM || other is BOTTOM -> BOTTOM
             this is Bounded && other is Bounded -> {
-                val newLower = multiplyBounds(this.lower, other.lower)
-                val newUpper = multiplyBounds(this.upper, other.upper)
-                Bounded(newLower, newUpper)
+                try {
+                    val newLower = multiplyBounds(this.lower, other.lower)
+                    val newUpper = multiplyBounds(this.upper, other.upper)
+                    Bounded(newLower, newUpper)
+                } catch (e: IllegalArgumentException) {
+                    // Catch the exception if the operation is not defined and return TOP
+                    log.warn("Times not defined for $this and $other: ${e.message}")
+                    TOP
+                }
             }
-            else -> throw IllegalArgumentException("Unsupported interval type $this and $other")
+            else -> {
+                log.warn("Unsupported interval type $this and $other")
+                TOP
+            }
         }
     }
 
@@ -380,11 +421,21 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         return when {
             this is BOTTOM || other is BOTTOM -> BOTTOM
             this is Bounded && other is Bounded -> {
-                val newLower = divideBounds(this.lower, other.lower)
-                val newUpper = divideBounds(this.upper, other.upper)
-                Bounded(newLower, newUpper)
+                try {
+
+                    val newLower = divideBounds(this.lower, other.lower)
+                    val newUpper = divideBounds(this.upper, other.upper)
+                    Bounded(newLower, newUpper)
+                } catch (e: IllegalArgumentException) {
+                    // Catch the exception if the operation is not defined and return TOP
+                    log.warn("Division not defined for $this and $other: ${e.message}")
+                    TOP
+                }
             }
-            else -> throw IllegalArgumentException("Unsupported interval type $this and $other")
+            else -> {
+                log.warn("Unsupported interval type $this and $other")
+                TOP
+            }
         }
     }
 
@@ -393,11 +444,20 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         return when {
             this is BOTTOM || other is BOTTOM -> BOTTOM
             this is Bounded && other is Bounded -> {
-                val lowerBracket = modulateBounds(this.lower, other.lower)
-                val upperBracket = modulateBounds(this.upper, other.upper)
-                lowerBracket.join(upperBracket)
+                try {
+                    val lowerBracket = modulateBounds(this.lower, other.lower)
+                    val upperBracket = modulateBounds(this.upper, other.upper)
+                    lowerBracket.join(upperBracket)
+                } catch (e: IllegalArgumentException) {
+                    // Catch the exception if the operation is not defined and return TOP
+                    log.warn("Modulo not defined for $this and $other: ${e.message}")
+                    TOP
+                }
             }
-            else -> throw IllegalArgumentException("Unsupported interval type $this and $other")
+            else -> {
+                log.warn("Unsupported interval type $this and $other")
+                TOP
+            }
         }
     }
 
@@ -410,7 +470,10 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
                 val newUpper = max(this.upper, other.upper)
                 Bounded(newLower, newUpper)
             }
-            else -> throw IllegalArgumentException("Unsupported interval type $this and $other")
+            else -> {
+                log.warn("Unsupported interval type $this and $other")
+                TOP
+            }
         }
     }
 
@@ -426,7 +489,10 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
                 val newUpper = min(this.upper, other.upper)
                 Bounded(newLower, newUpper)
             }
-            else -> throw IllegalArgumentException("Unsupported interval type $this and $other")
+            else -> {
+                log.warn("Unsupported interval type $this and $other")
+                TOP
+            }
         }
     }
 
