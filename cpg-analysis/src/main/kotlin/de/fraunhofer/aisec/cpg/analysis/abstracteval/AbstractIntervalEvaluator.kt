@@ -39,6 +39,10 @@ import kotlin.collections.set
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 import kotlin.to
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
+val log: Logger = LoggerFactory.getLogger(AbstractIntervalEvaluator::class.java)
 
 class TupleState<NodeId>(
     innerLattice1: DeclarationState<NodeId>,
@@ -221,7 +225,10 @@ class NewIntervalLattice() :
                     one.element = LatticeInterval.Bounded(newLower, newUpper)
                 }
                 else -> {
-                    TODO("Cannot handle this case: $oneElem and $twoElem")
+                    log.warn(
+                        "Cannot handle this case in NewIntervalLattice.lub: $oneElem and $twoElem"
+                    )
+                    Element(LatticeInterval.TOP)
                 }
             }
             return one
@@ -244,13 +251,45 @@ class NewIntervalLattice() :
                     val newUpper = maxOf(oneElem.upper, twoElem.upper)
                     Element(LatticeInterval.Bounded(newLower, newUpper))
                 }
-                else -> TODO("Not yet implemented")
+                else -> {
+                    log.warn(
+                        "Cannot handle this case in NewIntervalLattice.lub: $oneElem and $twoElem"
+                    )
+                    Element(LatticeInterval.TOP)
+                }
             }
         }
     }
 
     override fun glb(one: Element, two: Element): Element {
-        TODO("Not yet implemented")
+        val oneElem = one.element
+        val twoElem = two.element
+        return when {
+            oneElem == LatticeInterval.TOP && twoElem == LatticeInterval.TOP -> {
+                Element(LatticeInterval.TOP)
+            }
+
+            oneElem == LatticeInterval.BOTTOM || twoElem == LatticeInterval.BOTTOM -> {
+                Element(LatticeInterval.BOTTOM)
+            }
+            oneElem == LatticeInterval.TOP -> {
+                two.duplicate()
+            }
+            twoElem == LatticeInterval.TOP -> {
+                one.duplicate()
+            }
+
+            oneElem is LatticeInterval.Bounded && twoElem is LatticeInterval.Bounded -> {
+                val newLower = maxOf(oneElem.lower, twoElem.lower)
+                val newUpper = minOf(oneElem.upper, twoElem.upper)
+                Element(LatticeInterval.Bounded(newLower, newUpper))
+            }
+
+            else -> {
+                log.warn("Cannot handle this case in NewIntervalLattice.glb: $oneElem and $twoElem")
+                Element(LatticeInterval.TOP)
+            }
+        }
     }
 
     override fun compare(one: Element, two: Element): Order {
@@ -311,7 +350,7 @@ class NewIntervalLattice() :
         }
 
         override fun duplicate(): Element {
-            return Element(this.element) // TODO: Implement a deep copy
+            return Element(this.element) // TODO: Implement a deep copy!
         }
     }
 }

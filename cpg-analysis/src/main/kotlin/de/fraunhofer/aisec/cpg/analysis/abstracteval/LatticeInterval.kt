@@ -140,7 +140,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
                 this is Value && other is Value -> {
                     Value(this.value + other.value)
                 }
-                else -> throw IllegalArgumentException("Unsupported bound type")
+                else -> throw IllegalArgumentException("Unsupported bound type $this and $other")
             }
         }
 
@@ -152,7 +152,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
                 this is Value && other is Value -> {
                     Value(this.value - other.value)
                 }
-                else -> throw IllegalArgumentException("Unsupported bound type")
+                else -> throw IllegalArgumentException("Unsupported bound type $this and $other")
             }
         }
     }
@@ -314,7 +314,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
                     Bounded(Bound.Value(0), minUpper)
                 } else TOP
             }
-            else -> throw IllegalArgumentException("Unsupported interval type")
+            else -> throw IllegalArgumentException("Unsupported interval type $this and $other")
         }
     }
 
@@ -332,7 +332,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
                     } else TOP
                 } else TOP
             }
-            else -> throw IllegalArgumentException("Unsupported interval type")
+            else -> throw IllegalArgumentException("Unsupported interval type $this and $other")
         }
     }
 
@@ -345,7 +345,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
                 val newUpper = addBounds(this.upper, other.upper)
                 Bounded(newLower, newUpper)
             }
-            else -> throw IllegalArgumentException("Unsupported interval type")
+            else -> throw IllegalArgumentException("Unsupported interval type $this and $other")
         }
     }
 
@@ -358,7 +358,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
                 val newUpper = subtractBounds(this.upper, other.upper)
                 Bounded(newLower, newUpper)
             }
-            else -> throw IllegalArgumentException("Unsupported interval type")
+            else -> throw IllegalArgumentException("Unsupported interval type $this and $other")
         }
     }
 
@@ -371,7 +371,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
                 val newUpper = multiplyBounds(this.upper, other.upper)
                 Bounded(newLower, newUpper)
             }
-            else -> throw IllegalArgumentException("Unsupported interval type")
+            else -> throw IllegalArgumentException("Unsupported interval type $this and $other")
         }
     }
 
@@ -384,7 +384,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
                 val newUpper = divideBounds(this.upper, other.upper)
                 Bounded(newLower, newUpper)
             }
-            else -> throw IllegalArgumentException("Unsupported interval type")
+            else -> throw IllegalArgumentException("Unsupported interval type $this and $other")
         }
     }
 
@@ -397,7 +397,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
                 val upperBracket = modulateBounds(this.upper, other.upper)
                 lowerBracket.join(upperBracket)
             }
-            else -> throw IllegalArgumentException("Unsupported interval type")
+            else -> throw IllegalArgumentException("Unsupported interval type $this and $other")
         }
     }
 
@@ -410,7 +410,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
                 val newUpper = max(this.upper, other.upper)
                 Bounded(newLower, newUpper)
             }
-            else -> throw IllegalArgumentException("Unsupported interval type")
+            else -> throw IllegalArgumentException("Unsupported interval type $this and $other")
         }
     }
 
@@ -426,7 +426,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
                 val newUpper = min(this.upper, other.upper)
                 Bounded(newLower, newUpper)
             }
-            else -> throw IllegalArgumentException("Unsupported interval type")
+            else -> throw IllegalArgumentException("Unsupported interval type $this and $other")
         }
     }
 
@@ -482,7 +482,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
             other is Bound.INFINITE || one is Bound.NEGATIVE_INFINITE -> one
             one is Bound.Value && other is Bound.Value ->
                 Bound.Value(kotlin.math.min(one.value, other.value))
-            else -> throw IllegalArgumentException("Unsupported interval type")
+            else -> throw IllegalArgumentException("Unsupported interval type $one and $other")
         }
     }
 
@@ -492,37 +492,41 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
             other is Bound.INFINITE || one is Bound.NEGATIVE_INFINITE -> other
             one is Bound.Value && other is Bound.Value ->
                 Bound.Value(kotlin.math.max(one.value, other.value))
-            else -> throw IllegalArgumentException("Unsupported interval type")
+            else -> throw IllegalArgumentException("Unsupported interval type $one and $other")
         }
     }
 
     private fun addBounds(a: Bound, b: Bound): Bound {
         return when {
-            // -∞ + ∞ is not a defined operation
+            // -∞ + ∞ is defined as -∞
             a is Bound.INFINITE && b !is Bound.NEGATIVE_INFINITE -> Bound.INFINITE
+            a is Bound.NEGATIVE_INFINITE && b is Bound.INFINITE -> Bound.NEGATIVE_INFINITE
             a is Bound.NEGATIVE_INFINITE && b !is Bound.INFINITE -> Bound.NEGATIVE_INFINITE
             b is Bound.INFINITE && a !is Bound.NEGATIVE_INFINITE -> Bound.INFINITE
             b is Bound.NEGATIVE_INFINITE && a !is Bound.INFINITE -> Bound.NEGATIVE_INFINITE
             a is Bound.Value && b is Bound.Value -> Bound.Value(a.value + b.value)
-            else -> throw IllegalArgumentException("Unsupported bound type")
+            else -> throw IllegalArgumentException("Unsupported bound type $a and $b")
         }
     }
 
     private fun subtractBounds(a: Bound, b: Bound): Bound {
         return when {
-            // ∞ - ∞ is not a defined operation
+            // ∞ - ∞ is defined as ∞
+            a is Bound.INFINITE && b is Bound.INFINITE -> Bound.INFINITE
             a is Bound.INFINITE && b !is Bound.INFINITE -> Bound.INFINITE
             a is Bound.NEGATIVE_INFINITE && b !is Bound.NEGATIVE_INFINITE -> Bound.NEGATIVE_INFINITE
             b is Bound.INFINITE && a !is Bound.INFINITE -> Bound.NEGATIVE_INFINITE
             b is Bound.NEGATIVE_INFINITE && a !is Bound.NEGATIVE_INFINITE -> Bound.INFINITE
             a is Bound.Value && b is Bound.Value -> Bound.Value(a.value - b.value)
-            else -> throw IllegalArgumentException("Unsupported bound type")
+            else -> throw IllegalArgumentException("Unsupported bound type $a and $b")
         }
     }
 
     private fun multiplyBounds(a: Bound, b: Bound): Bound {
         return when {
-            // ∞ * 0 is not a defined operation
+            // ∞ * 0 is defined as 0
+            a is Bound.INFINITE && b == Bound.Value(0) -> Bound.Value(0)
+            a is Bound.NEGATIVE_INFINITE && b == Bound.Value(0) -> Bound.Value(0)
             a is Bound.INFINITE && b > Bound.Value(0) -> Bound.INFINITE
             a is Bound.INFINITE && b < Bound.Value(0) -> Bound.NEGATIVE_INFINITE
             a > Bound.Value(0) && b is Bound.INFINITE -> Bound.INFINITE
@@ -532,7 +536,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
             a > Bound.Value(0) && b is Bound.NEGATIVE_INFINITE -> Bound.NEGATIVE_INFINITE
             a < Bound.Value(0) && b is Bound.NEGATIVE_INFINITE -> Bound.INFINITE
             a is Bound.Value && b is Bound.Value -> Bound.Value(a.value * b.value)
-            else -> throw IllegalArgumentException("Unsupported bound type")
+            else -> throw IllegalArgumentException("Unsupported bound type $a and $b")
         }
     }
 
@@ -553,7 +557,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
                 (b is Bound.NEGATIVE_INFINITE || b is Bound.INFINITE) -> Bound.Value(0)
             a is Bound.Value && b is Bound.Value && b != Bound.Value(0) ->
                 Bound.Value(a.value / b.value)
-            else -> throw IllegalArgumentException("Unsupported bound type")
+            else -> throw IllegalArgumentException("Unsupported bound type $a and $b")
         }
     }
 
@@ -569,7 +573,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
             b is Bound.INFINITE -> Bounded(a, a)
             a is Bound.Value && b is Bound.Value && b != Bound.Value(0) ->
                 Bounded(a.value % b.value, a.value % b.value)
-            else -> throw IllegalArgumentException("Unsupported bound type")
+            else -> throw IllegalArgumentException("Unsupported bound type $a and $b")
         }
     }
 
@@ -675,7 +679,7 @@ class IntervalState : State<Node, LatticeInterval>() {
      * Implements the same duplication as the parent function, but returns a [IntervalState] object
      * instead.
      */
-    override fun duplicate(): State<de.fraunhofer.aisec.cpg.graph.Node, LatticeInterval> {
+    override fun duplicate(): State<Node, LatticeInterval> {
         val clone = IntervalState()
         for ((key, value) in this) {
             clone[key] = value.duplicate()
