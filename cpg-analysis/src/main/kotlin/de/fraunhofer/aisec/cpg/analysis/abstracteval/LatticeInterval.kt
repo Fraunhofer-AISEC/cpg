@@ -341,8 +341,8 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         return when {
             this is BOTTOM || other is BOTTOM -> BOTTOM
             this is Bounded && other is Bounded -> {
-                val newLower = addBounds(this.lower, other.lower)
-                val newUpper = addBounds(this.upper, other.upper)
+                val newLower = addBounds(this.lower, other.lower, BoundType.LOWER)
+                val newUpper = addBounds(this.upper, other.upper, BoundType.UPPER)
                 Bounded(newLower, newUpper)
             }
             else -> throw IllegalArgumentException("Unsupported interval type $this and $other")
@@ -354,8 +354,8 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         return when {
             this is BOTTOM || other is BOTTOM -> BOTTOM
             this is Bounded && other is Bounded -> {
-                val newLower = subtractBounds(this.lower, other.lower)
-                val newUpper = subtractBounds(this.upper, other.upper)
+                val newLower = subtractBounds(this.lower, other.upper)
+                val newUpper = subtractBounds(this.upper, other.lower)
                 Bounded(newLower, newUpper)
             }
             else -> throw IllegalArgumentException("Unsupported interval type $this and $other")
@@ -496,11 +496,14 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    private fun addBounds(a: Bound, b: Bound): Bound {
+    private fun addBounds(a: Bound, b: Bound, type: BoundType): Bound {
         return when {
-            // -∞ + ∞ is defined as -∞
+            // -∞ + ∞ is defined as -∞ or as ∞ depending on the type
             a is Bound.INFINITE && b !is Bound.NEGATIVE_INFINITE -> Bound.INFINITE
-            a is Bound.NEGATIVE_INFINITE && b is Bound.INFINITE -> Bound.NEGATIVE_INFINITE
+            a is Bound.NEGATIVE_INFINITE && b is Bound.INFINITE ->
+                if (type == BoundType.LOWER) Bound.NEGATIVE_INFINITE else Bound.INFINITE
+            b is Bound.NEGATIVE_INFINITE && a is Bound.INFINITE ->
+                if (type == BoundType.LOWER) Bound.NEGATIVE_INFINITE else Bound.INFINITE
             a is Bound.NEGATIVE_INFINITE && b !is Bound.INFINITE -> Bound.NEGATIVE_INFINITE
             b is Bound.INFINITE && a !is Bound.NEGATIVE_INFINITE -> Bound.INFINITE
             b is Bound.NEGATIVE_INFINITE && a !is Bound.INFINITE -> Bound.NEGATIVE_INFINITE
@@ -587,6 +590,11 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
     override fun hashCode(): Int {
         return javaClass.hashCode()
     }
+}
+
+enum class BoundType {
+    LOWER,
+    UPPER,
 }
 
 /**
