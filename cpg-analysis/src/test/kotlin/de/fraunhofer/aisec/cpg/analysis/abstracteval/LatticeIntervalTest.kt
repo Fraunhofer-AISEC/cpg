@@ -115,12 +115,14 @@ class LatticeIntervalTest {
         assertEquals(Bounded(-8, 8), Bounded(-5, 5) + Bounded(-3, 3))
 
         // Illegal Operations
-        assertThrows<IllegalArgumentException> {
-            Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE) + Bounded(0, INFINITE)
-        }
-        assertThrows<IllegalArgumentException> {
-            Bounded(INFINITE, INFINITE) + Bounded(NEGATIVE_INFINITE, 0)
-        }
+        assertEquals(
+            Bounded(NEGATIVE_INFINITE, INFINITE),
+            Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE) + Bounded(0, INFINITE),
+        )
+        assertEquals(
+            Bounded(NEGATIVE_INFINITE, INFINITE),
+            Bounded(INFINITE, INFINITE) + Bounded(NEGATIVE_INFINITE, 0),
+        )
     }
 
     @Test
@@ -146,13 +148,17 @@ class LatticeIntervalTest {
             Bounded(INFINITE, INFINITE),
             Bounded(-5, 5) - Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE),
         )
-        assertEquals(Bounded(-2, 2), Bounded(-5, 5) - Bounded(-3, 3))
+        assertEquals(Bounded(-8, 8), Bounded(-5, 5) - Bounded(-3, 3))
 
         // Illegal Operations
-        assertThrows<IllegalArgumentException> { Bounded(-10, INFINITE) - Bounded(0, INFINITE) }
-        assertThrows<IllegalArgumentException> {
-            Bounded(NEGATIVE_INFINITE, 10) - Bounded(NEGATIVE_INFINITE, 0)
-        }
+        assertEquals(
+            Bounded(NEGATIVE_INFINITE, INFINITE),
+            Bounded(-10, INFINITE) - Bounded(0, INFINITE),
+        )
+        assertEquals(
+            Bounded(NEGATIVE_INFINITE, INFINITE),
+            Bounded(NEGATIVE_INFINITE, 10) - Bounded(NEGATIVE_INFINITE, 0),
+        )
     }
 
     @Test
@@ -184,12 +190,14 @@ class LatticeIntervalTest {
         assertEquals(Bounded(15, 15), Bounded(-5, 5) * Bounded(-3, 3))
 
         // Illegal Operations
-        assertThrows<IllegalArgumentException> {
-            Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE) * Bounded(0, INFINITE)
-        }
-        assertThrows<IllegalArgumentException> {
-            Bounded(INFINITE, INFINITE) * Bounded(NEGATIVE_INFINITE, 0)
-        }
+        assertEquals(
+            Bounded(NEGATIVE_INFINITE, 0),
+            Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE) * Bounded(0, INFINITE),
+        )
+        assertEquals(
+            Bounded(NEGATIVE_INFINITE, 0),
+            Bounded(INFINITE, INFINITE) * Bounded(NEGATIVE_INFINITE, 0),
+        )
     }
 
     @Test
