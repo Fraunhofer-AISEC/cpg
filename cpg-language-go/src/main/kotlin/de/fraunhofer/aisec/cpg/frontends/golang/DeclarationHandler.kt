@@ -78,17 +78,12 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                     val record =
                         frontend.scopeManager.lookupScope(fqnRecord)?.astNode as? RecordDeclaration
 
-                    // now this gets a little bit hacky, we will add it to the record declaration
-                    // this is strictly speaking not 100 % true, since the method property edge is
-                    // marked as AST and in Go a method is not part of the struct's AST but is
-                    // declared outside. In the future, we need to differentiate between just the
-                    // associated members  of the class and the pure AST nodes declared in the
-                    // struct itself
+                    // Enter scope of record, so we can later resolve this correctly. We do NOT add
+                    // the method to the AST methods property because it is declared outside of the
+                    // record, but we add it to the symbols by declaring it.
                     if (record != null) {
                         method.recordDeclaration = record
-                        record.addMethod(method)
 
-                        // Enter scope of record
                         frontend.scopeManager.enterScope(record)
                     }
                 }

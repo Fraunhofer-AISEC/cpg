@@ -225,16 +225,16 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected open fun handleRecordDeclaration(node: RecordDeclaration) {
         handleStatementHolder(node)
         currentPredecessors.clear()
-        for (constructor in node.constructors) {
+        for (constructor in node.innerConstructors) {
             handleEOG(constructor)
         }
-        for (method in node.methods) {
+        for (method in node.innerMethods) {
             handleEOG(method)
         }
-        for (fields in node.fields) {
+        for (fields in node.innerFields) {
             handleEOG(fields)
         }
-        for (records in node.records) {
+        for (records in node.innerRecords) {
             handleEOG(records)
         }
     }
