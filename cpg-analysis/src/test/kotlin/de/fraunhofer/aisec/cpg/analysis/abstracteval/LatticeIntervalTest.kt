@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval.Bounded
 import kotlin.test.*
 import kotlin.test.Test
 import org.junit.jupiter.api.assertDoesNotThrow
-import org.junit.jupiter.api.assertThrows
 
 class LatticeIntervalTest {
     @Test
@@ -223,19 +222,24 @@ class LatticeIntervalTest {
         assertEquals(Bounded(5, 5), Bounded(-15, 15) / Bounded(-3, 3))
 
         // Illegal Operations
-        assertThrows<IllegalArgumentException> {
-            Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE) / Bounded(1, INFINITE)
-        }
-        assertThrows<IllegalArgumentException> {
-            Bounded(INFINITE, INFINITE) / Bounded(NEGATIVE_INFINITE, 1)
-        }
-        assertThrows<IllegalArgumentException> {
-            Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE) / Bounded(NEGATIVE_INFINITE, 1)
-        }
-        assertThrows<IllegalArgumentException> {
-            Bounded(INFINITE, INFINITE) / Bounded(1, INFINITE)
-        }
-        assertThrows<IllegalArgumentException> { Bounded(2, 4) / Bounded(1, 0) }
+        assertEquals(
+            LatticeInterval.TOP,
+            Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE) / Bounded(1, INFINITE),
+        )
+
+        assertEquals(
+            LatticeInterval.TOP,
+            Bounded(INFINITE, INFINITE) / Bounded(NEGATIVE_INFINITE, 1),
+        )
+
+        assertEquals(
+            LatticeInterval.TOP,
+            Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE) / Bounded(NEGATIVE_INFINITE, 1),
+        )
+
+        assertEquals(LatticeInterval.TOP, Bounded(INFINITE, INFINITE) / Bounded(1, INFINITE))
+
+        assertEquals(LatticeInterval.TOP, Bounded(2, 4) / Bounded(-1, 0))
     }
 
     @Test
@@ -254,11 +258,15 @@ class LatticeIntervalTest {
         assertEquals(Bounded(-1, 1), Bounded(-10, 10) % Bounded(-3, 3))
 
         // Illegal Operations
-        assertThrows<IllegalArgumentException> { Bounded(-5, 5) % Bounded(0, 5) }
-        assertThrows<IllegalArgumentException> { Bounded(-5, 5) % Bounded(-5, 0) }
-        assertThrows<IllegalArgumentException> {
-            Bounded(-5, 5) % Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE)
-        }
+
+        assertEquals(LatticeInterval.TOP, Bounded(-5, 5) % Bounded(0, 5))
+
+        assertEquals(LatticeInterval.TOP, Bounded(-5, 5) % Bounded(-5, 0))
+
+        assertEquals(
+            LatticeInterval.TOP,
+            Bounded(-5, 5) % Bounded(NEGATIVE_INFINITE, NEGATIVE_INFINITE),
+        )
     }
 
     @Test
