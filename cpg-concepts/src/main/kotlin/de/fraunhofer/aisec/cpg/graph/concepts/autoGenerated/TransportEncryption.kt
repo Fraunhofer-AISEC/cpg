@@ -11,5 +11,7 @@ public abstract class TransportEncryption(
   protocol: String,
   protocolVersion: Float,
   cipherSuites: CipherSuite,
+  basedOn: Cipher,
+  secret: Secret,
   underlyingNode: Node,
-) : Confidentiality(underlyingNode)
+) : Encryption(basedOn, secret, underlyingNode)

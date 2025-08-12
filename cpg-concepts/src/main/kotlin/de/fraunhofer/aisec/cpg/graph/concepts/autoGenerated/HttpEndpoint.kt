@@ -9,7 +9,9 @@ public abstract class HttpEndpoint(
   path: String,
   url: String,
   authenticity: Authenticity,
+  authorization: Authorization,
+  httpRequestContext: HttpRequestContext,
   proxyTarget: HttpEndpoint,
   transportEncryption: TransportEncryption,
   underlyingNode: Node,
-) : Functionality(underlyingNode)
+) : RemoteEntryPoint(underlyingNode)

@@ -8,5 +8,7 @@ public abstract class ManagedKeyEncryption(
   algorithm: String,
   enabled: Boolean,
   keyUrl: String,
+  basedOn: Cipher,
+  secret: Secret,
   underlyingNode: Node,
-) : AtRestEncryption(algorithm, enabled, keyUrl, underlyingNode)
+) : AtRestEncryption(algorithm, enabled, keyUrl, basedOn, secret, underlyingNode)

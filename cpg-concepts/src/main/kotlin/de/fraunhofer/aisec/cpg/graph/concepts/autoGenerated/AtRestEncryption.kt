@@ -8,5 +8,7 @@ public abstract class AtRestEncryption(
   algorithm: String,
   enabled: Boolean,
   keyUrl: String,
+  basedOn: Cipher,
+  secret: Secret,
   underlyingNode: Node,
-) : Confidentiality(underlyingNode)
+) : Encryption(basedOn, secret, underlyingNode)

@@ -5,6 +5,8 @@ import kotlin.String
 
 public abstract class Decryption(
   algorithm: String,
+  secret: Secret,
+  linkedConcept: Cipher,
   codeRegion: CodeRegion,
   underlyingNode: Node,
-) : CryptographicOperation(codeRegion, underlyingNode)
+) : CipherOperation(linkedConcept, codeRegion, underlyingNode)

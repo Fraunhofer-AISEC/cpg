@@ -9,8 +9,8 @@ import kotlin.String
 import kotlin.collections.MutableMap
 
 public abstract class SecurityAdvisoryService(
-  keies: Key,
   securityAdvisoryFeeds: SecurityAdvisoryFeed,
+  selectorKeies: SelectorKey,
   ips: Array<String>,
   ports: Array<Short>,
   authenticity: Boolean,

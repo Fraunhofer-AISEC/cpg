@@ -8,4 +8,4 @@ public abstract class HttpRequestHandler(
   application: Application,
   httpEndpoints: HttpEndpoint,
   underlyingNode: Node,
-) : Functionality(underlyingNode)
+) : Http(underlyingNode)

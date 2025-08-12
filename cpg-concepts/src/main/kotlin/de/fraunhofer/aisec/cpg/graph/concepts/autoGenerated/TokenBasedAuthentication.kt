@@ -6,6 +6,7 @@ import kotlin.Boolean
 public abstract class TokenBasedAuthentication(
   enabled: Boolean,
   enforced: Boolean,
+  token: Token,
   contextIsChecked: Boolean,
   underlyingNode: Node,
 ) : Authenticity(contextIsChecked, underlyingNode)

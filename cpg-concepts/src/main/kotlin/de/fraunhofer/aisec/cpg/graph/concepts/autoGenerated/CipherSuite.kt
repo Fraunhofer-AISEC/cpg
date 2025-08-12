@@ -7,6 +7,6 @@ public abstract class CipherSuite(
   authenticationMechanism: String,
   keyExchangeAlgorithm: String,
   macAlgorithm: String,
-  sessionCipher: String,
+  ciphers: Cipher,
   underlyingNode: Node,
 ) : Functionality(underlyingNode)

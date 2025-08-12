@@ -7,6 +7,7 @@ import kotlin.String
 public abstract class CryptographicHash(
   algorithm: String,
   usesSalt: Boolean,
+  linkedConcept: Confidentiality,
   codeRegion: CodeRegion,
   underlyingNode: Node,
-) : CryptographicOperation(codeRegion, underlyingNode)
+) : CryptographicOperation(linkedConcept, codeRegion, underlyingNode)

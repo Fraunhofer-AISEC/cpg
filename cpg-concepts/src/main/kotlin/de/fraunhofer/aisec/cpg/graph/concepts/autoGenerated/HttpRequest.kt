@@ -7,6 +7,7 @@ public abstract class HttpRequest(
   call: String,
   reqBody: String,
   httpEndpoint: HttpEndpoint,
+  linkedConcept: HttpClient,
   codeRegion: CodeRegion,
   underlyingNode: Node,
-) : Operation(codeRegion, underlyingNode)
+) : HttpClientOperation(linkedConcept, codeRegion, underlyingNode)
