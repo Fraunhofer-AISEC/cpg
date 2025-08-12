@@ -58,4 +58,5 @@ dependencies {
         libs.kotlin.test.junit5
     ) // somehow just using testFixturesApi(kotlin("test")) does not work for testFixtures
     testFixturesApi(libs.mockito)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
 }
