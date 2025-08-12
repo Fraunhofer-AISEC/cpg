@@ -417,6 +417,63 @@ class IntegerValue : Value<LatticeInterval> {
                     "&" -> {
                         lhsValue.bitwiseAnd(rhsValue)
                     }
+                    "&&" -> {
+                        if (
+                            lhsValue is LatticeInterval.Bounded &&
+                                rhsValue is LatticeInterval.Bounded
+                        ) {
+                            if (
+                                lhsValue.lower == LatticeInterval.Bound.Value(0L) &&
+                                    lhsValue.upper == LatticeInterval.Bound.Value(0L) ||
+                                    rhsValue.lower == LatticeInterval.Bound.Value(0L) &&
+                                        rhsValue.upper == LatticeInterval.Bound.Value(0L)
+                            ) {
+                                // One value is always zero, so the result is zero
+                                LatticeInterval.Bounded(0, 0)
+                            } else if (
+                                lhsValue.lower <= LatticeInterval.Bound.Value(0L) &&
+                                    lhsValue.upper >= LatticeInterval.Bound.Value(0L) ||
+                                    rhsValue.lower <= LatticeInterval.Bound.Value(0L) &&
+                                        rhsValue.upper >= LatticeInterval.Bound.Value(0L)
+                            ) {
+                                // One of the values can be zero, so the result is unknown
+                                LatticeInterval.Bounded(0, 1)
+                            } else {
+                                // Both values are non-zero, so the result is 1
+                                LatticeInterval.Bounded(1, 1)
+                            }
+                        } else {
+                            LatticeInterval.TOP // Cannot determine bounds
+                        }
+                    }
+                    "||" -> {
+                        if (
+                            lhsValue is LatticeInterval.Bounded &&
+                                rhsValue is LatticeInterval.Bounded
+                        ) {
+                            if (
+                                lhsValue.lower > LatticeInterval.Bound.Value(0L) ||
+                                    rhsValue.lower > LatticeInterval.Bound.Value(0L) ||
+                                    lhsValue.upper < LatticeInterval.Bound.Value(0L) ||
+                                    rhsValue.upper < LatticeInterval.Bound.Value(0L)
+                            ) {
+                                // One of the values is always non-zero, so the result is 1
+                                LatticeInterval.Bounded(1, 1)
+                            } else if (
+                                lhsValue.lower == LatticeInterval.Bound.Value(0L) &&
+                                    lhsValue.upper == LatticeInterval.Bound.Value(0L) &&
+                                    rhsValue.lower == LatticeInterval.Bound.Value(0L) &&
+                                    rhsValue.upper == LatticeInterval.Bound.Value(0L)
+                            ) {
+                                // Both of the values is always zero, so the result is 0
+                                LatticeInterval.Bounded(0, 0)
+                            } else {
+                                LatticeInterval.Bounded(0, 1)
+                            }
+                        } else {
+                            LatticeInterval.TOP // Cannot determine bounds
+                        }
+                    }
                     else -> {
                         log.info("Unsupported binary operator: ${node.operatorCode}")
                         LatticeInterval.TOP // Cannot determine bounds
@@ -441,7 +498,10 @@ class IntegerValue : Value<LatticeInterval> {
                         "*=" -> lhsValue * rhsValue
                         "/=" -> lhsValue / rhsValue
                         "%=" -> lhsValue % rhsValue
-                        else -> TODO("Unsupported operator: ${node.operatorCode}")
+                        else -> {
+                            log.info("Unsupported assignment operator: ${node.operatorCode}")
+                            LatticeInterval.TOP
+                        }
                     }
                 // Push the new value to the declaration state of the variable
                 lattice.changeDeclarationState(state, node.lhs.first(), newValue)
