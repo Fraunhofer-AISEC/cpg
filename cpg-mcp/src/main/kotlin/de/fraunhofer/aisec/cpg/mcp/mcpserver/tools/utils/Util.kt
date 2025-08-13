@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import kotlinx.serialization.json.Json
 
@@ -50,3 +51,5 @@ fun FunctionDeclaration.toJson() = Json.encodeToString(FunctionInfo(this))
 fun FieldDeclaration.toJson() = Json.encodeToString(FieldInfo(this))
 
 fun RecordDeclaration.toJson() = Json.encodeToString(RecordInfo(this))
+
+fun CallExpression.toJson() = Json.encodeToString(CallInfo(this))

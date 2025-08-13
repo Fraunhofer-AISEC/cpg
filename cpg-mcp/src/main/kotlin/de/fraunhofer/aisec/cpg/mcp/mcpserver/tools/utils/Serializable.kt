@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import kotlinx.serialization.Serializable
 
@@ -98,6 +99,33 @@ data class FunctionInfo(
         endLine = functionDeclaration.location?.region?.endLine,
         startColumn = functionDeclaration.location?.region?.startColumn,
         endColumn = functionDeclaration.location?.region?.endColumn,
+    )
+}
+
+@Serializable
+data class CallInfo(
+    val nodeId: String,
+    val name: String,
+    val arguments: List<NodeInfo>,
+    val resolvedTo: List<FunctionInfo>,
+    val fileName: String?,
+    val startLine: Int?,
+    val endLine: Int?,
+    val startColumn: Int?,
+    val endColumn: Int?,
+) {
+    constructor(
+        callExpression: CallExpression
+    ) : this(
+        nodeId = callExpression.id.toHexString(),
+        name = callExpression.name.toString(),
+        arguments = callExpression.arguments.map { NodeInfo(it) },
+        resolvedTo = callExpression.invokes.map { FunctionInfo(it) },
+        fileName = callExpression.location?.artifactLocation?.fileName,
+        startLine = callExpression.location?.region?.startLine,
+        endLine = callExpression.location?.region?.endLine,
+        startColumn = callExpression.location?.region?.startColumn,
+        endColumn = callExpression.location?.region?.endColumn,
     )
 }
 
