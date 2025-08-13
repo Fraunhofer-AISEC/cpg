@@ -363,11 +363,6 @@ class LatticeIntervalTest {
 
     @Test
     fun testToString() {
-        //        assertEquals("BOTTOM", BOTTOM.toString())
-        //        assertEquals(
-        //            "[NEGATIVE_INFINITE, INFINITE]",
-        //            Bounded(NEGATIVE_INFINITE, INFINITE).toString()
-        //        )
         assertEquals("[-5, 5]", Bounded(-5, 5).toString())
     }
 
