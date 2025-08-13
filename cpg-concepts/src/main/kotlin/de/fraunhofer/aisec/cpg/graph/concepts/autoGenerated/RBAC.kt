@@ -4,7 +4,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.Float
 
 public abstract class RBAC(
-  broadAssignments: Float,
-  mixedDuties: Float,
+  public val broadAssignments: Float,
+  public val mixedDuties: Float,
   underlyingNode: Node,
 ) : Authorization(underlyingNode)

@@ -4,7 +4,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.Boolean
 
 public abstract class AnomalyDetection(
-  enabled: Boolean,
-  applicationLogging: ApplicationLogging,
+  public val enabled: Boolean,
+  public val applicationLogging: ApplicationLogging,
   underlyingNode: Node,
 ) : Auditing(underlyingNode)

@@ -5,9 +5,9 @@ import kotlin.Boolean
 import kotlin.String
 
 public abstract class AtRestEncryption(
-  algorithm: String,
-  enabled: Boolean,
-  keyUrl: String,
+  public val algorithm: String,
+  public val enabled: Boolean,
+  public val keyUrl: String,
   basedOn: Cipher,
   secret: Secret,
   underlyingNode: Node,

@@ -4,7 +4,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.String
 
 public abstract class LocalDataLocation(
-  atRestEncryption: AtRestEncryption,
+  public val atRestEncryption: AtRestEncryption,
   path: String,
   storage: Storage,
   underlyingNode: Node,

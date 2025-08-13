@@ -4,8 +4,8 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.String
 
 public abstract class HttpRequestHandler(
-  path: String,
-  application: Application,
-  httpEndpoints: HttpEndpoint,
+  public val path: String,
+  public val application: Application,
+  public val httpEndpoints: HttpEndpoint,
   underlyingNode: Node,
 ) : Http(underlyingNode)

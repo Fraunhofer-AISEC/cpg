@@ -4,12 +4,29 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import java.util.List
+import java.util.Objects
+import kotlin.Any
+import kotlin.Boolean
+import kotlin.Int
 import kotlin.String
 
 public abstract class DatabaseOperation(
-  calls: List<String>,
-  databaseService: DatabaseService,
-  storage: DatabaseStorage,
+  public val calls: List<String>,
+  public val databaseService: DatabaseService,
+  public val storage: DatabaseStorage,
   concept: Concept,
   underlyingNode: Node,
-) : Operation(concept, underlyingNode)
+) : Operation(concept, underlyingNode) {
+  override fun equals(other: Any?): Boolean = other is DatabaseOperation &&
+              super.equals(other) &&
+              other.calls == this.calls &&
+              other.databaseService == this.databaseService &&
+              other.storage == this.storage
+
+  override fun hashCode(): Int = Objects.hash(
+              super.hashCode(),
+              calls,
+              databaseService,
+              storage,
+          )
+}

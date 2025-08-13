@@ -4,7 +4,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.String
 
 public abstract class DocumentChecksum(
-  algorithm: String,
-  errors: Error,
+  public val algorithm: String,
+  public val errors: Error,
   underlyingNode: Node,
 ) : Integrity(underlyingNode)

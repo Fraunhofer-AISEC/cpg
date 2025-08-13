@@ -4,7 +4,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.String
 
 public abstract class DataLocation(
-  path: String,
-  storage: Storage,
+  public val path: String,
+  public val storage: Storage,
   underlyingNode: Node,
 ) : Functionality(underlyingNode)

@@ -4,6 +4,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.String
 
 public abstract class GeoLocation(
-  region: String,
+  public val region: String,
   underlyingNode: Node,
 ) : Availability(underlyingNode)

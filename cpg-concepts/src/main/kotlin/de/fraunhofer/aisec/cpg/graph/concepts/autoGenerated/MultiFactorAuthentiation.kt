@@ -4,7 +4,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.Boolean
 
 public abstract class MultiFactorAuthentiation(
-  authenticities: Authenticity,
+  public val authenticities: Authenticity,
   contextIsChecked: Boolean,
   underlyingNode: Node,
 ) : Authenticity(contextIsChecked, underlyingNode)

@@ -5,8 +5,8 @@ import java.time.Duration
 import kotlin.Boolean
 
 public abstract class AutomaticUpdates(
-  enabled: Boolean,
-  interval: Duration,
-  securityOnly: Boolean,
+  public val enabled: Boolean,
+  public val interval: Duration,
+  public val securityOnly: Boolean,
   underlyingNode: Node,
 ) : Integrity(underlyingNode)

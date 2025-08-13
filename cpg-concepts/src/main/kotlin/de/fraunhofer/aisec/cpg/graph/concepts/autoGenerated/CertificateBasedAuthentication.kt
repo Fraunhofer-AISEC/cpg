@@ -4,7 +4,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.Boolean
 
 public abstract class CertificateBasedAuthentication(
-  enabled: Boolean,
+  public val enabled: Boolean,
   contextIsChecked: Boolean,
   underlyingNode: Node,
 ) : Authenticity(contextIsChecked, underlyingNode)

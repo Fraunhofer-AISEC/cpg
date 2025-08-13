@@ -4,6 +4,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.String
 
 public abstract class Error(
-  message: String,
+  public val message: String,
   underlyingNode: Node,
 ) : Functionality(underlyingNode)

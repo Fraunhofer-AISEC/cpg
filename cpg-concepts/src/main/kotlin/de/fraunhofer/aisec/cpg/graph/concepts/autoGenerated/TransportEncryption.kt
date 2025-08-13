@@ -6,11 +6,11 @@ import kotlin.Float
 import kotlin.String
 
 public abstract class TransportEncryption(
-  enabled: Boolean,
-  enforced: Boolean,
-  protocol: String,
-  protocolVersion: Float,
-  cipherSuites: CipherSuite,
+  public val enabled: Boolean,
+  public val enforced: Boolean,
+  public val protocol: String,
+  public val protocolVersion: Float,
+  public val cipherSuites: CipherSuite,
   basedOn: Cipher,
   secret: Secret,
   underlyingNode: Node,

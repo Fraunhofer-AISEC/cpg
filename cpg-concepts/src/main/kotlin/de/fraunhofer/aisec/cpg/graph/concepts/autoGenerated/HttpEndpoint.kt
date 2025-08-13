@@ -4,14 +4,14 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.String
 
 public abstract class HttpEndpoint(
-  handler: String,
-  method: String,
-  path: String,
-  url: String,
-  authenticity: Authenticity,
-  authorization: Authorization,
-  httpRequestContext: HttpRequestContext,
-  proxyTarget: HttpEndpoint,
-  transportEncryption: TransportEncryption,
+  public val handler: String,
+  public val method: String,
+  public val path: String,
+  public val url: String,
+  public val authenticity: Authenticity,
+  public val authorization: Authorization,
+  public val httpRequestContext: HttpRequestContext,
+  public val proxyTarget: HttpEndpoint,
+  public val transportEncryption: TransportEncryption,
   underlyingNode: Node,
 ) : RemoteEntryPoint(underlyingNode)

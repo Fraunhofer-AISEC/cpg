@@ -4,7 +4,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.Boolean
 
 public abstract class OTPBasedAuthentication(
-  activated: Boolean,
+  public val activated: Boolean,
   contextIsChecked: Boolean,
   underlyingNode: Node,
 ) : Authenticity(contextIsChecked, underlyingNode)

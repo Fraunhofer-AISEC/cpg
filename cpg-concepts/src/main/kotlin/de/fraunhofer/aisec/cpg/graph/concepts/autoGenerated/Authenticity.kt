@@ -4,6 +4,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.Boolean
 
 public abstract class Authenticity(
-  contextIsChecked: Boolean,
+  public val contextIsChecked: Boolean,
   underlyingNode: Node,
 ) : SecurityFeature(underlyingNode)

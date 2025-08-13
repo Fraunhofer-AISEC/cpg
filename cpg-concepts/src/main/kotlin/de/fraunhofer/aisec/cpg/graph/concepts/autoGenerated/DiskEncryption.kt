@@ -5,7 +5,7 @@ import kotlin.Boolean
 import kotlin.String
 
 public abstract class DiskEncryption(
-  target: BlockStorage,
+  public val target: BlockStorage,
   algorithm: String,
   enabled: Boolean,
   keyUrl: String,

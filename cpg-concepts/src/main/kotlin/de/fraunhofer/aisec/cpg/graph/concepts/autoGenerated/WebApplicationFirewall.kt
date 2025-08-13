@@ -4,6 +4,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.Boolean
 
 public abstract class WebApplicationFirewall(
-  enabled: Boolean,
+  public val enabled: Boolean,
   underlyingNode: Node,
 ) : Firewall(underlyingNode)

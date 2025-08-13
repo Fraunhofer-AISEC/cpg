@@ -4,6 +4,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.Int
 
 public abstract class UsageStatistics(
-  apiHitsPerMonth: Int,
+  public val apiHitsPerMonth: Int,
   underlyingNode: Node,
 ) : Auditing(underlyingNode)

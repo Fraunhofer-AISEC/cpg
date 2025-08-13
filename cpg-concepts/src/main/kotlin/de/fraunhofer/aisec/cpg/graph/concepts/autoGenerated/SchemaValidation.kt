@@ -4,8 +4,8 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.String
 
 public abstract class SchemaValidation(
-  format: String,
-  schemaURL: String,
-  errors: Error,
+  public val format: String,
+  public val schemaURL: String,
+  public val errors: Error,
   underlyingNode: Node,
 ) : Functionality(underlyingNode)

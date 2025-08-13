@@ -4,6 +4,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.OperatingSystemArchitecture
 
 public abstract class LocalEntryPoint(
-  target: OperatingSystemArchitecture,
+  public val target: OperatingSystemArchitecture,
   underlyingNode: Node,
 ) : EntryPoint(underlyingNode)

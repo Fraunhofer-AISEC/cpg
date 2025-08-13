@@ -4,8 +4,8 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.String
 
 public abstract class RemoteDataLocation(
-  authenticity: Authenticity,
-  transportEncryption: TransportEncryption,
+  public val authenticity: Authenticity,
+  public val transportEncryption: TransportEncryption,
   path: String,
   storage: Storage,
   underlyingNode: Node,

@@ -4,9 +4,9 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.Boolean
 
 public abstract class TokenBasedAuthentication(
-  enabled: Boolean,
-  enforced: Boolean,
-  token: Token,
+  public val enabled: Boolean,
+  public val enforced: Boolean,
+  public val token: Token,
   contextIsChecked: Boolean,
   underlyingNode: Node,
 ) : Authenticity(contextIsChecked, underlyingNode)

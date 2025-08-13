@@ -6,10 +6,10 @@ import kotlin.String
 
 public abstract class CodeRegion(
   code: String,
-  endColumn: Int,
-  endLine: Int,
-  `file`: String,
-  startColumn: Int,
-  startLine: Int,
+  public val endColumn: Int,
+  public val endLine: Int,
+  public val `file`: String,
+  public val startColumn: Int,
+  public val startLine: Int,
   underlyingNode: Node,
 ) : Functionality(underlyingNode)

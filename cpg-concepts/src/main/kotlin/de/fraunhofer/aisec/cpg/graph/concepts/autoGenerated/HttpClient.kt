@@ -4,7 +4,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.Boolean
 
 public abstract class HttpClient(
-  isTLS: Boolean,
-  authenticity: Authenticity,
+  public val isTLS: Boolean,
+  public val authenticity: Authenticity,
   underlyingNode: Node,
 ) : Http(underlyingNode)
