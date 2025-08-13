@@ -34,6 +34,7 @@ mavenPublishing {
 
 dependencies {
     implementation(libs.bundles.sootup)
+    implementation(libs.dex2jar)
     // needed until https://github.com/antlr/antlr4/issues/3895 is fixed
     runtimeOnly("org.antlr:antlr4-runtime") { version { strictly("4.9.3") } }
 }
