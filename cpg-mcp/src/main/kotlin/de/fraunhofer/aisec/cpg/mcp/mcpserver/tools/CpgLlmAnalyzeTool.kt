@@ -137,7 +137,9 @@ fun Server.addCpgLlmAnalyzeTool() {
                     "1. Research available concepts and operations in the CPG repository (cpg-concepts module)"
                 )
                 appendLine("2. Analyze the nodes below from a security perspective")
-                appendLine("3. Suggest the appropriate overlays from the CPG repository by providing their fully qualified class names")
+                appendLine(
+                    "3. Suggest the appropriate overlays from the CPG repository by providing their fully qualified class names"
+                )
                 appendLine()
                 appendLine("Focus on identifying nodes that handle:")
                 appendLine("- Sensitive data access (files, environment variables, databases)")
@@ -199,9 +201,7 @@ fun Server.addCpgLlmAnalyzeTool() {
             CallToolResult(
                 content =
                     listOf(
-                        TextContent(
-                            "Error generating prompt: ${e.message ?: e::class.simpleName}"
-                        )
+                        TextContent("Error generating prompt: ${e.message ?: e::class.simpleName}")
                     )
             )
         }
@@ -217,4 +217,3 @@ abstract class PrivacyOperation(underlyingNode: Node? = null, concept: Privacy) 
 
 class ReadData(underlyingNode: Node? = null, concept: Privacy) :
     PrivacyOperation(underlyingNode, concept)
-
