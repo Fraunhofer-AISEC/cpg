@@ -27,7 +27,10 @@ package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
+import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
 import io.modelcontextprotocol.kotlin.sdk.Tool
@@ -49,6 +52,8 @@ data class ConceptAssignment(
 )
 
 fun Server.addCpgApplyConceptsTool() {
+    val availableConcepts = listOverlayClasses<Concept>()
+    val availableOperations = listOverlayClasses<Operation>()
     val toolDescription =
         """
             Apply concepts or operations to specific nodes in the CPG.
@@ -64,6 +69,12 @@ fun Server.addCpgApplyConceptsTool() {
               Each assignment contains:
               - nodeId: ID of the node to apply overlay to
               - overlay: Fully qualified name of concept or operation class
+              
+            Available concepts:
+            ${availableConcepts.joinToString("\n") { "- ${it.name}" }}
+            
+            Available operations:
+            ${availableOperations.joinToString("\n") { "- ${it.name}" }}
         """
             .trimIndent()
 
