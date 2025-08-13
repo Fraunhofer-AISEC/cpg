@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.SignatureResult
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.ancestors
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Name
@@ -577,7 +578,7 @@ class MultipleLanguages(val languages: Set<Language<*>>) : Language<Nothing>() {
  * Returns the single language of a node and its children. If the node has multiple children with
  * different languages, it returns a [MultipleLanguages] object.
  */
-fun Node.multiLanguage(): Language<*> {
+fun AstNode.multiLanguage(): Language<*> {
     val languages = astChildren.map { it.language }.toSet()
     return if (languages.size == 1) {
         languages.single()

@@ -1336,7 +1336,11 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * therefore adds dummy statements to the end of basic blocks where a certain variable is
      * declared and initialized. The original phi instruction is not added to the CPG.
      */
-    fun handlePhi(instr: LLVMValueRef, tu: TranslationUnitDeclaration, flatAST: MutableList<Node>) {
+    fun handlePhi(
+        instr: LLVMValueRef,
+        tu: TranslationUnitDeclaration,
+        flatAST: MutableList<AstNode>,
+    ) {
         val labelMap = mutableMapOf<LabelStatement, Expression>()
         val numOps = LLVMGetNumOperands(instr)
         var i = 0

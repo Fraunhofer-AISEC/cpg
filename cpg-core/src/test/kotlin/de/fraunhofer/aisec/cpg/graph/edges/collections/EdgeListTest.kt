@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.edges.collections
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
@@ -42,7 +43,7 @@ class EdgeListTest {
             val node3 = newLiteral(3)
             val node4 = newLiteral(4)
 
-            val list = AstEdges<Node, AstEdge<Node>>(thisRef = node1)
+            val list = AstEdges<AstNode, AstEdge<AstNode>>(thisRef = node1)
             list += node2
             list += node3
 

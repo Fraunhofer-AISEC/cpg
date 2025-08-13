@@ -160,14 +160,14 @@ open class CallExpression :
 
     /** If the CallExpression instantiates a template, the call can provide template arguments. */
     @Relationship(value = "TEMPLATE_ARGUMENTS", direction = Relationship.Direction.OUTGOING)
-    var templateArgumentEdges: TemplateArguments<Node>? = null
+    var templateArgumentEdges: TemplateArguments<AstNode>? = null
         set(value) {
             field = value
             template = value != null
         }
 
-    val templateArguments: List<Node>
-        get(): List<Node> {
+    val templateArguments: List<AstNode>
+        get(): List<AstNode> {
             return templateArgumentEdges?.toNodeCollection() ?: listOf()
         }
 
@@ -189,10 +189,10 @@ open class CallExpression :
      */
     @JvmOverloads
     fun addTemplateParameter(
-        templateParam: Node,
+        templateParam: AstNode,
         templateInitialization: TemplateInitialization? = TemplateInitialization.EXPLICIT,
     ) {
-        if (templateParam is Expression || templateParam is Type) {
+        if (templateParam is Expression) {
             if (templateArgumentEdges == null) {
                 templateArgumentEdges = TemplateArguments(this)
             }
@@ -203,8 +203,8 @@ open class CallExpression :
     }
 
     fun updateTemplateParameters(
-        initializationType: Map<Node?, TemplateInitialization?>,
-        orderedInitializationSignature: List<Node>,
+        initializationType: Map<AstNode?, TemplateInitialization?>,
+        orderedInitializationSignature: List<AstNode>,
     ) {
         if (templateArgumentEdges == null) {
             templateArgumentEdges = TemplateArguments(this)

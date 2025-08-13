@@ -71,6 +71,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             // more than it helps.
             return
         }
+
         // These are EOGStarterHolders but do not have an EOG which means, they will just cause
         // problems. Again, if we delete information/edges, we will never be able to recover them.
         if (node is FunctionTemplateDeclaration) return
@@ -87,7 +88,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
         log.trace("Handling {} (complexity: {})", node.name, c)
 
-        clearFlowsOfVariableDeclarations(node)
+        if (node is AstNode) {
+            clearFlowsOfVariableDeclarations(node)
+        }
+
         val startState = DFGPassState<Set<Node>>()
 
         startState.declarationsState.push(node, PowersetLattice(identitySetOf()))
@@ -164,7 +168,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      * Removes all the incoming and outgoing DFG edges for each variable declaration in the block of
      * code [node].
      */
-    protected fun clearFlowsOfVariableDeclarations(node: Node) {
+    protected fun clearFlowsOfVariableDeclarations(node: AstNode) {
         // Get all children of the node which are not part of child EOG starters' children. We need
         // this to filter out effects on the childStarters' children. We do not want to impact them,
         // so we later filter out all things which occur in the children or even completely outside
