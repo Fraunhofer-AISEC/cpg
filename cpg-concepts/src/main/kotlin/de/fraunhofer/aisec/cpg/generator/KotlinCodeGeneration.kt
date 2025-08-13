@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg
 import com.squareup.kotlinpoet.ARRAY
 import com.squareup.kotlinpoet.BOOLEAN
 import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.DOUBLE
 import com.squareup.kotlinpoet.FLOAT
 import com.squareup.kotlinpoet.FileSpec
@@ -36,16 +37,19 @@ import com.squareup.kotlinpoet.INT
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.MUTABLE_MAP
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.SHORT
 import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
+import com.squareup.kotlinpoet.asTypeName
 import de.fraunhofer.aisec.cpg.models.ClassAbstractRepresentation
 import de.fraunhofer.aisec.cpg.models.Properties
 import java.io.File
 import java.io.FileWriter
 import java.io.IOException
 import kotlin.collections.plus
+import org.jboss.forge.roaster._shade.org.eclipse.jdt.internal.compiler.ast.NullAnnotationMatching.CheckMode.OVERRIDE
 
 fun writeKotlinClassesToFolder(
     sources: LinkedHashSet<ClassAbstractRepresentation>,
@@ -152,6 +156,8 @@ private fun createKtSourceCodeString(
         return ""
     }
 
+    val fileSpecBuilder = FileSpec.builder(ktSource.packageName!!, ktSource.name)
+
     // build parent class in order to extend from it
     // Get the parent interface/class using its fully-qualified name.
     var classBuilder = TypeSpec.classBuilder(ktSource.name).addModifiers(KModifier.ABSTRACT)
@@ -195,9 +201,8 @@ private fun createKtSourceCodeString(
         constructorBuilder,
         classBuilder,
         ktSource.name,
+        fileSpecBuilder,
     )
-
-    // findAllParentsAndSaveToClassAbstraction(ktSource, otherClassAbstractions)
 
     // Now we have to add each object and data property of all parents to the constructor of
     // ktSource
@@ -209,6 +214,7 @@ private fun createKtSourceCodeString(
             constructorBuilder,
             classBuilder,
             ktSource.name,
+            fileSpecBuilder,
             isParent = true,
         )
     }
@@ -216,12 +222,63 @@ private fun createKtSourceCodeString(
     // Set the primary constructor for the class.
     classBuilder.primaryConstructor(constructorBuilder.build())
 
+    // If current class is a operation we have to add equals method and hashCode method
+    if (ktSource.allParents.find { it.name == "Operation" } != null) {
+        // TODO: Call here equals and hash code method
+        addEqualsMethod(classBuilder, ktSource)
+        addHashCodeMethod(classBuilder, ktSource)
+    }
+
     // Build the final file
-    val file =
-        FileSpec.builder(ktSource.packageName!!, ktSource.name)
-            .addType(classBuilder.build())
-            .build()
+    val file = fileSpecBuilder.addType(classBuilder.build()).build()
     return file.toString()
+}
+
+private fun addEqualsMethod(classBuilder: TypeSpec.Builder, ktSource: ClassAbstractRepresentation) {
+    val equalsMethodBuilder =
+        FunSpec.builder("equals")
+            .addModifiers(KModifier.OVERRIDE)
+            .addParameter("other", Any::class.asTypeName().copy(nullable = true))
+            .returns(Boolean::class)
+
+    // Build the equals condition
+    val conditions = mutableListOf<String>()
+    conditions.add("other is ${ktSource.name}")
+    conditions.add("super.equals(other)")
+
+    // Add conditions for all data and object properties of the current class
+    for (property in ktSource.dataProperties + ktSource.objectProperties) {
+        conditions.add("other.${property.propertyName} == this.${property.propertyName}")
+    }
+
+    val returnStatement = "return " + conditions.joinToString(" &&\n            ")
+
+    equalsMethodBuilder.addStatement(returnStatement)
+    classBuilder.addFunction(equalsMethodBuilder.build())
+}
+
+private fun addHashCodeMethod(
+    classBuilder: TypeSpec.Builder,
+    ktSource: ClassAbstractRepresentation,
+) {
+    val hashCodeMethodBuilder =
+        FunSpec.builder("hashCode").addModifiers(KModifier.OVERRIDE).returns(Int::class)
+
+    // Collect all property names for hashing
+    val hashProperties = mutableListOf<String>()
+    hashProperties.add("super.hashCode()")
+
+    // Add all data and object properties of the current class
+    for (property in ktSource.dataProperties + ktSource.objectProperties) {
+        hashProperties.add(property.propertyName)
+    }
+
+    val hashStatement =
+        "return %T.hash(\n            ${hashProperties.joinToString(",\n            ")},\n        )"
+
+    hashCodeMethodBuilder.addStatement(hashStatement, ClassName("java.util", "Objects"))
+
+    classBuilder.addFunction(hashCodeMethodBuilder.build())
 }
 
 private fun addPropertiesToClass(
@@ -230,8 +287,12 @@ private fun addPropertiesToClass(
     constructorBuilder: FunSpec.Builder,
     classBuilder: TypeSpec.Builder,
     className: String,
+    fileSpecBuilder: FileSpec.Builder,
     isParent: Boolean = false,
 ) {
+    // Track if we need to add an init block
+    var needsInitBlock = false
+    val initBlockBuilder = CodeBlock.builder()
 
     // Loop over the data properties.
     for (dataProp in dataProperties) {
@@ -243,9 +304,41 @@ private fun addPropertiesToClass(
                 "Unknown type: ${dataProp.propertyType} for property ${dataProp.propertyName} of class ${className}"
             )
         }
+        // Special handling for 'name' and 'code' properties in object properties too
+        val paramName =
+            when (dataProp.propertyName) {
+                "name" -> {
+                    needsInitBlock = true
+                    fileSpecBuilder.addImport("de.fraunhofer.aisec.cpg.graph", "Name")
+                    initBlockBuilder.addStatement(
+                        "this.name = %T(localName = name)",
+                        ClassName("de.fraunhofer.aisec.cpg.graph", "Name"),
+                    )
+                    "nameString"
+                }
+                "code" -> {
+                    needsInitBlock = true
+                    initBlockBuilder.addStatement("this.code = code")
+                    "codeString"
+                }
+                else -> dataProp.propertyName
+            }
 
-        // Add a constructor parameter for the property.
+        if (dataProp.propertyName == "id") continue
+
+        // Add a constructor parameter for the property
         constructorBuilder.addParameter(dataProp.propertyName, typeName)
+
+        // For code and id we do not want to store these values since Class "Node" from the cpg
+        // already have them
+        if (!isParent && dataProp.propertyName != "code" && dataProp.propertyName != "name") {
+            // Add a property to the class, initialized from the constructor parameter.
+            classBuilder.addProperty(
+                PropertySpec.builder(dataProp.propertyName, typeName)
+                    .initializer(dataProp.propertyName)
+                    .build()
+            )
+        }
 
         // Add a property to the class, initialized from the constructor parameter.
         classBuilder.primaryConstructor(constructorBuilder.build())
@@ -267,12 +360,26 @@ private fun addPropertiesToClass(
         // Add a constructor parameter for the property.
         constructorBuilder.addParameter(objectProp.propertyName, typeName)
 
+        if (!isParent) {
+            // Add a property to the class, initialized from the constructor parameter.
+            classBuilder.addProperty(
+                PropertySpec.builder(objectProp.propertyName, typeName)
+                    .initializer(objectProp.propertyName)
+                    .build()
+            )
+        }
+
         // Add a property to the class, initialized from the constructor parameter.
         classBuilder.primaryConstructor(constructorBuilder.build())
 
         if (isParent) {
             // Add SuperclassConstructorParameter for the property.
             classBuilder.addSuperclassConstructorParameter(objectProp.propertyName).build()
+        }
+
+        // Add init block if needed
+        if (needsInitBlock) {
+            classBuilder.addInitializerBlock(initBlockBuilder.build())
         }
     }
 }
