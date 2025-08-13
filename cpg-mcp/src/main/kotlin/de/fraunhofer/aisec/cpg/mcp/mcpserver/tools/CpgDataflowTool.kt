@@ -30,6 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.GraphToFollow
 import de.fraunhofer.aisec.cpg.graph.Intraprocedural
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.DataflowResult
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.QueryTreeNode
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toQueryTreeNode
 import de.fraunhofer.aisec.cpg.query.May
 import de.fraunhofer.aisec.cpg.query.dataFlow
@@ -164,18 +166,3 @@ fun Server.addCpgDataflowTool() {
         }
     }
 }
-
-@Serializable
-data class DataflowResult(
-    val fromConcept: String,
-    val toConcept: String,
-    val foundPaths: List<QueryTreeNode>,
-)
-
-@Serializable
-data class QueryTreeNode(
-    val id: String,
-    val value: String,
-    val node: NodeInfo?,
-    val children: List<QueryTreeNode> = emptyList(),
-)

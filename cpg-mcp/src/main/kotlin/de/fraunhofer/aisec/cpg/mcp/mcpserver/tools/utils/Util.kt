@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.NodeInfo
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.QueryTreeNode
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.query.QueryTree
+import kotlinx.serialization.json.Json
 
 fun Node.toNodeInfo(): NodeInfo {
     return NodeInfo(
@@ -54,4 +54,27 @@ fun <T> QueryTree<T>.toQueryTreeNode(): QueryTreeNode {
         node = this.node?.toNodeInfo(),
         children = this.children.map { it.toQueryTreeNode() },
     )
+}
+
+fun FunctionDeclaration.toJson(): String {
+    val functionInfo =
+        FunctionInfo(
+            nodeId = this.id.toHexString(),
+            name = this.name.toString(),
+            parameters =
+                this.parameters.map {
+                    ParameterInfo(
+                        it.name.toString(),
+                        it.type.name.toString(),
+                        it.default.toString(),
+                    )
+                },
+            signature = this.signature,
+            fileName = this.location?.artifactLocation?.fileName,
+            startLine = this.location?.region?.startLine,
+            endLine = this.location?.region?.endLine,
+            startColumn = this.location?.region?.startColumn,
+            endColumn = this.location?.region?.endColumn,
+        )
+    return Json.encodeToString(functionInfo)
 }

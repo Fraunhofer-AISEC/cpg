@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.mcpserver
 
+import de.fraunhofer.aisec.codyze.console.listFunctions
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgAnalyzeTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgApplyConceptsTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgDataflowTool
@@ -52,6 +53,7 @@ fun configureServer(): Server {
     server.addCpgLlmAnalyzeTool()
     server.addCpgApplyConceptsTool()
     server.addCpgDataflowTool()
+    server.listFunctions()
 
     return server
 }

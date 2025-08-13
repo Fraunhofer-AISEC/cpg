@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.graph.variables
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toNodeInfo
 import de.fraunhofer.aisec.cpg.mcp.setupTranslationConfiguration
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
@@ -142,25 +143,3 @@ fun Server.addCpgAnalyzeTool() {
         }
     }
 }
-
-@Serializable
-data class NodeInfo(
-    val nodeId: String,
-    val name: String,
-    val code: String?,
-    val fileName: String?,
-    val startLine: Int?,
-    val endLine: Int?,
-    val startColumn: Int?,
-    val endColumn: Int?,
-)
-
-@Serializable
-data class CpgAnalysisResult(
-    val fileName: String,
-    val totalNodes: Int,
-    val functions: Int,
-    val variables: Int,
-    val callExpressions: Int,
-    val nodes: List<NodeInfo>,
-)

@@ -25,14 +25,12 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toJson
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
 import io.modelcontextprotocol.kotlin.sdk.server.Server
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 
 fun Server.listFunctions() {
     val toolDescription =
@@ -61,42 +59,3 @@ fun Server.listFunctions() {
         }
     }
 }
-
-fun FunctionDeclaration.toJson(): String {
-    val functionInfo =
-        FunctionInfo(
-            nodeId = this.id.toHexString(),
-            name = this.name.toString(),
-            parameters =
-                this.parameters.map {
-                    ParameterInfo(
-                        it.name.toString(),
-                        it.type.name.toString(),
-                        it.default.toString(),
-                    )
-                },
-            signature = this.signature,
-            fileName = this.location?.artifactLocation?.fileName,
-            startLine = this.location?.region?.startLine,
-            endLine = this.location?.region?.endLine,
-            startColumn = this.location?.region?.startColumn,
-            endColumn = this.location?.region?.endColumn,
-        )
-    return Json.encodeToString(functionInfo)
-}
-
-@Serializable
-data class ParameterInfo(val name: String, val type: String, val defaultValue: String? = null)
-
-@Serializable
-data class FunctionInfo(
-    val nodeId: String,
-    val name: String,
-    val parameters: List<ParameterInfo>,
-    val signature: String,
-    val fileName: String?,
-    val startLine: Int?,
-    val endLine: Int?,
-    val startColumn: Int?,
-    val endColumn: Int?,
-)
