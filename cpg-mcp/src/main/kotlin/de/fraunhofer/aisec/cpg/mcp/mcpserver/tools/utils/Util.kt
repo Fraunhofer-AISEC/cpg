@@ -26,25 +26,14 @@
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import kotlinx.serialization.json.Json
 
 fun Node.toNodeInfo(): NodeInfo {
-    return NodeInfo(
-        nodeId = this.id.toString(),
-        name = this.name.localName,
-        code = this.code,
-        fileName =
-            this.location?.artifactLocation?.uri?.let { uri ->
-                val path = uri.toString()
-                path.substringAfterLast('/').substringAfterLast('\\')
-            } ?: "unknown",
-        startLine = this.location?.region?.startLine ?: 0,
-        endLine = this.location?.region?.endLine ?: 0,
-        startColumn = this.location?.region?.startColumn ?: 0,
-        endColumn = this.location?.region?.endColumn ?: 0,
-    )
+    return NodeInfo(this)
 }
 
 fun <T> QueryTree<T>.toQueryTreeNode(): QueryTreeNode {
@@ -56,25 +45,8 @@ fun <T> QueryTree<T>.toQueryTreeNode(): QueryTreeNode {
     )
 }
 
-fun FunctionDeclaration.toJson(): String {
-    val functionInfo =
-        FunctionInfo(
-            nodeId = this.id.toHexString(),
-            name = this.name.toString(),
-            parameters =
-                this.parameters.map {
-                    ParameterInfo(
-                        it.name.toString(),
-                        it.type.name.toString(),
-                        it.default.toString(),
-                    )
-                },
-            signature = this.signature,
-            fileName = this.location?.artifactLocation?.fileName,
-            startLine = this.location?.region?.startLine,
-            endLine = this.location?.region?.endLine,
-            startColumn = this.location?.region?.startColumn,
-            endColumn = this.location?.region?.endColumn,
-        )
-    return Json.encodeToString(functionInfo)
-}
+fun FunctionDeclaration.toJson() = Json.encodeToString(FunctionInfo(this))
+
+fun FieldDeclaration.toJson() = Json.encodeToString(FieldInfo(this))
+
+fun RecordDeclaration.toJson() = Json.encodeToString(RecordInfo(this))

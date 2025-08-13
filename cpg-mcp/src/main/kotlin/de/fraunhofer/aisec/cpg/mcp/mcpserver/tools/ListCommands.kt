@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.codyze.console
 
 import de.fraunhofer.aisec.cpg.graph.functions
+import de.fraunhofer.aisec.cpg.graph.records
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toJson
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
@@ -49,6 +50,34 @@ fun Server.listFunctions() {
                             )
                     )
             CallToolResult(content = result.functions.map { TextContent(it.toJson()) })
+        } catch (e: Exception) {
+            CallToolResult(
+                content =
+                    listOf(
+                        TextContent("Error listing functions: ${e.message ?: e::class.simpleName}")
+                    )
+            )
+        }
+    }
+}
+
+fun Server.listRecords() {
+    val toolDescription =
+        "This tool lists all classes and structs, more precisely their declarations, which are held in the graph."
+
+    this.addTool(name = "cpg_list_records", description = toolDescription) { _ ->
+        try {
+            val result =
+                globalAnalysisResult
+                    ?: return@addTool CallToolResult(
+                        content =
+                            listOf(
+                                TextContent(
+                                    "No analysis result available. Please analyze your code first using cpg_analyze."
+                                )
+                            )
+                    )
+            CallToolResult(content = result.records.map { TextContent(it.toJson()) })
         } catch (e: Exception) {
             CallToolResult(
                 content =

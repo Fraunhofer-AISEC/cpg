@@ -25,6 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils
 
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -37,20 +43,36 @@ data class NodeInfo(
     val endLine: Int?,
     val startColumn: Int?,
     val endColumn: Int?,
-)
+) {
+    constructor(
+        node: Node
+    ) : this(
+        nodeId = node.id.toHexString(),
+        name = node.name.localName,
+        code = node.code,
+        fileName = node.location?.artifactLocation?.fileName,
+        startLine = node.location?.region?.startLine,
+        endLine = node.location?.region?.endLine,
+        startColumn = node.location?.region?.startColumn,
+        endColumn = node.location?.region?.endColumn,
+    )
+}
 
 @Serializable
-data class CpgAnalysisResult(
-    val fileName: String,
-    val totalNodes: Int,
-    val functions: Int,
-    val variables: Int,
-    val callExpressions: Int,
-    val nodes: List<NodeInfo>,
-)
+data class TypeInfo(val name: String) {
+    constructor(type: Type) : this(type.name.toString())
+}
 
 @Serializable
-data class ParameterInfo(val name: String, val type: String, val defaultValue: String? = null)
+data class ParameterInfo(val name: String, val type: TypeInfo, val defaultValue: String? = null) {
+    constructor(
+        parameterDeclaration: ParameterDeclaration
+    ) : this(
+        name = parameterDeclaration.name.toString(),
+        type = TypeInfo(parameterDeclaration.type),
+        defaultValue = parameterDeclaration.default.toString(),
+    )
+}
 
 @Serializable
 data class FunctionInfo(
@@ -63,6 +85,82 @@ data class FunctionInfo(
     val endLine: Int?,
     val startColumn: Int?,
     val endColumn: Int?,
+) {
+    constructor(
+        functionDeclaration: FunctionDeclaration
+    ) : this(
+        nodeId = functionDeclaration.id.toHexString(),
+        name = functionDeclaration.name.toString(),
+        parameters = functionDeclaration.parameters.map { ParameterInfo(it) },
+        signature = functionDeclaration.signature,
+        fileName = functionDeclaration.location?.artifactLocation?.fileName,
+        startLine = functionDeclaration.location?.region?.startLine,
+        endLine = functionDeclaration.location?.region?.endLine,
+        startColumn = functionDeclaration.location?.region?.startColumn,
+        endColumn = functionDeclaration.location?.region?.endColumn,
+    )
+}
+
+@Serializable
+data class RecordInfo(
+    val nodeId: String,
+    val name: String,
+    val methods: List<FunctionInfo>,
+    val fields: List<FieldInfo>,
+    val fileName: String?,
+    val startLine: Int?,
+    val endLine: Int?,
+    val startColumn: Int?,
+    val endColumn: Int?,
+) {
+    constructor(
+        recordDeclaration: RecordDeclaration
+    ) : this(
+        nodeId = recordDeclaration.id.toHexString(),
+        name = recordDeclaration.name.toString(),
+        methods = recordDeclaration.methods.map { FunctionInfo(it) },
+        fields = recordDeclaration.fields.map { FieldInfo(it) },
+        fileName = recordDeclaration.location?.artifactLocation?.fileName,
+        startLine = recordDeclaration.location?.region?.startLine,
+        endLine = recordDeclaration.location?.region?.endLine,
+        startColumn = recordDeclaration.location?.region?.startColumn,
+        endColumn = recordDeclaration.location?.region?.endColumn,
+    )
+}
+
+@Serializable
+data class FieldInfo(
+    val nodeId: String,
+    val name: String,
+    val type: TypeInfo,
+    val fileName: String?,
+    val startLine: Int?,
+    val endLine: Int?,
+    val startColumn: Int?,
+    val endColumn: Int?,
+) {
+    constructor(
+        field: FieldDeclaration
+    ) : this(
+        nodeId = field.id.toHexString(),
+        name = field.name.toString(),
+        type = TypeInfo(field.type),
+        fileName = field.location?.artifactLocation?.fileName,
+        startLine = field.location?.region?.startLine,
+        endLine = field.location?.region?.endLine,
+        startColumn = field.location?.region?.startColumn,
+        endColumn = field.location?.region?.endColumn,
+    )
+}
+
+@Serializable
+data class CpgAnalysisResult(
+    val fileName: String,
+    val totalNodes: Int,
+    val functions: Int,
+    val variables: Int,
+    val callExpressions: Int,
+    val nodes: List<NodeInfo>,
 )
 
 @Serializable
