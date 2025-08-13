@@ -27,11 +27,10 @@ package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.allChildren
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.nodes
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toNodeInfo
 import de.fraunhofer.aisec.cpg.mcp.setupTranslationConfiguration
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
@@ -107,9 +106,9 @@ fun Server.addCpgAnalyzeTool() {
             globalAnalysisResult = result
 
             val allNodes = result.nodes
-            val functions = result.allChildren<FunctionDeclaration>()
-            val variables = result.allChildren<VariableDeclaration>()
-            val callExpressions = result.allChildren<CallExpression>()
+            val functions = result.functions
+            val variables = result.variables
+            val callExpressions = result.calls
 
             val nodeInfos = allNodes.map { node: Node -> node.toNodeInfo() }
 
