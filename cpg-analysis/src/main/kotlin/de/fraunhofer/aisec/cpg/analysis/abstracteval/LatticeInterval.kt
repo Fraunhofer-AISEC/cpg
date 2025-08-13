@@ -25,9 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.abstracteval
 
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.helpers.LatticeElement
-import de.fraunhofer.aisec.cpg.helpers.State
 import kotlin.math.pow
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -106,7 +103,6 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
             }
         }
 
-        // necessary values for widening and narrowing
         /**
          * The [Bound] that represents negative infinity. It is used to represent the lower bound of
          * an interval that can go infinitely low.
@@ -165,9 +161,9 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    // Comparing two Intervals. They are treated as equal if they overlap
-    // BOTTOM intervals are considered "smaller" than known intervals
     override fun compareTo(other: LatticeInterval): Int {
+        // Comparing two Intervals. They are treated as equal if they overlap
+        // BOTTOM intervals are considered "smaller" than known intervals
         return when {
             this is BOTTOM && other !is BOTTOM -> -1
             other is BOTTOM && this !is BOTTOM -> 1
@@ -182,9 +178,9 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    // Equals check is only true if both Intervals are true or have the same boundaries
-    // Not the same as a zero result in compareTo!
     override fun equals(other: Any?): Boolean {
+        // Equals check is only true if both Intervals are true or have the same boundaries
+        // Not the same as a zero result in compareTo!
         return when (other) {
             !is LatticeInterval -> return false
             is BOTTOM -> this is BOTTOM
@@ -350,8 +346,8 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    // Addition operator
     operator fun plus(other: LatticeInterval): LatticeInterval {
+        // Addition operator
         return when {
             this is BOTTOM || other is BOTTOM -> BOTTOM
             this is Bounded && other is Bounded -> {
@@ -372,8 +368,8 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    // Subtraction operator
     operator fun minus(other: LatticeInterval): LatticeInterval {
+        // Subtraction operator
         return when {
             this is BOTTOM || other is BOTTOM -> BOTTOM
             this is Bounded && other is Bounded -> {
@@ -394,8 +390,8 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    // Multiplication operator
     operator fun times(other: LatticeInterval): LatticeInterval {
+        // Multiplication operator
         return when {
             this is BOTTOM || other is BOTTOM -> BOTTOM
             this is Bounded && other is Bounded -> {
@@ -416,8 +412,8 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    // Division operator
     operator fun div(other: LatticeInterval): LatticeInterval {
+        // Division operator
         return when {
             this is BOTTOM || other is BOTTOM -> BOTTOM
             this is Bounded && other is Bounded -> {
@@ -439,8 +435,8 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    // Modulo operator
     operator fun rem(other: LatticeInterval): LatticeInterval {
+        // Modulo operator
         return when {
             this is BOTTOM || other is BOTTOM -> BOTTOM
             this is Bounded && other is Bounded -> {
@@ -461,8 +457,8 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    // Join Operation
     fun join(other: LatticeInterval): LatticeInterval {
+        // Join Operation
         return when {
             this is BOTTOM || other is BOTTOM -> BOTTOM
             this is Bounded && other is Bounded -> {
@@ -477,8 +473,8 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    // Meet Operation
     fun meet(other: LatticeInterval): LatticeInterval {
+        // Meet Operation
         return when {
             this is BOTTOM -> other
             other is BOTTOM -> this
@@ -496,8 +492,8 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    // Widening
     fun widen(other: LatticeInterval): LatticeInterval {
+        // Widening
         if (this !is Bounded) {
             return other
         } else if (other !is Bounded) {
@@ -520,8 +516,8 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         return Bounded(lower, upper)
     }
 
-    // Narrowing
     fun narrow(other: LatticeInterval): LatticeInterval {
+        // Narrowing
         if (this !is Bounded || other !is Bounded) {
             return BOTTOM
         }
@@ -661,117 +657,4 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
 enum class BoundType {
     LOWER,
     UPPER,
-}
-
-/**
- * The [LatticeElement] that is used for worklist iteration. It wraps a single element of the type
- * [LatticeInterval].
- */
-class IntervalLattice(override val elements: LatticeInterval) :
-    LatticeElement<LatticeInterval>(elements) {
-    override fun compareTo(other: LatticeElement<LatticeInterval>): Int {
-        return elements.compareTo(other.elements)
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (other !is IntervalLattice) {
-            return false
-        }
-        return this.elements == other.elements
-    }
-
-    /** Returns true iff [other] is fully within this */
-    fun contains(other: LatticeElement<LatticeInterval>): Boolean {
-        if (this.elements is LatticeInterval.BOTTOM || other.elements is LatticeInterval.BOTTOM) {
-            return false
-        }
-        val thisInterval = this.elements as LatticeInterval.Bounded
-        val otherInterval = other.elements as LatticeInterval.Bounded
-
-        return (thisInterval.lower <= otherInterval.lower &&
-            thisInterval.upper >= otherInterval.upper)
-    }
-
-    /** The least upper bound of two Intervals is given by the join operation. */
-    override fun lub(other: LatticeElement<LatticeInterval>): LatticeElement<LatticeInterval> {
-        return IntervalLattice(this.elements.join(other.elements))
-    }
-
-    fun widen(other: IntervalLattice): IntervalLattice {
-        return IntervalLattice(this.elements.widen(other.elements))
-    }
-
-    fun narrow(other: IntervalLattice): IntervalLattice {
-        return IntervalLattice(this.elements.narrow(other.elements))
-    }
-
-    override fun duplicate(): LatticeElement<LatticeInterval> {
-        return when {
-            elements is LatticeInterval.Bounded ->
-                IntervalLattice(LatticeInterval.Bounded(elements.lower, elements.upper))
-            else -> IntervalLattice(LatticeInterval.BOTTOM)
-        }
-    }
-}
-
-/**
- * A [State] that maps analyzed [Node]s to their [LatticeInterval]. Whenever new information for a
- * known node is pushed, we join it with the previous known value to properly handle branch merges.
- */
-class IntervalState : State<Node, LatticeInterval>() {
-    /**
-     * Adds a new mapping from [newNode] to (a copy of) [newLatticeElement] to this object if
-     * [newNode] does not exist in this state yet. If it already exists, it will compute the [lub]
-     * over the new [LatticeElement] and the previous one. It returns whether the [LatticeElement]
-     * has changed.
-     */
-    override fun push(
-        newNode: de.fraunhofer.aisec.cpg.graph.Node,
-        newLatticeElement: LatticeElement<LatticeInterval>?,
-    ): Boolean {
-        if (newLatticeElement == null) {
-            return false
-        }
-        val current = this[newNode]
-        if (current != null) {
-            // Calculate the join of the new Element and the previous (propagated) value for the
-            // node
-            val joinedElement = current.lub(newLatticeElement)
-            // Use the joinedElement if it differs from before
-            if (joinedElement != this[newNode]) {
-                this[newNode] = joinedElement
-                return true
-            }
-            return false
-        } else {
-            this[newNode] = newLatticeElement
-        }
-        return true
-    }
-
-    /**
-     * Implements the same duplication as the parent function, but returns a [IntervalState] object
-     * instead.
-     */
-    override fun duplicate(): State<Node, LatticeInterval> {
-        val clone = IntervalState()
-        for ((key, value) in this) {
-            clone[key] = value.duplicate()
-        }
-        return clone
-    }
-
-    /**
-     * Implements the same [lub] function as the parent, but uses the [push] function from
-     * [LatticeInterval]
-     */
-    override fun lub(
-        other: State<Node, LatticeInterval>
-    ): Pair<State<Node, LatticeInterval>, Boolean> {
-        var update = false
-        for ((node, newLattice) in other) {
-            update = push(node, newLattice) || update
-        }
-        return Pair(this, update)
-    }
 }

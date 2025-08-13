@@ -85,17 +85,17 @@ class TupleState<NodeId>(
 typealias TupleStateElement<NodeId> =
     TupleLattice.Element<DeclarationState.DeclarationStateElement<NodeId>, NewIntervalStateElement>
 
-class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>) :
-    MapLattice<NodeId, NewIntervalLattice.Element>(innerLattice) {
+class DeclarationState<NodeId>(innerLattice: Lattice<IntervalLattice.Element>) :
+    MapLattice<NodeId, IntervalLattice.Element>(innerLattice) {
     override val bottom: DeclarationStateElement<NodeId>
         get() = DeclarationStateElement()
 
     override fun lub(
-        one: Element<NodeId, NewIntervalLattice.Element>,
-        two: Element<NodeId, NewIntervalLattice.Element>,
+        one: Element<NodeId, IntervalLattice.Element>,
+        two: Element<NodeId, IntervalLattice.Element>,
         allowModify: Boolean,
         widen: Boolean,
-    ): Element<NodeId, NewIntervalLattice.Element> {
+    ): Element<NodeId, IntervalLattice.Element> {
         val result = super.lub(one, two, allowModify, widen)
         if (result is DeclarationStateElement<NodeId>) {
             // If the result is a DeclarationStateElement, we can return it directly
@@ -106,9 +106,9 @@ class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>
     }
 
     override fun glb(
-        one: Element<NodeId, NewIntervalLattice.Element>,
-        two: Element<NodeId, NewIntervalLattice.Element>,
-    ): Element<NodeId, NewIntervalLattice.Element> {
+        one: Element<NodeId, IntervalLattice.Element>,
+        two: Element<NodeId, IntervalLattice.Element>,
+    ): Element<NodeId, IntervalLattice.Element> {
         val result = super.glb(one, two)
         if (result is DeclarationStateElement<NodeId>) {
             // If the result is a DeclarationStateElement, we can return it directly
@@ -119,20 +119,20 @@ class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>
     }
 
     class DeclarationStateElement<NodeId>(expectedMaxSize: Int) :
-        Element<NodeId, NewIntervalLattice.Element>(expectedMaxSize) {
+        Element<NodeId, IntervalLattice.Element>(expectedMaxSize) {
         constructor() : this(32)
 
-        constructor(m: Map<NodeId, NewIntervalLattice.Element>) : this(m.size) {
+        constructor(m: Map<NodeId, IntervalLattice.Element>) : this(m.size) {
             putAll(m)
         }
 
         constructor(
-            entries: Collection<Pair<NodeId, NewIntervalLattice.Element>>
+            entries: Collection<Pair<NodeId, IntervalLattice.Element>>
         ) : this(entries.size) {
             putAll(entries)
         }
 
-        constructor(vararg entries: Pair<NodeId, NewIntervalLattice.Element>) : this(entries.size) {
+        constructor(vararg entries: Pair<NodeId, IntervalLattice.Element>) : this(entries.size) {
             putAll(entries)
         }
 
@@ -146,7 +146,7 @@ class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>
 
         override fun duplicate(): DeclarationStateElement<NodeId> {
             return DeclarationStateElement(
-                this.map { (k, v) -> Pair<NodeId, NewIntervalLattice.Element>(k, v.duplicate()) }
+                this.map { (k, v) -> Pair<NodeId, IntervalLattice.Element>(k, v.duplicate()) }
             )
         }
 
@@ -164,10 +164,7 @@ class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>
             }
         }
 
-        override fun put(
-            key: NodeId?,
-            value: NewIntervalLattice.Element?,
-        ): NewIntervalLattice.Element? {
+        override fun put(key: NodeId?, value: IntervalLattice.Element?): IntervalLattice.Element? {
             val actualKey = key?.let { findKey(it) }
             return super.put(actualKey, value)
         }
@@ -176,9 +173,9 @@ class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>
          * Retrieves the interval element for the given [nodeId] from the declaration state element.
          *
          * @param nodeId The identifier of the node.
-         * @return The [NewIntervalLattice.Element] for the node, or null if not found.
+         * @return The [IntervalLattice.Element] for the node, or null if not found.
          */
-        override operator fun get(nodeId: NodeId): NewIntervalLattice.Element? {
+        override operator fun get(nodeId: NodeId): IntervalLattice.Element? {
             return if (nodeId is Integer) {
                 this.entries.singleOrNull { it.key == nodeId }?.value
             } else {
@@ -188,14 +185,14 @@ class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>
     }
 }
 
-typealias NewIntervalState = MapLattice<Node, NewIntervalLattice.Element>
+typealias NewIntervalState = MapLattice<Node, IntervalLattice.Element>
 
-typealias NewIntervalStateElement = MapLattice.Element<Node, NewIntervalLattice.Element>
+typealias NewIntervalStateElement = MapLattice.Element<Node, IntervalLattice.Element>
 
-class NewIntervalLattice() :
-    Lattice<NewIntervalLattice.Element>,
-    HasWidening<NewIntervalLattice.Element>,
-    HasNarrowing<NewIntervalLattice.Element> {
+class IntervalLattice() :
+    Lattice<IntervalLattice.Element>,
+    HasWidening<IntervalLattice.Element>,
+    HasNarrowing<IntervalLattice.Element> {
     override var elements: Set<Element> = setOf()
     override val bottom: Element = Element(LatticeInterval.BOTTOM)
 
@@ -226,7 +223,7 @@ class NewIntervalLattice() :
                 }
                 else -> {
                     log.warn(
-                        "Cannot handle this case in NewIntervalLattice.lub: $oneElem and $twoElem"
+                        "Cannot handle this case in IntervalLattice.lub: $oneElem and $twoElem"
                     )
                     Element(LatticeInterval.TOP)
                 }
@@ -253,7 +250,7 @@ class NewIntervalLattice() :
                 }
                 else -> {
                     log.warn(
-                        "Cannot handle this case in NewIntervalLattice.lub: $oneElem and $twoElem"
+                        "Cannot handle this case in IntervalLattice.lub: $oneElem and $twoElem"
                     )
                     Element(LatticeInterval.TOP)
                 }
@@ -286,7 +283,7 @@ class NewIntervalLattice() :
             }
 
             else -> {
-                log.warn("Cannot handle this case in NewIntervalLattice.glb: $oneElem and $twoElem")
+                log.warn("Cannot handle this case in IntervalLattice.glb: $oneElem and $twoElem")
                 Element(LatticeInterval.TOP)
             }
         }
@@ -397,8 +394,8 @@ class AbstractIntervalEvaluator {
         interval: LatticeInterval = LatticeInterval.BOTTOM, // TODO: Maybe should be top?
     ): LatticeInterval {
         analysisType = type
-        val declarationState = DeclarationState<Any>(NewIntervalLattice())
-        val intervalState = NewIntervalState(NewIntervalLattice())
+        val declarationState = DeclarationState<Any>(IntervalLattice())
+        val intervalState = NewIntervalState(IntervalLattice())
         val startState = TupleState(declarationState, intervalState)
 
         // evaluate effect of each operation on the list until we reach "node"
@@ -481,7 +478,7 @@ fun <NodeId> TupleState<NodeId>.changeDeclarationState(
         (node.objectIdentifier() as? NodeId)?.let { tmpId ->
             current.first.keys.singleOrNull { it == tmpId } ?: tmpId
         } ?: node as NodeId ?: TODO()
-    current.first[id] = NewIntervalLattice.Element(interval)
+    current.first[id] = IntervalLattice.Element(interval)
     return current
 }
 
@@ -504,7 +501,7 @@ fun <NodeId> TupleState<NodeId>.pushToDeclarationState(
         } ?: node as NodeId ?: TODO()
     this.innerLattice1.lub(
         current.first,
-        DeclarationState.DeclarationStateElement(id to NewIntervalLattice.Element(interval)),
+        DeclarationState.DeclarationStateElement(id to IntervalLattice.Element(interval)),
         allowModify = true,
     )
     return current
@@ -525,7 +522,7 @@ fun <NodeId> TupleState<NodeId>.pushToGeneralState(
 ): TupleStateElement<NodeId> {
     this.innerLattice2.lub(
         current.second,
-        NewIntervalStateElement(node to NewIntervalLattice.Element(interval)),
+        NewIntervalStateElement(node to IntervalLattice.Element(interval)),
         allowModify = true,
     )
     return current
@@ -545,7 +542,7 @@ private fun <NodeId> DeclarationState<NodeId>.push(
 ) {
     this.lub(
         current,
-        DeclarationState.DeclarationStateElement(start to NewIntervalLattice.Element(interval)),
+        DeclarationState.DeclarationStateElement(start to IntervalLattice.Element(interval)),
         allowModify = true,
     )
 }
@@ -564,7 +561,7 @@ private fun NewIntervalState.push(
 ) {
     this.lub(
         current,
-        NewIntervalStateElement(start to NewIntervalLattice.Element(interval)),
+        NewIntervalStateElement(start to IntervalLattice.Element(interval)),
         allowModify = true,
     )
 }
