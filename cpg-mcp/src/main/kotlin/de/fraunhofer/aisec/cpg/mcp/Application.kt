@@ -36,10 +36,24 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.io.asSink
 import kotlinx.io.asSource
 import kotlinx.io.buffered
+import picocli.CommandLine
+
+@CommandLine.Option(
+    names = ["--sse"],
+    description =
+        [
+            "Provide the port to run SSE (Server Sent Events). If not specified, the MCP server will run using stdio."
+        ],
+)
+var ssePort: Int? = null
 
 fun main() {
-    runMcpServerUsingStdio()
-    //   runSseMcpServerUsingKtorPlugin(3001, de.fraunhofer.aisec.cpg.mcp.configureServer())
+    val port = ssePort
+    if (port == null) {
+        runMcpServerUsingStdio()
+    } else {
+        runSseMcpServerUsingKtorPlugin(port, configureServer())
+    }
 }
 
 fun runMcpServerUsingStdio() {
