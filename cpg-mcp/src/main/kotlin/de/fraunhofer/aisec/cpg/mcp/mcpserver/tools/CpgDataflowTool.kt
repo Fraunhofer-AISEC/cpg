@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.GraphToFollow
 import de.fraunhofer.aisec.cpg.graph.Intraprocedural
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgDataflowPayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.DataflowResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.QueryTreeNode
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toQueryTreeNode
@@ -39,13 +40,10 @@ import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
 import io.modelcontextprotocol.kotlin.sdk.Tool
 import io.modelcontextprotocol.kotlin.sdk.server.Server
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
-
-@Serializable data class CpgDataflowPayload(val from: String, val to: String)
 
 fun Server.addCpgDataflowTool() {
     val toolDescription =

@@ -25,14 +25,18 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
-import de.fraunhofer.aisec.cpg.graph.calls
-import de.fraunhofer.aisec.cpg.graph.functions
-import de.fraunhofer.aisec.cpg.graph.records
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgNamePayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toJson
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
+import io.modelcontextprotocol.kotlin.sdk.Tool
 import io.modelcontextprotocol.kotlin.sdk.server.Server
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 
 fun Server.listFunctions() {
     val toolDescription =
@@ -107,6 +111,61 @@ fun Server.listCalls() {
                             )
                     )
             CallToolResult(content = result.calls.map { TextContent(it.toJson()) })
+        } catch (e: Exception) {
+            CallToolResult(
+                content =
+                    listOf(
+                        TextContent("Error listing functions: ${e.message ?: e::class.simpleName}")
+                    )
+            )
+        }
+    }
+}
+
+fun Server.listCallsTo() {
+    val toolDescription =
+        """This tool lists all function and method calls to the method/function with the specified name, which are held in the graph.
+
+        Parameters:
+        - name: The local name of the function or method whose calls should be listed.
+        """
+            .trimIndent()
+
+    val inputSchema =
+        Tool.Input(
+            properties =
+                buildJsonObject {
+                    putJsonObject("name") {
+                        put("type", "string")
+                        put(
+                            "description",
+                            "The local name of the function or method whose calls should be listed.",
+                        )
+                    }
+                },
+            required = listOf("name"),
+        )
+
+    this.addTool(
+        name = "cpg_list_calls_to",
+        description = toolDescription,
+        inputSchema = inputSchema,
+    ) { request ->
+        try {
+            val result =
+                globalAnalysisResult
+                    ?: return@addTool CallToolResult(
+                        content =
+                            listOf(
+                                TextContent(
+                                    "No analysis result available. Please analyze your code first using cpg_analyze."
+                                )
+                            )
+                    )
+            val payload =
+                Json.decodeFromString<CpgNamePayload>(Json.encodeToString(request.arguments))
+
+            CallToolResult(content = result.calls(payload.name).map { TextContent(it.toJson()) })
         } catch (e: Exception) {
             CallToolResult(
                 content =

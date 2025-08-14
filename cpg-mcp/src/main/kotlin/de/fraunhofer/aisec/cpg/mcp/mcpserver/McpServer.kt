@@ -25,7 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.mcpserver
 
+import de.fraunhofer.aisec.codyze.console.listCalls
+import de.fraunhofer.aisec.codyze.console.listCallsTo
 import de.fraunhofer.aisec.codyze.console.listFunctions
+import de.fraunhofer.aisec.codyze.console.listRecords
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgAnalyzeTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgApplyConceptsTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgDataflowTool
@@ -54,6 +57,9 @@ fun configureServer(): Server {
     server.addCpgApplyConceptsTool()
     server.addCpgDataflowTool()
     server.listFunctions()
+    server.listRecords()
+    server.listCalls()
+    server.listCallsTo()
 
     return server
 }
