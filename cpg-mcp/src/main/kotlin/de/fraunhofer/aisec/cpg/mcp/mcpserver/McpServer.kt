@@ -33,6 +33,8 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgAnalyzeTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgApplyConceptsTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgDataflowTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgLlmAnalyzeTool
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listAvailableConcepts
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listAvailableOperations
 import io.modelcontextprotocol.kotlin.sdk.Implementation
 import io.modelcontextprotocol.kotlin.sdk.ServerCapabilities
 import io.modelcontextprotocol.kotlin.sdk.server.Server
@@ -60,6 +62,8 @@ fun configureServer(): Server {
     server.listRecords()
     server.listCalls()
     server.listCallsTo()
+    server.listAvailableConcepts()
+    server.listAvailableOperations()
 
     return server
 }

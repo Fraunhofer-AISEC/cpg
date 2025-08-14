@@ -43,6 +43,33 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
+/** Provides a tool to list all available concepts which can be used to tag nodes in the CPG. */
+fun Server.listAvailableConcepts() {
+    val availableConcepts = listOverlayClasses<Concept>()
+    val toolDescription =
+        "This tool provides a list of all concepts that can be applied to nodes in the CPG."
+    this.addTool(name = "cpg_list_available_concepts", description = toolDescription) { _ ->
+        CallToolResult(content = availableConcepts.map { TextContent(it.name) })
+    }
+}
+
+/** Provides a tool to list all available operations which can be used to tag nodes in the CPG. */
+fun Server.listAvailableOperations() {
+    val availableOperations = listOverlayClasses<Operation>()
+    val toolDescription =
+        "This tool provides a list of all operations that can be applied to nodes in the CPG."
+    this.addTool(name = "cpg_list_available_operations", description = toolDescription) { _ ->
+        CallToolResult(content = availableOperations.map { TextContent(it.name) })
+    }
+}
+
+/**
+ * Adds a tool to the server that allows applying concepts or operations to specific nodes in the
+ * CPG.
+ *
+ * This tool can be used to create and attach concepts or operations to nodes identified by their
+ * IDs.
+ */
 fun Server.addCpgApplyConceptsTool() {
     val availableConcepts = listOverlayClasses<Concept>()
     val availableOperations = listOverlayClasses<Operation>()
@@ -55,6 +82,7 @@ fun Server.addCpgApplyConceptsTool() {
             
             Example usage:
             - "Apply concepts to the nodes you identified"
+            - "Tag the node with identifier <nodeId> with concept <overlay>"
             
             Parameters:
             - assignments: List of overlay assignments to perform
