@@ -112,18 +112,3 @@ fun setupTranslationConfiguration(
     )
     return translationConfiguration.build()
 }
-
-fun main() {
-    val file =
-        File(
-            "/home/shala/repos/cpg/cpg-mcp/src/main/kotlin/de/fraunhofer/aisec/cpg/mcp/test_example.py"
-        )
-    val config =
-        setupTranslationConfiguration(
-            topLevel = file,
-            files = listOf(file.absolutePath),
-            includePaths = emptyList(),
-        )
-    val analyzer = TranslationManager.builder().config(config).build()
-    val result = analyzer.analyze().get()
-}

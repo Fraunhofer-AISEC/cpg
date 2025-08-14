@@ -47,49 +47,60 @@ import kotlinx.serialization.json.putJsonObject
 
 var globalAnalysisResult: TranslationResult? = null
 
-fun Server.addCpgAnalyzeTool() {
-    val toolDescription =
-        """
-        Analyze source code files using CPG (Code Property Graph).
+val toolDescription =
+    """
+        Analyze source code using CPG (Code Property Graph).
         
         This tool parses source code and creates a comprehensive graph representation 
         containing all nodes, functions, variables, and call expressions.
         
         Example usage:
-        - "Analyze this Python script for security issues"
-        - "Parse this code and show me the structure"
-        - "Load this C++ file and analyze its functions"
-        
-        Parameters:
-        - file: Path to the source code file to analyze (required)
+        - "Analyze this Python file: /path/to/file.py"
+        - "Analyze this code: print('hello')"
+        - "Parse this uploaded file content"
     """
-            .trimIndent()
+        .trimIndent()
 
-    val inputSchema =
-        Tool.Input(
-            properties =
-                buildJsonObject {
-                    putJsonObject("file") {
-                        put("type", "string")
-                        put("description", "Path to source code file to analyze")
-                    }
-                },
-            required = listOf("file"),
-        )
+val inputSchema =
+    Tool.Input(
+        properties =
+            buildJsonObject {
+                putJsonObject("filePath") {
+                    put("type", "string")
+                    put("description", "Path to existing source code file")
+                }
+                putJsonObject("fileContent") {
+                    put("type", "string")
+                    put("description", "Uploaded file or source code")
+                }
+            },
+        required = listOf(),
+    )
 
+fun Server.addCpgAnalyzeTool() {
     this.addTool(name = "cpg_analyze", description = toolDescription, inputSchema = inputSchema) {
         request ->
         try {
             val payload =
                 Json.decodeFromString<CpgAnalyzePayload>(Json.encodeToString(request.arguments))
 
-            val file = File(payload.file)
+            val (file, fileName) =
+                when {
+                    payload.filePath != null -> {
+                        val f =
+                            File(
+                                "/home/shala/repos/cpg/cpg-mcp/src/main/kotlin/de/fraunhofer/aisec/cpg/mcp/test_example.py"
+                            )
+                        if (!f.exists())
+                            throw IllegalArgumentException("File not found: ${f.absolutePath}")
+                        f to f.name
+                    }
 
-            if (!file.exists()) {
-                return@addTool CallToolResult(
-                    content = listOf(TextContent("Error: File not found: ${file.absolutePath}"))
-                )
-            }
+                    else ->
+                        throw IllegalArgumentException(
+                            "Must provide filePath, fileContent, or sourceCode"
+                        )
+                }
 
             val config =
                 setupTranslationConfiguration(
@@ -113,7 +124,7 @@ fun Server.addCpgAnalyzeTool() {
 
             val analysisResult =
                 CpgAnalysisResult(
-                    fileName = file.name,
+                    fileName = fileName,
                     totalNodes = allNodes.size,
                     functions = functions.size,
                     variables = variables.size,
@@ -123,17 +134,7 @@ fun Server.addCpgAnalyzeTool() {
 
             val jsonResult = Json.encodeToString(analysisResult)
 
-            CallToolResult(
-                content =
-                    listOf(
-                        TextContent(
-                            "Analysis completed for ${file.name}:\n" +
-                                "${allNodes.size} nodes, ${functions.size} functions, " +
-                                "${variables.size} variables, ${callExpressions.size} calls\n\n" +
-                                jsonResult
-                        )
-                    )
-            )
+            CallToolResult(content = listOf(TextContent(jsonResult)))
         } catch (e: Exception) {
             CallToolResult(
                 content = listOf(TextContent("Error: ${e.message ?: e::class.simpleName}"))

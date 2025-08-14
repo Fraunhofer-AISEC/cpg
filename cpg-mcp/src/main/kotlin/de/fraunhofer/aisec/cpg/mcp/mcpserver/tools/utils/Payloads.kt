@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils
 
 import kotlinx.serialization.Serializable
 
-@Serializable data class CpgAnalyzePayload(val file: String)
+@Serializable data class CpgAnalyzePayload(val file: String? = null, val filePath: String? = null)
 
 @Serializable data class CpgNamePayload(val name: String)
 

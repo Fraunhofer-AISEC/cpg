@@ -45,7 +45,7 @@ fun Server.addCpgLlmAnalyzeTool() {
         """
         Generate a prompt asking the LLM to suggest concepts/operations
         
-        This tool creates a prompt that asks the LLM to act as a security officer and analyze 
+        This tool creates a prompt that asks the LLM to act as a security engineer and analyze 
         the CPG analysis results, suggesting appropriate security concepts and operations based 
         on the Fraunhofer CPG repository documentation. After using this tool,
         the LLM should analyze the prompt and provide JSON suggestions. The user should
@@ -54,7 +54,6 @@ fun Server.addCpgLlmAnalyzeTool() {
         Example usage:
         - "Analyze this code for security vulnerabilities"
         - "Focus on authentication vulnerabilities in this code"  
-        - "Check for payment processing security issues"
         
         Parameters:
         - description: Additional context for the security analysis (optional)
@@ -95,36 +94,31 @@ fun Server.addCpgLlmAnalyzeTool() {
                 appendLine("# Code Analysis")
                 appendLine()
                 appendLine(
-                    "Please take on the role of a security engineer and analyze the provided code for security-relevant patterns " +
-                        "and potential vulnerabilities."
+                    "Please take on the role of a security engineer and analyze the provided code."
                 )
                 appendLine()
 
-                appendLine("## Concept vs Operation Guidelines:")
-                appendLine(
-                    "- **Concepts** (what something IS): Apply to data, variables, parameters. Examples:"
-                )
-                appendLine(
-                    "  - Data containing passwords, tokens, keys → Look for 'Data' or similar concepts"
-                )
-                appendLine(
-                    "  - Auth tokens/credentials → Look for 'Authentication' related concepts"
-                )
-                appendLine("  - HTTP endpoints → Look for 'HttpEndpoint' or similar concepts")
+                appendLine("## Understanding CPG Concepts and Operations")
                 appendLine()
                 appendLine(
-                    "- **Operations** (what something DOES): Apply to function calls, expressions. Examples:"
-                )
-                appendLine(
-                    "  - Functions that read files/databases → Look for 'ReadData' or similar operations"
-                )
-                appendLine(
-                    "  - HTTP requests/API calls → Look for 'HttpRequest' or similar operations"
-                )
-                appendLine(
-                    "  - Login/auth functions → Look for 'Authenticate' or similar operations"
+                    "**Goal:** By marking security-relevant data (concepts) and critical operations, we can analyze how data flows through the code to discover vulnerabilities."
                 )
                 appendLine()
+                appendLine("**Concepts** mark 'what something IS':")
+                appendLine("- Applied to data-holding nodes (variables, parameters)")
+                appendLine(
+                    "- Examples: passwords, encryption keys, user input, authentication tokens"
+                )
+                appendLine("- Purpose: Track where important data goes")
+                appendLine()
+                appendLine("**Operations** mark 'what something DOES':")
+                appendLine("- Applied to action nodes (function calls)")
+                appendLine(
+                    "- Examples: HTTP requests, file reads, database queries, authentication checks"
+                )
+                appendLine("- Purpose: Track what happens to important data")
+                appendLine()
+                appendLine("**Key principle:** Mark the variables, not assignments.")
                 appendLine(
                     "**IMPORTANT**: Research and use only concepts and operations available in the CPG repository. Do not invent new names."
                 )
@@ -132,19 +126,18 @@ fun Server.addCpgLlmAnalyzeTool() {
 
                 appendLine("## Your Task")
                 appendLine(
-                    "1. Research available concepts and operations in the CPG repository (cpg-concepts module)"
+                    "1. Research available concepts/operations in the CPG repository (cpg-concepts module)"
                 )
                 appendLine("2. Analyze the nodes below from a security perspective")
                 appendLine(
                     "3. Suggest the appropriate overlays from the CPG repository by providing their fully qualified class names"
                 )
+                appendLine("2. Analyze each node for security relevance")
+                appendLine("3. Suggest appropriate overlays using fully qualified class names")
                 appendLine()
-                appendLine("Focus on identifying nodes that handle:")
-                appendLine("- Sensitive data access (files, environment variables, databases)")
-                appendLine("- Network communication (HTTP requests, API calls)")
-                appendLine("- Authentication and authorization mechanisms")
-                appendLine("- Input validation and sanitization")
-                appendLine("- Cryptographic operations")
+                appendLine(
+                    "**IMPORTANT:** Use only existing CPG concepts/operations. Do not invent new names."
+                )
                 appendLine()
 
                 if (payload.description != null) {
@@ -172,7 +165,7 @@ fun Server.addCpgLlmAnalyzeTool() {
 
                 appendLine()
                 appendLine("## Response Format")
-                appendLine("Please provide your security analysis in JSON format:")
+                appendLine("Please provide your analysis in JSON format:")
                 appendLine(
                     """
 ```json
@@ -180,6 +173,7 @@ fun Server.addCpgLlmAnalyzeTool() {
   "overlaySuggestions": [
     {
       "nodeId": "123",
+      "nodeName": "node"
       "overlay": "de.fraunhofer.aisec.cpg.graph.concepts.Data",
       "reasoning": "Detailed security reasoning for this classification",
       "securityImpact": "Potential security implications"
