@@ -49,9 +49,9 @@ fun Server.addCpgLlmAnalyzeTool() {
         Generate a prompt asking the LLM to suggest concepts/operations
         
         This tool creates a prompt that asks the LLM to act as a security engineer and analyze 
-        the CPG analysis results, suggesting appropriate security concepts and operations based 
-        on the Fraunhofer CPG repository documentation. After using this tool,
-        the LLM should analyze the prompt and provide JSON suggestions. The user should
+        the CPG analysis results, suggesting appropriate concepts and operations based 
+        on the Fraunhofer CPG repository documentation and the provided lists of available concepts/operations. After using this tool,
+        the LLM should analyze the prompt and provide the suggestions. The user should
         review these suggestions before applying them with cpg_apply_concepts.
         
         Example usage:
@@ -69,7 +69,7 @@ fun Server.addCpgLlmAnalyzeTool() {
                 buildJsonObject {
                     putJsonObject("description") {
                         put("type", "string")
-                        put("description", "Additional context for the security analysis")
+                        put("description", "Additional context for the analysis")
                     }
                 },
             required = listOf(),
@@ -95,7 +95,7 @@ fun Server.addCpgLlmAnalyzeTool() {
                                     putJsonObject("properties") {
                                         putJsonObject("nodeId") {
                                             put("type", "string")
-                                            put("description", "ID of the node to apply overlay to")
+                                            put("description", "NodeId of the CPG node")
                                         }
                                         putJsonObject("overlay") {
                                             put("type", "string")
@@ -196,13 +196,10 @@ fun Server.addCpgLlmAnalyzeTool() {
                     "1. **Same Domain**: Concepts and Operations must be semantically related"
                 )
                 appendLine(
-                    "2. **Dataflow Connection**: Operations should process the Concept's data"
+                    "2. **Concrete Classes**: Use specific implementations, not abstract base classes"
                 )
                 appendLine(
-                    "3. **Concrete Classes**: Use specific implementations, not abstract base classes"
-                )
-                appendLine(
-                    "4. **Operation Linking**: When suggesting an Operation, specify which Concept it processes using conceptNodeId"
+                    "3. **Operation Linking**: When suggesting an Operation, specify to which Concept it belongs to using conceptNodeId"
                 )
                 appendLine()
 
@@ -215,7 +212,7 @@ fun Server.addCpgLlmAnalyzeTool() {
                     "**IMPORTANT:** Use only existing CPG concepts/operations from the list below."
                 )
                 appendLine(
-                    "For additional context, you can check docstrings in the Fraunhofer CPG repository, especially cpg-concepts module."
+                    "For additional context, you can check docstrings in the Fraunhofer CPG repository on GitHub, especially the cpg-concepts module."
                 )
                 appendLine()
 
