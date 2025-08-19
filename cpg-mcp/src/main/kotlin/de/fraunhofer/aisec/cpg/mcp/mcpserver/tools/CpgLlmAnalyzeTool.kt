@@ -26,9 +26,10 @@
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
+import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgLlmAnalyzePayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toNodeInfo
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
@@ -36,8 +37,10 @@ import io.modelcontextprotocol.kotlin.sdk.TextContent
 import io.modelcontextprotocol.kotlin.sdk.Tool
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
 fun Server.addCpgLlmAnalyzeTool() {
@@ -56,7 +59,7 @@ fun Server.addCpgLlmAnalyzeTool() {
         - "Focus on authentication vulnerabilities in this code"  
         
         Parameters:
-        - description: Additional context for the security analysis (optional)
+        - description: Additional context for the analysis (optional)
     """
             .trimIndent()
 
@@ -72,10 +75,82 @@ fun Server.addCpgLlmAnalyzeTool() {
             required = listOf(),
         )
 
+    val outputSchema =
+        Tool.Output(
+            properties =
+                buildJsonObject {
+                    putJsonObject("prompt") {
+                        put("type", "string")
+                        put("description", "Generated prompt for LLM analysis")
+                    }
+                    putJsonObject("expectedResponseFormat") {
+                        put("type", "object")
+                        put("description", "Expected JSON structure for LLM response")
+                        putJsonObject("properties") {
+                            putJsonObject("overlaySuggestions") {
+                                put("type", "array")
+                                put("description", "List of concept/operation suggestions")
+                                putJsonObject("items") {
+                                    put("type", "object")
+                                    putJsonObject("properties") {
+                                        putJsonObject("nodeId") {
+                                            put("type", "string")
+                                            put("description", "ID of the node to apply overlay to")
+                                        }
+                                        putJsonObject("overlay") {
+                                            put("type", "string")
+                                            put(
+                                                "description",
+                                                "Fully qualified name of concept or operation class",
+                                            )
+                                        }
+                                        putJsonObject("overlayType") {
+                                            put("type", "string")
+                                            put(
+                                                "description",
+                                                "Type of overlay: 'Concept' or 'Operation'",
+                                            )
+                                        }
+                                        putJsonObject("conceptNodeId") {
+                                            put("type", "string")
+                                            put(
+                                                "description",
+                                                "NodeId of concept this operation references (for operations)",
+                                            )
+                                        }
+                                        putJsonObject("arguments") {
+                                            put("type", "object")
+                                            put("description", "Additional constructor arguments")
+                                        }
+                                        putJsonObject("reasoning") {
+                                            put("type", "string")
+                                            put(
+                                                "description",
+                                                "Security reasoning for this classification",
+                                            )
+                                        }
+                                        putJsonObject("securityImpact") {
+                                            put("type", "string")
+                                            put("description", "Potential security implications")
+                                        }
+                                    }
+                                    putJsonArray("required") {
+                                        add(JsonPrimitive("nodeId"))
+                                        add(JsonPrimitive("overlay"))
+                                        add(JsonPrimitive("overlayType"))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+        )
+
     this.addTool(
         name = "cpg_llm_analyze",
         description = toolDescription,
         inputSchema = inputSchema,
+        outputSchema = outputSchema,
     ) { request ->
         try {
             val payload =
@@ -87,8 +162,9 @@ fun Server.addCpgLlmAnalyzeTool() {
                     )
                 }
 
-            val nodes =
-                globalAnalysisResult?.allChildren<Node>()?.map { it.toNodeInfo() } ?: emptyList()
+            val nodes = globalAnalysisResult?.nodes?.map { it.toNodeInfo() } ?: emptyList()
+            val availableConcepts = listOverlayClasses<Concept>()
+            val availableOperations = listOverlayClasses<Operation>()
 
             val prompt = buildString {
                 appendLine("# Code Analysis")
@@ -98,46 +174,56 @@ fun Server.addCpgLlmAnalyzeTool() {
                 )
                 appendLine()
 
-                appendLine("## Understanding CPG Concepts and Operations")
-                appendLine()
+                appendLine("## Goal")
                 appendLine(
-                    "**Goal:** By marking security-relevant data (concepts) and critical operations, we can analyze how data flows through the code to discover vulnerabilities."
+                    "Mark interesting data and operations so we can analyze how data flows through code to discover patterns."
                 )
+                appendLine()
+
+                appendLine("## Understanding Concepts and Operations")
                 appendLine()
                 appendLine("**Concepts** mark 'what something IS':")
-                appendLine("- Applied to data-holding nodes (variables, parameters)")
-                appendLine(
-                    "- Examples: passwords, encryption keys, user input, authentication tokens"
-                )
-                appendLine("- Purpose: Track where important data goes")
+                appendLine("- Applied to data-holding nodes (variables, fields, return values)")
+                appendLine("- Purpose: Track where important data is stored")
                 appendLine()
                 appendLine("**Operations** mark 'what something DOES':")
-                appendLine("- Applied to action nodes (function calls)")
-                appendLine(
-                    "- Examples: HTTP requests, file reads, database queries, authentication checks"
-                )
+                appendLine("- Applied to nodes that perform actions (function calls, method calls)")
                 appendLine("- Purpose: Track what happens to important data")
                 appendLine()
-                appendLine("**Key principle:** Mark the variables, not assignments.")
+
+                appendLine("## Critical Rules")
                 appendLine(
-                    "**IMPORTANT**: Research and use only concepts and operations available in the CPG repository. Do not invent new names."
+                    "1. **Same Domain**: Concepts and Operations must be semantically related"
+                )
+                appendLine(
+                    "2. **Dataflow Connection**: Operations should process the Concept's data"
+                )
+                appendLine(
+                    "3. **Concrete Classes**: Use specific implementations, not abstract base classes"
+                )
+                appendLine(
+                    "4. **Operation Linking**: When suggesting an Operation, specify which Concept it processes using conceptNodeId"
                 )
                 appendLine()
 
                 appendLine("## Your Task")
-                appendLine(
-                    "1. Research available concepts/operations in the CPG repository (cpg-concepts module)"
-                )
-                appendLine("2. Analyze the nodes below from a security perspective")
-                appendLine(
-                    "3. Suggest the appropriate overlays from the CPG repository by providing their fully qualified class names"
-                )
-                appendLine("2. Analyze each node for security relevance")
-                appendLine("3. Suggest appropriate overlays using fully qualified class names")
+                appendLine("1. Analyze each node for relevance")
+                appendLine("2. Suggest appropriate overlays using fully qualified class names")
+                appendLine("3. Ensure concept-operation pairs belong to the same domain")
                 appendLine()
                 appendLine(
-                    "**IMPORTANT:** Use only existing CPG concepts/operations. Do not invent new names."
+                    "**IMPORTANT:** Use only existing CPG concepts/operations from the list below."
                 )
+                appendLine(
+                    "For additional context, you can check docstrings in the Fraunhofer CPG repository, especially cpg-concepts module."
+                )
+                appendLine()
+
+                appendLine("Available concepts:")
+                availableConcepts.forEach { appendLine("- ${it.name}") }
+                appendLine()
+                appendLine("Available operations:")
+                availableOperations.forEach { appendLine("- ${it.name}") }
                 appendLine()
 
                 if (payload.description != null) {
@@ -164,27 +250,8 @@ fun Server.addCpgLlmAnalyzeTool() {
                 }
 
                 appendLine()
-                appendLine("## Response Format")
-                appendLine("Please provide your analysis in JSON format:")
                 appendLine(
-                    """
-```json
-{
-  "overlaySuggestions": [
-    {
-      "nodeId": "123",
-      "nodeName": "node"
-      "overlay": "de.fraunhofer.aisec.cpg.graph.concepts.Data",
-      "reasoning": "Detailed security reasoning for this classification",
-      "securityImpact": "Potential security implications"
-    }
-  ],
-}
-```
-
-**IMPORTANT**: After providing your analysis, WAIT for user approval before applying any concepts. Do not automatically execute cpg_apply_concepts.
-                """
-                        .trimIndent()
+                    "**IMPORTANT**: After providing your analysis, WAIT for user approval before applying any concepts. Do not automatically execute cpg_apply_concepts."
                 )
             }
 

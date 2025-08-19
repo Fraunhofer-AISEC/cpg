@@ -25,12 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
+import de.fraunhofer.aisec.cpg.graph.concepts.operationBuildHelper
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
+import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgApplyConceptsPayload
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
@@ -119,10 +119,29 @@ fun Server.addCpgApplyConceptsTool() {
                                         "Fully qualified name of concept or operation class",
                                     )
                                 }
+                                putJsonObject("overlayType") {
+                                    put("type", "string")
+                                    put("description", "Type of overlay: 'Concept' or 'Operation'")
+                                }
+                                putJsonObject("conceptNodeId") {
+                                    put("type", "string")
+                                    put(
+                                        "description",
+                                        "NodeId of the concept this operation references (only for operations)",
+                                    )
+                                }
+                                putJsonObject("arguments") {
+                                    put("type", "object")
+                                    put(
+                                        "description",
+                                        "Additional constructor arguments (optional)",
+                                    )
+                                }
                             }
                             putJsonArray("required") {
                                 add("nodeId")
                                 add("overlay")
+                                add("overlayType")
                             }
                         }
                     }
@@ -155,26 +174,66 @@ fun Server.addCpgApplyConceptsTool() {
             val applied = mutableListOf<String>()
 
             payload.assignments.forEach { assignment ->
-                // Find the node by ID
-                val node = result.allChildren<Node>().find { it.id.toString() == assignment.nodeId }
-                if (node != null) {
-                    try {
-                        result.conceptBuildHelper(
-                            name = assignment.overlay,
-                            underlyingNode = node,
-                            connectDFGUnderlyingNodeToConcept = true,
-                        )
-
-                        applied.add(
-                            "Applied ${assignment.overlay} to node ${assignment.nodeId} (${node::class.simpleName})"
-                        )
-                    } catch (e: Exception) {
-                        applied.add(
-                            "Failed to create ${assignment.overlay} for node ${assignment.nodeId}: ${e.message}"
-                        )
+                try {
+                    val node = result.nodes.find { it.id.toString() == assignment.nodeId }
+                    if (node == null) {
+                        applied.add("Node ${assignment.nodeId} not found")
+                        return@forEach
                     }
-                } else {
-                    applied.add("Node ${assignment.nodeId} not found")
+
+                    when (assignment.overlayType?.lowercase()) {
+                        "concept" -> {
+                            result.conceptBuildHelper(
+                                name = assignment.overlay,
+                                underlyingNode = node,
+                                constructorArguments = assignment.arguments ?: emptyMap(),
+                                connectDFGUnderlyingNodeToConcept = true,
+                            )
+                            applied.add(
+                                "Applied concept ${assignment.overlay} to node ${assignment.nodeId} (${node::class.simpleName})"
+                            )
+                        }
+                        "operation" -> {
+                            val conceptNodeId = assignment.conceptNodeId
+                            if (conceptNodeId == null) {
+                                applied.add(
+                                    "Cannot apply operation ${assignment.overlay} to node ${assignment.nodeId}: conceptNodeId is required for operations"
+                                )
+                                return@forEach
+                            }
+
+                            val conceptNode =
+                                result.nodes.find { it.id.toString() == conceptNodeId }
+                            val concept =
+                                conceptNode?.overlays?.filterIsInstance<Concept>()?.firstOrNull()
+                            if (concept == null) {
+                                applied.add(
+                                    "Cannot apply operation ${assignment.overlay} to node ${assignment.nodeId}: No concept found on node ${conceptNodeId}"
+                                )
+                                return@forEach
+                            }
+
+                            result.operationBuildHelper(
+                                name = assignment.overlay,
+                                underlyingNode = node,
+                                concept = concept,
+                                constructorArguments = assignment.arguments ?: emptyMap(),
+                                connectDFGUnderlyingNodeToConcept = true,
+                            )
+                            applied.add(
+                                "Applied operation ${assignment.overlay} to node ${assignment.nodeId} with concept ${concept::class.simpleName}"
+                            )
+                        }
+                        else -> {
+                            applied.add(
+                                "Unknown overlay type '${assignment.overlayType}' for node ${assignment.nodeId}"
+                            )
+                        }
+                    }
+                } catch (e: Exception) {
+                    applied.add(
+                        "Failed to create ${assignment.overlayType} ${assignment.overlay} for node ${assignment.nodeId}: ${e.message}"
+                    )
                 }
             }
 

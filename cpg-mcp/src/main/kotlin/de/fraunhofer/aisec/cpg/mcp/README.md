@@ -20,17 +20,24 @@ The current implementation uses stdio since Claude Desktop only supports this tr
 ./gradlew :cpg-mcp:installDist
 ```
 
-Add to your Claude Desktop config:
-
-```json
-{
-  "mcpServers": {
-    "cpg": {
-      "command": "/path/to/cpg-mcp/build/install/cpg-mcp/bin/cpg-mcp"
+1. Open Claude Desktop
+2. Go to Settings -> Developer -> Edit Config
+3. Add the following configuration to the `mcpServers` section:
+    ```json
+    {
+      "mcpServers": {
+        "cpg": {
+          "command": "/path/to/cpg-mcp/build/install/cpg-mcp/bin/cpg-mcp"
+        }
+      }
     }
-  }
-}
-```
+    ```
+4. If you're navigating to the config file outside the app:
+    - On Linux, it is usually located at `~/.config/claude-desktop/config.json`.
+    - On macOS, it is typically at `~/Library/Application Support/Claude Desktop/config.json`.
+5. Open the file in a text editor
+6. Paste the configuration above into the `mcpServers` section
+7. Save the file and restart Claude Desktop
 
 ## Usage
 

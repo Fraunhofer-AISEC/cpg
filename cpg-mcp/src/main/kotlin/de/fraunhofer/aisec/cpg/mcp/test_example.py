@@ -41,7 +41,7 @@ def process_payment(user_data, amount):
     response = requests.post(payment_url, json=payment_data)
     return response.json()
 
-def main():
+def handle_payment():
     user_id = "12345"
     username = input("Enter username: ")
     password = input("Enter password: ")
@@ -53,6 +53,3 @@ def main():
             print(f"Payment result: {result}")
     else:
         print("Authentication failed")
-
-if __name__ == "__main__":
-    main()

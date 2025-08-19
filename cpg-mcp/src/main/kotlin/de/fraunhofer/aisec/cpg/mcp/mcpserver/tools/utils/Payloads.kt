@@ -27,7 +27,12 @@ package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils
 
 import kotlinx.serialization.Serializable
 
-@Serializable data class CpgAnalyzePayload(val file: String? = null, val filePath: String? = null)
+@Serializable
+data class CpgAnalyzePayload(
+    val content: String? = null,
+    val extension: String? = null,
+    val filePath: String? = null,
+)
 
 @Serializable data class CpgNamePayload(val name: String)
 
@@ -37,6 +42,11 @@ import kotlinx.serialization.Serializable
 data class ConceptAssignment(
     val nodeId: String,
     val overlay: String, // FQN of concept or operation class
+    val overlayType: String? = null, // "Concept" or "Operation" from LLM response
+    val conceptNodeId: String? = null, // NodeId of concept this operation references
+    val arguments: Map<String, String>? = null, // Additional constructor arguments
+    val reasoning: String? = null,
+    val securityImpact: String? = null,
 )
 
 @Serializable data class CpgDataflowPayload(val from: String, val to: String)

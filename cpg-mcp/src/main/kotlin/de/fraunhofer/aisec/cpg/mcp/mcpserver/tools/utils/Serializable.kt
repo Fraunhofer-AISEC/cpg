@@ -39,6 +39,7 @@ data class NodeInfo(
     val nodeId: String,
     val name: String,
     val code: String?,
+    val type: String?,
     val fileName: String?,
     val startLine: Int?,
     val endLine: Int?,
@@ -51,6 +52,7 @@ data class NodeInfo(
         nodeId = node.id.toHexString(),
         name = node.name.localName,
         code = node.code,
+        type = node::class.simpleName,
         fileName = node.location?.artifactLocation?.fileName,
         startLine = node.location?.region?.startLine,
         endLine = node.location?.region?.endLine,
@@ -183,7 +185,6 @@ data class FieldInfo(
 
 @Serializable
 data class CpgAnalysisResult(
-    val fileName: String,
     val totalNodes: Int,
     val functions: Int,
     val variables: Int,

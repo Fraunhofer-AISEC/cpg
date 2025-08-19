@@ -57,7 +57,7 @@ val toolDescription =
         Example usage:
         - "Analyze this Python file: /path/to/file.py"
         - "Analyze this code: print('hello')"
-        - "Parse this uploaded file content"
+        - "Analyze this uploaded file"
     """
         .trimIndent()
 
@@ -65,13 +65,23 @@ val inputSchema =
     Tool.Input(
         properties =
             buildJsonObject {
+                putJsonObject("content") {
+                    put("type", "string")
+                    put("description", "Source code content to analyze")
+                }
+                putJsonObject("extension") {
+                    put("type", "string")
+                    put(
+                        "description",
+                        "File extension for language detection (e.g., 'py', 'java', 'cpp')",
+                    )
+                }
                 putJsonObject("filePath") {
                     put("type", "string")
-                    put("description", "Path to existing source code file")
-                }
-                putJsonObject("fileContent") {
-                    put("type", "string")
-                    put("description", "Uploaded file or source code")
+                    put(
+                        "description",
+                        "Path to existing source code file (only possible when using host application locally)",
+                    )
                 }
             },
         required = listOf(),
@@ -84,22 +94,38 @@ fun Server.addCpgAnalyzeTool() {
             val payload =
                 Json.decodeFromString<CpgAnalyzePayload>(Json.encodeToString(request.arguments))
 
-            val (file, fileName) =
+            val file =
                 when {
+                    // Option 1: File path provided
                     payload.filePath != null -> {
-                        val f =
-                            File(
-                                "/home/shala/repos/cpg/cpg-mcp/src/main/kotlin/de/fraunhofer/aisec/cpg/mcp/test_example.py"
-                            )
-                        if (!f.exists())
-                            throw IllegalArgumentException("File not found: ${f.absolutePath}")
-                        f to f.name
+                        val file = File(payload.filePath)
+                        if (!file.exists()) {
+                            throw IllegalArgumentException("File not found: ${payload.filePath}")
+                        }
+                        file
+                    }
+
+                    // Option 2: Content provided (uploaded file or code)
+                    payload.content != null -> {
+                        val extension =
+                            if (payload.extension != null) {
+                                if (payload.extension.startsWith(".")) payload.extension
+                                else ".${payload.extension}"
+                            } else {
+                                throw IllegalArgumentException(
+                                    "extension is required when providing content"
+                                )
+                            }
+
+                        val tempFile = File.createTempFile("cpg_analysis", extension)
+                        tempFile.writeText(payload.content)
+                        tempFile.deleteOnExit()
+
+                        tempFile
                     }
 
                     else ->
-                        throw IllegalArgumentException(
-                            "Must provide filePath, fileContent, or sourceCode"
-                        )
+                        throw IllegalArgumentException("Must provide either filePath or content")
                 }
 
             val config =
@@ -124,7 +150,6 @@ fun Server.addCpgAnalyzeTool() {
 
             val analysisResult =
                 CpgAnalysisResult(
-                    fileName = fileName,
                     totalNodes = allNodes.size,
                     functions = functions.size,
                     variables = variables.size,
