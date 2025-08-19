@@ -23,7 +23,7 @@ The current implementation uses stdio since Claude Desktop only supports this tr
 1. Open Claude Desktop
 2. Go to Settings -> Developer -> Edit Config
 3. Add the following configuration to the `mcpServers` section:
-    ```json
+```json
     {
       "mcpServers": {
         "cpg": {
@@ -31,7 +31,7 @@ The current implementation uses stdio since Claude Desktop only supports this tr
         }
       }
     }
-    ```
+```
 4. If you're navigating to the config file outside the app:
     - On Linux, it is usually located at `~/.config/claude-desktop/config.json`.
     - On macOS, it is typically at `~/Library/Application Support/Claude Desktop/config.json`.
