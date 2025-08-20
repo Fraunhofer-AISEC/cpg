@@ -28,9 +28,10 @@ package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgLlmAnalyzePayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableConcepts
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableOperations
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toNodeInfo
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
@@ -115,7 +116,7 @@ fun Server.addCpgLlmAnalyzeTool() {
                                             put("type", "string")
                                             put(
                                                 "description",
-                                                "NodeId of concept this operation references (for operations)",
+                                                "NodeId of concept this operation references (REQUIRED for ALL operations)",
                                             )
                                         }
                                         putJsonObject("arguments") {
@@ -163,8 +164,8 @@ fun Server.addCpgLlmAnalyzeTool() {
                 }
 
             val nodes = globalAnalysisResult?.nodes?.map { it.toNodeInfo() } ?: emptyList()
-            val availableConcepts = listOverlayClasses<Concept>()
-            val availableOperations = listOverlayClasses<Operation>()
+            val availableConcepts = getAvailableConcepts()
+            val availableOperations = getAvailableOperations()
 
             val prompt = buildString {
                 appendLine("# Code Analysis")
@@ -184,22 +185,26 @@ fun Server.addCpgLlmAnalyzeTool() {
                 appendLine()
                 appendLine("**Concepts** mark 'what something IS':")
                 appendLine("- Applied to data-holding nodes (variables, fields, return values)")
+                appendLine("- Examples: user_email → Data, api_token → Secret")
                 appendLine("- Purpose: Track where important data is stored")
                 appendLine()
                 appendLine("**Operations** mark 'what something DOES':")
                 appendLine("- Applied to nodes that perform actions (function calls, method calls)")
+                appendLine(
+                    "- Examples: requests.post() → HttpRequest, file.write() → FileWrite, encrypt() → Encryption"
+                )
                 appendLine("- Purpose: Track what happens to important data")
                 appendLine()
 
-                appendLine("## Critical Rules")
+                appendLine("## Rules")
                 appendLine(
-                    "1. **Same Domain**: Concepts and Operations must be semantically related"
+                    "1. **Domain consistency**: When using Operations, they must match their Concept's domain (e.g., GetSecret needs Secret, HttpRequest needs HttpClient)"
                 )
                 appendLine(
-                    "2. **Concrete Classes**: Use specific implementations, not abstract base classes"
+                    "2. **Operations always need Concepts**: Every Operation MUST have a conceptNodeId pointing to an existing Concept node. However, Concepts can stand alone without Operations."
                 )
                 appendLine(
-                    "3. **Operation Linking**: When suggesting an Operation, specify to which Concept it belongs to using conceptNodeId"
+                    "3. **Focus on relevant security patterns**: Only add Operations where they provide meaningful security analysis value"
                 )
                 appendLine()
 

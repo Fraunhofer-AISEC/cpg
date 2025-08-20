@@ -49,7 +49,7 @@ data class NodeInfo(
     constructor(
         node: Node
     ) : this(
-        nodeId = node.id.toHexString(),
+        nodeId = node.id.toString(),
         name = node.name.localName,
         code = node.code,
         type = node::class.simpleName,
@@ -92,7 +92,7 @@ data class FunctionInfo(
     constructor(
         functionDeclaration: FunctionDeclaration
     ) : this(
-        nodeId = functionDeclaration.id.toHexString(),
+        nodeId = functionDeclaration.id.toString(),
         name = functionDeclaration.name.toString(),
         parameters = functionDeclaration.parameters.map { ParameterInfo(it) },
         signature = functionDeclaration.signature,
@@ -119,7 +119,7 @@ data class CallInfo(
     constructor(
         callExpression: CallExpression
     ) : this(
-        nodeId = callExpression.id.toHexString(),
+        nodeId = callExpression.id.toString(),
         name = callExpression.name.toString(),
         arguments = callExpression.arguments.map { NodeInfo(it) },
         resolvedTo = callExpression.invokes.map { FunctionInfo(it) },
@@ -146,7 +146,7 @@ data class RecordInfo(
     constructor(
         recordDeclaration: RecordDeclaration
     ) : this(
-        nodeId = recordDeclaration.id.toHexString(),
+        nodeId = recordDeclaration.id.toString(),
         name = recordDeclaration.name.toString(),
         methods = recordDeclaration.methods.map { FunctionInfo(it) },
         fields = recordDeclaration.fields.map { FieldInfo(it) },
@@ -172,7 +172,7 @@ data class FieldInfo(
     constructor(
         field: FieldDeclaration
     ) : this(
-        nodeId = field.id.toHexString(),
+        nodeId = field.id.toString(),
         name = field.name.toString(),
         type = TypeInfo(field.type),
         fileName = field.location?.artifactLocation?.fileName,

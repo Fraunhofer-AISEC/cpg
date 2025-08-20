@@ -26,12 +26,12 @@
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.concepts.operationBuildHelper
-import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgApplyConceptsPayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableConcepts
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableOperations
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
 import io.modelcontextprotocol.kotlin.sdk.Tool
@@ -45,7 +45,7 @@ import kotlinx.serialization.json.putJsonObject
 
 /** Provides a tool to list all available concepts which can be used to tag nodes in the CPG. */
 fun Server.listAvailableConcepts() {
-    val availableConcepts = listOverlayClasses<Concept>()
+    val availableConcepts = getAvailableConcepts()
     val toolDescription =
         "This tool provides a list of all concepts that can be applied to nodes in the CPG."
     this.addTool(name = "cpg_list_available_concepts", description = toolDescription) { _ ->
@@ -55,7 +55,7 @@ fun Server.listAvailableConcepts() {
 
 /** Provides a tool to list all available operations which can be used to tag nodes in the CPG. */
 fun Server.listAvailableOperations() {
-    val availableOperations = listOverlayClasses<Operation>()
+    val availableOperations = getAvailableOperations()
     val toolDescription =
         "This tool provides a list of all operations that can be applied to nodes in the CPG."
     this.addTool(name = "cpg_list_available_operations", description = toolDescription) { _ ->
@@ -71,8 +71,8 @@ fun Server.listAvailableOperations() {
  * IDs.
  */
 fun Server.addCpgApplyConceptsTool() {
-    val availableConcepts = listOverlayClasses<Concept>()
-    val availableOperations = listOverlayClasses<Operation>()
+    val availableConcepts = getAvailableConcepts()
+    val availableOperations = getAvailableOperations()
     val toolDescription =
         """
             Apply concepts or operations to specific nodes in the CPG.
@@ -186,7 +186,8 @@ fun Server.addCpgApplyConceptsTool() {
                             result.conceptBuildHelper(
                                 name = assignment.overlay,
                                 underlyingNode = node,
-                                constructorArguments = assignment.arguments ?: emptyMap(),
+                                constructorArguments = /*assignment.arguments ?:*/
+                                    emptyMap(), // TODO: handle arguments
                                 connectDFGUnderlyingNodeToConcept = true,
                             )
                             applied.add(
@@ -217,7 +218,8 @@ fun Server.addCpgApplyConceptsTool() {
                                 name = assignment.overlay,
                                 underlyingNode = node,
                                 concept = concept,
-                                constructorArguments = assignment.arguments ?: emptyMap(),
+                                constructorArguments = /*assignment.arguments ?:*/
+                                    emptyMap(), // TODO: handle arguments
                                 connectDFGUnderlyingNodeToConcept = true,
                             )
                             applied.add(

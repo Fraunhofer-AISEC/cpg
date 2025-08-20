@@ -44,7 +44,7 @@ data class ConceptAssignment(
     val overlay: String, // FQN of concept or operation class
     val overlayType: String? = null, // "Concept" or "Operation" from LLM response
     val conceptNodeId: String? = null, // NodeId of concept this operation references
-    val arguments: Map<String, String>? = null, // Additional constructor arguments
+    val arguments: Map<String, String>? = null,
     val reasoning: String? = null,
     val securityImpact: String? = null,
 )

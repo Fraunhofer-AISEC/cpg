@@ -26,9 +26,12 @@
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import kotlinx.serialization.json.Json
@@ -53,3 +56,23 @@ fun FieldDeclaration.toJson() = Json.encodeToString(FieldInfo(this))
 fun RecordDeclaration.toJson() = Json.encodeToString(RecordInfo(this))
 
 fun CallExpression.toJson() = Json.encodeToString(CallInfo(this))
+
+/** Returns all available concrete (non-abstract) concept classes. */
+fun getAvailableConcepts(): List<Class<out Concept>> {
+    return listOverlayClasses<Concept>()
+        .filter { !it.kotlin.isAbstract }
+        .filter {
+            !it.packageName.endsWith(".policy")
+        } // TODO: The concept/operation build helper are explicitly checking against underlying
+    // node, which some of our concepts don't have.
+}
+
+/** Returns all available concrete (non-abstract) operation classes. */
+fun getAvailableOperations(): List<Class<out Operation>> {
+    return listOverlayClasses<Operation>()
+        .filter { !it.kotlin.isAbstract }
+        .filter {
+            !it.packageName.endsWith(".policy")
+        } // TODO: The concept/operation build helper are explicitly checking against underlying
+    // node, which some of our concepts don't have.
+}
