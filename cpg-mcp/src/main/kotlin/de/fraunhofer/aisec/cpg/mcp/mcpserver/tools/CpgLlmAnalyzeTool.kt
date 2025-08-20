@@ -185,7 +185,7 @@ fun Server.addCpgLlmAnalyzeTool() {
                 appendLine(
                     """
                 {
-                  "assignments": [
+                  "overlaySuggestions": [
                     {
                       "nodeId": "1234",
                       "overlay": "fully.qualified.class.Name",
