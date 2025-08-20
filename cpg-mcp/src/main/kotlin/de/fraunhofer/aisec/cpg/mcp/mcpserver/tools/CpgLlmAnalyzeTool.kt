@@ -76,82 +76,11 @@ fun Server.addCpgLlmAnalyzeTool() {
             required = listOf(),
         )
 
-    val outputSchema =
-        Tool.Output(
-            properties =
-                buildJsonObject {
-                    putJsonObject("prompt") {
-                        put("type", "string")
-                        put("description", "Generated prompt for LLM analysis")
-                    }
-                    putJsonObject("expectedResponseFormat") {
-                        put("type", "object")
-                        put("description", "Expected JSON structure for LLM response")
-                        putJsonObject("properties") {
-                            putJsonObject("overlaySuggestions") {
-                                put("type", "array")
-                                put("description", "List of concept/operation suggestions")
-                                putJsonObject("items") {
-                                    put("type", "object")
-                                    putJsonObject("properties") {
-                                        putJsonObject("nodeId") {
-                                            put("type", "string")
-                                            put("description", "NodeId of the CPG node")
-                                        }
-                                        putJsonObject("overlay") {
-                                            put("type", "string")
-                                            put(
-                                                "description",
-                                                "Fully qualified name of concept or operation class",
-                                            )
-                                        }
-                                        putJsonObject("overlayType") {
-                                            put("type", "string")
-                                            put(
-                                                "description",
-                                                "Type of overlay: 'Concept' or 'Operation'",
-                                            )
-                                        }
-                                        putJsonObject("conceptNodeId") {
-                                            put("type", "string")
-                                            put(
-                                                "description",
-                                                "NodeId of concept this operation references (REQUIRED for ALL operations)",
-                                            )
-                                        }
-                                        putJsonObject("arguments") {
-                                            put("type", "object")
-                                            put("description", "Additional constructor arguments")
-                                        }
-                                        putJsonObject("reasoning") {
-                                            put("type", "string")
-                                            put(
-                                                "description",
-                                                "Security reasoning for this classification",
-                                            )
-                                        }
-                                        putJsonObject("securityImpact") {
-                                            put("type", "string")
-                                            put("description", "Potential security implications")
-                                        }
-                                    }
-                                    putJsonArray("required") {
-                                        add(JsonPrimitive("nodeId"))
-                                        add(JsonPrimitive("overlay"))
-                                        add(JsonPrimitive("overlayType"))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-        )
-
     this.addTool(
         name = "cpg_llm_analyze",
         description = toolDescription,
         inputSchema = inputSchema,
-        outputSchema = outputSchema,
+        //        outputSchema = outputSchema - not supported by all LLMs yet
     ) { request ->
         try {
             val payload =
@@ -250,7 +179,26 @@ fun Server.addCpgLlmAnalyzeTool() {
                         "No CPG analysis available. Please analyze a file first using cpg_analyze."
                     )
                 }
-
+                appendLine()
+                appendLine("## Expected Response Format")
+                appendLine("Please respond with a JSON object in this exact format:")
+                appendLine(
+                    """
+                {
+                  "assignments": [
+                    {
+                      "nodeId": "1234",
+                      "overlay": "fully.qualified.class.Name",
+                      "overlayType": "Concept" | "Operation",
+                      "conceptNodeId": "string (REQUIRED for operations)",
+                      "reasoning": "Security reasoning for this classification",
+                      "securityImpact": "Potential security implications"
+                    }
+                  ]
+                }
+                """
+                        .trimIndent()
+                )
                 appendLine()
                 appendLine(
                     "**IMPORTANT**: After providing your analysis, WAIT for user approval before applying any concepts. Do not automatically execute cpg_apply_concepts."
@@ -278,3 +226,75 @@ abstract class PrivacyOperation(underlyingNode: Node? = null, concept: Privacy) 
 
 class ReadData(underlyingNode: Node? = null, concept: Privacy) :
     PrivacyOperation(underlyingNode, concept)
+
+// Note: The output schema is not supported by all LLMs yet.
+val outputSchema =
+    Tool.Output(
+        properties =
+            buildJsonObject {
+                putJsonObject("prompt") {
+                    put("type", "string")
+                    put("description", "Generated prompt for LLM analysis")
+                }
+                putJsonObject("expectedResponseFormat") {
+                    put("type", "object")
+                    put("description", "Expected JSON structure for LLM response")
+                    putJsonObject("properties") {
+                        putJsonObject("overlaySuggestions") {
+                            put("type", "array")
+                            put("description", "List of concept/operation suggestions")
+                            putJsonObject("items") {
+                                put("type", "object")
+                                putJsonObject("properties") {
+                                    putJsonObject("nodeId") {
+                                        put("type", "string")
+                                        put("description", "NodeId of the CPG node")
+                                    }
+                                    putJsonObject("overlay") {
+                                        put("type", "string")
+                                        put(
+                                            "description",
+                                            "Fully qualified name of concept or operation class",
+                                        )
+                                    }
+                                    putJsonObject("overlayType") {
+                                        put("type", "string")
+                                        put(
+                                            "description",
+                                            "Type of overlay: 'Concept' or 'Operation'",
+                                        )
+                                    }
+                                    putJsonObject("conceptNodeId") {
+                                        put("type", "string")
+                                        put(
+                                            "description",
+                                            "NodeId of concept this operation references (REQUIRED for ALL operations)",
+                                        )
+                                    }
+                                    putJsonObject("arguments") {
+                                        put("type", "object")
+                                        put("description", "Additional constructor arguments")
+                                    }
+                                    putJsonObject("reasoning") {
+                                        put("type", "string")
+                                        put(
+                                            "description",
+                                            "Security reasoning for this classification",
+                                        )
+                                    }
+                                    putJsonObject("securityImpact") {
+                                        put("type", "string")
+                                        put("description", "Potential security implications")
+                                    }
+                                }
+                                putJsonArray("required") {
+                                    add(JsonPrimitive("nodeId"))
+                                    add(JsonPrimitive("overlay"))
+                                    add(JsonPrimitive("overlayType"))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+    )
