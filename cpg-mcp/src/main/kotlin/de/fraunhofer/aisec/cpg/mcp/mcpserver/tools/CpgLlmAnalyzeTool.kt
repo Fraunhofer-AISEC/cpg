@@ -28,11 +28,10 @@ package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.cpgDescription
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgLlmAnalyzePayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableConcepts
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableOperations
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toNodeInfo
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
 import io.modelcontextprotocol.kotlin.sdk.Tool
@@ -47,21 +46,12 @@ import kotlinx.serialization.json.putJsonObject
 fun Server.addCpgLlmAnalyzeTool() {
     val toolDescription =
         """
-        Generate a prompt asking the LLM to suggest concepts/operations
+        Generate a prompt asking the LLM to suggest concepts/operations.
         
-        This tool creates a prompt that asks the LLM to act as a security engineer and analyze 
-        the CPG analysis results, suggesting appropriate concepts and operations based 
-        on the Fraunhofer CPG repository documentation and the provided lists of available concepts/operations. After using this tool,
-        the LLM should analyze the prompt and provide the suggestions. The user should
-        review these suggestions before applying them with cpg_apply_concepts.
-        
-        Example usage:
-        - "Analyze this code for security vulnerabilities"
-        - "Focus on authentication vulnerabilities in this code"  
-        
-        Parameters:
-        - description: Additional context for the analysis (optional)
-    """
+        This tool creates a detailed prompt that asks the LLM to act as a software engineer with expertise in software security
+        and suggest appropriate concepts and operations for the analyzed code. 
+        After using this tool, review the suggestions before applying them with cpg_apply_concepts.
+        """
             .trimIndent()
 
     val inputSchema =
@@ -92,7 +82,7 @@ fun Server.addCpgLlmAnalyzeTool() {
                     )
                 }
 
-            val nodes = globalAnalysisResult?.nodes?.map { it.toNodeInfo() } ?: emptyList()
+            val hasAnalysisResult = globalAnalysisResult != null
             val availableConcepts = getAvailableConcepts()
             val availableOperations = getAvailableOperations()
 
@@ -100,8 +90,12 @@ fun Server.addCpgLlmAnalyzeTool() {
                 appendLine("# Code Analysis")
                 appendLine()
                 appendLine(
-                    "Please take on the role of a security engineer and analyze the provided code."
+                    "You are a Software engineer with expertise in software security for more than 10 years.\n"
                 )
+                appendLine()
+
+                appendLine("## About CPG")
+                appendLine(cpgDescription)
                 appendLine()
 
                 appendLine("## Goal")
@@ -132,9 +126,6 @@ fun Server.addCpgLlmAnalyzeTool() {
                 appendLine(
                     "2. **Operations always need Concepts**: Every Operation MUST have a conceptNodeId pointing to an existing Concept node. However, Concepts can stand alone without Operations."
                 )
-                appendLine(
-                    "3. **Focus on relevant security patterns**: Only add Operations where they provide meaningful security analysis value"
-                )
                 appendLine()
 
                 appendLine("## Your Task")
@@ -163,25 +154,18 @@ fun Server.addCpgLlmAnalyzeTool() {
                     appendLine()
                 }
 
-                if (nodes.isNotEmpty()) {
+                if (hasAnalysisResult) {
                     appendLine("## Nodes to Analyze")
-                    nodes.forEach { node ->
-                        val location =
-                            if (node.fileName != "unknown" && node.startLine != 0) {
-                                " at ${node.fileName}:${node.startLine}-${node.endLine}"
-                            } else {
-                                ""
-                            }
-                        appendLine("**Node ${node.nodeId}**: `${node.code}`$location")
-                    }
-                } else {
                     appendLine(
-                        "No CPG analysis available. Please analyze a file first using cpg_analyze."
+                        "Use the nodes from the previous cpg_analyze tool response to make your suggestions."
                     )
+                } else {
+                    appendLine("## No Analysis Available")
+                    appendLine("No CPG analysis available. Analyze a file first using cpg_analyze.")
                 }
                 appendLine()
                 appendLine("## Expected Response Format")
-                appendLine("Please respond with a JSON object in this exact format:")
+                appendLine("Respond with a JSON object in this exact format:")
                 appendLine(
                     """
                 {
