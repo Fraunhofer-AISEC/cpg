@@ -27,6 +27,8 @@ package de.fraunhofer.aisec.codyze.console
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.calls
+import de.fraunhofer.aisec.cpg.graph.concepts.Concept
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgCallArgumentByNameOrIndexPayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgIdPayload
@@ -92,6 +94,36 @@ fun Server.listRecords() {
                     listOf(
                         TextContent("Error listing records: ${e.message ?: e::class.simpleName}")
                     )
+            )
+        }
+    }
+}
+
+fun Server.listConceptsAndOperations() {
+    val toolDescription =
+        "This tool lists all concepts and operations which have been used as overlays to some nodes in the graph."
+
+    this.addTool(name = "cpg_list_concepts_and_operations", description = toolDescription) { _ ->
+        try {
+            val result =
+                globalAnalysisResult
+                    ?: return@addTool CallToolResult(
+                        content =
+                            listOf(
+                                TextContent(
+                                    "No analysis result available. Please analyze your code first using cpg_analyze."
+                                )
+                            )
+                    )
+            val concepts =
+                result.allChildrenWithOverlays<Concept>().map { TextContent(it.toJson()) }
+            val operations =
+                result.allChildrenWithOverlays<Operation>().map { TextContent(it.toJson()) }
+            CallToolResult(content = concepts + operations)
+        } catch (e: Exception) {
+            CallToolResult(
+                content =
+                    listOf(TextContent("Error listing calls: ${e.message ?: e::class.simpleName}"))
             )
         }
     }

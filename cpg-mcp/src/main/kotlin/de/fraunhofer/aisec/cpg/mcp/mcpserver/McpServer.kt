@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.codyze.console.getAllArgs
 import de.fraunhofer.aisec.codyze.console.getArgByIndexOrName
 import de.fraunhofer.aisec.codyze.console.listCalls
 import de.fraunhofer.aisec.codyze.console.listCallsTo
+import de.fraunhofer.aisec.codyze.console.listConceptsAndOperations
 import de.fraunhofer.aisec.codyze.console.listFunctions
 import de.fraunhofer.aisec.codyze.console.listRecords
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgAnalyzeTool
@@ -68,6 +69,7 @@ fun configureServer(): Server {
     server.listAvailableOperations()
     server.getAllArgs()
     server.getArgByIndexOrName()
+    server.listConceptsAndOperations()
 
     return server
 }

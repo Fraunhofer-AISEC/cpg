@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
@@ -53,6 +54,35 @@ data class NodeInfo(
         name = node.name.localName,
         code = node.code,
         type = node::class.simpleName,
+        fileName = node.location?.artifactLocation?.fileName,
+        startLine = node.location?.region?.startLine,
+        endLine = node.location?.region?.endLine,
+        startColumn = node.location?.region?.startColumn,
+        endColumn = node.location?.region?.endColumn,
+    )
+}
+
+@Serializable
+data class OverlayInfo(
+    val nodeId: String,
+    val underlyingNodeId: String?,
+    val name: String,
+    val code: String?,
+    val overlayClass: String?,
+    val fileName: String?,
+    val startLine: Int?,
+    val endLine: Int?,
+    val startColumn: Int?,
+    val endColumn: Int?,
+) {
+    constructor(
+        node: OverlayNode
+    ) : this(
+        nodeId = node.id.toString(),
+        underlyingNodeId = node.underlyingNode?.id?.toString(),
+        name = node.name.localName,
+        code = node.code,
+        overlayClass = node::class.simpleName,
         fileName = node.location?.artifactLocation?.fileName,
         startLine = node.location?.region?.startLine,
         endLine = node.location?.region?.endLine,

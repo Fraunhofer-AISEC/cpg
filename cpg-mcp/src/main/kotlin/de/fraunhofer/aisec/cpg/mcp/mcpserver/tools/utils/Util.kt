@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
@@ -58,6 +59,8 @@ fun FieldDeclaration.toJson() = Json.encodeToString(FieldInfo(this))
 fun RecordDeclaration.toJson() = Json.encodeToString(RecordInfo(this))
 
 fun CallExpression.toJson() = Json.encodeToString(CallInfo(this))
+
+fun OverlayNode.toJson() = Json.encodeToString(OverlayInfo(this))
 
 /** Returns all available concrete (non-abstract) concept classes. */
 fun getAvailableConcepts(): List<Class<out Concept>> {
