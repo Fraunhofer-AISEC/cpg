@@ -45,7 +45,14 @@ import kotlinx.serialization.json.putJsonObject
 
 fun Server.listFunctions() {
     val toolDescription =
-        "This tool lists all functions, more precisely function declarations, which are held in the graph."
+        """
+        This tool lists all functions, more precisely function declarations, which are held in the graph.
+        
+        Example prompts:
+        - "Show me all functions in the analyzed code"
+        - "What functions are defined in this codebase?"
+        """
+            .trimIndent()
 
     this.addTool(name = "cpg_list_functions", description = toolDescription) { _ ->
         try {
@@ -73,7 +80,14 @@ fun Server.listFunctions() {
 
 fun Server.listRecords() {
     val toolDescription =
-        "This tool lists all classes and structs, more precisely their declarations, which are held in the graph."
+        """
+        This tool lists all classes and structs, more precisely their declarations, which are held in the graph.
+        
+        Example prompts:
+        - "Show me all classes in the code"
+        - "What data structures are defined here?"
+        """
+            .trimIndent()
 
     this.addTool(name = "cpg_list_records", description = toolDescription) { _ ->
         try {
@@ -131,7 +145,14 @@ fun Server.listConceptsAndOperations() {
 
 fun Server.listCalls() {
     val toolDescription =
-        "This tool lists all function and method calls, which are held in the graph."
+        """
+        This tool lists all function and method calls, which are held in the graph.
+        
+        Example prompts:
+        - "Show me all function calls in the code"
+        - "What functions are being called?"
+        """
+            .trimIndent()
 
     this.addTool(name = "cpg_list_calls", description = toolDescription) { _ ->
         try {
@@ -157,7 +178,12 @@ fun Server.listCalls() {
 
 fun Server.listCallsTo() {
     val toolDescription =
-        """This tool lists all function and method calls to the method/function with the specified name, which are held in the graph.
+        """
+        This tool lists all function and method calls to the method/function with the specified name, which are held in the graph.
+
+        Example prompts:
+        - "Show me all calls to the function 'encrypt'"
+        - "Where is the 'authenticate' function called?"
 
         Parameters:
         - name: The local name of the function or method whose calls should be listed.
