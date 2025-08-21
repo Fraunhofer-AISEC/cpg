@@ -31,7 +31,7 @@ import kotlinx.serialization.Serializable
 data class CpgAnalyzePayload(
     val content: String? = null,
     val extension: String? = null,
-    val filePath: String? = null,
+    val sourcePath: String? = null,
 )
 
 @Serializable data class CpgNamePayload(val name: String)

@@ -61,6 +61,7 @@ val toolDescription =
         - "Analyze this Python file: /path/to/file.py"
         - "Analyze this code: print('hello')"
         - "Analyze this uploaded file"
+        - "Analyze this directory: /path/to/project/"
     """
         .trimIndent()
 
@@ -79,11 +80,11 @@ val inputSchema =
                         "File extension for language detection (e.g., 'py', 'java', 'cpp')",
                     )
                 }
-                putJsonObject("filePath") {
+                putJsonObject("sourcePath") {
                     put("type", "string")
                     put(
                         "description",
-                        "Path to existing source code file (only possible when using host application locally)",
+                        "Path to existing source code file or directory (only possible when using host application locally)",
                     )
                 }
             },
@@ -97,15 +98,25 @@ fun Server.addCpgAnalyzeTool() {
             val payload =
                 Json.decodeFromString<CpgAnalyzePayload>(Json.encodeToString(request.arguments))
 
-            val file =
+            val (topLevel, filesToAnalyze) =
                 when {
-                    // Option 1: File path provided
-                    payload.filePath != null -> {
-                        val file = File(payload.filePath)
+                    // Option 1: Source path provided
+                    payload.sourcePath != null -> {
+                        val file = File(payload.sourcePath)
                         if (!file.exists()) {
-                            throw IllegalArgumentException("File not found: ${payload.filePath}")
+                            throw IllegalArgumentException("File not found: ${payload.sourcePath}")
                         }
-                        file
+                        if (file.isDirectory) {
+                            val sourceFiles =
+                                file
+                                    .walkTopDown()
+                                    .filter { it.isFile }
+                                    .map { it.absolutePath }
+                                    .toList()
+                            Pair(file, sourceFiles)
+                        } else {
+                            Pair(file, listOf(file.absolutePath))
+                        }
                     }
 
                     // Option 2: Content provided (uploaded file or code)
@@ -123,18 +134,17 @@ fun Server.addCpgAnalyzeTool() {
                         val tempFile = File.createTempFile("cpg_analysis", extension)
                         tempFile.writeText(payload.content)
                         tempFile.deleteOnExit()
-
-                        tempFile
+                        Pair(tempFile, listOf(tempFile.absolutePath))
                     }
 
                     else ->
-                        throw IllegalArgumentException("Must provide either filePath or content")
+                        throw IllegalArgumentException("Must provide either sourcePath or content")
                 }
 
             val config =
                 setupTranslationConfiguration(
-                    topLevel = file,
-                    files = listOf(file.absolutePath),
+                    topLevel = topLevel,
+                    files = filesToAnalyze,
                     includePaths = emptyList(),
                 )
 
