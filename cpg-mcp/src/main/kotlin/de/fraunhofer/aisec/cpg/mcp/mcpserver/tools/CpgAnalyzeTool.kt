@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.graph.variables
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.cpgDescription
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toNodeInfo
@@ -50,6 +51,8 @@ var globalAnalysisResult: TranslationResult? = null
 val toolDescription =
     """
         Analyze source code using CPG (Code Property Graph).
+        
+        $cpgDescription
         
         This tool parses source code and creates a comprehensive graph representation 
         containing all nodes, functions, variables, and call expressions.
