@@ -26,7 +26,10 @@
 package de.fraunhofer.aisec.codyze.console
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgCallArgumentByNameOrIndexPayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgIdPayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgNamePayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toJson
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
@@ -87,7 +90,7 @@ fun Server.listRecords() {
             CallToolResult(
                 content =
                     listOf(
-                        TextContent("Error listing functions: ${e.message ?: e::class.simpleName}")
+                        TextContent("Error listing records: ${e.message ?: e::class.simpleName}")
                     )
             )
         }
@@ -114,9 +117,7 @@ fun Server.listCalls() {
         } catch (e: Exception) {
             CallToolResult(
                 content =
-                    listOf(
-                        TextContent("Error listing functions: ${e.message ?: e::class.simpleName}")
-                    )
+                    listOf(TextContent("Error listing calls: ${e.message ?: e::class.simpleName}"))
             )
         }
     }
@@ -169,8 +170,154 @@ fun Server.listCallsTo() {
         } catch (e: Exception) {
             CallToolResult(
                 content =
+                    listOf(TextContent("Error listing calls: ${e.message ?: e::class.simpleName}"))
+            )
+        }
+    }
+}
+
+fun Server.getAllArgs() {
+    val toolDescription =
+        """This tool lists all arguments passed to the method/function call with the specified ID.
+
+        Parameters:
+        - nodeId: ID of the method/function call whose arguments should be listed.
+        """
+            .trimIndent()
+
+    val inputSchema =
+        Tool.Input(
+            properties =
+                buildJsonObject {
+                    putJsonObject("nodeId") {
+                        put("type", "string")
+                        put(
+                            "description",
+                            "ID of the method/function call whose arguments should be listed.",
+                        )
+                    }
+                },
+            required = listOf("nodeId"),
+        )
+
+    this.addTool(
+        name = "cpg_list_call_args",
+        description = toolDescription,
+        inputSchema = inputSchema,
+    ) { request ->
+        try {
+            val result =
+                globalAnalysisResult
+                    ?: return@addTool CallToolResult(
+                        content =
+                            listOf(
+                                TextContent(
+                                    "No analysis result available. Please analyze your code first using cpg_analyze."
+                                )
+                            )
+                    )
+            val payload =
+                Json.decodeFromString<CpgIdPayload>(Json.encodeToString(request.arguments))
+
+            CallToolResult(
+                content =
+                    result.calls
+                        .single { it.id.toString() == payload.id }
+                        .arguments
+                        .map { TextContent(it.toJson()) }
+            )
+        } catch (e: Exception) {
+            CallToolResult(
+                content =
                     listOf(
-                        TextContent("Error listing functions: ${e.message ?: e::class.simpleName}")
+                        TextContent(
+                            "Error listing call arguments: ${e.message ?: e::class.simpleName}"
+                        )
+                    )
+            )
+        }
+    }
+}
+
+fun Server.getArgByIndexOrName() {
+    val toolDescription =
+        """This tool lists an argument passed to the method/function call with the specified ID either by name or by index.
+
+        Parameters:
+        - nodeId: ID of the method/function call whose arguments should be listed.
+        - argName: Name of the argument to retrieve (optional).
+        - index: Index of the argument to retrieve (optional). If both are provided, the name takes precedence. At least one of argName or index must be provided.
+        """
+            .trimIndent()
+
+    val inputSchema =
+        Tool.Input(
+            properties =
+                buildJsonObject {
+                    putJsonObject("nodeId") {
+                        put("type", "string")
+                        put(
+                            "description",
+                            "ID of the method/function call whose arguments should be listed.",
+                        )
+                    }
+                    putJsonObject("argName") {
+                        put("type", "string")
+                        put(
+                            "description",
+                            "The name of the argument (if arguments can be passed by name).",
+                        )
+                    }
+                    putJsonObject("index") {
+                        put("type", "integer")
+                        put("description", "The index/position of the argument.")
+                    }
+                },
+            required = listOf("nodeId"),
+        )
+
+    this.addTool(
+        name = "cpg_list_call_arg_by_name_or_index",
+        description = toolDescription,
+        inputSchema = inputSchema,
+    ) { request ->
+        try {
+            val result =
+                globalAnalysisResult
+                    ?: return@addTool CallToolResult(
+                        content =
+                            listOf(
+                                TextContent(
+                                    "No analysis result available. Please analyze your code first using cpg_analyze."
+                                )
+                            )
+                    )
+            val payload =
+                Json.decodeFromString<CpgCallArgumentByNameOrIndexPayload>(
+                    Json.encodeToString(request.arguments)
+                )
+
+            CallToolResult(
+                content =
+                    listOf(
+                        TextContent(
+                            result.calls
+                                .single { it.id.toString() == payload.id }
+                                .argumentByNameOrPosition(
+                                    name = payload.argumentName,
+                                    position = payload.index,
+                                )
+                                ?.toJson()
+                        )
+                    )
+            )
+        } catch (e: Exception) {
+            CallToolResult(
+                content =
+                    listOf(
+                        TextContent(
+                            "Error listing call argument: ${e.message ?: e::class.simpleName}"
+                        )
                     )
             )
         }

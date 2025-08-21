@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.mcpserver
 
+import de.fraunhofer.aisec.codyze.console.getAllArgs
+import de.fraunhofer.aisec.codyze.console.getArgByIndexOrName
 import de.fraunhofer.aisec.codyze.console.listCalls
 import de.fraunhofer.aisec.codyze.console.listCallsTo
 import de.fraunhofer.aisec.codyze.console.listFunctions
@@ -64,6 +66,8 @@ fun configureServer(): Server {
     server.listCallsTo()
     server.listAvailableConcepts()
     server.listAvailableOperations()
+    server.getAllArgs()
+    server.getArgByIndexOrName()
 
     return server
 }

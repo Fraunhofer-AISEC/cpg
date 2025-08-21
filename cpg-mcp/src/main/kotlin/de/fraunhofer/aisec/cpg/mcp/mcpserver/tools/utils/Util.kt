@@ -49,6 +49,8 @@ fun <T> QueryTree<T>.toQueryTreeNode(): QueryTreeNode {
     )
 }
 
+fun Node.toJson() = Json.encodeToString(NodeInfo(this))
+
 fun FunctionDeclaration.toJson() = Json.encodeToString(FunctionInfo(this))
 
 fun FieldDeclaration.toJson() = Json.encodeToString(FieldInfo(this))

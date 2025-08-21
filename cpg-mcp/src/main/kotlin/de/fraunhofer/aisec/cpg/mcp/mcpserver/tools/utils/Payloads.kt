@@ -36,6 +36,15 @@ data class CpgAnalyzePayload(
 
 @Serializable data class CpgNamePayload(val name: String)
 
+@Serializable data class CpgIdPayload(val id: String)
+
+@Serializable
+data class CpgCallArgumentByNameOrIndexPayload(
+    val id: String,
+    val argumentName: String,
+    val index: Int,
+)
+
 @Serializable data class CpgApplyConceptsPayload(val assignments: List<ConceptAssignment>)
 
 @Serializable
