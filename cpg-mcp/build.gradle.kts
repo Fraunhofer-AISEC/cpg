@@ -30,10 +30,13 @@ plugins {
     id("cpg.application-conventions")
     id("cpg.frontend-dependency-conventions")
     kotlin("plugin.serialization")
-    id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("com.gradleup.shadow") version "9.0.2"
 }
 
-tasks.shadowJar { setProperty("zip64", true) }
+tasks.shadowJar {
+    setProperty("zip64", true)
+    minimize()
+}
 
 application {
     mainClass.set("de.fraunhofer.aisec.cpg.mcp.ApplicationKt")
