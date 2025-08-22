@@ -33,6 +33,8 @@ plugins {
     id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
+tasks.shadowJar { setProperty("zip64", true) }
+
 application {
     mainClass.set("de.fraunhofer.aisec.cpg.mcp.ApplicationKt")
     // Since we are potentially persisting deeply nested graphs, we need to increase the stack and
