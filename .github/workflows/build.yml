@@ -175,7 +175,3 @@ jobs:
           name: ${{ env.version }}
           draft: false
           prerelease: false
-      - name: Remove shadow JARs
-        run: |
-          # Remove some of the shadow JARs that are no longer needed
-          rm -r ./cpg-mcp/build/distributions/
