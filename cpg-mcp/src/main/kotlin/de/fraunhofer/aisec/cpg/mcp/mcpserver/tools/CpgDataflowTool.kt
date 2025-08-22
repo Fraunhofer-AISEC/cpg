@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
+package de.fraunhofer.aisec.cpg.mcp
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Forward
@@ -31,12 +31,12 @@ import de.fraunhofer.aisec.cpg.graph.GraphToFollow
 import de.fraunhofer.aisec.cpg.graph.Intraprocedural
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgDataflowPayload
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.DataflowResult
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.QueryTreeNode
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.runOnCpg
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toQueryTreeNode
+import de.fraunhofer.aisec.cpg.mcp.utils.CpgDataflowPayload
+import de.fraunhofer.aisec.cpg.mcp.utils.DataflowResult
+import de.fraunhofer.aisec.cpg.mcp.utils.QueryTreeNode
+import de.fraunhofer.aisec.cpg.mcp.utils.runOnCpg
+import de.fraunhofer.aisec.cpg.mcp.utils.toObject
+import de.fraunhofer.aisec.cpg.mcp.utils.toQueryTreeNode
 import de.fraunhofer.aisec.cpg.query.May
 import de.fraunhofer.aisec.cpg.query.dataFlow
 import io.modelcontextprotocol.kotlin.sdk.CallToolRequest

@@ -50,7 +50,14 @@ import kotlinx.serialization.json.putJsonObject
 fun Server.listAvailableConcepts() {
     val availableConcepts = getAvailableConcepts()
     val toolDescription =
-        "This tool provides a list of all concepts that can be applied to nodes in the CPG."
+        """
+        This tool provides a list of all concepts that can be applied to nodes in the CPG.
+        
+        Example prompts:
+        - "What concepts are available for tagging nodes?"
+        - "Show me all available concepts"
+        """
+            .trimIndent()
     this.addTool(name = "cpg_list_available_concepts", description = toolDescription) { _ ->
         CallToolResult(content = availableConcepts.map { TextContent(it.name) })
     }
@@ -60,7 +67,14 @@ fun Server.listAvailableConcepts() {
 fun Server.listAvailableOperations() {
     val availableOperations = getAvailableOperations()
     val toolDescription =
-        "This tool provides a list of all operations that can be applied to nodes in the CPG."
+        """
+        This tool provides a list of all operations that can be applied to nodes in the CPG.
+        
+        Example prompts:
+        - "What operations are available for tagging nodes?"
+        - "Show me all available operations"
+        """
+            .trimIndent()
     this.addTool(name = "cpg_list_available_operations", description = toolDescription) { _ ->
         CallToolResult(content = availableOperations.map { TextContent(it.name) })
     }

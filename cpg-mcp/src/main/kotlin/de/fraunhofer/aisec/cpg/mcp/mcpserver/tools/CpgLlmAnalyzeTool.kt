@@ -23,13 +23,13 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
+package de.fraunhofer.aisec.cpg.mcp
 
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.cpgDescription
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgLlmAnalyzePayload
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableConcepts
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableOperations
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
+import de.fraunhofer.aisec.cpg.mcp.utils.CpgLlmAnalyzePayload
+import de.fraunhofer.aisec.cpg.mcp.utils.getAvailableConcepts
+import de.fraunhofer.aisec.cpg.mcp.utils.getAvailableOperations
+import de.fraunhofer.aisec.cpg.mcp.utils.toObject
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
 import io.modelcontextprotocol.kotlin.sdk.Tool

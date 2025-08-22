@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
+package de.fraunhofer.aisec.cpg.mcp
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -32,11 +32,10 @@ import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.cpgDescription
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalysisResult
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toNodeInfo
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
-import de.fraunhofer.aisec.cpg.mcp.setupTranslationConfiguration
+import de.fraunhofer.aisec.cpg.mcp.utils.CpgAnalysisResult
+import de.fraunhofer.aisec.cpg.mcp.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.mcp.utils.toNodeInfo
+import de.fraunhofer.aisec.cpg.mcp.utils.toObject
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
 import io.modelcontextprotocol.kotlin.sdk.Tool
@@ -59,10 +58,8 @@ val toolDescription =
         containing all nodes, functions, variables, and call expressions.
         
         Example usage:
-        - "Analyze this Python file: /path/to/file.py"
         - "Analyze this code: print('hello')"
         - "Analyze this uploaded file"
-        - "Analyze this directory: /path/to/project/"
     """
         .trimIndent()
 
@@ -81,13 +78,6 @@ val inputSchema =
                         "File extension for language detection (e.g., 'py', 'java', 'cpp')",
                     )
                 }
-                putJsonObject("sourcePath") {
-                    put("type", "string")
-                    put(
-                        "description",
-                        "Path to existing source code file or directory (only possible when using host application locally)",
-                    )
-                }
             },
         required = listOf(),
     )
@@ -98,28 +88,9 @@ fun Server.addCpgAnalyzeTool() {
         try {
             val payload = request.arguments.toObject<CpgAnalyzePayload>()
 
-            val (topLevel, filesToAnalyze) =
+            val file =
                 when {
-                    // Option 1: Source path provided
-                    payload.sourcePath != null -> {
-                        val file = File(payload.sourcePath)
-                        if (!file.exists()) {
-                            throw IllegalArgumentException("File not found: ${payload.sourcePath}")
-                        }
-                        if (file.isDirectory) {
-                            val sourceFiles =
-                                file
-                                    .walkTopDown()
-                                    .filter { it.isFile }
-                                    .map { it.absolutePath }
-                                    .toList()
-                            Pair(file, sourceFiles)
-                        } else {
-                            Pair(file, listOf(file.absolutePath))
-                        }
-                    }
-
-                    // Option 2: Content provided (uploaded file or code)
+                    // Content provided (uploaded file or code)
                     payload.content != null -> {
                         val extension =
                             if (payload.extension != null) {
@@ -127,24 +98,23 @@ fun Server.addCpgAnalyzeTool() {
                                 else ".${payload.extension}"
                             } else {
                                 throw IllegalArgumentException(
-                                    "extension is required when providing content"
+                                    "Extension is required when providing content"
                                 )
                             }
 
                         val tempFile = File.createTempFile("cpg_analysis", extension)
                         tempFile.writeText(payload.content)
                         tempFile.deleteOnExit()
-                        Pair(tempFile, listOf(tempFile.absolutePath))
+                        tempFile
                     }
 
-                    else ->
-                        throw IllegalArgumentException("Must provide either sourcePath or content")
+                    else -> throw IllegalArgumentException("Must provide content")
                 }
 
             val config =
                 setupTranslationConfiguration(
-                    topLevel = topLevel,
-                    files = filesToAnalyze,
+                    topLevel = file,
+                    files = listOf(file.absolutePath),
                     includePaths = emptyList(),
                 )
 

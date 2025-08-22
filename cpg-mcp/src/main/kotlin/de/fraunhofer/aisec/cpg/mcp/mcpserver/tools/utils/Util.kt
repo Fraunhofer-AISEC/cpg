@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils
+package de.fraunhofer.aisec.cpg.mcp.mcpserver.utils
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -74,9 +74,10 @@ fun getAvailableConcepts(): List<Class<out Concept>> {
     return listOverlayClasses<Concept>()
         .filter { !it.kotlin.isAbstract }
         .filter {
+            // TODO: The concept/operation build helper are explicitly checking against underlying
+            //  node, which some of our concepts don't have.
             !it.packageName.endsWith(".policy")
-        } // TODO: The concept/operation build helper are explicitly checking against underlying
-    // node, which some of our concepts don't have.
+        }
 }
 
 /** Returns all available concrete (non-abstract) operation classes. */
@@ -84,9 +85,10 @@ fun getAvailableOperations(): List<Class<out Operation>> {
     return listOverlayClasses<Operation>()
         .filter { !it.kotlin.isAbstract }
         .filter {
+            // TODO: The concept/operation build helper are explicitly checking against underlying
+            //  node, which some of our concepts don't have.
             !it.packageName.endsWith(".policy")
-        } // TODO: The concept/operation build helper are explicitly checking against underlying
-    // node, which some of our concepts don't have.
+        }
 }
 
 inline fun <reified T> JsonObject.toObject() = Json.decodeFromString<T>(Json.encodeToString(this))

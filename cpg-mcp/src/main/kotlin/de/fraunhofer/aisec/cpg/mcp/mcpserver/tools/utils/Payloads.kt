@@ -23,16 +23,12 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils
+package de.fraunhofer.aisec.cpg.mcp.mcpserver.utils
 
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class CpgAnalyzePayload(
-    val content: String? = null,
-    val extension: String? = null,
-    val sourcePath: String? = null,
-)
+data class CpgAnalyzePayload(val content: String? = null, val extension: String? = null)
 
 @Serializable data class CpgNamePayload(val name: String)
 
