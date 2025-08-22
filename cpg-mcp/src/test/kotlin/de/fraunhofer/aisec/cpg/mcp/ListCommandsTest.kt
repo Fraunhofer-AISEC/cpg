@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.mcp
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getAllArgs
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getArgByIndexOrName
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listAvailableConcepts
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listAvailableOperations
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listCalls
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listCallsTo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listFunctions
@@ -181,5 +183,27 @@ class ListCommandsTest {
         val argResult = argTool.handler(argRequest)
         assertNotNull(argResult)
         assertTrue(argResult.content.isNotEmpty(), "Should return the argument at index 0")
+    }
+
+    @Test
+    fun listAvailableConceptsTest() = runTest {
+        server.listAvailableConcepts()
+        val tool = server.tools["cpg_list_available_concepts"] ?: error("Tool not registered")
+        val request =
+            CallToolRequest(name = "cpg_list_available_concepts", arguments = buildJsonObject {})
+        val result = tool.handler(request)
+        assertNotNull(result)
+        assertTrue(result.content.isNotEmpty(), "Should return available concepts")
+    }
+
+    @Test
+    fun listAvailableOperationsTest() = runTest {
+        server.listAvailableOperations()
+        val tool = server.tools["cpg_list_available_operations"] ?: error("Tool not registered")
+        val request =
+            CallToolRequest(name = "cpg_list_available_operations", arguments = buildJsonObject {})
+        val result = tool.handler(request)
+        assertNotNull(result)
+        assertTrue(result.content.isNotEmpty(), "Should return available operations")
     }
 }
