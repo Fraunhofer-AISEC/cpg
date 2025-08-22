@@ -25,12 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.mcp
 
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgAnalyzeTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listFunctions
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import io.modelcontextprotocol.kotlin.sdk.*
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.FunctionInfo
+import io.modelcontextprotocol.kotlin.sdk.CallToolRequest
+import io.modelcontextprotocol.kotlin.sdk.Implementation
+import io.modelcontextprotocol.kotlin.sdk.ServerCapabilities
+import io.modelcontextprotocol.kotlin.sdk.TextContent
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 import kotlin.test.Test
@@ -40,50 +43,13 @@ import kotlin.test.assertNotNull
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
+import org.junit.jupiter.api.BeforeEach
 
-class CpgAnalyzeToolTest {
-
+class ListCommandsTest {
     private lateinit var server: Server
 
-    @Test
-    fun cpgAnalyzeToolIntegrationTest() = runTest {
-        val info = Implementation(name = "test-cpg-server", version = "1.0.0")
-        val options =
-            ServerOptions(
-                capabilities =
-                    ServerCapabilities(tools = ServerCapabilities.Tools(listChanged = true))
-            )
-        server = Server(info, options)
-
-        server.addCpgAnalyzeTool()
-
-        val inputSchema = buildJsonObject {
-            put("content", "def hello():\n    print('Hello World')")
-            put("extension", "py")
-        }
-
-        val request = CallToolRequest(name = "cpg_analyze", arguments = inputSchema)
-
-        val tool = server.tools["cpg_analyze"] ?: error("Tool not registered")
-        val result = tool.handler(request)
-
-        assertNotNull(globalAnalysisResult, "Result should be set after tool execution")
-
-        val resultContent = result.content.firstOrNull()
-        assertIs<TextContent>(resultContent)
-        val resultText = resultContent.text
-        assertNotNull(resultText, "Result content should not be null")
-
-        val analysisResult = Json.decodeFromString<CpgAnalysisResult>(resultText)
-
-        assertEquals(2, analysisResult.functions)
-        assertEquals(1, analysisResult.callExpressions)
-        assertNotNull(analysisResult.nodes)
-    }
-
-    @Test
-    fun cpgAnalyzeToolUnitTest() {
+    @BeforeEach
+    fun initializeServer() {
         val payload =
             CpgAnalyzePayload(content = "def hello():\n    print('Hello World')", extension = "py")
         val analysisResult = runCpgAnalyze(payload)
@@ -92,5 +58,37 @@ class CpgAnalyzeToolTest {
         assertEquals(2, analysisResult.functions)
         assertEquals(1, analysisResult.callExpressions)
         assertNotNull(analysisResult.nodes)
+        val info = Implementation(name = "test-cpg-server", version = "1.0.0")
+        val options =
+            ServerOptions(
+                capabilities =
+                    ServerCapabilities(tools = ServerCapabilities.Tools(listChanged = true))
+            )
+        server = Server(info, options)
+    }
+
+    @Test
+    fun listFunctionsTest() = runTest {
+        server.listFunctions()
+
+        val tool = server.tools["cpg_list_functions"] ?: error("Tool not registered")
+        val request = CallToolRequest(name = "cpg_list_functions", arguments = buildJsonObject {})
+        val result = tool.handler(request)
+
+        assertNotNull(result, "Result should not be null")
+        assertEquals(2, result.content.size, "Should return two function declarations")
+        val functionNames =
+            result.content.map {
+                assertIs<TextContent>(it)
+                Json.decodeFromString<FunctionInfo>(it.text ?: "").name
+            }
+        assertNotNull(
+            functionNames.singleOrNull { it == "print" },
+            "There is exactly one function declaration with name print",
+        )
+        assertNotNull(
+            functionNames.singleOrNull { it.endsWith(".hello") },
+            "There is exactly one function declaration with local name hello",
+        )
     }
 }
