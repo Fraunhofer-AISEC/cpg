@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.mcp
+package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -32,10 +32,11 @@ import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.cpgDescription
-import de.fraunhofer.aisec.cpg.mcp.utils.CpgAnalysisResult
-import de.fraunhofer.aisec.cpg.mcp.utils.CpgAnalyzePayload
-import de.fraunhofer.aisec.cpg.mcp.utils.toNodeInfo
-import de.fraunhofer.aisec.cpg.mcp.utils.toObject
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalysisResult
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toNodeInfo
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
+import de.fraunhofer.aisec.cpg.mcp.setupTranslationConfiguration
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
 import io.modelcontextprotocol.kotlin.sdk.Tool
@@ -87,61 +88,8 @@ fun Server.addCpgAnalyzeTool() {
         request ->
         try {
             val payload = request.arguments.toObject<CpgAnalyzePayload>()
-
-            val file =
-                when {
-                    // Content provided (uploaded file or code)
-                    payload.content != null -> {
-                        val extension =
-                            if (payload.extension != null) {
-                                if (payload.extension.startsWith(".")) payload.extension
-                                else ".${payload.extension}"
-                            } else {
-                                throw IllegalArgumentException(
-                                    "Extension is required when providing content"
-                                )
-                            }
-
-                        val tempFile = File.createTempFile("cpg_analysis", extension)
-                        tempFile.writeText(payload.content)
-                        tempFile.deleteOnExit()
-                        tempFile
-                    }
-
-                    else -> throw IllegalArgumentException("Must provide content")
-                }
-
-            val config =
-                setupTranslationConfiguration(
-                    topLevel = file,
-                    files = listOf(file.absolutePath),
-                    includePaths = emptyList(),
-                )
-
-            val analyzer = TranslationManager.builder().config(config).build()
-            val result = analyzer.analyze().get()
-
-            // Store globally for other tools
-            globalAnalysisResult = result
-
-            val allNodes = result.nodes
-            val functions = result.functions
-            val variables = result.variables
-            val callExpressions = result.calls
-
-            val nodeInfos = allNodes.map { node: Node -> node.toNodeInfo() }
-
-            val analysisResult =
-                CpgAnalysisResult(
-                    totalNodes = allNodes.size,
-                    functions = functions.size,
-                    variables = variables.size,
-                    callExpressions = callExpressions.size,
-                    nodes = nodeInfos,
-                )
-
+            val analysisResult = runCpgAnalyze(payload)
             val jsonResult = Json.encodeToString(analysisResult)
-
             CallToolResult(content = listOf(TextContent(jsonResult)))
         } catch (e: Exception) {
             CallToolResult(
@@ -149,4 +97,56 @@ fun Server.addCpgAnalyzeTool() {
             )
         }
     }
+}
+
+fun runCpgAnalyze(payload: CpgAnalyzePayload): CpgAnalysisResult {
+    val file =
+        when {
+            payload.content != null -> {
+                val extension =
+                    if (payload.extension != null) {
+                        if (payload.extension.startsWith(".")) payload.extension
+                        else ".${payload.extension}"
+                    } else {
+                        throw IllegalArgumentException(
+                            "Extension is required when providing content"
+                        )
+                    }
+
+                val tempFile = File.createTempFile("cpg_analysis", extension)
+                tempFile.writeText(payload.content)
+                tempFile.deleteOnExit()
+                tempFile
+            }
+
+            else -> throw IllegalArgumentException("Must provide content")
+        }
+
+    val config =
+        setupTranslationConfiguration(
+            topLevel = file,
+            files = listOf(file.absolutePath),
+            includePaths = emptyList(),
+        )
+
+    val analyzer = TranslationManager.builder().config(config).build()
+    val result = analyzer.analyze().get()
+
+    // Store the result globally
+    globalAnalysisResult = result
+
+    val allNodes = result.nodes
+    val functions = result.functions
+    val variables = result.variables
+    val callExpressions = result.calls
+
+    val nodeInfos = allNodes.map { node: Node -> node.toNodeInfo() }
+
+    return CpgAnalysisResult(
+        totalNodes = allNodes.size,
+        functions = functions.size,
+        variables = variables.size,
+        callExpressions = callExpressions.size,
+        nodes = nodeInfos,
+    )
 }

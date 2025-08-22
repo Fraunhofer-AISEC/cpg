@@ -70,6 +70,9 @@ dependencies {
     implementation(libs.mcp)
     implementation(libs.ktor.serialization.kotlinx.json)
 
+    // Test dependencies
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0")
+
     // Command line interface support
     api(libs.picocli)
     annotationProcessor(libs.picocli.codegen)
