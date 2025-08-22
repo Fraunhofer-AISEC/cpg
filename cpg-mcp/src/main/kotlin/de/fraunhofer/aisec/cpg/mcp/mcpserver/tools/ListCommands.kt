@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.mcp
+package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
@@ -31,12 +31,12 @@ import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.invoke
-import de.fraunhofer.aisec.cpg.mcp.utils.CpgCallArgumentByNameOrIndexPayload
-import de.fraunhofer.aisec.cpg.mcp.utils.CpgIdPayload
-import de.fraunhofer.aisec.cpg.mcp.utils.CpgNamePayload
-import de.fraunhofer.aisec.cpg.mcp.utils.runOnCpg
-import de.fraunhofer.aisec.cpg.mcp.utils.toJson
-import de.fraunhofer.aisec.cpg.mcp.utils.toObject
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgCallArgumentByNameOrIndexPayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgIdPayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgNamePayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.runOnCpg
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toJson
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
 import io.modelcontextprotocol.kotlin.sdk.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
