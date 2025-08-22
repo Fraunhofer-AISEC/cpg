@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.FrontendUtils
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.frontends.TranslationException as CpgTranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -41,6 +41,7 @@ import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.io.File.createTempFile
 import java.io.FileReader
+import java.io.InputStreamReader
 import java.io.LineNumberReader
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
@@ -68,10 +69,10 @@ class TypeScriptLanguageFrontend(
 
     private var currentFileContent: String? = null
 
-    private val mapper = jacksonObjectMapper()
+    internal val mapper = jacksonObjectMapper()
 
     companion object {
-        private val parserFile: File = createTempFile("parser", "")
+        internal val parserFile: File = createTempFile("parser", "")
 
         init {
             val arch = System.getProperty("os.arch").replace("amd64", "x86_64")
@@ -88,36 +89,127 @@ class TypeScriptLanguageFrontend(
                     }
                 }
 
-            val link = this::class.java.getResourceAsStream("/typescript/parser-$os-$arch")
-            link?.use {
+            // Note: Path adjusted to always look in /typescript/
+            val resourcePath = "/typescript/parser-$os-$arch"
+            val link = this::class.java.getResourceAsStream(resourcePath)
+
+            if (link == null) {
+                // Handle case where parser binary is not found
+                log.error("TypeScript parser binary not found at resource path: {}", resourcePath)
+                // Optionally attempt fallback or throw an exception
+                val fallbackResourcePath = "/typescript/parser-$os-x86_64"
+                val fallbackStream = this::class.java.getResourceAsStream(fallbackResourcePath)
+                if (fallbackStream != null) {
+                    log.warn("Could not find parser for specific arch $arch, using fallback x86_64")
+                    Files.copy(
+                        fallbackStream,
+                        parserFile.toPath(),
+                        StandardCopyOption.REPLACE_EXISTING,
+                    )
+                    parserFile.setExecutable(true)
+                    fallbackStream.close()
+                } else {
+                    log.error(
+                        "TypeScript parser binary also not found at fallback path: {}",
+                        fallbackResourcePath,
+                    )
+                    throw CpgTranslationException("TypeScript parser binary not found")
+                }
+            } else {
                 log.info(
-                    "Extracting parser out of resources to {}",
+                    "Extracting TypeScript parser from resources ({}) to {}",
+                    resourcePath,
                     parserFile.absoluteFile.toPath(),
                 )
                 Files.copy(
-                    it,
+                    link,
                     parserFile.absoluteFile.toPath(),
                     StandardCopyOption.REPLACE_EXISTING,
                 )
                 parserFile.setExecutable(true)
+                link.close() // Close the stream
             }
         }
     }
 
     override fun parse(file: File): TranslationUnitDeclaration {
-        // Necessary to not read file contents several times
         currentFileContent = file.readText()
         if (!parserFile.exists()) {
-            throw TranslationException("parser not found @ ${parserFile.absolutePath}")
+            throw CpgTranslationException(
+                "TypeScript parser not found @ ${parserFile.absolutePath}"
+            )
         }
 
-        val p = Runtime.getRuntime().exec(arrayOf(parserFile.absolutePath, file.absolutePath))
+        // Check file extension for Svelte
+        if (file.extension == "svelte") {
+            log.info(
+                "Detected .svelte file, attempting to parse with SvelteLanguageFrontend: {}",
+                file.absolutePath,
+            )
+            val diagCtx: de.fraunhofer.aisec.cpg.TranslationContext = ctx // Keep this for typing
+            // Further diagnostic: try to access a *different* known member of TranslationContext
+            val configTest =
+                diagCtx.config // TranslationContext has a 'config: TranslationConfiguration'
+            log.debug("Accessed TranslationContext.config: {}", configTest.toString())
 
-        val node = mapper.readValue(p.inputStream, TypeScriptNode::class.java)
+            // Correct way to get the SvelteLanguage instance from TranslationContext
+            val svelteLanguage = diagCtx.availableLanguage<SvelteLanguage>()
 
+            if (svelteLanguage == null) {
+                log.error(
+                    "SvelteLanguage not registered/available in TranslationContext. Cannot parse .svelte file."
+                )
+                throw CpgTranslationException("SvelteLanguage not available.")
+            }
+            // No need for cast now, svelteLanguage is already SvelteLanguage?
+            // val svelteLanguage = svelteLanguageRaw as SvelteLanguage
+
+            // Create SvelteLanguageFrontend instance using its primary constructor
+            val svelteFrontend =
+                SvelteLanguageFrontend(ctx, svelteLanguage) // Pass the non-null svelteLanguage
+
+            return svelteFrontend.parse(file)
+        }
+
+        // Original TypeScript/JavaScript parsing logic
+        val languageFlag = "--language=typescript"
+
+        log.info(
+            "Executing TypeScript parser for {} with flag: {}",
+            file.absolutePath,
+            languageFlag,
+        )
+        val process =
+            try {
+                Runtime.getRuntime()
+                    .exec(arrayOf(parserFile.absolutePath, languageFlag, file.absolutePath))
+            } catch (e: Exception) {
+                throw CpgTranslationException("Error executing TypeScript parser: ${e.message}")
+            }
+
+        val stdInput = InputStreamReader(process.inputStream)
+        val stdError = InputStreamReader(process.errorStream)
+        val jsonResult = stdInput.readText()
+        val errors = stdError.readText()
+        stdInput.close()
+        stdError.close()
+
+        val exitCode = process.waitFor()
+
+        if (exitCode != 0) {
+            log.error("TypeScript parser exited with code {}: {}", exitCode, errors)
+            throw CpgTranslationException("TypeScript parser failed: $errors")
+        }
+        if (errors.isNotEmpty()) {
+            log.warn("TypeScript parser reported errors/warnings: {}", errors)
+        }
+
+        // Deserialize directly into TypeScriptNode for existing TS handling
+        val node = mapper.readValue(jsonResult, TypeScriptNode::class.java)
+
+        // Use existing TypeScript handlers
         val translationUnit = this.declarationHandler.handle(node) as TranslationUnitDeclaration
-
-        handleComments(file, translationUnit)
+        handleComments(file, translationUnit) // Handle TS comments
 
         return translationUnit
     }
@@ -145,7 +237,8 @@ class TypeScriptLanguageFrontend(
         matches?.toList()?.forEach { result ->
             val groups = result.groups
             groups[0]?.let {
-                val commentRegion = getRegionFromStartEnd(file, it.range.first, it.range.last)
+                val commentRegion =
+                    getRegionFromStartEnd(file, currentFileContent, it.range.first, it.range.last)
 
                 // We only want the actual comment text and therefore take the value we captured in
                 // the first, or second group.
@@ -181,34 +274,13 @@ class TypeScriptLanguageFrontend(
         // From here on the invariant 'astNode.location.end - position != astNode.code!!.length'
         // should hold, only exceptions are mispositioned empty ast elements
         val region =
-            getRegionFromStartEnd(File(astNode.location.file), position, astNode.location.end)
+            getRegionFromStartEnd(
+                File(astNode.location.file),
+                currentFileContent,
+                position,
+                astNode.location.end,
+            )
         return PhysicalLocation(File(astNode.location.file).toURI(), region ?: Region())
-    }
-
-    fun getRegionFromStartEnd(file: File, start: Int, end: Int): Region? {
-        val lineNumberReader = LineNumberReader(FileReader(file))
-
-        // Start and end position given by the parser are sometimes including spaces in front of the
-        // code and loc.end - loc.pos > code.length. This is caused by the parser and results in
-        // unexpected
-        // but correct regions if the start and end positions are assumed to be correct.
-        lineNumberReader.skip(start.toLong())
-        val startLine = lineNumberReader.lineNumber + 1
-        lineNumberReader.skip((end - start).toLong())
-        val endLine = lineNumberReader.lineNumber + 1
-
-        val translationUnitSignature = currentFileContent
-        val region =
-            translationUnitSignature?.let {
-                FrontendUtils.parseColumnPositionsFromFile(
-                    it,
-                    end - start,
-                    start,
-                    startLine,
-                    endLine,
-                )
-            }
-        return region
     }
 
     override fun setComment(node: Node, astNode: TypeScriptNode) {
@@ -275,4 +347,24 @@ class TypeScriptNode(
     fun firstChild(type: String): TypeScriptNode? {
         return this.children?.firstOrNull { it.type == type }
     }
+}
+
+fun getRegionFromStartEnd(file: File, currentFileContent: String?, start: Int, end: Int): Region? {
+    val lineNumberReader = LineNumberReader(FileReader(file))
+
+    // Start and end position given by the parser are sometimes including spaces in front of the
+    // code and loc.end - loc.pos > code.length. This is caused by the parser and results in
+    // unexpected
+    // but correct regions if the start and end positions are assumed to be correct.
+    lineNumberReader.skip(start.toLong())
+    val startLine = lineNumberReader.lineNumber + 1
+    lineNumberReader.skip((end - start).toLong())
+    val endLine = lineNumberReader.lineNumber + 1
+
+    val translationUnitSignature = currentFileContent
+    val region =
+        translationUnitSignature?.let {
+            FrontendUtils.parseColumnPositionsFromFile(it, end - start, start, startLine, endLine)
+        }
+    return region
 }
