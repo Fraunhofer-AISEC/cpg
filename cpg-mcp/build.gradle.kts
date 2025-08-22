@@ -33,10 +33,7 @@ plugins {
     id("com.gradleup.shadow") version "9.0.2"
 }
 
-tasks.shadowJar {
-    setProperty("zip64", true)
-    minimize()
-}
+tasks.shadowJar { setProperty("zip64", true) }
 
 application {
     mainClass.set("de.fraunhofer.aisec.cpg.mcp.ApplicationKt")
