@@ -25,19 +25,19 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.mcpserver
 
-import de.fraunhofer.aisec.codyze.console.getAllArgs
-import de.fraunhofer.aisec.codyze.console.getArgByIndexOrName
-import de.fraunhofer.aisec.codyze.console.listCalls
-import de.fraunhofer.aisec.codyze.console.listCallsTo
-import de.fraunhofer.aisec.codyze.console.listConceptsAndOperations
-import de.fraunhofer.aisec.codyze.console.listFunctions
-import de.fraunhofer.aisec.codyze.console.listRecords
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgAnalyzeTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgApplyConceptsTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgDataflowTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgLlmAnalyzeTool
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getAllArgs
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getArgByIndexOrName
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listAvailableConcepts
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listAvailableOperations
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listCalls
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listCallsTo
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listConceptsAndOperations
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listFunctions
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listRecords
 import io.modelcontextprotocol.kotlin.sdk.Implementation
 import io.modelcontextprotocol.kotlin.sdk.ServerCapabilities
 import io.modelcontextprotocol.kotlin.sdk.server.Server
@@ -74,7 +74,7 @@ fun configureServer(): Server {
     return server
 }
 
-val cpgDescription =
+const val cpgDescription =
     """
 This server provides tools to analyze the Fraunhofer AISEC CPG (Code Property Graph) and
 allows to perform various operations on it. A CPG is a supergraph which consists of several subgraphs:

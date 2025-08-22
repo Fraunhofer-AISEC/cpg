@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils
 
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
@@ -34,8 +35,14 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.query.QueryTree
+import io.modelcontextprotocol.kotlin.sdk.CallToolRequest
+import io.modelcontextprotocol.kotlin.sdk.CallToolResult
+import io.modelcontextprotocol.kotlin.sdk.TextContent
+import java.util.function.BiFunction
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 
 fun Node.toNodeInfo(): NodeInfo {
     return NodeInfo(this)
@@ -80,4 +87,29 @@ fun getAvailableOperations(): List<Class<out Operation>> {
             !it.packageName.endsWith(".policy")
         } // TODO: The concept/operation build helper are explicitly checking against underlying
     // node, which some of our concepts don't have.
+}
+
+inline fun <reified T> JsonObject.toObject() = Json.decodeFromString<T>(Json.encodeToString(this))
+
+fun CallToolRequest.runOnCpg(
+    query: BiFunction<TranslationResult, CallToolRequest, CallToolResult>
+): CallToolResult {
+    return try {
+        val result =
+            globalAnalysisResult
+                ?: return CallToolResult(
+                    content =
+                        listOf(
+                            TextContent(
+                                "No analysis result available. Please analyze your code first using cpg_analyze."
+                            )
+                        )
+                )
+        query.apply(result, this)
+    } catch (e: Exception) {
+        CallToolResult(
+            content =
+                listOf(TextContent("Error executing query: ${e.message ?: e::class.simpleName}"))
+        )
+    }
 }

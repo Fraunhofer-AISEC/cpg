@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Forward
 import de.fraunhofer.aisec.cpg.graph.GraphToFollow
 import de.fraunhofer.aisec.cpg.graph.Intraprocedural
@@ -33,9 +34,12 @@ import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgDataflowPayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.DataflowResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.QueryTreeNode
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.runOnCpg
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toQueryTreeNode
 import de.fraunhofer.aisec.cpg.query.May
 import de.fraunhofer.aisec.cpg.query.dataFlow
+import io.modelcontextprotocol.kotlin.sdk.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
 import io.modelcontextprotocol.kotlin.sdk.Tool
@@ -90,27 +94,15 @@ fun Server.addCpgDataflowTool() {
 
     this.addTool(name = "cpg_dataflow", description = toolDescription, inputSchema = inputSchema) {
         request ->
-        try {
-            val result =
-                globalAnalysisResult
-                    ?: return@addTool CallToolResult(
-                        content =
-                            listOf(
-                                TextContent(
-                                    "No analysis result available. Please analyze your code first using cpg_analyze."
-                                )
-                            )
-                    )
-
-            val payload =
-                Json.decodeFromString<CpgDataflowPayload>(Json.encodeToString(request.arguments))
+        request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
+            val payload = request.arguments.toObject<CpgDataflowPayload>()
 
             val allOverlayNodes = result.allChildrenWithOverlays<OverlayNode>()
             val sourceNodes = allOverlayNodes.filter { it.name.localName == payload.from }
             val targetNodes = allOverlayNodes.filter { it.name.localName == payload.to }
 
             if (sourceNodes.isEmpty() || targetNodes.isEmpty()) {
-                return@addTool CallToolResult(
+                return@runOnCpg CallToolResult(
                     content =
                         listOf(
                             TextContent(
@@ -152,15 +144,6 @@ fun Server.addCpgDataflowTool() {
                 )
 
             CallToolResult(content = listOf(TextContent(Json.encodeToString(dataflowResult))))
-        } catch (e: Exception) {
-            CallToolResult(
-                content =
-                    listOf(
-                        TextContent(
-                            "Error analyzing data flow: ${e.message ?: e::class.simpleName}"
-                        )
-                    )
-            )
         }
     }
 }

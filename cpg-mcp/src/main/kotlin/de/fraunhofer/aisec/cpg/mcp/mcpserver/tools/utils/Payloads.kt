@@ -50,9 +50,12 @@ data class CpgCallArgumentByNameOrIndexPayload(
 @Serializable
 data class ConceptAssignment(
     val nodeId: String,
-    val overlay: String, // FQN of concept or operation class
-    val overlayType: String? = null, // "Concept" or "Operation" from LLM response
-    val conceptNodeId: String? = null, // NodeId of concept this operation references
+    /* FQN of concept or operation class */
+    val overlay: String,
+    /* "Concept" or "Operation" from LLM response */
+    val overlayType: String? = null,
+    /* NodeId of concept this operation references */
+    val conceptNodeId: String? = null,
     val arguments: Map<String, String>? = null,
     val reasoning: String? = null,
     val securityImpact: String? = null,

@@ -23,22 +23,25 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.codyze.console
+package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
+import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgCallArgumentByNameOrIndexPayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgIdPayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgNamePayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.runOnCpg
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toJson
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
+import io.modelcontextprotocol.kotlin.sdk.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
 import io.modelcontextprotocol.kotlin.sdk.Tool
 import io.modelcontextprotocol.kotlin.sdk.server.Server
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
@@ -54,26 +57,9 @@ fun Server.listFunctions() {
         """
             .trimIndent()
 
-    this.addTool(name = "cpg_list_functions", description = toolDescription) { _ ->
-        try {
-            val result =
-                globalAnalysisResult
-                    ?: return@addTool CallToolResult(
-                        content =
-                            listOf(
-                                TextContent(
-                                    "No analysis result available. Please analyze your code first using cpg_analyze."
-                                )
-                            )
-                    )
+    this.addTool(name = "cpg_list_functions", description = toolDescription) { request ->
+        request.runOnCpg { result: TranslationResult, _ ->
             CallToolResult(content = result.functions.map { TextContent(it.toJson()) })
-        } catch (e: Exception) {
-            CallToolResult(
-                content =
-                    listOf(
-                        TextContent("Error listing functions: ${e.message ?: e::class.simpleName}")
-                    )
-            )
         }
     }
 }
@@ -89,26 +75,9 @@ fun Server.listRecords() {
         """
             .trimIndent()
 
-    this.addTool(name = "cpg_list_records", description = toolDescription) { _ ->
-        try {
-            val result =
-                globalAnalysisResult
-                    ?: return@addTool CallToolResult(
-                        content =
-                            listOf(
-                                TextContent(
-                                    "No analysis result available. Please analyze your code first using cpg_analyze."
-                                )
-                            )
-                    )
+    this.addTool(name = "cpg_list_records", description = toolDescription) { request ->
+        request.runOnCpg { result: TranslationResult, _ ->
             CallToolResult(content = result.records.map { TextContent(it.toJson()) })
-        } catch (e: Exception) {
-            CallToolResult(
-                content =
-                    listOf(
-                        TextContent("Error listing records: ${e.message ?: e::class.simpleName}")
-                    )
-            )
         }
     }
 }
@@ -117,28 +86,14 @@ fun Server.listConceptsAndOperations() {
     val toolDescription =
         "This tool lists all concepts and operations which have been used as overlays to some nodes in the graph."
 
-    this.addTool(name = "cpg_list_concepts_and_operations", description = toolDescription) { _ ->
-        try {
-            val result =
-                globalAnalysisResult
-                    ?: return@addTool CallToolResult(
-                        content =
-                            listOf(
-                                TextContent(
-                                    "No analysis result available. Please analyze your code first using cpg_analyze."
-                                )
-                            )
-                    )
+    this.addTool(name = "cpg_list_concepts_and_operations", description = toolDescription) { request
+        ->
+        request.runOnCpg { result: TranslationResult, _: CallToolRequest ->
             val concepts =
                 result.allChildrenWithOverlays<Concept>().map { TextContent(it.toJson()) }
             val operations =
                 result.allChildrenWithOverlays<Operation>().map { TextContent(it.toJson()) }
             CallToolResult(content = concepts + operations)
-        } catch (e: Exception) {
-            CallToolResult(
-                content =
-                    listOf(TextContent("Error listing calls: ${e.message ?: e::class.simpleName}"))
-            )
         }
     }
 }
@@ -154,24 +109,9 @@ fun Server.listCalls() {
         """
             .trimIndent()
 
-    this.addTool(name = "cpg_list_calls", description = toolDescription) { _ ->
-        try {
-            val result =
-                globalAnalysisResult
-                    ?: return@addTool CallToolResult(
-                        content =
-                            listOf(
-                                TextContent(
-                                    "No analysis result available. Please analyze your code first using cpg_analyze."
-                                )
-                            )
-                    )
+    this.addTool(name = "cpg_list_calls", description = toolDescription) { request ->
+        request.runOnCpg { result: TranslationResult, _ ->
             CallToolResult(content = result.calls.map { TextContent(it.toJson()) })
-        } catch (e: Exception) {
-            CallToolResult(
-                content =
-                    listOf(TextContent("Error listing calls: ${e.message ?: e::class.simpleName}"))
-            )
         }
     }
 }
@@ -210,26 +150,10 @@ fun Server.listCallsTo() {
         description = toolDescription,
         inputSchema = inputSchema,
     ) { request ->
-        try {
-            val result =
-                globalAnalysisResult
-                    ?: return@addTool CallToolResult(
-                        content =
-                            listOf(
-                                TextContent(
-                                    "No analysis result available. Please analyze your code first using cpg_analyze."
-                                )
-                            )
-                    )
-            val payload =
-                Json.decodeFromString<CpgNamePayload>(Json.encodeToString(request.arguments))
+        request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
+            val payload = request.arguments.toObject<CpgNamePayload>()
 
             CallToolResult(content = result.calls(payload.name).map { TextContent(it.toJson()) })
-        } catch (e: Exception) {
-            CallToolResult(
-                content =
-                    listOf(TextContent("Error listing calls: ${e.message ?: e::class.simpleName}"))
-            )
         }
     }
 }
@@ -263,19 +187,8 @@ fun Server.getAllArgs() {
         description = toolDescription,
         inputSchema = inputSchema,
     ) { request ->
-        try {
-            val result =
-                globalAnalysisResult
-                    ?: return@addTool CallToolResult(
-                        content =
-                            listOf(
-                                TextContent(
-                                    "No analysis result available. Please analyze your code first using cpg_analyze."
-                                )
-                            )
-                    )
-            val payload =
-                Json.decodeFromString<CpgIdPayload>(Json.encodeToString(request.arguments))
+        request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
+            val payload = request.arguments.toObject<CpgIdPayload>()
 
             CallToolResult(
                 content =
@@ -283,15 +196,6 @@ fun Server.getAllArgs() {
                         .single { it.id.toString() == payload.id }
                         .arguments
                         .map { TextContent(it.toJson()) }
-            )
-        } catch (e: Exception) {
-            CallToolResult(
-                content =
-                    listOf(
-                        TextContent(
-                            "Error listing call arguments: ${e.message ?: e::class.simpleName}"
-                        )
-                    )
             )
         }
     }
@@ -339,21 +243,8 @@ fun Server.getArgByIndexOrName() {
         description = toolDescription,
         inputSchema = inputSchema,
     ) { request ->
-        try {
-            val result =
-                globalAnalysisResult
-                    ?: return@addTool CallToolResult(
-                        content =
-                            listOf(
-                                TextContent(
-                                    "No analysis result available. Please analyze your code first using cpg_analyze."
-                                )
-                            )
-                    )
-            val payload =
-                Json.decodeFromString<CpgCallArgumentByNameOrIndexPayload>(
-                    Json.encodeToString(request.arguments)
-                )
+        request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
+            val payload = request.arguments.toObject<CpgCallArgumentByNameOrIndexPayload>()
 
             CallToolResult(
                 content =
@@ -366,15 +257,6 @@ fun Server.getArgByIndexOrName() {
                                     position = payload.index,
                                 )
                                 ?.toJson()
-                        )
-                    )
-            )
-        } catch (e: Exception) {
-            CallToolResult(
-                content =
-                    listOf(
-                        TextContent(
-                            "Error listing call argument: ${e.message ?: e::class.simpleName}"
                         )
                     )
             )

@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.concepts.operationBuildHelper
@@ -32,11 +33,13 @@ import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgApplyConceptsPayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableConcepts
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableOperations
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.runOnCpg
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
+import io.modelcontextprotocol.kotlin.sdk.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
 import io.modelcontextprotocol.kotlin.sdk.Tool
 import io.modelcontextprotocol.kotlin.sdk.server.Server
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -154,22 +157,8 @@ fun Server.addCpgApplyConceptsTool() {
         description = toolDescription,
         inputSchema = inputSchema,
     ) { request ->
-        try {
-            val result =
-                globalAnalysisResult
-                    ?: return@addTool CallToolResult(
-                        content =
-                            listOf(
-                                TextContent(
-                                    "No analysis result available. Please analyze your code first using cpg_analyze."
-                                )
-                            )
-                    )
-
-            val payload =
-                Json.decodeFromString<CpgApplyConceptsPayload>(
-                    Json.encodeToString(request.arguments)
-                )
+        request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
+            val payload = request.arguments.toObject<CpgApplyConceptsPayload>()
 
             val applied = mutableListOf<String>()
 
@@ -209,7 +198,7 @@ fun Server.addCpgApplyConceptsTool() {
                                 conceptNode?.overlays?.filterIsInstance<Concept>()?.firstOrNull()
                             if (concept == null) {
                                 applied.add(
-                                    "Cannot apply operation ${assignment.overlay} to node ${assignment.nodeId}: No concept found on node ${conceptNodeId}"
+                                    "Cannot apply operation ${assignment.overlay} to node ${assignment.nodeId}: No concept found on node $conceptNodeId"
                                 )
                                 return@forEach
                             }
@@ -243,13 +232,6 @@ fun Server.addCpgApplyConceptsTool() {
                 "Applied ${payload.assignments.size} concept(s):\n" + applied.joinToString("\n")
 
             CallToolResult(content = listOf(TextContent(summary)))
-        } catch (e: Exception) {
-            CallToolResult(
-                content =
-                    listOf(
-                        TextContent("Error applying concepts: ${e.message ?: e::class.simpleName}")
-                    )
-            )
         }
     }
 }

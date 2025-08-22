@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.cpgDescription
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toNodeInfo
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
 import de.fraunhofer.aisec.cpg.mcp.setupTranslationConfiguration
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
@@ -95,8 +96,7 @@ fun Server.addCpgAnalyzeTool() {
     this.addTool(name = "cpg_analyze", description = toolDescription, inputSchema = inputSchema) {
         request ->
         try {
-            val payload =
-                Json.decodeFromString<CpgAnalyzePayload>(Json.encodeToString(request.arguments))
+            val payload = request.arguments.toObject<CpgAnalyzePayload>()
 
             val (topLevel, filesToAnalyze) =
                 when {

@@ -25,18 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.concepts.Concept
-import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.cpgDescription
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgLlmAnalyzePayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableConcepts
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableOperations
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
 import io.modelcontextprotocol.kotlin.sdk.Tool
 import io.modelcontextprotocol.kotlin.sdk.server.Server
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -77,9 +74,7 @@ fun Server.addCpgLlmAnalyzeTool() {
                 if (request.arguments.isEmpty()) {
                     CpgLlmAnalyzePayload()
                 } else {
-                    Json.decodeFromString<CpgLlmAnalyzePayload>(
-                        Json.encodeToString(request.arguments)
-                    )
+                    request.arguments.toObject<CpgLlmAnalyzePayload>()
                 }
 
             val hasAnalysisResult = globalAnalysisResult != null
@@ -201,17 +196,8 @@ fun Server.addCpgLlmAnalyzeTool() {
     }
 }
 
-abstract class Privacy(underlyingNode: Node? = null) : Concept(underlyingNode)
-
-class Data(underlyingNode: Node? = null) : Privacy(underlyingNode)
-
-abstract class PrivacyOperation(underlyingNode: Node? = null, concept: Privacy) :
-    Operation(underlyingNode, concept)
-
-class ReadData(underlyingNode: Node? = null, concept: Privacy) :
-    PrivacyOperation(underlyingNode, concept)
-
 // Note: The output schema is not supported by all LLMs yet.
+@Suppress("unused")
 val outputSchema =
     Tool.Output(
         properties =
