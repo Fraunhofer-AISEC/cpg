@@ -56,13 +56,13 @@ class InferenceTest {
             assertEquals(true, record.isInferred)
             assertEquals("struct", record.kind)
 
-            assertEquals(2, record.fields.size)
+            assertEquals(2, record.innerFields.size)
 
-            val valueField = record.fields["value"]
+            val valueField = record.innerFields["value"]
             assertNotNull(valueField)
             assertLocalName("int", valueField.type)
 
-            val nextField = record.fields["next"]
+            val nextField = record.innerFields["next"]
             assertNotNull(nextField)
             assertLocalName("T*", nextField.type)
         }
@@ -85,13 +85,13 @@ class InferenceTest {
         assertEquals(true, record.isInferred)
         assertEquals("class", record.kind)
 
-        assertEquals(2, record.fields.size)
+        assertEquals(2, record.innerFields.size)
 
-        val valueField = record.fields["value"]
+        val valueField = record.innerFields["value"]
         assertNotNull(valueField)
         assertLocalName("int", valueField.type)
 
-        val nextField = record.fields["next"]
+        val nextField = record.innerFields["next"]
         assertNotNull(nextField)
         assertLocalName("T*", nextField.type)
     }

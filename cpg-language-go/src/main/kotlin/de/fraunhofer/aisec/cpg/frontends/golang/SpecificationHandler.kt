@@ -117,8 +117,8 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 val type = frontend.typeOf(field.type)
 
                 // A field can also have no name, which means that it is embedded. In this case, it
-                // can be accessed by the local name of its type and therefore we name the field
-                // accordingly. We use the modifiers property to denote that this is an embedded
+                // can be accessed by the local name of its type, and therefore we name the field
+                // accordingly. We use the "modifiers" property to denote that this is an embedded
                 // field, so we can easily retrieve them later
                 val (fieldName, modifiers) =
                     if (field.names.isEmpty()) {
@@ -130,7 +130,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
                 val decl = newFieldDeclaration(fieldName, type, modifiers, rawNode = field)
                 frontend.scopeManager.addDeclaration(decl)
-                record.fields += decl
+                record.innerFields += decl
             }
         }
 
@@ -169,7 +169,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                     frontend.scopeManager.leaveScope(method)
 
                     frontend.scopeManager.addDeclaration(method)
-                    record.methods += method
+                    record.innerMethods += method
                 } else {
                     log.debug("Adding {} as super class of interface {}", type.name, record.name)
                     // Otherwise, it contains either types or interfaces. For now, we
