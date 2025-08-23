@@ -30,8 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import java.util.Objects
 
 /** This concept represents an encryption. */
-open class Encryption<T>(underlyingNode: Node? = null) :
-    Concept(underlyingNode = underlyingNode), IsEncryption {
+open class Encryption<T>(underlyingNode: Node? = null) : Concept(), IsEncryption {
     /** The encryption target */
     var target: T? = null
 

@@ -29,8 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 
 /** Represents a "secret key", e.g. used in encryption. */
-open class Secret(underlyingNode: Node? = null) :
-    Concept(underlyingNode = underlyingNode), IsEncryption {
+open class Secret(underlyingNode: Node? = null) : Concept(), IsEncryption {
     /** Key size. */
     var keySize: Int? = null
 }
