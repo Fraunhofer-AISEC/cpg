@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.helpers.functional
 
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.statements.LoopStatement
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import java.io.Serializable
@@ -60,6 +61,30 @@ fun compareMultiple(vararg orders: Order) =
         else -> Order.UNEQUAL
     }
 
+interface HasWidening<T : Lattice.Element> {
+    /**
+     * Computes the widening of [one] and [two]. This is used to ensure that the fixpoint iteration
+     * converges (faster).
+     *
+     * @param one The first element to widen
+     * @param two The second element to widen
+     * @return The widened element
+     */
+    fun widen(one: T, two: T): T
+}
+
+interface HasNarrowing<T : Lattice.Element> {
+    /**
+     * Computes the narrowing of [one] and [two]. This is used to ensure that the fixpoint iteration
+     * converges (faster) without too much overapproximation.
+     *
+     * @param one The first element to narrow
+     * @param two The second element to narrow
+     * @return The narrowed element
+     */
+    fun narrow(one: T, two: T): T
+}
+
 /**
  * A lattice is a partially ordered structure of values of type [T]. [T] could be anything, where
  * common examples are sets, ranges, maps, tuples, but it can also have random names and a new data
@@ -78,6 +103,13 @@ fun compareMultiple(vararg orders: Order) =
  * and currently has no real effect.
  */
 interface Lattice<T : Lattice.Element> {
+    enum class Strategy {
+        PRECISE,
+        WIDENING,
+        WIDENING_NARROWING,
+        NARROWING,
+    }
+
     /**
      * Represents a single element of the [Lattice]. It also provides the functionality to compare
      * and duplicate the element.
@@ -106,7 +138,7 @@ interface Lattice<T : Lattice.Element> {
      * is modified if there is no element greater than each other (if set to `true`) or if a new
      * [Lattice.Element] is returned (if set to `false`).
      */
-    fun lub(one: T, two: T, allowModify: Boolean = false): T
+    fun lub(one: T, two: T, allowModify: Boolean = false, widen: Boolean = false): T
 
     /** Computes the greatest lower bound (meet) of [one] and [two] */
     fun glb(one: T, two: T): T
@@ -137,6 +169,7 @@ interface Lattice<T : Lattice.Element> {
         startEdges: List<EvaluationOrder>,
         startState: T,
         transformation: (Lattice<T>, EvaluationOrder, T) -> T,
+        strategy: Strategy = Strategy.PRECISE,
     ): T {
         val globalState = IdentityHashMap<EvaluationOrder, T>()
         var finalState: T = this.bottom
@@ -212,9 +245,35 @@ interface Lattice<T : Lattice.Element> {
                 // the state in comparison to the previous time we were there.
 
                 val oldGlobalIt = globalState[it]
+
+                // If we're on the loop head (some node is LoopStatement), and we use WIDENING or
+                // WIDENING_NARROWING, we have to apply the widening/narrowing here (if oldGlobalIt
+                // is not null).
                 val newGlobalIt =
-                    (oldGlobalIt?.let { this.lub(newState, it, isNotNearStartOrEndOfBasicBlock) }
-                        ?: newState)
+                    if (
+                        nextEdge.end is LoopStatement &&
+                            (strategy == Strategy.WIDENING ||
+                                strategy == Strategy.WIDENING_NARROWING) &&
+                            oldGlobalIt != null
+                    ) {
+                        this.lub(
+                            one = newState,
+                            two = oldGlobalIt,
+                            allowModify = isNotNearStartOrEndOfBasicBlock,
+                            widen = true,
+                        )
+                    } else if (strategy == Strategy.NARROWING) {
+                        TODO()
+                    } else {
+                        (oldGlobalIt?.let {
+                            this.lub(
+                                one = newState,
+                                two = it,
+                                allowModify = isNotNearStartOrEndOfBasicBlock,
+                            )
+                        } ?: newState)
+                    }
+
                 globalState[it] = newGlobalIt
                 if (
                     it !in currentBBEdgesList &&
@@ -222,7 +281,8 @@ interface Lattice<T : Lattice.Element> {
                         it !in mergePointsEdgesList &&
                         (isNoBranchingPoint ||
                             oldGlobalIt == null ||
-                            newGlobalIt.compare(oldGlobalIt) == Order.GREATER)
+                            newGlobalIt.compare(oldGlobalIt) == Order.GREATER ||
+                            newGlobalIt.compare(oldGlobalIt) == Order.UNEQUAL)
                 ) {
                     if (it.start.prevEOGEdges.size > 1) {
                         // This edge brings us to a merge point, so we add it to the list of merge
@@ -324,7 +384,12 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
     override val bottom: Element<T>
         get() = Element()
 
-    override fun lub(one: Element<T>, two: Element<T>, allowModify: Boolean): Element<T> {
+    override fun lub(
+        one: Element<T>,
+        two: Element<T>,
+        allowModify: Boolean,
+        widen: Boolean,
+    ): Element<T> {
         if (allowModify) {
             one += two
             return one
@@ -357,7 +422,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     Lattice<MapLattice.Element<K, V>> {
     override lateinit var elements: Set<Element<K, V>>
 
-    class Element<K, V : Lattice.Element>(expectedMaxSize: Int) :
+    open class Element<K, V : Lattice.Element>(expectedMaxSize: Int) :
         IdentityHashMap<K, V>(expectedMaxSize), Lattice.Element {
 
         constructor() : this(32)
@@ -450,7 +515,12 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     override val bottom: Element<K, V>
         get() = MapLattice.Element()
 
-    override fun lub(one: Element<K, V>, two: Element<K, V>, allowModify: Boolean): Element<K, V> {
+    override fun lub(
+        one: Element<K, V>,
+        two: Element<K, V>,
+        allowModify: Boolean,
+        widen: Boolean,
+    ): Element<K, V> {
         if (allowModify) {
             two.forEach { (k, v) ->
                 if (!one.containsKey(k)) {
@@ -458,12 +528,13 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                     one[k] = v
                 } else {
                     // This key already exists in "one", so we have to compute the lub of the values
-                    one[k]?.let { oneValue -> innerLattice.lub(oneValue, v, true) }
+                    one[k]?.let { oneValue ->
+                        innerLattice.lub(one = oneValue, two = v, allowModify = true, widen = widen)
+                    }
                 }
             }
             return one
         }
-
         val allKeys = one.keys.toIdentitySet()
         allKeys += two.keys
         val newMap =
@@ -472,7 +543,12 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                 val thisValue = one[key]
                 val newValue =
                     if (thisValue != null && otherValue != null) {
-                        innerLattice.lub(thisValue, otherValue, allowModify)
+                        innerLattice.lub(
+                            one = thisValue,
+                            two = otherValue,
+                            allowModify = false,
+                            widen = widen,
+                        )
                     } else thisValue ?: otherValue
                 newValue?.let { current[key] = it }
                 current
@@ -509,13 +585,13 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
  * Implements the [Lattice] for a lattice over two other lattices which are represented by
  * [innerLattice1] and [innerLattice2].
  */
-class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
+open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
     val innerLattice1: Lattice<S>,
     val innerLattice2: Lattice<T>,
 ) : Lattice<TupleLattice.Element<S, T>> {
     override lateinit var elements: Set<Element<S, T>>
 
-    class Element<S : Lattice.Element, T : Lattice.Element>(val first: S, val second: T) :
+    open class Element<S : Lattice.Element, T : Lattice.Element>(val first: S, val second: T) :
         Serializable, Lattice.Element {
         override fun toString(): String = "($first, $second)"
 
@@ -555,15 +631,30 @@ class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
     override val bottom: Element<S, T>
         get() = Element(innerLattice1.bottom, innerLattice2.bottom)
 
-    override fun lub(one: Element<S, T>, two: Element<S, T>, allowModify: Boolean): Element<S, T> {
+    override fun lub(
+        one: Element<S, T>,
+        two: Element<S, T>,
+        allowModify: Boolean,
+        widen: Boolean,
+    ): Element<S, T> {
         return if (allowModify) {
-            innerLattice1.lub(one.first, two.first, true)
-            innerLattice2.lub(one.second, two.second, true)
+            innerLattice1.lub(one = one.first, two = two.first, allowModify = true, widen = widen)
+            innerLattice2.lub(one = one.second, two = two.second, allowModify = true, widen = widen)
             one
         } else {
             Element(
-                innerLattice1.lub(one.first, two.first),
-                innerLattice2.lub(one.second, two.second),
+                innerLattice1.lub(
+                    one = one.first,
+                    two = two.first,
+                    allowModify = false,
+                    widen = widen,
+                ),
+                innerLattice2.lub(
+                    one = one.second,
+                    two = two.second,
+                    allowModify = false,
+                    widen = widen,
+                ),
             )
         }
     }
@@ -642,17 +733,33 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
         one: Element<R, S, T>,
         two: Element<R, S, T>,
         allowModify: Boolean,
+        widen: Boolean,
     ): Element<R, S, T> {
         return if (allowModify) {
-            innerLattice1.lub(one.first, two.first, true)
-            innerLattice2.lub(one.second, two.second, true)
-            innerLattice3.lub(one.third, two.third, true)
+            innerLattice1.lub(one = one.first, two = two.first, allowModify = true, widen = widen)
+            innerLattice2.lub(one = one.second, two = two.second, allowModify = true, widen = widen)
+            innerLattice3.lub(one = one.third, two = two.third, allowModify = true, widen = widen)
             one
         } else {
             Element(
-                innerLattice1.lub(one.first, two.first),
-                innerLattice2.lub(one.second, two.second),
-                innerLattice3.lub(one.third, two.third),
+                innerLattice1.lub(
+                    one = one.first,
+                    two = two.first,
+                    allowModify = false,
+                    widen = widen,
+                ),
+                innerLattice2.lub(
+                    one = one.second,
+                    two = two.second,
+                    allowModify = false,
+                    widen = widen,
+                ),
+                innerLattice3.lub(
+                    one = one.third,
+                    two = two.third,
+                    allowModify = false,
+                    widen = widen,
+                ),
             )
         }
     }
