@@ -40,43 +40,58 @@ repositories {
     mavenCentral()
 }
 
-allprojects {
-    plugins.apply("org.jetbrains.dokka")
+group = "de.fraunhofer.aisec"
 
-    group = "de.fraunhofer.aisec"
+// Configure Dokka for the multi-module cpg project
+dokka {
+    val tag = when (val configuredVersion = project.version.toString()) {
+        "", "unspecified" -> "main"
+        else -> configuredVersion
+    }
+    dokkaPublications.html {
+        outputDirectory.set(layout.buildDirectory.dir("dokkaCustomMultiModuleOutput/$tag"))
 
-    val dokkaPlugin by configurations
-    dependencies {
-        dokkaPlugin("org.jetbrains.dokka:versioning-plugin:2.0.0")
+        // Collect documentation from all subprojects
+        subprojects.forEach {
+            dependencies {
+                dokka(project(":${it.name}"))
+            }
+        }
+    }
+    pluginsConfiguration {
+        versioning {
+            version.set(tag)
+            olderVersionsDir.set(projectDir.resolve("previousDocs"))
+        }
     }
 }
 
-// configure dokka for the multi-module cpg project
-// this works together with the dokka configuration in the common-conventions plugin
-tasks.dokkaHtmlMultiModule {
-    val configuredVersion = project.version.toString()
-    if(configuredVersion.isNotEmpty() && configuredVersion != "unspecified") {
-        generateDokkaWithVersionTag(this, configuredVersion)
-    } else {
-        generateDokkaWithVersionTag(this, "main")
-    }
-}
-
-/**
- * Takes the old dokka sites in build/dokkaCustomMultiModuleOutput/versions and generates a new site.
- * This new site contains the old ones, so copying the newly generated site to the gh page is enough.
- * Currently, the mkdocs plugin expects it in docs/dokka/latest. The tags in the dropdown will be
- * named based on what we configured here.
- */
-fun generateDokkaWithVersionTag(dokkaMultiModuleTask: org.jetbrains.dokka.gradle.AbstractDokkaParentTask, tag: String) {
-    val oldOutputPath = projectDir.resolve("previousDocs")
-    val id = "org.jetbrains.dokka.versioning.VersioningPlugin"
-    val config = """{ "version": "$tag", "olderVersionsDir":"${oldOutputPath.path}" }"""
-    val mapOf = mapOf(id to config)
-
-    dokkaMultiModuleTask.outputDirectory.set(file(layout.buildDirectory.asFile.get().resolve("dokkaCustomMultiModuleOutput").resolve(tag)))
-    dokkaMultiModuleTask.pluginsMapConfiguration.set(mapOf)
-}
+//// configure dokka for the multi-module cpg project
+//// this works together with the dokka configuration in the common-conventions plugin
+//tasks.dokkaHtmlMultiModule {
+//    val configuredVersion = project.version.toString()
+//    if(configuredVersion.isNotEmpty() && configuredVersion != "unspecified") {
+//        generateDokkaWithVersionTag(this, configuredVersion)
+//    } else {
+//        generateDokkaWithVersionTag(this, "main")
+//    }
+//}
+//
+///**
+// * Takes the old dokka sites in build/dokkaCustomMultiModuleOutput/versions and generates a new site.
+// * This new site contains the old ones, so copying the newly generated site to the gh page is enough.
+// * Currently, the mkdocs plugin expects it in docs/dokka/latest. The tags in the dropdown will be
+// * named based on what we configured here.
+// */
+//fun generateDokkaWithVersionTag(dokkaMultiModuleTask: org.jetbrains.dokka.gradle.AbstractDokkaParentTask, tag: String) {
+//    val oldOutputPath = projectDir.resolve("previousDocs")
+//    val id = "org.jetbrains.dokka.versioning.VersioningPlugin"
+//    val config = """{ "version": "$tag", "olderVersionsDir":"${oldOutputPath.path}" }"""
+//    val mapOf = mapOf(id to config)
+//
+//    dokkaMultiModuleTask.outputDirectory.set(file(layout.buildDirectory.asFile.get().resolve("dokkaCustomMultiModuleOutput").resolve(tag)))
+//    dokkaMultiModuleTask.pluginsMapConfiguration.set(mapOf)
+//}
 
 dependencies {
     testReportAggregation(project(":cpg-core"))
