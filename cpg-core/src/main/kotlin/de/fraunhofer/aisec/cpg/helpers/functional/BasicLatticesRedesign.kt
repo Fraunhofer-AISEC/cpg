@@ -640,28 +640,28 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         val allKeys = one.keys.toIdentitySet()
         allKeys += two.keys
         val newMap = Element<K, V>(allKeys.size)
-        //        runBlocking {
-        //            val /concurrentProcesses =
-        allKeys
-            .map { key ->
-                //                    async {
-                val otherValue = two[key]
-                val thisValue = one[key]
-                val newValue =
-                    if (thisValue != null && otherValue != null) {
-                        innerLattice.lub(
-                            one = thisValue,
-                            two = otherValue,
-                            allowModify = false,
-                            widen = widen,
-                        )
-                    } else thisValue ?: otherValue
-                key to newValue
-                //                    }
+        runBlocking {
+            val concurrentProcesses =
+                allKeys.map { key ->
+                    async {
+                        val otherValue = two[key]
+                        val thisValue = one[key]
+                        val newValue =
+                            if (thisValue != null && otherValue != null) {
+                                innerLattice.lub(
+                                    one = thisValue,
+                                    two = otherValue,
+                                    allowModify = false,
+                                    widen = widen,
+                                )
+                            } else thisValue ?: otherValue
+                        key to newValue
+                    }
+                }
+            concurrentProcesses.awaitAll().forEach { (key, value) ->
+                value?.let { newMap[key] = it }
             }
-            //            concurrentProcesses.awaitAll()
-            .forEach { (key, value) -> value?.let { newMap[key] = it } }
-        //        }
+        }
         return newMap
     }
 
@@ -669,23 +669,23 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         val allKeys = one.keys.intersect(two.keys).toIdentitySet()
 
         val newMap = Element<K, V>(allKeys.size)
-        //        runBlocking {
-        val concurrentProcesses =
-            allKeys
-                .map { key ->
-                    //                    async {
-                    val otherValue = two[key]
-                    val thisValue = one[key]
-                    val newValue =
-                        if (thisValue != null && otherValue != null) {
-                            innerLattice.glb(thisValue, otherValue)
-                        } else innerLattice.bottom
-                    key to newValue
-                    //                    }
+        runBlocking {
+            val concurrentProcesses =
+                allKeys.map { key ->
+                    async {
+                        val otherValue = two[key]
+                        val thisValue = one[key]
+                        val newValue =
+                            if (thisValue != null && otherValue != null) {
+                                innerLattice.glb(thisValue, otherValue)
+                            } else innerLattice.bottom
+                        key to newValue
+                    }
                 }
-                //            concurrentProcesses.awaitAll()
-                .forEach { (key, value) -> value.let { newMap[key] = it } }
-        //        }
+            concurrentProcesses.awaitAll().forEach { (key, value) ->
+                value.let { newMap[key] = it }
+            }
+        }
 
         return newMap
     }
