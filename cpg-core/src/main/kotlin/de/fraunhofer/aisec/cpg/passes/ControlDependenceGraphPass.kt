@@ -179,7 +179,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                 // left, and we assign the function declaration, or 2) there is one or multiple
                 // dominators left.
                 if (finalDominators.isEmpty()) {
-                    basicBlock.nodes.forEach { it.prevCDG += startNode }
+                    basicBlock.nodes.forEach { if (it != startNode) it.prevCDG += startNode }
                 } else {
                     // We have one or multiple dominators left.
                     finalDominators.forEach { (finalDominator, reachingBB) ->
@@ -192,25 +192,31 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                                 .toSet()
 
                         basicBlock.nodes.forEach { node ->
-                            node.prevCDGEdges.add(finalDominator) {
-                                branches =
-                                    when {
-                                        branchesSet.isNotEmpty() -> {
-                                            branchesSet
-                                        }
+                            if (
+                                node != startNode
+                            ) { // Do not introduce self-loops between the startnode and itself.
+                                node.prevCDGEdges.add(finalDominator) {
+                                    branches =
+                                        when {
+                                            branchesSet.isNotEmpty() -> {
+                                                branchesSet
+                                            }
 
-                                        finalDominator is IfStatement &&
-                                            (branchingNodeConditionals[finalDominator]?.size ?: 0) >
-                                                1 -> { // Note: branchesSet must be empty here The
-                                            // if
-                                            // statement has only a then branch but there's a way
-                                            // to "jump out" of this branch. In this case, we
-                                            // want to set the false property here.
-                                            setOf(false)
+                                            finalDominator is IfStatement &&
+                                                (branchingNodeConditionals[finalDominator]?.size
+                                                    ?: 0) >
+                                                    1 -> { // Note: branchesSet must be empty here
+                                                // The
+                                                // if
+                                                // statement has only a then branch but there's a
+                                                // way
+                                                // to "jump out" of this branch. In this case, we
+                                                // want to set the false property here.
+                                                setOf(false)
+                                            }
+                                            else -> setOf()
                                         }
-
-                                        else -> setOf()
-                                    }
+                                }
                             }
                         }
                     }
