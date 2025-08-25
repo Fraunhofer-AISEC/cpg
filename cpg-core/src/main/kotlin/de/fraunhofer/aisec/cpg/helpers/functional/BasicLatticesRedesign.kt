@@ -604,36 +604,20 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         allowModify: Boolean,
         widen: Boolean,
     ): Element<K, V> {
-        // Concurrency stuff
-        //        val parentJob = Job()
-        //        val limitedDispatcher = Dispatchers.Default.limitedParallelism(100)
-        //        val scope = CoroutineScope(limitedDispatcher + parentJob)
 
         if (allowModify) {
             two.forEach { (k, v) ->
-                //                scope.launch {
                 if (!one.containsKey(k)) {
                     // This key is not in "one", so we add the value from "two" to "one"
-                    //                        synchronized(one) {
                     one[k] = v
-                    //                        }
                 } else {
                     // This key already exists in "one", so we have to compute the lub of the
                     // values
-                    //                        synchronized(one) {
                     one[k]?.let { oneValue ->
                         innerLattice.lub(oneValue, v, allowModify = true, widen = widen)
                     }
-                    //                        }
                 }
-                //                }
             }
-            //            runBlocking {
-            //                parentJob.children.forEach { it.join() } // Wait for all child
-            // coroutines to finish
-            //                parentJob.complete() // Ensure parentJob is completed
-            //                parentJob.join() // Wait for the parentJob to complete
-            //            }
             return one
         }
 
@@ -764,18 +748,8 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
         return if (allowModify) {
             innerLattice1.lub(one = one.first, two = two.first, allowModify = true, widen = widen)
             innerLattice2.lub(one = one.second, two = two.second, allowModify = true, widen = widen)
-            /*           runBlocking {
-                           val l1 = async { innerLattice1.lub(one.first, two.first, true) }
-            val l2 = async { innerLattice2.lub(one.second, two.second, true) }
-            awaitAll(l1, l2)*/
             one
-            //            }*/
         } else {
-            /*            runBlocking {
-                val l1 = async { innerLattice1.lub(one.first, two.first) }
-                val l2 = async { innerLattice2.lub(one.second, two.second) }
-                Element(l1.await(), l2.await())
-            }*/
             Element(
                 innerLattice1.lub(
                     one = one.first,
@@ -876,22 +850,11 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
         widen: Boolean,
     ): Element<R, S, T> {
         return if (allowModify) {
-            //            runBlocking {
-            /*                val l1 = async { innerLattice1.lub(one.first, two.first, true) }
-            val l2 = async { innerLattice2.lub(one.second, two.second, true) }
-            val l3 = async { innerLattice3.lub(one.third, two.third, true) }
-            awaitAll(l1, l2, l3)*/
             innerLattice1.lub(one = one.first, two = two.first, allowModify = true, widen = widen)
             innerLattice2.lub(one = one.second, two = two.second, allowModify = true, widen = widen)
             innerLattice3.lub(one = one.third, two = two.third, allowModify = true, widen = widen)
             one
-            //            }
         } else {
-            /*            runBlocking {
-            val l1 = async { innerLattice1.lub(one.first, two.first) }
-            val l2 = async { innerLattice2.lub(one.second, two.second) }
-            val l3 = async { innerLattice3.lub(one.third, two.third) }
-            Element(l1.await(), l2.await(), l3.await())*/
             Element(
                 innerLattice1.lub(
                     one = one.first,
@@ -912,7 +875,6 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
                     widen = widen,
                 ),
             )
-            //            }
         }
     }
 
