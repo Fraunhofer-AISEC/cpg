@@ -38,6 +38,8 @@ import kotlin.collections.set
 import kotlin.math.ceil
 import kotlin.sequences.forEach
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
     override fun equals(other: Any?): Boolean {
@@ -495,13 +497,13 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         }
 
         override fun compare(other: Lattice.Element): Order {
-            //            var ret: Order
-            //            runBlocking { ret = innerCompare(other) }
-            //            return ret
-            //        }
-            //
-            //        @OptIn(ExperimentalCoroutinesApi::class)
-            //        override suspend fun innerCompare(other: Lattice.Element): Order {
+            var ret: Order
+            runBlocking { ret = innerCompare(other) }
+            return ret
+        }
+
+        @OptIn(ExperimentalCoroutinesApi::class)
+        suspend fun innerCompare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
             if (other !is Element<K, V>)
@@ -515,74 +517,57 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
             var someGreater = false
             var someLesser = otherKeySetIsBigger
 
-            //            val parentJob = Job()
-            //            val limitedDispatcher = Dispatchers.Default.limitedParallelism(100)
-            //            val scope = CoroutineScope(limitedDispatcher + parentJob)
-            //            val mutex = Mutex()
+            val mutex = Mutex()
 
             var ret: Order? = null
 
-            this.entries.forEach { (k, v) ->
-                // We can't return in the coroutines, so we only set the return value
-                // there. If we have a return value, we can stop here
-                if (ret != null) {
-                    return@compare ret
-                } else {
-                    //                    scope.launch {
-                    val otherV = other[k]
-                    if (otherV != null) {
-                        when (v.compare(otherV)) {
-                            Order.EQUAL -> {
-                                /* Nothing to do*/
-                            }
-
-                            Order.GREATER -> {
-                                if (someLesser) {
-                                    //                                        mutex.withLock {
-                                    ret = Order.UNEQUAL
-                                    //                                    }
+            runBlocking {
+                this@Element.entries.forEach { (k, v) ->
+                    // We can't return in the coroutines, so we only set the return value
+                    // there. If we have a return value, we can stop here
+                    launch {
+                        if (ret != null) return@launch
+                        val otherV = other[k]
+                        if (otherV != null) {
+                            when (v.compare(otherV)) {
+                                Order.EQUAL -> {
+                                    /* Nothing to do*/
                                 }
+
+                                Order.GREATER -> {
+                                    if (someLesser) {
+                                        mutex.withLock { ret = Order.UNEQUAL }
+                                    }
+                                    someGreater = true
+                                }
+
+                                Order.LESSER -> {
+                                    if (someGreater) {
+                                        mutex.withLock { ret = Order.UNEQUAL }
+                                    }
+                                    someLesser = true
+                                }
+
+                                Order.UNEQUAL -> {
+                                    mutex.withLock { ret = Order.UNEQUAL }
+                                    mutex.withLock {
+                                        someLesser = true
+                                        someGreater = true
+                                    }
+                                }
+                            }
+                        } else {
+                            if (someLesser) {
+                                mutex.withLock { ret = Order.UNEQUAL }
+                            }
+                            mutex.withLock {
+                                // key is missing in other, so this is greater
                                 someGreater = true
                             }
-
-                            Order.LESSER -> {
-                                if (someGreater) {
-                                    //                                        mutex.withLock {
-                                    ret = Order.UNEQUAL
-                                    //                                        }
-                                }
-                                someLesser = true
-                            }
-
-                            Order.UNEQUAL -> {
-                                //                                    mutex.withLock {
-                                ret = Order.UNEQUAL
-                                //                                    }
-                                //                                    mutex.withLock {
-                                someLesser = true
-                                someGreater = true
-                                //                                    }
-                            }
                         }
-                    } else {
-                        if (someLesser) {
-                            //                                mutex.withLock {
-                            ret = Order.UNEQUAL
-                            //                                }
-                        }
-                        //                            mutex.withLock {
-                        // key is missing in other, so this is greater
-                        someGreater = true
-                        //                            }
                     }
-                    //                    }
                 }
             }
-
-            //            parentJob.children.forEach { it.join() } // Wait for all child coroutines
-            // to finish
-            //            parentJob.complete() // Ensure parentJob is completed
-            //            parentJob.join() // Wait for the parentJob to complete
 
             return if (!someGreater && !someLesser) {
                 // All entries are the same, so the maps are equal
