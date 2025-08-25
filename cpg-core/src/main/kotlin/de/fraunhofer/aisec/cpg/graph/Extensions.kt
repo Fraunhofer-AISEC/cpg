@@ -44,11 +44,7 @@ import java.util.Objects
 import kotlin.collections.filter
 import kotlin.collections.firstOrNull
 import kotlin.math.absoluteValue
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.sync.Mutex
 
 /**
  * Flattens the AST beginning with this node and returns all nodes of type [T]. For convenience, an
@@ -913,12 +909,6 @@ fun Node.followXUntilHit(
     // The list of paths where we're not done yet.
     val worklist = identitySetOf<List<Pair<Node, Context>>>()
     worklist.add(listOf(this to ctx)) // We start only with the "from" node (=this)
-
-    // Concurrency stuff
-    val parentJob = Job()
-    val limitedDispatcher = Dispatchers.Default.limitedParallelism(100)
-    val scope = CoroutineScope(limitedDispatcher + parentJob)
-    val mutex = Mutex()
 
     val alreadySeenNodes = mutableSetOf<Pair<Node, Context>>()
     // First check if the current node satisfies the predicate.
