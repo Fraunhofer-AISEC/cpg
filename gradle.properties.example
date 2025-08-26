@@ -10,3 +10,5 @@ enableTypeScriptFrontend=true
 enableRubyFrontend=true
 enableJVMFrontend=true
 enableINIFrontend=true
+
+org.jetbrains.dokka.experimental.gradle.pluginMode=V2Enabled
