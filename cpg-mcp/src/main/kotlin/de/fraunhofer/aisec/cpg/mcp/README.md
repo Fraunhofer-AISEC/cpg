@@ -2,10 +2,22 @@
 
 ## Available Tools
 
+### Analysis Tools
 - **`cpg_analyze`** : Parse code files to build the CPG
-- **`cpg_llm_analyze`** : Generate security analysis prompts asking LLM to suggest concepts/operations
-- **`cpg_apply_concepts`** : Apply concept overlays to specific code nodes
+- **`cpg_llm_analyze`** : Generate prompt asking LLM to suggest concepts/operations
+- **`cpg_apply_concepts`** : Apply the suggested concept/operations to specific nodes
 - **`cpg_dataflow`** : Perform dataflow analysis
+
+### Query and Listing Tools
+- **`list_functions`** : List all function declarations
+- **`list_records`** : List all record declarations (classes, structs, etc.)
+- **`list_calls`** : List all call expressions
+- **`list_calls_to`** : List all calls to a specific function or method
+- **`list_available_concepts`** : List all available concepts
+- **`list_available_operations`** : List all available operations
+- **`list_concepts_and_operations`** : List all applied concepts and operations on nodes
+- **`get_all_args`** : Get all arguments passed to function calls
+- **`get_arg_by_index_or_name`** : Get specific argument by index or parameter name
 
 ## Setup
 
@@ -23,15 +35,17 @@ The current implementation uses stdio since Claude Desktop only supports this tr
 1. Open Claude Desktop
 2. Go to Settings -> Developer -> Edit Config
 3. Add the following configuration to the `mcpServers` section:
+
 ```json
     {
-      "mcpServers": {
-        "cpg": {
-          "command": "/path/to/cpg-mcp/build/install/cpg-mcp/bin/cpg-mcp"
-        }
-      }
+  "mcpServers": {
+    "cpg": {
+      "command": "/path/to/cpg-mcp/build/install/cpg-mcp/bin/cpg-mcp"
     }
+  }
+}
 ```
+
 4. If you're navigating to the config file outside the app:
     - On Linux, it is usually located at `~/.config/claude-desktop/config.json`.
     - On macOS, it is typically at `~/Library/Application Support/Claude Desktop/config.json`.
@@ -44,7 +58,7 @@ The current implementation uses stdio since Claude Desktop only supports this tr
 ### Step 1: Parse Your Code (`cpg_analyze`)
 
 First, parse the source code to build the Code Property Graph.
-You can either provide a file path or paste code directly.
+You can either provide an upload a file or paste code directly.
 
 **Example:**
 
@@ -82,43 +96,26 @@ You can either provide a file path or paste code directly.
 }
 ```
 
-### Step 2: Generate Security Analysis Prompt (`cpg_llm_analyze`)
+### Step 2: Generate Prompt (`cpg_llm_analyze`)
 
-This tool creates a security analysis prompt that asks the LLM to act as a security officer.
-The LLM is instructed to research the CPG documentation and suggest appropriate security concepts.
-
-**Example:**
-
-```json
-{
-  "tool": "cpg_llm_analyze",
-  "arguments": {
-    "description": "Focus on authentication and data access patterns in this Python web application"
-  }
-}
-```
-
-**Response:** A comprehensive security analysis prompt that includes:
-
-- Instructions for the LLM to take on the role of a security officer
-- Background examples (e.g., `open('/etc/passwd', 'r')` → 'Data' concept)
-- Direction to research CPG repository and documentation
-- All analyzed nodes from the current CPG analysis
-- Request for JSON response with security findings and concept suggestions
+This tool creates a prompt that asks the LLM to act as a software engineer with expertise in software security.
+The LLM is provided with background information of the CPG and with examples of how to classify nodes into concepts and
+operations.
+Furthermore, it obtains a list of all existing concepts/operations and a list of all nodes in the current CPG analysis.
 
 **LLM Response Format Expected:**
+
 ```json
 {
-  "analysis_summary": "Brief overview of security findings",
-  "concept_suggestions": [
+  "overlaySuggestions": [
     {
-      "nodeId": "node_123",
-      "nodeName": "node",
-      "conceptType": "Data|ReadData|Authentication|HttpRequest|etc",
-      "reasoning": "Detailed security reasoning for this classification",
-      "security_impact": "Potential security implications"
+      "nodeId": "1234",
+      "overlay": "fully.qualified.class.Name",
+      "overlayType": "Concept | Operation",
+      "conceptNodeId": "string (REQUIRED for operations)",
+      "reasoning": "Security reasoning for this classification",
+      "securityImpact": "Potential security implications"
     }
-  ],
-  "additional_recommendations": "Any additional security recommendations"
+  ]
 }
 ```
