@@ -58,7 +58,7 @@ The current implementation uses stdio since Claude Desktop only supports this tr
 ### Step 1: Parse Your Code (`cpg_analyze`)
 
 First, parse the source code to build the Code Property Graph.
-You can either provide an upload a file or paste code directly.
+You can either provide and upload a file or paste code directly.
 
 **Example:**
 
