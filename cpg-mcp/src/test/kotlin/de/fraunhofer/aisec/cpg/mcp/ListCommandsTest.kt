@@ -219,6 +219,9 @@ class ListCommandsTest {
             )
         val result = tool.handler(request)
         assertNotNull(result)
-        assertTrue(result.content.isNotEmpty(), "Should return available concepts and operations")
+        assertTrue(
+            result.content.isEmpty(),
+            "We did not apply any concepts or operations, so it should be empty",
+        )
     }
 }
