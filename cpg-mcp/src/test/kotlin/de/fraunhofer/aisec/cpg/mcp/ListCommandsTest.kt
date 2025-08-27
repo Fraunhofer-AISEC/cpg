@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.FunctionInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.NodeInfo
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.RecordInfo
 import io.modelcontextprotocol.kotlin.sdk.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.Implementation
 import io.modelcontextprotocol.kotlin.sdk.ServerCapabilities
@@ -65,7 +66,10 @@ class ListCommandsTest {
     @BeforeEach
     fun initializeServer() {
         val payload =
-            CpgAnalyzePayload(content = "def hello():\n    print('Hello World')", extension = "py")
+            CpgAnalyzePayload(
+                content = "class Foo:\n    field = 0\ndef hello():\n    print('Hello World')",
+                extension = "py",
+            )
         val analysisResult = runCpgAnalyze(payload)
         assertNotNull(globalAnalysisResult, "Result should be set after tool execution")
 
@@ -113,7 +117,15 @@ class ListCommandsTest {
         val request = CallToolRequest(name = "cpg_list_records", arguments = buildJsonObject {})
         val result = tool.handler(request)
         assertNotNull(result)
-        assertTrue(result.content.isEmpty(), "There is no record declaration in the test code")
+        assertTrue(
+            result.content.isNotEmpty(),
+            "There is a record declaration \"Foo\" in the test code",
+        )
+        assertDoesNotThrow {
+            Json.decodeFromString<RecordInfo>(
+                (result.content.singleOrNull() as? TextContent)?.text.orEmpty()
+            )
+        }
     }
 
     @Test
