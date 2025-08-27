@@ -36,7 +36,6 @@ import kotlin.collections.component2
 import kotlin.collections.plusAssign
 import kotlin.collections.set
 import kotlin.math.ceil
-import kotlin.sequences.forEach
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -372,12 +371,6 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
         }
 
         override fun compare(other: Lattice.Element): Order {
-            //            var ret: Order
-            //            runBlocking { ret = innerCompare(other) }
-            //            return ret
-            //        }
-            //
-            //        override suspend fun innerCompare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
             if (other !is Element<T>)
@@ -709,12 +702,6 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
         }
 
         override fun compare(other: Lattice.Element): Order {
-            //            var ret: Order
-            //            runBlocking { ret = innerCompare(other) }
-            //            return ret
-            //        }
-            //
-            //        open override suspend fun innerCompare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
             if (other !is Element<S, T>)
@@ -722,9 +709,11 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
                     "$other should be of type TupleLattice.Element<S, T> but is of type ${other.javaClass}"
                 )
 
-            val result1 = this.first.compare(other.first)
-            val result2 = this.second.compare(other.second)
-            return compareMultiple(result1, result2)
+            return runBlocking {
+                val result1 = async { this@Element.first.compare(other.first) }
+                val result2 = async { this@Element.second.compare(other.second) }
+                compareMultiple(result1.await(), result2.await())
+            }
         }
 
         override fun duplicate(): Element<S, T> {
@@ -812,12 +801,6 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
         }
 
         override fun compare(other: Lattice.Element): Order {
-            //            var ret: Order
-            //            runBlocking { ret = innerCompare(other) }
-            //            return ret
-            //        }
-            //
-            //        override suspend fun innerCompare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
             if (other !is Element<R, S, T>)
@@ -825,10 +808,12 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
                     "$other should be of type TripleLattice.Element<R, S, T> but is of type ${other.javaClass}"
                 )
 
-            val result1 = this.first.compare(other.first)
-            val result2 = this.second.compare(other.second)
-            val result3 = this.third.compare(other.third)
-            return compareMultiple(result1, result2, result3)
+            return runBlocking {
+                val result1 = async { this@Element.first.compare(other.first) }
+                val result2 = async { this@Element.second.compare(other.second) }
+                val result3 = async { this@Element.third.compare(other.third) }
+                compareMultiple(result1.await(), result2.await(), result3.await())
+            }
         }
 
         override fun duplicate(): Element<R, S, T> {
@@ -855,26 +840,33 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
             innerLattice3.lub(one = one.third, two = two.third, allowModify = true, widen = widen)
             one
         } else {
-            Element(
-                innerLattice1.lub(
-                    one = one.first,
-                    two = two.first,
-                    allowModify = false,
-                    widen = widen,
-                ),
-                innerLattice2.lub(
-                    one = one.second,
-                    two = two.second,
-                    allowModify = false,
-                    widen = widen,
-                ),
-                innerLattice3.lub(
-                    one = one.third,
-                    two = two.third,
-                    allowModify = false,
-                    widen = widen,
-                ),
-            )
+            runBlocking {
+                val first = async {
+                    innerLattice1.lub(
+                        one = one.first,
+                        two = two.first,
+                        allowModify = false,
+                        widen = widen,
+                    )
+                }
+                val second = async {
+                    innerLattice2.lub(
+                        one = one.second,
+                        two = two.second,
+                        allowModify = false,
+                        widen = widen,
+                    )
+                }
+                val third = async {
+                    innerLattice3.lub(
+                        one = one.third,
+                        two = two.third,
+                        allowModify = false,
+                        widen = widen,
+                    )
+                }
+                Element(first.await(), second.await(), third.await())
+            }
         }
     }
 
