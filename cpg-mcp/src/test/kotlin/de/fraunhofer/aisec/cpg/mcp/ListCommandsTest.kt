@@ -193,7 +193,8 @@ class ListCommandsTest {
         server.getArgByIndexOrName()
         val argTool =
             server.tools["cpg_list_call_arg_by_name_or_index"] ?: error("Tool not registered")
-        val argRequest =
+
+        val argRequestByIndex =
             CallToolRequest(
                 name = "cpg_list_call_arg_by_name_or_index",
                 arguments =
@@ -202,12 +203,26 @@ class ListCommandsTest {
                         put("index", 0)
                     },
             )
-        val argResult = argTool.handler(argRequest)
-        assertNotNull(argResult)
-        assertTrue(argResult.content.isNotEmpty(), "Should return the argument at index 0")
+        val argResultByIndex = argTool.handler(argRequestByIndex)
+        assertNotNull(argResultByIndex)
+        assertTrue(argResultByIndex.content.isNotEmpty(), "Should return the argument at index 0")
         assertDoesNotThrow {
             Json.decodeFromString<NodeInfo>(
-                (argResult.content.singleOrNull() as? TextContent)?.text.orEmpty()
+                (argResultByIndex.content.singleOrNull() as? TextContent)?.text.orEmpty()
+            )
+        }
+
+        val argRequestByName =
+            CallToolRequest(
+                name = "cpg_list_call_arg_by_name_or_index",
+                arguments = buildJsonObject { put("id", callId) },
+            )
+        val argResultByName = argTool.handler(argRequestByName)
+        assertNotNull(argResultByName)
+        assertTrue(argResultByName.content.isNotEmpty(), "Should return the error message")
+        assertThrows<IllegalArgumentException> {
+            Json.decodeFromString<NodeInfo>(
+                (argResultByName.content.singleOrNull() as? TextContent)?.text.orEmpty()
             )
         }
     }
