@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.FunctionInfo
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.NodeInfo
 import io.modelcontextprotocol.kotlin.sdk.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.Implementation
 import io.modelcontextprotocol.kotlin.sdk.ServerCapabilities
@@ -55,6 +56,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.assertDoesNotThrow
+import org.junit.jupiter.api.assertThrows
 
 class ListCommandsTest {
     private lateinit var server: Server
@@ -152,11 +155,29 @@ class ListCommandsTest {
         val argsRequest =
             CallToolRequest(
                 name = "cpg_list_call_args",
-                arguments = buildJsonObject { put("nodeId", callId) },
+                arguments = buildJsonObject { put("id", callId) },
             )
         val argsResult = argsTool.handler(argsRequest)
         assertNotNull(argsResult)
         assertTrue(argsResult.content.isNotEmpty(), "Should return arguments for the call")
+        assertDoesNotThrow {
+            Json.decodeFromString<NodeInfo>(
+                (argsResult.content.singleOrNull() as? TextContent)?.text.orEmpty()
+            )
+        }
+        val wrongArgsRequest =
+            CallToolRequest(
+                name = "cpg_list_call_args",
+                arguments = buildJsonObject { put("nodeId", callId) },
+            )
+        val wrongArgsResult = argsTool.handler(wrongArgsRequest)
+        assertNotNull(wrongArgsResult)
+        assertTrue(wrongArgsResult.content.isNotEmpty(), "Should return arguments for the call")
+        assertThrows<IllegalArgumentException> {
+            Json.decodeFromString<NodeInfo>(
+                (wrongArgsResult.content.first() as TextContent).text.orEmpty()
+            )
+        }
     }
 
     @Test
@@ -177,13 +198,18 @@ class ListCommandsTest {
                 name = "cpg_list_call_arg_by_name_or_index",
                 arguments =
                     buildJsonObject {
-                        put("nodeId", callId)
+                        put("id", callId)
                         put("index", 0)
                     },
             )
         val argResult = argTool.handler(argRequest)
         assertNotNull(argResult)
         assertTrue(argResult.content.isNotEmpty(), "Should return the argument at index 0")
+        assertDoesNotThrow {
+            Json.decodeFromString<NodeInfo>(
+                (argResult.content.singleOrNull() as? TextContent)?.text.orEmpty()
+            )
+        }
     }
 
     @Test

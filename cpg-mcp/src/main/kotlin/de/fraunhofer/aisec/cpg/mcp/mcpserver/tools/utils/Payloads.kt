@@ -37,8 +37,8 @@ data class CpgAnalyzePayload(val content: String? = null, val extension: String?
 @Serializable
 data class CpgCallArgumentByNameOrIndexPayload(
     val id: String,
-    val argumentName: String,
-    val index: Int,
+    val argumentName: String? = null,
+    val index: Int? = null,
 )
 
 @Serializable data class CpgApplyConceptsPayload(val assignments: List<ConceptAssignment>)

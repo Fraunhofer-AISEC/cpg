@@ -163,7 +163,7 @@ fun Server.getAllArgs() {
         """This tool lists all arguments passed to the method/function call with the specified ID.
 
         Parameters:
-        - nodeId: ID of the method/function call whose arguments should be listed.
+        - id: ID of the method/function call whose arguments should be listed.
         """
             .trimIndent()
 
@@ -171,7 +171,7 @@ fun Server.getAllArgs() {
         Tool.Input(
             properties =
                 buildJsonObject {
-                    putJsonObject("nodeId") {
+                    putJsonObject("id") {
                         put("type", "string")
                         put(
                             "description",
@@ -179,7 +179,7 @@ fun Server.getAllArgs() {
                         )
                     }
                 },
-            required = listOf("nodeId"),
+            required = listOf("id"),
         )
 
     this.addTool(
@@ -206,7 +206,7 @@ fun Server.getArgByIndexOrName() {
         """This tool lists an argument passed to the method/function call with the specified ID either by name or by index.
 
         Parameters:
-        - nodeId: ID of the method/function call whose arguments should be listed.
+        - id: ID of the method/function call whose arguments should be listed.
         - argName: Name of the argument to retrieve (optional).
         - index: Index of the argument to retrieve (optional). If both are provided, the name takes precedence. At least one of argName or index must be provided.
         """
@@ -216,7 +216,7 @@ fun Server.getArgByIndexOrName() {
         Tool.Input(
             properties =
                 buildJsonObject {
-                    putJsonObject("nodeId") {
+                    putJsonObject("id") {
                         put("type", "string")
                         put(
                             "description",
