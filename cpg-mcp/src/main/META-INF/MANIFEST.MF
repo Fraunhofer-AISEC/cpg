@@ -1,2 +1,0 @@
-Manifest-Version: 1.0
-Main-Class: de.fraunhofer.aisec.cpg.mcp.ApplicationKt
