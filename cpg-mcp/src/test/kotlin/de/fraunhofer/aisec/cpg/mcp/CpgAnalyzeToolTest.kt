@@ -111,6 +111,8 @@ class CpgAnalyzeToolTest {
                 "cpg_list_calls_to",
                 "cpg_list_call_args",
                 "cpg_list_call_arg_by_name_or_index",
+                "cpg_list_available_concepts",
+                "cpg_list_available_operations",
             ),
             testServer.tools.keys,
         )
