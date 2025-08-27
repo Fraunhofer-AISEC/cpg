@@ -67,7 +67,8 @@ class ListCommandsTest {
     fun initializeServer() {
         val payload =
             CpgAnalyzePayload(
-                content = "class Foo:\n    field = 0\ndef hello():\n    print('Hello World')",
+                content =
+                    "class Foo:\n    secretKey = '0000'\ndef hello():\n    print('Hello World')",
                 extension = "py",
             )
         val analysisResult = runCpgAnalyze(payload)
