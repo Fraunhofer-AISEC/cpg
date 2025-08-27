@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.mcp
 
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.configureServer
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgAnalyzeTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
@@ -92,5 +93,26 @@ class CpgAnalyzeToolTest {
         assertEquals(2, analysisResult.functions)
         assertEquals(1, analysisResult.callExpressions)
         assertNotNull(analysisResult.nodes)
+    }
+
+    @Test
+    fun testConfigureServer() {
+        val testServer = configureServer()
+        assertEquals(
+            setOf(
+                "cpg_analyze",
+                "cpg_llm_analyze",
+                "cpg_apply_concepts",
+                "cpg_dataflow",
+                "cpg_list_functions",
+                "cpg_list_records",
+                "cpg_list_concepts_and_operations",
+                "cpg_list_calls",
+                "cpg_list_calls_to",
+                "cpg_list_call_args",
+                "cpg_list_call_arg_by_name_or_index",
+            ),
+            testServer.tools.keys,
+        )
     }
 }
