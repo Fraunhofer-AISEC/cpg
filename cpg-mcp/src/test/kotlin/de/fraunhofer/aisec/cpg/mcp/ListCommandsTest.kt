@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listAvailableConcepts
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listAvailableOperations
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listCalls
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listCallsTo
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listConceptsAndOperations
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listFunctions
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listRecords
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
@@ -205,5 +206,19 @@ class ListCommandsTest {
         val result = tool.handler(request)
         assertNotNull(result)
         assertTrue(result.content.isNotEmpty(), "Should return available operations")
+    }
+
+    @Test
+    fun listAvailableConceptsAndOperationsTest() = runTest {
+        server.listConceptsAndOperations()
+        val tool = server.tools["cpg_list_concepts_and_operations"] ?: error("Tool not registered")
+        val request =
+            CallToolRequest(
+                name = "cpg_list_concepts_and_operations",
+                arguments = buildJsonObject {},
+            )
+        val result = tool.handler(request)
+        assertNotNull(result)
+        assertTrue(result.content.isNotEmpty(), "Should return available concepts and operations")
     }
 }
