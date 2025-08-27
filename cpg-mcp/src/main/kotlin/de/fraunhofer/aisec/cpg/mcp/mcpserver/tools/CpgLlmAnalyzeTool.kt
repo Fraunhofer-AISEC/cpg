@@ -81,88 +81,60 @@ fun Server.addCpgLlmAnalyzeTool() {
             val availableConcepts = getAvailableConcepts()
             val availableOperations = getAvailableOperations()
 
-            val prompt = buildString {
-                appendLine("# Code Analysis")
-                appendLine()
-                appendLine(
-                    "You are a Software engineer with expertise in software security for more than 10 years.\n"
-                )
-                appendLine()
-
-                appendLine("## About CPG")
-                appendLine(cpgDescription)
-                appendLine()
-
-                appendLine("## Goal")
-                appendLine(
-                    "Mark interesting data and operations so we can analyze how data flows through code to discover patterns."
-                )
-                appendLine()
-
-                appendLine("## Understanding Concepts and Operations")
-                appendLine()
-                appendLine("**Concepts** mark 'what something IS':")
-                appendLine("- Applied to data-holding nodes (variables, fields, return values)")
-                appendLine("- Examples: user_email → Data, api_token → Secret")
-                appendLine("- Purpose: Track where important data is stored")
-                appendLine()
-                appendLine("**Operations** mark 'what something DOES':")
-                appendLine("- Applied to nodes that perform actions (function calls, method calls)")
-                appendLine(
-                    "- Examples: requests.post() → HttpRequest, file.write() → FileWrite, encrypt() → Encryption"
-                )
-                appendLine("- Purpose: Track what happens to important data")
-                appendLine()
-
-                appendLine("## Rules")
-                appendLine(
-                    "1. **Domain consistency**: When using Operations, they must match their Concept's domain (e.g., GetSecret needs Secret, HttpRequest needs HttpClient)"
-                )
-                appendLine(
-                    "2. **Operations always need Concepts**: Every Operation MUST have a conceptNodeId pointing to an existing Concept node. However, Concepts can stand alone without Operations."
-                )
-                appendLine()
-
-                appendLine("## Your Task")
-                appendLine("1. Analyze each node for relevance")
-                appendLine("2. Suggest appropriate overlays using fully qualified class names")
-                appendLine("3. Ensure concept-operation pairs belong to the same domain")
-                appendLine()
-                appendLine(
-                    "**IMPORTANT:** Use only existing CPG concepts/operations from the list below."
-                )
-                appendLine(
-                    "For additional context, you can check docstrings in the Fraunhofer CPG repository on GitHub, especially the cpg-concepts module."
-                )
-                appendLine()
-
-                appendLine("Available concepts:")
-                availableConcepts.forEach { appendLine("- ${it.name}") }
-                appendLine()
-                appendLine("Available operations:")
-                availableOperations.forEach { appendLine("- ${it.name}") }
-                appendLine()
-
-                if (payload.description != null) {
-                    appendLine("## Additional Context")
-                    appendLine(payload.description)
-                    appendLine()
-                }
-
-                if (hasAnalysisResult) {
-                    appendLine("## Nodes to Analyze")
-                    appendLine(
-                        "Use the nodes from the previous cpg_analyze tool response to make your suggestions."
-                    )
-                } else {
-                    appendLine("## No Analysis Available")
-                    appendLine("No CPG analysis available. Analyze a file first using cpg_analyze.")
-                }
-                appendLine()
-                appendLine("## Expected Response Format")
-                appendLine("Respond with a JSON object in this exact format:")
-                appendLine(
-                    """
+            val prompt =
+                """# Code Analysis
+                
+                You are a Software engineer with expertise in software security for more than 10 years
+                
+                ## About the CPG
+                $cpgDescription
+                
+                ## Goals
+                
+                Mark interesting data and operations so we can analyze how data flows through code to discover patterns.
+                
+                ## Understanding Concepts and Operations
+                
+                **Concepts** mark 'what something IS':
+                - Applied to data-holding nodes (variables, fields, return values)
+                - Examples: user_email → Data, api_token → Secret
+                - Purpose: Track where important data is stored
+                
+                **Operations** mark 'what something DOES':
+                - Applied to nodes that perform actions (function calls, method calls)
+                - Examples: requests.post() → HttpRequest, file.write() → FileWrite, encrypt() → Encryption
+                - Purpose: Track what happens to important data
+                
+                ## Rules
+                
+                1. **Domain consistency**: When using Operations, they must match their Concept's domain (e.g., GetSecret needs Secret, HttpRequest needs HttpClient)
+                2. **Operations always need Concepts**: Every Operation MUST have a conceptNodeId pointing to an existing Concept node. However, Concepts can stand alone without Operations.
+                
+                ## Your Task
+                
+                1. Analyze each node for relevance
+                2. Suggest appropriate overlays using fully qualified class names
+                3. Ensure concept-operation pairs belong to the same domain
+                
+                **IMPORTANT:** Use only existing CPG concepts/operations from the list below.
+                
+                For additional context, you can check docstrings in the Fraunhofer CPG repository on GitHub, especially the cpg-concepts module.
+                
+                Available concepts:
+                
+                ${availableConcepts.map { "- ${it.name}\n" }}
+                
+                Available operations:
+                
+                ${availableOperations.map { "- ${it.name}\n" }}
+                
+                ${if(payload.description != null) "## Additional Context\n${payload.description}\n" else ""}
+                ${if(hasAnalysisResult) "## Nodes to Analyze\nUse the nodes from the previous cpg_analyze tool response to make your suggestions.\n" else "## No Analysis Available\nNo CPG analysis available. Analyze a file first using cpg_analyze.\n"}
+                
+                ## Expected Response Format
+                
+                Respond with a JSON object in this exact format:
+                
                 {
                   "overlaySuggestions": [
                     {
@@ -175,14 +147,10 @@ fun Server.addCpgLlmAnalyzeTool() {
                     }
                   ]
                 }
-                """
-                        .trimIndent()
-                )
-                appendLine()
-                appendLine(
-                    "**IMPORTANT**: After providing your analysis, WAIT for user approval before applying any concepts. Do not automatically execute cpg_apply_concepts."
-                )
-            }
+                
+                **IMPORTANT**: After providing your analysis, WAIT for user approval before applying any concepts. Do not automatically execute cpg_apply_concepts.
+            """
+                    .trimIndent()
 
             CallToolResult(content = listOf(TextContent(prompt)))
         } catch (e: Exception) {
