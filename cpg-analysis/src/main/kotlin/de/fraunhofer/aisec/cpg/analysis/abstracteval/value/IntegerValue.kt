@@ -494,7 +494,7 @@ class IntegerValue : Value<LatticeInterval> {
                         "<<=" ->
                             lhsValue.shl(
                                 rhsValue,
-                                maxBits = (node.type as? IntegerType)?.bitWidth ?: 32,
+                                maxBits = (node.lhs[0].type as? IntegerType)?.bitWidth ?: 32,
                             )
                         // We need to know how many bits our value can have as this affects the
                         // shift's outcome. If we do not know, we assume 32 bits.
@@ -503,7 +503,7 @@ class IntegerValue : Value<LatticeInterval> {
                         ">>=" ->
                             lhsValue.shr(
                                 rhsValue,
-                                maxBits = (node.type as? IntegerType)?.bitWidth ?: 32,
+                                maxBits = (node.lhs[0].type as? IntegerType)?.bitWidth ?: 32,
                             )
                         "|=" -> lhsValue.bitwiseOr(rhsValue)
                         "&=" -> lhsValue.bitwiseAnd(rhsValue)
