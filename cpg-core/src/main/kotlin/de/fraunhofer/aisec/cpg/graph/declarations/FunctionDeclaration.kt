@@ -232,7 +232,7 @@ open class FunctionDeclaration :
     /** This returns a simple heuristic for the complexity of a function declaration. */
     val complexity: Long
         get() {
-            return this.body?.cyclomaticComplexity(0) ?: 0L
+            return this.body?.specialComplexity(0) ?: 0L
         }
 
     override val secondaryTypes: List<Type>
@@ -276,39 +276,45 @@ open class FunctionDeclaration :
 }
 
 /** This is a very basic implementation of Cyclomatic Complexity. */
-fun Statement.cyclomaticComplexity(depth: Int = 1): Long {
+fun AstNode.cyclomaticComplexity(): Long {
+    val allAstChildren = this.allChildren<AstNode> { it !is ParameterDeclaration }
+    val allEOGEdgesCount = allAstChildren.fold(0L) { old, node -> old + node.nextEOGEdges.size }
+    return allEOGEdgesCount - allAstChildren.size + 2
+}
+
+fun Statement.specialComplexity(depth: Int = 1): Long {
     var i: Long = 0
     for (stmt in (this as? StatementHolder)?.statements ?: listOf(this)) {
         when (stmt) {
             is ForEachStatement,
             is ForStatement -> {
                 // add the depth and include the children
-                i += depth * ((stmt.statement?.cyclomaticComplexity(depth + 1) ?: 0) + 1)
+                i += depth * ((stmt.statement?.specialComplexity(depth + 1) ?: 0) + 1)
             }
             is IfStatement -> {
                 // add the depth for each branch (and include the children)
-                stmt.thenStatement?.let { i += depth + it.cyclomaticComplexity(depth + 1) }
-                stmt.elseStatement?.let { i += depth + it.cyclomaticComplexity(depth + 1) }
+                stmt.thenStatement?.let { i += depth + it.specialComplexity(depth + 1) }
+                stmt.elseStatement?.let { i += depth + it.specialComplexity(depth + 1) }
             }
             is SwitchStatement -> {
                 // forward it to the block containing the case statements
-                stmt.statement?.let { i += depth + it.cyclomaticComplexity(depth + 1) }
+                stmt.statement?.let { i += depth + it.specialComplexity(depth + 1) }
             }
             is CaseStatement -> {
                 // add the depth for each branch (and include the children)
-                stmt.caseExpression?.let { i += depth + it.cyclomaticComplexity(depth + 1) }
+                stmt.caseExpression?.let { i += depth + it.specialComplexity(depth + 1) }
             }
             is DoStatement,
             is WhileStatement -> {
                 // add one for the do statement (and include the children)
-                i += depth + ((stmt.statement?.cyclomaticComplexity(depth + 1) ?: 0))
+                i += depth + ((stmt.statement?.specialComplexity(depth + 1) ?: 0))
             }
             is GotoStatement -> {
                 // add the depth
                 i += depth
             }
             is StatementHolder -> {
-                i += depth + stmt.cyclomaticComplexity(depth + 1)
+                i += depth + stmt.specialComplexity(depth + 1)
             }
         }
     }

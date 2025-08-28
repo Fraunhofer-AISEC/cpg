@@ -245,9 +245,8 @@ var globalDerefs = mutableMapOf<Node, PowersetLattice.Element<Pair<Node, Boolean
 open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDependencies = true) {
     class Configuration(
         /**
-         * This specifies the maximum complexity (as calculated per
-         * [Statement.cyclomaticComplexity]) a [FunctionDeclaration] must have in order to be
-         * considered.
+         * This specifies the maximum complexity (as calculated per [Statement.specialComplexity]) a
+         * [FunctionDeclaration] must have in order to be considered.
          */
         var maxComplexity: Int? = null,
 
@@ -299,7 +298,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         // Calculate the complexity of the function and see, if it exceeds our threshold
         val max = passConfig<Configuration>()?.maxComplexity
-        val c = node.body?.cyclomaticComplexity() ?: 0
+        val c = node.body?.specialComplexity() ?: 0
         if (max != null && c > max) {
             log.info(
                 "Ignoring function ${node.name} because its complexity (${NumberFormat.getNumberInstance(Locale.US).format(c)}) is greater than the configured maximum (${max})"

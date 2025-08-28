@@ -31,7 +31,9 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.cyclomaticComplexity
+import de.fraunhofer.aisec.cpg.graph.declarations.specialComplexity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.statements.DoStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
@@ -43,11 +45,14 @@ import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import java.io.File
 import java.text.NumberFormat
 import java.util.Locale
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.system.measureTimeMillis
+
+var cdgLogFile: File? = null
 
 /** This pass builds the Control Dependence Graph (CDG) by iterating through the EOG. */
 @DependsOn(EvaluationOrderGraphPass::class)
@@ -55,8 +60,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
 
     class Configuration(
         /**
-         * This specifies the maximum complexity (as calculated per
-         * [de.fraunhofer.aisec.cpg.graph.statements.Statement.cyclomaticComplexity]) a
+         * This specifies the maximum complexity (as calculated per [specialComplexity]) a
          * [FunctionDeclaration] must have in order to be considered.
          */
         var maxComplexity: Int? = null
@@ -78,14 +82,23 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
      *    Repeat step 3) until you cannot move the node upwards in the CDG anymore.
      */
     override fun accept(startNode: Node) {
+        if (cdgLogFile == null) {
+            cdgLogFile = File("cdg-${startNode.location?.artifactLocation?.fileName}.log")
+            cdgLogFile?.appendText(
+                "Function;CyclomaticCompexity;SpecialComplexity;Processed;TotalTime;BBTime;EOGTime;AfterworkTime\n"
+            )
+        }
         // For now, we only execute this for function declarations, we will support all EOG starters
         // in the future.
         if (startNode !is FunctionDeclaration) {
             return
         }
         val max = passConfig<Configuration>()?.maxComplexity
-        val c = startNode.body?.cyclomaticComplexity() ?: 0
+        val c = startNode.body?.specialComplexity() ?: 0
         if (max != null && c > max) {
+            cdgLogFile?.appendText(
+                "${startNode.name};${startNode.cyclomaticComplexity()};$c;false;0;0;0;0\n"
+            )
             log.info(
                 "Ignoring function ${startNode.name} because its complexity (${NumberFormat.getNumberInstance(Locale.US).format(c)}) is greater than the configured maximum (${max})"
             )
@@ -96,8 +109,16 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         )
 
         log.trace("Creating CDG for {} with complexity {}", startNode.name, c)
+        val firstBasicBlock: BasicBlock
+        val basicBlocks: Collection<BasicBlock>
+        val nodeToBBMap: Map<Node, BasicBlock>
 
-        val (firstBasicBlock, basicBlocks, nodeToBBMap) = collectBasicBlocks(startNode, false)
+        val bbConstructionTime = measureTimeMillis {
+            val tmp = collectBasicBlocks(startNode, false)
+            firstBasicBlock = tmp.first
+            basicBlocks = tmp.second
+            nodeToBBMap = tmp.third
+        }
 
         log.trace("Retrieved network of BBs for {}", startNode.name)
 
@@ -224,8 +245,11 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             }
         }
 
+        cdgLogFile?.appendText(
+            "${startNode.name};${startNode.cyclomaticComplexity()};$c;true;${afterworkTime+eogIterationTime+bbConstructionTime};$bbConstructionTime;$eogIterationTime;$afterworkTime\n"
+        )
         log.info(
-            "Done creating CDG fopr function ${startNode.name}. Complexity: $c; eogIterationTime: $eogIterationTime; afterworkTime: $afterworkTime"
+            "Done creating CDG for function ${startNode.name}. Cyclomatic complexity: ${startNode.cyclomaticComplexity()}; Special complexity: $c; bbConstructionTime: $bbConstructionTime; eogIterationTime: $eogIterationTime; afterworkTime: $afterworkTime"
         )
     }
 

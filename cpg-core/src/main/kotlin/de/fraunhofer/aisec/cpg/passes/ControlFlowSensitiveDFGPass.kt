@@ -51,9 +51,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
     class Configuration(
         /**
-         * This specifies the maximum complexity (as calculated per
-         * [Statement.cyclomaticComplexity]) a [FunctionDeclaration] must have in order to be
-         * considered.
+         * This specifies the maximum complexity (as calculated per [Statement.specialComplexity]) a
+         * [FunctionDeclaration] must have in order to be considered.
          */
         var maxComplexity: Int? = null,
         val parallel: Boolean = true,
@@ -78,7 +77,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
         // Calculate the complexity of the function and see, if it exceeds our threshold
         val max = passConfig<Configuration>()?.maxComplexity
-        val c = (node as? FunctionDeclaration)?.body?.cyclomaticComplexity() ?: 0
+        val c = (node as? FunctionDeclaration)?.body?.specialComplexity() ?: 0
         if (max != null && c > max) {
             log.info(
                 "Ignoring function ${node.name} because its complexity (${c}) is greater than the configured maximum (${max})"
