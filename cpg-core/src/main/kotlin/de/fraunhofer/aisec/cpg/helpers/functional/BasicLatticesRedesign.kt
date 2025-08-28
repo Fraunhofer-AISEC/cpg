@@ -358,16 +358,37 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
         }
 
         override fun equals(other: Any?): Boolean {
-            return this === other ||
-                (other is Element<T> &&
-                    this.size == other.size &&
-                    this.all { t ->
-                        if (t is Pair<*, *>)
-                            other.any {
-                                it is Pair<*, *> && it.first === t.first && it.second == t.second
+            if (this === other) return true
+            if (other !is Element<*> || this.size != other.size) return false
+
+            var ret = true
+            runBlocking {
+                try {
+                    val scope = CoroutineScope(Job())
+                    this@Element.forEach { t ->
+                        scope.launch {
+                            ensureActive()
+                            val isEqual =
+                                if (t is Pair<*, *>)
+                                    other.any {
+                                        it is Pair<*, *> &&
+                                            it.first === t.first &&
+                                            it.second == t.second
+                                    }
+                                else t in other
+
+                            if (!isEqual) {
+                                ret = false
+                                // cancel all coroutines
+                                scope.cancel()
                             }
-                        else t in other
-                    })
+                        }
+                    }
+                } catch (_: CancellationException) {
+                    ret = false
+                }
+            }
+            return ret
         }
 
         override fun compare(other: Lattice.Element): Order {
