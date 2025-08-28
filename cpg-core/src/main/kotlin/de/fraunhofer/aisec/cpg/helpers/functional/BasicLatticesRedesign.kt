@@ -364,23 +364,24 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
             var ret = true
             runBlocking {
                 try {
-                    val scope = CoroutineScope(Job())
-                    this@Element.forEach { t ->
-                        scope.launch {
-                            ensureActive()
-                            val isEqual =
-                                if (t is Pair<*, *>)
-                                    other.any {
-                                        it is Pair<*, *> &&
-                                            it.first === t.first &&
-                                            it.second == t.second
-                                    }
-                                else t in other
+                    coroutineScope {
+                        this@Element.forEach { t ->
+                            launch {
+                                ensureActive()
+                                val isEqual =
+                                    if (t is Pair<*, *>)
+                                        other.any {
+                                            it is Pair<*, *> &&
+                                                it.first === t.first &&
+                                                it.second == t.second
+                                        }
+                                    else t in other
 
-                            if (!isEqual) {
-                                ret = false
-                                // cancel all coroutines
-                                scope.cancel()
+                                if (!isEqual) {
+                                    ret = false
+                                    // cancel all coroutines
+                                    cancel()
+                                }
                             }
                         }
                     }
