@@ -25,24 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.AbstractIntervalEvaluator
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleState
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.TupleStateElement
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.changeDeclarationState
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.intervalOf
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToDeclarationState
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.pushToGeneralState
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.*
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -498,6 +487,27 @@ class IntegerValue : Value<LatticeInterval> {
                         "*=" -> lhsValue * rhsValue
                         "/=" -> lhsValue / rhsValue
                         "%=" -> lhsValue % rhsValue
+                        // We need to know how many bits our value can have as this affects the
+                        // shift's outcome. If we do not know, we assume 32 bits.
+                        // TODO: Configure this better, e.g. based on the platform if we have
+                        // information about it.
+                        "<<=" ->
+                            lhsValue.shl(
+                                rhsValue,
+                                maxBits = (node.type as? IntegerType)?.bitWidth ?: 32,
+                            )
+                        // We need to know how many bits our value can have as this affects the
+                        // shift's outcome. If we do not know, we assume 32 bits.
+                        // TODO: Configure this better, e.g. based on the platform if we have
+                        // information about it.
+                        ">>=" ->
+                            lhsValue.shr(
+                                rhsValue,
+                                maxBits = (node.type as? IntegerType)?.bitWidth ?: 32,
+                            )
+                        "|=" -> lhsValue.bitwiseOr(rhsValue)
+                        "&=" -> lhsValue.bitwiseAnd(rhsValue)
+
                         else -> {
                             log.info("Unsupported assignment operator: ${node.operatorCode}")
                             LatticeInterval.TOP
