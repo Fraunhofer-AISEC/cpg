@@ -76,7 +76,7 @@ class IntegerValue : Value<LatticeInterval> {
             simpleComparison(lhs.lhs, rhs.lhs, lhs.operatorCode, lattice, lhsState)
             val rhsState = state.duplicate()
             simpleComparison(rhs.lhs, rhs.lhs, rhs.operatorCode, lattice, rhsState)
-            val newState = lattice.glb(lhsState, rhsState)
+            val newState = runBlocking { lattice.glb(lhsState, rhsState) }
             // TODO: Handle the new state
             return newState
         }

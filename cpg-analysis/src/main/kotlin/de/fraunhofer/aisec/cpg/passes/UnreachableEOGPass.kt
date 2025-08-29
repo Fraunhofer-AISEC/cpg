@@ -320,7 +320,7 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
         } else Element(maxOf(one.reachability, two.reachability))
     }
 
-    override fun glb(one: Element, two: Element): Element {
+    override suspend fun glb(one: Element, two: Element): Element {
         return Element(minOf(one.reachability, two.reachability))
     }
 

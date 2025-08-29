@@ -164,7 +164,7 @@ interface Lattice<T : Lattice.Element> {
     suspend fun lub(one: T, two: T, allowModify: Boolean = false, widen: Boolean = false): T
 
     /** Computes the greatest lower bound (meet) of [one] and [two] */
-    fun glb(one: T, two: T): T
+    suspend fun glb(one: T, two: T): T
 
     /**
      * Compares [one] and [two]. Returns
@@ -488,7 +488,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
         return result
     }
 
-    override fun glb(one: Element<T>, two: Element<T>): Element<T> {
+    override suspend fun glb(one: Element<T>, two: Element<T>): Element<T> {
         return Element(one.intersect(two))
     }
 
@@ -532,13 +532,6 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         }
 
         override suspend fun compare(other: Lattice.Element): Order {
-            var ret: Order
-            runBlocking { ret = innerCompare(other) }
-            return ret
-        }
-
-        @OptIn(ExperimentalCoroutinesApi::class)
-        suspend fun innerCompare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
             if (other !is Element<K, V>)
@@ -684,7 +677,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         return newMap
     }
 
-    override fun glb(one: Element<K, V>, two: Element<K, V>): Element<K, V> {
+    override suspend fun glb(one: Element<K, V>, two: Element<K, V>): Element<K, V> {
         val allKeys = one.keys.intersect(two.keys).toIdentitySet()
 
         val newMap = Element<K, V>(allKeys.size)
@@ -744,19 +737,17 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
                 runBlocking { this@Element.compare(other) == Order.EQUAL }
         }
 
-        override suspend fun compare(other: Lattice.Element): Order {
-            if (this === other) return Order.EQUAL
+        override suspend fun compare(other: Lattice.Element): Order = coroutineScope {
+            if (this === other) return@coroutineScope Order.EQUAL
 
             if (other !is Element<S, T>)
                 throw IllegalArgumentException(
                     "$other should be of type TupleLattice.Element<S, T> but is of type ${other.javaClass}"
                 )
 
-            return runBlocking {
-                val result1 = async { this@Element.first.compare(other.first) }
-                val result2 = async { this@Element.second.compare(other.second) }
-                compareMultiple(result1.await(), result2.await())
-            }
+            val result1 = async { this@Element.first.compare(other.first) }
+            val result2 = async { this@Element.second.compare(other.second) }
+            return@coroutineScope compareMultiple(result1.await(), result2.await())
         }
 
         override fun duplicate(): Element<S, T> {
@@ -804,7 +795,7 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
         }
     }
 
-    override fun glb(one: Element<S, T>, two: Element<S, T>): Element<S, T> {
+    override suspend fun glb(one: Element<S, T>, two: Element<S, T>): Element<S, T> {
         return Element(
             innerLattice1.glb(one.first, two.first),
             innerLattice2.glb(one.second, two.second),
@@ -849,20 +840,18 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
                 runBlocking { this@Element.compare(other) == Order.EQUAL }
         }
 
-        override suspend fun compare(other: Lattice.Element): Order {
-            if (this === other) return Order.EQUAL
+        override suspend fun compare(other: Lattice.Element): Order = coroutineScope {
+            if (this === other) return@coroutineScope Order.EQUAL
 
             if (other !is Element<R, S, T>)
                 throw IllegalArgumentException(
                     "$other should be of type TripleLattice.Element<R, S, T> but is of type ${other.javaClass}"
                 )
 
-            return runBlocking {
-                val result1 = async { this@Element.first.compare(other.first) }
-                val result2 = async { this@Element.second.compare(other.second) }
-                val result3 = async { this@Element.third.compare(other.third) }
-                compareMultiple(result1.await(), result2.await(), result3.await())
-            }
+            val result1 = async { this@Element.first.compare(other.first) }
+            val result2 = async { this@Element.second.compare(other.second) }
+            val result3 = async { this@Element.third.compare(other.third) }
+            return@coroutineScope compareMultiple(result1.await(), result2.await(), result3.await())
         }
 
         override fun duplicate(): Element<R, S, T> {
@@ -920,7 +909,7 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
         }
     }
 
-    override fun glb(one: Element<R, S, T>, two: Element<R, S, T>): Element<R, S, T> {
+    override suspend fun glb(one: Element<R, S, T>, two: Element<R, S, T>): Element<R, S, T> {
         return Element(
             innerLattice1.glb(one.first, two.first),
             innerLattice2.glb(one.second, two.second),

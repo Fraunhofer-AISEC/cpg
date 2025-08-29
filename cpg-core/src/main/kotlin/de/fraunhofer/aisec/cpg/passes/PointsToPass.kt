@@ -133,7 +133,7 @@ class PointsToState(
         return result as? PointsToState.Element ?: Element(result)
     }
 
-    override fun glb(
+    override suspend fun glb(
         one: TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>,
         two: TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>,
     ): PointsToState.Element {

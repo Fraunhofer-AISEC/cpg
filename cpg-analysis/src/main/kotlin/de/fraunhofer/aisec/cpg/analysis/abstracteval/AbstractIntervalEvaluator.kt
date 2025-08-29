@@ -106,7 +106,7 @@ class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>
         }
     }
 
-    override fun glb(
+    override suspend fun glb(
         one: Element<NodeId, NewIntervalLattice.Element>,
         two: Element<NodeId, NewIntervalLattice.Element>,
     ): Element<NodeId, NewIntervalLattice.Element> {
@@ -268,7 +268,7 @@ class NewIntervalLattice() :
         }
     }
 
-    override fun glb(one: Element, two: Element): Element {
+    override suspend fun glb(one: Element, two: Element): Element {
         val oneElem = one.element
         val twoElem = two.element
         return when {
