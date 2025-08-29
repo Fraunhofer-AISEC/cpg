@@ -1988,10 +1988,18 @@ fun PointsToState.push(
     // If we already have exactly that entry, no need to re-write it, otherwise we might confuse the
     // iterateEOG function
     val newLatticeCopy = newLatticeElement.duplicate()
-    newLatticeCopy.third.removeAll { pair ->
-        currentState.generalState[newNode]?.third?.any {
-            it.first === pair.first && it.second == pair.second
-        } == true
+    runBlocking {
+        newLatticeCopy.third.forEach { pair ->
+            launch {
+                if (
+                    currentState.generalState[newNode]?.third?.any {
+                        it.first === pair.first && it.second == pair.second
+                    } == true
+                ) {
+                    synchronized(newLatticeCopy.third) { newLatticeCopy.third.remove(pair) }
+                }
+            }
+        }
     }
 
     runBlocking {
