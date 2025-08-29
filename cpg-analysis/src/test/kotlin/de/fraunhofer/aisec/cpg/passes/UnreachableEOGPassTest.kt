@@ -220,44 +220,48 @@ class UnreachableEOGPassTest {
 
     @Test
     fun testReachabilityLattice() {
-        val lattice = ReachabilityLattice()
-        val bottom = lattice.bottom
-        assertEquals(Reachability.BOTTOM, bottom.reachability)
-        val unreachable = ReachabilityLattice.Element(Reachability.UNREACHABLE)
-        val reachable = ReachabilityLattice.Element(Reachability.REACHABLE)
-        val reachable2 = lattice.duplicate(reachable)
-        assertNotSame(reachable, reachable2)
-        assertEquals(reachable, reachable2)
-        assertEquals(setOf(bottom, unreachable, reachable), lattice.elements)
+        runBlocking {
+            val lattice = ReachabilityLattice()
+            val bottom = lattice.bottom
+            assertEquals(Reachability.BOTTOM, bottom.reachability)
+            val unreachable = ReachabilityLattice.Element(Reachability.UNREACHABLE)
+            val reachable = ReachabilityLattice.Element(Reachability.REACHABLE)
+            val reachable2 = lattice.duplicate(reachable)
+            assertNotSame(reachable, reachable2)
+            assertEquals(reachable, reachable2)
+            assertEquals(setOf(bottom, unreachable, reachable), lattice.elements)
 
-        assertEquals(bottom, lattice.glb(bottom, unreachable))
-        assertEquals(bottom, lattice.glb(bottom, reachable))
-        assertEquals(unreachable, lattice.glb(unreachable, reachable))
-        assertEquals(reachable, lattice.glb(reachable, reachable2))
-        assertEquals(bottom, lattice.glb(unreachable, bottom))
-        assertEquals(bottom, lattice.glb(reachable, bottom))
-        assertEquals(unreachable, lattice.glb(reachable, unreachable))
-        assertEquals(reachable, lattice.glb(reachable, reachable2))
+            assertEquals(bottom, lattice.glb(bottom, unreachable))
+            assertEquals(bottom, lattice.glb(bottom, reachable))
+            assertEquals(unreachable, lattice.glb(unreachable, reachable))
+            assertEquals(reachable, lattice.glb(reachable, reachable2))
+            assertEquals(bottom, lattice.glb(unreachable, bottom))
+            assertEquals(bottom, lattice.glb(reachable, bottom))
+            assertEquals(unreachable, lattice.glb(reachable, unreachable))
+            assertEquals(reachable, lattice.glb(reachable, reachable2))
 
-        assertEquals(unreachable, runBlocking { lattice.lub(bottom, unreachable) })
-        assertEquals(reachable, runBlocking { lattice.lub(bottom, reachable) })
-        assertEquals(reachable, runBlocking { lattice.lub(unreachable, reachable) })
-        assertEquals(reachable, runBlocking { lattice.lub(reachable, reachable2) })
-        assertEquals(unreachable, runBlocking { lattice.lub(unreachable, bottom) })
-        assertEquals(reachable, runBlocking { lattice.lub(reachable, bottom) })
-        assertEquals(reachable, runBlocking { lattice.lub(reachable, unreachable) })
-        assertEquals(reachable, runBlocking { lattice.lub(reachable, reachable2) })
+            assertEquals(unreachable, runBlocking { lattice.lub(bottom, unreachable) })
+            assertEquals(reachable, runBlocking { lattice.lub(bottom, reachable) })
+            assertEquals(reachable, runBlocking { lattice.lub(unreachable, reachable) })
+            assertEquals(reachable, runBlocking { lattice.lub(reachable, reachable2) })
+            assertEquals(unreachable, runBlocking { lattice.lub(unreachable, bottom) })
+            assertEquals(reachable, runBlocking { lattice.lub(reachable, bottom) })
+            assertEquals(reachable, runBlocking { lattice.lub(reachable, unreachable) })
+            assertEquals(reachable, runBlocking { lattice.lub(reachable, reachable2) })
 
-        assertEquals(Order.LESSER, lattice.compare(bottom, unreachable))
-        assertEquals(Order.LESSER, lattice.compare(bottom, reachable))
-        assertEquals(Order.LESSER, lattice.compare(unreachable, reachable))
-        assertEquals(Order.EQUAL, lattice.compare(bottom, bottom.duplicate()))
-        assertEquals(Order.EQUAL, lattice.compare(unreachable, unreachable.duplicate()))
-        assertEquals(Order.EQUAL, lattice.compare(reachable, reachable2))
-        assertEquals(Order.GREATER, lattice.compare(unreachable, bottom))
-        assertEquals(Order.GREATER, lattice.compare(reachable, bottom))
-        assertEquals(Order.GREATER, lattice.compare(reachable, unreachable))
+            assertEquals(Order.LESSER, lattice.compare(bottom, unreachable))
+            assertEquals(Order.LESSER, lattice.compare(bottom, reachable))
+            assertEquals(Order.LESSER, lattice.compare(unreachable, reachable))
+            assertEquals(Order.EQUAL, lattice.compare(bottom, bottom.duplicate()))
+            assertEquals(Order.EQUAL, lattice.compare(unreachable, unreachable.duplicate()))
+            assertEquals(Order.EQUAL, lattice.compare(reachable, reachable2))
+            assertEquals(Order.GREATER, lattice.compare(unreachable, bottom))
+            assertEquals(Order.GREATER, lattice.compare(reachable, bottom))
+            assertEquals(Order.GREATER, lattice.compare(reachable, unreachable))
 
-        assertThrows<IllegalArgumentException> { bottom.compare(PowersetLattice.Element<String>()) }
+            assertThrows<IllegalArgumentException> {
+                bottom.compare(PowersetLattice.Element<String>())
+            }
+        }
     }
 }

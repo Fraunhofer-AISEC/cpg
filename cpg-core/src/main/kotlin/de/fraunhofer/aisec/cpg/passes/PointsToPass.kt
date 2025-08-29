@@ -157,7 +157,7 @@ class PointsToState(
                 TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>
         ) : this(tupleState.first, tupleState.second)
 
-        override fun compare(other: Lattice.Element): Order {
+        override suspend fun compare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
             if (other !is Element)

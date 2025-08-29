@@ -41,6 +41,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Order
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -260,16 +261,10 @@ enum class Reachability {
 class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
     class Element(var reachability: Reachability) : Lattice.Element {
         override fun equals(other: Any?): Boolean {
-            return other is Element && this.compare(other) == Order.EQUAL
+            return other is Element && runBlocking { this@Element.compare(other) == Order.EQUAL }
         }
 
-        override fun compare(other: Lattice.Element): Order {
-            //            val ret: Order
-            //            runBlocking { ret = innerCompare(other) }
-            //            return ret
-            //        }
-            //
-            //        override suspend fun innerCompare(other: Lattice.Element): Order {
+        override suspend fun compare(other: Lattice.Element): Order {
             return when {
                 other !is Element ->
                     throw IllegalArgumentException(
@@ -309,7 +304,7 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
     ): Element {
         return if (allowModify) {
             val ret: Order
-            runBlocking { ret = compare(one, two) }
+            coroutineScope { ret = compare(one, two) }
             when (ret) {
                 Order.EQUAL -> one
                 Order.GREATER -> one
@@ -329,7 +324,7 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
         return Element(minOf(one.reachability, two.reachability))
     }
 
-    override fun compare(one: Element, two: Element): Order {
+    override suspend fun compare(one: Element, two: Element): Order {
         return one.compare(two)
     }
 
