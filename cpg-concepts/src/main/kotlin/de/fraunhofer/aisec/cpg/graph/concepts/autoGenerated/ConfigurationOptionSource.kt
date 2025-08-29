@@ -6,6 +6,11 @@ import java.time.ZonedDateTime
 import kotlin.String
 import kotlin.collections.MutableMap
 
+/**
+ * Represents a possible option source for a configuration option. For example, when loading an INI
+ * file with our INI file frontend, each key-value pair is presented as a [FieldDeclaration]. This
+ * field declaration would be the source to the configuration option.
+ */
 public abstract class ConfigurationOptionSource(
   dataLocation: DataLocation,
   creation_time: ZonedDateTime,

@@ -10,6 +10,10 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
+/**
+ * This class represents a database service that identifies itself as \"multi-model\", e.g., offers
+ * document storage as well as relational features.
+ */
 public abstract class MultiModalDatabaseService(
   anomalyDetections: AnomalyDetection,
   httpEndpoint: HttpEndpoint,

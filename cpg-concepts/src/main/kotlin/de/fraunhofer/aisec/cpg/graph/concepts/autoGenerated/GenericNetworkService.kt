@@ -10,6 +10,9 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
+/**
+ * A generic network service.
+ */
 public abstract class GenericNetworkService(
   ips: Array<String>,
   ports: Array<Short>,

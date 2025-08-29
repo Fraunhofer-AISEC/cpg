@@ -9,6 +9,9 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
+/**
+ * A generic LogOutput.
+ */
 public abstract class LogOutput(
   public val call: String,
   public val `value`: String,

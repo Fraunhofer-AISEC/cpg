@@ -8,6 +8,10 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
+/**
+ * Base class for operations that involve protected assets. These operations can include checks for
+ * access permissions, modifications, or any other actions that require validation against a policy.
+ */
 public abstract class ProtectedAssetOperation(
   public val linkedConcept: ProtectedAsset,
   concept: Concept,

@@ -8,6 +8,9 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
+/**
+ * Base class for operations on an [HttpClient].
+ */
 public abstract class HttpClientOperation(
   public val linkedConcept: HttpClient,
   concept: Concept,

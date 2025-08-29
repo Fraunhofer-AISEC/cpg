@@ -8,6 +8,10 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
+/**
+ * Represents an operation that loads a symbol during runtime. A common example would be a call
+ * to`dlsym` in C/C++.
+ */
 public abstract class LoadSymbol(
   operatingSystemArchitecture: OperatingSystemArchitecture,
   linkedConcept: Memory,

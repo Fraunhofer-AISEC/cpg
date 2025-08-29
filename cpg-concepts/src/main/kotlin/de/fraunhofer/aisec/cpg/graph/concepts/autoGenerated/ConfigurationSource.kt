@@ -7,6 +7,11 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
+/**
+ * Represents a possible source for a configuration. For example, when loading an INI file with our
+ * INI file frontend, the whole file would be represented as a [TranslationUnitDeclaration]. This
+ * translation unit declaration would be the source of the configuration.
+ */
 public abstract class ConfigurationSource(
   public val configurationGroupSources: MutableList<ConfigurationGroupSource>,
   dataLocation: DataLocation,

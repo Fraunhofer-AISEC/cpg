@@ -7,6 +7,9 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
+/**
+ * Represents an authorization operation based on JWT tokens.
+ */
 public abstract class AuthorizeJwt(
   linkedConcept: Authenticity,
   concept: Concept,

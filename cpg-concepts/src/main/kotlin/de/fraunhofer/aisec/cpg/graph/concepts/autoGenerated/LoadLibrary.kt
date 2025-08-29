@@ -9,6 +9,10 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.collections.MutableList
 
+/**
+ * Represents an operation that loads a shared library during runtime. A common example would be a
+ * call to `dlopen` in C/C++.
+ */
 public abstract class LoadLibrary(
   public val entryPoints: MutableList<EntryPoint>,
   operatingSystemArchitecture: OperatingSystemArchitecture,

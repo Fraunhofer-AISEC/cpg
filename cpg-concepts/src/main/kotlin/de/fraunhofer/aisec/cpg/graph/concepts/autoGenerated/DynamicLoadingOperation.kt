@@ -8,6 +8,9 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
+/**
+ * Represents an operation used by the [DynamicLoading] concept.
+ */
 public abstract class DynamicLoadingOperation(
   public val operatingSystemArchitecture: OperatingSystemArchitecture,
   linkedConcept: Memory,

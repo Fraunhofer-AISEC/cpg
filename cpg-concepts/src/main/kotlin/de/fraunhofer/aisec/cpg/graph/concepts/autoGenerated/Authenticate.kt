@@ -7,6 +7,9 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
+/**
+ * Represents an authentication operation.
+ */
 public abstract class Authenticate(
   public val credential: Credential,
   linkedConcept: Authenticity,

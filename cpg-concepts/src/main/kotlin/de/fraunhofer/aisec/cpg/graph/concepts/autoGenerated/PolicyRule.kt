@@ -6,6 +6,10 @@ import java.time.ZonedDateTime
 import kotlin.String
 import kotlin.collections.MutableMap
 
+/**
+ * Represents a rule that is part of a policy. This can be used to define conditions that must be
+ * met for the policy to be enforced.
+ */
 public abstract class PolicyRule(
   dataLocation: DataLocation,
   creation_time: ZonedDateTime,

@@ -7,6 +7,9 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
+/**
+ * DataLocation: Describes the location as local or remote location
+ */
 public abstract class Document(
   public val filetype: String,
   public val documentChecksums: MutableList<DocumentChecksum>,

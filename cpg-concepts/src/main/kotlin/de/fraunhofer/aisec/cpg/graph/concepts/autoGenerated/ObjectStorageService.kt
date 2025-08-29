@@ -10,6 +10,11 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
+/**
+ * An object storage service represents the network service that is used to access a list of object
+ * storage containers. The storage itself is modelled as a ObjectStorage. The service has an http
+ * endpoint.
+ */
 public abstract class ObjectStorageService(
   public val httpEndpoint: HttpEndpoint,
   activityLogging: ActivityLogging,

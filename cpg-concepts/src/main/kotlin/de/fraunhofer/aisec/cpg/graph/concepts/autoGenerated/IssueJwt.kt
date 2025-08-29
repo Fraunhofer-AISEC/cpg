@@ -7,6 +7,9 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
+/**
+ * Represents an operation to issue a new JWT token.
+ */
 public abstract class IssueJwt(
   linkedConcept: Authenticity,
   concept: Concept,

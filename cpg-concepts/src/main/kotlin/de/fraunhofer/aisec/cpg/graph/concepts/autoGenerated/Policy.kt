@@ -7,6 +7,10 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
+/**
+ * Represents a policy that can be applied to a resource or a set of resources. Policies can contain
+ * rules and operations that define how access to the resource is controlled.
+ */
 public abstract class Policy(
   public val context: Context,
   public val policyRules: MutableList<PolicyRule>,

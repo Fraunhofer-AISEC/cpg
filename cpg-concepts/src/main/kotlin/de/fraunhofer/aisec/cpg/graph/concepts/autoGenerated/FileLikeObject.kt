@@ -6,6 +6,10 @@ import java.time.ZonedDateTime
 import kotlin.String
 import kotlin.collections.MutableMap
 
+/**
+ * This is the base class for all file-like objects. It provides the common properties and methods
+ * that are shared by all file-like objects.
+ */
 public abstract class FileLikeObject(
   dataLocation: DataLocation,
   creation_time: ZonedDateTime,

@@ -8,6 +8,9 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
+/**
+ * usedByMultiple: In which resources the credential is being used
+ */
 public abstract class Credential(
   public val enabled: Boolean,
   public val expirationDate: ZonedDateTime,

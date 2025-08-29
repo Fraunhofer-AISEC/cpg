@@ -7,6 +7,10 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
+/**
+ * Represents a memory de-allocation operation. This can be done using `free` in C or `delete` in
+ * C++ or by calling a destructor in managed languages.
+ */
 public abstract class DeAllocate(
   linkedConcept: Memory,
   concept: Concept,

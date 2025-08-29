@@ -8,6 +8,9 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
+/**
+ * A log write operation e.g. `loggint.warn(\"...\")`.
+ */
 public abstract class LogWrite(
   public val logLevel: String,
   linkedConcept: Logging,

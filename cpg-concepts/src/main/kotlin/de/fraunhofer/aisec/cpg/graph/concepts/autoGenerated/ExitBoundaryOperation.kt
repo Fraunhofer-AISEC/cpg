@@ -8,6 +8,10 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
+/**
+ * Represents an exit operation that is part of a [Boundary]. This operation is used to define the
+ * point at which data leaves the boundary.
+ */
 public abstract class ExitBoundaryOperation(
   public val linkedConcept: Boundary,
   concept: Concept,

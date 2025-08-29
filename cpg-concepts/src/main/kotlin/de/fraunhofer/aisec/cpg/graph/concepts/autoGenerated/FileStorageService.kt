@@ -10,6 +10,10 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
+/**
+ * An file storage service represents the network service that is used to access a list of file
+ * storage shares. The storage itself is modelled as a FileStorage. The service has an http endpoint.
+ */
 public abstract class FileStorageService(
   public val httpEndpoint: HttpEndpoint,
   activityLogging: ActivityLogging,

@@ -6,6 +6,11 @@ import java.time.ZonedDateTime
 import kotlin.String
 import kotlin.collections.MutableMap
 
+/**
+ * Represents a possible group source for a configuration group. For example, when loading an INI
+ * file with our INI file frontend, each section is presented as a [RecordDeclaration]. This record
+ * declaration would be the source of the configuration group.
+ */
 public abstract class ConfigurationGroupSource(
   dataLocation: DataLocation,
   creation_time: ZonedDateTime,

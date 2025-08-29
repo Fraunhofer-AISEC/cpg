@@ -6,6 +6,10 @@ import java.time.ZonedDateTime
 import kotlin.String
 import kotlin.collections.MutableMap
 
+/**
+ * Represents a rule that combines two other rules using a logical AND operation. This means that
+ * both rules must be satisfied for the combined rule to be satisfied.
+ */
 public abstract class AndRule(
   dataLocation: DataLocation,
   creation_time: ZonedDateTime,

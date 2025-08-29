@@ -7,6 +7,10 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
+/**
+ * Represents an operation to provide a [ConfigurationOption]. It connects a
+ * [ConfigurationOptionSource] with a [ConfigurationOption].
+ */
 public abstract class ProvideConfigurationOption(
   public val configurationOption: ConfigurationOption,
   public val configurationOptionSource: ConfigurationOptionSource,

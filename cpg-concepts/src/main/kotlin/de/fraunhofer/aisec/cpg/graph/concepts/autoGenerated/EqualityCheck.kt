@@ -7,6 +7,9 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
+/**
+ * Represents an operation that checks whether two principals are equal.
+ */
 public abstract class EqualityCheck(
   public val leftPrincipal: Principal,
   public val rightPrincipal: Principal,

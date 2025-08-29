@@ -10,6 +10,10 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
+/**
+ * A logging-as-a-service offering, e.g. for analyzing logs; has a Storage resource that stores the
+ * logs
+ */
 public abstract class LoggingService(
   public val storage: MutableList<Storage>,
   ips: Array<String>,

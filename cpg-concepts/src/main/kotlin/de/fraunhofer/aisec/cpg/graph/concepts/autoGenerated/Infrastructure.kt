@@ -8,6 +8,10 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
+/**
+ * internetAccessibleEndpoint: Is true if the management API endpoint is reachable from everywhere.
+ * Access controls can still apply.
+ */
 public abstract class Infrastructure(
   public val internetAccessibleEndpoint: Boolean,
   public val geoLocation: GeoLocation,

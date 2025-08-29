@@ -6,6 +6,10 @@ import java.time.ZonedDateTime
 import kotlin.String
 import kotlin.collections.MutableMap
 
+/**
+ * A generic concept to describe memory operations with a program. This includes allocation and
+ * de-allocation of memory as well as copying memory regions.
+ */
 public abstract class Memory(
   public val mode: String,
   creation_time: ZonedDateTime,

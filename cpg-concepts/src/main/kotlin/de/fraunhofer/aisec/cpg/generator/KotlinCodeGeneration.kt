@@ -191,6 +191,11 @@ private fun createKtSourceCodeString(
                 .addModifiers(KModifier.ABSTRACT)
     }
 
+    // Add docstring in front of constructor if structDescription is available
+    if (!ktSource.structDescription.isNullOrBlank()) {
+        classBuilder.addKdoc("%L\n", ktSource.structDescription!!)
+    }
+
     // Create a constructor builder for adding parameters.
     val constructorBuilder = FunSpec.constructorBuilder()
 

@@ -4,6 +4,9 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.time.Duration
 import kotlin.Boolean
 
+/**
+ * RetentionPeriod in hours
+ */
 public abstract class Backup(
   public val enabled: Boolean,
   public val interval: Duration,

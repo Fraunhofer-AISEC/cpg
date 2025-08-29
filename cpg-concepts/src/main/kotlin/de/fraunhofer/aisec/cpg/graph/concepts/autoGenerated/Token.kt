@@ -6,6 +6,9 @@ import java.time.ZonedDateTime
 import kotlin.String
 import kotlin.collections.MutableMap
 
+/**
+ * A Token used for TokenBasedAuthentication.
+ */
 public abstract class Token(
   dataLocation: DataLocation,
   creation_time: ZonedDateTime,

@@ -7,6 +7,9 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
+/**
+ * Represents an agnostic architecture, which is not tied to a specific operating system.
+ */
 public abstract class Agnostic(
   codeModules: MutableList<CodeModule>,
   codeRepository: CodeRepository,

@@ -8,6 +8,9 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
+/**
+ * This represents the cloud account as a whole, e.g., an Azure subscription.
+ */
 public abstract class Account(
   internetAccessibleEndpoint: Boolean,
   geoLocation: GeoLocation,

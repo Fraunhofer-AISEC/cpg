@@ -7,6 +7,9 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
+/**
+ * A log get operation e.g. `logging.getLogger(\"...\")`.
+ */
 public abstract class LogGet(
   linkedConcept: Logging,
   concept: Concept,

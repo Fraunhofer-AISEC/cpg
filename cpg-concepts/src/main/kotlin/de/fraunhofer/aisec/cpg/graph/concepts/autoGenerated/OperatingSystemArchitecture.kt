@@ -7,6 +7,9 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
+/**
+ * Represents an architecture of an operating system.
+ */
 public abstract class OperatingSystemArchitecture(
   codeModules: MutableList<CodeModule>,
   codeRepository: CodeRepository,

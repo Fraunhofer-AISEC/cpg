@@ -7,6 +7,9 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
+/**
+ * Represents an operation that checks whether a user or principal has access to a protected
+ */
 public abstract class CheckAccess(
   linkedConcept: ProtectedAsset,
   concept: Concept,

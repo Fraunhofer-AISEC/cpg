@@ -4,6 +4,10 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.time.Duration
 import kotlin.Boolean
 
+/**
+ * This feature is, e.g., available on some VM services to automatically update their software. It
+ * ensures that a resource is protected from tampering with its state.
+ */
 public abstract class AutomaticUpdates(
   public val enabled: Boolean,
   public val interval: Duration,

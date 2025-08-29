@@ -7,6 +7,9 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
+/**
+ * Represents an operation to check the validity of a JWT token.
+ */
 public abstract class ValidateJwt(
   linkedConcept: Authenticity,
   concept: Concept,

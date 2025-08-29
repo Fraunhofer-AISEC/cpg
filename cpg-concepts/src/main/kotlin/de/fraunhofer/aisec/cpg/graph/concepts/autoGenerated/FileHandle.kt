@@ -6,6 +6,9 @@ import java.time.ZonedDateTime
 import kotlin.String
 import kotlin.collections.MutableMap
 
+/**
+ * This class represents a file handle.
+ */
 public abstract class FileHandle(
   dataLocation: DataLocation,
   creation_time: ZonedDateTime,

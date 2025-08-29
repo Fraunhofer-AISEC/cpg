@@ -8,6 +8,9 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
+/**
+ * Abstract base class for all authentication operations.
+ */
 public abstract class AuthenticationOperation(
   public val linkedConcept: Authenticity,
   concept: Concept,

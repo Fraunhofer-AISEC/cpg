@@ -6,6 +6,10 @@ import kotlin.Float
 import kotlin.String
 import kotlin.collections.MutableList
 
+/**
+ * enabled means the resource _can_ be reached via https, while enforced means it _can only_ be
+ * reached via https (or http traffic is redirected)
+ */
 public abstract class TransportEncryption(
   public val enabled: Boolean,
   public val enforced: Boolean,

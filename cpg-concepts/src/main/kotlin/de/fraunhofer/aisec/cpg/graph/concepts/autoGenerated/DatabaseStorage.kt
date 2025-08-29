@@ -8,6 +8,9 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
+/**
+ * describes the actual database or a table in a database
+ */
 public abstract class DatabaseStorage(
   activityLogging: ActivityLogging,
   atRestEncryption: Boolean,

@@ -8,6 +8,10 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
+/**
+ * Represents an operation that is part of a policy. This can be used to define rules or checks that
+ * need to be performed to enforce the policy.
+ */
 public abstract class PolicyOperation(
   public val linkedConcept: Policy,
   concept: Concept,

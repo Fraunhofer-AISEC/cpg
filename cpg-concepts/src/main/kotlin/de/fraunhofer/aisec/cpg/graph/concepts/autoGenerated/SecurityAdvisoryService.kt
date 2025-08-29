@@ -10,6 +10,11 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
+/**
+ * This service discloses security advisories, e.g. according to the CSAF standard. It has one or
+ * more feeds that contain the actual advisories as well as multiple (public) keys that are used to
+ * sign the advisory documents.
+ */
 public abstract class SecurityAdvisoryService(
   public val securityAdvisoryFeeds: MutableList<SecurityAdvisoryFeed>,
   public val selectorKeies: MutableList<SelectorKey>,

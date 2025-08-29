@@ -8,6 +8,9 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
+/**
+ * A common abstract class for configuration operations, such as reading options or a whole file.
+ */
 public abstract class ConfigurationOperation(
   public val linkedConcept: Configuration,
   concept: Concept,

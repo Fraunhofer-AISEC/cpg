@@ -7,6 +7,10 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
+/**
+ * Represents an operation to read a specific configuration option. Often this is done with a member
+ * access such as `group.option` or a subscript operation such as `group[\"option\"]`.
+ */
 public abstract class ReadConfigurationOption(
   public val configurationOption: ConfigurationOption,
   linkedConcept: Configuration,

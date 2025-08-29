@@ -7,6 +7,9 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
+/**
+ * Represents an operation to load a configuration from a source, such as a file.
+ */
 public abstract class LoadConfiguration(
   linkedConcept: Configuration,
   concept: Concept,

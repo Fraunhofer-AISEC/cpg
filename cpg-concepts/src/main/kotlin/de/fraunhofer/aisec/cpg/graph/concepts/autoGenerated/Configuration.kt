@@ -7,6 +7,15 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
+/**
+ * Represents the abstract concept of a \"configuration\". This is a common pattern in many
+ * programming languages, where a data structure in code represents an aggregation of configuration
+ * values. For example, in Python, the
+ * [`configparser`](https://docs.python.org/3/library/configparser.html) module is used to read INI
+ * files, and the config values are represented as a dictionary-like object. Often, the configuration
+ * is loaded from multiple sources, such as INI files, environment variables, and command-line
+ * arguments.
+ */
 public abstract class Configuration(
   public val configurationGroups: MutableList<ConfigurationGroup>,
   dataLocation: DataLocation,

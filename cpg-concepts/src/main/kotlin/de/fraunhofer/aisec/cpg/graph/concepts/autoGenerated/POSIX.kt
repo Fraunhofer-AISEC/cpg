@@ -7,6 +7,9 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
+/**
+ * Represents a POSIX architecture, commonly found on Linux systems.
+ */
 public abstract class POSIX(
   codeModules: MutableList<CodeModule>,
   codeRepository: CodeRepository,

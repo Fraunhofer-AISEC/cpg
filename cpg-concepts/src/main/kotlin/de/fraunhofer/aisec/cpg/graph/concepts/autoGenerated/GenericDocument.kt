@@ -7,6 +7,9 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
+/**
+ * This is a placeholder for all other documents, e.g. index.txt
+ */
 public abstract class GenericDocument(
   filetype: String,
   documentChecksums: MutableList<DocumentChecksum>,

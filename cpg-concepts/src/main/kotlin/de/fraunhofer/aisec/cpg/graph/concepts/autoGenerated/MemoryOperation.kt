@@ -8,6 +8,9 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
+/**
+ * A common abstract class for memory operations.
+ */
 public abstract class MemoryOperation(
   public val linkedConcept: Memory,
   concept: Concept,

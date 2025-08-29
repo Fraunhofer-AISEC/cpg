@@ -8,6 +8,9 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
+/**
+ * Base class for operations on an [HttpEndpoint].
+ */
 public abstract class HttpEndpointOperation(
   concept: Concept,
   underlyingNode: Node,

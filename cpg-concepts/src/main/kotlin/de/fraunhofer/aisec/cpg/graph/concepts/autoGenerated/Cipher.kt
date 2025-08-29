@@ -5,6 +5,9 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.Int
 import kotlin.String
 
+/**
+ * Represents a cipher suite. E.g. `AES-XTS-plain64`.
+ */
 public abstract class Cipher(
   public val blockSize: Int,
   public val keySize: Int,

@@ -6,6 +6,10 @@ import java.time.ZonedDateTime
 import kotlin.String
 import kotlin.collections.MutableMap
 
+/**
+ * Represents a configuration option within one [group]. Usually there is one option for each entry
+ * in a configuration data structure.
+ */
 public abstract class ConfigurationOption(
   public val configurationGroup: ConfigurationGroup,
   public val selectorKey: SelectorKey,

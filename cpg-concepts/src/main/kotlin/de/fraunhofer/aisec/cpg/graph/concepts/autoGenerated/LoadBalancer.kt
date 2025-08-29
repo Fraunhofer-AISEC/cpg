@@ -10,6 +10,9 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
+/**
+ * A Load Balancer may have multiple access restriction features, e.g. a L3 firewall and a WAF
+ */
 public abstract class LoadBalancer(
   public val url: String,
   public val accessRestriction: Boolean,

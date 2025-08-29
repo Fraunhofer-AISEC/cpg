@@ -10,6 +10,11 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
+/**
+ * This entity represents a network-based service that can be used to access a particular storage
+ * backend. It has multiple subclasses, e.g., for databases or object stores. It has a list of storage
+ * resources associated to it.
+ */
 public abstract class StorageService(
   public val activityLogging: ActivityLogging,
   public val storage: MutableList<Storage>,

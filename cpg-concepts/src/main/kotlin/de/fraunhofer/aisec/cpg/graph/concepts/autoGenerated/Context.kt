@@ -6,6 +6,10 @@ import java.time.ZonedDateTime
 import kotlin.String
 import kotlin.collections.MutableMap
 
+/**
+ * Represents a context in which a policy is applied. Typically, a context contains information
+ * about a user or some other form of identity (e.g. a [Principal]).
+ */
 public abstract class Context(
   dataLocation: DataLocation,
   creation_time: ZonedDateTime,

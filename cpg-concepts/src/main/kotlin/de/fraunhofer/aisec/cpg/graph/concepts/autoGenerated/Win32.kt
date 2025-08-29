@@ -7,6 +7,9 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
+/**
+ * Represents a Win32 architecture, commonly found on Windows systems.
+ */
 public abstract class Win32(
   codeModules: MutableList<CodeModule>,
   codeRepository: CodeRepository,

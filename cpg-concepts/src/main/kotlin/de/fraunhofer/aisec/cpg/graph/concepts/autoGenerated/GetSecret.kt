@@ -7,6 +7,10 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
+/**
+ * An operation that retrieves a secret from a (remote) location. This can be a local keystore, a
+ * remote key server or a hardware device such as a TPM or HSM.
+ */
 public abstract class GetSecret(
   linkedConcept: Secret,
   concept: Concept,

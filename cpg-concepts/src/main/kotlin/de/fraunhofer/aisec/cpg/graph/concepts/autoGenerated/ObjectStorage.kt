@@ -8,6 +8,9 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
+/**
+ * publicAccess: Means if access to the actual object is public or not
+ */
 public abstract class ObjectStorage(
   public val publicAccess: Boolean,
   activityLogging: ActivityLogging,
