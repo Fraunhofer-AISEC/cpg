@@ -33,8 +33,9 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
-/** A declaration of a function or nontype template parameter. */
+/** A declaration of a function or non-type template parameter. */
 class ParameterDeclaration : ValueDeclaration(), HasDefault<Expression?>, ArgumentHolder {
+
     var isVariadic = false
 
     @Relationship(value = "DEFAULT", direction = Relationship.Direction.OUTGOING)

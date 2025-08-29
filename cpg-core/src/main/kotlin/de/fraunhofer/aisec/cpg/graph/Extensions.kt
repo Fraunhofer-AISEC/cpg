@@ -40,9 +40,15 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
+import java.util.Objects
 import kotlin.collections.filter
 import kotlin.collections.firstOrNull
 import kotlin.math.absoluteValue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 /**
  * Flattens the AST beginning with this node and returns all nodes of type [T]. For convenience, an
@@ -466,6 +472,16 @@ class Context(
         return this
     }
 
+    override fun equals(other: Any?): Boolean {
+        return other is Context &&
+            this.indexStack == other.indexStack &&
+            this.callStack == other.callStack
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hash(super.hashCode(), indexStack, callStack)
+    }
+
     companion object {
         /**
          * Creates a new [Context] with an empty index stack and call stack given by the
@@ -538,6 +554,30 @@ class SimpleStack<T> {
 
     operator fun contains(elem: T): Boolean {
         return deque.contains(elem)
+    }
+
+    /** Hack: Check if the items in the deque repeat themselves */
+    fun isLoop(): Boolean {
+        if (this.deque.isEmpty()) return false
+        val first = this.deque.removeFirst()
+        var current: T? = null
+        val pattern = mutableListOf(first)
+        var containsLoop = true
+
+        // Pop elements until we determine the pattern
+        while (current != first) {
+            if (this.deque.isEmpty()) return false
+            if (this.deque.first() == first) break
+            // We have a small loop over a single element
+            if (current != first) current = this.deque.removeFirst()
+            pattern.add(current)
+        }
+        // Now let's check if the pattern happens again
+        pattern.forEach {
+            if (this.deque.isEmpty()) return false
+            if (it != this.deque.removeFirst()) containsLoop = false
+        }
+        return containsLoop
     }
 }
 
@@ -851,6 +891,7 @@ fun Node.followPrevCDGUntilHit(
  * Hence, if "fulfilled" is a non-empty list, a path from [this] to such a node is **possible but
  * not mandatory**. If the list "failed" is empty, the path is mandatory.
  */
+// @OptIn(ExperimentalCoroutinesApi::class)
 fun Node.followXUntilHit(
     x:
         (Node, Context, List<Pair<Node, Context>>, MutableList<NodePath>) -> Collection<
@@ -858,6 +899,7 @@ fun Node.followXUntilHit(
             >,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    continueAfterHit: Boolean = false,
     ctx: Context = Context(steps = 0),
     earlyTermination: (Node, Context) -> Boolean,
     predicate: (Node) -> Boolean,
@@ -875,66 +917,126 @@ fun Node.followXUntilHit(
     val alreadySeenNodes = mutableSetOf<Pair<Node, Context>>()
     // First check if the current node satisfies the predicate.
     // If it does, we consider this path fulfilled and skip further traversal.
+
+    // Concurrency stuff
+    val parentJob = Job()
+    val scope = CoroutineScope(Dispatchers.Default + parentJob)
+
     if (predicate(this)) {
         fulfilledPaths.add(NodePath(mutableListOf(this)).addAssumptionDependence(this))
         return FulfilledAndFailedPaths(fulfilledPaths.toSet().toList(), failedPaths)
     }
-    while (worklist.isNotEmpty()) {
-        val currentPath = worklist.maxBy { it.size }
-        worklist.remove(currentPath)
-        val currentNode = currentPath.last().first
-        val currentContext = currentPath.last().second
-        alreadySeenNodes.add(currentNode to currentContext)
-        val currentPathNodes = currentPath.map { it.first }
-        // The last node of the path is where we continue. We get all of its outgoing CDG edges and
-        // follow them
-        val nextNodes = x(currentNode, currentContext, currentPath, loopingPaths)
 
-        // No further nodes in the path and the path criteria are not satisfied.
-        if (nextNodes.isEmpty() && collectFailedPaths) {
-            // TODO: How to determine if this path is really at the end or if it exceeded the number
-            // of steps?
-            failedPaths.add(
-                FailureReason.PATH_ENDED to
-                    NodePath(currentPath.map { it.first })
-                        .addAssumptionDependence(currentPath.map { it.second }.toList())
-            )
-        }
+    runBlocking {
+        // As long as the worklist is not empty or there might be new entries incoming, keep running
+        while (
+            // Synchronize both checks to avoid a thread adding something to the worklist and
+            // stopping in between the two checks
+            synchronized(worklist) {
+                worklist.isNotEmpty() || parentJob.children.any { it.isActive }
+            }
+        ) {
+            scope.launch {
+                val currentPath: List<Pair<Node, Context>>
+                synchronized(worklist) {
+                    if (worklist.isEmpty()) return@launch
+                    currentPath = worklist.first()
+                    worklist.remove(currentPath)
+                }
+                val currentNode = currentPath.last().first
+                val currentContext = currentPath.last().second
+                synchronized(alreadySeenNodes) {
+                    alreadySeenNodes.add(currentNode to currentContext)
+                }
+                val currentPathNodes = currentPath.map { it.first }
+                // The last node of the path is where we continue. We get all of its outgoing CDG
+                // edges and follow them
+                val nextNodes =
+                    synchronized(loopingPaths) {
+                        x(currentNode, currentContext, currentPath, loopingPaths)
+                    }
 
-        for ((next, newContext) in nextNodes) {
-            // Copy the path for each outgoing edge and add the next node
-            if (predicate(next)) {
-                // We ended up in the node fulfilling "predicate", so we're done for this path. Add
-                // the path to the results.
-                fulfilledPaths.add(
-                    NodePath(currentPathNodes.toMutableList() + next)
-                        .addAssumptionDependence(currentPath.map { it.second } + newContext)
-                )
-                continue // Don't add this path anymore. The requirement is satisfied.
-            }
-            if (earlyTermination(next, currentContext)) {
-                failedPaths.add(
-                    FailureReason.HIT_EARLY_TERMINATION to
-                        NodePath(currentPath.map { it.first } + next)
-                            .addAssumptionDependence(currentPath.map { it.second } + newContext)
-                )
-                continue // Don't add this path anymore. We already failed.
-            }
-            // The next node is new in the current path (i.e., there's no loop), so we add the path
-            // with the next step to the worklist.
-            if (
-                !isNodeWithCallStackInPath(next, newContext, currentPath) &&
-                    (findAllPossiblePaths ||
-                        (!isNodeWithCallStackInPath(next, newContext, alreadySeenNodes) &&
-                            worklist.none { isNodeWithCallStackInPath(next, newContext, it) }))
-            ) {
-                worklist.add(currentPath.toMutableList() + (next to newContext.inc()))
-            } else {
-                // There's a loop.
-                loopingPaths.add(
-                    NodePath(currentPathNodes + next)
-                        .addAssumptionDependence(currentPath.map { it.second } + newContext)
-                )
+                // No further nodes in the path and the path criteria are not satisfied.
+                if (nextNodes.isEmpty() && collectFailedPaths) {
+                    // TODO: How to determine if this path is really at the end or if it exceeded
+                    // the number of steps?
+                    synchronized(failedPaths) {
+                        failedPaths.add(
+                            FailureReason.PATH_ENDED to
+                                NodePath(currentPath.map { it.first })
+                                    .addAssumptionDependence(currentPath.map { it.second }.toList())
+                        )
+                    }
+                }
+
+                for ((next, newContext) in nextNodes) {
+                    // Copy the path for each outgoing edge and add the next node
+                    if (predicate(next)) {
+                        // We ended up in the node fulfilling "predicate", so we're done for this
+                        // path.
+                        // Add the path to the results.
+                        synchronized(fulfilledPaths) {
+                            fulfilledPaths.add(
+                                NodePath(currentPathNodes.toMutableList() + next)
+                                    .addAssumptionDependence(
+                                        currentPath.map { it.second } + newContext
+                                    )
+                            )
+                        }
+                        continue // Don't add this path anymore. The requirement is satisfied.
+                    }
+                    if (earlyTermination(next, currentContext)) {
+                        synchronized(failedPaths) {
+                            failedPaths.add(
+                                FailureReason.HIT_EARLY_TERMINATION to
+                                    NodePath(currentPath.map { it.first } + next)
+                                        .addAssumptionDependence(
+                                            currentPath.map { it.second } + newContext
+                                        )
+                            )
+                        }
+                        continue // Don't add this path anymore. We already failed.
+                    }
+                    // The next node is new in the current path (i.e., there's no loop), so we add
+                    // the path with the next step to the worklist.
+                    val isInAlreadySeenNodesStackPath =
+                        synchronized(alreadySeenNodes) {
+                            isNodeWithCallStackInPath(next, newContext, alreadySeenNodes)
+                        }
+                    synchronized(worklist) {
+                        if (
+                            !isNodeWithCallStackInPath(next, newContext, currentPath) &&
+                                // A hack that tries to ensure that we are not running in circles:
+                                // Watch out if the top of the newContext and the currentPath
+                                // callStack
+                                // are the same and not null, this could indicate a loop
+                                // However, if the newContext and the currentPath last's callStack
+                                // are the same, it should be fine I guess
+                                !newContext.callStack.clone().isLoop() &&
+                                (newContext.callStack.top !=
+                                    currentPath.last().second.callStack.top ||
+                                    newContext.callStack.top == null ||
+                                    newContext.callStack == currentPath.last().second.callStack) &&
+                                (findAllPossiblePaths ||
+                                    (!isInAlreadySeenNodesStackPath &&
+                                        worklist.none {
+                                            isNodeWithCallStackInPath(next, newContext, it)
+                                        }))
+                        ) {
+                            worklist.add(currentPath.toMutableList() + (next to newContext.inc()))
+                        } else {
+                            // There's a loop.
+                            synchronized(loopingPaths) {
+                                loopingPaths.add(
+                                    NodePath(currentPathNodes + next)
+                                        .addAssumptionDependence(
+                                            currentPath.map { it.second } + newContext
+                                        )
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -1454,9 +1556,8 @@ private fun Node.eogDistanceTo(to: Node): Int {
 fun Expression?.unwrapReference(): Reference? {
     return when {
         this is Reference -> this
-        this is UnaryOperator && (this.operatorCode == "*" || this.operatorCode == "&") ->
-            this.input.unwrapReference()
-
+        this is PointerReference -> this
+        this is PointerDereference -> this
         this is CastExpression -> this.expression.unwrapReference()
         else -> null
     }
