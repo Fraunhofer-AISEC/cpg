@@ -7,9 +7,9 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class CertificateBasedAuthentication(
-  public val enabled: Boolean,
-  contextIsChecked: Boolean,
-  underlyingNode: Node,
+  public val enabled: Boolean?,
+  contextIsChecked: Boolean?,
+  underlyingNode: Node?,
 ) : Authenticity(contextIsChecked, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is CertificateBasedAuthentication &&
               super.equals(other) &&

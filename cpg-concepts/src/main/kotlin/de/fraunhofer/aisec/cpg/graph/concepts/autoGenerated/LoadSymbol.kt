@@ -13,10 +13,10 @@ import kotlin.Int
  * to`dlsym` in C/C++.
  */
 public abstract class LoadSymbol(
-  operatingSystemArchitecture: OperatingSystemArchitecture,
-  linkedConcept: Memory,
-  concept: Concept,
-  underlyingNode: Node,
+  operatingSystemArchitecture: OperatingSystemArchitecture?,
+  linkedConcept: Memory?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : DynamicLoadingOperation(operatingSystemArchitecture, linkedConcept, concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is LoadSymbol &&
               super.equals(other)

@@ -7,7 +7,7 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class CertificationTarget(
-  underlyingNode: Node,
+  underlyingNode: Node?,
 ) : Core(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is CertificationTarget &&
               super.equals(other)

@@ -10,9 +10,9 @@ import kotlin.Int
  * Scope contains the resource ID of the protected resource.
  */
 public abstract class AnomalyDetection(
-  public val enabled: Boolean,
-  public val applicationLogging: ApplicationLogging,
-  underlyingNode: Node,
+  public val enabled: Boolean?,
+  public val applicationLogging: ApplicationLogging?,
+  underlyingNode: Node?,
 ) : Auditing(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is AnomalyDetection &&
               super.equals(other) &&

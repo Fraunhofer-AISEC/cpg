@@ -10,10 +10,10 @@ import kotlin.Int
 import kotlin.String
 
 public abstract class ObjectStorageRequest(
-  public val source: String,
-  public val objectStorage: ObjectStorage,
-  concept: Concept,
-  underlyingNode: Node,
+  public val source: String?,
+  public val objectStorage: ObjectStorage?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : Operation(concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is ObjectStorageRequest &&
               super.equals(other) &&

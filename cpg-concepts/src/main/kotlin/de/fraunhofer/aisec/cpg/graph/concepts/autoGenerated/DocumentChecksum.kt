@@ -9,9 +9,9 @@ import kotlin.String
 import kotlin.collections.MutableList
 
 public abstract class DocumentChecksum(
-  public val algorithm: String,
-  public val errors: MutableList<Error>,
-  underlyingNode: Node,
+  public val algorithm: String?,
+  public val errors: MutableList<Error?>,
+  underlyingNode: Node?,
 ) : Integrity(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is DocumentChecksum &&
               super.equals(other) &&

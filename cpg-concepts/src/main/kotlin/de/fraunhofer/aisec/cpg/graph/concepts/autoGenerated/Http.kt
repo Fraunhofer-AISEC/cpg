@@ -10,7 +10,7 @@ import kotlin.Int
  * Abstract class for all HTTP related functionalities.
  */
 public abstract class Http(
-  underlyingNode: Node,
+  underlyingNode: Node?,
 ) : Functionality(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is Http &&
               super.equals(other)

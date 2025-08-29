@@ -15,14 +15,14 @@ import kotlin.collections.MutableMap
  * about a user or some other form of identity (e.g. a [Principal]).
  */
 public abstract class Context(
-  dataLocation: DataLocation,
-  creation_time: ZonedDateTime,
-  description: String,
-  labels: MutableMap<String, String>,
-  name: String,
-  raw: String,
-  parent: Resource,
-  underlyingNode: Node,
+  dataLocation: DataLocation?,
+  creation_time: ZonedDateTime?,
+  description: String?,
+  labels: MutableMap<String, String>?,
+  name: String?,
+  raw: String?,
+  parent: Resource?,
+  underlyingNode: Node?,
 ) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
   init {
     this.name = Name(localName = name)

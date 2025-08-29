@@ -16,18 +16,18 @@ import kotlin.collections.MutableMap
  * Access controls can still apply.
  */
 public abstract class Infrastructure(
-  public val internetAccessibleEndpoint: Boolean,
-  public val geoLocation: GeoLocation,
-  public val loggings: MutableList<Logging>,
-  public val redundancies: Redundancy,
-  public val usageStatistics: UsageStatistics,
-  creation_time: ZonedDateTime,
-  description: String,
-  labels: MutableMap<String, String>,
-  name: String,
-  raw: String,
-  parent: Resource,
-  underlyingNode: Node,
+  public val internetAccessibleEndpoint: Boolean?,
+  public val geoLocation: GeoLocation?,
+  public val loggings: MutableList<Logging?>,
+  public val redundancies: Redundancy?,
+  public val usageStatistics: UsageStatistics?,
+  creation_time: ZonedDateTime?,
+  description: String?,
+  labels: MutableMap<String, String>?,
+  name: String?,
+  raw: String?,
+  parent: Resource?,
+  underlyingNode: Node?,
 ) : Resource(creation_time, description, labels, name, raw, parent, underlyingNode) {
   init {
     this.name = Name(localName = name)

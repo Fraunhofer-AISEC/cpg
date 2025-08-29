@@ -12,13 +12,13 @@ import kotlin.String
 import kotlin.collections.MutableMap
 
 public abstract class Resource(
-  public val creation_time: ZonedDateTime,
-  public val description: String,
-  public val labels: MutableMap<String, String>,
-  name: String,
-  public val raw: String,
-  public val parent: Resource,
-  underlyingNode: Node,
+  public val creation_time: ZonedDateTime?,
+  public val description: String?,
+  public val labels: MutableMap<String, String>?,
+  name: String?,
+  public val raw: String?,
+  public val parent: Resource?,
+  underlyingNode: Node?,
 ) : Concept(underlyingNode) {
   init {
     this.name = Name(localName = name)

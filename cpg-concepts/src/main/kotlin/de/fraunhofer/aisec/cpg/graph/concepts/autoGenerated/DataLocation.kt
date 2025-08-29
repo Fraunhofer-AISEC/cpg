@@ -11,9 +11,9 @@ import kotlin.String
  * path: Describes either local path or path in URL format
  */
 public abstract class DataLocation(
-  public val path: String,
-  public val storage: Storage,
-  underlyingNode: Node,
+  public val path: String?,
+  public val storage: Storage?,
+  underlyingNode: Node?,
 ) : Functionality(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is DataLocation &&
               super.equals(other) &&

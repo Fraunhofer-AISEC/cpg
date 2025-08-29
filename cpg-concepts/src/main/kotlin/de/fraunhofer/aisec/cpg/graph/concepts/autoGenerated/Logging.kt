@@ -10,13 +10,13 @@ import kotlin.Int
 import kotlin.String
 
 public abstract class Logging(
-  public val enabled: Boolean,
-  public val monitoringEnabled: Boolean,
-  name: String,
-  public val retentionPeriod: Duration,
-  public val securityAlertsEnabled: Boolean,
-  public val loggingService: LoggingService,
-  underlyingNode: Node,
+  public val enabled: Boolean?,
+  public val monitoringEnabled: Boolean?,
+  name: String?,
+  public val retentionPeriod: Duration?,
+  public val securityAlertsEnabled: Boolean?,
+  public val loggingService: LoggingService?,
+  underlyingNode: Node?,
 ) : Auditing(underlyingNode) {
   init {
     this.name = Name(localName = name)

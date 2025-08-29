@@ -11,9 +11,9 @@ import kotlin.Int
  * Represents an operation to load a configuration from a source, such as a file.
  */
 public abstract class LoadConfiguration(
-  linkedConcept: Configuration,
-  concept: Concept,
-  underlyingNode: Node,
+  linkedConcept: Configuration?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : ConfigurationOperation(linkedConcept, concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is LoadConfiguration &&
               super.equals(other)

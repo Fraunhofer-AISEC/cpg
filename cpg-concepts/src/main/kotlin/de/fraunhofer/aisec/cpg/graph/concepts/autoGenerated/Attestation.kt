@@ -7,8 +7,8 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class Attestation(
-  public val enabled: Boolean,
-  underlyingNode: Node,
+  public val enabled: Boolean?,
+  underlyingNode: Node?,
 ) : Integrity(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is Attestation &&
               super.equals(other) &&

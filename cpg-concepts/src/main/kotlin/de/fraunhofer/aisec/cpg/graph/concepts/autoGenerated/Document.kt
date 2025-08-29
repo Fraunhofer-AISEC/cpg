@@ -15,19 +15,19 @@ import kotlin.collections.MutableMap
  * DataLocation: Describes the location as local or remote location
  */
 public abstract class Document(
-  public val filetype: String,
-  public val documentChecksums: MutableList<DocumentChecksum>,
-  public val documentSignatures: MutableList<DocumentSignature>,
-  public val securityFeatures: MutableList<SecurityFeature>,
-  public val validatedBy: SchemaValidation,
-  dataLocation: DataLocation,
-  creation_time: ZonedDateTime,
-  description: String,
-  labels: MutableMap<String, String>,
-  name: String,
-  raw: String,
-  parent: Resource,
-  underlyingNode: Node,
+  public val filetype: String?,
+  public val documentChecksums: MutableList<DocumentChecksum?>,
+  public val documentSignatures: MutableList<DocumentSignature?>,
+  public val securityFeatures: MutableList<SecurityFeature?>,
+  public val validatedBy: SchemaValidation?,
+  dataLocation: DataLocation?,
+  creation_time: ZonedDateTime?,
+  description: String?,
+  labels: MutableMap<String, String>?,
+  name: String?,
+  raw: String?,
+  parent: Resource?,
+  underlyingNode: Node?,
 ) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
   init {
     this.name = Name(localName = name)

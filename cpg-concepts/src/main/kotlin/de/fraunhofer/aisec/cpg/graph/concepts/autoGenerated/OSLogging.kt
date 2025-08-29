@@ -10,13 +10,13 @@ import kotlin.Int
 import kotlin.String
 
 public abstract class OSLogging(
-  enabled: Boolean,
-  monitoringEnabled: Boolean,
-  name: String,
-  retentionPeriod: Duration,
-  securityAlertsEnabled: Boolean,
-  loggingService: LoggingService,
-  underlyingNode: Node,
+  enabled: Boolean?,
+  monitoringEnabled: Boolean?,
+  name: String?,
+  retentionPeriod: Duration?,
+  securityAlertsEnabled: Boolean?,
+  loggingService: LoggingService?,
+  underlyingNode: Node?,
 ) : Logging(enabled, monitoringEnabled, name, retentionPeriod, securityAlertsEnabled,
     loggingService, underlyingNode) {
   init {

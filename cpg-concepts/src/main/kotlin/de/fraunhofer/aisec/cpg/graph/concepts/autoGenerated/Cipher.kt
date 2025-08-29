@@ -12,10 +12,10 @@ import kotlin.String
  * Represents a cipher suite. E.g. `AES-XTS-plain64`.
  */
 public abstract class Cipher(
-  public val blockSize: Int,
-  public val keySize: Int,
-  name: String,
-  underlyingNode: Node,
+  public val blockSize: Int?,
+  public val keySize: Int?,
+  name: String?,
+  underlyingNode: Node?,
 ) : Functionality(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is Cipher &&
               super.equals(other) &&

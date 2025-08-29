@@ -9,9 +9,9 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class HttpRequestHandlerOperation(
-  public val linkedConcept: HttpRequestHandler,
-  concept: Concept,
-  underlyingNode: Node,
+  public val linkedConcept: HttpRequestHandler?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : Operation(concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is HttpRequestHandlerOperation &&
               super.equals(other) &&

@@ -10,12 +10,12 @@ import kotlin.Int
 import kotlin.String
 
 public abstract class DatabaseQuery(
-  public val modify: Boolean,
-  calls: List<String>,
-  databaseService: DatabaseService,
-  storage: DatabaseStorage,
-  concept: Concept,
-  underlyingNode: Node,
+  public val modify: Boolean?,
+  calls: List<String>?,
+  databaseService: DatabaseService?,
+  storage: DatabaseStorage?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : DatabaseOperation(calls, databaseService, storage, concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is DatabaseQuery &&
               super.equals(other) &&

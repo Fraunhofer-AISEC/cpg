@@ -14,14 +14,14 @@ import kotlin.collections.MutableMap
  * This class represents a file handle.
  */
 public abstract class FileHandle(
-  dataLocation: DataLocation,
-  creation_time: ZonedDateTime,
-  description: String,
-  labels: MutableMap<String, String>,
-  name: String,
-  raw: String,
-  parent: Resource,
-  underlyingNode: Node,
+  dataLocation: DataLocation?,
+  creation_time: ZonedDateTime?,
+  description: String?,
+  labels: MutableMap<String, String>?,
+  name: String?,
+  raw: String?,
+  parent: Resource?,
+  underlyingNode: Node?,
 ) : FileLikeObject(dataLocation, creation_time, description, labels, name, raw, parent,
     underlyingNode) {
   init {

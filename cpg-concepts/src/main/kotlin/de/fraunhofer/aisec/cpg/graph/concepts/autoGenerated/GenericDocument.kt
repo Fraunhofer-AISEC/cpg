@@ -15,19 +15,19 @@ import kotlin.collections.MutableMap
  * This is a placeholder for all other documents, e.g. index.txt
  */
 public abstract class GenericDocument(
-  filetype: String,
-  documentChecksums: MutableList<DocumentChecksum>,
-  documentSignatures: MutableList<DocumentSignature>,
-  securityFeatures: MutableList<SecurityFeature>,
-  validatedBy: SchemaValidation,
-  dataLocation: DataLocation,
-  creation_time: ZonedDateTime,
-  description: String,
-  labels: MutableMap<String, String>,
-  name: String,
-  raw: String,
-  parent: Resource,
-  underlyingNode: Node,
+  filetype: String?,
+  documentChecksums: MutableList<DocumentChecksum?>,
+  documentSignatures: MutableList<DocumentSignature?>,
+  securityFeatures: MutableList<SecurityFeature?>,
+  validatedBy: SchemaValidation?,
+  dataLocation: DataLocation?,
+  creation_time: ZonedDateTime?,
+  description: String?,
+  labels: MutableMap<String, String>?,
+  name: String?,
+  raw: String?,
+  parent: Resource?,
+  underlyingNode: Node?,
 ) : Document(filetype, documentChecksums, documentSignatures, securityFeatures, validatedBy,
     dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
   init {

@@ -11,9 +11,9 @@ import kotlin.Int
  * A log get operation e.g. `logging.getLogger(\"...\")`.
  */
 public abstract class LogGet(
-  linkedConcept: Logging,
-  concept: Concept,
-  underlyingNode: Node,
+  linkedConcept: Logging?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : LogOperation(linkedConcept, concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is LogGet &&
               super.equals(other)

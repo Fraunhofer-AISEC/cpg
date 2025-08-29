@@ -473,7 +473,7 @@ private fun extractDataProperties(dataProp: Properties): TypeName {
                     .parameterizedBy(STRING) // TODO: Check if this is correct
             else -> ClassName("unknown", "unknown")
         }
-    return typeName
+    return typeName.copy(nullable = true)
 }
 
 private fun extractObjectProperties(objectProp: Properties): TypeName {
@@ -907,5 +907,5 @@ private fun extractObjectProperties(objectProp: Properties): TypeName {
 
             else -> ClassName("unknown", "unknown")
         }
-    return typeName
+    return typeName.copy(nullable = true)
 }

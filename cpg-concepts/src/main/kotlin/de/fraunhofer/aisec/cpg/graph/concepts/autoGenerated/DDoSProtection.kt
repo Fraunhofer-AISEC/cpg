@@ -7,7 +7,7 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class DDoSProtection(
-  underlyingNode: Node,
+  underlyingNode: Node?,
 ) : Availability(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is DDoSProtection &&
               super.equals(other)

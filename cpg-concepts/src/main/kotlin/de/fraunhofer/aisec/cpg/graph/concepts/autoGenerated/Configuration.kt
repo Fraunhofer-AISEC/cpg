@@ -21,15 +21,15 @@ import kotlin.collections.MutableMap
  * arguments.
  */
 public abstract class Configuration(
-  public val configurationGroups: MutableList<ConfigurationGroup>,
-  dataLocation: DataLocation,
-  creation_time: ZonedDateTime,
-  description: String,
-  labels: MutableMap<String, String>,
-  name: String,
-  raw: String,
-  parent: Resource,
-  underlyingNode: Node,
+  public val configurationGroups: MutableList<ConfigurationGroup?>,
+  dataLocation: DataLocation?,
+  creation_time: ZonedDateTime?,
+  description: String?,
+  labels: MutableMap<String, String>?,
+  name: String?,
+  raw: String?,
+  parent: Resource?,
+  underlyingNode: Node?,
 ) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
   init {
     this.name = Name(localName = name)

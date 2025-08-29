@@ -7,7 +7,7 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class RobustnessScore(
-  underlyingNode: Node,
+  underlyingNode: Node?,
 ) : Reliability(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is RobustnessScore &&
               super.equals(other)

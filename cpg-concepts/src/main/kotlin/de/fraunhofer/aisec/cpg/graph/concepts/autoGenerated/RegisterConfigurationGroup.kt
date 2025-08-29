@@ -16,10 +16,10 @@ import kotlin.Int
  * the code contains the [RegisterConfigurationGroup] and [ReadConfigurationGroup] nodes.
  */
 public abstract class RegisterConfigurationGroup(
-  public val configurationGroup: ConfigurationGroup,
-  linkedConcept: Configuration,
-  concept: Concept,
-  underlyingNode: Node,
+  public val configurationGroup: ConfigurationGroup?,
+  linkedConcept: Configuration?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : ConfigurationOperation(linkedConcept, concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is RegisterConfigurationGroup &&
               super.equals(other) &&

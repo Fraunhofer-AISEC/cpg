@@ -11,7 +11,7 @@ import kotlin.Int
  * of a specific HTTP request.
  */
 public abstract class HttpRequestContext(
-  underlyingNode: Node,
+  underlyingNode: Node?,
 ) : Http(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is HttpRequestContext &&
               super.equals(other)

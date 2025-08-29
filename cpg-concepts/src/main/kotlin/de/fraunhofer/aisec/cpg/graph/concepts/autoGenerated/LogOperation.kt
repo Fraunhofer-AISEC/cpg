@@ -9,9 +9,9 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class LogOperation(
-  public val linkedConcept: Logging,
-  concept: Concept,
-  underlyingNode: Node,
+  public val linkedConcept: Logging?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : Operation(concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is LogOperation &&
               super.equals(other) &&

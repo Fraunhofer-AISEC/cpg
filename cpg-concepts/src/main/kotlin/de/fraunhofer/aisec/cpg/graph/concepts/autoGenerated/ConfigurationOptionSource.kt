@@ -16,14 +16,14 @@ import kotlin.collections.MutableMap
  * field declaration would be the source to the configuration option.
  */
 public abstract class ConfigurationOptionSource(
-  dataLocation: DataLocation,
-  creation_time: ZonedDateTime,
-  description: String,
-  labels: MutableMap<String, String>,
-  name: String,
-  raw: String,
-  parent: Resource,
-  underlyingNode: Node,
+  dataLocation: DataLocation?,
+  creation_time: ZonedDateTime?,
+  description: String?,
+  labels: MutableMap<String, String>?,
+  name: String?,
+  raw: String?,
+  parent: Resource?,
+  underlyingNode: Node?,
 ) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
   init {
     this.name = Name(localName = name)

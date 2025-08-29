@@ -9,11 +9,11 @@ import kotlin.String
 import kotlin.collections.MutableList
 
 public abstract class CipherSuite(
-  public val authenticationMechanism: String,
-  public val keyExchangeAlgorithm: String,
-  public val macAlgorithm: String,
-  public val ciphers: MutableList<Cipher>,
-  underlyingNode: Node,
+  public val authenticationMechanism: String?,
+  public val keyExchangeAlgorithm: String?,
+  public val macAlgorithm: String?,
+  public val ciphers: MutableList<Cipher?>,
+  underlyingNode: Node?,
 ) : Functionality(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is CipherSuite &&
               super.equals(other) &&

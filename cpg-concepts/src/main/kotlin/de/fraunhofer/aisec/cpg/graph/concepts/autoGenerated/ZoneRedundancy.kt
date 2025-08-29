@@ -8,8 +8,8 @@ import kotlin.Int
 import kotlin.collections.MutableList
 
 public abstract class ZoneRedundancy(
-  geoLocations: MutableList<GeoLocation>,
-  underlyingNode: Node,
+  geoLocations: MutableList<GeoLocation?>,
+  underlyingNode: Node?,
 ) : Redundancy(geoLocations, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is ZoneRedundancy &&
               super.equals(other)

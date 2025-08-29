@@ -7,7 +7,7 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class Logger(
-  underlyingNode: Node,
+  underlyingNode: Node?,
 ) : Framework(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is Logger &&
               super.equals(other)

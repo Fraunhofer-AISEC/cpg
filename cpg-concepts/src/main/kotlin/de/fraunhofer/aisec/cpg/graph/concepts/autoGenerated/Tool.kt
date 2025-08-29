@@ -7,7 +7,7 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class Tool(
-  underlyingNode: Node,
+  underlyingNode: Node?,
 ) : Core(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is Tool &&
               super.equals(other)

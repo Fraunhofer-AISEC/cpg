@@ -17,15 +17,15 @@ import kotlin.collections.MutableMap
  * translation unit declaration would be the source of the configuration.
  */
 public abstract class ConfigurationSource(
-  public val configurationGroupSources: MutableList<ConfigurationGroupSource>,
-  dataLocation: DataLocation,
-  creation_time: ZonedDateTime,
-  description: String,
-  labels: MutableMap<String, String>,
-  name: String,
-  raw: String,
-  parent: Resource,
-  underlyingNode: Node,
+  public val configurationGroupSources: MutableList<ConfigurationGroupSource?>,
+  dataLocation: DataLocation?,
+  creation_time: ZonedDateTime?,
+  description: String?,
+  labels: MutableMap<String, String>?,
+  name: String?,
+  raw: String?,
+  parent: Resource?,
+  underlyingNode: Node?,
 ) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
   init {
     this.name = Name(localName = name)

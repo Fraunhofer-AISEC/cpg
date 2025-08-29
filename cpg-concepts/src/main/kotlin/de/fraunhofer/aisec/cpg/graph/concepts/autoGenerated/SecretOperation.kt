@@ -9,9 +9,9 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class SecretOperation(
-  public val linkedConcept: Secret,
-  concept: Concept,
-  underlyingNode: Node,
+  public val linkedConcept: Secret?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : Operation(concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is SecretOperation &&
               super.equals(other) &&

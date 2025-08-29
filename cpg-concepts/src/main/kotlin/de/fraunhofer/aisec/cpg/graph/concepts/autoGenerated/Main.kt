@@ -11,8 +11,8 @@ import kotlin.Int
  * The main function of a program.
  */
 public abstract class Main(
-  target: OperatingSystemArchitecture,
-  underlyingNode: Node,
+  target: OperatingSystemArchitecture?,
+  underlyingNode: Node?,
 ) : LocalEntryPoint(target, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is Main &&
               super.equals(other)

@@ -15,18 +15,18 @@ import kotlin.collections.MutableMap
  * This represents the cloud account as a whole, e.g., an Azure subscription.
  */
 public abstract class Account(
-  internetAccessibleEndpoint: Boolean,
-  geoLocation: GeoLocation,
-  loggings: MutableList<Logging>,
-  redundancies: Redundancy,
-  usageStatistics: UsageStatistics,
-  creation_time: ZonedDateTime,
-  description: String,
-  labels: MutableMap<String, String>,
-  name: String,
-  raw: String,
-  parent: Resource,
-  underlyingNode: Node,
+  internetAccessibleEndpoint: Boolean?,
+  geoLocation: GeoLocation?,
+  loggings: MutableList<Logging?>,
+  redundancies: Redundancy?,
+  usageStatistics: UsageStatistics?,
+  creation_time: ZonedDateTime?,
+  description: String?,
+  labels: MutableMap<String, String>?,
+  name: String?,
+  raw: String?,
+  parent: Resource?,
+  underlyingNode: Node?,
 ) : Infrastructure(internetAccessibleEndpoint, geoLocation, loggings, redundancies, usageStatistics,
     creation_time, description, labels, name, raw, parent, underlyingNode) {
   init {

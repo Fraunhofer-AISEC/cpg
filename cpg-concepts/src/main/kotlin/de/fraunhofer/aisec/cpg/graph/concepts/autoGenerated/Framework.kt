@@ -7,7 +7,7 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class Framework(
-  underlyingNode: Node,
+  underlyingNode: Node?,
 ) : Core(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is Framework &&
               super.equals(other)

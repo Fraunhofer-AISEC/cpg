@@ -10,9 +10,9 @@ import kotlin.Int
  * This represents an encryption.
  */
 public abstract class Encryption(
-  public val basedOn: Cipher,
-  public val secret: Secret,
-  underlyingNode: Node,
+  public val basedOn: Cipher?,
+  public val secret: Secret?,
+  underlyingNode: Node?,
 ) : Confidentiality(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is Encryption &&
               super.equals(other) &&

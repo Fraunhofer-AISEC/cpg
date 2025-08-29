@@ -15,14 +15,14 @@ import kotlin.collections.MutableMap
  * both rules must be satisfied for the combined rule to be satisfied.
  */
 public abstract class AndRule(
-  dataLocation: DataLocation,
-  creation_time: ZonedDateTime,
-  description: String,
-  labels: MutableMap<String, String>,
-  name: String,
-  raw: String,
-  parent: Resource,
-  underlyingNode: Node,
+  dataLocation: DataLocation?,
+  creation_time: ZonedDateTime?,
+  description: String?,
+  labels: MutableMap<String, String>?,
+  name: String?,
+  raw: String?,
+  parent: Resource?,
+  underlyingNode: Node?,
 ) : PolicyRule(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode)
     {
   init {

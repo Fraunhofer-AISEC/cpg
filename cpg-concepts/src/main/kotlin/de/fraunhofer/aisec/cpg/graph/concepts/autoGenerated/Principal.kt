@@ -11,7 +11,7 @@ import kotlin.Int
  * representing) a user or a group of users.
  */
 public abstract class Principal(
-  underlyingNode: Node,
+  underlyingNode: Node?,
 ) : Functionality(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is Principal &&
               super.equals(other)

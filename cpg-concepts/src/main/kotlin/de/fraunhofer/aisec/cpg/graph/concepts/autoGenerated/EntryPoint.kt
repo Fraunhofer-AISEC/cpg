@@ -12,7 +12,7 @@ import kotlin.Int
  * network endpoint.
  */
 public abstract class EntryPoint(
-  underlyingNode: Node,
+  underlyingNode: Node?,
 ) : Functionality(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is EntryPoint &&
               super.equals(other)

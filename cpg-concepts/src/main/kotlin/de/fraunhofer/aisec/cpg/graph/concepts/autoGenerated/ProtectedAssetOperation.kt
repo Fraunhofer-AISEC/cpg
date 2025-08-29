@@ -13,9 +13,9 @@ import kotlin.Int
  * access permissions, modifications, or any other actions that require validation against a policy.
  */
 public abstract class ProtectedAssetOperation(
-  public val linkedConcept: ProtectedAsset,
-  concept: Concept,
-  underlyingNode: Node,
+  public val linkedConcept: ProtectedAsset?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : Operation(concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is ProtectedAssetOperation &&
               super.equals(other) &&

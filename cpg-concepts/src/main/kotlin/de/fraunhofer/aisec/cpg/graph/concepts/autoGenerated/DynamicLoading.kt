@@ -12,7 +12,7 @@ import kotlin.Int
  * code dynamically during runtime.
  */
 public abstract class DynamicLoading(
-  underlyingNode: Node,
+  underlyingNode: Node?,
 ) : Functionality(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is DynamicLoading &&
               super.equals(other)

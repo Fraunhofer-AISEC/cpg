@@ -12,9 +12,9 @@ import kotlin.collections.MutableList
  * file, a database, or any other resource that requires access control.
  */
 public abstract class ProtectedAsset(
-  public val policies: MutableList<Policy>,
-  public val protects: Resource,
-  underlyingNode: Node,
+  public val policies: MutableList<Policy?>,
+  public val protects: Resource?,
+  underlyingNode: Node?,
 ) : Functionality(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is ProtectedAsset &&
               super.equals(other) &&

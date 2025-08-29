@@ -12,8 +12,8 @@ import kotlin.Int
  * Base class for operations on an [HttpEndpoint].
  */
 public abstract class HttpEndpointOperation(
-  concept: Concept,
-  underlyingNode: Node,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : Operation(concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is HttpEndpointOperation &&
               super.equals(other)

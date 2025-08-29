@@ -13,10 +13,10 @@ import kotlin.Int
  * or`conf[\"GROUP\"]`.
  */
 public abstract class ReadConfigurationGroup(
-  public val configurationGroup: ConfigurationGroup,
-  linkedConcept: Configuration,
-  concept: Concept,
-  underlyingNode: Node,
+  public val configurationGroup: ConfigurationGroup?,
+  linkedConcept: Configuration?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : ConfigurationOperation(linkedConcept, concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is ReadConfigurationGroup &&
               super.equals(other) &&

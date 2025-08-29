@@ -8,13 +8,13 @@ import kotlin.Int
 import kotlin.String
 
 public abstract class DiskEncryption(
-  public val target: BlockStorage,
-  algorithm: String,
-  enabled: Boolean,
-  keyUrl: String,
-  basedOn: Cipher,
-  secret: Secret,
-  underlyingNode: Node,
+  public val target: BlockStorage?,
+  algorithm: String?,
+  enabled: Boolean?,
+  keyUrl: String?,
+  basedOn: Cipher?,
+  secret: Secret?,
+  underlyingNode: Node?,
 ) : AtRestEncryption(algorithm, enabled, keyUrl, basedOn, secret, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is DiskEncryption &&
               super.equals(other) &&

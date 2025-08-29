@@ -12,11 +12,11 @@ import kotlin.Int
  * [ConfigurationGroupSource] with a [ConfigurationGroup].
  */
 public abstract class ProvideConfigurationGroup(
-  public val configurationGroup: ConfigurationGroup,
-  public val configurationGroupSource: ConfigurationGroupSource,
-  linkedConcept: Configuration,
-  concept: Concept,
-  underlyingNode: Node,
+  public val configurationGroup: ConfigurationGroup?,
+  public val configurationGroupSource: ConfigurationGroupSource?,
+  linkedConcept: Configuration?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : ConfigurationOperation(linkedConcept, concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is ProvideConfigurationGroup &&
               super.equals(other) &&

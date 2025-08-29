@@ -16,16 +16,16 @@ import kotlin.collections.MutableMap
  * [UNIX](https://www.opengroup.org/openbrand/register/apple.htm) and is (mostly) POSIX compatible.
  */
 public abstract class Darwin(
-  codeModules: MutableList<CodeModule>,
-  codeRepository: CodeRepository,
-  functionalities: MutableList<Functionality>,
-  creation_time: ZonedDateTime,
-  description: String,
-  labels: MutableMap<String, String>,
-  name: String,
-  raw: String,
-  parent: Resource,
-  underlyingNode: Node,
+  codeModules: MutableList<CodeModule?>,
+  codeRepository: CodeRepository?,
+  functionalities: MutableList<Functionality?>,
+  creation_time: ZonedDateTime?,
+  description: String?,
+  labels: MutableMap<String, String>?,
+  name: String?,
+  raw: String?,
+  parent: Resource?,
+  underlyingNode: Node?,
 ) : OperatingSystemArchitecture(codeModules, codeRepository, functionalities, creation_time,
     description, labels, name, raw, parent, underlyingNode) {
   init {

@@ -7,7 +7,7 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class ABAC(
-  underlyingNode: Node,
+  underlyingNode: Node?,
 ) : Authorization(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is ABAC &&
               super.equals(other)

@@ -12,11 +12,11 @@ import kotlin.Int
  * [ConfigurationOptionSource] with a [ConfigurationOption].
  */
 public abstract class ProvideConfigurationOption(
-  public val configurationOption: ConfigurationOption,
-  public val configurationOptionSource: ConfigurationOptionSource,
-  linkedConcept: Configuration,
-  concept: Concept,
-  underlyingNode: Node,
+  public val configurationOption: ConfigurationOption?,
+  public val configurationOptionSource: ConfigurationOptionSource?,
+  linkedConcept: Configuration?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : ConfigurationOperation(linkedConcept, concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is ProvideConfigurationOption &&
               super.equals(other) &&

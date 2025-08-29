@@ -8,9 +8,9 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class UnlockEncryptedDisk(
-  linkedConcept: DiskEncryption,
-  concept: Concept,
-  underlyingNode: Node,
+  linkedConcept: DiskEncryption?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : DiskEncryptionOperation(linkedConcept, concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is UnlockEncryptedDisk &&
               super.equals(other)

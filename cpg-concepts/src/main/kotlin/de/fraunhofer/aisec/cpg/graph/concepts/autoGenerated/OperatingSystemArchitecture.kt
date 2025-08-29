@@ -15,16 +15,16 @@ import kotlin.collections.MutableMap
  * Represents an architecture of an operating system.
  */
 public abstract class OperatingSystemArchitecture(
-  codeModules: MutableList<CodeModule>,
-  codeRepository: CodeRepository,
-  functionalities: MutableList<Functionality>,
-  creation_time: ZonedDateTime,
-  description: String,
-  labels: MutableMap<String, String>,
-  name: String,
-  raw: String,
-  parent: Resource,
-  underlyingNode: Node,
+  codeModules: MutableList<CodeModule?>,
+  codeRepository: CodeRepository?,
+  functionalities: MutableList<Functionality?>,
+  creation_time: ZonedDateTime?,
+  description: String?,
+  labels: MutableMap<String, String>?,
+  name: String?,
+  raw: String?,
+  parent: Resource?,
+  underlyingNode: Node?,
 ) : Code(codeModules, codeRepository, functionalities, creation_time, description, labels, name,
     raw, parent, underlyingNode) {
   init {

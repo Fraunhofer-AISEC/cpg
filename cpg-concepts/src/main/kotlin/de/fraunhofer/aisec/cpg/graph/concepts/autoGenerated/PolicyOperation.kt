@@ -13,9 +13,9 @@ import kotlin.Int
  * need to be performed to enforce the policy.
  */
 public abstract class PolicyOperation(
-  public val linkedConcept: Policy,
-  concept: Concept,
-  underlyingNode: Node,
+  public val linkedConcept: Policy?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : Operation(concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is PolicyOperation &&
               super.equals(other) &&

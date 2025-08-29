@@ -14,14 +14,14 @@ import kotlin.collections.MutableList
  * reached via https (or http traffic is redirected)
  */
 public abstract class TransportEncryption(
-  public val enabled: Boolean,
-  public val enforced: Boolean,
-  public val protocol: String,
-  public val protocolVersion: Float,
-  public val cipherSuites: MutableList<CipherSuite>,
-  basedOn: Cipher,
-  secret: Secret,
-  underlyingNode: Node,
+  public val enabled: Boolean?,
+  public val enforced: Boolean?,
+  public val protocol: String?,
+  public val protocolVersion: Float?,
+  public val cipherSuites: MutableList<CipherSuite?>,
+  basedOn: Cipher?,
+  secret: Secret?,
+  underlyingNode: Node?,
 ) : Encryption(basedOn, secret, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is TransportEncryption &&
               super.equals(other) &&

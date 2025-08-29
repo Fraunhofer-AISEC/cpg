@@ -12,9 +12,9 @@ import kotlin.Int
  * C++ or by calling a destructor in managed languages.
  */
 public abstract class DeAllocate(
-  linkedConcept: Memory,
-  concept: Concept,
-  underlyingNode: Node,
+  linkedConcept: Memory?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : MemoryOperation(linkedConcept, concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is DeAllocate &&
               super.equals(other)

@@ -9,12 +9,12 @@ import kotlin.Int
 import kotlin.String
 
 public abstract class HttpRequest(
-  public val call: String,
-  public val reqBody: String,
-  public val httpEndpoint: HttpEndpoint,
-  linkedConcept: HttpClient,
-  concept: Concept,
-  underlyingNode: Node,
+  public val call: String?,
+  public val reqBody: String?,
+  public val httpEndpoint: HttpEndpoint?,
+  linkedConcept: HttpClient?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : HttpClientOperation(linkedConcept, concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is HttpRequest &&
               super.equals(other) &&

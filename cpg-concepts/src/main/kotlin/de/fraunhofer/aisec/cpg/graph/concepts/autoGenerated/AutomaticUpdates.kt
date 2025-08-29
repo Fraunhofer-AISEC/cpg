@@ -12,10 +12,10 @@ import kotlin.Int
  * ensures that a resource is protected from tampering with its state.
  */
 public abstract class AutomaticUpdates(
-  public val enabled: Boolean,
-  public val interval: Duration,
-  public val securityOnly: Boolean,
-  underlyingNode: Node,
+  public val enabled: Boolean?,
+  public val interval: Duration?,
+  public val securityOnly: Boolean?,
+  underlyingNode: Node?,
 ) : Integrity(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is AutomaticUpdates &&
               super.equals(other) &&

@@ -12,10 +12,10 @@ import kotlin.String
  * A log write operation e.g. `loggint.warn(\"...\")`.
  */
 public abstract class LogWrite(
-  public val logLevel: String,
-  linkedConcept: Logging,
-  concept: Concept,
-  underlyingNode: Node,
+  public val logLevel: String?,
+  linkedConcept: Logging?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : LogOperation(linkedConcept, concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is LogWrite &&
               super.equals(other) &&

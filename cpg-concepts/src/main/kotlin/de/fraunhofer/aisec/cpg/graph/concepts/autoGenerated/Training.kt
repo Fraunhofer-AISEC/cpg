@@ -11,15 +11,15 @@ import kotlin.String
 import kotlin.collections.MutableMap
 
 public abstract class Training(
-  public val annualUpdateCompleted: Boolean,
-  public val successfullyCompletedPercentage: Boolean,
-  creation_time: ZonedDateTime,
-  description: String,
-  labels: MutableMap<String, String>,
-  name: String,
-  raw: String,
-  parent: Resource,
-  underlyingNode: Node,
+  public val annualUpdateCompleted: Boolean?,
+  public val successfullyCompletedPercentage: Boolean?,
+  creation_time: ZonedDateTime?,
+  description: String?,
+  labels: MutableMap<String, String>?,
+  name: String?,
+  raw: String?,
+  parent: Resource?,
+  underlyingNode: Node?,
 ) : HumanResources(creation_time, description, labels, name, raw, parent, underlyingNode) {
   init {
     this.name = Name(localName = name)

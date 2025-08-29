@@ -12,10 +12,10 @@ import kotlin.Int
  * access such as `group.option` or a subscript operation such as `group[\"option\"]`.
  */
 public abstract class ReadConfigurationOption(
-  public val configurationOption: ConfigurationOption,
-  linkedConcept: Configuration,
-  concept: Concept,
-  underlyingNode: Node,
+  public val configurationOption: ConfigurationOption?,
+  linkedConcept: Configuration?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : ConfigurationOperation(linkedConcept, concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is ReadConfigurationOption &&
               super.equals(other) &&

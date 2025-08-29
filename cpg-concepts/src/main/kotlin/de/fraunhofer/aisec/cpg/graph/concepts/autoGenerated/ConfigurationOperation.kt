@@ -12,9 +12,9 @@ import kotlin.Int
  * A common abstract class for configuration operations, such as reading options or a whole file.
  */
 public abstract class ConfigurationOperation(
-  public val linkedConcept: Configuration,
-  concept: Concept,
-  underlyingNode: Node,
+  public val linkedConcept: Configuration?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : Operation(concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is ConfigurationOperation &&
               super.equals(other) &&

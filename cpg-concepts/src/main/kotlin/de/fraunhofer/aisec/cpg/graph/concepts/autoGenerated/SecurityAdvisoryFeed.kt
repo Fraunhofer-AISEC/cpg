@@ -8,8 +8,8 @@ import kotlin.Int
 import kotlin.collections.MutableList
 
 public abstract class SecurityAdvisoryFeed(
-  public val securityAdvisoryDocuments: MutableList<SecurityAdvisoryDocument>,
-  underlyingNode: Node,
+  public val securityAdvisoryDocuments: MutableList<SecurityAdvisoryDocument?>,
+  underlyingNode: Node?,
 ) : Functionality(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is SecurityAdvisoryFeed &&
               super.equals(other) &&

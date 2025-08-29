@@ -12,19 +12,19 @@ import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 public abstract class ContainerImage(
-  application: Application,
-  internetAccessibleEndpoint: Boolean,
-  geoLocation: GeoLocation,
-  loggings: MutableList<Logging>,
-  redundancies: Redundancy,
-  usageStatistics: UsageStatistics,
-  creation_time: ZonedDateTime,
-  description: String,
-  labels: MutableMap<String, String>,
-  name: String,
-  raw: String,
-  parent: Resource,
-  underlyingNode: Node,
+  application: Application?,
+  internetAccessibleEndpoint: Boolean?,
+  geoLocation: GeoLocation?,
+  loggings: MutableList<Logging?>,
+  redundancies: Redundancy?,
+  usageStatistics: UsageStatistics?,
+  creation_time: ZonedDateTime?,
+  description: String?,
+  labels: MutableMap<String, String>?,
+  name: String?,
+  raw: String?,
+  parent: Resource?,
+  underlyingNode: Node?,
 ) : Image(application, internetAccessibleEndpoint, geoLocation, loggings, redundancies,
     usageStatistics, creation_time, description, labels, name, raw, parent, underlyingNode) {
   init {

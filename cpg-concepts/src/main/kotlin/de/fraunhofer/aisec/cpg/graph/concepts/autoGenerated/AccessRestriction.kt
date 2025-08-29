@@ -7,7 +7,7 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class AccessRestriction(
-  underlyingNode: Node,
+  underlyingNode: Node?,
 ) : Authorization(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is AccessRestriction &&
               super.equals(other)

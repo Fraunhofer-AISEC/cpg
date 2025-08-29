@@ -10,7 +10,7 @@ import kotlin.Int
  * Represents an entry point that can be triggered remotely, such as a network endpoint.
  */
 public abstract class RemoteEntryPoint(
-  underlyingNode: Node,
+  underlyingNode: Node?,
 ) : EntryPoint(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is RemoteEntryPoint &&
               super.equals(other)

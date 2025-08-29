@@ -11,8 +11,8 @@ import kotlin.Int
  * Represents a local entry point into the execution of the program, such as a main function.
  */
 public abstract class LocalEntryPoint(
-  public val target: OperatingSystemArchitecture,
-  underlyingNode: Node,
+  public val target: OperatingSystemArchitecture?,
+  underlyingNode: Node?,
 ) : EntryPoint(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is LocalEntryPoint &&
               super.equals(other) &&

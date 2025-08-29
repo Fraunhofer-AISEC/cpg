@@ -10,11 +10,11 @@ import kotlin.Int
 import kotlin.String
 
 public abstract class EncryptionOperation(
-  public val algorithm: String,
-  public val linkedConcept: Encryption,
-  public val secret: Secret,
-  concept: Concept,
-  underlyingNode: Node,
+  public val algorithm: String?,
+  public val linkedConcept: Encryption?,
+  public val secret: Secret?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : Operation(concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is EncryptionOperation &&
               super.equals(other) &&

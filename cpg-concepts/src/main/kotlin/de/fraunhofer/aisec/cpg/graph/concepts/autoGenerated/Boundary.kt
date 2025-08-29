@@ -13,7 +13,7 @@ import kotlin.Int
  * endpoint.
  */
 public abstract class Boundary(
-  underlyingNode: Node,
+  underlyingNode: Node?,
 ) : Functionality(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is Boundary &&
               super.equals(other)

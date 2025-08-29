@@ -14,11 +14,11 @@ import kotlin.collections.MutableList
  * call to `dlopen` in C/C++.
  */
 public abstract class LoadLibrary(
-  public val entryPoints: MutableList<EntryPoint>,
-  operatingSystemArchitecture: OperatingSystemArchitecture,
-  linkedConcept: Memory,
-  concept: Concept,
-  underlyingNode: Node,
+  public val entryPoints: MutableList<EntryPoint?>,
+  operatingSystemArchitecture: OperatingSystemArchitecture?,
+  linkedConcept: Memory?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : DynamicLoadingOperation(operatingSystemArchitecture, linkedConcept, concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is LoadLibrary &&
               super.equals(other) &&

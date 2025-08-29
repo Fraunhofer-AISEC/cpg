@@ -7,8 +7,8 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class UsageStatistics(
-  public val apiHitsPerMonth: Int,
-  underlyingNode: Node,
+  public val apiHitsPerMonth: Int?,
+  underlyingNode: Node?,
 ) : Auditing(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is UsageStatistics &&
               super.equals(other) &&

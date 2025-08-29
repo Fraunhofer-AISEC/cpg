@@ -12,9 +12,9 @@ import kotlin.Int
  * Abstract base class for all authentication operations.
  */
 public abstract class AuthenticationOperation(
-  public val linkedConcept: Authenticity,
-  concept: Concept,
-  underlyingNode: Node,
+  public val linkedConcept: Authenticity?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : Operation(concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is AuthenticationOperation &&
               super.equals(other) &&

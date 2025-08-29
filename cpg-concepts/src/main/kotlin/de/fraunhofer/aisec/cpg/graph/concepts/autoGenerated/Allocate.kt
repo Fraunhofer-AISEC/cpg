@@ -8,9 +8,9 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class Allocate(
-  linkedConcept: Memory,
-  concept: Concept,
-  underlyingNode: Node,
+  linkedConcept: Memory?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : MemoryOperation(linkedConcept, concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is Allocate &&
               super.equals(other)

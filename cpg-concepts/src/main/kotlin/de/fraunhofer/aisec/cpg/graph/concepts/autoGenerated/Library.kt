@@ -12,18 +12,18 @@ import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 public abstract class Library(
-  public val vulnerabilities: MutableList<Vulnerability>,
-  libraries: MutableList<Library>,
-  codeModules: MutableList<CodeModule>,
-  codeRepository: CodeRepository,
-  functionalities: MutableList<Functionality>,
-  creation_time: ZonedDateTime,
-  description: String,
-  labels: MutableMap<String, String>,
-  name: String,
-  raw: String,
-  parent: Resource,
-  underlyingNode: Node,
+  public val vulnerabilities: MutableList<Vulnerability?>,
+  libraries: MutableList<Library?>,
+  codeModules: MutableList<CodeModule?>,
+  codeRepository: CodeRepository?,
+  functionalities: MutableList<Functionality?>,
+  creation_time: ZonedDateTime?,
+  description: String?,
+  labels: MutableMap<String, String>?,
+  name: String?,
+  raw: String?,
+  parent: Resource?,
+  underlyingNode: Node?,
 ) : Component(libraries, codeModules, codeRepository, functionalities, creation_time, description,
     labels, name, raw, parent, underlyingNode) {
   init {

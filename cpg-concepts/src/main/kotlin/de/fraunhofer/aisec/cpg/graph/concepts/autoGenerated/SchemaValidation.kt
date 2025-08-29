@@ -9,10 +9,10 @@ import kotlin.String
 import kotlin.collections.MutableList
 
 public abstract class SchemaValidation(
-  public val format: String,
-  public val schemaURL: String,
-  public val errors: MutableList<Error>,
-  underlyingNode: Node,
+  public val format: String?,
+  public val schemaURL: String?,
+  public val errors: MutableList<Error?>,
+  underlyingNode: Node?,
 ) : Functionality(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is SchemaValidation &&
               super.equals(other) &&

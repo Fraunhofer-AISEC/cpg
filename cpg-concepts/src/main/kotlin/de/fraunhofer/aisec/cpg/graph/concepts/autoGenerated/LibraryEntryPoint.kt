@@ -11,8 +11,8 @@ import kotlin.Int
  * Represents an entry point that is triggered if the code is loaded as a (dynamic) library.
  */
 public abstract class LibraryEntryPoint(
-  target: OperatingSystemArchitecture,
-  underlyingNode: Node,
+  target: OperatingSystemArchitecture?,
+  underlyingNode: Node?,
 ) : LocalEntryPoint(target, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is LibraryEntryPoint &&
               super.equals(other)

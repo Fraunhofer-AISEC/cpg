@@ -13,9 +13,9 @@ import kotlin.Int
  * point at which data leaves the boundary.
  */
 public abstract class ExitBoundaryOperation(
-  public val linkedConcept: Boundary,
-  concept: Concept,
-  underlyingNode: Node,
+  public val linkedConcept: Boundary?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : Operation(concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is ExitBoundaryOperation &&
               super.equals(other) &&

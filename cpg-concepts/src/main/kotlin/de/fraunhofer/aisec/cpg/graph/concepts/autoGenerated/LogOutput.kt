@@ -13,11 +13,11 @@ import kotlin.String
  * A generic LogOutput.
  */
 public abstract class LogOutput(
-  public val call: String,
-  public val `value`: String,
-  public val logging: Logging,
-  concept: Concept,
-  underlyingNode: Node,
+  public val call: String?,
+  public val `value`: String?,
+  public val logging: Logging?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : Operation(concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is LogOutput &&
               super.equals(other) &&

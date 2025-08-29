@@ -7,7 +7,7 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class Authorization(
-  underlyingNode: Node,
+  underlyingNode: Node?,
 ) : SecurityFeature(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is Authorization &&
               super.equals(other)

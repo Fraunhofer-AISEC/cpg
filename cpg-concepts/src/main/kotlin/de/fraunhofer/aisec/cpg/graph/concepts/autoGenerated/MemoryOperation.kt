@@ -12,9 +12,9 @@ import kotlin.Int
  * A common abstract class for memory operations.
  */
 public abstract class MemoryOperation(
-  public val linkedConcept: Memory,
-  concept: Concept,
-  underlyingNode: Node,
+  public val linkedConcept: Memory?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : Operation(concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is MemoryOperation &&
               super.equals(other) &&

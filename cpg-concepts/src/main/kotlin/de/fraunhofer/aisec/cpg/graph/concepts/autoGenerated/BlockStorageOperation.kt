@@ -9,9 +9,9 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class BlockStorageOperation(
-  public val linkedConcept: BlockStorage,
-  concept: Concept,
-  underlyingNode: Node,
+  public val linkedConcept: BlockStorage?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : Operation(concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is BlockStorageOperation &&
               super.equals(other) &&

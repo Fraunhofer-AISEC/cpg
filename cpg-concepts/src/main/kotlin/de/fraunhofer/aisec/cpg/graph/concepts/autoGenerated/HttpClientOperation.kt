@@ -12,9 +12,9 @@ import kotlin.Int
  * Base class for operations on an [HttpClient].
  */
 public abstract class HttpClientOperation(
-  public val linkedConcept: HttpClient,
-  concept: Concept,
-  underlyingNode: Node,
+  public val linkedConcept: HttpClient?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : Operation(concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is HttpClientOperation &&
               super.equals(other) &&

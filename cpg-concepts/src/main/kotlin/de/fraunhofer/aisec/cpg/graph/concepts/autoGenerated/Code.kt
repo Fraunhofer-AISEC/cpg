@@ -12,16 +12,16 @@ import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 public abstract class Code(
-  public val codeModules: MutableList<CodeModule>,
-  public val codeRepository: CodeRepository,
-  public val functionalities: MutableList<Functionality>,
-  creation_time: ZonedDateTime,
-  description: String,
-  labels: MutableMap<String, String>,
-  name: String,
-  raw: String,
-  parent: Resource,
-  underlyingNode: Node,
+  public val codeModules: MutableList<CodeModule?>,
+  public val codeRepository: CodeRepository?,
+  public val functionalities: MutableList<Functionality?>,
+  creation_time: ZonedDateTime?,
+  description: String?,
+  labels: MutableMap<String, String>?,
+  name: String?,
+  raw: String?,
+  parent: Resource?,
+  underlyingNode: Node?,
 ) : Resource(creation_time, description, labels, name, raw, parent, underlyingNode) {
   init {
     this.name = Name(localName = name)

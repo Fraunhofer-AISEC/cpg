@@ -7,7 +7,7 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class ExplainableResults(
-  underlyingNode: Node,
+  underlyingNode: Node?,
 ) : Reliability(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is ExplainableResults &&
               super.equals(other)

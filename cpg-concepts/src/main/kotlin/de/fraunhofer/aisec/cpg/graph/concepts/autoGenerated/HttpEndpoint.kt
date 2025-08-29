@@ -8,20 +8,20 @@ import kotlin.Int
 import kotlin.String
 
 /**
- * An HTTP endpoint can set the \"proxyTarget\" property, in case that is routed through a (reverse)
- * proxy, e.g. a load balancer.
+ * Via the Authenticity relationship, the access type can be specified, e.g. public access (no
+ * authentication), password-based, etc.
  */
 public abstract class HttpEndpoint(
-  public val handler: String,
-  public val method: String,
-  public val path: String,
-  public val url: String,
-  public val authenticity: Authenticity,
-  public val authorization: Authorization,
-  public val httpRequestContext: HttpRequestContext,
-  public val proxyTarget: HttpEndpoint,
-  public val transportEncryption: TransportEncryption,
-  underlyingNode: Node,
+  public val handler: String?,
+  public val method: String?,
+  public val path: String?,
+  public val url: String?,
+  public val authenticity: Authenticity?,
+  public val authorization: Authorization?,
+  public val httpRequestContext: HttpRequestContext?,
+  public val proxyTarget: HttpEndpoint?,
+  public val transportEncryption: TransportEncryption?,
+  underlyingNode: Node?,
 ) : RemoteEntryPoint(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is HttpEndpoint &&
               super.equals(other) &&

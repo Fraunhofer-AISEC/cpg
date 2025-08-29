@@ -7,9 +7,9 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class OTPBasedAuthentication(
-  public val activated: Boolean,
-  contextIsChecked: Boolean,
-  underlyingNode: Node,
+  public val activated: Boolean?,
+  contextIsChecked: Boolean?,
+  underlyingNode: Node?,
 ) : Authenticity(contextIsChecked, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is OTPBasedAuthentication &&
               super.equals(other) &&

@@ -8,9 +8,9 @@ import kotlin.Int
 import kotlin.collections.MutableList
 
 public abstract class MultiFactorAuthentiation(
-  public val authenticities: MutableList<Authenticity>,
-  contextIsChecked: Boolean,
-  underlyingNode: Node,
+  public val authenticities: MutableList<Authenticity?>,
+  contextIsChecked: Boolean?,
+  underlyingNode: Node?,
 ) : Authenticity(contextIsChecked, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is MultiFactorAuthentiation &&
               super.equals(other) &&

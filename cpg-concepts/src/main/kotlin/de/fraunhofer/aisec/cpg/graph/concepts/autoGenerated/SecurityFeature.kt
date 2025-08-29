@@ -8,7 +8,7 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class SecurityFeature(
-  underlyingNode: Node,
+  underlyingNode: Node?,
 ) : Concept(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is SecurityFeature &&
               super.equals(other)

@@ -18,11 +18,11 @@ import kotlin.Int
  * [Configuration.ops] as it's an operation of the source, not the target.
  */
 public abstract class ProvideConfiguration(
-  public val configuration: Configuration,
-  public val configurationSource: ConfigurationSource,
-  linkedConcept: Configuration,
-  concept: Concept,
-  underlyingNode: Node,
+  public val configuration: Configuration?,
+  public val configurationSource: ConfigurationSource?,
+  linkedConcept: Configuration?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : ConfigurationOperation(linkedConcept, concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is ProvideConfiguration &&
               super.equals(other) &&

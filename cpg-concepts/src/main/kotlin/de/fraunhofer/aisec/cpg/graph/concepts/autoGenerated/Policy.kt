@@ -16,16 +16,16 @@ import kotlin.collections.MutableMap
  * rules and operations that define how access to the resource is controlled.
  */
 public abstract class Policy(
-  public val context: Context,
-  public val policyRules: MutableList<PolicyRule>,
-  dataLocation: DataLocation,
-  creation_time: ZonedDateTime,
-  description: String,
-  labels: MutableMap<String, String>,
-  name: String,
-  raw: String,
-  parent: Resource,
-  underlyingNode: Node,
+  public val context: Context?,
+  public val policyRules: MutableList<PolicyRule?>,
+  dataLocation: DataLocation?,
+  creation_time: ZonedDateTime?,
+  description: String?,
+  labels: MutableMap<String, String>?,
+  name: String?,
+  raw: String?,
+  parent: Resource?,
+  underlyingNode: Node?,
 ) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
   init {
     this.name = Name(localName = name)

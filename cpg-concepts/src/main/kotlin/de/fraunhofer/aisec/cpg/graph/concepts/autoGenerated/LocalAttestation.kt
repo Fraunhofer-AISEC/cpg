@@ -7,8 +7,8 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class LocalAttestation(
-  enabled: Boolean,
-  underlyingNode: Node,
+  enabled: Boolean?,
+  underlyingNode: Node?,
 ) : Attestation(enabled, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is LocalAttestation &&
               super.equals(other)

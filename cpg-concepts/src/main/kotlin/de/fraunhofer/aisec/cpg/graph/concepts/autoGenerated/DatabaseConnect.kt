@@ -10,11 +10,11 @@ import kotlin.Int
 import kotlin.String
 
 public abstract class DatabaseConnect(
-  calls: List<String>,
-  databaseService: DatabaseService,
-  storage: DatabaseStorage,
-  concept: Concept,
-  underlyingNode: Node,
+  calls: List<String>?,
+  databaseService: DatabaseService?,
+  storage: DatabaseStorage?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : DatabaseOperation(calls, databaseService, storage, concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is DatabaseConnect &&
               super.equals(other)

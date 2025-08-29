@@ -9,9 +9,9 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class FileOperation(
-  public val linkedConcept: File,
-  concept: Concept,
-  underlyingNode: Node,
+  public val linkedConcept: File?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : Operation(concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is FileOperation &&
               super.equals(other) &&

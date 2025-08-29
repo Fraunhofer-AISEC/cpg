@@ -17,10 +17,10 @@ import kotlin.Int
  * [ReadConfigurationOption] nodes.
  */
 public abstract class RegisterConfigurationOption(
-  public val configurationOption: ConfigurationOption,
-  linkedConcept: Configuration,
-  concept: Concept,
-  underlyingNode: Node,
+  public val configurationOption: ConfigurationOption?,
+  linkedConcept: Configuration?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : ConfigurationOperation(linkedConcept, concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is RegisterConfigurationOption &&
               super.equals(other) &&

@@ -7,8 +7,8 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class Authenticity(
-  public val contextIsChecked: Boolean,
-  underlyingNode: Node,
+  public val contextIsChecked: Boolean?,
+  underlyingNode: Node?,
 ) : SecurityFeature(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is Authenticity &&
               super.equals(other) &&

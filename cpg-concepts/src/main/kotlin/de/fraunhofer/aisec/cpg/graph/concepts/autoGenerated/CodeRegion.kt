@@ -8,13 +8,13 @@ import kotlin.Int
 import kotlin.String
 
 public abstract class CodeRegion(
-  code: String,
-  public val endColumn: Int,
-  public val endLine: Int,
-  public val `file`: String,
-  public val startColumn: Int,
-  public val startLine: Int,
-  underlyingNode: Node,
+  code: String?,
+  public val endColumn: Int?,
+  public val endLine: Int?,
+  public val `file`: String?,
+  public val startColumn: Int?,
+  public val startLine: Int?,
+  underlyingNode: Node?,
 ) : Functionality(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is CodeRegion &&
               super.equals(other) &&

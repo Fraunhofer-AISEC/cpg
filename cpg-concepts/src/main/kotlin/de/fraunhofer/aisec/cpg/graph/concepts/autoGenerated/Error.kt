@@ -8,8 +8,8 @@ import kotlin.Int
 import kotlin.String
 
 public abstract class Error(
-  public val message: String,
-  underlyingNode: Node,
+  public val message: String?,
+  underlyingNode: Node?,
 ) : Functionality(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is Error &&
               super.equals(other) &&

@@ -8,10 +8,10 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class RemoteAttestation(
-  public val creation_time: ZonedDateTime,
-  public val status: Boolean,
-  enabled: Boolean,
-  underlyingNode: Node,
+  public val creation_time: ZonedDateTime?,
+  public val status: Boolean?,
+  enabled: Boolean?,
+  underlyingNode: Node?,
 ) : Attestation(enabled, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is RemoteAttestation &&
               super.equals(other) &&

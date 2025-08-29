@@ -11,15 +11,15 @@ import kotlin.String
 import kotlin.collections.MutableMap
 
 public abstract class AwarenessTraining(
-  annualUpdateCompleted: Boolean,
-  successfullyCompletedPercentage: Boolean,
-  creation_time: ZonedDateTime,
-  description: String,
-  labels: MutableMap<String, String>,
-  name: String,
-  raw: String,
-  parent: Resource,
-  underlyingNode: Node,
+  annualUpdateCompleted: Boolean?,
+  successfullyCompletedPercentage: Boolean?,
+  creation_time: ZonedDateTime?,
+  description: String?,
+  labels: MutableMap<String, String>?,
+  name: String?,
+  raw: String?,
+  parent: Resource?,
+  underlyingNode: Node?,
 ) : Training(annualUpdateCompleted, successfullyCompletedPercentage, creation_time, description,
     labels, name, raw, parent, underlyingNode) {
   init {

@@ -12,9 +12,9 @@ import kotlin.Int
  * remote key server or a hardware device such as a TPM or HSM.
  */
 public abstract class GetSecret(
-  linkedConcept: Secret,
-  concept: Concept,
-  underlyingNode: Node,
+  linkedConcept: Secret?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : SecretOperation(linkedConcept, concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is GetSecret &&
               super.equals(other)

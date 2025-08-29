@@ -11,9 +11,9 @@ import kotlin.Int
  * Represents an operation to issue a new JWT token.
  */
 public abstract class IssueJwt(
-  linkedConcept: Authenticity,
-  concept: Concept,
-  underlyingNode: Node,
+  linkedConcept: Authenticity?,
+  concept: Concept?,
+  underlyingNode: Node?,
 ) : AuthenticationOperation(linkedConcept, concept, underlyingNode) {
   override fun equals(other: Any?): Boolean = other is IssueJwt &&
               super.equals(other)

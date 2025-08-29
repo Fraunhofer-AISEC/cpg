@@ -7,8 +7,8 @@ import kotlin.Boolean
 import kotlin.Int
 
 public abstract class HttpServer(
-  public val httpRequestHandler: HttpRequestHandler,
-  underlyingNode: Node,
+  public val httpRequestHandler: HttpRequestHandler?,
+  underlyingNode: Node?,
 ) : Framework(underlyingNode) {
   override fun equals(other: Any?): Boolean = other is HttpServer &&
               super.equals(other) &&
