@@ -179,8 +179,7 @@ class JVMLanguageFrontend(
         return null
     }
 
-    override fun codeOf(astNode: Any): String {
-
+    override fun codeOf(astNode: Any): String? {
         if (astNode is SootMethod && astNode.isConcrete) {
             try {
                 return astNode.body.toString()
@@ -188,8 +187,7 @@ class JVMLanguageFrontend(
                 log.error("Could not retrieve the code of $astNode", e)
             }
         }
-        // We do not really have a source anyway. maybe in jimple?
-        return ""
+        return null
     }
 
     override fun typeOf(type: SootType): Type {
