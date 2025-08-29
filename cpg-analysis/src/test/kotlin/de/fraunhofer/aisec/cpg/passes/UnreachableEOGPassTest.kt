@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.Order
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.testcases.Passes
 import kotlin.test.*
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertThrows
@@ -238,14 +239,14 @@ class UnreachableEOGPassTest {
         assertEquals(unreachable, lattice.glb(reachable, unreachable))
         assertEquals(reachable, lattice.glb(reachable, reachable2))
 
-        assertEquals(unreachable, lattice.lub(bottom, unreachable))
-        assertEquals(reachable, lattice.lub(bottom, reachable))
-        assertEquals(reachable, lattice.lub(unreachable, reachable))
-        assertEquals(reachable, lattice.lub(reachable, reachable2))
-        assertEquals(unreachable, lattice.lub(unreachable, bottom))
-        assertEquals(reachable, lattice.lub(reachable, bottom))
-        assertEquals(reachable, lattice.lub(reachable, unreachable))
-        assertEquals(reachable, lattice.lub(reachable, reachable2))
+        assertEquals(unreachable, runBlocking { lattice.lub(bottom, unreachable) })
+        assertEquals(reachable, runBlocking { lattice.lub(bottom, reachable) })
+        assertEquals(reachable, runBlocking { lattice.lub(unreachable, reachable) })
+        assertEquals(reachable, runBlocking { lattice.lub(reachable, reachable2) })
+        assertEquals(unreachable, runBlocking { lattice.lub(unreachable, bottom) })
+        assertEquals(reachable, runBlocking { lattice.lub(reachable, bottom) })
+        assertEquals(reachable, runBlocking { lattice.lub(reachable, unreachable) })
+        assertEquals(reachable, runBlocking { lattice.lub(reachable, reachable2) })
 
         assertEquals(Order.LESSER, lattice.compare(bottom, unreachable))
         assertEquals(Order.LESSER, lattice.compare(bottom, reachable))

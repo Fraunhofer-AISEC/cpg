@@ -123,7 +123,7 @@ class PointsToState(
     override val bottom: Element
         get() = Element(innerLattice1.bottom, innerLattice2.bottom)
 
-    override fun lub(
+    override suspend fun lub(
         one: TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>,
         two: TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>,
         allowModify: Boolean,
@@ -1994,11 +1994,13 @@ fun PointsToState.push(
         } == true
     }
 
-    this.innerLattice1.lub(
-        currentState.generalState,
-        MapLattice.Element(newNode to newLatticeCopy),
-        true,
-    )
+    runBlocking {
+        this@push.innerLattice1.lub(
+            currentState.generalState,
+            MapLattice.Element(newNode to newLatticeCopy),
+            true,
+        )
+    }
     return currentState
 }
 
@@ -2022,11 +2024,13 @@ fun PointsToState.pushToDeclarationsState(
         } == true
     }
 
-    this.innerLattice2.lub(
-        currentState.declarationsState,
-        MapLattice.Element(newNode to newLatticeCopy),
-        true,
-    )
+    runBlocking {
+        this@pushToDeclarationsState.innerLattice2.lub(
+            currentState.declarationsState,
+            MapLattice.Element(newNode to newLatticeCopy),
+            true,
+        )
+    }
     return currentState
 }
 

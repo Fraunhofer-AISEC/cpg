@@ -301,7 +301,12 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
     override val bottom: Element
         get() = Element(Reachability.BOTTOM)
 
-    override fun lub(one: Element, two: Element, allowModify: Boolean, widen: Boolean): Element {
+    override suspend fun lub(
+        one: Element,
+        two: Element,
+        allowModify: Boolean,
+        widen: Boolean,
+    ): Element {
         return if (allowModify) {
             val ret: Order
             runBlocking { ret = compare(one, two) }
@@ -343,9 +348,11 @@ fun UnreachabilityState.push(
     newEdge: EvaluationOrder,
     newReachability: Reachability,
 ): UnreachabilityStateElement {
-    return this.lub(
-        currentState,
-        UnreachabilityStateElement(newEdge to ReachabilityLattice.Element(newReachability)),
-        true,
-    )
+    return runBlocking {
+        this@push.lub(
+            currentState,
+            UnreachabilityStateElement(newEdge to ReachabilityLattice.Element(newReachability)),
+            true,
+        )
+    }
 }

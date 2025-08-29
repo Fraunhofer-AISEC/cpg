@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
+import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -67,7 +68,7 @@ class IntegerValue : Value<LatticeInterval> {
             simpleComparison(lhs.lhs, rhs.lhs, lhs.operatorCode, lattice, lhsState)
             val rhsState = state.duplicate()
             simpleComparison(rhs.lhs, rhs.lhs, rhs.operatorCode, lattice, rhsState)
-            val newState = lattice.lub(lhsState, rhsState, false)
+            val newState = runBlocking { lattice.lub(lhsState, rhsState, false) }
             // TODO: Handle the new state
             return newState
         } else if (operator == "&&" && lhs is BinaryOperator && rhs is BinaryOperator) {
