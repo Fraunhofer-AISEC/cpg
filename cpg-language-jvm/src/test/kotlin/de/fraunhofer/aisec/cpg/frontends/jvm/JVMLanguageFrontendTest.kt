@@ -189,6 +189,25 @@ class JVMLanguageFrontendTest {
         tu.methods.forEach { println(it.code) }
     }
 
+    @Disabled("APK support is implemented but always crashes with an out of memory error")
+    @Test
+    fun testHelloWorldApk() {
+        // This will be our classpath
+        val topLevel = Path.of("src", "test", "resources", "apk", "HelloWorld")
+        val tu =
+            analyzeAndGetFirstTU(
+                // In case of a jar, the jar is directly used as a class path
+                listOf(topLevel.resolve("app-debug.apk").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<JVMLanguage>()
+            }
+        assertNotNull(tu)
+        assertEquals(0, tu.problems.size)
+        tu.methods.forEach { println(it.code) }
+    }
+
     @Test
     fun testInheritanceClass() {
         // This will be our classpath
@@ -408,5 +427,25 @@ class JVMLanguageFrontendTest {
             }
         assertNotNull(tu)
         tu.methods.forEach { println(it.code) }
+    }
+
+    @Test
+    fun testExceptionsClass() {
+        // This will be our classpath
+        val topLevel = Path.of("src", "test", "resources", "class", "exceptions")
+        val result =
+            analyze(
+                // We just need to specify one file to trigger the byte code loader
+                listOf(topLevel.resolve("ExceptionTest.class").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<JVMLanguage>()
+            }
+        assertNotNull(result)
+
+        assertEquals(1, result.throws.size, "There is exactly one throw statement")
+
+        assertEquals(0, result.problems.size)
     }
 }
