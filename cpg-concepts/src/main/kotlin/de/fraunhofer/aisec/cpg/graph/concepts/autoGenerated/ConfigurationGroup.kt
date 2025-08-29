@@ -4,11 +4,12 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import java.time.ZonedDateTime
 import kotlin.String
+import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 public abstract class ConfigurationGroup(
   public val configuration: Configuration,
-  public val configurationOptions: ConfigurationOption,
+  public val configurationOptions: MutableList<ConfigurationOption>,
   dataLocation: DataLocation,
   creation_time: ZonedDateTime,
   description: String,

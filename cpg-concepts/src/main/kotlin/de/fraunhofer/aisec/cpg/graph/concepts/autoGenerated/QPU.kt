@@ -6,6 +6,7 @@ import java.time.ZonedDateTime
 import kotlin.Boolean
 import kotlin.Float
 import kotlin.String
+import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 public abstract class QPU(
@@ -14,12 +15,12 @@ public abstract class QPU(
   public val TwoQubitErrorRate: Float,
   public val errorCorrectionEnabled: Boolean,
   encryptionInUse: EncryptionInUse,
-  networkInterfaces: NetworkInterface,
+  networkInterfaces: MutableList<NetworkInterface>,
   remoteAttestation: RemoteAttestation,
   resourceLogging: ResourceLogging,
   internetAccessibleEndpoint: Boolean,
   geoLocation: GeoLocation,
-  loggings: Logging,
+  loggings: MutableList<Logging>,
   redundancies: Redundancy,
   usageStatistics: UsageStatistics,
   creation_time: ZonedDateTime,

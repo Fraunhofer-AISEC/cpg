@@ -5,6 +5,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.time.ZonedDateTime
 import kotlin.Float
 import kotlin.String
+import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 public abstract class MachineLearningModel(
@@ -14,7 +15,7 @@ public abstract class MachineLearningModel(
   public val privacyLabel: Float,
   public val privacyLevel: Float,
   public val robustness: Float,
-  public val vulnerabilities: Vulnerability,
+  public val vulnerabilities: MutableList<Vulnerability>,
   dataLocation: DataLocation,
   creation_time: ZonedDateTime,
   description: String,

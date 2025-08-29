@@ -7,20 +7,21 @@ import kotlin.Array
 import kotlin.Boolean
 import kotlin.Short
 import kotlin.String
+import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 public abstract class SecurityAdvisoryService(
-  public val securityAdvisoryFeeds: SecurityAdvisoryFeed,
-  public val selectorKeies: SelectorKey,
+  public val securityAdvisoryFeeds: MutableList<SecurityAdvisoryFeed>,
+  public val selectorKeies: MutableList<SelectorKey>,
   ips: Array<String>,
   ports: Array<Short>,
   authenticity: Boolean,
-  computes: Compute,
+  computes: MutableList<Compute>,
   serviceMetadataDocument: ServiceMetadataDocument,
   transportEncryption: TransportEncryption,
   internetAccessibleEndpoint: Boolean,
   geoLocation: GeoLocation,
-  loggings: Logging,
+  loggings: MutableList<Logging>,
   redundancies: Redundancy,
   usageStatistics: UsageStatistics,
   creation_time: ZonedDateTime,

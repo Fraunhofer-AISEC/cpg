@@ -4,13 +4,14 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import java.time.ZonedDateTime
 import kotlin.String
+import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 public abstract class Document(
   public val filetype: String,
-  public val documentChecksums: DocumentChecksum,
-  public val documentSignatures: DocumentSignature,
-  public val securityFeatures: SecurityFeature,
+  public val documentChecksums: MutableList<DocumentChecksum>,
+  public val documentSignatures: MutableList<DocumentSignature>,
+  public val securityFeatures: MutableList<SecurityFeature>,
   public val validatedBy: SchemaValidation,
   dataLocation: DataLocation,
   creation_time: ZonedDateTime,

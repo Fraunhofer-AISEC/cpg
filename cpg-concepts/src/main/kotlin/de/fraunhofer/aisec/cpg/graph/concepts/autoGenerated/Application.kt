@@ -5,6 +5,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.time.ZonedDateTime
 import java.util.List
 import kotlin.String
+import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 public abstract class Application(
@@ -13,10 +14,10 @@ public abstract class Application(
   public val translationUnits: List<String>,
   public val automaticUpdates: AutomaticUpdates,
   public val compute: Compute,
-  libraries: Library,
-  codeModules: CodeModule,
+  libraries: MutableList<Library>,
+  codeModules: MutableList<CodeModule>,
   codeRepository: CodeRepository,
-  functionalities: Functionality,
+  functionalities: MutableList<Functionality>,
   creation_time: ZonedDateTime,
   description: String,
   labels: MutableMap<String, String>,

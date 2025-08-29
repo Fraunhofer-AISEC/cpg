@@ -6,6 +6,7 @@ import java.time.ZonedDateTime
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
+import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 public abstract class Secret(
@@ -18,7 +19,7 @@ public abstract class Secret(
   usedByMultiple: Infrastructure,
   internetAccessibleEndpoint: Boolean,
   geoLocation: GeoLocation,
-  loggings: Logging,
+  loggings: MutableList<Logging>,
   redundancies: Redundancy,
   usageStatistics: UsageStatistics,
   creation_time: ZonedDateTime,

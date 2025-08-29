@@ -5,17 +5,18 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.time.ZonedDateTime
 import kotlin.Boolean
 import kotlin.String
+import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 public abstract class Storage(
   public val activityLogging: ActivityLogging,
   public val atRestEncryption: Boolean,
-  public val backups: Backup,
+  public val backups: MutableList<Backup>,
   public val immutability: Immutability,
   public val resourceLogging: ResourceLogging,
   internetAccessibleEndpoint: Boolean,
   geoLocation: GeoLocation,
-  loggings: Logging,
+  loggings: MutableList<Logging>,
   redundancies: Redundancy,
   usageStatistics: UsageStatistics,
   creation_time: ZonedDateTime,

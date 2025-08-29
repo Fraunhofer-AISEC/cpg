@@ -4,13 +4,14 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import kotlin.Boolean
 import kotlin.Float
 import kotlin.String
+import kotlin.collections.MutableList
 
 public abstract class TransportEncryption(
   public val enabled: Boolean,
   public val enforced: Boolean,
   public val protocol: String,
   public val protocolVersion: Float,
-  public val cipherSuites: CipherSuite,
+  public val cipherSuites: MutableList<CipherSuite>,
   basedOn: Cipher,
   secret: Secret,
   underlyingNode: Node,

@@ -7,9 +7,10 @@ import java.util.Objects
 import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
+import kotlin.collections.MutableList
 
 public abstract class LoadLibrary(
-  public val entryPoints: EntryPoint,
+  public val entryPoints: MutableList<EntryPoint>,
   operatingSystemArchitecture: OperatingSystemArchitecture,
   linkedConcept: Memory,
   concept: Concept,

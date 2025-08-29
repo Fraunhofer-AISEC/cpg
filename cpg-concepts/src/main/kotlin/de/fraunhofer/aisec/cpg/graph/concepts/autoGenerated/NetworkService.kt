@@ -7,18 +7,19 @@ import kotlin.Array
 import kotlin.Boolean
 import kotlin.Short
 import kotlin.String
+import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 public abstract class NetworkService(
   public val ips: Array<String>,
   public val ports: Array<Short>,
   public val authenticity: Boolean,
-  public val computes: Compute,
+  public val computes: MutableList<Compute>,
   public val serviceMetadataDocument: ServiceMetadataDocument,
   public val transportEncryption: TransportEncryption,
   internetAccessibleEndpoint: Boolean,
   geoLocation: GeoLocation,
-  loggings: Logging,
+  loggings: MutableList<Logging>,
   redundancies: Redundancy,
   usageStatistics: UsageStatistics,
   creation_time: ZonedDateTime,

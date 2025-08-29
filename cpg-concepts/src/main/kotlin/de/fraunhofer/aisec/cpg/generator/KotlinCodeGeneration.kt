@@ -224,7 +224,6 @@ private fun createKtSourceCodeString(
 
     // If current class is a operation we have to add equals method and hashCode method
     if (ktSource.allParents.find { it.name == "Operation" } != null) {
-        // TODO: Call here equals and hash code method
         addEqualsMethod(classBuilder, ktSource)
         addHashCodeMethod(classBuilder, ktSource)
     }
@@ -358,15 +357,33 @@ private fun addPropertiesToClass(
         }
 
         // Add a constructor parameter for the property.
-        constructorBuilder.addParameter(objectProp.propertyName, typeName)
+        if (objectProp.propertyProperty == "hasMultiple") {
+            constructorBuilder.addParameter(
+                objectProp.propertyName,
+                ClassName("kotlin.collections", "MutableList").parameterizedBy(typeName),
+            )
+        } else {
+            constructorBuilder.addParameter(objectProp.propertyName, typeName)
+        }
 
         if (!isParent) {
             // Add a property to the class, initialized from the constructor parameter.
-            classBuilder.addProperty(
-                PropertySpec.builder(objectProp.propertyName, typeName)
-                    .initializer(objectProp.propertyName)
-                    .build()
-            )
+            if (objectProp.propertyProperty == "hasMultiple") {
+                classBuilder.addProperty(
+                    PropertySpec.builder(
+                            objectProp.propertyName,
+                            ClassName("kotlin.collections", "MutableList").parameterizedBy(typeName),
+                        )
+                        .initializer(objectProp.propertyName)
+                        .build()
+                )
+            } else {
+                classBuilder.addProperty(
+                    PropertySpec.builder(objectProp.propertyName, typeName)
+                        .initializer(objectProp.propertyName)
+                        .build()
+                )
+            }
         }
 
         // Add a property to the class, initialized from the constructor parameter.

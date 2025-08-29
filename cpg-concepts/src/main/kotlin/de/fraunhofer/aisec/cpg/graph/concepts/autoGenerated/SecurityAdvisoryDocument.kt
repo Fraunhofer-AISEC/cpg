@@ -4,14 +4,15 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import java.time.ZonedDateTime
 import kotlin.String
+import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 public abstract class SecurityAdvisoryDocument(
-  public val vulnerabilities: Vulnerability,
+  public val vulnerabilities: MutableList<Vulnerability>,
   filetype: String,
-  documentChecksums: DocumentChecksum,
-  documentSignatures: DocumentSignature,
-  securityFeatures: SecurityFeature,
+  documentChecksums: MutableList<DocumentChecksum>,
+  documentSignatures: MutableList<DocumentSignature>,
+  securityFeatures: MutableList<SecurityFeature>,
   validatedBy: SchemaValidation,
   dataLocation: DataLocation,
   creation_time: ZonedDateTime,

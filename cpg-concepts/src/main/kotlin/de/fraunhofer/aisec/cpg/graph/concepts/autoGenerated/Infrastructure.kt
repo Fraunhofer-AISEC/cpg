@@ -5,12 +5,13 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.time.ZonedDateTime
 import kotlin.Boolean
 import kotlin.String
+import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 public abstract class Infrastructure(
   public val internetAccessibleEndpoint: Boolean,
   public val geoLocation: GeoLocation,
-  public val loggings: Logging,
+  public val loggings: MutableList<Logging>,
   public val redundancies: Redundancy,
   public val usageStatistics: UsageStatistics,
   creation_time: ZonedDateTime,

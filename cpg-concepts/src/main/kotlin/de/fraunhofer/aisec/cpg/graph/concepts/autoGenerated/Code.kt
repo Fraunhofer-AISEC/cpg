@@ -4,12 +4,13 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import java.time.ZonedDateTime
 import kotlin.String
+import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 public abstract class Code(
-  public val codeModules: CodeModule,
+  public val codeModules: MutableList<CodeModule>,
   public val codeRepository: CodeRepository,
-  public val functionalities: Functionality,
+  public val functionalities: MutableList<Functionality>,
   creation_time: ZonedDateTime,
   description: String,
   labels: MutableMap<String, String>,

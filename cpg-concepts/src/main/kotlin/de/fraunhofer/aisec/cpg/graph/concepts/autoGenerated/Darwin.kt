@@ -4,12 +4,13 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import java.time.ZonedDateTime
 import kotlin.String
+import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 public abstract class Darwin(
-  codeModules: CodeModule,
+  codeModules: MutableList<CodeModule>,
   codeRepository: CodeRepository,
-  functionalities: Functionality,
+  functionalities: MutableList<Functionality>,
   creation_time: ZonedDateTime,
   description: String,
   labels: MutableMap<String, String>,

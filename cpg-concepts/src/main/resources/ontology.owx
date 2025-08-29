@@ -1893,7 +1893,7 @@
         <Class IRI="/classes/Configuration"/>
         <ObjectSomeValuesFrom>
             <ObjectProperty IRI="/properties/hasMultiple"/>
-            <Class IRI="/classes/Operation"/>
+            <Class IRI="/classes/ConfigurationGroup"/>
         </ObjectSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
@@ -5335,6 +5335,11 @@ name = metadata.name</Literal>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>/classes/ExitBoundaryOperation</IRI>
         <Literal>ExitBoundaryOperation</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/File</IRI>
+        <Literal>File</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
