@@ -2021,15 +2021,29 @@ fun PointsToState.pushToDeclarationsState(
     // If we already have exactly that entry, no need to re-write it, otherwise we might confuse the
     // iterateEOG function
     val newLatticeCopy = newLatticeElement.duplicate()
-    newLatticeCopy.second.removeAll { pair ->
-        currentState.declarationsState[newNode]?.second?.any {
-            it.first === pair.first && it.second == pair.second
-        } == true
-    }
-    newLatticeCopy.third.removeAll { pair ->
-        currentState.declarationsState[newNode]?.third?.any {
-            it.first === pair.first && it.second == pair.second
-        } == true
+
+    runBlocking {
+        newLatticeCopy.second.forEach { pair ->
+            launch {
+                if (
+                    currentState.declarationsState[newNode]?.second?.any {
+                        it.first === pair.first && it.second == pair.second
+                    } == true
+                )
+                    synchronized(newLatticeCopy.second) { newLatticeCopy.second.remove(pair) }
+            }
+        }
+
+        newLatticeCopy.third.forEach { pair ->
+            launch {
+                if (
+                    currentState.declarationsState[newNode]?.third?.any {
+                        it.first === pair.first && it.second == pair.second
+                    } == true
+                )
+                    synchronized(newLatticeCopy.third) { newLatticeCopy.third.remove(pair) }
+            }
+        }
     }
 
     runBlocking {
@@ -2115,7 +2129,6 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
             )
         }
     } else {
-
         // Otherwise, we read the declarationState.
         // Let's start with the main element
         var elements = this.declarationsState[node]?.second?.toList()
