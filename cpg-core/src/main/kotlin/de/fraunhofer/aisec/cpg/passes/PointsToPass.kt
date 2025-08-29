@@ -2722,13 +2722,24 @@ fun PointsToState.Element.updateValues(
             // the short FS paths
             val newLastWrites = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
             newLastWrites.addAll(lastWrites)
-            newLastWrites.removeIf { lw ->
-                destinations.none {
-                    it is CallExpression && it.invokes.singleOrNull()?.body == null
-                } &&
-                    (sources.any { src -> src.first === lw.first && src.second in lw.second } ||
-                        lw.first in destinations)
+
+            runBlocking {
+                newLastWrites.forEach { lw ->
+                    launch {
+                        if (
+                            destinations.none {
+                                it is CallExpression && it.invokes.singleOrNull()?.body == null
+                            } &&
+                                (sources.any { src ->
+                                    src.first === lw.first && src.second in lw.second
+                                } || lw.first in destinations)
+                        ) {
+                            synchronized(newLastWrites) { newLastWrites.remove(lw) }
+                        }
+                    }
+                }
             }
+
             destinations.forEach { d ->
                 val newGenState = this.generalState.duplicate()
                 newGenState[d] =
