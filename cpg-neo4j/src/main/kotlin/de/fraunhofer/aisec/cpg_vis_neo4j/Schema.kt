@@ -168,7 +168,7 @@ class Schema {
         // node in neo4j
         entities.forEach { classInfo ->
             val key = meta.schema.findNode(classInfo.neo4jName())
-            allRels[classInfo.neo4jName() ?: classInfo.underlyingClass.simpleName] =
+            allRels[classInfo.neo4jName() ?: classInfo.underlyingClass.name] =
                 key.relationships().entries.map { Pair(it.key, it.value.type()) }.toSet()
         }
 
@@ -182,7 +182,7 @@ class Schema {
                     it.field.declaringClass == entity.underlyingClass
                 }
             fields.forEach { relationshipFields.put(Pair(entity, it.name), it) }
-            val name = entity.neo4jName() ?: entity.underlyingClass.simpleName
+            val name = entity.neo4jName() ?: entity.underlyingClass.name
             allRels[name]?.let { relationPair ->
                 inherentRels[name] =
                     relationPair.filter { rel -> fields.any { it.name == rel.first } }.toSet()
@@ -197,9 +197,7 @@ class Schema {
                     ) {
                         (property.compositeConverter as CpgCompositeConverter).graphSchema
                     } else {
-                        listOf<Pair<String, String>>(
-                            Pair(property.field.type.simpleName, property.name)
-                        )
+                        listOf<Pair<String, String>>(Pair(property.field.type.name, property.name))
                     }
 
                 if (property.field.declaringClass == entity.underlyingClass) {
@@ -219,7 +217,7 @@ class Schema {
         val entityRoots: MutableList<ClassInfo> =
             hierarchy.filter { it.value.first == null }.map { it.key }.toMutableList()
         entityRoots.forEach {
-            inheritedRels[it.neo4jName() ?: it.underlyingClass.simpleName] = mutableSetOf()
+            inheritedRels[it.neo4jName() ?: it.underlyingClass.name] = mutableSetOf()
         }
         entityRoots.forEach { extractFieldInformationFromHierarchy(it) }
 
@@ -235,15 +233,15 @@ class Schema {
     /** Extracts the field information for every entity and relationship. */
     private fun extractFieldInformationFromHierarchy(classInfo: ClassInfo) {
         val fields: MutableSet<Pair<String, String>> = mutableSetOf()
-        inherentRels[classInfo.neo4jName() ?: classInfo.underlyingClass.simpleName]?.let {
+        inherentRels[classInfo.neo4jName() ?: classInfo.underlyingClass.name]?.let {
             fields.addAll(it)
         }
-        inheritedRels[classInfo.neo4jName() ?: classInfo.underlyingClass.simpleName]?.let {
+        inheritedRels[classInfo.neo4jName() ?: classInfo.underlyingClass.name]?.let {
             fields.addAll(it)
         }
 
         hierarchy[classInfo]?.second?.forEach {
-            inheritedRels[it.neo4jName() ?: it.underlyingClass.simpleName] = fields
+            inheritedRels[it.neo4jName() ?: it.underlyingClass.name] = fields
             extractFieldInformationFromHierarchy(it)
         }
     }
@@ -260,15 +258,14 @@ class Schema {
         hierarchy[root]?.second?.forEach { completeSchema(relCanHave, hierarchy, it) }
 
         hierarchy.keys
-            .filter { !relCanHave.contains(it.neo4jName() ?: it.underlyingClass.simpleName) }
+            .filter { !relCanHave.contains(it.neo4jName() ?: it.underlyingClass.name) }
             .forEach {
                 relCanHave.put(
-                    it.neo4jName() ?: it.underlyingClass.simpleName,
+                    it.neo4jName() ?: it.underlyingClass.name,
                     hierarchy[it]
                         ?.second
                         ?.flatMap { classInfo ->
-                            relCanHave[
-                                classInfo.neo4jName() ?: classInfo.underlyingClass.simpleName]
+                            relCanHave[classInfo.neo4jName() ?: classInfo.underlyingClass.name]
                                 ?: setOf()
                         }
                         ?.toSet() ?: setOf(),
@@ -510,7 +507,7 @@ class Schema {
         if (classInfo == null) {
             return "Node"
         }
-        return classInfo.neo4jName() ?: classInfo.underlyingClass.simpleName
+        return classInfo.neo4jName() ?: classInfo.underlyingClass.name
     }
 
     /** Creates a unique markdown anchor to make navigation unambiguous. */
