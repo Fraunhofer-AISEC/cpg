@@ -179,13 +179,13 @@ class JVMLanguageFrontend(
         return null
     }
 
-    override fun codeOf(astNode: Any): String? {
+    override fun codeOf(astNode: Any): String {
 
         if (astNode is SootMethod && astNode.isConcrete) {
             try {
                 return astNode.body.toString()
-            } catch (_: IllegalArgumentException) {
-                // Do nothing
+            } catch (e: IllegalArgumentException) {
+                log.error("Could not retrieve the code of $astNode", e)
             }
         }
         // We do not really have a source anyway. maybe in jimple?
