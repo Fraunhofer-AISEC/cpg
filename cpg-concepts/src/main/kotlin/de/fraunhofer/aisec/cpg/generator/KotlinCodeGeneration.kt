@@ -227,11 +227,9 @@ private fun createKtSourceCodeString(
     // Set the primary constructor for the class.
     classBuilder.primaryConstructor(constructorBuilder.build())
 
-    // If current class is a operation we have to add equals method and hashCode method
-    if (ktSource.allParents.find { it.name == "Operation" } != null) {
-        addEqualsMethod(classBuilder, ktSource)
-        addHashCodeMethod(classBuilder, ktSource)
-    }
+    // We have to add equals method and hashCode method to concepts and operations
+    addEqualsMethod(classBuilder, ktSource)
+    addHashCodeMethod(classBuilder, ktSource)
 
     // Build the final file
     val file = fileSpecBuilder.addType(classBuilder.build()).build()
