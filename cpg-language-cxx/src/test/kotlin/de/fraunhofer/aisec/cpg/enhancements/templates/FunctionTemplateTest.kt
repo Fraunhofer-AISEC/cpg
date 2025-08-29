@@ -113,7 +113,7 @@ internal class FunctionTemplateTest : BaseTest() {
         val intType = IntegerType("int", 32, language, NumericType.Modifier.SIGNED)
         val floatType = FloatingPointType("float", 32, language, NumericType.Modifier.SIGNED)
         assertEquals(typeT, typeParamDeclaration.type)
-        assertEquals(intType, typeParamDeclaration.default)
+        assertEquals(intType, typeParamDeclaration.default?.type)
 
         val N = findByUniqueName(result.parameters, "N")
         val int2 = findByUniquePredicate(result.literals { it.value == 2 }) { it.value == 2 }
@@ -316,12 +316,12 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(fixedMultiply, call.invokes[0])
 
         // Check template parameters
-        val intType =
-            findByUniquePredicate(result.allChildren()) { t: ObjectType ->
+        val intTypeExpression =
+            findByUniquePredicate(result.allChildren()) { t: TypeExpression ->
                 t.name.localName == "int"
             }
-        val literal5 =
-            findByUniquePredicate<Literal<*>>(result.literals) { l: Literal<*> -> l.value == 5 }
+        val intType = intTypeExpression.type
+        val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
         assertEquals(2, call.templateArguments.size)
         assertEquals(intType, (call.templateArguments[0] as TypeExpression).type)
         assertEquals(literal5, call.templateArguments[1])
@@ -418,10 +418,13 @@ internal class FunctionTemplateTest : BaseTest() {
         assertEquals(fixedMultiply, call.invokes[0])
 
         // Check template parameters
-        val intType =
-            findByUniquePredicate(result.allChildren<ObjectType>()) { t: ObjectType ->
+        val intTypeExpression =
+            findByUniquePredicate(
+                result.allChildren<FunctionTemplateDeclaration>().flatMap { it.allChildren() }
+            ) { t: TypeExpression ->
                 t.name.localName == "int"
             }
+        val intType = intTypeExpression.type
         val literal5 = findByUniquePredicate(result.literals) { l: Literal<*> -> l.value == 5 }
         assertEquals(2, call.templateArguments.size)
         assertEquals(intType, (call.templateArguments[0] as TypeExpression).type)

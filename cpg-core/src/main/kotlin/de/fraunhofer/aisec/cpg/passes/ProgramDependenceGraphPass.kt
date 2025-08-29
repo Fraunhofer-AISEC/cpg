@@ -47,12 +47,12 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 @DependsOn(DynamicInvokeResolver::class)
 class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     private val visitor =
-        object : IVisitor<Node>() {
+        object : IVisitor<AstNode>() {
             /**
              * Collects the data and control dependence edges of a node and adds them to the program
              * dependence edges
              */
-            override fun visit(t: Node) {
+            override fun visit(t: AstNode) {
                 if (t is Reference) {
                     // We filter all prevDFGEdges if the condition affects the variable of t and
                     // if there's a flow from the prevDFGEdge's node through the condition to t.
@@ -136,6 +136,8 @@ class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(
     }
 
     private fun handle(node: Node) {
-        node.accept(Strategy::AST_FORWARD, visitor)
+        if (node is AstNode) {
+            node.accept<AstNode>(Strategy::AST_FORWARD, visitor)
+        }
     }
 }

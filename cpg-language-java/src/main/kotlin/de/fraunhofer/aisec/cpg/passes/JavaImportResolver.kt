@@ -163,12 +163,12 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         return result
     }
 
-    protected fun findImportables(node: Node) {
+    protected fun findImportables(node: AstNode) {
         // Using a visitor to avoid loops in the AST
         node.accept(
             Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
+            object : IVisitor<AstNode>() {
+                override fun visit(t: AstNode) {
                     if (t is RecordDeclaration) {
                         records.add(t)
                         importables.putIfAbsent(t.name.toString(), t)
