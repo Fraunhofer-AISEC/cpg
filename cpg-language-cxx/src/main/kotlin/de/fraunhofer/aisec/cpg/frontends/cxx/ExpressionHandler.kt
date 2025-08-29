@@ -287,8 +287,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
      * @param template
      * @return List of Nodes containing the all the arguments the template was instantiated with.
      */
-    private fun getTemplateArguments(template: CPPASTTemplateId): MutableList<Node> {
-        val templateArguments = mutableListOf<Node>()
+    private fun getTemplateArguments(template: CPPASTTemplateId): MutableList<AstNode> {
+        val templateArguments = mutableListOf<AstNode>()
         for (argument in template.templateArguments) {
             when (argument) {
                 is IASTTypeId -> {
@@ -306,6 +306,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 }
             }
         }
+
         return templateArguments
     }
 

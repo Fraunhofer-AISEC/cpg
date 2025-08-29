@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 /**
- * Represets a Type used as an expression for instance when instantiating templates
+ * Represents a Type used as an expression for instance when instantiating templates
  *
  * Note: This Expression is required since we cannot have ASTChilds directly connected to a Type
  * since they are merged.
