@@ -428,4 +428,24 @@ class JVMLanguageFrontendTest {
         assertNotNull(tu)
         tu.methods.forEach { println(it.code) }
     }
+
+    @Test
+    fun testExceptionsClass() {
+        // This will be our classpath
+        val topLevel = Path.of("src", "test", "resources", "class", "exceptions")
+        val result =
+            analyze(
+                // We just need to specify one file to trigger the byte code loader
+                listOf(topLevel.resolve("ExceptionTest.class").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<JVMLanguage>()
+            }
+        assertNotNull(result)
+
+        assertEquals(1, result.throws.size, "There is exactly one throw statement")
+
+        assertEquals(0, result.problems.size)
+    }
 }
