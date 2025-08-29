@@ -549,7 +549,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
 
             var ret: Order? = null
 
-            runBlocking {
+            coroutineScope {
                 this@Element.entries.forEach { (k, v) ->
                     // We can't return in the coroutines, so we only set the return value
                     // there. If we have a return value, we can stop here
@@ -681,7 +681,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         val allKeys = one.keys.intersect(two.keys).toIdentitySet()
 
         val newMap = Element<K, V>(allKeys.size)
-        runBlocking {
+        coroutineScope {
             val concurrentProcesses =
                 allKeys.map { key ->
                     async {
