@@ -74,7 +74,7 @@ class TypeScriptLanguageFrontend(
         private val parserFile: File = createTempFile("parser", "")
 
         init {
-            val arch = System.getProperty("os.arch")
+            val arch = System.getProperty("os.arch").replace("amd64", "x86_64")
             val os: String =
                 when {
                     System.getProperty("os.name").startsWith("Mac") -> {
