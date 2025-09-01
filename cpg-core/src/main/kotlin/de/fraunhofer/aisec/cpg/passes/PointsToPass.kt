@@ -271,10 +271,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     override fun accept(node: Node) {
         functionSummaryAnalysisChain.clear()
-        return acceptInternal(node)
+        return runBlocking { acceptInternal(node) }
     }
 
-    fun acceptInternal(node: Node) {
+    suspend fun acceptInternal(node: Node) {
         // For now, we only execute this for function declarations, we will support all EOG starters
         // in the future.
         if (node !is FunctionDeclaration) {
@@ -411,7 +411,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
      * This function draws the basic DFG-Edges based on the functionDeclaration, such as edges
      * between ParameterMemoryValues
      */
-    private fun handleEmptyFunctionDeclaration(
+    private suspend fun handleEmptyFunctionDeclaration(
         lattice: PointsToState,
         startState: PointsToState.Element,
         functionDeclaration: FunctionDeclaration,
@@ -463,7 +463,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
 
         for ((param, fsEntries) in functionDeclaration.functionSummary) {
-            runBlocking {
+            coroutineScope {
                 fsEntries.forEach { entry ->
                     launch {
                         if (
@@ -531,13 +531,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return doubleState
     }
 
-    private fun storeFunctionSummary(
+    private suspend fun storeFunctionSummary(
         node: FunctionDeclaration,
         doubleState: PointsToState.Element,
     ) {
 
         clearFSDummies(node.functionSummary)
-        runBlocking {
+        coroutineScope {
             node.parameters.forEach { param ->
                 launch {
                     // Collect all addresses of the parameter that we can use as index to look up
@@ -751,32 +751,34 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val lattice = lattice as? PointsToState ?: return state
         val currentNode = currentEdge.end
 
-        // Used to keep iterating for steps which do not modify the alias-state otherwise
-        doubleState =
-            lattice.pushToDeclarationsState(
-                doubleState,
-                currentNode,
-                doubleState.getFromDecl(currentEdge.end)
-                    ?: DeclarationStateEntryElement(
-                        PowersetLattice.Element(),
-                        PowersetLattice.Element(),
-                        PowersetLattice.Element(),
-                    ),
-            )
+        runBlocking {
+            // Used to keep iterating for steps which do not modify the alias-state otherwise
+            doubleState =
+                lattice.pushToDeclarationsState(
+                    doubleState,
+                    currentNode,
+                    doubleState.getFromDecl(currentEdge.end)
+                        ?: DeclarationStateEntryElement(
+                            PowersetLattice.Element(),
+                            PowersetLattice.Element(),
+                            PowersetLattice.Element(),
+                        ),
+                )
 
-        doubleState =
-            when (currentNode) {
-                is DeleteExpression -> handleDeleteExpression(lattice, currentNode, doubleState)
-                is Declaration,
-                is MemoryAddress -> handleDeclaration(lattice, currentNode, doubleState)
-                is AssignExpression -> handleAssignExpression(lattice, currentNode, doubleState)
-                is UnaryOperator -> handleUnaryOperator(lattice, currentNode, doubleState)
-                is CallExpression -> handleCallExpression(lattice, currentNode, doubleState)
-                is Expression -> handleExpression(lattice, currentNode, doubleState)
-                is ReturnStatement -> handleReturnStatement(lattice, currentNode, doubleState)
-                else -> doubleState
-            }
+            doubleState =
+                when (currentNode) {
+                    is DeleteExpression -> handleDeleteExpression(lattice, currentNode, doubleState)
+                    is Declaration,
+                    is MemoryAddress -> handleDeclaration(lattice, currentNode, doubleState)
 
+                    is AssignExpression -> handleAssignExpression(lattice, currentNode, doubleState)
+                    is UnaryOperator -> handleUnaryOperator(lattice, currentNode, doubleState)
+                    is CallExpression -> handleCallExpression(lattice, currentNode, doubleState)
+                    is Expression -> handleExpression(lattice, currentNode, doubleState)
+                    is ReturnStatement -> handleReturnStatement(lattice, currentNode, doubleState)
+                    else -> doubleState
+                }
+        }
         return doubleState
     }
 
@@ -1030,7 +1032,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val dst: IdentitySet<Node> = identitySetOf(),
     )
 
-    private fun handleCallExpression(
+    private suspend fun handleCallExpression(
         lattice: PointsToState,
         currentNode: CallExpression,
         doubleState: PointsToState.Element,
@@ -1040,7 +1042,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         // The toIdentitySet avoids having the same elements multiple times
         val invokes = currentNode.invokes.toIdentitySet().toList()
-        runBlocking {
+        coroutineScope {
             invokes.forEach { invoke ->
                 val inv = calculateFunctionSummaries(invoke)
                 if (inv != null) {
@@ -1210,7 +1212,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return ret
     }
 
-    private fun calculateFunctionSummaries(invoke: FunctionDeclaration): FunctionDeclaration? {
+    private suspend fun calculateFunctionSummaries(
+        invoke: FunctionDeclaration
+    ): FunctionDeclaration? {
         if (invoke.functionSummary.isEmpty()) {
             if (invoke.hasBody()) {
                 log.debug(
@@ -1245,7 +1249,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return invoke
     }
 
-    private fun writeMapEntriesToState(
+    private suspend fun writeMapEntriesToState(
         lattice: PointsToState,
         doubleState: PointsToState.Element,
         dstAddr: Node,
@@ -1265,7 +1269,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val lastWrites = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
         val destinations = identitySetOf<Node>()
 
-        runBlocking {
+        coroutineScope {
             values.forEach { value ->
                 launch {
                     value.lastWrites.forEach { (lw, lwProps) ->
@@ -2005,7 +2009,7 @@ fun PointsToState.push(
     // iterateEOG function
     val newLatticeCopy = newLatticeElement.duplicate()
     runBlocking {
-        newLatticeCopy.third.forEach { pair ->
+        newLatticeElement.third.forEach { pair ->
             launch {
                 if (
                     currentState.generalState[newNode]?.third?.any {
@@ -2039,7 +2043,7 @@ fun PointsToState.pushToDeclarationsState(
     val newLatticeCopy = newLatticeElement.duplicate()
 
     runBlocking {
-        newLatticeCopy.second.forEach { pair ->
+        newLatticeElement.second.forEach { pair ->
             launch {
                 if (
                     currentState.declarationsState[newNode]?.second?.any {
@@ -2050,7 +2054,7 @@ fun PointsToState.pushToDeclarationsState(
             }
         }
 
-        newLatticeCopy.third.forEach { pair ->
+        newLatticeElement.third.forEach { pair ->
             launch {
                 if (
                     currentState.declarationsState[newNode]?.third?.any {
