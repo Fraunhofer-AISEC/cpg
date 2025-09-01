@@ -35,10 +35,11 @@ import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.plusAssign
 import kotlin.collections.set
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.math.ceil
 import kotlinx.coroutines.*
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
     override fun equals(other: Any?): Boolean {
@@ -531,6 +532,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                 runBlocking { this@Element.compare(other) == Order.EQUAL }
         }
 
+        @OptIn(ExperimentalAtomicApi::class)
         override suspend fun compare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
@@ -542,19 +544,17 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
             val otherKeySetIsBigger = other.keys.any { it !in this.keys }
 
             // We can check if the entries are equal, greater or lesser
-            var someGreater = false
-            var someLesser = otherKeySetIsBigger
+            val someGreater = AtomicBoolean(false)
+            val someLesser = AtomicBoolean(otherKeySetIsBigger)
 
-            val mutex = Mutex()
-
-            var ret: Order? = null
+            val ret = AtomicReference<Order?>(null)
 
             coroutineScope {
                 this@Element.entries.forEach { (k, v) ->
                     // We can't return in the coroutines, so we only set the return value
                     // there. If we have a return value, we can stop here
                     launch {
-                        if (ret != null) return@launch
+                        if (ret.load() != null) return@launch
                         val otherV = other[k]
                         if (otherV != null) {
                             when (v.compare(otherV)) {
@@ -563,48 +563,45 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                                 }
 
                                 Order.GREATER -> {
-                                    if (someLesser) {
-                                        mutex.withLock { ret = Order.UNEQUAL }
+                                    if (someLesser.load()) {
+                                        ret.store(Order.UNEQUAL)
                                     }
-                                    someGreater = true
+                                    someGreater.store(true)
                                 }
 
                                 Order.LESSER -> {
-                                    if (someGreater) {
-                                        mutex.withLock { ret = Order.UNEQUAL }
+                                    if (someGreater.load()) {
+                                        ret.store(Order.UNEQUAL)
                                     }
-                                    someLesser = true
+                                    someLesser.store(true)
                                 }
 
                                 Order.UNEQUAL -> {
-                                    mutex.withLock { ret = Order.UNEQUAL }
-                                    mutex.withLock {
-                                        someLesser = true
-                                        someGreater = true
-                                    }
+                                    ret.store(Order.UNEQUAL)
+                                    someLesser.store(true)
+
+                                    someGreater.store(true)
                                 }
                             }
                         } else {
-                            if (someLesser) {
-                                mutex.withLock { ret = Order.UNEQUAL }
+                            if (someLesser.load()) {
+                                ret.store(Order.UNEQUAL)
                             }
-                            mutex.withLock {
-                                // key is missing in other, so this is greater
-                                someGreater = true
-                            }
+                            // key is missing in other, so this is greater
+                            someGreater.store(true)
                         }
                     }
                 }
             }
 
-            return if (!someGreater && !someLesser) {
+            return if (!someGreater.load() && !someLesser.load()) {
                 // All entries are the same, so the maps are equal
                 Order.EQUAL
-            } else if (someLesser && !someGreater) {
+            } else if (someLesser.load() && !someGreater.load()) {
                 // Some entries are equal, some are lesser and none are greater, so this map is
                 // lesser.
                 Order.LESSER
-            } else if (!someLesser && someGreater) {
+            } else if (!someLesser.load() && someGreater.load()) {
                 // Some entries are equal, some are greater but none are lesser, so this map is
                 // greater.
                 Order.GREATER
