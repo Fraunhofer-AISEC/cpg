@@ -52,6 +52,8 @@ import kotlin.collections.map
 import kotlin.let
 import kotlin.text.contains
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 val nodesCreatingUnknownValues = ConcurrentHashMap<Pair<Node, Name>, MemoryAddress>()
 var totalFunctionDeclarationCount = 0
@@ -156,6 +158,8 @@ class PointsToState(
             tupleState:
                 TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>
         ) : this(tupleState.first, tupleState.second)
+
+        val mutex = Mutex()
 
         override suspend fun compare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
@@ -509,7 +513,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     )
                                 val shortFsEntry = entry.properties.singleOrNull { it is Boolean }
                                 if (shortFsEntry != null) propertySet.add(shortFsEntry)
-                                synchronized(doubleState) {
+                                //                                synchronized(doubleState) {
+                                doubleState.mutex.withLock {
                                     doubleState =
                                         lattice.push(
                                             doubleState,
@@ -770,7 +775,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     is DeleteExpression -> handleDeleteExpression(lattice, currentNode, doubleState)
                     is Declaration,
                     is MemoryAddress -> handleDeclaration(lattice, currentNode, doubleState)
-
                     is AssignExpression -> handleAssignExpression(lattice, currentNode, doubleState)
                     is UnaryOperator -> handleUnaryOperator(lattice, currentNode, doubleState)
                     is CallExpression -> handleCallExpression(lattice, currentNode, doubleState)
@@ -782,7 +786,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return doubleState
     }
 
-    protected fun handleDeleteExpression(
+    protected suspend fun handleDeleteExpression(
         lattice: PointsToState,
         currentNode: DeleteExpression,
         doubleState: PointsToState.Element,
@@ -845,7 +849,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
      * Add the data flows from the CallExpression's arguments to the FunctionDeclaration's
      * ParameterMemoryValues to the doubleState
      */
-    private fun calculateIncomingCallingContexts(
+    private suspend fun calculateIncomingCallingContexts(
         lattice: PointsToState,
         functionDeclaration: FunctionDeclaration,
         callExpression: CallExpression,
@@ -1047,7 +1051,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 val inv = calculateFunctionSummaries(invoke)
                 if (inv != null) {
                     launch {
-                        synchronized(doubleState) {
+                        //                        synchronized(doubleState) {
+                        doubleState.mutex.withLock {
                             doubleState =
                                 calculateIncomingCallingContexts(
                                     lattice,
@@ -1592,7 +1597,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
     }
 
-    private fun handleUnaryOperator(
+    private suspend fun handleUnaryOperator(
         lattice: PointsToState,
         currentNode: UnaryOperator,
         doubleState: PointsToState.Element,
@@ -1656,7 +1661,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return doubleState
     }
 
-    private fun handleAssignExpression(
+    private suspend fun handleAssignExpression(
         lattice: PointsToState,
         currentNode: AssignExpression,
         doubleState: PointsToState.Element,
@@ -1693,7 +1698,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return doubleState
     }
 
-    private fun handleExpression(
+    private suspend fun handleExpression(
         lattice: PointsToState,
         currentNode: Expression,
         doubleState: PointsToState.Element,
@@ -1813,7 +1818,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return doubleState
     }
 
-    private fun handleDeclaration(
+    private suspend fun handleDeclaration(
         lattice: PointsToState,
         currentNode: Node,
         doubleState: PointsToState.Element,
@@ -1876,7 +1881,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     }
 
     /** Create ParameterMemoryValues up to depth `depth` */
-    private fun initializeParameters(
+    private suspend fun initializeParameters(
         lattice: PointsToState,
         parameters: MutableList<ParameterDeclaration>,
         doubleState: PointsToState.Element,
@@ -2000,7 +2005,7 @@ fun PointsToState.Element.getFromDecl(key: Node): DeclarationStateEntryElement? 
     return this.declarationsState[key]
 }
 
-fun PointsToState.push(
+suspend fun PointsToState.push(
     currentState: PointsToState.Element,
     newNode: Node,
     newLatticeElement: GeneralStateEntryElement,
@@ -2008,7 +2013,7 @@ fun PointsToState.push(
     // If we already have exactly that entry, no need to re-write it, otherwise we might confuse the
     // iterateEOG function
     val newLatticeCopy = newLatticeElement.duplicate()
-    runBlocking {
+    coroutineScope {
         newLatticeElement.third.forEach { pair ->
             launch {
                 if (
@@ -2022,7 +2027,7 @@ fun PointsToState.push(
         }
     }
 
-    runBlocking {
+    coroutineScope {
         this@push.innerLattice1.lub(
             currentState.generalState,
             MapLattice.Element(newNode to newLatticeCopy),
@@ -2033,7 +2038,7 @@ fun PointsToState.push(
 }
 
 /** Pushes the [newNode] and its [newLatticeElement] to the [declarationsState]. */
-fun PointsToState.pushToDeclarationsState(
+suspend fun PointsToState.pushToDeclarationsState(
     currentState: PointsToState.Element,
     newNode: Node,
     newLatticeElement: DeclarationStateEntryElement,
@@ -2042,7 +2047,7 @@ fun PointsToState.pushToDeclarationsState(
     // iterateEOG function
     val newLatticeCopy = newLatticeElement.duplicate()
 
-    runBlocking {
+    coroutineScope {
         newLatticeElement.second.forEach { pair ->
             launch {
                 if (
@@ -2066,7 +2071,7 @@ fun PointsToState.pushToDeclarationsState(
         }
     }
 
-    runBlocking {
+    coroutineScope {
         this@pushToDeclarationsState.innerLattice2.lub(
             currentState.declarationsState,
             MapLattice.Element(newNode to newLatticeCopy),
@@ -2663,7 +2668,7 @@ fun PointsToState.Element.fetchFieldAddresses(
  * Updates the declarationState at `destinationAddresses` to the values in `sources`. Additionally,
  * updates the generalstate at `destinations` if there is any
  */
-fun PointsToState.Element.updateValues(
+suspend fun PointsToState.Element.updateValues(
     lattice: PointsToState,
     doubleState: PointsToState.Element,
     sources: PowersetLattice.Element<Triple<Node?, Boolean, Boolean>>,
@@ -2713,26 +2718,28 @@ fun PointsToState.Element.updateValues(
             }
 
             // If we have any full writes, we eliminate the previous state
-            if (fullSourcesExist) {
-                val newDeclState = this.declarationsState.duplicate()
-                newDeclState[destAddr] =
-                    DeclarationStateEntryElement(
-                        PowersetLattice.Element(currentEntries),
-                        PowersetLattice.Element(newSources),
-                        PowersetLattice.Element(prevDFG),
-                    )
-                doubleState = PointsToState.Element(doubleState.generalState, newDeclState)
-            } else {
-                doubleState =
-                    lattice.pushToDeclarationsState(
-                        doubleState,
-                        destAddr,
+            doubleState.mutex.withLock {
+                if (fullSourcesExist) {
+                    val newDeclState = this.declarationsState.duplicate()
+                    newDeclState[destAddr] =
                         DeclarationStateEntryElement(
                             PowersetLattice.Element(currentEntries),
                             PowersetLattice.Element(newSources),
                             PowersetLattice.Element(prevDFG),
-                        ),
-                    )
+                        )
+                    doubleState = PointsToState.Element(doubleState.generalState, newDeclState)
+                } else {
+                    doubleState =
+                        lattice.pushToDeclarationsState(
+                            doubleState,
+                            destAddr,
+                            DeclarationStateEntryElement(
+                                PowersetLattice.Element(currentEntries),
+                                PowersetLattice.Element(newSources),
+                                PowersetLattice.Element(prevDFG),
+                            ),
+                        )
+                }
             }
 
             /* Also update the generalState for dst (if we have any destinations) */
@@ -2743,7 +2750,7 @@ fun PointsToState.Element.updateValues(
             val newLastWrites = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
             newLastWrites.addAll(lastWrites)
 
-            runBlocking {
+            coroutineScope {
                 newLastWrites.forEach { lw ->
                     launch {
                         if (
