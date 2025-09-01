@@ -51,7 +51,7 @@ fun Server.listAvailableConcepts() {
     val availableConcepts = getAvailableConcepts()
     val toolDescription =
         """
-        This tool provides a list of all concepts that can be applied to nodes in the CPG.
+        This tool provides a list of all concepts (a special node marking 'what something IS') that can be applied to nodes in the CPG.
         
         Example prompts:
         - "What concepts are available for tagging nodes?"
@@ -68,7 +68,7 @@ fun Server.listAvailableOperations() {
     val availableOperations = getAvailableOperations()
     val toolDescription =
         """
-        This tool provides a list of all operations that can be applied to nodes in the CPG.
+        This tool provides a list of all operations (a special node marking 'what something DOES') that can be applied to nodes in the CPG.
         
         Example prompts:
         - "What operations are available for tagging nodes?"
@@ -92,7 +92,7 @@ fun Server.addCpgApplyConceptsTool() {
     val availableOperations = getAvailableOperations()
     val toolDescription =
         """
-            Apply concepts or operations to specific nodes in the CPG.
+            Apply concepts (a special node marking 'what something IS') or operations (a special node marking 'what something DOES') to specific nodes in the CPG.
             
             This tool creates and attaches concepts or operations using their 
             fully qualified class names (FQN) to specific nodes in the graph.

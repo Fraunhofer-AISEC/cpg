@@ -84,7 +84,7 @@ fun Server.listRecords() {
 
 fun Server.listConceptsAndOperations() {
     val toolDescription =
-        "This tool lists all concepts and operations which have been used as overlays to some nodes in the graph."
+        "This tool lists all concepts (a special node marking 'what something IS') and operations (a special node marking 'what something DOES') which have been used as overlays to some nodes in the graph."
 
     this.addTool(name = "cpg_list_concepts_and_operations", description = toolDescription) { request
         ->
@@ -208,7 +208,9 @@ fun Server.getArgByIndexOrName() {
         Parameters:
         - id: ID of the method/function call whose arguments should be listed.
         - argName: Name of the argument to retrieve (optional).
-        - index: Index of the argument to retrieve (optional). If both are provided, the name takes precedence. At least one of argName or index must be provided.
+        - index: Index of the argument to retrieve (optional). The first argument is at index 0. We do not support the base/receiver of a method call here.
+        
+        If both argName and index are provided, the name takes precedence. At least one of argName or index must be provided.
         """
             .trimIndent()
 
@@ -232,7 +234,10 @@ fun Server.getArgByIndexOrName() {
                     }
                     putJsonObject("index") {
                         put("type", "integer")
-                        put("description", "The index/position of the argument.")
+                        put(
+                            "description",
+                            "The index/position of the argument. The first argument is at index 0. We do not support the base/receiver of a method call here.",
+                        )
                     }
                 },
             required = listOf("nodeId"),
