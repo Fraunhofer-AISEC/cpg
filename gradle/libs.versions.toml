@@ -6,7 +6,7 @@ neo4j5 = "5.28.2"
 log4j = "2.24.0"
 spotless = "7.0.4"
 publish = "0.33.0"
-sootup = "1.3.0"
+sootup = "2.0.0"
 slf4j = "2.0.16"
 clikt = "5.0.2"
 kaml = "0.92.0"
@@ -81,14 +81,17 @@ spotless-gradle = { module = "com.diffplug.spotless:spotless-plugin-gradle", ver
 
 sootup-core = { module = "org.soot-oss:sootup.core", version.ref = "sootup" }
 sootup-java-core = { module = "org.soot-oss:sootup.java.core", version.ref = "sootup" }
-sootup-java-sourcecode = { module = "org.soot-oss:sootup.java.sourcecode", version.ref = "sootup" }
-sootup-java-bytecode = { module = "org.soot-oss:sootup.java.bytecode", version.ref = "sootup" }
-sootup-jimple-parser = { module = "org.soot-oss:sootup.jimple.parser", version.ref = "sootup" }
+sootup-java-sourcecode = { module = "org.soot-oss:sootup.java.sourcecode.frontend", version.ref = "sootup" }
+sootup-java-bytecode = { module = "org.soot-oss:sootup.java.bytecode.frontend", version.ref = "sootup" }
+sootup-apk = { module = "org.soot-oss:sootup.apk.frontend", version.ref = "sootup" }
+sootup-jimple = { module = "org.soot-oss:sootup.jimple.frontend", version.ref = "sootup" }
+
+dex2jar = {module = "de.femtopedia.dex2jar:dex2jar", version="2.4.22" }
 
 [bundles]
 log4j = ["log4j-impl", "log4j-core"]
 neo4j = ["neo4j-ogm-core", "neo4j-ogm-bolt-driver"]
-sootup = ["sootup-core", "sootup-java-core", "sootup-java-sourcecode", "sootup-java-bytecode", "sootup-jimple-parser"]
+sootup = ["sootup-core", "sootup-java-core", "sootup-java-sourcecode", "sootup-java-bytecode", "sootup-jimple", "sootup-apk"]
 ktor = ["ktor-server-core", "ktor-server-netty", "ktor-server-cors","ktor-server-content-negotiation", "ktor-serialization-kotlinx-json"]
 
 [plugins]
