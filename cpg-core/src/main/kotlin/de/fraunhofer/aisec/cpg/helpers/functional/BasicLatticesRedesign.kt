@@ -774,8 +774,25 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
         widen: Boolean,
     ): Element<S, T> {
         return if (allowModify) {
-            innerLattice1.lub(one = one.first, two = two.first, allowModify = true, widen = widen)
-            innerLattice2.lub(one = one.second, two = two.second, allowModify = true, widen = widen)
+            coroutineScope {
+                val first = async {
+                    innerLattice1.lub(
+                        one = one.first,
+                        two = two.first,
+                        allowModify = true,
+                        widen = widen,
+                    )
+                }
+                val second = async {
+                    innerLattice2.lub(
+                        one = one.second,
+                        two = two.second,
+                        allowModify = true,
+                        widen = widen,
+                    )
+                }
+                awaitAll(first, second)
+            }
             one
         } else {
             coroutineScope {
@@ -878,10 +895,33 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
         widen: Boolean,
     ): Element<R, S, T> {
         return if (allowModify) {
-
-            innerLattice1.lub(one = one.first, two = two.first, allowModify = true, widen = widen)
-            innerLattice2.lub(one = one.second, two = two.second, allowModify = true, widen = widen)
-            innerLattice3.lub(one = one.third, two = two.third, allowModify = true, widen = widen)
+            coroutineScope {
+                val first = async {
+                    innerLattice1.lub(
+                        one = one.first,
+                        two = two.first,
+                        allowModify = true,
+                        widen = widen,
+                    )
+                }
+                val second = async {
+                    innerLattice2.lub(
+                        one = one.second,
+                        two = two.second,
+                        allowModify = true,
+                        widen = widen,
+                    )
+                }
+                val third = async {
+                    innerLattice3.lub(
+                        one = one.third,
+                        two = two.third,
+                        allowModify = true,
+                        widen = widen,
+                    )
+                }
+                awaitAll(first, second, third)
+            }
             one
         } else {
             coroutineScope {
