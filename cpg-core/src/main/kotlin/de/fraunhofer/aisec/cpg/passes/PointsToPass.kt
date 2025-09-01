@@ -1059,97 +1059,113 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         // return
                         // value
                         // after executing the function call to our doubleState.
-                        for ((param, fsEntries) in inv.functionSummary) {
-                            val argument =
-                                when (param) {
-                                    is ParameterDeclaration -> {
-                                        // Dereference the parameter
-                                        if (param.argumentIndex < currentNode.arguments.size) {
-                                            currentNode.arguments[param.argumentIndex]
-                                        } else null
-                                    }
+                        coroutineScope {
+                            for ((param, fsEntries) in inv.functionSummary) {
+                                launch {
+                                    val argument =
+                                        when (param) {
+                                            is ParameterDeclaration -> {
+                                                // Dereference the parameter
+                                                if (
+                                                    param.argumentIndex < currentNode.arguments.size
+                                                ) {
+                                                    currentNode.arguments[param.argumentIndex]
+                                                } else null
+                                            }
 
-                                    is ReturnStatement,
-                                    is FunctionDeclaration -> {
-                                        currentNode
-                                    }
+                                            is ReturnStatement,
+                                            is FunctionDeclaration -> {
+                                                currentNode
+                                            }
 
-                                    else -> null
-                                }
-                            if (argument != null) {
-                                fsEntries
-                                    .sortedBy { it.destValueDepth }
-                                    .forEach {
-                                        (
-                                            dstValueDepth,
-                                            srcNode,
-                                            srcValueDepth,
-                                            subAccessName,
-                                            lastWrites,
-                                            properties,
-                                        ) ->
-                                        val shortFS = properties.any { it == true }
-                                        val (destinationAddresses, destinations) =
-                                            synchronized(doubleState) {
-                                                calculateCallExpressionDestinations(
-                                                    doubleState,
-                                                    mapDstToSrc,
+                                            else -> null
+                                        }
+                                    if (argument != null) {
+                                        fsEntries
+                                            .sortedBy { it.destValueDepth }
+                                            .forEach {
+                                                (
                                                     dstValueDepth,
+                                                    srcNode,
+                                                    srcValueDepth,
                                                     subAccessName,
-                                                    argument,
+                                                    lastWrites,
                                                     properties,
-                                                )
-                                            }
-                                        // Collect the properties for the  DeclarationStateEntry
-                                        val propertySet = equalLinkedHashSetOf<Any>()
-                                        propertySet.addAll(properties)
-                                        if (subAccessName.isNotEmpty()) {
-                                            propertySet.add(
-                                                PartialDataflowGranularity(
-                                                    FieldDeclaration().apply {
-                                                        name = Name(subAccessName)
+                                                ) ->
+                                                val shortFS = properties.any { it == true }
+                                                val (destinationAddresses, destinations) =
+                                                    synchronized(doubleState) {
+                                                        calculateCallExpressionDestinations(
+                                                            doubleState,
+                                                            mapDstToSrc,
+                                                            dstValueDepth,
+                                                            subAccessName,
+                                                            argument,
+                                                            properties,
+                                                        )
                                                     }
-                                                )
-                                            )
-                                        }
-
-                                        // Especially for shortFS, we need to update the prevDFGs
-                                        // with
-                                        // information we didn't have when creating the
-                                        // functionSummary.
-                                        // calculatePrev does this for us
-                                        val prev =
-                                            calculatePrevDFGs(lastWrites, shortFS, currentNode, inv)
-                                        // mapDstToSrc might be written, doubleState will be read,
-                                        // so 2
-                                        // locks
-                                        synchronized(mapDstToSrc) {
-                                            synchronized(doubleState) {
-                                                mapDstToSrc =
-                                                    addEntryToMap(
-                                                        doubleState,
-                                                        mapDstToSrc,
-                                                        destinationAddresses,
-                                                        destinations,
-                                                        // To ensure that we have a unique Node, we
-                                                        // take
-                                                        // the allExpression if the FS said the
-                                                        // srcNode
-                                                        // is
-                                                        // the FunctionDeclaration
-                                                        if (srcNode is FunctionDeclaration)
-                                                            currentNode
-                                                        else srcNode,
-                                                        shortFS,
-                                                        srcValueDepth,
-                                                        param,
-                                                        propertySet,
-                                                        currentNode,
-                                                        prev,
+                                                // Collect the properties for the
+                                                // DeclarationStateEntry
+                                                val propertySet = equalLinkedHashSetOf<Any>()
+                                                propertySet.addAll(properties)
+                                                if (subAccessName.isNotEmpty()) {
+                                                    propertySet.add(
+                                                        PartialDataflowGranularity(
+                                                            FieldDeclaration().apply {
+                                                                name = Name(subAccessName)
+                                                            }
+                                                        )
                                                     )
+                                                }
+
+                                                // Especially for shortFS, we need to update the
+                                                // prevDFGs
+                                                // with
+                                                // information we didn't have when creating the
+                                                // functionSummary.
+                                                // calculatePrev does this for us
+                                                val prev =
+                                                    calculatePrevDFGs(
+                                                        lastWrites,
+                                                        shortFS,
+                                                        currentNode,
+                                                        inv,
+                                                    )
+                                                // mapDstToSrc might be written, doubleState will be
+                                                // read,
+                                                // so 2
+                                                // locks
+                                                synchronized(mapDstToSrc) {
+                                                    synchronized(doubleState) {
+                                                        mapDstToSrc =
+                                                            addEntryToMap(
+                                                                doubleState,
+                                                                mapDstToSrc,
+                                                                destinationAddresses,
+                                                                destinations,
+                                                                // To ensure that we have a unique
+                                                                // Node, we
+                                                                // take
+                                                                // the allExpression if the FS said
+                                                                // the
+                                                                // srcNode
+                                                                // is
+                                                                // the FunctionDeclaration
+                                                                if (srcNode is FunctionDeclaration)
+                                                                    currentNode
+                                                                else srcNode,
+                                                                shortFS,
+                                                                srcValueDepth,
+                                                                param,
+                                                                propertySet,
+                                                                currentNode,
+                                                                prev,
+                                                            )
+                                                    }
+                                                }
                                             }
-                                        }
                                     }
+                                }
                             }
                         }
                     }
