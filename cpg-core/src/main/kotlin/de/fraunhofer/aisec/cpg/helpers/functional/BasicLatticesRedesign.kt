@@ -634,15 +634,20 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     ): Element<K, V> {
 
         if (allowModify) {
-            two.forEach { (k, v) ->
-                if (!one.containsKey(k)) {
-                    // This key is not in "one", so we add the value from "two" to "one"
-                    one[k] = v
-                } else {
-                    // This key already exists in "one", so we have to compute the lub of the
-                    // values
-                    one[k]?.let { oneValue ->
-                        innerLattice.lub(oneValue, v, allowModify = true, widen = widen)
+            coroutineScope {
+                two.forEach { (k, v) ->
+                    launch {
+                        if (!one.containsKey(k)) {
+                            // This key is not in "one", so we add the value from "two" to "one"
+                            one[k] = v
+                        } else {
+                            // This key already exists in "one", so we have to compute the lub of
+                            // the
+                            // values
+                            one[k]?.let { oneValue ->
+                                innerLattice.lub(oneValue, v, allowModify = true, widen = widen)
+                            }
+                        }
                     }
                 }
             }
