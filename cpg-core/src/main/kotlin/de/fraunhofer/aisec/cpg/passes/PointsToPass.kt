@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
@@ -51,6 +52,8 @@ import kotlin.collections.filter
 import kotlin.collections.map
 import kotlin.let
 import kotlin.text.contains
+import kotlin.time.DurationUnit
+import kotlin.time.measureTimedValue
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -58,6 +61,7 @@ import kotlinx.coroutines.sync.withLock
 val nodesCreatingUnknownValues = ConcurrentHashMap<Pair<Node, Name>, MemoryAddress>()
 var totalFunctionDeclarationCount = 0
 var analyzedFunctionDeclarationCount = 0
+var timeInHandleCallExpression: Long = 0
 
 typealias GeneralStateEntry =
     TripleLattice<
@@ -296,7 +300,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // If we haven't done so yet, set the total number of functions
         if (totalFunctionDeclarationCount == 0)
             totalFunctionDeclarationCount =
-                node.firstParentOrNull<TranslationUnitDeclaration>().functions.size
+                node.firstParentOrNull<TranslationResult>().functions.size
 
         analyzedFunctionDeclarationCount++
         functionSummaryAnalysisChain.add(node)
@@ -316,6 +320,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         log.info(
             "Analyzing function ${node.name}. Complexity: ${NumberFormat.getNumberInstance(Locale.US).format(c)}. (Function $analyzedFunctionDeclarationCount / $totalFunctionDeclarationCount)"
         )
+        log.debug("Time spent until now in handleCallExpression: $timeInHandleCallExpression")
 
         val lattice =
             PointsToState(
@@ -797,7 +802,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     is MemoryAddress -> handleDeclaration(lattice, currentNode, doubleState)
                     is AssignExpression -> handleAssignExpression(lattice, currentNode, doubleState)
                     is UnaryOperator -> handleUnaryOperator(lattice, currentNode, doubleState)
-                    is CallExpression -> handleCallExpression(lattice, currentNode, doubleState)
+                    is CallExpression -> {
+                        val (tmp, duration) =
+                            measureTimedValue {
+                                handleCallExpression(lattice, currentNode, doubleState)
+                            }
+                        timeInHandleCallExpression += duration.toLong(DurationUnit.MILLISECONDS)
+                        tmp
+                    }
                     is Expression -> handleExpression(lattice, currentNode, doubleState)
                     is ReturnStatement -> handleReturnStatement(lattice, currentNode, doubleState)
                     else -> doubleState
