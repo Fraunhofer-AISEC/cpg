@@ -84,9 +84,15 @@ fun writeKotlinClassesToFolder(
             ktSource.objectProperties
                 .sortedWith(
                     compareBy<Properties> {
-                            it.propertyName == "linkedConcept" // linkedConcept always last Property.
-                        } // Hacky but needed because we ignore concept and always replace it with linkedConcept.
-                        // When generating Operations, we always inherit from Operation which has a concept and underlying node property. When now linkedConcept is directly processed before concept then we skip linkedConcept and replace the processing of concept with linkedConcept. When doing that the order stays the same.
+                            it.propertyName ==
+                                "linkedConcept" // linkedConcept always last Property.
+                        } // Hacky but needed because we ignore concept and always replace it with
+                        // linkedConcept.
+                        // When generating Operations, we always inherit from Operation which has a
+                        // concept and underlying node property. When now linkedConcept is directly
+                        // processed before concept then we skip linkedConcept and replace the
+                        // processing of concept with linkedConcept. When doing that the order stays
+                        // the same.
                         .thenBy { it.propertyName }
                 )
                 .toCollection(linkedSetOf())
