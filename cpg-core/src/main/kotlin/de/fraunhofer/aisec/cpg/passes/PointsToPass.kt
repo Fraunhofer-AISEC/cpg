@@ -513,7 +513,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     )
                                 val shortFsEntry = entry.properties.singleOrNull { it is Boolean }
                                 if (shortFsEntry != null) propertySet.add(shortFsEntry)
-                                //                                synchronized(doubleState) {
                                 doubleState.mutex.withLock {
                                     doubleState =
                                         lattice.push(
@@ -1116,7 +1115,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                 launch {
                                                     val shortFS = properties.any { it == true }
                                                     val (destinationAddresses, destinations) =
-                                                        synchronized(doubleState) {
+                                                        doubleState.mutex.withLock {
                                                             calculateCallExpressionDestinations(
                                                                 doubleState,
                                                                 mapDstToSrc,
@@ -1141,8 +1140,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                     }
 
                                                     // Especially for shortFS, we need to update the
-                                                    // prevDFGs
-                                                    // with
+                                                    // prevDFGs with
                                                     // information we didn't have when creating the
                                                     // functionSummary.
                                                     // calculatePrev does this for us
@@ -1154,42 +1152,35 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                             inv,
                                                         )
                                                     // mapDstToSrc might be written, doubleState
-                                                    // will be
-                                                    // read,
-                                                    // so 2
-                                                    // locks
-                                                    synchronized(mapDstToSrc) {
-                                                        synchronized(doubleState) {
-                                                            mapDstToSrc =
-                                                                addEntryToMap(
-                                                                    doubleState,
-                                                                    mapDstToSrc,
-                                                                    destinationAddresses,
-                                                                    destinations,
-                                                                    // To ensure that we have a
-                                                                    // unique
-                                                                    // Node, we
-                                                                    // take
-                                                                    // the allExpression if the FS
-                                                                    // said
-                                                                    // the
-                                                                    // srcNode
-                                                                    // is
-                                                                    // the FunctionDeclaration
-                                                                    if (
-                                                                        srcNode
-                                                                            is FunctionDeclaration
-                                                                    )
-                                                                        currentNode
-                                                                    else srcNode,
-                                                                    shortFS,
-                                                                    srcValueDepth,
-                                                                    param,
-                                                                    propertySet,
-                                                                    currentNode,
-                                                                    prev,
-                                                                )
-                                                        }
+                                                    // will be read, so we need a mutex
+
+                                                    doubleState.mutex.withLock {
+                                                        mapDstToSrc =
+                                                            addEntryToMap(
+                                                                doubleState,
+                                                                mapDstToSrc,
+                                                                destinationAddresses,
+                                                                destinations,
+                                                                // To ensure that we have a
+                                                                // unique
+                                                                // Node, we
+                                                                // take
+                                                                // the allExpression if the FS
+                                                                // said
+                                                                // the
+                                                                // srcNode
+                                                                // is
+                                                                // the FunctionDeclaration
+                                                                if (srcNode is FunctionDeclaration)
+                                                                    currentNode
+                                                                else srcNode,
+                                                                shortFS,
+                                                                srcValueDepth,
+                                                                param,
+                                                                propertySet,
+                                                                currentNode,
+                                                                prev,
+                                                            )
                                                     }
                                                 }
                                             }
