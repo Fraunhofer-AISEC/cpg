@@ -81,7 +81,15 @@ fun writeKotlinClassesToFolder(
         ktSource.dataProperties =
             ktSource.dataProperties.sortedBy { it.propertyName }.toCollection(linkedSetOf())
         ktSource.objectProperties =
-            ktSource.objectProperties.sortedBy { it.propertyName }.toCollection(linkedSetOf())
+            ktSource.objectProperties
+                .sortedWith(
+                    compareBy<Properties> {
+                            it.propertyName == "linkedConcept" // linkedConcept always last Property.
+                        } // Hacky but needed because we ignore concept and always replace it with linkedConcept.
+                        // When generating Operations, we always inherit from Operation which has a concept and underlying node property. When now linkedConcept is directly processed before concept then we skip linkedConcept and replace the processing of concept with linkedConcept. When doing that the order stays the same.
+                        .thenBy { it.propertyName }
+                )
+                .toCollection(linkedSetOf())
     }
 
     for (ktSource in sources) {
@@ -249,7 +257,9 @@ private fun addEqualsMethod(classBuilder: TypeSpec.Builder, ktSource: ClassAbstr
     conditions.add("super.equals(other)")
 
     // Add conditions for all data and object properties of the current class
-    for (property in ktSource.dataProperties + ktSource.objectProperties) {
+    for (property in
+        ktSource.dataProperties +
+            ktSource.objectProperties.filter { !it.propertyName.equals("linkedConcept") }) {
         conditions.add("other.${property.propertyName} == this.${property.propertyName}")
     }
 
@@ -271,7 +281,9 @@ private fun addHashCodeMethod(
     hashProperties.add("super.hashCode()")
 
     // Add all data and object properties of the current class
-    for (property in ktSource.dataProperties + ktSource.objectProperties) {
+    for (property in
+        ktSource.dataProperties +
+            ktSource.objectProperties.filter { !it.propertyName.equals("linkedConcept") }) {
         hashProperties.add(property.propertyName)
     }
 
@@ -313,14 +325,14 @@ private fun addPropertiesToClass(
                     needsInitBlock = true
                     fileSpecBuilder.addImport("de.fraunhofer.aisec.cpg.graph", "Name")
                     initBlockBuilder.addStatement(
-                        "this.name = %T(localName = name)",
+                        "name?.let { this.name = %T(localName = it) }",
                         ClassName("de.fraunhofer.aisec.cpg.graph", "Name"),
                     )
                     "nameString"
                 }
                 "code" -> {
                     needsInitBlock = true
-                    initBlockBuilder.addStatement("this.code = code")
+                    initBlockBuilder.addStatement("code?.let { this.code = it }")
                     "codeString"
                 }
                 else -> dataProp.propertyName
@@ -353,6 +365,7 @@ private fun addPropertiesToClass(
 
     // Loop over the object properties.
     for (objectProp in objectProperties) {
+
         val typeName = extractObjectProperties(objectProp)
 
         if (typeName == ClassName("unknown", "unknown")) {
@@ -363,10 +376,20 @@ private fun addPropertiesToClass(
         if (objectProp.propertyProperty == "hasMultiple") {
             constructorBuilder.addParameter(
                 objectProp.propertyName,
-                ClassName("kotlin.collections", "MutableList").parameterizedBy(typeName),
+                ClassName("kotlin.collections", "MutableList")
+                    .parameterizedBy(typeName.copy(nullable = true)),
             )
         } else {
-            constructorBuilder.addParameter(objectProp.propertyName, typeName)
+            if (objectProp.propertyName != "concept") {
+                if (objectProp.propertyName == "linkedConcept") {
+                    constructorBuilder.addParameter(objectProp.propertyName, typeName)
+                } else {
+                    constructorBuilder.addParameter(
+                        objectProp.propertyName,
+                        typeName.copy(nullable = true),
+                    )
+                }
+            }
         }
 
         if (!isParent) {
@@ -375,26 +398,45 @@ private fun addPropertiesToClass(
                 classBuilder.addProperty(
                     PropertySpec.builder(
                             objectProp.propertyName,
-                            ClassName("kotlin.collections", "MutableList").parameterizedBy(typeName),
+                            ClassName("kotlin.collections", "MutableList")
+                                .parameterizedBy(typeName.copy(nullable = true)),
                         )
                         .initializer(objectProp.propertyName)
                         .build()
                 )
             } else {
-                classBuilder.addProperty(
-                    PropertySpec.builder(objectProp.propertyName, typeName)
-                        .initializer(objectProp.propertyName)
-                        .build()
-                )
+                if (objectProp.propertyName == "linkedConcept") {
+                    classBuilder.addProperty(
+                        PropertySpec.builder(objectProp.propertyName, typeName)
+                            .initializer(objectProp.propertyName)
+                            .build()
+                    )
+                } else {
+                    classBuilder.addProperty(
+                        PropertySpec.builder(
+                                objectProp.propertyName,
+                                typeName.copy(nullable = true),
+                            )
+                            .initializer(objectProp.propertyName)
+                            .build()
+                    )
+                }
             }
         }
 
         // Add a property to the class, initialized from the constructor parameter.
         classBuilder.primaryConstructor(constructorBuilder.build())
 
+        // If is parent -> SuperClassConstructorParameters have to be set
         if (isParent) {
             // Add SuperclassConstructorParameter for the property.
-            classBuilder.addSuperclassConstructorParameter(objectProp.propertyName).build()
+            if (objectProp.propertyName == "concept") {
+                classBuilder.addSuperclassConstructorParameter("linkedConcept").build()
+            } else if (objectProp.propertyName == "linkedConcept") {
+                continue
+            } else {
+                classBuilder.addSuperclassConstructorParameter(objectProp.propertyName).build()
+            }
         }
 
         // Add init block if needed
@@ -448,7 +490,7 @@ private fun extractDataProperties(dataProp: Properties): TypeName {
             "de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression" ->
                 ClassName("de.fraunhofer.aisec.cpg.graph.statements.expressions", "CallExpression")
             "java.util.List<de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration>" ->
-                ClassName("java.util", "List")
+                ClassName("java.util", "List") // TODO: change to mutable list
                     .parameterizedBy(
                         ClassName(
                             "de.fraunhofer.aisec.cpg.graph.declarations",
@@ -456,7 +498,7 @@ private fun extractDataProperties(dataProp: Properties): TypeName {
                         )
                     )
             "java.util.List<de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression>" ->
-                ClassName("java.util", "List")
+                ClassName("java.util", "List") // TODO: change to mutable list
                     .parameterizedBy(
                         ClassName(
                             "de.fraunhofer.aisec.cpg.graph.statements.expressions",
@@ -469,7 +511,7 @@ private fun extractDataProperties(dataProp: Properties): TypeName {
 
             "dateTime" -> ClassName("java.time", "ZonedDateTime") // TODO: Check if this is correct
             "listString" ->
-                ClassName("java.util", "List")
+                ClassName("java.util", "List") // TODO: change to mutable list
                     .parameterizedBy(STRING) // TODO: Check if this is correct
             else -> ClassName("unknown", "unknown")
         }
@@ -907,5 +949,5 @@ private fun extractObjectProperties(objectProp: Properties): TypeName {
 
             else -> ClassName("unknown", "unknown")
         }
-    return typeName.copy(nullable = true)
+    return typeName
 }
