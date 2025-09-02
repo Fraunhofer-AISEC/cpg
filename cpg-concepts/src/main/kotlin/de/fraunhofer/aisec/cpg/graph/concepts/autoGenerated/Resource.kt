@@ -21,7 +21,7 @@ public abstract class Resource(
   underlyingNode: Node?,
 ) : Concept(underlyingNode) {
   init {
-    this.name = Name(localName = name)
+    name?.let { this.name = Name(localName = it) }
   }
 
   override fun equals(other: Any?): Boolean = other is Resource &&

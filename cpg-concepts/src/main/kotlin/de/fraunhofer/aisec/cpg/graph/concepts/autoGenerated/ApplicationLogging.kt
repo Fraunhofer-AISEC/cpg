@@ -20,7 +20,7 @@ public abstract class ApplicationLogging(
 ) : Logging(enabled, monitoringEnabled, name, retentionPeriod, securityAlertsEnabled,
     loggingService, underlyingNode) {
   init {
-    this.name = Name(localName = name)
+    name?.let { this.name = Name(localName = it) }
   }
 
   override fun equals(other: Any?): Boolean = other is ApplicationLogging &&

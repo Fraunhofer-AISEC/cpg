@@ -2149,6 +2149,13 @@
     <SubClassOf>
         <Class IRI="/classes/DatabaseOperation"/>
         <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/classes/linkedConcept"/>
+            <Class IRI="/classes/DatabaseStorage"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/DatabaseOperation"/>
+        <ObjectSomeValuesFrom>
             <ObjectProperty IRI="/properties/storage"/>
             <Class IRI="/classes/DatabaseStorage"/>
         </ObjectSomeValuesFrom>
@@ -2663,6 +2670,13 @@
         <Class IRI="/classes/Operation"/>
     </SubClassOf>
     <SubClassOf>
+        <Class IRI="/classes/HttpEndpointOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/classes/linkedConcept"/>
+            <Class IRI="/classes/Http"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
         <Class IRI="/classes/HttpRequest"/>
         <Class IRI="/classes/HttpClientOperation"/>
     </SubClassOf>
@@ -3057,6 +3071,13 @@
     <SubClassOf>
         <Class IRI="/classes/LogOutput"/>
         <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/classes/linkedConcept"/>
+            <Class IRI="/classes/Logging"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/LogOutput"/>
+        <ObjectSomeValuesFrom>
             <ObjectProperty IRI="/properties/offers"/>
             <Class IRI="/classes/Logging"/>
         </ObjectSomeValuesFrom>
@@ -3430,6 +3451,13 @@
     <SubClassOf>
         <Class IRI="/classes/ObjectStorageRequest"/>
         <Class IRI="/classes/Operation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/ObjectStorageRequest"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/classes/linkedConcept"/>
+            <Class IRI="/classes/Storage"/>
+        </ObjectSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
         <Class IRI="/classes/ObjectStorageRequest"/>

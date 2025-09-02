@@ -28,7 +28,7 @@ public abstract class ConfigurationSource(
   underlyingNode: Node?,
 ) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
   init {
-    this.name = Name(localName = name)
+    name?.let { this.name = Name(localName = it) }
   }
 
   override fun equals(other: Any?): Boolean = other is ConfigurationSource &&

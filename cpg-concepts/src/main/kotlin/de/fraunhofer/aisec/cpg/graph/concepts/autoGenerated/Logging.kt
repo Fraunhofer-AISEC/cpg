@@ -19,7 +19,7 @@ public abstract class Logging(
   underlyingNode: Node?,
 ) : Auditing(underlyingNode) {
   init {
-    this.name = Name(localName = name)
+    name?.let { this.name = Name(localName = it) }
   }
 
   override fun equals(other: Any?): Boolean = other is Logging &&

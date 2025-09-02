@@ -35,7 +35,7 @@ public abstract class Application(
 ) : Component(libraries, codeModules, codeRepository, functionalities, creation_time, description,
     labels, name, raw, parent, underlyingNode) {
   init {
-    this.name = Name(localName = name)
+    name?.let { this.name = Name(localName = it) }
   }
 
   override fun equals(other: Any?): Boolean = other is Application &&
