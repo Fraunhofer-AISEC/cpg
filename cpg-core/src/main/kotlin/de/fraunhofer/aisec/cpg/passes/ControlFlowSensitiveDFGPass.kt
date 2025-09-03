@@ -39,6 +39,8 @@ import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * This pass determines the data flows of References which refer to a VariableDeclaration (not a
@@ -56,7 +58,13 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
          * [Statement.cyclomaticComplexity]) a [FunctionDeclaration] must have in order to be
          * considered.
          */
-        var maxComplexity: Int? = null
+        var maxComplexity: Int? = null,
+        /**
+         * This specifies the maximum time (in ms) we want to spend analyzing a single
+         * [de.fraunhofer.aisec.cpg.graph.EOGStarterHolder]. If the time is exceeded, we skip the
+         * function (or whatever is starting the EOG). If `null`, no time limit is enforced.
+         */
+        var timeout: Long? = null,
     ) : PassConfiguration()
 
     override fun cleanup() {
@@ -75,7 +83,14 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         // These are EOGStarterHolders but do not have an EOG which means, they will just cause
         // problems. Again, if we delete information/edges, we will never be able to recover them.
         if (node is FunctionTemplateDeclaration) return
+        runBlocking {
+            passConfig<Configuration>()?.timeout?.let { timeout ->
+                withTimeoutOrNull(timeout) { buildDFG(node) }
+            } ?: run { buildDFG(node) }
+        }
+    }
 
+    fun buildDFG(node: Node) {
         // Calculate the complexity of the function and see, if it exceeds our threshold
         val max = passConfig<Configuration>()?.maxComplexity
         val c = (node as? FunctionDeclaration)?.body?.cyclomaticComplexity ?: 0
