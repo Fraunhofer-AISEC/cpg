@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import java.io.Serializable
 import java.util.*
+import java.util.Collections.addAll
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.plusAssign
@@ -81,6 +82,39 @@ fun compareMultiple(vararg orders: Order) =
         orders.all { it == Order.EQUAL || it == Order.GREATER } -> Order.GREATER
         else -> Order.UNEQUAL
     }
+
+/**
+ * Extension that splits an IdentitySet<T> into at most [maxParts] subsets, each containing **at
+ * least [minPartSize] elements**.
+ *
+ * Rules
+ * 1. If the set is empty ➜ returns an empty list.
+ * 2. If the set has < [minPartSize] elements ➜ returns a single subset with all elements.
+ * 3. Otherwise the number of created subsets k is k = min(maxParts, size / [minPartSize]) (integer
+ *    division, k ≥ 1) so every subset can have at least [minPartSize] elements.
+ */
+fun <T> IdentitySet<T>.splitInto(maxParts: Int = 10, minPartSize: Int = 3): List<IdentitySet<T>> {
+    require(maxParts > 0) { "maxParts must be positive" }
+
+    if (isEmpty()) return emptyList()
+    if (size < minPartSize) return listOf(this)
+
+    // ---- determine how many subsets we really create ----
+    val k = minOf(maxParts, size / minPartSize) // size/minPartSize is integer division, ≥ 1
+    val base = size / k // minimum size of every subset (≥ minPartSize)
+    val extra = size % k // first 'extra' subsets get +1 element
+
+    // ---- materialize the subsets ----
+    val list = toList() // keeps original encounter order
+    var index = 0
+
+    return List(k) { i ->
+        val partSize = base + if (i < extra) 1 else 0
+        IdentitySet<T>()
+            .apply { addAll(list.subList(index, index + partSize)) }
+            .also { index += partSize }
+    }
+}
 
 interface HasWidening<T : Lattice.Element> {
     /**
@@ -510,6 +544,44 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     Lattice<MapLattice.Element<K, V>> {
     override lateinit var elements: Set<Element<K, V>>
 
+    /**
+     * Splits a MapLattice.Element<K,V> into at most [maxParts] smaller MapLattice.Element<K,V>
+     * objects, each containing **at least [minPartSize] entries**.
+     *
+     * Rules
+     * 1. Empty map ➜ empty list.
+     * 2. Less than [minPartSize] entries ➜ single element containing all entries.
+     * 3. Otherwise k = min(maxParts, size / minPartSize) subsets are created so that every subset
+     *    has ≥ [minPartSize] entries and their union equals the original map.
+     */
+    fun <K, V : Lattice.Element> Element<K, V>.splitInto(
+        maxParts: Int = 10,
+        minPartSize: Int = 3,
+    ): List<Element<K, V>> {
+        require(maxParts > 0) { "maxParts must be positive" }
+
+        if (isEmpty()) return emptyList()
+        if (size < minPartSize) return listOf(this)
+
+        // -- determine the real number of subsets we can build --
+        val k = minOf(maxParts, size / minPartSize) // k ≥ 1
+        val base = size / k // minimal size of every subset (≥ minPartSize)
+        val extra = size % k // first 'extra' subsets get +1 entry
+
+        // -- create the subsets --
+        val entriesList = entries.toList()
+        var index = 0
+        return List(k) { i ->
+            val partSize = base + if (i < extra) 1 else 0
+            Element<K, V>(partSize).apply {
+                repeat(partSize) {
+                    val (key, value) = entriesList[index++]
+                    this[key] = value
+                }
+            }
+        }
+    }
+
     open class Element<K, V : Lattice.Element>(expectedMaxSize: Int) :
         IdentityHashMap<K, V>(expectedMaxSize), Lattice.Element {
 
@@ -629,20 +701,22 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         allowModify: Boolean,
         widen: Boolean,
     ): Element<K, V> {
-
         if (allowModify) {
             coroutineScope {
-                two.forEach { (k, v) ->
+                // a launch for every key is not efficient, so we create chunks that are handled by
+                // coroutines
+                two.splitInto(8, 3).forEach { chunk ->
                     launch {
-                        if (!one.containsKey(k)) {
-                            // This key is not in "one", so we add the value from "two" to "one"
-                            one[k] = v
-                        } else {
-                            // This key already exists in "one", so we have to compute the lub of
-                            // the
-                            // values
-                            one[k]?.let { oneValue ->
-                                innerLattice.lub(oneValue, v, allowModify = true, widen = widen)
+                        for ((k, v) in chunk) {
+                            if (!one.containsKey(k)) {
+                                // This key is not in "one", so we add the value from "two" to "one"
+                                one[k] = v
+                            } else {
+                                // This key already exists in "one", so we have to compute the lub
+                                // of the values
+                                one[k]?.let { oneValue ->
+                                    innerLattice.lub(oneValue, v, allowModify = true, widen = widen)
+                                }
                             }
                         }
                     }
@@ -655,9 +729,9 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         allKeys += two.keys
         val newMap = Element<K, V>(allKeys.size)
         coroutineScope {
-            val concurrentProcesses =
-                allKeys.map { key ->
-                    async {
+            allKeys.splitInto(8, 3).forEach { chunk ->
+                launch {
+                    for (key in chunk) {
                         val otherValue = two[key]
                         val thisValue = one[key]
                         val newValue =
@@ -669,11 +743,9 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                                     widen = widen,
                                 )
                             } else thisValue ?: otherValue
-                        key to newValue
+                        synchronized(newMap) { newValue?.let { newMap[key] = it } }
                     }
                 }
-            concurrentProcesses.awaitAll().forEach { (key, value) ->
-                value?.let { newMap[key] = it }
             }
         }
         return newMap
