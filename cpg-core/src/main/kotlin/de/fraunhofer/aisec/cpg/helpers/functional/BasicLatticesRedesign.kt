@@ -40,7 +40,15 @@ import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.math.ceil
+import kotlin.system.measureNanoTime
+import kotlin.system.measureTimeMillis
+import kotlin.time.DurationUnit
+import kotlin.time.measureTimedValue
 import kotlinx.coroutines.*
+
+var compareTime: Long = 0
+var mapLatticeLubTime: Long = 0
+var tupleLatticeLubTime: Long = 0
 
 class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
     override fun equals(other: Any?): Boolean {
@@ -229,6 +237,8 @@ interface Lattice<T : Lattice.Element> {
         transformation: (Lattice<T>, EvaluationOrder, T) -> T,
         strategy: Strategy = Strategy.PRECISE,
     ): T {
+        var finalStateCalcTime: Long = 0
+        var pointsToStateLub: Long = 0
         val globalState = IdentityHashMap<EvaluationOrder, T>()
         var finalState: T = this.bottom
         for (startEdge in startEdges) {
@@ -337,13 +347,18 @@ interface Lattice<T : Lattice.Element> {
                         } else if (strategy == Strategy.NARROWING) {
                             TODO()
                         } else {
-                            (oldGlobalIt?.let {
-                                this@Lattice.lub(
-                                    one = newState,
-                                    two = it,
-                                    allowModify = isNotNearStartOrEndOfBasicBlock,
-                                )
-                            } ?: newState)
+                            val (result, time) =
+                                measureTimedValue {
+                                    (oldGlobalIt?.let {
+                                        this@Lattice.lub(
+                                            one = newState,
+                                            two = it,
+                                            allowModify = isNotNearStartOrEndOfBasicBlock,
+                                        )
+                                    } ?: newState)
+                                }
+                            pointsToStateLub += time.toLong(DurationUnit.MILLISECONDS)
+                            result
                         }
 
                     globalState[it] = newGlobalIt
@@ -385,10 +400,19 @@ interface Lattice<T : Lattice.Element> {
                             nextBranchEdgesList.isEmpty() &&
                             mergePointsEdgesList.isEmpty())
                 ) {
-                    finalState = this@Lattice.lub(finalState, newState, false)
+                    finalStateCalcTime += measureTimeMillis {
+                        finalState = this@Lattice.lub(finalState, newState, false)
+                    }
                 }
             }
         }
+
+        println(
+            "+++ final state lub calculations took $finalStateCalcTime, PointsToState lub $pointsToStateLub, compareTime: ${compareTime/1000000}, tupleLattice lub time: ${tupleLatticeLubTime/1000000}, mapLattice lub time: ${mapLatticeLubTime/1000000}"
+        )
+        compareTime = 0
+        mapLatticeLubTime = 0
+        tupleLatticeLubTime = 0
 
         return finalState
     }
@@ -454,14 +478,17 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                     "$other should be of type PowersetLattice.Element<T> but is of type ${other.javaClass}"
                 )
             val otherOnly = Element(other)
-            val thisOnly =
-                this.filterTo(IdentitySet<T>()) { t ->
-                    !if (t is Pair<*, *>) {
-                        otherOnly.removeIf { o ->
-                            o is Pair<*, *> && o.first === t.first && o.second == t.second
-                        }
-                    } else otherOnly.remove(t)
+            val (thisOnly, duration) =
+                measureTimedValue {
+                    this.filterTo(IdentitySet<T>()) { t ->
+                        !if (t is Pair<*, *>) {
+                            otherOnly.removeIf { o ->
+                                o is Pair<*, *> && o.first === t.first && o.second == t.second
+                            }
+                        } else otherOnly.remove(t)
+                    }
                 }
+            compareTime += duration.toLong(DurationUnit.NANOSECONDS)
             return when {
                 otherOnly.isEmpty() && thisOnly.isEmpty() -> {
                     Order.EQUAL
@@ -701,54 +728,66 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         allowModify: Boolean,
         widen: Boolean,
     ): Element<K, V> {
-        if (allowModify) {
-            coroutineScope {
-                // a launch for every key is not efficient, so we create chunks that are handled by
-                // coroutines
-                two.splitInto(8, 3).forEach { chunk ->
-                    launch {
-                        for ((k, v) in chunk) {
-                            if (!one.containsKey(k)) {
-                                // This key is not in "one", so we add the value from "two" to "one"
-                                one[k] = v
-                            } else {
-                                // This key already exists in "one", so we have to compute the lub
-                                // of the values
-                                one[k]?.let { oneValue ->
-                                    innerLattice.lub(oneValue, v, allowModify = true, widen = widen)
+        var result: Element<K, V>
+        mapLatticeLubTime += measureNanoTime {
+            if (allowModify) {
+                coroutineScope {
+                    // a launch for every key is not efficient, so we create chunks that are handled
+                    // by
+                    // coroutines
+                    two.splitInto(8, 3).forEach { chunk ->
+                        launch {
+                            for ((k, v) in chunk) {
+                                if (!one.containsKey(k)) {
+                                    // This key is not in "one", so we add the value from "two" to
+                                    // "one"
+                                    one[k] = v
+                                } else {
+                                    // This key already exists in "one", so we have to compute the
+                                    // lub
+                                    // of the values
+                                    one[k]?.let { oneValue ->
+                                        innerLattice.lub(
+                                            oneValue,
+                                            v,
+                                            allowModify = true,
+                                            widen = widen,
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
+                return one
             }
-            return one
-        }
 
-        val allKeys = one.keys.toIdentitySet()
-        allKeys += two.keys
-        val newMap = Element<K, V>(allKeys.size)
-        coroutineScope {
-            allKeys.splitInto(8, 3).forEach { chunk ->
-                launch {
-                    for (key in chunk) {
-                        val otherValue = two[key]
-                        val thisValue = one[key]
-                        val newValue =
-                            if (thisValue != null && otherValue != null) {
-                                innerLattice.lub(
-                                    one = thisValue,
-                                    two = otherValue,
-                                    allowModify = false,
-                                    widen = widen,
-                                )
-                            } else thisValue ?: otherValue
-                        synchronized(newMap) { newValue?.let { newMap[key] = it } }
+            val allKeys = one.keys.toIdentitySet()
+            allKeys += two.keys
+            val newMap = Element<K, V>(allKeys.size)
+            coroutineScope {
+                allKeys.splitInto(8, 3).forEach { chunk ->
+                    launch {
+                        for (key in chunk) {
+                            val otherValue = two[key]
+                            val thisValue = one[key]
+                            val newValue =
+                                if (thisValue != null && otherValue != null) {
+                                    innerLattice.lub(
+                                        one = thisValue,
+                                        two = otherValue,
+                                        allowModify = false,
+                                        widen = widen,
+                                    )
+                                } else thisValue ?: otherValue
+                            synchronized(newMap) { newValue?.let { newMap[key] = it } }
+                        }
                     }
                 }
             }
+            result = newMap
         }
-        return newMap
+        return result
     }
 
     override suspend fun glb(one: Element<K, V>, two: Element<K, V>): Element<K, V> {
@@ -842,48 +881,53 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
         allowModify: Boolean,
         widen: Boolean,
     ): Element<S, T> {
-        return if (allowModify) {
-            coroutineScope {
-                val first = async {
-                    innerLattice1.lub(
-                        one = one.first,
-                        two = two.first,
-                        allowModify = true,
-                        widen = widen,
-                    )
+        val result: Element<S, T>
+        tupleLatticeLubTime += measureNanoTime {
+            result =
+                if (allowModify) {
+                    coroutineScope {
+                        val first = async {
+                            innerLattice1.lub(
+                                one = one.first,
+                                two = two.first,
+                                allowModify = true,
+                                widen = widen,
+                            )
+                        }
+                        val second = async {
+                            innerLattice2.lub(
+                                one = one.second,
+                                two = two.second,
+                                allowModify = true,
+                                widen = widen,
+                            )
+                        }
+                        awaitAll(first, second)
+                    }
+                    one
+                } else {
+                    coroutineScope {
+                        val first = async {
+                            innerLattice1.lub(
+                                one = one.first,
+                                two = two.first,
+                                allowModify = false,
+                                widen = widen,
+                            )
+                        }
+                        val second = async {
+                            innerLattice2.lub(
+                                one = one.second,
+                                two = two.second,
+                                allowModify = false,
+                                widen = widen,
+                            )
+                        }
+                        Element(first.await(), second.await())
+                    }
                 }
-                val second = async {
-                    innerLattice2.lub(
-                        one = one.second,
-                        two = two.second,
-                        allowModify = true,
-                        widen = widen,
-                    )
-                }
-                awaitAll(first, second)
-            }
-            one
-        } else {
-            coroutineScope {
-                val first = async {
-                    innerLattice1.lub(
-                        one = one.first,
-                        two = two.first,
-                        allowModify = false,
-                        widen = widen,
-                    )
-                }
-                val second = async {
-                    innerLattice2.lub(
-                        one = one.second,
-                        two = two.second,
-                        allowModify = false,
-                        widen = widen,
-                    )
-                }
-                Element(first.await(), second.await())
-            }
         }
+        return result
     }
 
     override suspend fun glb(one: Element<S, T>, two: Element<S, T>): Element<S, T> {

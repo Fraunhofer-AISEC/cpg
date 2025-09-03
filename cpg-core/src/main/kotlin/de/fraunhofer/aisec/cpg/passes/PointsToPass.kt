@@ -51,6 +51,7 @@ import kotlin.Pair
 import kotlin.collections.filter
 import kotlin.collections.map
 import kotlin.let
+import kotlin.system.measureTimeMillis
 import kotlin.text.contains
 import kotlin.time.DurationUnit
 import kotlin.time.measureTimedValue
@@ -62,6 +63,9 @@ val nodesCreatingUnknownValues = ConcurrentHashMap<Pair<Node, Name>, MemoryAddre
 var totalFunctionDeclarationCount = 0
 var analyzedFunctionDeclarationCount = 0
 var timeInHandleCallExpression: Long = 0
+var timeinTransfer: Long = 0
+var timeTotalIterateEOG: Long = 0
+var timeinAccept: Long = 0
 
 typealias GeneralStateEntry =
     TripleLattice<
@@ -279,7 +283,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     override fun accept(node: Node) {
         functionSummaryAnalysisChain.clear()
-        return runBlocking { acceptInternal(node) }
+        val (ret, time) = measureTimedValue { runBlocking { acceptInternal(node) } }
+        timeinAccept += time.toLong(DurationUnit.MILLISECONDS)
+        log.info(
+            "Time spent in accept: ${time.toLong(DurationUnit.MILLISECONDS)}. Total: $timeinAccept"
+        )
+        return ret
     }
 
     suspend fun acceptInternal(node: Node) {
@@ -320,7 +329,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         log.info(
             "Analyzing function ${node.name}. Complexity: ${NumberFormat.getNumberInstance(Locale.US).format(c)}. (Function $analyzedFunctionDeclarationCount / $totalFunctionDeclarationCount)"
         )
-        log.debug("Time spent until now in handleCallExpression: $timeInHandleCallExpression")
+        log.debug(
+            "Time spent  in handleCallExpression and transfer: $timeInHandleCallExpression and $timeinTransfer"
+        )
 
         val lattice =
             PointsToState(
@@ -346,66 +357,79 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         startState = initializeParameters(lattice, node.parameters, startState)
 
-        val finalState =
-            if (node.body == null) {
-                handleEmptyFunctionDeclaration(lattice, startState, node)
-            } else {
-                lattice.iterateEOG(node.nextEOGEdges, startState, ::transfer)
-                    as PointsToState.Element
+        val (finalState, iterateEOGTime) =
+            measureTimedValue {
+                if (node.body == null) {
+                    handleEmptyFunctionDeclaration(lattice, startState, node)
+                } else {
+                    lattice.iterateEOG(node.nextEOGEdges, startState, ::transfer)
+                        as PointsToState.Element
+                }
             }
 
-        for ((key, value) in finalState.generalState) {
-            // The generalState values have 3 items: The address, the value, and the prevDFG-Edges
-            // with a set of properties
-            // Let's start with fetching the addresses
-            if (key is HasMemoryAddress) {
-                key.memoryAddresses += value.first.filterIsInstance<MemoryAddress>()
-            }
+        timeTotalIterateEOG += iterateEOGTime.toLong(DurationUnit.MILLISECONDS)
+        log.info(
+            "Time for EOG iteration: ${iterateEOGTime.toLong(DurationUnit.MILLISECONDS)}. Total: $timeTotalIterateEOG"
+        )
 
-            // Then the memoryValues
-            if (key is HasMemoryValue && value.second.isNotEmpty()) {
-                value.second.forEach { (v, properties) ->
+        val drawEdgesTime = measureTimeMillis {
+            for ((key, value) in finalState.generalState) {
+                // The generalState values have 3 items: The address, the value, and the
+                // prevDFG-Edges
+                // with a set of properties
+                // Let's start with fetching the addresses
+                if (key is HasMemoryAddress) {
+                    key.memoryAddresses += value.first.filterIsInstance<MemoryAddress>()
+                }
+
+                // Then the memoryValues
+                if (key is HasMemoryValue && value.second.isNotEmpty()) {
+                    value.second.forEach { (v, properties) ->
+                        var granularity = default()
+                        var shortFS = false
+                        properties.forEach { p ->
+                            when (p) {
+                                is String -> granularity = PartialDataflowGranularity(p)
+                                is Boolean -> shortFS = p
+                                else -> TODO()
+                            }
+                        }
+                        key.memoryValueEdges += Dataflow(v, key, granularity, shortFS)
+                    }
+                }
+
+                // And now the prevDFGs. These are pairs, where the second item is a with a set of
+                // properties for the edge
+                value.third.forEach { (prev, properties) ->
+                    var context: CallingContext? = null
                     var granularity = default()
-                    var shortFS = false
-                    properties.forEach { p ->
-                        when (p) {
-                            is String -> granularity = PartialDataflowGranularity(p)
-                            is Boolean -> shortFS = p
-                            else -> TODO()
+                    var functionSummary = false
+
+                    // the properties can contain a lot of things. A granularity, a
+                    // callingcontext, or a boolean indicating if this is a functionSummary edge or
+                    // not
+                    properties.forEach { property ->
+                        when (property) {
+                            is Granularity -> granularity = property
+                            is CallingContext -> context = property
+                            is Boolean -> functionSummary = property
                         }
                     }
-                    key.memoryValueEdges += Dataflow(v, key, granularity, shortFS)
+
+                    if (context == null) // TODO: add functionSummary flag for contextSensitive DFs
+                     key.prevDFGEdges += Dataflow(prev, key, granularity, functionSummary)
+                    else
+                        key.prevDFGEdges.addContextSensitive(
+                            prev,
+                            granularity,
+                            context,
+                            functionSummary,
+                        )
                 }
-            }
-
-            // And now the prevDFGs. These are pairs, where the second item is a with a set of
-            // properties for the edge
-            value.third.forEach { (prev, properties) ->
-                var context: CallingContext? = null
-                var granularity = default()
-                var functionSummary = false
-
-                // the properties can contain a lot of things. A granularity, a
-                // callingcontext, or a boolean indicating if this is a functionSummary edge or not
-                properties.forEach { property ->
-                    when (property) {
-                        is Granularity -> granularity = property
-                        is CallingContext -> context = property
-                        is Boolean -> functionSummary = property
-                    }
-                }
-
-                if (context == null) // TODO: add functionSummary flag for contextSensitive DFs
-                 key.prevDFGEdges += Dataflow(prev, key, granularity, functionSummary)
-                else
-                    key.prevDFGEdges.addContextSensitive(
-                        prev,
-                        granularity,
-                        context,
-                        functionSummary,
-                    )
             }
         }
+
+        log.info("Time to draw Edges: $drawEdgesTime")
 
         /* Store function summary for this FunctionDeclaration. */
         storeFunctionSummary(node, finalState)
@@ -777,44 +801,51 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 ?: throw java.lang.IllegalArgumentException(
                     "Expected the state to be of type PointsToState.Element"
                 )
+        timeinTransfer = measureTimeMillis {
+            val lattice = lattice as? PointsToState ?: return state
+            val currentNode = currentEdge.end
 
-        val lattice = lattice as? PointsToState ?: return state
-        val currentNode = currentEdge.end
+            runBlocking {
+                // Used to keep iterating for steps which do not modify the alias-state otherwise
+                doubleState =
+                    lattice.pushToDeclarationsState(
+                        doubleState,
+                        currentNode,
+                        doubleState.getFromDecl(currentEdge.end)
+                            ?: DeclarationStateEntryElement(
+                                PowersetLattice.Element(),
+                                PowersetLattice.Element(),
+                                PowersetLattice.Element(),
+                            ),
+                    )
 
-        runBlocking {
-            // Used to keep iterating for steps which do not modify the alias-state otherwise
-            doubleState =
-                lattice.pushToDeclarationsState(
-                    doubleState,
-                    currentNode,
-                    doubleState.getFromDecl(currentEdge.end)
-                        ?: DeclarationStateEntryElement(
-                            PowersetLattice.Element(),
-                            PowersetLattice.Element(),
-                            PowersetLattice.Element(),
-                        ),
-                )
+                doubleState =
+                    when (currentNode) {
+                        is DeleteExpression ->
+                            handleDeleteExpression(lattice, currentNode, doubleState)
+                        is Declaration,
+                        is MemoryAddress -> handleDeclaration(lattice, currentNode, doubleState)
 
-            doubleState =
-                when (currentNode) {
-                    is DeleteExpression -> handleDeleteExpression(lattice, currentNode, doubleState)
-                    is Declaration,
-                    is MemoryAddress -> handleDeclaration(lattice, currentNode, doubleState)
-                    is AssignExpression -> handleAssignExpression(lattice, currentNode, doubleState)
-                    is UnaryOperator -> handleUnaryOperator(lattice, currentNode, doubleState)
-                    is CallExpression -> {
-                        val (tmp, duration) =
-                            measureTimedValue {
-                                handleCallExpression(lattice, currentNode, doubleState)
-                            }
-                        timeInHandleCallExpression += duration.toLong(DurationUnit.MILLISECONDS)
-                        tmp
+                        is AssignExpression ->
+                            handleAssignExpression(lattice, currentNode, doubleState)
+                        is UnaryOperator -> handleUnaryOperator(lattice, currentNode, doubleState)
+                        is CallExpression -> {
+                            val (tmp, duration) =
+                                measureTimedValue {
+                                    handleCallExpression(lattice, currentNode, doubleState)
+                                }
+                            timeInHandleCallExpression = duration.toLong(DurationUnit.MILLISECONDS)
+                            tmp
+                        }
+
+                        is Expression -> handleExpression(lattice, currentNode, doubleState)
+                        is ReturnStatement ->
+                            handleReturnStatement(lattice, currentNode, doubleState)
+                        else -> doubleState
                     }
-                    is Expression -> handleExpression(lattice, currentNode, doubleState)
-                    is ReturnStatement -> handleReturnStatement(lattice, currentNode, doubleState)
-                    else -> doubleState
-                }
+            }
         }
+        //        log.info("Time in transfer: $timeinTransfer")
         return doubleState
     }
 
