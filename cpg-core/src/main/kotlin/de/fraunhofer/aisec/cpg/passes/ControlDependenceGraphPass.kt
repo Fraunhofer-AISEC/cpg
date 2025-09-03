@@ -45,6 +45,8 @@ import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import kotlin.collections.component1
 import kotlin.collections.component2
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** This pass builds the Control Dependence Graph (CDG) by iterating through the EOG. */
 @DependsOn(EvaluationOrderGraphPass::class)
@@ -56,7 +58,13 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
          * [de.fraunhofer.aisec.cpg.graph.statements.Statement.cyclomaticComplexity]) a
          * [FunctionDeclaration] must have in order to be considered.
          */
-        var maxComplexity: Int? = null
+        var maxComplexity: Int? = null,
+        /**
+         * This specifies the maximum time (in ms) we want to spend analyzing a single
+         * [de.fraunhofer.aisec.cpg.graph.EOGStarterHolder]. If the time is exceeded, we skip the
+         * function (or whatever is starting the EOG). If `null`, no time limit is enforced.
+         */
+        var timeout: Long? = null,
     ) : PassConfiguration()
 
     override fun cleanup() {
@@ -80,6 +88,14 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         if (startNode !is FunctionDeclaration) {
             return
         }
+        runBlocking {
+            passConfig<Configuration>()?.timeout?.let { timeout ->
+                withTimeoutOrNull(timeout) { buildCDG(startNode) }
+            } ?: run { buildCDG(startNode) }
+        }
+    }
+
+    fun buildCDG(startNode: FunctionDeclaration) {
         val max = passConfig<Configuration>()?.maxComplexity
         val c = startNode.body?.cyclomaticComplexity ?: 0
         if (max != null && c > max) {
