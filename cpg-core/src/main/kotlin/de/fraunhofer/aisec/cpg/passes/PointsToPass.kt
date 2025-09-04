@@ -74,13 +74,6 @@ typealias GeneralStateEntry =
         PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
     >
 
-typealias DeclarationStateEntry =
-    TripleLattice<
-        PowersetLattice.Element<Node>,
-        PowersetLattice.Element<Pair<Node, Boolean>>,
-        PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
-    >
-
 /**
  * A typealias for an element in the generalState. The first element represent possible addresses,
  * the second element represents possible memory values and the third element represents the last
@@ -118,6 +111,41 @@ typealias SingleDeclarationStateElement = MapLattice.Element<Node, DeclarationSt
 typealias SingleGeneralState = MapLattice<Node, GeneralStateEntryElement>
 
 typealias SingleDeclarationState = MapLattice<Node, DeclarationStateEntryElement>
+
+class DeclarationStateEntry(
+    addresses: PowersetLattice<Node>,
+    values: PowersetLattice<Pair<Node, Boolean>>,
+    lastWrites: PowersetLattice<Pair<Node, EqualLinkedHashSet<Any>>>,
+) :
+    TripleLattice<
+        PowersetLattice.Element<Node>,
+        PowersetLattice.Element<Pair<Node, Boolean>>,
+        PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
+    >(addresses, values, lastWrites) {
+    class Element(
+        one: PowersetLattice.Element<Node>,
+        two: PowersetLattice.Element<Pair<Node, Boolean>>,
+        three: PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
+    ) :
+        TripleLattice.Element<
+            PowersetLattice.Element<Node>,
+            PowersetLattice.Element<Pair<Node, Boolean>>,
+            PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
+        >(one, two, three) {
+        override suspend fun compare(other: Lattice.Element): Order = coroutineScope {
+            if (this === other) return@coroutineScope Order.EQUAL
+
+            if (other !is DeclarationStateEntry.Element)
+                throw IllegalArgumentException(
+                    "$other should be of type Element but is of type ${other.javaClass}"
+                )
+
+            val result1 = async { this@Element.first.compare(other.first) }
+            val result2 = async { this@Element.second.compare(other.second) }
+            return@coroutineScope compareMultiple(result1.await(), result2.await())
+        }
+    }
+}
 
 class PointsToState(
     innerLattice1: Lattice<SingleGeneralStateElement>,
