@@ -50,6 +50,8 @@ var compareTime: Long = 0
 var mapLatticeLubTime: Long = 0
 var tupleLatticeLubTime: Long = 0
 
+val CPU_CORES = 8
+
 class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
     override fun equals(other: Any?): Boolean {
         return other is LinkedHashSet<*> &&
@@ -443,22 +445,24 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
             runBlocking {
                 try {
                     coroutineScope {
-                        this@Element.forEach { t ->
+                        this@Element.splitInto(CPU_CORES).forEach { chunk ->
                             launch {
-                                ensureActive()
-                                val isEqual =
-                                    if (t is Pair<*, *>)
-                                        other.any {
-                                            it is Pair<*, *> &&
-                                                it.first === t.first &&
-                                                it.second == t.second
-                                        }
-                                    else t in other
+                                for (t in chunk) {
+                                    ensureActive()
+                                    val isEqual =
+                                        if (t is Pair<*, *>)
+                                            other.any {
+                                                it is Pair<*, *> &&
+                                                    it.first === t.first &&
+                                                    it.second == t.second
+                                            }
+                                        else t in other
 
-                                if (!isEqual) {
-                                    ret = false
-                                    // cancel all coroutines
-                                    cancel()
+                                    if (!isEqual) {
+                                        ret = false
+                                        // cancel all coroutines
+                                        cancel()
+                                    }
                                 }
                             }
                         }
@@ -735,7 +739,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                     // a launch for every key is not efficient, so we create chunks that are handled
                     // by
                     // coroutines
-                    two.splitInto(8, 3).forEach { chunk ->
+                    two.splitInto(CPU_CORES, 3).forEach { chunk ->
                         launch {
                             for ((k, v) in chunk) {
                                 if (!one.containsKey(k)) {
@@ -766,7 +770,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
             allKeys += two.keys
             val newMap = Element<K, V>(allKeys.size)
             coroutineScope {
-                allKeys.splitInto(8, 3).forEach { chunk ->
+                allKeys.splitInto(CPU_CORES, 3).forEach { chunk ->
                     launch {
                         for (key in chunk) {
                             val otherValue = two[key]
@@ -950,14 +954,14 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
  * Implements the [Lattice] for a lattice over three other lattices which are represented by
  * [innerLattice1], [innerLattice2] and [innerLattice3].
  */
-class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Element>(
+open class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Element>(
     val innerLattice1: Lattice<R>,
     val innerLattice2: Lattice<S>,
     val innerLattice3: Lattice<T>,
 ) : Lattice<TripleLattice.Element<R, S, T>> {
     override lateinit var elements: Set<Element<R, S, T>>
 
-    class Element<R : Lattice.Element, S : Lattice.Element, T : Lattice.Element>(
+    open class Element<R : Lattice.Element, S : Lattice.Element, T : Lattice.Element>(
         val first: R,
         val second: S,
         val third: T,
