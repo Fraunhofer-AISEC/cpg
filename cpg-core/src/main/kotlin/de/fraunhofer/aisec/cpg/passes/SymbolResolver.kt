@@ -688,7 +688,12 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     ): Set<FunctionDeclaration> {
         return declaration.overriddenBy
             .filter { f ->
-                f is MethodDeclaration && f.recordDeclaration?.toType() in possibleSubTypes
+                if (f is MethodDeclaration) {
+                    val record = f.recordDeclaration
+                    record != null && record.toType() in possibleSubTypes
+                } else {
+                    false
+                }
             }
             .toSet()
     }
@@ -706,7 +711,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     ): ConstructorDeclaration? {
         val signature = constructExpression.signature
         val constructorCandidate =
-            recordDeclaration.constructors.firstOrNull {
+            recordDeclaration.innerConstructors.firstOrNull {
                 it.matchesSignature(
                     signature,
                     constructExpression.arguments,
