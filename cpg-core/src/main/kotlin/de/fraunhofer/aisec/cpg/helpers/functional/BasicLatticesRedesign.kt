@@ -369,7 +369,7 @@ interface Lattice<T : Lattice.Element> {
                         it !in mergePointsEdgesList &&
                         (isNoBranchingPoint ||
                             oldGlobalIt == null ||
-                            runBlocking /*(Dispatchers.Default)*/ {
+                            runBlocking {
                                 newGlobalIt.compare(oldGlobalIt) in
                                     setOf(Order.GREATER, Order.UNEQUAL)
                             })
@@ -441,7 +441,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
             if (other !is Element<*> || this.size != other.size) return false
 
             var ret = true
-            runBlocking /*(Dispatchers.Default)*/ {
+            runBlocking {
                 try {
                     coroutineScope {
                         this@Element.splitInto(CPU_CORES).forEach { chunk ->
@@ -631,7 +631,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
 
         override fun equals(other: Any?): Boolean {
             return other is Element<K, V> &&
-                runBlocking /*(Dispatchers.Default)*/ { this@Element.compare(other) == Order.EQUAL }
+                runBlocking { this@Element.compare(other) == Order.EQUAL }
         }
 
         @OptIn(ExperimentalAtomicApi::class)
@@ -733,7 +733,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     ): Element<K, V> {
         var result: Element<K, V>
         mapLatticeLubTime += measureNanoTime {
-            runBlocking /*(Dispatchers.Default)*/ {
+            runBlocking {
                 if (allowModify) {
                     coroutineScope {
                         // a launch for every key is not efficient, so we create chunks that are
@@ -856,7 +856,7 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
 
         override fun equals(other: Any?): Boolean {
             return other is Element<S, T> &&
-                runBlocking /*(Dispatchers.Default)*/ { this@Element.compare(other) == Order.EQUAL }
+                runBlocking { this@Element.compare(other) == Order.EQUAL }
         }
 
         override suspend fun compare(other: Lattice.Element): Order = coroutineScope {
@@ -892,7 +892,7 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
     ): Element<S, T> {
         val result: Element<S, T>
         tupleLatticeLubTime += measureNanoTime {
-            result = runBlocking /*(Dispatchers.Default)*/ {
+            result = runBlocking {
                 if (allowModify) {
                     val first = async {
                         innerLattice1.lub(
@@ -978,7 +978,7 @@ open class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.E
 
         override fun equals(other: Any?): Boolean {
             return other is Element<R, S, T> &&
-                runBlocking /*(Dispatchers.Default)*/ { this@Element.compare(other) == Order.EQUAL }
+                runBlocking { this@Element.compare(other) == Order.EQUAL }
         }
 
         override suspend fun compare(other: Lattice.Element): Order = coroutineScope {
@@ -1014,7 +1014,7 @@ open class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.E
         widen: Boolean,
     ): Element<R, S, T> {
         return if (allowModify) {
-            runBlocking /*(Dispatchers.Default)*/ {
+            runBlocking {
                 val first = async {
                     innerLattice1.lub(
                         one = one.first,
@@ -1043,7 +1043,7 @@ open class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.E
             }
             one
         } else {
-            runBlocking /*(Dispatchers.Default)*/ {
+            runBlocking {
                 val first = async {
                     innerLattice1.lub(
                         one = one.first,
