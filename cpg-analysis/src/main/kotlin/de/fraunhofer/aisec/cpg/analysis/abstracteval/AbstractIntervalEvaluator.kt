@@ -39,6 +39,7 @@ import kotlin.collections.set
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 import kotlin.to
+import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -53,7 +54,7 @@ class TupleState<NodeId>(
         innerLattice2,
     ) {
 
-    override fun lub(
+    override suspend fun lub(
         one: TupleStateElement<NodeId>,
         two: TupleStateElement<NodeId>,
         allowModify: Boolean,
@@ -90,7 +91,7 @@ class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>
     override val bottom: DeclarationStateElement<NodeId>
         get() = DeclarationStateElement()
 
-    override fun lub(
+    override suspend fun lub(
         one: Element<NodeId, NewIntervalLattice.Element>,
         two: Element<NodeId, NewIntervalLattice.Element>,
         allowModify: Boolean,
@@ -105,7 +106,7 @@ class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>
         }
     }
 
-    override fun glb(
+    override suspend fun glb(
         one: Element<NodeId, NewIntervalLattice.Element>,
         two: Element<NodeId, NewIntervalLattice.Element>,
     ): Element<NodeId, NewIntervalLattice.Element> {
@@ -137,7 +138,8 @@ class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>
         }
 
         override fun equals(other: Any?): Boolean {
-            return other is DeclarationStateElement<NodeId> && this.compare(other) == Order.EQUAL
+            return other is DeclarationStateElement<NodeId> &&
+                runBlocking { this@DeclarationStateElement.compare(other) == Order.EQUAL }
         }
 
         override fun hashCode(): Int {
@@ -199,7 +201,12 @@ class NewIntervalLattice() :
     override var elements: Set<Element> = setOf()
     override val bottom: Element = Element(LatticeInterval.BOTTOM)
 
-    override fun lub(one: Element, two: Element, allowModify: Boolean, widen: Boolean): Element {
+    override suspend fun lub(
+        one: Element,
+        two: Element,
+        allowModify: Boolean,
+        widen: Boolean,
+    ): Element {
         val oneElem = one.element
         val twoElem = two.element
         if (allowModify) {
@@ -261,7 +268,7 @@ class NewIntervalLattice() :
         }
     }
 
-    override fun glb(one: Element, two: Element): Element {
+    override suspend fun glb(one: Element, two: Element): Element {
         val oneElem = one.element
         val twoElem = two.element
         return when {
@@ -292,7 +299,7 @@ class NewIntervalLattice() :
         }
     }
 
-    override fun compare(one: Element, two: Element): Order {
+    override suspend fun compare(one: Element, two: Element): Order {
         return one.compare(two)
     }
 
@@ -313,7 +320,7 @@ class NewIntervalLattice() :
             return "IntervalLattice.Element(elements=$element)"
         }
 
-        override fun compare(other: Lattice.Element): Order {
+        override suspend fun compare(other: Lattice.Element): Order {
             //            var ret: Order
             //            runBlocking { ret = innerCompare(other) }
             //            return ret
@@ -508,11 +515,13 @@ fun <NodeId> TupleState<NodeId>.pushToDeclarationState(
         (node.objectIdentifier() as? NodeId)?.let { tmpId ->
             current.first.keys.singleOrNull { it == tmpId } ?: tmpId
         } ?: node as NodeId ?: TODO()
-    this.innerLattice1.lub(
-        current.first,
-        DeclarationState.DeclarationStateElement(id to NewIntervalLattice.Element(interval)),
-        allowModify = true,
-    )
+    runBlocking {
+        this@pushToDeclarationState.innerLattice1.lub(
+            current.first,
+            DeclarationState.DeclarationStateElement(id to NewIntervalLattice.Element(interval)),
+            allowModify = true,
+        )
+    }
     return current
 }
 
@@ -529,11 +538,13 @@ fun <NodeId> TupleState<NodeId>.pushToGeneralState(
     node: Node,
     interval: LatticeInterval,
 ): TupleStateElement<NodeId> {
-    this.innerLattice2.lub(
-        current.second,
-        NewIntervalStateElement(node to NewIntervalLattice.Element(interval)),
-        allowModify = true,
-    )
+    runBlocking {
+        this@pushToGeneralState.innerLattice2.lub(
+            current.second,
+            NewIntervalStateElement(node to NewIntervalLattice.Element(interval)),
+            allowModify = true,
+        )
+    }
     return current
 }
 
@@ -549,11 +560,13 @@ private fun <NodeId> DeclarationState<NodeId>.push(
     start: NodeId,
     interval: LatticeInterval,
 ) {
-    this.lub(
-        current,
-        DeclarationState.DeclarationStateElement(start to NewIntervalLattice.Element(interval)),
-        allowModify = true,
-    )
+    runBlocking {
+        this@push.lub(
+            current,
+            DeclarationState.DeclarationStateElement(start to NewIntervalLattice.Element(interval)),
+            allowModify = true,
+        )
+    }
 }
 
 /**
@@ -568,9 +581,11 @@ private fun NewIntervalState.push(
     start: Node,
     interval: LatticeInterval,
 ) {
-    this.lub(
-        current,
-        NewIntervalStateElement(start to NewIntervalLattice.Element(interval)),
-        allowModify = true,
-    )
+    runBlocking {
+        this@push.lub(
+            current,
+            NewIntervalStateElement(start to NewIntervalLattice.Element(interval)),
+            allowModify = true,
+        )
+    }
 }

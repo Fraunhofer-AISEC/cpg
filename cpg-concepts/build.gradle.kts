@@ -49,5 +49,6 @@ dependencies {
     findProject(":cpg-language-ini")?.also { integrationTestImplementation(it) }
     integrationTestImplementation(projects.cpgAnalysis)
 
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation(libs.reflections)
 }

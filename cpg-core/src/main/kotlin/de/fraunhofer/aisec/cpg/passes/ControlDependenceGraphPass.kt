@@ -51,6 +51,7 @@ import java.util.Locale
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.system.measureTimeMillis
+import kotlinx.coroutines.runBlocking
 
 var cdgLogFile: File? = null
 
@@ -130,13 +131,14 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         // result in the basicBlock, we use the dominator's state instead (i.e., we move the
         // basicBlock one layer upwards)
         var startState: PrevEOGStateElement = prevEOGState.bottom
-        startState =
+        startState = runBlocking {
             prevEOGState.push(
                 startState,
                 firstBasicBlock,
                 PrevEOGLatticeElement(startNode to PowersetLattice.Element(firstBasicBlock)),
                 true,
             )
+        }
 
         log.trace("Iterating EOG of {}", firstBasicBlock)
         var finalState: PrevEOGStateElement
@@ -337,9 +339,10 @@ fun transfer(
                 ?.let { PrevEOGLatticeElement(it) } ?: PrevEOGLatticeElement()
 
         val map = PrevEOGLatticeElement(branchingNode to PowersetLattice.Element(currentEnd))
-
-        val newPath = lattice.innerLattice.lub(map, prevPathLattice, true)
-        newState = lattice.push(newState, currentEnd, newPath, true)
+        runBlocking {
+            val newPath = lattice.innerLattice.lub(map, prevPathLattice, true)
+            newState = lattice.push(newState, currentEnd, newPath, true)
+        }
     } else {
         // We did not start in a branching node, so for the next node, we have the same path
         // (last branching + first end node) as for the start node of this edge.
@@ -349,7 +352,7 @@ fun transfer(
         val state =
             newState[currentStart]?.let { PrevEOGLatticeElement(it) }
                 ?: PrevEOGLatticeElement(currentStart to PowersetLattice.Element(currentEnd))
-        newState = lattice.push(newState, currentEnd, state, true)
+        runBlocking { newState = lattice.push(newState, currentEnd, state, true) }
     }
     return newState
 }
@@ -417,7 +420,7 @@ typealias PrevEOGStateElement = MapLattice.Element<BasicBlock, PrevEOGLatticeEle
 
 typealias PrevEOGState = MapLattice<BasicBlock, PrevEOGLatticeElement>
 
-fun PrevEOGState.push(
+suspend fun PrevEOGState.push(
     currentElement: PrevEOGStateElement,
     newNode: BasicBlock,
     newEOGLattice: PrevEOGLatticeElement,
