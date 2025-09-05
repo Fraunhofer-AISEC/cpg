@@ -41,7 +41,6 @@ import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Order
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -296,15 +295,10 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
     override val bottom: Element
         get() = Element(Reachability.BOTTOM)
 
-    override suspend fun lub(
-        one: Element,
-        two: Element,
-        allowModify: Boolean,
-        widen: Boolean,
-    ): Element {
+    override fun lub(one: Element, two: Element, allowModify: Boolean, widen: Boolean): Element {
         return if (allowModify) {
             val ret: Order
-            coroutineScope { ret = compare(one, two) }
+            runBlocking { ret = compare(one, two) }
             when (ret) {
                 Order.EQUAL -> one
                 Order.GREATER -> one

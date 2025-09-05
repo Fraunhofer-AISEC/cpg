@@ -206,7 +206,7 @@ interface Lattice<T : Lattice.Element> {
      * is modified if there is no element greater than each other (if set to `true`) or if a new
      * [Lattice.Element] is returned (if set to `false`).
      */
-    suspend fun lub(one: T, two: T, allowModify: Boolean = false, widen: Boolean = false): T
+    fun lub(one: T, two: T, allowModify: Boolean = false, widen: Boolean = false): T
 
     /** Computes the greatest lower bound (meet) of [one] and [two] */
     suspend fun glb(one: T, two: T): T
@@ -260,151 +260,150 @@ interface Lattice<T : Lattice.Element> {
         val mergePointsEdgesList = mutableListOf<EvaluationOrder>()
         startEdges.forEach { nextBranchEdgesList.add(it) }
 
-        runBlocking(Dispatchers.Default) {
-            while (
-                currentBBEdgesList.isNotEmpty() ||
-                    nextBranchEdgesList.isNotEmpty() ||
-                    mergePointsEdgesList.isNotEmpty()
-            ) {
-                val nextEdge =
-                    if (currentBBEdgesList.isNotEmpty()) {
-                        // If we have edges in the current basic block, we take these. We prefer to
-                        // finish with the whole Basic Block before moving somewhere else.
-                        currentBBEdgesList.removeFirst()
-                    } else if (nextBranchEdgesList.isNotEmpty()) {
-                        // If we have points splitting up the EOG, we prefer to process these before
-                        // merging the EOG again. This is to hopefully reduce the number of merges
-                        // that
-                        // we have to compute and that we hopefully reduce the number of
-                        // re-processing
-                        // the same basic blocks.
-                        nextBranchEdgesList.removeFirst()
-                    } else {
-                        // We have a merge point, we try to process this after having processed all
-                        // branches leading there.
-                        mergePointsEdgesList.removeFirst()
-                    }
-
-                // Compute the effects of "nextEdge" on the state by applying the transformation to
-                // its
-                // state.
-                val nextGlobal = globalState[nextEdge] ?: continue
-
-                // Either immediately before or after this edge, there's a branching node. In these
-                // cases, we definitely want to check if there's an update to the state.
-                val isNoBranchingPoint =
-                    nextEdge.end.nextEOGEdges.size == 1 &&
-                        nextEdge.end.prevEOGEdges.size == 1 &&
-                        nextEdge.start.nextEOGEdges.size == 1 &&
-                        nextEdge.start.prevEOGEdges.size == 1
-                // Either before or after this edge, there's a branching node within two steps
-                // (start,
-                // end and the nodes before/after these). We have to ensure that we copy the state
-                // for
-                // all these nodes to enable the update checks conducted ib the branching edges. We
-                // need
-                // one more step for this, otherwise we will fail recognizing the updates for a node
-                // "x"
-                // which is a branching edge because the next node would already modify the state of
-                // x.
-                val isNotNearStartOrEndOfBasicBlock =
-                    isNoBranchingPoint &&
-                        nextEdge.end.nextEOGEdges.single().end.nextEOGEdges.size == 1 &&
-                        nextEdge.end.nextEOGEdges.single().end.prevEOGEdges.size == 1 &&
-                        nextEdge.start.prevEOGEdges.single().start.nextEOGEdges.size == 1 &&
-                        nextEdge.start.prevEOGEdges.single().start.prevEOGEdges.size == 1
-
-                val newState =
-                    transformation(
-                        this@Lattice,
-                        nextEdge,
-                        if (isNotNearStartOrEndOfBasicBlock) nextGlobal
-                        else nextGlobal.duplicate() as T,
-                    )
-                nextEdge.end.nextEOGEdges.forEach {
-                    // We continue with the nextEOG edge if we haven't seen it before or if we
-                    // updated
-                    // the state in comparison to the previous time we were there.
-
-                    val oldGlobalIt = globalState[it]
-
-                    // If we're on the loop head (some node is LoopStatement), and we use WIDENING
-                    // or
-                    // WIDENING_NARROWING, we have to apply the widening/narrowing here (if
-                    // oldGlobalIt
-                    // is not null).
-                    val newGlobalIt =
-                        if (
-                            nextEdge.end is LoopStatement &&
-                                (strategy == Strategy.WIDENING ||
-                                    strategy == Strategy.WIDENING_NARROWING) &&
-                                oldGlobalIt != null
-                        ) {
-                            this@Lattice.lub(
-                                one = newState,
-                                two = oldGlobalIt,
-                                allowModify = isNotNearStartOrEndOfBasicBlock,
-                                widen = true,
-                            )
-                        } else if (strategy == Strategy.NARROWING) {
-                            TODO()
-                        } else {
-                            val (result, time) =
-                                measureTimedValue {
-                                    (oldGlobalIt?.let {
-                                        this@Lattice.lub(
-                                            one = newState,
-                                            two = it,
-                                            allowModify = isNotNearStartOrEndOfBasicBlock,
-                                        )
-                                    } ?: newState)
-                                }
-                            pointsToStateLub += time.toLong(DurationUnit.MILLISECONDS)
-                            result
-                        }
-
-                    globalState[it] = newGlobalIt
-
-                    if (
-                        it !in currentBBEdgesList &&
-                            it !in nextBranchEdgesList &&
-                            it !in mergePointsEdgesList &&
-                            (isNoBranchingPoint ||
-                                oldGlobalIt == null ||
-                                newGlobalIt.compare(oldGlobalIt) in
-                                    setOf(Order.GREATER, Order.UNEQUAL))
-                    ) {
-                        if (it.start.prevEOGEdges.size > 1) {
-                            // This edge brings us to a merge point, so we add it to the list of
-                            // merge
-                            // points.
-                            mergePointsEdgesList.add(0, it)
-                        } else if (nextEdge.end.nextEOGEdges.size > 1) {
-                            // If we have multiple next edges, we add this edge to the list of edges
-                            // of
-                            // a next basic block.
-                            // We will process these after the current basic block has been
-                            // processed
-                            // (probably very soon).
-                            nextBranchEdgesList.add(0, it)
-                        } else {
-                            // If we have only one next edge, we add it to the current basic block
-                            // edges
-                            // list.
-                            currentBBEdgesList.add(0, it)
-                        }
-                    }
+        while (
+            currentBBEdgesList.isNotEmpty() ||
+                nextBranchEdgesList.isNotEmpty() ||
+                mergePointsEdgesList.isNotEmpty()
+        ) {
+            val nextEdge =
+                if (currentBBEdgesList.isNotEmpty()) {
+                    // If we have edges in the current basic block, we take these. We prefer to
+                    // finish with the whole Basic Block before moving somewhere else.
+                    currentBBEdgesList.removeFirst()
+                } else if (nextBranchEdgesList.isNotEmpty()) {
+                    // If we have points splitting up the EOG, we prefer to process these before
+                    // merging the EOG again. This is to hopefully reduce the number of merges
+                    // that
+                    // we have to compute and that we hopefully reduce the number of
+                    // re-processing
+                    // the same basic blocks.
+                    nextBranchEdgesList.removeFirst()
+                } else {
+                    // We have a merge point, we try to process this after having processed all
+                    // branches leading there.
+                    mergePointsEdgesList.removeFirst()
                 }
 
-                if (
-                    nextEdge.end.nextEOGEdges.isEmpty() ||
-                        (currentBBEdgesList.isEmpty() &&
-                            nextBranchEdgesList.isEmpty() &&
-                            mergePointsEdgesList.isEmpty())
-                ) {
-                    finalStateCalcTime += measureTimeMillis {
-                        finalState = this@Lattice.lub(finalState, newState, false)
+            // Compute the effects of "nextEdge" on the state by applying the transformation to
+            // its
+            // state.
+            val nextGlobal = globalState[nextEdge] ?: continue
+
+            // Either immediately before or after this edge, there's a branching node. In these
+            // cases, we definitely want to check if there's an update to the state.
+            val isNoBranchingPoint =
+                nextEdge.end.nextEOGEdges.size == 1 &&
+                    nextEdge.end.prevEOGEdges.size == 1 &&
+                    nextEdge.start.nextEOGEdges.size == 1 &&
+                    nextEdge.start.prevEOGEdges.size == 1
+            // Either before or after this edge, there's a branching node within two steps
+            // (start,
+            // end and the nodes before/after these). We have to ensure that we copy the state
+            // for
+            // all these nodes to enable the update checks conducted ib the branching edges. We
+            // need
+            // one more step for this, otherwise we will fail recognizing the updates for a node
+            // "x"
+            // which is a branching edge because the next node would already modify the state of
+            // x.
+            val isNotNearStartOrEndOfBasicBlock =
+                isNoBranchingPoint &&
+                    nextEdge.end.nextEOGEdges.single().end.nextEOGEdges.size == 1 &&
+                    nextEdge.end.nextEOGEdges.single().end.prevEOGEdges.size == 1 &&
+                    nextEdge.start.prevEOGEdges.single().start.nextEOGEdges.size == 1 &&
+                    nextEdge.start.prevEOGEdges.single().start.prevEOGEdges.size == 1
+
+            val newState =
+                transformation(
+                    this@Lattice,
+                    nextEdge,
+                    if (isNotNearStartOrEndOfBasicBlock) nextGlobal else nextGlobal.duplicate() as T,
+                )
+            nextEdge.end.nextEOGEdges.forEach {
+                // We continue with the nextEOG edge if we haven't seen it before or if we
+                // updated
+                // the state in comparison to the previous time we were there.
+
+                val oldGlobalIt = globalState[it]
+
+                // If we're on the loop head (some node is LoopStatement), and we use WIDENING
+                // or
+                // WIDENING_NARROWING, we have to apply the widening/narrowing here (if
+                // oldGlobalIt
+                // is not null).
+                val newGlobalIt =
+                    if (
+                        nextEdge.end is LoopStatement &&
+                            (strategy == Strategy.WIDENING ||
+                                strategy == Strategy.WIDENING_NARROWING) &&
+                            oldGlobalIt != null
+                    ) {
+                        this@Lattice.lub(
+                            one = newState,
+                            two = oldGlobalIt,
+                            allowModify = isNotNearStartOrEndOfBasicBlock,
+                            widen = true,
+                        )
+                    } else if (strategy == Strategy.NARROWING) {
+                        TODO()
+                    } else {
+                        val (result, time) =
+                            measureTimedValue {
+                                (oldGlobalIt?.let {
+                                    this@Lattice.lub(
+                                        one = newState,
+                                        two = it,
+                                        allowModify = isNotNearStartOrEndOfBasicBlock,
+                                    )
+                                } ?: newState)
+                            }
+                        pointsToStateLub += time.toLong(DurationUnit.MILLISECONDS)
+                        result
                     }
+
+                globalState[it] = newGlobalIt
+
+                if (
+                    it !in currentBBEdgesList &&
+                        it !in nextBranchEdgesList &&
+                        it !in mergePointsEdgesList &&
+                        (isNoBranchingPoint ||
+                            oldGlobalIt == null ||
+                            runBlocking /*(Dispatchers.Default)*/ {
+                                newGlobalIt.compare(oldGlobalIt) in
+                                    setOf(Order.GREATER, Order.UNEQUAL)
+                            })
+                ) {
+                    if (it.start.prevEOGEdges.size > 1) {
+                        // This edge brings us to a merge point, so we add it to the list of
+                        // merge
+                        // points.
+                        mergePointsEdgesList.add(0, it)
+                    } else if (nextEdge.end.nextEOGEdges.size > 1) {
+                        // If we have multiple next edges, we add this edge to the list of edges
+                        // of
+                        // a next basic block.
+                        // We will process these after the current basic block has been
+                        // processed
+                        // (probably very soon).
+                        nextBranchEdgesList.add(0, it)
+                    } else {
+                        // If we have only one next edge, we add it to the current basic block
+                        // edges
+                        // list.
+                        currentBBEdgesList.add(0, it)
+                    }
+                }
+            }
+
+            if (
+                nextEdge.end.nextEOGEdges.isEmpty() ||
+                    (currentBBEdgesList.isEmpty() &&
+                        nextBranchEdgesList.isEmpty() &&
+                        mergePointsEdgesList.isEmpty())
+            ) {
+                finalStateCalcTime += measureTimeMillis {
+                    finalState = this@Lattice.lub(finalState, newState, false)
                 }
             }
         }
@@ -442,7 +441,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
             if (other !is Element<*> || this.size != other.size) return false
 
             var ret = true
-            runBlocking(Dispatchers.Default) {
+            runBlocking /*(Dispatchers.Default)*/ {
                 try {
                     coroutineScope {
                         this@Element.splitInto(CPU_CORES).forEach { chunk ->
@@ -537,7 +536,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
     override val bottom: Element<T>
         get() = Element()
 
-    override suspend fun lub(
+    override fun lub(
         one: Element<T>,
         two: Element<T>,
         allowModify: Boolean,
@@ -632,7 +631,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
 
         override fun equals(other: Any?): Boolean {
             return other is Element<K, V> &&
-                runBlocking(Dispatchers.Default) { this@Element.compare(other) == Order.EQUAL }
+                runBlocking /*(Dispatchers.Default)*/ { this@Element.compare(other) == Order.EQUAL }
         }
 
         @OptIn(ExperimentalAtomicApi::class)
@@ -726,7 +725,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     override val bottom: Element<K, V>
         get() = MapLattice.Element()
 
-    override suspend fun lub(
+    override fun lub(
         one: Element<K, V>,
         two: Element<K, V>,
         allowModify: Boolean,
@@ -734,62 +733,68 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     ): Element<K, V> {
         var result: Element<K, V>
         mapLatticeLubTime += measureNanoTime {
-            if (allowModify) {
-                coroutineScope {
-                    // a launch for every key is not efficient, so we create chunks that are handled
-                    // by
-                    // coroutines
-                    two.splitInto(CPU_CORES, 3).forEach { chunk ->
-                        launch(Dispatchers.Default) {
-                            for ((k, v) in chunk) {
-                                if (!one.containsKey(k)) {
-                                    // This key is not in "one", so we add the value from "two" to
-                                    // "one"
-                                    one[k] = v
-                                } else {
-                                    // This key already exists in "one", so we have to compute the
-                                    // lub
-                                    // of the values
-                                    one[k]?.let { oneValue ->
-                                        innerLattice.lub(
-                                            oneValue,
-                                            v,
-                                            allowModify = true,
-                                            widen = widen,
-                                        )
+            runBlocking /*(Dispatchers.Default)*/ {
+                if (allowModify) {
+                    coroutineScope {
+                        // a launch for every key is not efficient, so we create chunks that are
+                        // handled
+                        // by
+                        // coroutines
+                        two.splitInto(CPU_CORES, 3).forEach { chunk ->
+                            launch(Dispatchers.Default) {
+                                for ((k, v) in chunk) {
+                                    if (!one.containsKey(k)) {
+                                        // This key is not in "one", so we add the value from "two"
+                                        // to
+                                        // "one"
+                                        one[k] = v
+                                    } else {
+                                        // This key already exists in "one", so we have to compute
+                                        // the
+                                        // lub
+                                        // of the values
+                                        one[k]?.let { oneValue ->
+                                            innerLattice.lub(
+                                                oneValue,
+                                                v,
+                                                allowModify = true,
+                                                widen = widen,
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
-                return one
-            }
+                    result = one
+                } else {
 
-            val allKeys = one.keys.toIdentitySet()
-            allKeys += two.keys
-            val newMap = Element<K, V>(allKeys.size)
-            coroutineScope {
-                allKeys.splitInto(CPU_CORES, 3).forEach { chunk ->
-                    launch(Dispatchers.Default) {
-                        for (key in chunk) {
-                            val otherValue = two[key]
-                            val thisValue = one[key]
-                            val newValue =
-                                if (thisValue != null && otherValue != null) {
-                                    innerLattice.lub(
-                                        one = thisValue,
-                                        two = otherValue,
-                                        allowModify = false,
-                                        widen = widen,
-                                    )
-                                } else thisValue ?: otherValue
-                            synchronized(newMap) { newValue?.let { newMap[key] = it } }
+                    val allKeys = one.keys.toIdentitySet()
+                    allKeys += two.keys
+                    val newMap = Element<K, V>(allKeys.size)
+                    coroutineScope {
+                        allKeys.splitInto(CPU_CORES, 3).forEach { chunk ->
+                            launch(Dispatchers.Default) {
+                                for (key in chunk) {
+                                    val otherValue = two[key]
+                                    val thisValue = one[key]
+                                    val newValue =
+                                        if (thisValue != null && otherValue != null) {
+                                            innerLattice.lub(
+                                                one = thisValue,
+                                                two = otherValue,
+                                                allowModify = false,
+                                                widen = widen,
+                                            )
+                                        } else thisValue ?: otherValue
+                                    synchronized(newMap) { newValue?.let { newMap[key] = it } }
+                                }
+                            }
                         }
                     }
+                    result = newMap
                 }
             }
-            result = newMap
         }
         return result
     }
@@ -851,7 +856,7 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
 
         override fun equals(other: Any?): Boolean {
             return other is Element<S, T> &&
-                runBlocking(Dispatchers.Default) { this@Element.compare(other) == Order.EQUAL }
+                runBlocking /*(Dispatchers.Default)*/ { this@Element.compare(other) == Order.EQUAL }
         }
 
         override suspend fun compare(other: Lattice.Element): Order = coroutineScope {
@@ -879,7 +884,7 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
     override val bottom: Element<S, T>
         get() = Element(innerLattice1.bottom, innerLattice2.bottom)
 
-    override suspend fun lub(
+    override fun lub(
         one: Element<S, T>,
         two: Element<S, T>,
         allowModify: Boolean,
@@ -887,49 +892,46 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
     ): Element<S, T> {
         val result: Element<S, T>
         tupleLatticeLubTime += measureNanoTime {
-            result =
+            result = runBlocking /*(Dispatchers.Default)*/ {
                 if (allowModify) {
-                    coroutineScope {
-                        val first = async {
-                            innerLattice1.lub(
-                                one = one.first,
-                                two = two.first,
-                                allowModify = true,
-                                widen = widen,
-                            )
-                        }
-                        val second = async {
-                            innerLattice2.lub(
-                                one = one.second,
-                                two = two.second,
-                                allowModify = true,
-                                widen = widen,
-                            )
-                        }
-                        awaitAll(first, second)
+                    val first = async {
+                        innerLattice1.lub(
+                            one = one.first,
+                            two = two.first,
+                            allowModify = true,
+                            widen = widen,
+                        )
                     }
+                    val second = async {
+                        innerLattice2.lub(
+                            one = one.second,
+                            two = two.second,
+                            allowModify = true,
+                            widen = widen,
+                        )
+                    }
+                    awaitAll(first, second)
                     one
                 } else {
-                    coroutineScope {
-                        val first = async {
-                            innerLattice1.lub(
-                                one = one.first,
-                                two = two.first,
-                                allowModify = false,
-                                widen = widen,
-                            )
-                        }
-                        val second = async {
-                            innerLattice2.lub(
-                                one = one.second,
-                                two = two.second,
-                                allowModify = false,
-                                widen = widen,
-                            )
-                        }
-                        Element(first.await(), second.await())
+                    val first = async {
+                        innerLattice1.lub(
+                            one = one.first,
+                            two = two.first,
+                            allowModify = false,
+                            widen = widen,
+                        )
                     }
+                    val second = async {
+                        innerLattice2.lub(
+                            one = one.second,
+                            two = two.second,
+                            allowModify = false,
+                            widen = widen,
+                        )
+                    }
+                    Element(first.await(), second.await())
                 }
+            }
         }
         return result
     }
@@ -976,7 +978,7 @@ open class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.E
 
         override fun equals(other: Any?): Boolean {
             return other is Element<R, S, T> &&
-                runBlocking(Dispatchers.Default) { this@Element.compare(other) == Order.EQUAL }
+                runBlocking /*(Dispatchers.Default)*/ { this@Element.compare(other) == Order.EQUAL }
         }
 
         override suspend fun compare(other: Lattice.Element): Order = coroutineScope {
@@ -1005,14 +1007,14 @@ open class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.E
     override val bottom: Element<R, S, T>
         get() = Element(innerLattice1.bottom, innerLattice2.bottom, innerLattice3.bottom)
 
-    override suspend fun lub(
+    override fun lub(
         one: Element<R, S, T>,
         two: Element<R, S, T>,
         allowModify: Boolean,
         widen: Boolean,
     ): Element<R, S, T> {
         return if (allowModify) {
-            coroutineScope {
+            runBlocking /*(Dispatchers.Default)*/ {
                 val first = async {
                     innerLattice1.lub(
                         one = one.first,
@@ -1041,7 +1043,7 @@ open class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.E
             }
             one
         } else {
-            coroutineScope {
+            runBlocking /*(Dispatchers.Default)*/ {
                 val first = async {
                     innerLattice1.lub(
                         one = one.first,

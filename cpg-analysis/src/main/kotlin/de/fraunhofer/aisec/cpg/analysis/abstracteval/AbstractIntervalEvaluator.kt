@@ -54,7 +54,7 @@ class TupleState<NodeId>(
         innerLattice2,
     ) {
 
-    override suspend fun lub(
+    override fun lub(
         one: TupleStateElement<NodeId>,
         two: TupleStateElement<NodeId>,
         allowModify: Boolean,
@@ -91,7 +91,7 @@ class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>
     override val bottom: DeclarationStateElement<NodeId>
         get() = DeclarationStateElement()
 
-    override suspend fun lub(
+    override fun lub(
         one: Element<NodeId, NewIntervalLattice.Element>,
         two: Element<NodeId, NewIntervalLattice.Element>,
         allowModify: Boolean,
@@ -201,12 +201,7 @@ class NewIntervalLattice() :
     override var elements: Set<Element> = setOf()
     override val bottom: Element = Element(LatticeInterval.BOTTOM)
 
-    override suspend fun lub(
-        one: Element,
-        two: Element,
-        allowModify: Boolean,
-        widen: Boolean,
-    ): Element {
+    override fun lub(one: Element, two: Element, allowModify: Boolean, widen: Boolean): Element {
         val oneElem = one.element
         val twoElem = two.element
         if (allowModify) {
