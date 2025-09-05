@@ -485,10 +485,12 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                 measureTimedValue {
                     this.filterTo(IdentitySet<T>()) { t ->
                         !if (t is Pair<*, *>) {
-                            otherOnly.removeIf { o ->
-                                o is Pair<*, *> && o.first === t.first && o.second == t.second
+                            synchronized(otherOnly) {
+                                otherOnly.removeIf { o ->
+                                    o is Pair<*, *> && o.first === t.first && o.second == t.second
+                                }
                             }
-                        } else otherOnly.remove(t)
+                        } else synchronized(otherOnly) { otherOnly.remove(t) }
                     }
                 }
             compareTime += duration.toLong(DurationUnit.NANOSECONDS)
@@ -735,36 +737,35 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         mapLatticeLubTime += measureNanoTime {
             runBlocking {
                 if (allowModify) {
-                    coroutineScope {
-                        // a launch for every key is not efficient, so we create chunks that are
-                        // handled
-                        // by
-                        // coroutines
-                        two.splitInto(CPU_CORES, 3).forEach { chunk ->
-                            launch(Dispatchers.Default) {
-                                for ((k, v) in chunk) {
-                                    if (!one.containsKey(k)) {
-                                        // This key is not in "one", so we add the value from "two"
-                                        // to
-                                        // "one"
-                                        one[k] = v
-                                    } else {
-                                        // This key already exists in "one", so we have to compute
-                                        // the
-                                        // lub
-                                        // of the values
-                                        one[k]?.let { oneValue ->
-                                            innerLattice.lub(
-                                                oneValue,
-                                                v,
-                                                allowModify = true,
-                                                widen = widen,
-                                            )
-                                        }
-                                    }
-                                }
+                    //                    coroutineScope {
+                    // a launch for every key is not efficient, so we create chunks that are
+                    // handled by coroutines
+                    // TODO: Can we do this in coroutines without running into the problem that we
+                    // need a synchronized(one) block for every access?
+                    //                        two.splitInto(CPU_CORES, 3).forEach { chunk ->
+                    // TODO: We could use map here to first calculate the values in threads
+                    // and only then merge them, this should avoid the synchronized()
+                    //                            launch(Dispatchers.Default) {
+                    //                                for ((k, v) in chunk) {
+                    two.forEach { (k, v) ->
+                        if (!one.containsKey(k)) {
+                            // This key is not in "one", so we add the value from "two"
+                            // to "one"
+                            //                                        synchronized(one) { one[k] = v
+                            // }
+                            one[k] = v
+                        } else {
+                            // This key already exists in "one", so we have to compute
+                            // the lub of the values
+                            //                                        synchronized(one[k]!!) {
+                            one[k]?.let { oneValue ->
+                                innerLattice.lub(oneValue, v, allowModify = true, widen = widen)
                             }
+                            //                                        }
                         }
+                        //                                }
+                        //                            }
+                        //                        }
                     }
                     result = one
                 } else {
@@ -894,21 +895,26 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
         tupleLatticeLubTime += measureNanoTime {
             result = runBlocking {
                 if (allowModify) {
+
                     val first = async {
-                        innerLattice1.lub(
-                            one = one.first,
-                            two = two.first,
-                            allowModify = true,
-                            widen = widen,
-                        )
+                        synchronized(one.first) {
+                            innerLattice1.lub(
+                                one = one.first,
+                                two = two.first,
+                                allowModify = true,
+                                widen = widen,
+                            )
+                        }
                     }
                     val second = async {
-                        innerLattice2.lub(
-                            one = one.second,
-                            two = two.second,
-                            allowModify = true,
-                            widen = widen,
-                        )
+                        synchronized(one.second) {
+                            innerLattice2.lub(
+                                one = one.second,
+                                two = two.second,
+                                allowModify = true,
+                                widen = widen,
+                            )
+                        }
                     }
                     awaitAll(first, second)
                     one
@@ -1016,28 +1022,34 @@ open class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.E
         return if (allowModify) {
             runBlocking {
                 val first = async {
-                    innerLattice1.lub(
-                        one = one.first,
-                        two = two.first,
-                        allowModify = true,
-                        widen = widen,
-                    )
+                    synchronized(one.first) {
+                        innerLattice1.lub(
+                            one = one.first,
+                            two = two.first,
+                            allowModify = true,
+                            widen = widen,
+                        )
+                    }
                 }
                 val second = async {
-                    innerLattice2.lub(
-                        one = one.second,
-                        two = two.second,
-                        allowModify = true,
-                        widen = widen,
-                    )
+                    synchronized(one.second) {
+                        innerLattice2.lub(
+                            one = one.second,
+                            two = two.second,
+                            allowModify = true,
+                            widen = widen,
+                        )
+                    }
                 }
                 val third = async {
-                    innerLattice3.lub(
-                        one = one.third,
-                        two = two.third,
-                        allowModify = true,
-                        widen = widen,
-                    )
+                    synchronized(one.third) {
+                        innerLattice3.lub(
+                            one = one.third,
+                            two = two.third,
+                            allowModify = true,
+                            widen = widen,
+                        )
+                    }
                 }
                 awaitAll(first, second, third)
             }
