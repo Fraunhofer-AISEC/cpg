@@ -260,7 +260,7 @@ interface Lattice<T : Lattice.Element> {
         val mergePointsEdgesList = mutableListOf<EvaluationOrder>()
         startEdges.forEach { nextBranchEdgesList.add(it) }
 
-        runBlocking {
+        runBlocking(Dispatchers.Default) {
             while (
                 currentBBEdgesList.isNotEmpty() ||
                     nextBranchEdgesList.isNotEmpty() ||
@@ -442,11 +442,11 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
             if (other !is Element<*> || this.size != other.size) return false
 
             var ret = true
-            runBlocking {
+            runBlocking(Dispatchers.Default) {
                 try {
                     coroutineScope {
                         this@Element.splitInto(CPU_CORES).forEach { chunk ->
-                            launch {
+                            launch(Dispatchers.Default) {
                                 for (t in chunk) {
                                     ensureActive()
                                     val isEqual =
@@ -632,7 +632,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
 
         override fun equals(other: Any?): Boolean {
             return other is Element<K, V> &&
-                runBlocking { this@Element.compare(other) == Order.EQUAL }
+                runBlocking(Dispatchers.Default) { this@Element.compare(other) == Order.EQUAL }
         }
 
         @OptIn(ExperimentalAtomicApi::class)
@@ -656,7 +656,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                 this@Element.entries.forEach { (k, v) ->
                     // We can't return in the coroutines, so we only set the return value
                     // there. If we have a return value, we can stop here
-                    launch {
+                    launch(Dispatchers.Default) {
                         if (ret.load() != null) return@launch
                         val otherV = other[k]
                         if (otherV != null) {
@@ -740,7 +740,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                     // by
                     // coroutines
                     two.splitInto(CPU_CORES, 3).forEach { chunk ->
-                        launch {
+                        launch(Dispatchers.Default) {
                             for ((k, v) in chunk) {
                                 if (!one.containsKey(k)) {
                                     // This key is not in "one", so we add the value from "two" to
@@ -771,7 +771,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
             val newMap = Element<K, V>(allKeys.size)
             coroutineScope {
                 allKeys.splitInto(CPU_CORES, 3).forEach { chunk ->
-                    launch {
+                    launch(Dispatchers.Default) {
                         for (key in chunk) {
                             val otherValue = two[key]
                             val thisValue = one[key]
@@ -851,7 +851,7 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
 
         override fun equals(other: Any?): Boolean {
             return other is Element<S, T> &&
-                runBlocking { this@Element.compare(other) == Order.EQUAL }
+                runBlocking(Dispatchers.Default) { this@Element.compare(other) == Order.EQUAL }
         }
 
         override suspend fun compare(other: Lattice.Element): Order = coroutineScope {
@@ -976,7 +976,7 @@ open class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.E
 
         override fun equals(other: Any?): Boolean {
             return other is Element<R, S, T> &&
-                runBlocking { this@Element.compare(other) == Order.EQUAL }
+                runBlocking(Dispatchers.Default) { this@Element.compare(other) == Order.EQUAL }
         }
 
         override suspend fun compare(other: Lattice.Element): Order = coroutineScope {
