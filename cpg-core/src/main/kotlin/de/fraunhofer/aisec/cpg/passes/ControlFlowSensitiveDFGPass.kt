@@ -39,8 +39,6 @@ import de.fraunhofer.aisec.cpg.helpers.*
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * This pass determines the data flows of References which refer to a VariableDeclaration (not a
@@ -83,14 +81,6 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         // These are EOGStarterHolders but do not have an EOG which means, they will just cause
         // problems. Again, if we delete information/edges, we will never be able to recover them.
         if (node is FunctionTemplateDeclaration) return
-        runBlocking {
-            passConfig<Configuration>()?.timeout?.let { timeout ->
-                withTimeoutOrNull(timeout) { buildDFG(node) }
-            } ?: run { buildDFG(node) }
-        }
-    }
-
-    fun buildDFG(node: Node) {
         // Calculate the complexity of the function and see, if it exceeds our threshold
         val max = passConfig<Configuration>()?.maxComplexity
         val c = (node as? FunctionDeclaration)?.body?.cyclomaticComplexity ?: 0
@@ -128,7 +118,13 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         }
 
         val finalState =
-            iterateEOG(node.nextEOGEdges, startState, ::transfer) as? DFGPassState ?: return
+            iterateEOG(
+                node.nextEOGEdges,
+                startState,
+                passConfig<Configuration>()?.timeout,
+                ::transfer,
+            )
+                as? DFGPassState ?: return
 
         removeUnreachableImplicitReturnStatement(
             node,

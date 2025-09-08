@@ -45,8 +45,6 @@ import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import kotlin.collections.component1
 import kotlin.collections.component2
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
 
 /** This pass builds the Control Dependence Graph (CDG) by iterating through the EOG. */
 @DependsOn(EvaluationOrderGraphPass::class)
@@ -88,14 +86,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         if (startNode !is FunctionDeclaration) {
             return
         }
-        runBlocking {
-            passConfig<Configuration>()?.timeout?.let { timeout ->
-                withTimeoutOrNull(timeout) { buildCDG(startNode) }
-            } ?: run { buildCDG(startNode) }
-        }
-    }
 
-    fun buildCDG(startNode: FunctionDeclaration) {
         val max = passConfig<Configuration>()?.maxComplexity
         val c = startNode.body?.cyclomaticComplexity ?: 0
         if (max != null && c > max) {
@@ -128,7 +119,20 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             )
         log.trace("Iterating EOG of {}", firstBasicBlock)
         val finalState =
-            prevEOGState.iterateEOG(firstBasicBlock.nextEOGEdges, startState, ::transfer)
+            prevEOGState.iterateEOG(
+                firstBasicBlock.nextEOGEdges,
+                startState,
+                ::transfer,
+                passConfig<Configuration>()?.timeout,
+            )
+                ?: run {
+                    log.warn(
+                        "Timeout while computing CDG for {}, skipping CDG generation",
+                        startNode.name,
+                    )
+                    return@accept
+                }
+
         log.trace("Done iterating EOG for {}. Generating the edges now.", startNode.name)
 
         // branchingNodeConditionals is a map organized as follows:
