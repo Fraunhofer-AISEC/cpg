@@ -1,3 +1,61 @@
+##### Here start the pass specific ownerships, new passes should be added here #####
+
+# Core Semantic Passes
+
+cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/EvaluationOrderGraphPass.kt @konradweiss @KuechA
+cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/SymbolResolver.kt @oxisto @konradweiss
+cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/DFGPass.kt @KuechA @konradweiss @oxisto
+cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/ControlFlowSensitiveDFGPass.kt @KuechA @konradweiss @oxisto
+cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/ControlDependenceGraphPass.kt @KuechA @konradweiss @oxisto
+cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/ProgramDependenceGraphPass.kt @KuechA @konradweiss @oxisto
+
+# Resolvers
+
+cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/ImportResolver.kt @oxisto @konradweiss @maximiliankaul
+cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/TypeResolver.kt @oxisto @konradweiss
+cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/TypeHierarchyResolver.kt @oxisto @konradweiss
+cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/DynamicInvokeResolver.kt @oxisto @peckto
+cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/ResolveCallExpressionAmbiguityPass.kt @oxisto @peckto
+cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/ResolveMemberExpressionAmbiguityPass.kt @oxisto @peckto
+
+# Language Specific Passes
+
+cpg-language-python/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/PythonAddDeclarationsPass.kt @maximiliankaul @KuechA
+cpg-language-python/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/PythonUnreachableEOGPass.kt @oxisto @konradweiss
+
+cpg-language-java/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/JavaExternalTypeHierarchyResolver.kt @konradweiss @oxisto
+cpg-language-java/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/JavaImportResolver.kt @konradweiss @oxisto
+cpg-language-java/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/JavaExtraPass.kt @konradweiss @oxisto
+
+cpg-language-cxx/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/CXXExtraPass.kt @peckto @fwendland @oxisto
+
+cpg-language-go/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/GoExtraPass.kt @oxisto @fwendland @konradweiss
+cpg-language-go/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/GoEvaluationOrderGraphPass.kt @oxisto @konradweiss
+
+cpg-language-llvm/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/CompressLLVMPass.kt @KuechA @oxisto
+
+# Extra Passes
+
+cpg-analysis/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/UnreachableEOGPass.kt @KuechA @konradweiss
+cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/PrepareSerialization.kt @peckto @konradweiss
+
+# Concepts Passes
+
+cpg-concepts/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/concepts/file/python/PythonTempFilePass.kt @maximiliankaul @lshala
+cpg-concepts/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/concepts/file/python/PythonFileJoinPass.kt @maximiliankaul @lshala
+cpg-concepts/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/concepts/file/python/PythonFileConceptPass.kt @maximiliankaul @lshala
+cpg-concepts/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/concepts/logging/python/PythonLoggingConceptPass.kt @maximiliankaul @lshala
+cpg-concepts/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/concepts/config/python/PythonStdLibConfigurationPass.kt @oxisto @KuechA
+cpg-concepts/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/concepts/TagOverlaysPass.kt @KuechA @lshala @oxisto
+cpg-concepts/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/concepts/LoadPersistedConcepts.kt @maximiliankaul @lshala
+cpg-concepts/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/concepts/config/ProvideConfigPass.kt @lshala @oxisto
+cpg-concepts/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/concepts/config/ini/IniFileConfigurationSourcePass.kt @lshala @oxisto
+cpg-concepts/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/concepts/flows/cxx/CXXEntryPointsPass.kt @maximiliankaul @oxisto @KuechA
+cpg-concepts/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/concepts/memory/cxx/CXXDynamicLoadingPass.kt @oxisto @KuechA
+
+
+##### Here start the language and module based ownership definitions #####
+
 *                       @konradweiss @oxisto @KuechA
 
 *.go                    @oxisto
