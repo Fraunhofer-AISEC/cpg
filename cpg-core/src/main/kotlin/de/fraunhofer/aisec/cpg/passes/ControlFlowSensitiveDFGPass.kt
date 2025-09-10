@@ -56,7 +56,13 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
          * [Statement.cyclomaticComplexity]) a [FunctionDeclaration] must have in order to be
          * considered.
          */
-        var maxComplexity: Int? = null
+        var maxComplexity: Int? = null,
+        /**
+         * This specifies the maximum time (in ms) we want to spend analyzing a single
+         * [de.fraunhofer.aisec.cpg.graph.EOGStarterHolder]. If the time is exceeded, we skip the
+         * function (or whatever is starting the EOG). If `null`, no time limit is enforced.
+         */
+        var timeout: Long? = null,
     ) : PassConfiguration()
 
     override fun cleanup() {
@@ -75,7 +81,6 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         // These are EOGStarterHolders but do not have an EOG which means, they will just cause
         // problems. Again, if we delete information/edges, we will never be able to recover them.
         if (node is FunctionTemplateDeclaration) return
-
         // Calculate the complexity of the function and see, if it exceeds our threshold
         val max = passConfig<Configuration>()?.maxComplexity
         val c = (node as? FunctionDeclaration)?.body?.cyclomaticComplexity ?: 0
@@ -113,7 +118,13 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         }
 
         val finalState =
-            iterateEOG(node.nextEOGEdges, startState, ::transfer) as? DFGPassState ?: return
+            iterateEOG(
+                node.nextEOGEdges,
+                startState,
+                passConfig<Configuration>()?.timeout,
+                ::transfer,
+            )
+                as? DFGPassState ?: return
 
         removeUnreachableImplicitReturnStatement(
             node,
