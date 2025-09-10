@@ -25,12 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.frontends
 
-import com.fasterxml.jackson.annotation.JsonIdentityInfo
-import com.fasterxml.jackson.annotation.ObjectIdGenerators
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.fasterxml.jackson.databind.jsontype.TypeSerializer
 import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.SignatureResult
 import de.fraunhofer.aisec.cpg.TranslationContext
@@ -99,7 +99,6 @@ data class ImplicitCast(override var depthDistance: Int) : CastResult(depthDista
  * the [Node.language] property.
  */
 @Suppress("CONTEXT_RECEIVERS_DEPRECATED")
-@JsonIdentityInfo(generator = ObjectIdGenerators.UUIDGenerator::class, property = "@id")
 abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
 
     /** The file extensions without the dot */
@@ -113,6 +112,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     abstract val frontend: KClass<out T>
 
     /** The primitive type names of this language. */
+    @get:JsonIgnore
     val primitiveTypeNames: Set<String>
         get() = builtInTypes.keys
 
@@ -134,7 +134,7 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     open val simpleAssignmentOperators: Set<String> = setOf("=")
 
     /** The standard evaluator to be used with this language. */
-    @Transient @DoNotPersist open val evaluator: ValueEvaluator = ValueEvaluator()
+    @JsonIgnore @Transient @DoNotPersist open val evaluator: ValueEvaluator = ValueEvaluator()
 
     init {
         this.language = this
@@ -535,6 +535,15 @@ internal class KClassSerializer : JsonSerializer<KClass<*>>() {
     override fun serialize(value: KClass<*>, gen: JsonGenerator, provider: SerializerProvider) {
         // Write the fully qualified name as a string
         gen.writeString(value.qualifiedName)
+    }
+
+    override fun serializeWithType(
+        value: KClass<*>,
+        gen: JsonGenerator,
+        serializers: SerializerProvider,
+        typeSer: TypeSerializer,
+    ) {
+        serialize(value, gen, serializers)
     }
 }
 

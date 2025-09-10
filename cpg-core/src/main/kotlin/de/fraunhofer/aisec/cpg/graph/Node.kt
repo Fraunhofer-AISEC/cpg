@@ -31,6 +31,7 @@ import com.fasterxml.jackson.annotation.JsonIdentityInfo
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonMerge
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
@@ -71,7 +72,16 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 /** The base class for all graph objects that are going to be persisted in the database. */
-@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator::class, property = "id")
+// @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator::class, property = "id")
+
+@JsonTypeInfo(
+    use = JsonTypeInfo.Id.CLASS,
+    include = JsonTypeInfo.As.WRAPPER_OBJECT,
+    property = "@class",
+)
+@JsonIdentityInfo(generator = ObjectIdGenerators.UUIDGenerator::class, property = "@id")
+// @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property =
+// "@class")
 abstract class Node() :
     IVisitable<Node>,
     Persistable,
@@ -260,7 +270,7 @@ abstract class Node() :
 
     @get:JsonIgnore var prevPDG by unwrapping(Node::prevPDGEdges)
 
-    @DoNotPersist override val assumptions: MutableSet<Assumption> = mutableSetOf()
+    @DoNotPersist @JsonMerge override val assumptions: MutableSet<Assumption> = mutableSetOf()
 
     /**
      * If a node is marked as being inferred, it means that it was created artificially and does not
@@ -295,7 +305,7 @@ abstract class Node() :
                 } ?: 0,
                 hashCode().toLong(),
             )
-        private set(value) {}
+        set(value) {}
 
     /** Index of the argument if this node is used in a function call or parameter list. */
     var argumentIndex = 0
@@ -308,7 +318,7 @@ abstract class Node() :
      * Additional problem nodes. These nodes represent problems which occurred during processing of
      * a node (i.e. only partially processed).
      */
-    val additionalProblems: MutableSet<ProblemNode> = mutableSetOf()
+    @JsonMerge val additionalProblems: MutableSet<ProblemNode> = mutableSetOf()
 
     @Relationship(value = "OVERLAY", direction = Relationship.Direction.OUTGOING)
     @JsonMerge

@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
 
@@ -32,6 +33,7 @@ import org.apache.commons.lang3.builder.ToStringStyle
  * This class holds configuration options for the inference of certain constructs and auto-guessing
  * when executing language frontends.
  */
+@JsonDeserialize(builder = InferenceConfiguration.Builder::class)
 class InferenceConfiguration
 private constructor(
     /** Enables or disables the inference system as a whole. */
@@ -59,7 +61,7 @@ private constructor(
      * Uses heuristics to add DFG edges for call expressions to unresolved functions (i.e.,
      * functions not implemented in the given source code).
      */
-    val inferDfgForUnresolvedSymbols: Boolean,
+    val inferDfgForUnresolvedCalls: Boolean,
 ) {
     class Builder(
         private var enabled: Boolean = true,
@@ -108,7 +110,7 @@ private constructor(
     override fun toString(): String {
         return ToStringBuilder(this, ToStringStyle.JSON_STYLE)
             .append("inferRecords", inferRecords)
-            .append("inferDfgForUnresolvedCalls", inferDfgForUnresolvedSymbols)
+            .append("inferDfgForUnresolvedCalls", inferDfgForUnresolvedCalls)
             .toString()
     }
 }

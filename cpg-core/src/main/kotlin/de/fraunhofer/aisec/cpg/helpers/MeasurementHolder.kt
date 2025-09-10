@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
@@ -41,6 +42,7 @@ import org.slf4j.LoggerFactory
 @DoNotPersist
 class BenchmarkResults(val entries: List<List<Any>>) {
 
+    @get:JsonIgnore
     val json: String
         get() {
             val mapper = jacksonObjectMapper()
