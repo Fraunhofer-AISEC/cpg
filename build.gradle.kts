@@ -61,7 +61,6 @@ dokka {
     pluginsConfiguration {
         versioning {
             version.set(tag)
-            olderVersionsDir.set(projectDir.resolve("previousDocs"))
         }
     }
 }
