@@ -187,8 +187,7 @@ class ChatService {
                             // Handle tool calls
                             val toolCalls = message?.tool_calls
                             if (!toolCalls.isNullOrEmpty()) {
-                                emit("\n\n🔧 **Tools Called:**\n")
-
+                                emit("\n\n**Tools Called:**\n")
                                 for (toolCall in toolCalls) {
                                     emit("- **${toolCall.function.name}**\n")
                                     val result = executeToolCall(toolCall)
