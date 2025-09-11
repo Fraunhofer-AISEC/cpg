@@ -33,7 +33,9 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import io.modelcontextprotocol.kotlin.sdk.Tool
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 @Serializable
 data class NodeInfo(
@@ -236,3 +238,31 @@ data class QueryTreeNode(
     val node: NodeInfo?,
     val children: List<QueryTreeNode> = emptyList(),
 )
+
+@Serializable
+data class RegisteredTool(val type: String = "function", val function: ToolFunction) {
+    constructor(
+        name: String,
+        tool: Tool,
+    ) : this(
+        function =
+            ToolFunction(
+                name = name,
+                description = tool.description?.replace("\n", "\\n")?.replace("\r", "\\r"),
+                parameters = ToolFunction.ToolParameters(properties = tool.inputSchema.properties),
+            )
+    )
+
+    @Serializable
+    data class ToolFunction(
+        val name: String,
+        val description: String?,
+        val parameters: ToolParameters = ToolParameters(),
+    ) {
+        @Serializable
+        data class ToolParameters(
+            val type: String = "object",
+            val properties: Map<String, JsonElement> = emptyMap(),
+        )
+    }
+}

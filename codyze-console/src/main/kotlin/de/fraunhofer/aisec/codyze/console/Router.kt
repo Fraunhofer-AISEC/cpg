@@ -59,7 +59,7 @@ import kotlin.reflect.KClass
  * - POST `/api/concept`: Adds a concept node to the current
  *   [de.fraunhofer.aisec.codyze.AnalysisResult]
  */
-fun Routing.apiRoutes(service: ConsoleService) {
+fun Routing.apiRoutes(service: ConsoleService, chatService: ChatService) {
     // The API routes are prefixed with /api
     route("/api") {
         // The endpoint to analyze a project
@@ -241,6 +241,23 @@ fun Routing.apiRoutes(service: ConsoleService) {
                 call.respond(
                     HttpStatusCode.BadRequest,
                     mapOf("error" to "Invalid request format: ${e.message}"),
+                )
+            }
+        }
+
+        post("/chat") {
+            try {
+                val request = call.receive<ChatRequestJSON>()
+                call.respondTextWriter(contentType = ContentType.Text.EventStream) {
+                    chatService.chat(request).collect { chunk ->
+                        write("data: $chunk\n\n")
+                        flush()
+                    }
+                }
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    mapOf("error" to "Chat request failed: ${e.message}"),
                 )
             }
         }

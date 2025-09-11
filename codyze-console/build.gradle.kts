@@ -17,13 +17,24 @@ mavenPublishing {
 dependencies {
     // CPG modules
     implementation(projects.cpgConcepts)
+    implementation(projects.cpgMcp)
+    implementation(libs.mcp)
 
     // Ktor server dependencies
     implementation(libs.bundles.ktor)
 
+    // Ktor client dependencies
+    implementation("io.ktor:ktor-client-core:${libs.versions.ktor.get()}")
+    implementation("io.ktor:ktor-client-cio:${libs.versions.ktor.get()}")
+    implementation("io.ktor:ktor-client-content-negotiation:${libs.versions.ktor.get()}")
+
     // Serialization
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.jacksonyml)
+
+    implementation("dev.langchain4j:langchain4j-mcp:1.4.0-beta10")
+    implementation("dev.langchain4j:langchain4j:1.4.0")
+    implementation("dev.langchain4j:langchain4j-ollama:1.4.0")
 
     // Testing
     testImplementation(libs.ktor.server.test.host)

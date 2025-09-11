@@ -40,9 +40,9 @@ import kotlinx.serialization.json.Json
  * listens on localhost at port 8080. The server is configured using the [configureWebconsole]
  * function.
  */
-fun ConsoleService.startConsole() {
+fun ConsoleService.startConsole(chatService: ChatService = ChatService()) {
     embeddedServer(Netty, host = "localhost", port = 8080) {
-            configureWebconsole(this@startConsole)
+            configureWebconsole(this@startConsole, chatService)
         }
         .start(wait = true)
 }
@@ -54,7 +54,10 @@ fun ConsoleService.startConsole() {
  * Note: Currently, the CORS policy allows any host. This should be restricted to specific hosts in
  * a production environment and will be made available as an option later.
  */
-fun Application.configureWebconsole(service: ConsoleService = ConsoleService()) {
+fun Application.configureWebconsole(
+    service: ConsoleService = ConsoleService(),
+    chatService: ChatService = ChatService(),
+) {
     install(CORS) {
         anyHost()
         allowHeader(HttpHeaders.ContentType)
@@ -69,17 +72,28 @@ fun Application.configureWebconsole(service: ConsoleService = ConsoleService()) 
         )
     }
 
-    configureRouting(service)
+    configureRouting(service, chatService)
 }
 
 /**
  * This function sets up the routing for the web console. It defines the API routes and static
  * resources (for serving the single-page application frontend).
  */
-fun Application.configureRouting(service: ConsoleService) {
+fun Application.configureRouting(
+    service: ConsoleService,
+    chatService: ChatService = ChatService(),
+) {
     routing {
         // We'll add routes here
-        apiRoutes(service)
+        apiRoutes(service, chatService)
         frontendRoutes()
     }
+}
+
+fun Application.module() {
+    val config = environment.config
+
+    val provider = config.property("llm.provider").getString()
+    val baseUrl = config.property("llm.baseUrl").getString()
+    val model = config.property("llm.model").getString()
 }

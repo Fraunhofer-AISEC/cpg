@@ -310,7 +310,7 @@ fun AnalysisResult.toJSON(): AnalysisResultJSON =
             components = components.map { it.toJSON() },
             totalNodes = nodes.size,
             analysisResult = this@toJSON,
-            sourceDir = config.sourceLocations.first().absolutePath,
+            sourceDir = config.sourceLocations.firstOrNull()?.absolutePath ?: "",
             findings = sarif.runs.flatMap { it.results?.map { it.toJSON() } ?: emptyList() },
             requirementCategories =
                 project.requirementCategoriesToJSON(this@toJSON.requirementsResults),

@@ -25,9 +25,19 @@
  */
 package de.fraunhofer.aisec.cpg.mcp
 
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.main
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.int
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.configureServer
-import io.ktor.server.cio.CIO
-import io.ktor.server.engine.embeddedServer
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
+import io.ktor.server.application.*
+import io.ktor.server.cio.*
+import io.ktor.server.engine.*
+import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.cors.routing.*
+import io.ktor.server.routing.*
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.StdioServerTransport
 import io.modelcontextprotocol.kotlin.sdk.server.mcp
@@ -36,23 +46,29 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.io.asSink
 import kotlinx.io.asSource
 import kotlinx.io.buffered
-import picocli.CommandLine
 
-@CommandLine.Option(
-    names = ["--sse"],
-    description =
-        [
-            "Provide the port to run SSE (Server Sent Events). If not specified, the MCP server will run using stdio."
-        ],
-)
-var ssePort: Int? = null
+fun main(args: Array<String>) {
+    McpServer().main(args)
+}
 
-fun main() {
-    val port = ssePort
-    if (port == null) {
-        runMcpServerUsingStdio()
-    } else {
-        runSseMcpServerUsingKtorPlugin(port, configureServer())
+class McpServer : CliktCommand(name = "mcp-server") {
+    private val ssePort by
+        option(
+                "--sse",
+                help =
+                    "Port to run SSE (Server Sent Events). If nothing provided, it will use stdio.",
+            )
+            .int()
+
+    override fun run() {
+        val port = ssePort
+        if (port != null) {
+            println("Starting MCP server in SSE mode on port $port...")
+            runSseMcpServerUsingKtorPlugin(port, configureServer())
+        } else {
+            println("Starting MCP server in stdio mode...")
+            runMcpServerUsingStdio()
+        }
     }
 }
 

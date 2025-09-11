@@ -66,13 +66,14 @@ mavenPublishing {
 dependencies {
     implementation(libs.mcp)
     implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.ktor.server.cors)
+    implementation(libs.ktor.server.content.negotiation)
 
     // Test dependencies
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0")
 
     // Command line interface support
-    api(libs.picocli)
-    annotationProcessor(libs.picocli.codegen)
+    implementation(libs.clikt)
 
     integrationTestImplementation(libs.kotlin.reflect)
 
