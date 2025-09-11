@@ -2,92 +2,76 @@
 
 # Core Semantic Passes
 
-cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/EvaluationOrderGraphPass.kt @konradweiss @KuechA
-cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/SymbolResolver.kt @oxisto @konradweiss
-cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/DFGPass.kt @KuechA @konradweiss @oxisto
-cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/ControlFlowSensitiveDFGPass.kt @KuechA @konradweiss @oxisto
-cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/ControlDependenceGraphPass.kt @KuechA @konradweiss @oxisto
-cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/ProgramDependenceGraphPass.kt @KuechA @konradweiss @oxisto
+*/EvaluationOrderGraphPass*.kt @konradweiss
+*/SymbolResolver*.kt @oxisto @konradweiss
+*/DFGPass*.kt @KuechA @konradweiss @oxisto
+*/ControlFlowSensitiveDFGPass*.kt @KuechA @konradweiss @oxisto
+*/ControlDependenceGraphPass*.kt @KuechA @konradweiss @oxisto
+*/ProgramDependenceGraphPass*.kt @KuechA @konradweiss @oxisto
 
 # Resolvers
 
-cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/ImportResolver.kt @oxisto @konradweiss @maximiliankaul
-cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/TypeResolver.kt @oxisto @konradweiss
-cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/TypeHierarchyResolver.kt @oxisto @konradweiss
-cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/DynamicInvokeResolver.kt @oxisto @peckto
-cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/ResolveCallExpressionAmbiguityPass.kt @oxisto @peckto
-cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/ResolveMemberExpressionAmbiguityPass.kt @oxisto @peckto
-
-# Language Specific Passes
-
-cpg-language-python/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/PythonAddDeclarationsPass.kt @maximiliankaul @KuechA
-cpg-language-python/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/PythonUnreachableEOGPass.kt @oxisto @konradweiss
-
-cpg-language-java/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/JavaExternalTypeHierarchyResolver.kt @konradweiss @oxisto
-cpg-language-java/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/JavaImportResolver.kt @konradweiss @oxisto
-cpg-language-java/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/JavaExtraPass.kt @konradweiss @oxisto
-
-cpg-language-cxx/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/CXXExtraPass.kt @peckto @fwendland @oxisto
-
-cpg-language-go/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/GoExtraPass.kt @oxisto @fwendland @konradweiss
-cpg-language-go/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/GoEvaluationOrderGraphPass.kt @oxisto @konradweiss
-
-cpg-language-llvm/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/CompressLLVMPass.kt @KuechA @oxisto
+*/ImportResolver*.kt @oxisto @konradweiss @maximiliankaul
+*/TypeResolver*.kt @oxisto @konradweiss
+*/TypeHierarchyResolver*.kt @oxisto @konradweiss
+*/DynamicInvokeResolver*.kt @oxisto @peckto
+*/ResolveCallExpressionAmbiguityPass*.kt @oxisto @peckto
+*/ResolveMemberExpressionAmbiguityPass*.kt @oxisto @peckto
 
 # Extra Passes
 
-cpg-analysis/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/UnreachableEOGPass.kt @KuechA @konradweiss
-cpg-core/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/PrepareSerialization.kt @peckto @konradweiss
+*/UnreachableEOGPass*.kt @KuechA @konradweiss
+*/PrepareSerialization*.kt @peckto @konradweiss
 
 # Concepts Passes
 
-cpg-concepts/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/concepts/file/python/PythonTempFilePass.kt @maximiliankaul @lshala
-cpg-concepts/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/concepts/file/python/PythonFileJoinPass.kt @maximiliankaul @lshala
-cpg-concepts/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/concepts/file/python/PythonFileConceptPass.kt @maximiliankaul @lshala
-cpg-concepts/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/concepts/logging/python/PythonLoggingConceptPass.kt @maximiliankaul @lshala
-cpg-concepts/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/concepts/config/python/PythonStdLibConfigurationPass.kt @oxisto @KuechA
-cpg-concepts/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/concepts/TagOverlaysPass.kt @KuechA @lshala @oxisto
-cpg-concepts/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/concepts/LoadPersistedConcepts.kt @maximiliankaul @lshala
-cpg-concepts/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/concepts/config/ProvideConfigPass.kt @lshala @oxisto
-cpg-concepts/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/concepts/config/ini/IniFileConfigurationSourcePass.kt @lshala @oxisto
-cpg-concepts/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/concepts/flows/cxx/CXXEntryPointsPass.kt @maximiliankaul @oxisto @KuechA
-cpg-concepts/src/main/kotlin/de/fraunhofer/aisec/cpg/passes/concepts/memory/cxx/CXXDynamicLoadingPass.kt @oxisto @KuechA
+*/PythonTempFilePass*.kt @maximiliankaul @lshala
+*/PythonFileJoinPass*.kt @maximiliankaul @lshala
+*/PythonFileConceptPass*.kt @maximiliankaul @lshala
+*/PythonLoggingConceptPass*.kt @maximiliankaul @lshala
+*/PythonStdLibConfigurationPass*.kt @oxisto @KuechA
+*/TagOverlaysPass*.kt @KuechA @lshala @oxisto
+*/LoadPersistedConcepts*.kt @maximiliankaul @lshala
+*/ProvideConfigPass*.kt @lshala @oxisto
+*/IniFileConfigurationSourcePass*.kt @lshala @oxisto
+*/CXXEntryPointsPass*.kt @maximiliankaul @oxisto @KuechA
+*/CXXDynamicLoadingPass*.kt @oxisto @KuechA
 
 
 ##### Here start the language and module based ownership definitions #####
 
 *                       @konradweiss @oxisto @KuechA
 
-*.go                    @oxisto
-cpg-language-go         @oxisto
+*.go                    @oxisto @fwendland
+cpg-language-go         @oxisto @fwendland
 
-*.ts                    @oxisto
-cpg-language-typescript @oxisto
+*.ts                    @oxisto @konradweiss
+cpg-language-typescript @oxisto @konradweiss
 
 *.py                    @maximiliankaul @lshala
 cpg-language-python     @maximiliankaul @lshala
 
-*.c                     @peckto
-*.cpp                   @peckto
-cpg-language-cxx        @peckto
+*.c                     @peckto @fwendland
+*.cpp                   @peckto @fwendland
+cpg-language-cxx        @peckto @fwendland
 
-*.ll                    @KuechA
-cpg-language-llvm       @KuechA
-cpg-analysis            @KuechA
+*.ll                    @KuechA @oxisto
+cpg-language-llvm       @KuechA @oxisto
+cpg-analysis            @KuechA @oxisto
 
-*.java                  @konradweiss
-cpg-language-java       @konradweiss
+*.java                  @konradweiss @oxisto
+cpg-language-java       @konradweiss @oxisto
 
-cpg-language-jvm        @oxisto
+cpg-language-jvm        @oxisto @konradweiss
 
-cpg-language-ruby       @oxisto
+cpg-language-ruby       @oxisto @konradweiss
 
-cpg-neo4j               @peckto
+cpg-neo4j               @peckto @konradweiss
 
 build.gradle.kts        @oxisto
 .github                 @oxisto
 
-cpg-language-ini        @maximiliankaul
+cpg-language-ini        @maximiliankaul @konradweiss
 
 cpg-concepts            @maximiliankaul
 
