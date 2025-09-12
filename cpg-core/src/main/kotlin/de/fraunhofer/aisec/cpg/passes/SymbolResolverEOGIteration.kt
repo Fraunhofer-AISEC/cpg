@@ -220,7 +220,7 @@ fun SymbolResolver.acceptWithIterateEOG(t: Node) {
         }
 
     t.scope?.let { startState = startState.pushDeclarationToScope(lattice, it) }
-    val finalState = lattice.iterateEOG(t.nextEOGEdges, startState, ::transfer)
+    val finalState = runBlocking { lattice.iterateEOG(t.nextEOGEdges, startState, ::transfer) }
 
     finalState.candidates.forEach { node, candidates ->
         if (node is Reference) {
@@ -250,7 +250,7 @@ fun SymbolResolver.acceptWithIterateEOG(t: Node) {
  * The state-transfer function for the [SymbolResolver]. It is called for each node in the EOG and
  * is responsible for updating the state based on the node type.
  */
-fun SymbolResolver.transfer(
+suspend fun SymbolResolver.transfer(
     lattice: Lattice<DeclarationStateElement>,
     currentEdge: EvaluationOrder,
     state: DeclarationStateElement,

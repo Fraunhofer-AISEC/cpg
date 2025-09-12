@@ -122,8 +122,9 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         log.trace("Iterating EOG of {}", firstBasicBlock)
         var finalState: PrevEOGStateElement
         val eogIterationTime = measureTimeMillis {
-            finalState =
+            finalState = runBlocking {
                 prevEOGState.iterateEOG(firstBasicBlock.nextEOGEdges, startState, ::transfer)
+            }
         }
         log.trace("Done iterating EOG for {}. Generating the edges now.", startNode.name)
 
@@ -283,7 +284,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
  *
  * Returns the updated state and true because we always expect an update of the state.
  */
-fun transfer(
+suspend fun transfer(
     lattice: Lattice<PrevEOGStateElement>,
     currentEdge: EvaluationOrder,
     currentState: PrevEOGStateElement,

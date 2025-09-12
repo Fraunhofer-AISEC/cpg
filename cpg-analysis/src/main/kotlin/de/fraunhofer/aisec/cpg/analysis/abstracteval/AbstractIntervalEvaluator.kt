@@ -415,13 +415,14 @@ class AbstractIntervalEvaluator {
         intervalState.push(startInterval, start, interval)
         declarationState.push(startStateElement.first, start, interval)
 
-        val finalState =
+        val finalState = runBlocking {
             startState.iterateEOG(
                 start.nextEOGEdges,
                 startStateElement,
                 ::handleNode,
                 strategy = Lattice.Strategy.WIDENING_NARROWING,
             )
+        }
         return finalState.second.get(targetNode)?.element ?: LatticeInterval.BOTTOM
     }
 

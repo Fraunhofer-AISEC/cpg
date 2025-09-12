@@ -78,7 +78,9 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         }
 
         val nextEog = node.nextEOGEdges.toList()
-        val finalStateNew = unreachabilityState.iterateEOG(nextEog, startState, ::transfer)
+        val finalStateNew = runBlocking {
+            unreachabilityState.iterateEOG(nextEog, startState, ::transfer)
+        }
 
         for ((key, value) in finalStateNew) {
             if (value.reachability == Reachability.UNREACHABLE) {
@@ -102,7 +104,7 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
      *
      * Returns the updated state and true because we always expect an update of the state.
      */
-    fun transfer(
+    suspend fun transfer(
         lattice: Lattice<UnreachabilityStateElement>,
         currentEdge: EvaluationOrder,
         currentState: UnreachabilityStateElement,

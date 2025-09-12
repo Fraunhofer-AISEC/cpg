@@ -818,7 +818,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
     }
 
-    protected fun transfer(
+    protected suspend fun transfer(
         lattice:
             Lattice<TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>>,
         currentEdge: EvaluationOrder,
@@ -833,7 +833,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val lattice = lattice as? PointsToState ?: return state
             val currentNode = currentEdge.end
 
-            runBlocking {
+            coroutineScope {
                 // Used to keep iterating for steps which do not modify the alias-state otherwise
                 doubleState =
                     lattice.pushToDeclarationsState(

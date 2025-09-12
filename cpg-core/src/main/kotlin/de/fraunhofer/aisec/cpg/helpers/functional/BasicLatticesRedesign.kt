@@ -50,7 +50,7 @@ var compareTime: Long = 0
 var mapLatticeLubTime: Long = 0
 var tupleLatticeLubTime: Long = 0
 
-val CPU_CORES = 8
+val CPU_CORES = 5
 
 class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
     override fun equals(other: Any?): Boolean {
@@ -233,10 +233,10 @@ interface Lattice<T : Lattice.Element> {
      * change. With state, we mean a mapping between the [EvaluationOrder] edges to the value of
      * [Lattice] which represents possible values (or abstractions thereof) that they hold.
      */
-    fun iterateEOG(
+    suspend fun iterateEOG(
         startEdges: List<EvaluationOrder>,
         startState: T,
-        transformation: (Lattice<T>, EvaluationOrder, T) -> T,
+        transformation: suspend (Lattice<T>, EvaluationOrder, T) -> T,
         strategy: Strategy = Strategy.PRECISE,
     ): T {
         var finalStateCalcTime: Long = 0
@@ -485,12 +485,12 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                 measureTimedValue {
                     this.filterTo(IdentitySet<T>()) { t ->
                         !if (t is Pair<*, *>) {
-                            synchronized(otherOnly) {
-                                otherOnly.removeIf { o ->
-                                    o is Pair<*, *> && o.first === t.first && o.second == t.second
-                                }
+                            //                            synchronized(otherOnly) {
+                            otherOnly.removeIf { o ->
+                                o is Pair<*, *> && o.first === t.first && o.second == t.second
                             }
-                        } else synchronized(otherOnly) { otherOnly.remove(t) }
+                            //                            }
+                        } else /*synchronized(otherOnly) { */ otherOnly.remove(t) // }
                     }
                 }
             compareTime += duration.toLong(DurationUnit.NANOSECONDS)
