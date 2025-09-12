@@ -206,7 +206,7 @@ interface Lattice<T : Lattice.Element> {
      * is modified if there is no element greater than each other (if set to `true`) or if a new
      * [Lattice.Element] is returned (if set to `false`).
      */
-    fun lub(one: T, two: T, allowModify: Boolean = false, widen: Boolean = false): T
+    suspend fun lub(one: T, two: T, allowModify: Boolean = false, widen: Boolean = false): T
 
     /** Computes the greatest lower bound (meet) of [one] and [two] */
     suspend fun glb(one: T, two: T): T
@@ -369,10 +369,7 @@ interface Lattice<T : Lattice.Element> {
                         it !in mergePointsEdgesList &&
                         (isNoBranchingPoint ||
                             oldGlobalIt == null ||
-                            runBlocking {
-                                newGlobalIt.compare(oldGlobalIt) in
-                                    setOf(Order.GREATER, Order.UNEQUAL)
-                            })
+                            newGlobalIt.compare(oldGlobalIt) in setOf(Order.GREATER, Order.UNEQUAL))
                 ) {
                     if (it.start.prevEOGEdges.size > 1) {
                         // This edge brings us to a merge point, so we add it to the list of
@@ -538,7 +535,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
     override val bottom: Element<T>
         get() = Element()
 
-    override fun lub(
+    override suspend fun lub(
         one: Element<T>,
         two: Element<T>,
         allowModify: Boolean,
@@ -727,7 +724,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     override val bottom: Element<K, V>
         get() = MapLattice.Element()
 
-    override fun lub(
+    override suspend fun lub(
         one: Element<K, V>,
         two: Element<K, V>,
         allowModify: Boolean,
@@ -885,7 +882,7 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
     override val bottom: Element<S, T>
         get() = Element(innerLattice1.bottom, innerLattice2.bottom)
 
-    override fun lub(
+    override suspend fun lub(
         one: Element<S, T>,
         two: Element<S, T>,
         allowModify: Boolean,
@@ -893,51 +890,52 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
     ): Element<S, T> {
         val result: Element<S, T>
         tupleLatticeLubTime += measureNanoTime {
-            result = runBlocking {
+            result = /*runBlocking {*/
                 if (allowModify) {
-
-                    val first = async {
-                        synchronized(one.first) {
-                            innerLattice1.lub(
-                                one = one.first,
-                                two = two.first,
-                                allowModify = true,
-                                widen = widen,
-                            )
-                        }
-                    }
-                    val second = async {
-                        synchronized(one.second) {
-                            innerLattice2.lub(
-                                one = one.second,
-                                two = two.second,
-                                allowModify = true,
-                                widen = widen,
-                            )
-                        }
-                    }
-                    awaitAll(first, second)
+                    val first = /*async {
+                                synchronized(one.first) {*/
+                        innerLattice1.lub(
+                            one = one.first,
+                            two = two.first,
+                            allowModify = true,
+                            widen = widen,
+                        )
+                    //                        }
+                    //                    }
+                    val second = /*async {
+                                 synchronized(one.second) {*/
+                        innerLattice2.lub(
+                            one = one.second,
+                            two = two.second,
+                            allowModify = true,
+                            widen = widen,
+                        )
+                    //                        }
+                    //                    }
+                    //                    awaitAll(first, second)
                     one
                 } else {
-                    val first = async {
+                    /*                   val first: T
+                    val second: T*/
+                    //                    coroutineScope {
+                    val first = /*async {*/
                         innerLattice1.lub(
                             one = one.first,
                             two = two.first,
                             allowModify = false,
                             widen = widen,
                         )
-                    }
-                    val second = async {
+                    //                    }
+                    val second = /*async {*/
                         innerLattice2.lub(
                             one = one.second,
                             two = two.second,
                             allowModify = false,
                             widen = widen,
                         )
-                    }
-                    Element(first.await(), second.await())
+                    //                    }
+                    Element(first, second)
                 }
-            }
         }
         return result
     }
@@ -1013,49 +1011,34 @@ open class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.E
     override val bottom: Element<R, S, T>
         get() = Element(innerLattice1.bottom, innerLattice2.bottom, innerLattice3.bottom)
 
-    override fun lub(
+    override suspend fun lub(
         one: Element<R, S, T>,
         two: Element<R, S, T>,
         allowModify: Boolean,
         widen: Boolean,
     ): Element<R, S, T> {
         return if (allowModify) {
-            runBlocking {
-                val first = async {
-                    synchronized(one.first) {
-                        innerLattice1.lub(
-                            one = one.first,
-                            two = two.first,
-                            allowModify = true,
-                            widen = widen,
-                        )
-                    }
-                }
-                val second = async {
-                    synchronized(one.second) {
-                        innerLattice2.lub(
-                            one = one.second,
-                            two = two.second,
-                            allowModify = true,
-                            widen = widen,
-                        )
-                    }
-                }
-                val third = async {
-                    synchronized(one.third) {
-                        innerLattice3.lub(
-                            one = one.third,
-                            two = two.third,
-                            allowModify = true,
-                            widen = widen,
-                        )
-                    }
-                }
-                awaitAll(first, second, third)
-            }
+            //            coroutineScope {
+            /*val first = async {
+            synchronized(one.first) {*/
+            innerLattice1.lub(one = one.first, two = two.first, allowModify = true, widen = widen)
+            //                    }
+            //                }
+            /*val second = async {
+            synchronized(one.second) {*/
+            innerLattice2.lub(one = one.second, two = two.second, allowModify = true, widen = widen)
+            //                    }
+            //                }
+            /*val third = async {
+            synchronized(one.third) {*/
+            innerLattice3.lub(one = one.third, two = two.third, allowModify = true, widen = widen)
+            //                    }
+            //                }
+            //                awaitAll(first, second, third)
+            //            }
             one
         } else {
-            runBlocking {
+            coroutineScope {
                 val first = async {
                     innerLattice1.lub(
                         one = one.first,

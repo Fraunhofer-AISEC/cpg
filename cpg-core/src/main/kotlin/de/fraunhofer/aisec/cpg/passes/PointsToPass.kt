@@ -161,7 +161,7 @@ class PointsToState(
     override val bottom: Element
         get() = Element(innerLattice1.bottom, innerLattice2.bottom)
 
-    override fun lub(
+    override suspend fun lub(
         one: TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>,
         two: TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>,
         allowModify: Boolean,
