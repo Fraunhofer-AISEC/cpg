@@ -732,66 +732,64 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     ): Element<K, V> {
         var result: Element<K, V>
         mapLatticeLubTime += measureNanoTime {
-            runBlocking {
-                if (allowModify) {
-                    //                    coroutineScope {
-                    // a launch for every key is not efficient, so we create chunks that are
-                    // handled by coroutines
-                    // TODO: Can we do this in coroutines without running into the problem that we
-                    // need a synchronized(one) block for every access?
-                    //                        two.splitInto(CPU_CORES, 3).forEach { chunk ->
-                    // TODO: We could use map here to first calculate the values in threads
-                    // and only then merge them, this should avoid the synchronized()
-                    //                            launch(Dispatchers.Default) {
-                    //                                for ((k, v) in chunk) {
-                    two.forEach { (k, v) ->
-                        if (!one.containsKey(k)) {
-                            // This key is not in "one", so we add the value from "two"
-                            // to "one"
-                            //                                        synchronized(one) { one[k] = v
-                            // }
-                            one[k] = v
-                        } else {
-                            // This key already exists in "one", so we have to compute
-                            // the lub of the values
-                            //                                        synchronized(one[k]!!) {
-                            one[k]?.let { oneValue ->
-                                innerLattice.lub(oneValue, v, allowModify = true, widen = widen)
-                            }
-                            //                                        }
+            if (allowModify) {
+                //                    coroutineScope {
+                // a launch for every key is not efficient, so we create chunks that are
+                // handled by coroutines
+                // TODO: Can we do this in coroutines without running into the problem that we
+                // need a synchronized(one) block for every access?
+                //                        two.splitInto(CPU_CORES, 3).forEach { chunk ->
+                // TODO: We could use map here to first calculate the values in threads
+                // and only then merge them, this should avoid the synchronized()
+                //                            launch(Dispatchers.Default) {
+                //                                for ((k, v) in chunk) {
+                two.forEach { (k, v) ->
+                    if (!one.containsKey(k)) {
+                        // This key is not in "one", so we add the value from "two"
+                        // to "one"
+                        //                                        synchronized(one) { one[k] = v
+                        // }
+                        one[k] = v
+                    } else {
+                        // This key already exists in "one", so we have to compute
+                        // the lub of the values
+                        //                                        synchronized(one[k]!!) {
+                        one[k]?.let { oneValue ->
+                            innerLattice.lub(oneValue, v, allowModify = true, widen = widen)
                         }
-                        //                                }
-                        //                            }
-                        //                        }
+                        //                                        }
                     }
-                    result = one
-                } else {
-
-                    val allKeys = one.keys.toIdentitySet()
-                    allKeys += two.keys
-                    val newMap = Element<K, V>(allKeys.size)
-                    coroutineScope {
-                        allKeys.splitInto(CPU_CORES, 3).forEach { chunk ->
-                            launch(Dispatchers.Default) {
-                                for (key in chunk) {
-                                    val otherValue = two[key]
-                                    val thisValue = one[key]
-                                    val newValue =
-                                        if (thisValue != null && otherValue != null) {
-                                            innerLattice.lub(
-                                                one = thisValue,
-                                                two = otherValue,
-                                                allowModify = false,
-                                                widen = widen,
-                                            )
-                                        } else thisValue ?: otherValue
-                                    synchronized(newMap) { newValue?.let { newMap[key] = it } }
-                                }
-                            }
-                        }
-                    }
-                    result = newMap
+                    //                                }
+                    //                            }
+                    //                        }
                 }
+                result = one
+            } else {
+
+                val allKeys = one.keys.toIdentitySet()
+                allKeys += two.keys
+                val newMap = Element<K, V>(allKeys.size)
+                coroutineScope {
+                    allKeys.splitInto(CPU_CORES, 3).forEach { chunk ->
+                        launch(Dispatchers.Default) {
+                            for (key in chunk) {
+                                val otherValue = two[key]
+                                val thisValue = one[key]
+                                val newValue =
+                                    if (thisValue != null && otherValue != null) {
+                                        innerLattice.lub(
+                                            one = thisValue,
+                                            two = otherValue,
+                                            allowModify = false,
+                                            widen = widen,
+                                        )
+                                    } else thisValue ?: otherValue
+                                synchronized(newMap) { newValue?.let { newMap[key] = it } }
+                            }
+                        }
+                    }
+                }
+                result = newMap
             }
         }
         return result
