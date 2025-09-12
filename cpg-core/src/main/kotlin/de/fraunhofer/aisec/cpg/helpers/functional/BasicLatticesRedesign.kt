@@ -50,7 +50,7 @@ var compareTime: Long = 0
 var mapLatticeLubTime: Long = 0
 var tupleLatticeLubTime: Long = 0
 
-val CPU_CORES = 5
+val CPU_CORES = 16
 
 class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
     override fun equals(other: Any?): Boolean {
@@ -440,28 +440,28 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
             var ret = true
             runBlocking {
                 try {
-                    coroutineScope {
-                        this@Element.splitInto(CPU_CORES).forEach { chunk ->
-                            launch(Dispatchers.Default) {
-                                for (t in chunk) {
-                                    ensureActive()
-                                    val isEqual =
-                                        if (t is Pair<*, *>)
-                                            other.any {
-                                                it is Pair<*, *> &&
-                                                    it.first === t.first &&
-                                                    it.second == t.second
-                                            }
-                                        else t in other
+                    //                    coroutineScope {
+                    this@Element.splitInto(CPU_CORES).forEach { chunk ->
+                        launch(Dispatchers.Default) {
+                            for (t in chunk) {
+                                ensureActive()
+                                val isEqual =
+                                    if (t is Pair<*, *>)
+                                        other.any {
+                                            it is Pair<*, *> &&
+                                                it.first === t.first &&
+                                                it.second == t.second
+                                        }
+                                    else t in other
 
-                                    if (!isEqual) {
-                                        ret = false
-                                        // cancel all coroutines
-                                        cancel()
-                                    }
+                                if (!isEqual) {
+                                    ret = false
+                                    // cancel all coroutines
+                                    cancel()
                                 }
                             }
                         }
+                        //                        }
                     }
                 } catch (_: CancellationException) {
                     ret = false
@@ -482,12 +482,10 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                 measureTimedValue {
                     this.filterTo(IdentitySet<T>()) { t ->
                         !if (t is Pair<*, *>) {
-                            //                            synchronized(otherOnly) {
                             otherOnly.removeIf { o ->
                                 o is Pair<*, *> && o.first === t.first && o.second == t.second
                             }
-                            //                            }
-                        } else /*synchronized(otherOnly) { */ otherOnly.remove(t) // }
+                        } else otherOnly.remove(t)
                     }
                 }
             compareTime += duration.toLong(DurationUnit.NANOSECONDS)
@@ -733,7 +731,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         var result: Element<K, V>
         mapLatticeLubTime += measureNanoTime {
             if (allowModify) {
-                //                    coroutineScope {
+                //                                    coroutineScope {
                 // a launch for every key is not efficient, so we create chunks that are
                 // handled by coroutines
                 // TODO: Can we do this in coroutines without running into the problem that we
@@ -765,12 +763,11 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                 }
                 result = one
             } else {
-
                 val allKeys = one.keys.toIdentitySet()
                 allKeys += two.keys
                 val newMap = Element<K, V>(allKeys.size)
                 coroutineScope {
-                    allKeys.splitInto(CPU_CORES, 3).forEach { chunk ->
+                    allKeys.splitInto(CPU_CORES).forEach { chunk ->
                         launch(Dispatchers.Default) {
                             for (key in chunk) {
                                 val otherValue = two[key]
