@@ -732,18 +732,26 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         mapLatticeLubTime += measureNanoTime {
             if (allowModify) {
                 coroutineScope {
-                    two.forEach { (k, v) ->
+                    two.splitInto(CPU_CORES).forEach { chunk ->
                         launch(Dispatchers.Default) {
-                            if (!one.containsKey(k)) {
-                                // This key is not in "one", so we add the value from "two"
-                                // to "one"
-                                //                                synchronized(one) { one[k] = v }
-                                one[k] = v
-                            } else {
-                                // This key already exists in "one", so we have to compute
-                                // the lub of the values
-                                one[k]?.let { oneValue ->
-                                    innerLattice.lub(oneValue, v, allowModify = true, widen = widen)
+                            for ((k, v) in chunk) {
+                                if (!one.containsKey(k)) {
+                                    // This key is not in "one", so we add the value from "two"
+                                    // to "one"
+                                    //                                synchronized(one) { one[k] = v
+                                    // }
+                                    one[k] = v
+                                } else {
+                                    // This key already exists in "one", so we have to compute
+                                    // the lub of the values
+                                    one[k]?.let { oneValue ->
+                                        innerLattice.lub(
+                                            oneValue,
+                                            v,
+                                            allowModify = true,
+                                            widen = widen,
+                                        )
+                                    }
                                 }
                             }
                         }
