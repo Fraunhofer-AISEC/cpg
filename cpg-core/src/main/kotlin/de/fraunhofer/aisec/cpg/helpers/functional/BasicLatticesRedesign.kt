@@ -730,61 +730,56 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     ): Element<K, V> {
         var result: Element<K, V>
         mapLatticeLubTime += measureNanoTime {
-            /*            if (allowModify) {
-                two.forEach { (k, v) ->
-                    if (!one.containsKey(k)) {
-                        // This key is not in "one", so we add the value from "two"
-                        // to "one"
-                        one[k] = v
-                    } else {
-                        // This key already exists in "one", so we have to compute
-                        // the lub of the values
-                        //                                        synchronized(one[k]!!) {
-                        one[k]?.let { oneValue ->
-                            innerLattice.lub(oneValue, v, allowModify = true, widen = widen)
-                        }
-                        //                                        }
-                    }
-                }
-            } */
-            //            val allKeys = one.keys.toIdentitySet()
-            val allKeys = IdentitySet<K>(one.keys.size + two.keys.size).apply { addAll(one.keys) }
-            allKeys += two.keys
-            val newMap = Element<K, V>(allKeys.size)
-            coroutineScope {
-                allKeys.splitInto(CPU_CORES).forEach { chunk ->
-                    launch(Dispatchers.Default) {
-                        for (key in chunk) {
-                            val otherValue = two[key]
-                            val thisValue = one[key]
-                            val newValue =
-                                if (thisValue != null && otherValue != null) {
-                                    innerLattice.lub(
-                                        one = thisValue,
-                                        two = otherValue,
-                                        allowModify = false,
-                                        widen = widen,
-                                    )
-                                } else thisValue ?: otherValue
-                            // If allowModify is set
-                            if (allowModify && thisValue != null) newValue?.let { one[key] = it }
-                            else synchronized(newMap) { newValue?.let { newMap[key] = it } }
-                        }
-                    }
-                }
-            }
-            result = newMap
             if (allowModify) {
-                //                            one.clear()
-                newMap.forEach { (k, v) -> one[k] = v }
-                /*
-                    var one = one
-                    one = newMap
-                */
+                coroutineScope {
+                    two.forEach { (k, v) ->
+                        launch(Dispatchers.Default) {
+                            if (!one.containsKey(k)) {
+                                // This key is not in "one", so we add the value from "two"
+                                // to "one"
+                                //                                synchronized(one) { one[k] = v }
+                                one[k] = v
+                            } else {
+                                // This key already exists in "one", so we have to compute
+                                // the lub of the values
+                                one[k]?.let { oneValue ->
+                                    innerLattice.lub(oneValue, v, allowModify = true, widen = widen)
+                                }
+                            }
+                        }
+                    }
+                }
+                result = one
+            } else {
+                val allKeys =
+                    IdentitySet<K>(one.keys.size + two.keys.size).apply { addAll(one.keys) }
+                allKeys += two.keys
+                val newMap = Element<K, V>(allKeys.size)
+                coroutineScope {
+                    allKeys.splitInto(CPU_CORES).forEach { chunk ->
+                        launch(Dispatchers.Default) {
+                            for (key in chunk) {
+                                val otherValue = two[key]
+                                val thisValue = one[key]
+                                val newValue =
+                                    if (thisValue != null && otherValue != null) {
+                                        innerLattice.lub(
+                                            one = thisValue,
+                                            two = otherValue,
+                                            allowModify = false,
+                                            widen = widen,
+                                        )
+                                    } else thisValue ?: otherValue
+                                synchronized(newMap) { newValue?.let { newMap[key] = it } }
+                            }
+                        }
+                    }
+                }
+                result = newMap
             }
-        }
 
-        return result
+            return result
+        }
     }
 
     override suspend fun glb(one: Element<K, V>, two: Element<K, V>): Element<K, V> {
