@@ -730,23 +730,11 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     ): Element<K, V> {
         var result: Element<K, V>
         mapLatticeLubTime += measureNanoTime {
-            if (allowModify) {
-                //                                    coroutineScope {
-                // a launch for every key is not efficient, so we create chunks that are
-                // handled by coroutines
-                // TODO: Can we do this in coroutines without running into the problem that we
-                // need a synchronized(one) block for every access?
-                //                        two.splitInto(CPU_CORES, 3).forEach { chunk ->
-                // TODO: We could use map here to first calculate the values in threads
-                // and only then merge them, this should avoid the synchronized()
-                //                            launch(Dispatchers.Default) {
-                //                                for ((k, v) in chunk) {
+            /*            if (allowModify) {
                 two.forEach { (k, v) ->
                     if (!one.containsKey(k)) {
                         // This key is not in "one", so we add the value from "two"
                         // to "one"
-                        //                                        synchronized(one) { one[k] = v
-                        // }
                         one[k] = v
                     } else {
                         // This key already exists in "one", so we have to compute
@@ -757,38 +745,45 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                         }
                         //                                        }
                     }
-                    //                                }
-                    //                            }
-                    //                        }
                 }
-                result = one
-            } else {
-                val allKeys = one.keys.toIdentitySet()
-                allKeys += two.keys
-                val newMap = Element<K, V>(allKeys.size)
-                coroutineScope {
-                    allKeys.splitInto(CPU_CORES).forEach { chunk ->
-                        launch(Dispatchers.Default) {
-                            for (key in chunk) {
-                                val otherValue = two[key]
-                                val thisValue = one[key]
-                                val newValue =
-                                    if (thisValue != null && otherValue != null) {
-                                        innerLattice.lub(
-                                            one = thisValue,
-                                            two = otherValue,
-                                            allowModify = false,
-                                            widen = widen,
-                                        )
-                                    } else thisValue ?: otherValue
-                                synchronized(newMap) { newValue?.let { newMap[key] = it } }
-                            }
+            } */
+            //            val allKeys = one.keys.toIdentitySet()
+            val allKeys = IdentitySet<K>(one.keys.size + two.keys.size).apply { addAll(one.keys) }
+            allKeys += two.keys
+            val newMap = Element<K, V>(allKeys.size)
+            coroutineScope {
+                allKeys.splitInto(CPU_CORES).forEach { chunk ->
+                    launch(Dispatchers.Default) {
+                        for (key in chunk) {
+                            val otherValue = two[key]
+                            val thisValue = one[key]
+                            val newValue =
+                                if (thisValue != null && otherValue != null) {
+                                    innerLattice.lub(
+                                        one = thisValue,
+                                        two = otherValue,
+                                        allowModify = false,
+                                        widen = widen,
+                                    )
+                                } else thisValue ?: otherValue
+                            // If allowModify is set
+                            if (allowModify && thisValue != null) newValue?.let { one[key] = it }
+                            else synchronized(newMap) { newValue?.let { newMap[key] = it } }
                         }
                     }
                 }
-                result = newMap
+            }
+            result = newMap
+            if (allowModify) {
+                //                            one.clear()
+                newMap.forEach { (k, v) -> one[k] = v }
+                /*
+                    var one = one
+                    one = newMap
+                */
             }
         }
+
         return result
     }
 
