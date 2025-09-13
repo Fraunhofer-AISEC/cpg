@@ -45,6 +45,8 @@ import kotlin.system.measureTimeMillis
 import kotlin.time.DurationUnit
 import kotlin.time.measureTimedValue
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 var compareTime: Long = 0
 var mapLatticeLubTime: Long = 0
@@ -735,7 +737,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         var result: Element<K, V>
         mapLatticeLubTime += measureNanoTime {
             if (allowModify) {
-                val addToOne = Element<K, V>(two.keys.size)
+                val mutex = Mutex()
                 coroutineScope {
                     two.splitInto(CPU_CORES).forEach { chunk ->
                         launch(Dispatchers.Default) {
@@ -743,11 +745,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                                 if (!one.containsKey(k)) {
                                     // This key is not in "one", so we add the value from "two"
                                     // to "one"
-                                    // Instead of locking one here, we add the information to a
-                                    // temporary structure which we add to one at the end. Seems
-                                    // slightly more efficient.
-                                    // synchronized(one) { one[k] }
-                                    synchronized(addToOne) { addToOne[k] = v }
+                                    mutex.withLock { one[k] = v }
                                 } else {
                                     // This key already exists in "one", so we have to compute
                                     // the lub of the values
@@ -764,7 +762,6 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                         }
                     }
                 }
-                addToOne.forEach { (k, v) -> one[k] = v }
                 result = one
             } else {
                 val allKeys =
