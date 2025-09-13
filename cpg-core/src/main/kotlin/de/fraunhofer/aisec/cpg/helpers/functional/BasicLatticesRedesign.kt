@@ -50,7 +50,8 @@ var compareTime: Long = 0
 var mapLatticeLubTime: Long = 0
 var tupleLatticeLubTime: Long = 0
 
-val CPU_CORES = 100
+val CPU_CORES = 8
+val MIN_CHUNK_SIZE = 3
 
 class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
     override fun equals(other: Any?): Boolean {
@@ -103,7 +104,10 @@ fun compareMultiple(vararg orders: Order) =
  * 3. Otherwise the number of created subsets k is k = min(maxParts, size / [minPartSize]) (integer
  *    division, k ≥ 1) so every subset can have at least [minPartSize] elements.
  */
-fun <T> IdentitySet<T>.splitInto(maxParts: Int = 10, minPartSize: Int = 3): List<IdentitySet<T>> {
+fun <T> IdentitySet<T>.splitInto(
+    maxParts: Int = CPU_CORES,
+    minPartSize: Int = MIN_CHUNK_SIZE,
+): List<IdentitySet<T>> {
     require(maxParts > 0) { "maxParts must be positive" }
 
     if (isEmpty()) return emptyList()
@@ -582,8 +586,8 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
      *    has ≥ [minPartSize] entries and their union equals the original map.
      */
     fun <K, V : Lattice.Element> Element<K, V>.splitInto(
-        maxParts: Int = 10,
-        minPartSize: Int = 3,
+        maxParts: Int = CPU_CORES,
+        minPartSize: Int = MIN_CHUNK_SIZE,
     ): List<Element<K, V>> {
         require(maxParts > 0) { "maxParts must be positive" }
 
