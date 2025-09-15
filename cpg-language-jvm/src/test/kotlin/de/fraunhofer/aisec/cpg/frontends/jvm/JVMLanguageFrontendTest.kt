@@ -57,7 +57,7 @@ class JVMLanguageFrontendTest {
         val helloWorld = tu.records["HelloWorld"]
         assertNotNull(helloWorld)
 
-        val constructor = helloWorld.constructors.firstOrNull()
+        val constructor = helloWorld.innerConstructors.firstOrNull()
         assertNotNull(constructor)
 
         // All references should be resolved (except Object.<init>, which should be a construct
@@ -72,7 +72,7 @@ class JVMLanguageFrontendTest {
             )
         }
 
-        val main = helloWorld.methods["main"]
+        val main = helloWorld.innerMethods["main"]
         assertNotNull(main)
         assertTrue(main.isStatic)
 
@@ -106,7 +106,7 @@ class JVMLanguageFrontendTest {
         val adder = pkg.records["Adder"]
         assertNotNull(adder)
 
-        val add = adder.methods["add"]
+        val add = adder.innerMethods["add"]
         assertNotNull(add)
 
         val main = pkg.methods["Main.main"]
@@ -272,7 +272,7 @@ class JVMLanguageFrontendTest {
                             it.base in extended.usages
                     }]
         assertNotNull(getMyProperty)
-        assertInvokes(getMyProperty, baseClass.methods["getMyProperty"])
+        assertInvokes(getMyProperty, baseClass.innerMethods["getMyProperty"])
 
         val setMyProperty =
             appInit.calls[
@@ -282,7 +282,7 @@ class JVMLanguageFrontendTest {
                             it.base in extended.usages
                     }]
         assertNotNull(setMyProperty)
-        assertInvokes(setMyProperty, extendedClass.methods["setMyProperty"])
+        assertInvokes(setMyProperty, extendedClass.innerMethods["setMyProperty"])
     }
 
     @Test

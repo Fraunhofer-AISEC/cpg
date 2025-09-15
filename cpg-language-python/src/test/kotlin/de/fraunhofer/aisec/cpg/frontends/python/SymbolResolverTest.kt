@@ -53,7 +53,7 @@ class SymbolResolverTest {
         assertNotNull(globalA)
 
         // Make sure, we only have one (!) field a
-        val fieldsA = result.records["MyClass"]?.fields("a")
+        val fieldsA = result.records["MyClass"]?.innerFields("a")
         val fieldA = fieldsA?.singleOrNull()
         assertNotNull(fieldA)
 
@@ -74,9 +74,9 @@ class SymbolResolverTest {
 
         // Same tests but for fields declared at the record level.
         // A variable "declared" inside a class is considered a field in Python.
-        val fieldCopyA = result.records["MyClass"]?.fields["copyA"]
+        val fieldCopyA = result.records["MyClass"]?.innerFields["copyA"]
         assertIs<FieldDeclaration>(fieldCopyA)
-        val baz = result.records["MyClass"]?.methods["baz"]
+        val baz = result.records["MyClass"]?.innerMethods["baz"]
         assertIs<MethodDeclaration>(baz)
         val bazPrint = baz.calls("print").singleOrNull()
         assertIs<CallExpression>(bazPrint)
