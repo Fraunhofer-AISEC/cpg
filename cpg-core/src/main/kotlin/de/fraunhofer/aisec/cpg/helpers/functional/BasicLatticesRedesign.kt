@@ -104,29 +104,26 @@ fun compareMultiple(vararg orders: Order) =
  * 3. Otherwise the number of created subsets k is k = min(maxParts, size / [minPartSize]) (integer
  *    division, k ≥ 1) so every subset can have at least [minPartSize] elements.
  */
-fun <T> IdentitySet<T>.splitInto(
+fun <T> Collection<T>.splitInto(
     maxParts: Int = CPU_CORES,
     minPartSize: Int = MIN_CHUNK_SIZE,
-): List<IdentitySet<T>> {
+): List<List<T>> {
     require(maxParts > 0) { "maxParts must be positive" }
 
     if (isEmpty()) return emptyList()
-    if (size < minPartSize) return listOf(this)
+    if (size < minPartSize) return listOf(this.toList())
 
-    // ---- determine how many subsets we really create ----
-    val k = minOf(maxParts, size / minPartSize) // size/minPartSize is integer division, ≥ 1
-    val base = size / k // minimum size of every subset (≥ minPartSize)
-    val extra = size % k // first 'extra' subsets get +1 element
+    // Anzahl Teilmengen bestimmen
+    val k = minOf(maxParts, size / minPartSize) // k ≥ 1
+    val base = size / k // Mindest­größe jeder Teilmenge
+    val extra = size % k // erste 'extra' Teilmengen +1
 
-    // ---- materialize the subsets ----
-    val list = toList() // keeps original encounter order
+    // Elemente in Encounter-Reihenfolge aufteilen
+    val list = this.toList()
     var index = 0
-
     return List(k) { i ->
         val partSize = base + if (i < extra) 1 else 0
-        IdentitySet<T>()
-            .apply { addAll(list.subList(index, index + partSize)) }
-            .also { index += partSize }
+        list.subList(index, index + partSize).also { index += partSize }
     }
 }
 
@@ -653,45 +650,47 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
             val ret = AtomicReference<Order?>(null)
 
             coroutineScope {
-                this@Element.entries.forEach { (k, v) ->
+                this@Element.entries.splitInto().forEach { chunk ->
                     // We can't return in the coroutines, so we only set the return value
                     // there. If we have a return value, we can stop here
                     launch(Dispatchers.Default) {
-                        if (ret.load() != null) return@launch
-                        val otherV = other[k]
-                        if (otherV != null) {
-                            when (v.compare(otherV)) {
-                                Order.EQUAL -> {
-                                    /* Nothing to do*/
-                                }
-
-                                Order.GREATER -> {
-                                    if (someLesser.load()) {
-                                        ret.store(Order.UNEQUAL)
+                        for ((k, v) in chunk) {
+                            if (ret.load() != null) return@launch
+                            val otherV = other[k]
+                            if (otherV != null) {
+                                when (v.compare(otherV)) {
+                                    Order.EQUAL -> {
+                                        /* Nothing to do*/
                                     }
-                                    someGreater.store(true)
-                                }
 
-                                Order.LESSER -> {
-                                    if (someGreater.load()) {
-                                        ret.store(Order.UNEQUAL)
+                                    Order.GREATER -> {
+                                        if (someLesser.load()) {
+                                            ret.store(Order.UNEQUAL)
+                                        }
+                                        someGreater.store(true)
                                     }
-                                    someLesser.store(true)
-                                }
 
-                                Order.UNEQUAL -> {
+                                    Order.LESSER -> {
+                                        if (someGreater.load()) {
+                                            ret.store(Order.UNEQUAL)
+                                        }
+                                        someLesser.store(true)
+                                    }
+
+                                    Order.UNEQUAL -> {
+                                        ret.store(Order.UNEQUAL)
+                                        someLesser.store(true)
+
+                                        someGreater.store(true)
+                                    }
+                                }
+                            } else {
+                                if (someLesser.load()) {
                                     ret.store(Order.UNEQUAL)
-                                    someLesser.store(true)
-
-                                    someGreater.store(true)
                                 }
+                                // key is missing in other, so this is greater
+                                someGreater.store(true)
                             }
-                        } else {
-                            if (someLesser.load()) {
-                                ret.store(Order.UNEQUAL)
-                            }
-                            // key is missing in other, so this is greater
-                            someGreater.store(true)
                         }
                     }
                 }

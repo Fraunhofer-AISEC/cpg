@@ -325,14 +325,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         if (node !is FunctionDeclaration) {
             return
         }
-        // If the node has a body and a function summary, we have visited it before and can
-        // return here.
-        if (
-            (node.functionSummary.isNotEmpty() && node.body != null) &&
-                node.functionSummary.keys.any { it in node.parameters || it in node.returns }
-        ) {
-            return
-        }
 
         // If we haven't done so yet, set the total number of functions
         if (totalFunctionDeclarationCount == 0)
@@ -340,6 +332,17 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 node.firstParentOrNull<TranslationResult>().functions.size
 
         analyzedFunctionDeclarationCount++
+
+        // If the node has a body and a function summary, we have visited it before and can
+        // return here.
+        if (
+            (node.functionSummary.isNotEmpty() && node.body != null) &&
+                node.functionSummary.keys.any { it in node.parameters || it in node.returns }
+        ) {
+            "Skipping function ${node.name} because we already have a function Summary. (Function $analyzedFunctionDeclarationCount / $totalFunctionDeclarationCount)"
+            return
+        }
+
         functionSummaryAnalysisChain.add(node)
 
         // Calculate the complexity of the function and see, if it exceeds our threshold
