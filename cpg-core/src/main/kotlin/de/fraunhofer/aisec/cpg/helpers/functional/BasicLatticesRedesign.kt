@@ -893,50 +893,38 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
     ): Element<S, T> {
         val result: Element<S, T>
         tupleLatticeLubTime += measureNanoTime {
-            result = /*runBlocking {*/
+            result =
                 if (allowModify) {
-                    val first = /*async {
-                                synchronized(one.first) {*/
-                        innerLattice1.lub(
-                            one = one.first,
-                            two = two.first,
-                            allowModify = true,
-                            widen = widen,
-                        )
-                    //                        }
-                    //                    }
-                    val second = /*async {
-                                 synchronized(one.second) {*/
+                    innerLattice1.lub(
+                        one = one.first,
+                        two = two.first,
+                        allowModify = true,
+                        widen = widen,
+                    )
+                    val second =
                         innerLattice2.lub(
                             one = one.second,
                             two = two.second,
                             allowModify = true,
                             widen = widen,
                         )
-                    //                        }
-                    //                    }
-                    //                    awaitAll(first, second)
+
                     one
                 } else {
-                    /*                   val first: T
-                    val second: T*/
-                    //                    coroutineScope {
-                    val first = /*async {*/
+                    val first =
                         innerLattice1.lub(
                             one = one.first,
                             two = two.first,
                             allowModify = false,
                             widen = widen,
                         )
-                    //                    }
-                    val second = /*async {*/
+                    val second =
                         innerLattice2.lub(
                             one = one.second,
                             two = two.second,
                             allowModify = false,
                             widen = widen,
                         )
-                    //                    }
                     Element(first, second)
                 }
         }
@@ -1019,55 +1007,47 @@ open class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.E
         two: Element<R, S, T>,
         allowModify: Boolean,
         widen: Boolean,
-    ): Element<R, S, T> {
-        return if (allowModify) {
-            //            coroutineScope {
-            /*val first = async {
-            synchronized(one.first) {*/
+    ): Element<R, S, T> = coroutineScope {
+        return@coroutineScope if (allowModify) {
+            //            val first = async {
             innerLattice1.lub(one = one.first, two = two.first, allowModify = true, widen = widen)
-            //                    }
-            //                }
-            /*val second = async {
-            synchronized(one.second) {*/
-            innerLattice2.lub(one = one.second, two = two.second, allowModify = true, widen = widen)
-            //                    }
-            //                }
-            /*val third = async {
-            synchronized(one.third) {*/
-            innerLattice3.lub(one = one.third, two = two.third, allowModify = true, widen = widen)
-            //                    }
-            //                }
-            //                awaitAll(first, second, third)
             //            }
+            //            val second = async {
+            //            synchronized(one.second) {
+            innerLattice2.lub(one = one.second, two = two.second, allowModify = true, widen = widen)
+            //            }
+            //            val third = async {
+            innerLattice3.lub(one = one.third, two = two.third, allowModify = true, widen = widen)
+            //            }
+            //            awaitAll(first, second, third)
             one
         } else {
-            coroutineScope {
-                val first = async {
-                    innerLattice1.lub(
-                        one = one.first,
-                        two = two.first,
-                        allowModify = false,
-                        widen = widen,
-                    )
-                }
-                val second = async {
-                    innerLattice2.lub(
-                        one = one.second,
-                        two = two.second,
-                        allowModify = false,
-                        widen = widen,
-                    )
-                }
-                val third = async {
-                    innerLattice3.lub(
-                        one = one.third,
-                        two = two.third,
-                        allowModify = false,
-                        widen = widen,
-                    )
-                }
-                Element(first.await(), second.await(), third.await())
-            }
+            val first = /*async {*/
+                innerLattice1.lub(
+                    one = one.first,
+                    two = two.first,
+                    allowModify = false,
+                    widen = widen,
+                )
+            //            }
+            val second = /*async {*/
+                innerLattice2.lub(
+                    one = one.second,
+                    two = two.second,
+                    allowModify = false,
+                    widen = widen,
+                )
+            //            }
+            val third = /*async {*/
+                innerLattice3.lub(
+                    one = one.third,
+                    two = two.third,
+                    allowModify = false,
+                    widen = widen,
+                )
+            //            }
+            //            Element(first.await(), second.await(), third.await())
+            Element(first, second, third)
         }
     }
 
