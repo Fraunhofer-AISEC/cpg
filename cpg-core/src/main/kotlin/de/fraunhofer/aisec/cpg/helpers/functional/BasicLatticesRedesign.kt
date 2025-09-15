@@ -113,12 +113,12 @@ fun <T> Collection<T>.splitInto(
     if (isEmpty()) return emptyList()
     if (size < minPartSize) return listOf(this.toList())
 
-    // Anzahl Teilmengen bestimmen
+    // Determine number of chunks
     val k = minOf(maxParts, size / minPartSize) // k ≥ 1
-    val base = size / k // Mindest­größe jeder Teilmenge
-    val extra = size % k // erste 'extra' Teilmengen +1
+    val base = size / k // minimum size for each chunk
+    val extra = size % k
 
-    // Elemente in Encounter-Reihenfolge aufteilen
+    // split the Collection into chunks
     val list = this.toList()
     var index = 0
     return List(k) { i ->
@@ -730,23 +730,20 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         two: Element<K, V>,
         allowModify: Boolean,
         widen: Boolean,
-    ): Element<K, V> {
+    ): Element<K, V> = coroutineScope {
         var result: Element<K, V>
         mapLatticeLubTime += measureNanoTime {
             if (allowModify) {
-                val addToOne = Element<K, V>(two.keys.size)
-                coroutineScope {
-                    two.splitInto(CPU_CORES).forEach { chunk ->
-                        launch(Dispatchers.Default) {
+                val additionsPerChunk =
+                    two.splitInto(CPU_CORES).map { chunk ->
+                        async(Dispatchers.Default) {
+                            val local = Element<K, V>(chunk.size)
                             for ((k, v) in chunk) {
-                                if (!one.containsKey(k)) {
+                                val entry = one[k]
+                                if (entry == null) {
                                     // This key is not in "one", so we add the value from "two"
                                     // to "one"
-                                    // Instead of locking one here, we add the information to a
-                                    // temporary structure which we add to one at the end. Seems
-                                    // slightly more efficient.
-                                    // synchronized(one) { one[k] }
-                                    synchronized(addToOne) { addToOne[k] = v }
+                                    local[k] = v
                                 } else {
                                     // This key already exists in "one", so we have to compute
                                     // the lub of the values
@@ -760,19 +757,24 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                                     }
                                 }
                             }
+                            local // return only new pairs
                         }
                     }
+                additionsPerChunk.awaitAll().forEach { addition ->
+                    addition.forEach { (k, v) -> one[k] = v }
                 }
-                addToOne.forEach { (k, v) -> one[k] = v }
+                //                return@coroutineScope one
                 result = one
             } else {
                 val allKeys =
-                    IdentitySet<K>(one.keys.size + two.keys.size).apply { addAll(one.keys) }
-                allKeys += two.keys
-                val newMap = Element<K, V>(allKeys.size)
-                coroutineScope {
-                    allKeys.splitInto(CPU_CORES).forEach { chunk ->
-                        launch(Dispatchers.Default) {
+                    IdentitySet<K>(one.keys.size + two.keys.size).apply {
+                        addAll(one.keys)
+                        addAll(two.keys)
+                    }
+                val partialMaps =
+                    allKeys.splitInto(CPU_CORES).map { chunk ->
+                        async(Dispatchers.Default) {
+                            val local = Element<K, V>(chunk.size)
                             for (key in chunk) {
                                 val otherValue = two[key]
                                 val thisValue = one[key]
@@ -785,16 +787,17 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                                             widen = widen,
                                         )
                                     } else thisValue ?: otherValue
-                                synchronized(newMap) { newValue?.let { newMap[key] = it } }
+                                newValue?.let { local[key] = it }
                             }
+                            local
                         }
                     }
-                }
+                val newMap = Element<K, V>(allKeys.size)
+                partialMaps.awaitAll().forEach { part -> part.forEach { (k, v) -> newMap[k] = v } }
                 result = newMap
             }
-
-            return result
         }
+        return@coroutineScope result
     }
 
     override suspend fun glb(one: Element<K, V>, two: Element<K, V>): Element<K, V> {
