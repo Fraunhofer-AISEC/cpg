@@ -50,8 +50,8 @@ var compareTime: Long = 0
 var mapLatticeLubTime: Long = 0
 var tupleLatticeLubTime: Long = 0
 
-val CPU_CORES = 8
-val MIN_CHUNK_SIZE = 3
+val CPU_CORES = 16
+val MIN_CHUNK_SIZE = 10
 
 class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
     override fun equals(other: Any?): Boolean {
