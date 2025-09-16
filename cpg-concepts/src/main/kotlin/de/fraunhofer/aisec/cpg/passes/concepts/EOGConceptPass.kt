@@ -201,7 +201,7 @@ open class EOGConceptPass(ctx: TranslationContext) :
     }
 
     /** This function is called for each edge in the EOG until the fixpoint is computed. */
-    fun transfer(
+    suspend fun transfer(
         lattice: Lattice<NodeToOverlayStateElement>,
         currentEdge: EvaluationOrder,
         currentState: NodeToOverlayStateElement,

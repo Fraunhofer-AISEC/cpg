@@ -41,7 +41,6 @@ import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Order
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -79,7 +78,9 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         }
 
         val nextEog = node.nextEOGEdges.toList()
-        val finalStateNew = unreachabilityState.iterateEOG(nextEog, startState, ::transfer)
+        val finalStateNew = runBlocking {
+            unreachabilityState.iterateEOG(nextEog, startState, ::transfer)
+        }
 
         for ((key, value) in finalStateNew) {
             if (value.reachability == Reachability.UNREACHABLE) {
@@ -103,7 +104,7 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
      *
      * Returns the updated state and true because we always expect an update of the state.
      */
-    fun transfer(
+    suspend fun transfer(
         lattice: Lattice<UnreachabilityStateElement>,
         currentEdge: EvaluationOrder,
         currentState: UnreachabilityStateElement,
@@ -304,7 +305,7 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
     ): Element {
         return if (allowModify) {
             val ret: Order
-            coroutineScope { ret = compare(one, two) }
+            runBlocking { ret = compare(one, two) }
             when (ret) {
                 Order.EQUAL -> one
                 Order.GREATER -> one
