@@ -936,7 +936,7 @@ fun Node.followXUntilHit(
                 worklist.isNotEmpty() || parentJob.children.any { it.isActive }
             }
         ) {
-            scope.launch {
+            scope.launch(Dispatchers.Default) {
                 val currentPath: List<Pair<Node, Context>>
                 synchronized(worklist) {
                     if (worklist.isEmpty()) return@launch

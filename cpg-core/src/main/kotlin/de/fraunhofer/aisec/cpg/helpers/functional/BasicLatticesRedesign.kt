@@ -666,6 +666,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                                     Order.GREATER -> {
                                         if (someLesser.load()) {
                                             ret.store(Order.UNEQUAL)
+                                            cancel()
                                         }
                                         someGreater.store(true)
                                     }
@@ -673,6 +674,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                                     Order.LESSER -> {
                                         if (someGreater.load()) {
                                             ret.store(Order.UNEQUAL)
+                                            cancel()
                                         }
                                         someLesser.store(true)
                                     }
@@ -680,16 +682,17 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                                     Order.UNEQUAL -> {
                                         ret.store(Order.UNEQUAL)
                                         someLesser.store(true)
-
                                         someGreater.store(true)
+                                        cancel()
                                     }
                                 }
                             } else {
-                                if (someLesser.load()) {
-                                    ret.store(Order.UNEQUAL)
-                                }
                                 // key is missing in other, so this is greater
                                 someGreater.store(true)
+                                if (someLesser.load()) {
+                                    ret.store(Order.UNEQUAL)
+                                    cancel()
+                                }
                             }
                         }
                     }
