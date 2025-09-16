@@ -50,7 +50,7 @@ var compareTime: Long = 0
 var mapLatticeLubTime: Long = 0
 var tupleLatticeLubTime: Long = 0
 
-val CPU_CORES = 16
+val CPU_CORES = Runtime.getRuntime().availableProcessors()
 val MIN_CHUNK_SIZE = 10
 
 class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
