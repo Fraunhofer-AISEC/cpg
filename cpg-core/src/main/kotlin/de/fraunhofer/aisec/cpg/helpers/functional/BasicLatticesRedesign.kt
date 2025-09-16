@@ -860,17 +860,20 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
                 runBlocking { this@Element.compare(other) == Order.EQUAL }
         }
 
-        override suspend fun compare(other: Lattice.Element): Order = coroutineScope {
-            if (this === other) return@coroutineScope Order.EQUAL
+        override suspend fun compare(other: Lattice.Element): Order /*= coroutineScope*/ {
+            if (this === other) return /*@coroutineScope*/ Order.EQUAL
 
             if (other !is Element<S, T>)
                 throw IllegalArgumentException(
                     "$other should be of type TupleLattice.Element<S, T> but is of type ${other.javaClass}"
                 )
 
-            val result1 = async { this@Element.first.compare(other.first) }
+            /*            val result1 = async { this@Element.first.compare(other.first) }
             val result2 = async { this@Element.second.compare(other.second) }
-            return@coroutineScope compareMultiple(result1.await(), result2.await())
+            return@coroutineScope compareMultiple(result1.await(), result2.await())*/
+            val result1 = this.first.compare(other.first)
+            val result2 = this.second.compare(other.second)
+            return compareMultiple(result1, result2)
         }
 
         override fun duplicate(): Element<S, T> {
@@ -976,18 +979,22 @@ open class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.E
                 runBlocking { this@Element.compare(other) == Order.EQUAL }
         }
 
-        override suspend fun compare(other: Lattice.Element): Order = coroutineScope {
-            if (this === other) return@coroutineScope Order.EQUAL
+        override suspend fun compare(other: Lattice.Element): Order /*= coroutineScope*/ {
+            if (this === other) return /*@coroutineScope*/ Order.EQUAL
 
             if (other !is Element<R, S, T>)
                 throw IllegalArgumentException(
                     "$other should be of type TripleLattice.Element<R, S, T> but is of type ${other.javaClass}"
                 )
 
-            val result1 = async { this@Element.first.compare(other.first) }
+            /*            val result1 = async { this@Element.first.compare(other.first) }
             val result2 = async { this@Element.second.compare(other.second) }
             val result3 = async { this@Element.third.compare(other.third) }
-            return@coroutineScope compareMultiple(result1.await(), result2.await(), result3.await())
+            return@coroutineScope compareMultiple(result1.await(), result2.await(), result3.await())*/
+            val result1 = this@Element.first.compare(other.first)
+            val result2 = this@Element.second.compare(other.second)
+            val result3 = this@Element.third.compare(other.third)
+            return compareMultiple(result1, result2, result3)
         }
 
         override fun duplicate(): Element<R, S, T> {
