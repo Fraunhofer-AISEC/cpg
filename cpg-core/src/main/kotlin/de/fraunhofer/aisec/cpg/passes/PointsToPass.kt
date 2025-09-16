@@ -2116,7 +2116,7 @@ suspend fun PointsToState.push(
                 it.first === pair.first && it.second == pair.second
             } == true
         ) {
-            synchronized(newLatticeCopy.third) { newLatticeCopy.third.remove(pair) }
+            /*synchronized(newLatticeCopy.third) {*/ newLatticeCopy.third.remove(pair) // }
         }
     }
 
@@ -2135,47 +2135,55 @@ suspend fun PointsToState.pushToDeclarationsState(
     currentState: PointsToState.Element,
     newNode: Node,
     newLatticeElement: DeclarationStateEntryElement,
-): PointsToState.Element {
+): PointsToState.Element = coroutineScope {
     // If we already have exactly that entry, no need to re-write it, otherwise we might confuse the
     // iterateEOG function
     val newLatticeCopy = newLatticeElement.duplicate()
 
-    coroutineScope {
-        newLatticeElement.second.splitInto().forEach { chunk ->
-            launch(Dispatchers.Default) {
+    val toRemoveSecond =
+        newLatticeElement.second.splitInto().map { chunk ->
+            async(Dispatchers.Default) {
+                val local = PowersetLattice.Element<Pair<Node, Boolean>>()
                 for (pair in chunk) {
                     if (
                         currentState.declarationsState[newNode]?.second?.any {
                             it.first === pair.first && it.second == pair.second
                         } == true
                     )
-                        synchronized(newLatticeCopy.second) { newLatticeCopy.second.remove(pair) }
+                    //                        synchronized(newLatticeCopy.second) {
+                    // newLatticeCopy.second.remove(pair) }
+                    local.add(pair)
                 }
+                local
             }
         }
+    toRemoveSecond.awaitAll().forEach { subList -> newLatticeCopy.second.removeAll(subList) }
 
-        newLatticeElement.third.splitInto().forEach { chunk ->
-            launch(Dispatchers.Default) {
+    val toRemoveThird =
+        newLatticeElement.third.splitInto().map { chunk ->
+            async(Dispatchers.Default) {
+                val local = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
                 for (pair in chunk) {
                     if (
                         currentState.declarationsState[newNode]?.third?.any {
                             it.first === pair.first && it.second == pair.second
                         } == true
                     )
-                        synchronized(newLatticeCopy.third) { newLatticeCopy.third.remove(pair) }
+                    //                        synchronized(newLatticeCopy.third) {
+                    // newLatticeCopy.third.remove(pair) }
+                    local.add(pair)
                 }
+                local
             }
         }
-    }
+    toRemoveThird.awaitAll().forEach { subList -> newLatticeCopy.third.removeAll(subList) }
 
-    coroutineScope {
-        this@pushToDeclarationsState.innerLattice2.lub(
-            currentState.declarationsState,
-            MapLattice.Element(newNode to newLatticeCopy),
-            true,
-        )
-    }
-    return currentState
+    this@pushToDeclarationsState.innerLattice2.lub(
+        currentState.declarationsState,
+        MapLattice.Element(newNode to newLatticeCopy),
+        true,
+    )
+    return@coroutineScope currentState
 }
 
 /** Check if `node` has an entry in the DeclarationState */
