@@ -132,17 +132,17 @@ class DeclarationStateEntry(
             PowersetLattice.Element<Pair<Node, Boolean>>,
             PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
         >(one, two, three) {
-        override suspend fun compare(other: Lattice.Element): Order = coroutineScope {
-            if (this === other) return@coroutineScope Order.EQUAL
+        override suspend fun compare(other: Lattice.Element): Order {
+            if (this === other) return Order.EQUAL
 
             if (other !is DeclarationStateEntry.Element)
                 throw IllegalArgumentException(
                     "$other should be of type Element but is of type ${other.javaClass}"
                 )
 
-            val result1 = async { this@Element.first.compare(other.first) }
-            val result2 = async { this@Element.second.compare(other.second) }
-            return@coroutineScope compareMultiple(result1.await(), result2.await())
+            val result1 = this@Element.first.compare(other.first)
+            val result2 = this@Element.second.compare(other.second)
+            return compareMultiple(result1, result2)
         }
     }
 }
