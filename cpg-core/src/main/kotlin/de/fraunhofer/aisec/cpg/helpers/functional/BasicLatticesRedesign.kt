@@ -438,8 +438,27 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
             if (this === other) return true
             if (other !is Element<*> || this.size != other.size) return false
 
+            this@Element.forEach { t ->
+                val isEqual =
+                    if (t is Pair<*, *>)
+                        other.any {
+                            it is Pair<*, *> && it.first === t.first && it.second == t.second
+                        }
+                    else t in other
+
+                if (!isEqual) {
+                    return true
+                }
+            }
+            return true
+        }
+
+        suspend fun parallelEquals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is Element<*> || this.size != other.size) return false
+
             var ret = true
-            runBlocking {
+            coroutineScope {
                 try {
                     //                    coroutineScope {
                     this@Element.splitInto(CPU_CORES).forEach { chunk ->

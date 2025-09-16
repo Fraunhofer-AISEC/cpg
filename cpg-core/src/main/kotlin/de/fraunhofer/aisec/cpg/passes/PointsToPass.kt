@@ -673,13 +673,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     it.srcNode == node &&
                                     it.srcValueDepth == 0 &&
                                     it.subAccessName == subAccessName &&
-                                    it.lastWrites ==
+                                    it.lastWrites.parallelEquals(
                                         PowersetLattice.Element<Pair<*, *>>(
                                             Pair<Node, EqualLinkedHashSet<*>>(
                                                 node,
                                                 equalLinkedHashSetOf<Any>(),
                                             )
-                                        ) &&
+                                        )
+                                    ) &&
                                     it.properties == equalLinkedHashSetOf(true)
                             }
                         )
@@ -1399,7 +1400,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
      * @param currentNode The current call expression being analyzed.
      * @return The updated map that tracks the source nodes for each destination node.
      */
-    private fun addEntryToMap(
+    private suspend fun addEntryToMap(
         doubleState: PointsToState.Element,
         mapDstToSrc: MutableMap<Node, IdentitySet<MapDstToSrcEntry>>,
         destinationAddresses: IdentitySet<Node?>,
@@ -1457,7 +1458,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             if (
                                 currentSet.none {
                                     it.srcNode === value &&
-                                        it.lastWrites == lastWrites.singleOrNull() &&
+                                        it.lastWrites.parallelEquals(lastWrites.singleOrNull()) &&
                                         it.propertySet == updatedPropertySet
                                 }
                             ) {
@@ -1493,7 +1494,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     if (
                                         currentSet.none {
                                             it.srcNode === value &&
-                                                it.lastWrites == lastWrites &&
+                                                it.lastWrites.parallelEquals(lastWrites) &&
                                                 it.propertySet == updatedPropertySet
                                         }
                                     ) {
