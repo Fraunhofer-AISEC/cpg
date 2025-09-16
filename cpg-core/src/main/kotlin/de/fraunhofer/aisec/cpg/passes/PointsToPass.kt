@@ -1365,7 +1365,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         coroutineScope {
             values.forEach { value ->
-                launch {
+                launch(Dispatchers.Default) {
                     value.lastWrites.forEach { (lw, lwProps) ->
                         // For short FunctionSummaries (AKA one of the lastWrite properties set to
                         // 'true',
@@ -1978,123 +1978,115 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         depth: Int = 2,
     ): PointsToState.Element {
         var doubleState = doubleState
-        coroutineScope {
-            parameters
-                .filter { it.memoryValues.filterIsInstance<ParameterMemoryValue>().isEmpty() }
-                .forEach { param ->
-                    launch {
-                        // In the first step, we have a triangle of ParameterDeclaration, the
-                        // ParameterDeclaration's Memory Address and the ParameterMemoryValue
-                        // Therefore, the src and the addresses are different. For all other depths,
-                        // we set
-                        // both to the ParameterMemoryValue we create in the first step
-                        var src: Node = param
-                        var addresses = doubleState.getAddresses(src, src)
-                        var prevAddresses = identitySetOf<Node>()
-                        // If we have a Pointer as param, we initialize all levels, otherwise, only
-                        // the
-                        // first one
-                        val paramDepth =
-                            if (
-                                param.type is PointerType ||
-                                    // If the type is unknown, we also initialize all levels to be
-                                    // sure
-                                    param.type is UnknownType ||
-                                    // Another guess we take: If the length is the same as the
-                                    // addressLength, again, to be sure we initialize all levels
-                                    (param.type as? NumericType)?.bitWidth ==
-                                        // TODO: passConfig<Configuration> should never be null?
-                                        (passConfig<Configuration>()?.addressLength ?: 64)
-                            )
-                                depth
-                            else 0
-                        for (i in 0..paramDepth) {
-                            val pmvName = "deref".repeat(i) + "value"
-                            val pmv = ParameterMemoryValue(Name(pmvName, param.name))
+        //        coroutineScope {
+        parameters
+            .filter { it.memoryValues.filterIsInstance<ParameterMemoryValue>().isEmpty() }
+            .forEach { param ->
+                //                    launch /*(Dispatchers.Default)*/ {
+                // In the first step, we have a triangle of ParameterDeclaration, the
+                // ParameterDeclaration's Memory Address and the ParameterMemoryValue
+                // Therefore, the src and the addresses are different. For all other depths,
+                // we set
+                // both to the ParameterMemoryValue we create in the first step
+                var src: Node = param
+                var addresses = doubleState.getAddresses(src, src)
+                var prevAddresses = identitySetOf<Node>()
+                // If we have a Pointer as param, we initialize all levels, otherwise, only
+                // the
+                // first one
+                val paramDepth =
+                    if (
+                        param.type is PointerType ||
+                            // If the type is unknown, we also initialize all levels to be
+                            // sure
+                            param.type is UnknownType ||
+                            // Another guess we take: If the length is the same as the
+                            // addressLength, again, to be sure we initialize all levels
+                            (param.type as? NumericType)?.bitWidth ==
+                                // TODO: passConfig<Configuration> should never be null?
+                                (passConfig<Configuration>()?.addressLength ?: 64)
+                    )
+                        depth
+                    else 0
+                for (i in 0..paramDepth) {
+                    val pmvName = "deref".repeat(i) + "value"
+                    val pmv = ParameterMemoryValue(Name(pmvName, param.name))
 
-                            // In the first step, we link the ParameterDeclaration to the PMV to be
-                            // able to
-                            // also access it outside the function
-                            if (src is ParameterDeclaration) {
-                                // src.memoryValue = pmv
-                                doubleState =
-                                    lattice.push(
-                                        doubleState,
-                                        src,
-                                        GeneralStateEntryElement(
-                                            PowersetLattice.Element(addresses),
-                                            PowersetLattice.Element(
-                                                Pair(pmv, equalLinkedHashSetOf())
-                                            ),
-                                            PowersetLattice.Element(),
-                                        ),
-                                    )
-                            } else {
-                                // Link the PMVs with each other so that we can find them. This is
-                                // especially important outside the respective function where we
-                                // don't have
-                                // a state
-                                addresses.filterIsInstance<ParameterMemoryValue>().forEach {
-                                    doubleState =
-                                        lattice.push(
-                                            doubleState,
-                                            it,
-                                            GeneralStateEntryElement(
-                                                PowersetLattice.Element(prevAddresses),
-                                                PowersetLattice.Element(
-                                                    Pair(pmv, equalLinkedHashSetOf())
-                                                ),
-                                                PowersetLattice.Element(),
-                                            ),
-                                        )
-                                }
-                                doubleState =
-                                    lattice.push(
-                                        doubleState,
-                                        pmv,
-                                        GeneralStateEntryElement(
-                                            PowersetLattice.Element(addresses),
-                                            PowersetLattice.Element(),
-                                            PowersetLattice.Element(),
-                                        ),
-                                    )
-                                doubleState =
-                                    lattice.push(
-                                        doubleState,
-                                        param,
-                                        GeneralStateEntryElement(
-                                            PowersetLattice.Element(),
-                                            PowersetLattice.Element(
-                                                Pair(pmv, equalLinkedHashSetOf(pmvName))
-                                            ),
-                                            PowersetLattice.Element(),
-                                        ),
-                                    )
-                            }
-
-                            // Update the states
-                            val declStateElement =
-                                DeclarationStateEntryElement(
-                                    PowersetLattice.Element(prevAddresses),
-                                    PowersetLattice.Element(Pair(pmv, false)),
+                    // In the first step, we link the ParameterDeclaration to the PMV to be
+                    // able to
+                    // also access it outside the function
+                    if (src is ParameterDeclaration) {
+                        // src.memoryValue = pmv
+                        doubleState =
+                            lattice.push(
+                                doubleState,
+                                src,
+                                GeneralStateEntryElement(
+                                    PowersetLattice.Element(addresses),
                                     PowersetLattice.Element(Pair(pmv, equalLinkedHashSetOf())),
+                                    PowersetLattice.Element(),
+                                ),
+                            )
+                    } else {
+                        // Link the PMVs with each other so that we can find them. This is
+                        // especially important outside the respective function where we
+                        // don't have
+                        // a state
+                        addresses.filterIsInstance<ParameterMemoryValue>().forEach {
+                            doubleState =
+                                lattice.push(
+                                    doubleState,
+                                    it,
+                                    GeneralStateEntryElement(
+                                        PowersetLattice.Element(prevAddresses),
+                                        PowersetLattice.Element(Pair(pmv, equalLinkedHashSetOf())),
+                                        PowersetLattice.Element(),
+                                    ),
                                 )
-                            addresses.forEach { addr ->
-                                doubleState =
-                                    lattice.pushToDeclarationsState(
-                                        doubleState,
-                                        addr,
-                                        declStateElement,
-                                    )
-                            }
-
-                            prevAddresses = addresses
-                            src = pmv
-                            addresses = identitySetOf(pmv)
                         }
+                        doubleState =
+                            lattice.push(
+                                doubleState,
+                                pmv,
+                                GeneralStateEntryElement(
+                                    PowersetLattice.Element(addresses),
+                                    PowersetLattice.Element(),
+                                    PowersetLattice.Element(),
+                                ),
+                            )
+                        doubleState =
+                            lattice.push(
+                                doubleState,
+                                param,
+                                GeneralStateEntryElement(
+                                    PowersetLattice.Element(),
+                                    PowersetLattice.Element(
+                                        Pair(pmv, equalLinkedHashSetOf(pmvName))
+                                    ),
+                                    PowersetLattice.Element(),
+                                ),
+                            )
                     }
+
+                    // Update the states
+                    val declStateElement =
+                        DeclarationStateEntryElement(
+                            PowersetLattice.Element(prevAddresses),
+                            PowersetLattice.Element(Pair(pmv, false)),
+                            PowersetLattice.Element(Pair(pmv, equalLinkedHashSetOf())),
+                        )
+                    addresses.forEach { addr ->
+                        doubleState =
+                            lattice.pushToDeclarationsState(doubleState, addr, declStateElement)
+                    }
+
+                    prevAddresses = addresses
+                    src = pmv
+                    addresses = identitySetOf(pmv)
                 }
-        }
+            }
+        //                }
+        //        }
         return doubleState
     }
 }
@@ -2117,17 +2109,14 @@ suspend fun PointsToState.push(
     // If we already have exactly that entry, no need to re-write it, otherwise we might confuse the
     // iterateEOG function
     val newLatticeCopy = newLatticeElement.duplicate()
-    coroutineScope {
-        newLatticeElement.third.forEach { pair ->
-            launch {
-                if (
-                    currentState.generalState[newNode]?.third?.any {
-                        it.first === pair.first && it.second == pair.second
-                    } == true
-                ) {
-                    synchronized(newLatticeCopy.third) { newLatticeCopy.third.remove(pair) }
-                }
-            }
+    //    coroutineScope {
+    newLatticeElement.third.forEach { pair ->
+        if (
+            currentState.generalState[newNode]?.third?.any {
+                it.first === pair.first && it.second == pair.second
+            } == true
+        ) {
+            synchronized(newLatticeCopy.third) { newLatticeCopy.third.remove(pair) }
         }
     }
 
@@ -2152,25 +2141,29 @@ suspend fun PointsToState.pushToDeclarationsState(
     val newLatticeCopy = newLatticeElement.duplicate()
 
     coroutineScope {
-        newLatticeElement.second.forEach { pair ->
-            launch {
-                if (
-                    currentState.declarationsState[newNode]?.second?.any {
-                        it.first === pair.first && it.second == pair.second
-                    } == true
-                )
-                    synchronized(newLatticeCopy.second) { newLatticeCopy.second.remove(pair) }
+        newLatticeElement.second.splitInto().forEach { chunk ->
+            launch(Dispatchers.Default) {
+                for (pair in chunk) {
+                    if (
+                        currentState.declarationsState[newNode]?.second?.any {
+                            it.first === pair.first && it.second == pair.second
+                        } == true
+                    )
+                        synchronized(newLatticeCopy.second) { newLatticeCopy.second.remove(pair) }
+                }
             }
         }
 
-        newLatticeElement.third.forEach { pair ->
-            launch {
-                if (
-                    currentState.declarationsState[newNode]?.third?.any {
-                        it.first === pair.first && it.second == pair.second
-                    } == true
-                )
-                    synchronized(newLatticeCopy.third) { newLatticeCopy.third.remove(pair) }
+        newLatticeElement.third.splitInto().forEach { chunk ->
+            launch(Dispatchers.Default) {
+                for (pair in chunk) {
+                    if (
+                        currentState.declarationsState[newNode]?.third?.any {
+                            it.first === pair.first && it.second == pair.second
+                        } == true
+                    )
+                        synchronized(newLatticeCopy.third) { newLatticeCopy.third.remove(pair) }
+                }
             }
         }
     }
@@ -2855,20 +2848,28 @@ suspend fun PointsToState.Element.updateValues(
             newLastWrites.addAll(lastWrites)
 
             coroutineScope {
-                newLastWrites.forEach { lw ->
-                    launch {
-                        if (
-                            destinations.none {
-                                it is CallExpression && it.invokes.singleOrNull()?.body == null
-                            } &&
-                                (sources.any { src ->
-                                    src.first === lw.first && src.second in lw.second
-                                } || lw.first in destinations)
-                        ) {
-                            synchronized(newLastWrites) { newLastWrites.remove(lw) }
+                val removeList =
+                    newLastWrites.splitInto().map { chunk ->
+                        async(Dispatchers.Default) {
+                            val local =
+                                PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
+                            for (lw in chunk) {
+                                if (
+                                    destinations.none {
+                                        it is CallExpression &&
+                                            it.invokes.singleOrNull()?.body == null
+                                    } &&
+                                        (sources.any { src ->
+                                            src.first === lw.first && src.second in lw.second
+                                        } || lw.first in destinations)
+                                ) {
+                                    local.add(lw)
+                                }
+                            }
+                            local
                         }
                     }
-                }
+                removeList.awaitAll().forEach { subList -> newLastWrites.removeAll(subList) }
             }
 
             destinations.forEach { d ->
