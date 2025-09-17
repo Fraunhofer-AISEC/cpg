@@ -891,7 +891,6 @@ fun Node.followPrevCDGUntilHit(
  * Hence, if "fulfilled" is a non-empty list, a path from [this] to such a node is **possible but
  * not mandatory**. If the list "failed" is empty, the path is mandatory.
  */
-// @OptIn(ExperimentalCoroutinesApi::class)
 fun Node.followXUntilHit(
     x:
         (Node, Context, List<Pair<Node, Context>>, MutableList<NodePath>) -> Collection<
