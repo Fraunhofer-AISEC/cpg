@@ -132,7 +132,7 @@ class DeclarationStateEntry(
             PowersetLattice.Element<Pair<Node, Boolean>>,
             PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
         >(one, two, three) {
-        override suspend fun compare(other: Lattice.Element): Order {
+        override fun compare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
             if (other !is DeclarationStateEntry.Element)
@@ -197,7 +197,7 @@ class PointsToState(
 
         val mutex = Mutex()
 
-        override suspend fun compare(other: Lattice.Element): Order {
+        override fun compare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
             if (other !is Element)
@@ -205,7 +205,18 @@ class PointsToState(
                     "$other should be of type Element but is of type ${other.javaClass}"
                 )
 
-            return this.second.compare(other.second)
+            return this@Element.second.compare(other.second)
+        }
+
+        suspend fun parallelCompare(other: Lattice.Element): Order {
+            if (this === other) return Order.EQUAL
+
+            if (other !is Element)
+                throw IllegalArgumentException(
+                    "$other should be of type Element but is of type ${other.javaClass}"
+                )
+
+            return this@Element.second.parallelCompare(other.second)
         }
 
         override fun duplicate():

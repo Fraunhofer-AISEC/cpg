@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.LoopStatement
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
+import de.fraunhofer.aisec.cpg.passes.PointsToState
 import java.io.Serializable
 import java.util.*
 import java.util.Collections.addAll
@@ -187,7 +188,7 @@ interface Lattice<T : Lattice.Element> {
          * @throws IllegalArgumentException if [other] is not an instance of this implementation of
          *   Element
          */
-        suspend fun compare(other: Element): Order
+        fun compare(other: Element): Order
 
         /** Does the actual, concurrent work */
         // suspend fun innerCompare(other: Element): Order
@@ -223,7 +224,7 @@ interface Lattice<T : Lattice.Element> {
      * - [Order.UNEQUAL] in all other cases (this also means that `one != two` and `two != lub(one,
      *   two) != one` and `two != glb(one, two) != one`).
      */
-    suspend fun compare(one: T, two: T): Order
+    fun compare(one: T, two: T): Order
 
     /** Returns a copy of [one]. */
     fun duplicate(one: T): T
@@ -370,7 +371,12 @@ interface Lattice<T : Lattice.Element> {
                         it !in mergePointsEdgesList &&
                         (isNoBranchingPoint ||
                             oldGlobalIt == null ||
-                            newGlobalIt.compare(oldGlobalIt) in setOf(Order.GREATER, Order.UNEQUAL))
+                            // If we deal with PointsToState Elements, we use their special
+                            // parallelCompare function, otherwise, we resort to the traditional
+                            // compare
+                            ((newGlobalIt as? PointsToState.Element)?.parallelCompare(oldGlobalIt)
+                                ?: newGlobalIt.compare(oldGlobalIt)) in
+                                setOf(Order.GREATER, Order.UNEQUAL))
                 ) {
                     if (it.start.prevEOGEdges.size > 1) {
                         // This edge brings us to a merge point, so we add it to the list of
@@ -490,7 +496,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
             return ret
         }
 
-        override suspend fun compare(other: Lattice.Element): Order {
+        override fun compare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
             if (other !is Element<T>)
@@ -574,7 +580,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
         return Element(one.intersect(two))
     }
 
-    override suspend fun compare(one: Element<T>, two: Element<T>): Order {
+    override fun compare(one: Element<T>, two: Element<T>): Order {
         return one.compare(two)
     }
 
@@ -647,12 +653,71 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         }
 
         override fun equals(other: Any?): Boolean {
-            return other is Element<K, V> &&
-                runBlocking { this@Element.compare(other) == Order.EQUAL }
+            return other is Element<K, V> && this@Element.compare(other) == Order.EQUAL
+        }
+
+        override fun compare(other: Lattice.Element): Order {
+            if (this === other) return Order.EQUAL
+
+            if (other !is Element<K, V>)
+                throw IllegalArgumentException(
+                    "$other should be of type MapLattice.Element<K, V> but is of type ${other.javaClass}"
+                )
+
+            val otherKeySetIsBigger = other.keys.any { it !in this.keys }
+
+            // We can check if the entries are equal, greater or lesser
+            var someGreater = false
+            var someLesser = otherKeySetIsBigger
+            this.entries.forEach { (k, v) ->
+                val otherV = other[k]
+                if (otherV != null) {
+                    when (v.compare(otherV)) {
+                        Order.EQUAL -> {
+                            /* Nothing to do*/
+                        }
+                        Order.GREATER -> {
+                            if (someLesser) {
+                                return Order.UNEQUAL
+                            }
+                            someGreater = true
+                        }
+                        Order.LESSER -> {
+                            if (someGreater) {
+                                return Order.UNEQUAL
+                            }
+                            someLesser = true
+                        }
+                        Order.UNEQUAL -> {
+                            return Order.UNEQUAL
+                        }
+                    }
+                } else {
+                    if (someLesser) {
+                        return Order.UNEQUAL
+                    }
+                    someGreater = true // key is missing in other, so this is greater
+                }
+            }
+            return if (!someGreater && !someLesser) {
+                // All entries are the same, so the maps are equal
+                Order.EQUAL
+            } else if (someLesser && !someGreater) {
+                // Some entries are equal, some are lesser and none are greater, so this map is
+                // lesser.
+                Order.LESSER
+            } else if (!someLesser && someGreater) {
+                // Some entries are equal, some are greater but none are lesser, so this map is
+                // greater.
+                Order.GREATER
+            } else {
+                // Some entries are greater and some are lesser, so the maps are unequal
+                Order.UNEQUAL
+            }
         }
 
         @OptIn(ExperimentalAtomicApi::class)
-        override suspend fun compare(other: Lattice.Element): Order {
+        suspend fun parallelCompare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
 
             if (other !is Element<K, V>)
@@ -847,7 +912,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         return newMap
     }
 
-    override suspend fun compare(one: Element<K, V>, two: Element<K, V>): Order {
+    override fun compare(one: Element<K, V>, two: Element<K, V>): Order {
         return one.compare(two)
     }
 
@@ -878,11 +943,10 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
         operator fun component2(): T = second
 
         override fun equals(other: Any?): Boolean {
-            return other is Element<S, T> &&
-                runBlocking { this@Element.compare(other) == Order.EQUAL }
+            return other is Element<S, T> && this@Element.compare(other) == Order.EQUAL
         }
 
-        override suspend fun compare(other: Lattice.Element): Order /*= coroutineScope*/ {
+        override fun compare(other: Lattice.Element): Order /*= coroutineScope*/ {
             if (this === other) return /*@coroutineScope*/ Order.EQUAL
 
             if (other !is Element<S, T>)
@@ -963,7 +1027,7 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
         )
     }
 
-    override suspend fun compare(one: Element<S, T>, two: Element<S, T>): Order {
+    override fun compare(one: Element<S, T>, two: Element<S, T>): Order {
         return one.compare(two)
     }
 
@@ -997,11 +1061,10 @@ open class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.E
         operator fun component3(): T = third
 
         override fun equals(other: Any?): Boolean {
-            return other is Element<R, S, T> &&
-                runBlocking { this@Element.compare(other) == Order.EQUAL }
+            return other is Element<R, S, T> && this@Element.compare(other) == Order.EQUAL
         }
 
-        override suspend fun compare(other: Lattice.Element): Order /*= coroutineScope*/ {
+        override fun compare(other: Lattice.Element): Order /*= coroutineScope*/ {
             if (this === other) return /*@coroutineScope*/ Order.EQUAL
 
             if (other !is Element<R, S, T>)
@@ -1088,7 +1151,7 @@ open class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.E
         )
     }
 
-    override suspend fun compare(one: Element<R, S, T>, two: Element<R, S, T>): Order {
+    override fun compare(one: Element<R, S, T>, two: Element<R, S, T>): Order {
         return one.compare(two)
     }
 

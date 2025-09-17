@@ -139,7 +139,7 @@ class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>
 
         override fun equals(other: Any?): Boolean {
             return other is DeclarationStateElement<NodeId> &&
-                runBlocking { this@DeclarationStateElement.compare(other) == Order.EQUAL }
+                this@DeclarationStateElement.compare(other) == Order.EQUAL
         }
 
         override fun hashCode(): Int {
@@ -299,7 +299,7 @@ class NewIntervalLattice() :
         }
     }
 
-    override suspend fun compare(one: Element, two: Element): Order {
+    override fun compare(one: Element, two: Element): Order {
         return one.compare(two)
     }
 
@@ -320,7 +320,7 @@ class NewIntervalLattice() :
             return "IntervalLattice.Element(elements=$element)"
         }
 
-        override suspend fun compare(other: Lattice.Element): Order {
+        override fun compare(other: Lattice.Element): Order {
             //            var ret: Order
             //            runBlocking { ret = innerCompare(other) }
             //            return ret
