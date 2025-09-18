@@ -1322,51 +1322,51 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val lastWrites = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
         val destinations = identitySetOf<Node>()
 
-        coroutineScope {
-            values.forEach { value ->
-                launch(Dispatchers.Default) {
-                    value.lastWrites.forEach { (lw, lwProps) ->
-                        // For short FunctionSummaries (AKA one of the lastWrite properties set to
-                        // 'true',
-                        // we don't add the callingcontext
-                        val lwPropertySet = EqualLinkedHashSet<Any>()
-                        lwPropertySet.addAll(value.propertySet)
-                        // If this is not a shortFS edge, we add the new callingcontext and have to
-                        // check if
-                        // we already have a list of callingcontexts in the properties
-                        if (value.propertySet.none { it == true }) {
-                            val existingCallingContext =
-                                lwProps.filterIsInstance<CallingContextOut>().singleOrNull()
-                            if (existingCallingContext != null) {
-                                if (
-                                    callingContext.calls.any { call ->
-                                        call !in existingCallingContext.calls
-                                    }
-                                ) {
-                                    val cpy = existingCallingContext.calls.toMutableList()
-                                    cpy.addAll(callingContext.calls)
-                                    lwPropertySet.add(CallingContextOut(cpy))
-                                }
-                            } else lwPropertySet.add(callingContext)
+        //        coroutineScope {
+        values.forEach { value ->
+            //                launch(Dispatchers.Default) {
+            value.lastWrites.forEach { (lw, lwProps) ->
+                // For short FunctionSummaries (AKA one of the lastWrite properties set to
+                // 'true',
+                // we don't add the callingcontext
+                val lwPropertySet = EqualLinkedHashSet<Any>()
+                lwPropertySet.addAll(value.propertySet)
+                // If this is not a shortFS edge, we add the new callingcontext and have to
+                // check if
+                // we already have a list of callingcontexts in the properties
+                if (value.propertySet.none { it == true }) {
+                    val existingCallingContext =
+                        lwProps.filterIsInstance<CallingContextOut>().singleOrNull()
+                    if (existingCallingContext != null) {
+                        if (
+                            callingContext.calls.any { call ->
+                                call !in existingCallingContext.calls
+                            }
+                        ) {
+                            val cpy = existingCallingContext.calls.toMutableList()
+                            cpy.addAll(callingContext.calls)
+                            lwPropertySet.add(CallingContextOut(cpy))
                         }
-                        // Add all other previous properties
-                        lwPropertySet.addAll(lwProps.filter { it !is CallingContextOut })
-                        // Add them to the set of lastWrites if there is no same element in there
-                        // yet
-                        synchronized(lastWrites) {
-                            if (
-                                lastWrites.none {
-                                    it.first == lw &&
-                                        it.second.all { it in lwPropertySet } &&
-                                        it.second.size == lwPropertySet.size
-                                }
-                            )
-                                lastWrites.add(Pair(lw, lwPropertySet))
-                        }
-                    }
+                    } else lwPropertySet.add(callingContext)
                 }
-                synchronized(destinations) { destinations.addAll(value.dst) }
+                // Add all other previous properties
+                lwPropertySet.addAll(lwProps.filter { it !is CallingContextOut })
+                // Add them to the set of lastWrites if there is no same element in there
+                // yet
+                //                        synchronized(lastWrites) {
+                if (
+                    lastWrites.none {
+                        it.first == lw &&
+                            it.second.all { it in lwPropertySet } &&
+                            it.second.size == lwPropertySet.size
+                    }
+                )
+                    lastWrites.add(Pair(lw, lwPropertySet))
+                //                        }
             }
+            //                }
+            /*synchronized(destinations) {*/ destinations.addAll(value.dst) // }
+            //            }
         }
 
         return doubleState.updateValues(
