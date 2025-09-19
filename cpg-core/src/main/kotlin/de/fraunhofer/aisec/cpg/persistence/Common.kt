@@ -297,6 +297,9 @@ private fun isRelationship(property: KProperty1<out Persistable, *>): Boolean {
     val returnType = property.returnType.withNullability(false)
 
     return when {
+        // The next 2 lines ensure that MemoryAddress-Nodes end up in Neo4j
+        property.name == "memoryAddress" -> true
+        property.name == "prevDFGEdges" -> true
         property.hasAnnotation<DoNotPersist>() -> false
         property.javaField?.type?.simpleName?.contains("Delegate") == true -> false
         property.javaField?.getAnnotation(Relationship::class.java)?.direction == INCOMING -> false

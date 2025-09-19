@@ -55,6 +55,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
 import kotlin.collections.toSet
+import kotlinx.coroutines.runBlocking
 
 /**
  * Implements the [LatticeElement] for a lattice over a set of nodes. The lattice itself is
@@ -107,20 +108,22 @@ fun DeclarationStateElement.pushDeclarationToScope(
     scope: Scope,
     vararg elements: Declaration,
 ): DeclarationStateElement {
-    return lattice.lub(
-        this,
-        DeclarationStateElement(
-            ScopeToDeclarationElement(scope to PowersetLatticeDeclarationElement(*elements)),
-            NodeToDeclarationElement(),
-            NodeToTypeElement(
-                *elements
-                    .mapNotNull { it as? HasType }
-                    .map { it as Node to PowersetLatticeTypeElement(it.type) }
-                    .toTypedArray()
+    return runBlocking {
+        lattice.lub(
+            this@pushDeclarationToScope,
+            DeclarationStateElement(
+                ScopeToDeclarationElement(scope to PowersetLatticeDeclarationElement(*elements)),
+                NodeToDeclarationElement(),
+                NodeToTypeElement(
+                    *elements
+                        .mapNotNull { it as? HasType }
+                        .map { it as Node to PowersetLatticeTypeElement(it.type) }
+                        .toTypedArray()
+                ),
             ),
-        ),
-        true,
-    )
+            true,
+        )
+    }
 }
 
 fun DeclarationStateElement.pushCandidate(
@@ -128,15 +131,17 @@ fun DeclarationStateElement.pushCandidate(
     scope: Node,
     vararg elements: Declaration,
 ): DeclarationStateElement {
-    return lattice.lub(
-        this,
-        DeclarationStateElement(
-            ScopeToDeclarationElement(),
-            NodeToDeclarationElement(scope to PowersetLatticeDeclarationElement(*elements)),
-            NodeToTypeElement(),
-        ),
-        true,
-    )
+    return runBlocking {
+        lattice.lub(
+            this@pushCandidate,
+            DeclarationStateElement(
+                ScopeToDeclarationElement(),
+                NodeToDeclarationElement(scope to PowersetLatticeDeclarationElement(*elements)),
+                NodeToTypeElement(),
+            ),
+            true,
+        )
+    }
 }
 
 fun DeclarationStateElement.pushType(
@@ -144,15 +149,17 @@ fun DeclarationStateElement.pushType(
     node: Node,
     vararg elements: Type,
 ): DeclarationStateElement {
-    return lattice.lub(
-        this,
-        DeclarationStateElement(
-            ScopeToDeclarationElement(),
-            NodeToDeclarationElement(),
-            NodeToTypeElement(node to PowersetLatticeTypeElement(*elements)),
-        ),
-        true,
-    )
+    return runBlocking {
+        lattice.lub(
+            this@pushType,
+            DeclarationStateElement(
+                ScopeToDeclarationElement(),
+                NodeToDeclarationElement(),
+                NodeToTypeElement(node to PowersetLatticeTypeElement(*elements)),
+            ),
+            true,
+        )
+    }
 }
 
 /**
@@ -213,7 +220,7 @@ fun SymbolResolver.acceptWithIterateEOG(t: Node) {
         }
 
     t.scope?.let { startState = startState.pushDeclarationToScope(lattice, it) }
-    val finalState = lattice.iterateEOG(t.nextEOGEdges, startState, ::transfer)
+    val finalState = runBlocking { lattice.iterateEOG(t.nextEOGEdges, startState, ::transfer) }
 
     finalState.candidates.forEach { node, candidates ->
         if (node is Reference) {
@@ -243,7 +250,7 @@ fun SymbolResolver.acceptWithIterateEOG(t: Node) {
  * The state-transfer function for the [SymbolResolver]. It is called for each node in the EOG and
  * is responsible for updating the state based on the node type.
  */
-fun SymbolResolver.transfer(
+suspend fun SymbolResolver.transfer(
     lattice: Lattice<DeclarationStateElement>,
     currentEdge: EvaluationOrder,
     state: DeclarationStateElement,
