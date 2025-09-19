@@ -375,6 +375,9 @@ interface Lattice<T : Lattice.Element> {
                             // parallelCompare function, otherwise, we resort to the traditional
                             // compare
                             ((newGlobalIt as? PointsToState.Element)?.parallelCompare(oldGlobalIt)
+                                ?: (newGlobalIt as? MapLattice.Element<*, *>)?.parallelCompare(
+                                    oldGlobalIt
+                                )
                                 ?: newGlobalIt.compare(oldGlobalIt)) in
                                 setOf(Order.GREATER, Order.UNEQUAL))
                 ) {
@@ -742,6 +745,8 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                             if (ret.load() != null) return@launch
                             val otherV = other[k]
                             if (otherV != null) {
+                                // Do not use parallelCompare since that would be too many
+                                // coroutines
                                 when (v.compare(otherV)) {
                                     Order.EQUAL -> {
                                         /* Nothing to do*/
