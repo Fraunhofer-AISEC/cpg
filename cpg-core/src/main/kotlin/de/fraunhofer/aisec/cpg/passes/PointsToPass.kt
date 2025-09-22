@@ -818,7 +818,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
         val percentage =
             try {
-                dfgSearchTime / totalTime
+                dfgSearchTime * 100 / totalTime
             } catch (_: java.lang.ArithmeticException) {
                 0
             }
