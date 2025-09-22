@@ -64,7 +64,7 @@ val nodesCreatingUnknownValues = ConcurrentHashMap<Pair<Node, Name>, MemoryAddre
 var totalFunctionDeclarationCount = 0
 var analyzedFunctionDeclarationCount = 0
 var timeInHandleCallExpression: Long = 0
-var timeinTransfer: Long = 0
+var totalTimeinTransfer: Long = 0
 var timeTotalIterateEOG: Long = 0
 var timeinAccept: Long = 0
 
@@ -373,7 +373,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             "Analyzing function ${node.name}. Complexity: ${NumberFormat.getNumberInstance(Locale.US).format(c)}. (Function $analyzedFunctionDeclarationCount / $totalFunctionDeclarationCount)"
         )
         log.debug(
-            "Time spent  in handleCallExpression and transfer: $timeInHandleCallExpression and $timeinTransfer"
+            "Total time spent until now in handleCallExpression and transfer: $timeInHandleCallExpression and $totalTimeinTransfer"
         )
 
         val lattice =
@@ -679,11 +679,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         )
                                     )
                                     // Additionally, we store this as a shortFunctionSummary
-                                    // were the
-                                    // Function writes to the parameter
-                                    // add doesn't recognize if the entry already exists b/c it
-                                    // compares
-                                    // the hashes so we do that manually
+                                    // were the function writes to the parameter
+                                    // Note: add doesn't recognize if the entry already exists b/c
+                                    // it
+                                    // compares the hashes so we do that manually
                                     if (
                                         existingEntry.none {
                                             it.destValueDepth == dstValueDepth &&
@@ -732,7 +731,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                         OnlyFullDFG +
                                                             FieldSensitive +
                                                             ContextSensitive,
-                                                    scope = Intraprocedural(),
+                                                    // We need to search interprocedural here. In order this acceptable also in larger graphs, we limit the maxCallDepth and hop size
+                                                    scope = Interprocedural(maxCallDepth = 1, maxSteps = 10),
                                                     predicate = {
                                                         it is ParameterMemoryValue &&
                                                             /* If it's a ParameterMemoryValue from the node's
@@ -843,7 +843,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 ?: throw java.lang.IllegalArgumentException(
                     "Expected the state to be of type PointsToState.Element"
                 )
-        timeinTransfer = measureTimeMillis {
+        totalTimeinTransfer += measureTimeMillis {
             val lattice = lattice as? PointsToState ?: return state
             val currentNode = currentEdge.end
 
@@ -876,7 +876,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 measureTimedValue {
                                     handleCallExpression(lattice, currentNode, doubleState)
                                 }
-                            timeInHandleCallExpression = duration.toLong(DurationUnit.MILLISECONDS)
+                            timeInHandleCallExpression += duration.toLong(DurationUnit.MILLISECONDS)
                             tmp
                         }
 
