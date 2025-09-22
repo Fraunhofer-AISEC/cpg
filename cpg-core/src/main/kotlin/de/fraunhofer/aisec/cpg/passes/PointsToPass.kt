@@ -306,6 +306,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         /** This specifies the address length (usually 64bit) */
         var addressLength: Int = 64,
 
+        /** This specifies if we are running after DFG edges to create the detailed shortFS * */
+        var detailedShortFS: Boolean = true,
+
         /**
          * specifies if we draw the current(deref)derefvalue-DFG Edges. Not sure if we want/need
          * them
@@ -718,92 +721,100 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             FieldDeclaration().apply { name = Name(subAccessName) }
                                         )
 
-                                    if (!shortFS) {
-                                        // Check if the value is influenced by a Parameter and
-                                        // if so, add this information to the functionSummary
-                                        val (paths, searchTime) =
-                                            measureTimedValue {
-                                                value.followDFGEdgesUntilHit(
-                                                    collectFailedPaths = false,
-                                                    findAllPossiblePaths = false,
-                                                    direction = Backward(GraphToFollow.DFG),
-                                                    sensitivities =
-                                                        OnlyFullDFG +
-                                                            FieldSensitive +
-                                                            ContextSensitive,
-                                                    // We need to search interprocedural here. In
-                                                    // order this acceptable also in larger graphs,
-                                                    // we limit the maxCallDepth and hop size
-                                                    scope =
-                                                        Interprocedural(
-                                                            maxCallDepth = 1,
-                                                            maxSteps = 10,
-                                                        ),
-                                                    predicate = {
-                                                        it is ParameterMemoryValue &&
-                                                            /* If it's a ParameterMemoryValue from the node's
-                                                            parameters, it has to have a DFG Node to one
-                                                            of the node's parameters. Either partial to a derefvalue or full to the parameterdeclaration */
-                                                            it.memoryValueUsageEdges
-                                                                .filter {
-                                                                    ((it.granularity is
-                                                                        PartialDataflowGranularity<
-                                                                            *
-                                                                        > &&
-                                                                        ((it.granularity
-                                                                                    as
-                                                                                    PartialDataflowGranularity<
-                                                                                        *
-                                                                                    >)
-                                                                                .partialTarget
-                                                                                as? String)
-                                                                            ?.endsWith(
-                                                                                "derefvalue"
-                                                                            ) == true) ||
-                                                                        (it.granularity is
-                                                                            FullDataflowGranularity &&
-                                                                            it.end is
-                                                                                ParameterDeclaration)) &&
-                                                                        it.end in node.parameters
+                                    // Create the detailed shortFS. Like, which parameter influences
+                                    // what.
+                                    // This may take a lot of time, so this is optional
+                                    if (!(passConfig<Configuration>()?.detailedShortFS ?: true)) {
+                                        if (!shortFS) {
+                                            // Check if the value is influenced by a Parameter and
+                                            // if so, add this information to the functionSummary
+                                            val (paths, searchTime) =
+                                                measureTimedValue {
+                                                    value.followDFGEdgesUntilHit(
+                                                        collectFailedPaths = false,
+                                                        findAllPossiblePaths = false,
+                                                        direction = Backward(GraphToFollow.DFG),
+                                                        sensitivities =
+                                                            OnlyFullDFG +
+                                                                FieldSensitive +
+                                                                ContextSensitive,
+                                                        // We need to search interprocedural here.
+                                                        // In
+                                                        // order this acceptable also in larger
+                                                        // graphs,
+                                                        // we limit the maxCallDepth and hop size
+                                                        scope =
+                                                            Interprocedural(
+                                                                maxCallDepth = 1,
+                                                                maxSteps = 10,
+                                                            ),
+                                                        predicate = {
+                                                            it is ParameterMemoryValue &&
+                                                                /* If it's a ParameterMemoryValue from the node's
+                                                                parameters, it has to have a DFG Node to one
+                                                                of the node's parameters. Either partial to a derefvalue or full to the parameterdeclaration */
+                                                                it.memoryValueUsageEdges
+                                                                    .filter {
+                                                                        ((it.granularity is
+                                                                            PartialDataflowGranularity<
+                                                                                *
+                                                                            > &&
+                                                                            ((it.granularity
+                                                                                        as
+                                                                                        PartialDataflowGranularity<
+                                                                                            *
+                                                                                        >)
+                                                                                    .partialTarget
+                                                                                    as? String)
+                                                                                ?.endsWith(
+                                                                                    "derefvalue"
+                                                                                ) == true) ||
+                                                                            (it.granularity is
+                                                                                FullDataflowGranularity &&
+                                                                                it.end is
+                                                                                    ParameterDeclaration)) &&
+                                                                            it.end in
+                                                                                node.parameters
+                                                                    }
+                                                                    .size == 1 &&
+                                                                node.parameters.any { param ->
+                                                                    param.name.localName ==
+                                                                        it.name.parent?.localName
                                                                 }
-                                                                .size == 1 &&
-                                                            node.parameters.any { param ->
-                                                                param.name.localName ==
-                                                                    it.name.parent?.localName
-                                                            }
-                                                    },
-                                                )
-                                            }
-                                        dfgSearchTime +=
-                                            searchTime.toLong(DurationUnit.MILLISECONDS)
-                                        paths.fulfilled
-                                            .map { it.nodes.last() }
-                                            .forEach { sourceParamValue ->
-                                                val matchingDeclarations =
-                                                    node.parameters.singleOrNull {
-                                                        it.name == sourceParamValue.name.parent
-                                                    }
-                                                if (matchingDeclarations == null) TODO()
-                                                localFunctionSummary
-                                                    .computeIfAbsent(param) { mutableSetOf() }
-                                                    .add(
-                                                        FSEntry(
-                                                            dstValueDepth,
-                                                            matchingDeclarations,
-                                                            stringToDepth(
-                                                                sourceParamValue.name.localName
-                                                            ),
-                                                            subAccessName,
-                                                            PowersetLattice.Element(
-                                                                Pair(
-                                                                    matchingDeclarations,
-                                                                    equalLinkedHashSetOf(),
-                                                                )
-                                                            ),
-                                                            equalLinkedHashSetOf(true),
-                                                        )
+                                                        },
                                                     )
-                                            }
+                                                }
+                                            dfgSearchTime +=
+                                                searchTime.toLong(DurationUnit.MILLISECONDS)
+                                            paths.fulfilled
+                                                .map { it.nodes.last() }
+                                                .forEach { sourceParamValue ->
+                                                    val matchingDeclarations =
+                                                        node.parameters.singleOrNull {
+                                                            it.name == sourceParamValue.name.parent
+                                                        }
+                                                    if (matchingDeclarations == null) TODO()
+                                                    localFunctionSummary
+                                                        .computeIfAbsent(param) { mutableSetOf() }
+                                                        .add(
+                                                            FSEntry(
+                                                                dstValueDepth,
+                                                                matchingDeclarations,
+                                                                stringToDepth(
+                                                                    sourceParamValue.name.localName
+                                                                ),
+                                                                subAccessName,
+                                                                PowersetLattice.Element(
+                                                                    Pair(
+                                                                        matchingDeclarations,
+                                                                        equalLinkedHashSetOf(),
+                                                                    )
+                                                                ),
+                                                                equalLinkedHashSetOf(true),
+                                                            )
+                                                        )
+                                                }
+                                        }
                                     }
                                 }
                                 localFunctionSummary
