@@ -52,6 +52,7 @@ import kotlin.Pair
 import kotlin.collections.filter
 import kotlin.collections.map
 import kotlin.let
+import kotlin.system.measureNanoTime
 import kotlin.system.measureTimeMillis
 import kotlin.text.contains
 import kotlin.time.DurationUnit
@@ -64,9 +65,16 @@ val nodesCreatingUnknownValues = ConcurrentHashMap<Pair<Node, Name>, MemoryAddre
 var totalFunctionDeclarationCount = 0
 var analyzedFunctionDeclarationCount = 0
 var timeInHandleCallExpression: Long = 0
+var timeInHandleExpression: Long = 0
+var timeInHandleAssignExpression: Long = 0
+var timeInHandleUnaryOperator: Long = 0
+var timeInHandleDeclaration: Long = 0
+var timeToPush: Long = 0
 var totalTimeinTransfer: Long = 0
+var timeInTransfer: Long = 0
 var timeTotalIterateEOG: Long = 0
-var timeinAccept: Long = 0
+var totalTimeinAccept: Long = 0
+var transferActionCounter: Long = 0
 
 typealias GeneralStateEntry =
     TripleLattice<
@@ -327,9 +335,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     override fun accept(node: Node) {
         functionSummaryAnalysisChain.clear()
         val (ret, time) = measureTimedValue { runBlocking { acceptInternal(node) } }
-        timeinAccept += time.toLong(DurationUnit.MILLISECONDS)
+        totalTimeinAccept += time.toLong(DurationUnit.MILLISECONDS)
+        timeInTransfer = 0
+        timeInHandleExpression = 0
+        timeInHandleAssignExpression = 0
+        timeInHandleCallExpression = 0
+        timeInHandleDeclaration = 0
+        timeInHandleUnaryOperator = 0
+        timeToPush = 0
         log.info(
-            "Time spent in accept: ${time.toLong(DurationUnit.MILLISECONDS)}. Total: $timeinAccept"
+            "Time spent in accept: ${time.toLong(DurationUnit.MILLISECONDS)}. Total: $totalTimeinAccept"
         )
         return ret
     }
@@ -881,13 +896,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 ?: throw java.lang.IllegalArgumentException(
                     "Expected the state to be of type PointsToState.Element"
                 )
-        totalTimeinTransfer += measureTimeMillis {
+        transferActionCounter++
+        if (transferActionCounter == 100000L) {
+            log.info(
+                "Transferring. timeInTransfer: ${timeInTransfer/1000000}, timeInHandleAssignExpression: ${timeInHandleAssignExpression/1000000}, timeInHandleCallExpression: ${timeInHandleCallExpression/1000000}, timeInHandleExpression: ${timeInHandleExpression/1000000}, timeToPush: ${timeToPush/1000000}, timeInHandleDeclaration: ${timeInHandleDeclaration/1000000}, timeInHandleUnaryOperator: ${timeInHandleUnaryOperator/1000000}"
+            )
+            transferActionCounter = 0
+        }
+        timeInTransfer += measureNanoTime {
             val lattice = lattice as? PointsToState ?: return state
             val currentNode = currentEdge.end
 
             coroutineScope {
                 // Used to keep iterating for steps which do not modify the alias-state otherwise
-                doubleState =
+
+                val tmp = measureTimedValue {
                     lattice.pushToDeclarationsState(
                         doubleState,
                         currentNode,
@@ -898,33 +921,66 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 PowersetLattice.Element(),
                             ),
                     )
-
+                }
+                doubleState = tmp.value
+                timeToPush += tmp.duration.toLong(DurationUnit.NANOSECONDS)
                 doubleState =
                     when (currentNode) {
                         is DeleteExpression ->
                             handleDeleteExpression(lattice, currentNode, doubleState)
                         is Declaration,
-                        is MemoryAddress -> handleDeclaration(lattice, currentNode, doubleState)
+                        is MemoryAddress -> {
+                            val (tmp, duration) =
+                                measureTimedValue {
+                                    handleDeclaration(lattice, currentNode, doubleState)
+                                }
+                            timeInHandleDeclaration += duration.toLong(DurationUnit.NANOSECONDS)
+                            tmp
+                        }
 
-                        is AssignExpression ->
-                            handleAssignExpression(lattice, currentNode, doubleState)
-                        is UnaryOperator -> handleUnaryOperator(lattice, currentNode, doubleState)
+                        is AssignExpression -> {
+                            val (tmp, duration) =
+                                measureTimedValue {
+                                    handleAssignExpression(lattice, currentNode, doubleState)
+                                }
+                            timeInHandleAssignExpression +=
+                                duration.toLong(DurationUnit.NANOSECONDS)
+                            tmp
+                        }
+
+                        is UnaryOperator -> {
+                            val (tmp, duration) =
+                                measureTimedValue {
+                                    handleUnaryOperator(lattice, currentNode, doubleState)
+                                }
+                            timeInHandleUnaryOperator += duration.toLong(DurationUnit.NANOSECONDS)
+                            tmp
+                        }
+
                         is CallExpression -> {
                             val (tmp, duration) =
                                 measureTimedValue {
                                     handleCallExpression(lattice, currentNode, doubleState)
                                 }
-                            timeInHandleCallExpression += duration.toLong(DurationUnit.MILLISECONDS)
+                            timeInHandleCallExpression += duration.toLong(DurationUnit.NANOSECONDS)
                             tmp
                         }
 
-                        is Expression -> handleExpression(lattice, currentNode, doubleState)
+                        is Expression -> {
+                            val (tmp, duration) =
+                                measureTimedValue {
+                                    handleExpression(lattice, currentNode, doubleState)
+                                }
+                            timeInHandleExpression += duration.toLong(DurationUnit.NANOSECONDS)
+                            tmp
+                        }
                         is ReturnStatement ->
                             handleReturnStatement(lattice, currentNode, doubleState)
                         else -> doubleState
                     }
             }
         }
+        totalTimeinTransfer += timeInTransfer
         //        log.info("Time in transfer: $timeinTransfer")
         return doubleState
     }
@@ -1201,8 +1257,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     // If we have a FunctionSummary, we push the values of the arguments and
                     // return value
                     // after executing the function call to our doubleState.
-                    for ((param, fsEntries) in inv.functionSummary) {
-                        withContext(Dispatchers.Default) {
+                    // We can't go through all levels at once as a change at a lower level may
+                    // affect a higher level. So let's do this step by step
+                    for (depth in 0..3) {
+                        for ((param, fsEntries) in inv.functionSummary) {
+                            //                        inv.functionSummary.map{ (param, fsEntries) ->
                             val argument =
                                 when (param) {
                                     is ParameterDeclaration -> {
@@ -1221,72 +1280,44 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 }
                             if (argument != null) {
                                 fsEntries
-                                    .sortedBy { it.destValueDepth }
-                                    .forEach {
-                                        (
-                                            dstValueDepth,
-                                            srcNode,
-                                            srcValueDepth,
-                                            subAccessName,
-                                            lastWrites,
-                                            properties,
-                                        ) ->
-                                        val shortFS = properties.any { it == true }
-                                        val (destinationAddresses, destinations) =
-                                            doubleState.mutex.withLock {
-                                                calculateCallExpressionDestinations(
+                                    .filter { it.destValueDepth == depth }
+                                    .splitInto()
+                                    .map { chunk ->
+                                        async(Dispatchers.Default) {
+                                            val localMapDstToSrc =
+                                                mutableMapOf<Node, IdentitySet<MapDstToSrcEntry>>()
+                                            for ((
+                                                dstValueDepth,
+                                                srcNode,
+                                                srcValueDepth,
+                                                subAccessName,
+                                                lastWrites,
+                                                properties,
+                                            ) in chunk) {
+                                                writeEntry(
                                                     doubleState,
-                                                    mapDstToSrc,
+                                                    localMapDstToSrc,
                                                     dstValueDepth,
                                                     subAccessName,
                                                     argument,
                                                     properties,
-                                                )
-                                            }
-                                        // Collect the properties for the
-                                        // DeclarationStateEntry
-                                        val propertySet = equalLinkedHashSetOf<Any>()
-                                        propertySet.addAll(properties)
-                                        if (subAccessName.isNotEmpty()) {
-                                            propertySet.add(
-                                                PartialDataflowGranularity(
-                                                    FieldDeclaration().apply {
-                                                        name = Name(subAccessName)
-                                                    }
-                                                )
-                                            )
-                                        }
-
-                                        // Especially for shortFS, we need to update the
-                                        // prevDFGs with
-                                        // information we didn't have when creating the
-                                        // functionSummary.
-                                        // calculatePrev does this for us
-                                        val prev =
-                                            calculatePrevDFGs(lastWrites, shortFS, currentNode, inv)
-                                        // mapDstToSrc might be written, doubleState
-                                        // will be read, so we need a mutex
-                                        doubleState.mutex.withLock {
-                                            mapDstToSrc =
-                                                addEntryToMap(
-                                                    doubleState,
-                                                    mapDstToSrc,
-                                                    destinationAddresses,
-                                                    destinations,
-                                                    // To ensure that we have a
-                                                    // unique Node, we take
-                                                    // the allExpression if the FS
-                                                    // said the srcNode is
-                                                    // the FunctionDeclaration
-                                                    if (srcNode is FunctionDeclaration) currentNode
-                                                    else srcNode,
-                                                    shortFS,
+                                                    lastWrites,
+                                                    currentNode,
+                                                    inv,
+                                                    srcNode,
                                                     srcValueDepth,
                                                     param,
-                                                    propertySet,
-                                                    currentNode,
-                                                    prev,
                                                 )
+                                            }
+                                            localMapDstToSrc
+                                        }
+                                    }
+                                    .awaitAll()
+                                    .forEach { subMap ->
+                                        subMap.forEach { (key, value) ->
+                                            mapDstToSrc
+                                                .computeIfAbsent(key) { identitySetOf() }
+                                                .addAll(value)
                                         }
                                     }
                             }
@@ -1303,6 +1334,72 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
 
         return doubleState
+    }
+
+    suspend fun writeEntry(
+        doubleState: PointsToState.Element,
+        mapDstToSrc: MutableMap<Node, IdentitySet<MapDstToSrcEntry>>,
+        dstValueDepth: Int,
+        subAccessName: String,
+        argument: Expression,
+        properties: EqualLinkedHashSet<Any>,
+        lastWrites: PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
+        currentNode: CallExpression,
+        inv: FunctionDeclaration,
+        srcNode: Node?,
+        srcValueDepth: Int,
+        param: Node,
+    ): MutableMap<Node, IdentitySet<MapDstToSrcEntry>> {
+        val shortFS = properties.any { it == true }
+        val (destinationAddresses, destinations) =
+            doubleState.mutex.withLock {
+                calculateCallExpressionDestinations(
+                    doubleState,
+                    mapDstToSrc,
+                    dstValueDepth,
+                    subAccessName,
+                    argument,
+                    properties,
+                )
+            }
+        // Collect the properties for the
+        // DeclarationStateEntry
+        val propertySet = equalLinkedHashSetOf<Any>()
+        propertySet.addAll(properties)
+        if (subAccessName.isNotEmpty()) {
+            propertySet.add(
+                PartialDataflowGranularity(FieldDeclaration().apply { name = Name(subAccessName) })
+            )
+        }
+
+        // Especially for shortFS, we need to update the
+        // prevDFGs with
+        // information we didn't have when creating the
+        // functionSummary.
+        // calculatePrev does this for us
+        val prev = calculatePrevDFGs(lastWrites, shortFS, currentNode, inv)
+        // mapDstToSrc might be written, doubleState
+        // will be read, so we need a mutex
+        return doubleState.mutex.withLock {
+            addEntryToMap(
+                doubleState,
+                mapDstToSrc,
+                destinationAddresses,
+                destinations,
+                // To ensure that we have a
+                // unique Node, we take
+                // the allExpression if the FS
+                // said the srcNode is
+                // the FunctionDeclaration
+                if (srcNode is FunctionDeclaration) currentNode else srcNode,
+                shortFS,
+                srcValueDepth,
+                param,
+                propertySet,
+                currentNode,
+                prev,
+            )
+        }
     }
 
     private fun calculatePrevDFGs(
@@ -1344,7 +1441,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 )
                 if (invoke !in functionSummaryAnalysisChain) {
                     //                    val summaryCopy = functionSummaryAnalysisChain.toSet()
+                    log.info("Calling acceptInteral(${invoke.name.localName}")
                     acceptInternal(invoke)
+                    log.info("Finished with acceptInteral(${invoke.name.localName}")
                     //                    functionSummaryAnalysisChain.addAll(summaryCopy)
                 } else {
                     log.error(
