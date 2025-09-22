@@ -1188,7 +1188,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         var mapDstToSrc = mutableMapOf<Node, IdentitySet<MapDstToSrcEntry>>()
 
         // The toIdentitySet avoids having the same elements multiple times
-        val invokes = currentNode.invokes.toIdentitySet().toList()
+        val invokes = currentNode.invokes.toIdentitySet() // .toList()
         coroutineScope {
             invokes.forEach { invoke ->
                 val inv = calculateFunctionSummaries(invoke)
