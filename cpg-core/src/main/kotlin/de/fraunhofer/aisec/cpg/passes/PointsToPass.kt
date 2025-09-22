@@ -600,59 +600,57 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         clearFSDummies(node.functionSummary)
         var dfgSearchTime: Long = 0
         val totalTime = measureTimeMillis {
-            val paramSummaries =
-                node.parameters.map { param ->
-                    async(Dispatchers.Default) {
-                        // Collect all addresses of the parameter that we can use as index to look
-                        // up
-                        // possible
-                        // new values
-                        val indexes = mutableSetOf<Pair<Node, Int>>()
-                        val values =
-                            doubleState.getValues(param, param).mapTo(IdentitySet()) { it.first }
+            //            val paramSummaries =
+            node.parameters.forEach { param ->
+                //                    async(Dispatchers.Default) {
+                // Collect all addresses of the parameter that we can use as index to look
+                // up
+                // possible
+                // new values
+                val indexes = mutableSetOf<Pair<Node, Int>>()
+                val values = doubleState.getValues(param, param).mapTo(IdentitySet()) { it.first }
 
-                        val localFunctionSummary = mutableMapOf<Node, MutableSet<FSEntry>>()
+                // We look at the deref and the derefderef, hence for depth 2 and 3
+                // We have to look up the index of the ParameterMemoryValue to check out
+                // changes on the dereferences
+                values
+                    .filterTo(identitySetOf()) { doubleState.hasDeclarationStateEntry(it) }
+                    .map { indexes.add(Pair(it, 2)) }
+                // Additionally, we can check out the "dereference" itself to look for
+                // "derefdereferences"
+                values
+                    .filterTo(identitySetOf()) { doubleState.hasDeclarationStateEntry(it) }
+                    .flatMap {
+                        doubleState.getValues(it, it).mapTo(PowersetLattice.Element()) { it.first }
+                    }
+                    .forEach { value ->
+                        if (doubleState.hasDeclarationStateEntry(value)) indexes.add(Pair(value, 3))
+                    }
 
-                        // We look at the deref and the derefderef, hence for depth 2 and 3
-                        // We have to look up the index of the ParameterMemoryValue to check out
-                        // changes on the dereferences
-                        values
-                            .filterTo(identitySetOf()) { doubleState.hasDeclarationStateEntry(it) }
-                            .map { indexes.add(Pair(it, 2)) }
-                        // Additionally, we can check out the "dereference" itself to look for
-                        // "derefdereferences"
-                        values
-                            .filterTo(identitySetOf()) { doubleState.hasDeclarationStateEntry(it) }
-                            .flatMap {
-                                doubleState.getValues(it, it).mapTo(PowersetLattice.Element()) {
-                                    it.first
-                                }
-                            }
-                            .forEach { value ->
-                                if (doubleState.hasDeclarationStateEntry(value))
-                                    indexes.add(Pair(value, 3))
-                            }
-
-                        indexes.forEach { (index, dstValueDepth) ->
-                            val stateEntries =
-                                doubleState
-                                    .fetchValueFromDeclarationState(index, true, true)
-                                    .filterTo(PowersetLattice.Element()) {
-                                        it.value.name != param.name
-                                    }
-                            stateEntries
-                                /* See if we can find something that is different from the initial value*/
-                                .filterTo(PowersetLattice.Element()) {
-                                    /* Filter the PMVs from this parameter*/
-                                    !(it.value is ParameterMemoryValue &&
-                                        it.value.name.localName.contains("derefvalue") &&
-                                        it.value.name.parent == param.name)
-                                    /* Filter the unknownMemoryValues that weren't written to*/
-                                    && !(it.value is UnknownMemoryValue && it.lastWrites.isEmpty())
-                                }
-                                // If so, store the information for the parameter in the
-                                // FunctionSummary
-                                .forEach { (value, shortFS, subAccessName, lastWrites) ->
+                indexes.forEach { (index, dstValueDepth) ->
+                    val stateEntries =
+                        doubleState.fetchValueFromDeclarationState(index, true, true).filterTo(
+                            PowersetLattice.Element()
+                        ) {
+                            it.value.name != param.name
+                        }
+                    stateEntries
+                        /* See if we can find something that is different from the initial value*/
+                        .filterTo(PowersetLattice.Element()) {
+                            /* Filter the PMVs from this parameter*/
+                            !(it.value is ParameterMemoryValue &&
+                                it.value.name.localName.contains("derefvalue") &&
+                                it.value.name.parent == param.name)
+                            /* Filter the unknownMemoryValues that weren't written to*/
+                            && !(it.value is UnknownMemoryValue && it.lastWrites.isEmpty())
+                        }
+                        // If so, store the information for the parameter in the
+                        // FunctionSummary
+                        .splitInto(minPartSize = 1)
+                        .map { chunk ->
+                            async(Dispatchers.Default) {
+                                val localFunctionSummary = mutableMapOf<Node, MutableSet<FSEntry>>()
+                                chunk.forEach { (value, shortFS, subAccessName, lastWrites) ->
                                     // Extract the value depth from the value's localName
                                     val srcValueDepth = stringToDepth(value.name.localName)
                                     // Store the information in the functionSummary
@@ -799,15 +797,19 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             }
                                     }
                                 }
+                                localFunctionSummary
+                            }
                         }
-                        localFunctionSummary
-                    }
-                }
-            paramSummaries.awaitAll().forEach { summary ->
-                summary.forEach { (param, entries) ->
-                    entries.forEach { entry ->
-                        node.functionSummary.computeIfAbsent(param) { mutableSetOf() }.add(entry)
-                    }
+                        .awaitAll()
+                        .forEach { summary ->
+                            summary.forEach { (param, entries) ->
+                                entries.forEach { entry ->
+                                    node.functionSummary
+                                        .computeIfAbsent(param) { mutableSetOf() }
+                                        .add(entry)
+                                }
+                            }
+                        }
                 }
             }
 
