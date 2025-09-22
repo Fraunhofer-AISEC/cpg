@@ -684,8 +684,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     // Additionally, we store this as a shortFunctionSummary
                                     // were the function writes to the parameter
                                     // Note: add doesn't recognize if the entry already exists b/c
-                                    // it
-                                    // compares the hashes so we do that manually
+                                    // it compares the hashes so we do that manually
+                                    // Note: We do this filtering again later, but here it's in
+                                    // parallel, so we keep it in the hope to save some time
                                     if (
                                         existingEntry.none {
                                             it.destValueDepth == dstValueDepth &&
@@ -724,7 +725,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     // Create the detailed shortFS. Like, which parameter influences
                                     // what.
                                     // This may take a lot of time, so this is optional
-                                    if (!(passConfig<Configuration>()?.detailedShortFS ?: true)) {
+                                    if ((passConfig<Configuration>()?.detailedShortFS ?: true)) {
                                         if (!shortFS) {
                                             // Check if the value is influenced by a Parameter and
                                             // if so, add this information to the functionSummary
@@ -823,10 +824,30 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         .awaitAll()
                         .forEach { summary ->
                             summary.forEach { (param, entries) ->
-                                entries.forEach { entry ->
-                                    node.functionSummary
-                                        .computeIfAbsent(param) { mutableSetOf() }
-                                        .add(entry)
+                                entries.forEach { newEntry ->
+                                    val paramEntries =
+                                        node.functionSummary.computeIfAbsent(param) {
+                                            mutableSetOf()
+                                        }
+                                    // Make sure that nothing was added by 2 different coroutines
+                                    if (
+                                        paramEntries.none { existingEntry ->
+                                            existingEntry.destValueDepth ==
+                                                newEntry.destValueDepth &&
+                                                existingEntry.srcNode == newEntry.srcNode &&
+                                                existingEntry.srcValueDepth ==
+                                                    newEntry.srcValueDepth &&
+                                                existingEntry.subAccessName ==
+                                                    newEntry.subAccessName &&
+                                                existingEntry.lastWrites.parallelEquals(
+                                                    newEntry.lastWrites
+                                                ) &&
+                                                existingEntry.properties == newEntry.properties
+                                        }
+                                    )
+                                        node.functionSummary
+                                            .computeIfAbsent(param) { mutableSetOf() }
+                                            .add(newEntry)
                                 }
                             }
                         }
