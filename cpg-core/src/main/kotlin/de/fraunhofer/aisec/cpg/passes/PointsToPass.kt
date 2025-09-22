@@ -731,8 +731,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                         OnlyFullDFG +
                                                             FieldSensitive +
                                                             ContextSensitive,
-                                                    // We need to search interprocedural here. In order this acceptable also in larger graphs, we limit the maxCallDepth and hop size
-                                                    scope = Interprocedural(maxCallDepth = 1, maxSteps = 10),
+                                                    // We need to search interprocedural here. In
+                                                    // order this acceptable also in larger graphs,
+                                                    // we limit the maxCallDepth and hop size
+                                                    scope =
+                                                        Interprocedural(
+                                                            maxCallDepth = 1,
+                                                            maxSteps = 10,
+                                                        ),
                                                     predicate = {
                                                         it is ParameterMemoryValue &&
                                                             /* If it's a ParameterMemoryValue from the node's
