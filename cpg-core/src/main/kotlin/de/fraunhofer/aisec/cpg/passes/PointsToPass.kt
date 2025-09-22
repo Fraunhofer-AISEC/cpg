@@ -634,6 +634,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         ) {
                             it.value.name != param.name
                         }
+                    log.info(
+                        "In storeFunctionSummary, param ${param.argumentIndex} (${param.name.localName}. Index ${index.name.localName} (${indexes.size} in total). stateEntries: ${stateEntries.size}"
+                    )
                     stateEntries
                         /* See if we can find something that is different from the initial value*/
                         .filterTo(PowersetLattice.Element()) {
