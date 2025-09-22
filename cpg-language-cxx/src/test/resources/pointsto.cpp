@@ -592,3 +592,19 @@ void recursion2(int param_1,int *param_2) {
   return;
 }
 
+void sub(int* p) {
+  *p=*p-2;
+}
+
+void outer_sub(int* p) {
+  sub(p);
+}
+
+int testShortFS2() {
+  int i=5;
+  int* p=&i;
+
+  printf("%d\n", *p);
+  sub(p);
+  printf("%d\n", *p);
+}
