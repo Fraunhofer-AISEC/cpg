@@ -2897,14 +2897,15 @@ suspend fun PointsToState.Element.updateValues(
     // Node and short FS yes or no
     destinationAddresses: IdentitySet<Node>,
     lastWrites: PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
-): PointsToState.Element {
+): PointsToState.Element = coroutineScope {
     var doubleState = doubleState
 
     /* Update the declarationState for the addresses */
     destinationAddresses.forEach { destAddr ->
         if (!isGlobal(destAddr)) {
             val currentEntries =
-                this.declarationsState[destAddr]?.first?.toIdentitySet() ?: identitySetOf(destAddr)
+                this@updateValues.declarationsState[destAddr]?.first?.toIdentitySet()
+                    ?: identitySetOf(destAddr)
 
             // If we want to update the State with exactly the same elements as are already in the
             // state, we do nothing in order not to confuse the iterateEOG function
@@ -2912,7 +2913,7 @@ suspend fun PointsToState.Element.updateValues(
                 sources
                     .mapTo(PowersetLattice.Element()) { triple ->
                         val existingPair =
-                            this.declarationsState[destAddr]?.second?.firstOrNull {
+                            this@updateValues.declarationsState[destAddr]?.second?.firstOrNull {
                                 it.first === triple.first && it.second == triple.second
                             }
                         existingPair ?: Pair(triple.first, triple.second)
@@ -2927,41 +2928,51 @@ suspend fun PointsToState.Element.updateValues(
             // If we already have exactly this value in the state for the prevDFGs, we take that in
             // order not to confuse the iterateEOG function
             val prevDFG = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
-            lastWrites.forEach { lw ->
-                val existingEntries =
-                    doubleState.declarationsState[destAddr]?.third?.filter { entry ->
-                        entry.first === lw.first &&
-                            lw.second.all { it in entry.second } &&
-                            lw.second.size == entry.second.size
+            lastWrites
+                .splitInto()
+                .map { chunk ->
+                    async(Dispatchers.Default) {
+                        val local = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
+                        for (lw in chunk) {
+                            val existingEntries =
+                                doubleState.declarationsState[destAddr]?.third?.filter { entry ->
+                                    entry.first === lw.first &&
+                                        lw.second.all { it in entry.second } &&
+                                        lw.second.size == entry.second.size
+                                }
+                            if (existingEntries?.isNotEmpty() == true) local.addAll(existingEntries)
+                            else local.add(lw)
+                        }
+                        local
                     }
-                if (existingEntries?.isNotEmpty() == true) prevDFG.addAll(existingEntries)
-                else prevDFG.add(lw)
-            }
+                }
+                .awaitAll()
+                .forEach { prevDFG.addAll(it) }
 
             // If we have any full writes, we eliminate the previous state
-            doubleState.mutex.withLock {
-                if (fullSourcesExist) {
-                    val newDeclState = this.declarationsState.duplicate()
-                    newDeclState[destAddr] =
+            //            doubleState.mutex.withLock {
+            if (fullSourcesExist) {
+                val newDeclState = this@updateValues.declarationsState.duplicate()
+                newDeclState[destAddr] =
+                    DeclarationStateEntryElement(
+                        PowersetLattice.Element(currentEntries),
+                        PowersetLattice.Element(newSources),
+                        PowersetLattice.Element(prevDFG),
+                    )
+                doubleState = PointsToState.Element(doubleState.generalState, newDeclState)
+            } else {
+                doubleState =
+                    lattice.pushToDeclarationsState(
+                        doubleState,
+                        destAddr,
                         DeclarationStateEntryElement(
                             PowersetLattice.Element(currentEntries),
                             PowersetLattice.Element(newSources),
                             PowersetLattice.Element(prevDFG),
-                        )
-                    doubleState = PointsToState.Element(doubleState.generalState, newDeclState)
-                } else {
-                    doubleState =
-                        lattice.pushToDeclarationsState(
-                            doubleState,
-                            destAddr,
-                            DeclarationStateEntryElement(
-                                PowersetLattice.Element(currentEntries),
-                                PowersetLattice.Element(newSources),
-                                PowersetLattice.Element(prevDFG),
-                            ),
-                        )
-                }
+                        ),
+                    )
             }
+            //            }
 
             /* Also update the generalState for dst (if we have any destinations) */
             // If the lastWrites are in the sources or destinations, we don't have to set the
@@ -2971,64 +2982,78 @@ suspend fun PointsToState.Element.updateValues(
             val newLastWrites = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
             newLastWrites.addAll(lastWrites)
 
-            coroutineScope {
-                val removeList =
-                    newLastWrites.splitInto().map { chunk ->
-                        async(Dispatchers.Default) {
-                            val local =
-                                PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
-                            for (lw in chunk) {
-                                if (
-                                    destinations.none {
-                                        it is CallExpression &&
-                                            it.invokes.singleOrNull()?.body == null
-                                    } &&
-                                        (sources.any { src ->
-                                            src.first === lw.first && src.second in lw.second
-                                        } || lw.first in destinations)
-                                ) {
-                                    local.add(lw)
-                                }
+            val removeList =
+                newLastWrites.splitInto().map { chunk ->
+                    async(Dispatchers.Default) {
+                        val local = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
+                        for (lw in chunk) {
+                            if (
+                                destinations.none {
+                                    it is CallExpression && it.invokes.singleOrNull()?.body == null
+                                } &&
+                                    (sources.any { src ->
+                                        src.first === lw.first && src.second in lw.second
+                                    } || lw.first in destinations)
+                            ) {
+                                local.add(lw)
                             }
-                            local
+                        }
+                        local
+                    }
+                }
+            removeList.awaitAll().forEach { subList -> newLastWrites.removeAll(subList) }
+
+            val newGenState = this@updateValues.generalState.duplicate()
+            destinations
+                .splitInto()
+                .map { chunk ->
+                    async(Dispatchers.Default) {
+                        for (d in chunk) {
+                            newGenState[d] =
+                                GeneralStateEntryElement(
+                                    PowersetLattice.Element(destinationAddresses),
+                                    PowersetLattice.Element(
+                                        sources
+                                            .filter { it.first != null }
+                                            .mapTo(PowersetLattice.Element()) {
+                                                Pair(it.first!!, equalLinkedHashSetOf(it.second))
+                                            }
+                                    ),
+                                    PowersetLattice.Element(newLastWrites),
+                                )
                         }
                     }
-                removeList.awaitAll().forEach { subList -> newLastWrites.removeAll(subList) }
-            }
-
-            destinations.forEach { d ->
-                val newGenState = this.generalState.duplicate()
-                newGenState[d] =
-                    GeneralStateEntryElement(
-                        PowersetLattice.Element(destinationAddresses),
-                        PowersetLattice.Element(
-                            sources
-                                .filter { it.first != null }
-                                .mapTo(PowersetLattice.Element()) {
-                                    Pair(it.first!!, equalLinkedHashSetOf(it.second))
-                                }
-                        ),
-                        PowersetLattice.Element(newLastWrites),
-                    )
-                doubleState = PointsToState.Element(newGenState, doubleState.declarationsState)
-            }
+                }
+                .awaitAll()
+            doubleState = PointsToState.Element(newGenState, doubleState.declarationsState)
         } else {
             // For globals, we draw a DFG Edge from the source to the destination
-            destinations.forEach { d ->
-                val entry =
-                    doubleState.generalState.computeIfAbsent(d) {
-                        GeneralStateEntryElement(
-                            PowersetLattice.Element(),
-                            PowersetLattice.Element(),
-                            PowersetLattice.Element(),
-                        )
+            destinations
+                .splitInto()
+                .map { chunk ->
+                    async(Dispatchers.Default) {
+                        for (d in chunk) {
+                            val entry =
+                                doubleState.generalState.computeIfAbsent(d) {
+                                    GeneralStateEntryElement(
+                                        PowersetLattice.Element(),
+                                        PowersetLattice.Element(),
+                                        PowersetLattice.Element(),
+                                    )
+                                }
+                            sources
+                                .filter { it.first != null }
+                                .map {
+                                    entry.third.add(
+                                        Pair(it.first!!, equalLinkedHashSetOf(it.second))
+                                    )
+                                }
+                        }
                     }
-                sources
-                    .filter { it.first != null }
-                    .map { entry.third.add(Pair(it.first!!, equalLinkedHashSetOf(it.second))) }
-            }
+                }
+                .awaitAll()
         }
     }
 
-    return doubleState
+    return@coroutineScope doubleState
 }
