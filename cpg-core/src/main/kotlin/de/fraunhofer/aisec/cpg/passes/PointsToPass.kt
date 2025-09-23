@@ -391,7 +391,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             "Analyzing function ${node.name}. Complexity: ${NumberFormat.getNumberInstance(Locale.US).format(c)}. (Function $analyzedFunctionDeclarationCount / $totalFunctionDeclarationCount)"
         )
         log.debug(
-            "Total time spent until now in handleCallExpression and transfer: $timeInHandleCallExpression and $totalTimeinTransfer"
+            "Total time spent until now in handleCallExpression and transfer: $timeInHandleCallExpression and ${totalTimeinTransfer/1000000}"
         )
 
         val lattice =
@@ -652,9 +652,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         ) {
                             it.value.name != param.name
                         }
-                    log.info(
+                    /*log.debug(
                         "In storeFunctionSummary, param ${param.argumentIndex} (${param.name.localName}. Index ${index.name.localName} (${indexes.size} in total). stateEntries: ${stateEntries.size}"
-                    )
+                    )*/
                     stateEntries
                         /* See if we can find something that is different from the initial value*/
                         .filterTo(PowersetLattice.Element()) {
@@ -897,7 +897,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     "Expected the state to be of type PointsToState.Element"
                 )
         transferActionCounter++
-        if (transferActionCounter == 100000L) {
+        if (transferActionCounter == 10000L) {
             log.info(
                 "Transferring. timeInTransfer: ${timeInTransfer/1000000}, timeInHandleAssignExpression: ${timeInHandleAssignExpression/1000000}, timeInHandleCallExpression: ${timeInHandleCallExpression/1000000}, timeInHandleExpression: ${timeInHandleExpression/1000000}, timeToPush: ${timeToPush/1000000}, timeInHandleDeclaration: ${timeInHandleDeclaration/1000000}, timeInHandleUnaryOperator: ${timeInHandleUnaryOperator/1000000}"
             )
@@ -1249,10 +1249,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             invokes.forEach { invoke ->
                 val inv = calculateFunctionSummaries(invoke)
                 if (inv != null) {
-                    doubleState.mutex.withLock {
-                        doubleState =
-                            calculateIncomingCallingContexts(lattice, inv, currentNode, doubleState)
-                    }
+                    //                    doubleState.mutex.withLock {
+                    doubleState =
+                        calculateIncomingCallingContexts(lattice, inv, currentNode, doubleState)
+                    //                    }
 
                     // If we have a FunctionSummary, we push the values of the arguments and
                     // return value
