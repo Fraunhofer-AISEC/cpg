@@ -75,6 +75,7 @@ var timeInTransfer: Long = 0
 var timeTotalIterateEOG: Long = 0
 var totalTimeinAccept: Long = 0
 var transferActionCounter: Long = 0
+var PointsTotransferCounter: Long = 0
 
 typealias GeneralStateEntry =
     TripleLattice<
@@ -346,6 +347,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         log.info(
             "Time spent in accept: ${time.toLong(DurationUnit.MILLISECONDS)}. Total: $totalTimeinAccept"
         )
+        log.info("PointsToPass counter: $PointsTotransferCounter")
         return ret
     }
 
@@ -897,6 +899,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     "Expected the state to be of type PointsToState.Element"
                 )
         transferActionCounter++
+        PointsTotransferCounter++
         if (transferActionCounter == 10000L) {
             log.info(
                 "Transferring. timeInTransfer: ${timeInTransfer/1000000}, timeInHandleAssignExpression: ${timeInHandleAssignExpression/1000000}, timeInHandleCallExpression: ${timeInHandleCallExpression/1000000}, timeInHandleExpression: ${timeInHandleExpression/1000000}, timeToPush: ${timeToPush/1000000}, timeInHandleDeclaration: ${timeInHandleDeclaration/1000000}, timeInHandleUnaryOperator: ${timeInHandleUnaryOperator/1000000}"
@@ -1248,12 +1251,15 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         coroutineScope {
             invokes.forEach { invoke ->
                 val inv = calculateFunctionSummaries(invoke)
-                log.info("Back in handeCallExpression. currentNode: $currentNode")
+                log.info(
+                    "Back in handeCallExpression. currentNode: $currentNode. inv: $inv invokes.size: ${invokes.size}"
+                )
                 if (inv != null) {
                     //                    doubleState.mutex.withLock {
                     doubleState =
                         calculateIncomingCallingContexts(lattice, inv, currentNode, doubleState)
                     //                    }
+                    log.info("Finished calculating CallingContexsts")
 
                     // If we have a FunctionSummary, we push the values of the arguments and
                     // return value
@@ -1323,6 +1329,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     }
                             }
                         }
+                        log.info("Finished with depth $depth")
                     }
                 }
             }

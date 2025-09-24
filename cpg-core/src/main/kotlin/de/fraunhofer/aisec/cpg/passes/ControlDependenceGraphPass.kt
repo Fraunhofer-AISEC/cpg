@@ -271,6 +271,8 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         log.info(
             "Done creating CDG for function ${startNode.name}. Complexity: $c; eogIterationTime: $eogIterationTime; afterworkTime: $afterworkTime"
         )
+
+        log.info("CDG Transfer counter: $CDGTransferCounter")
     }
 
     /*
@@ -326,11 +328,14 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
  *
  * Returns the updated state and true because we always expect an update of the state.
  */
+var CDGTransferCounter: Long = 0
+
 suspend fun transfer(
     lattice: Lattice<PrevEOGStateElement>,
     currentEdge: EvaluationOrder,
     currentState: PrevEOGStateElement,
 ): PrevEOGStateElement {
+    CDGTransferCounter++
     val lattice = lattice as? PrevEOGState ?: return currentState
     var newState = currentState
 
