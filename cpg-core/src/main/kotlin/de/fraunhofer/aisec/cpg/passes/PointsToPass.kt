@@ -1248,6 +1248,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         coroutineScope {
             invokes.forEach { invoke ->
                 val inv = calculateFunctionSummaries(invoke)
+                log.info("Back in handeCallExpression. currentNode: $currentNode")
                 if (inv != null) {
                     //                    doubleState.mutex.withLock {
                     doubleState =
@@ -1333,6 +1334,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 writeMapEntriesToState(lattice, doubleState, dstAddr, values, callingContextOut)
         }
 
+        log.info("Finished in handleCalLExpression")
         return doubleState
     }
 
@@ -1443,7 +1445,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     //                    val summaryCopy = functionSummaryAnalysisChain.toSet()
                     log.info("Calling acceptInteral(${invoke.name.localName}")
                     acceptInternal(invoke)
-                    log.info("Finished with acceptInteral(${invoke.name.localName}")
+                    log.info("Finished with acceptInteral(${invoke.name.localName})")
                     //                    functionSummaryAnalysisChain.addAll(summaryCopy)
                 } else {
                     log.error(

@@ -304,6 +304,11 @@ fun Statement.cyclomaticComplexity(depth: Int = 1): Long {
                 i += depth + ((stmt.statement?.cyclomaticComplexity(depth + 1) ?: 0))
             }
             is GotoStatement -> {
+                // Analyze where the goto jumps to. Then go through the target block and fetch its
+                // complexity
+                /*                stmt.nextEOG.forEach { next ->
+                    i += next.firstParentOrNull<Block>()?.cyclomaticComplexity(depth + 1) ?: 0
+                }*/
                 // add the depth
                 i += depth
             }
