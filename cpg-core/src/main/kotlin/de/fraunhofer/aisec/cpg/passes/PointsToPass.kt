@@ -1267,6 +1267,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     // We can't go through all levels at once as a change at a lower level may
                     // affect a higher level. So let's do this step by step
                     for (depth in 0..3) {
+                        log.info("inv.functionSummary.size: ${inv.functionSummary.size}")
                         for ((param, fsEntries) in inv.functionSummary) {
                             //                        inv.functionSummary.map{ (param, fsEntries) ->
                             val argument =
@@ -1286,6 +1287,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     else -> null
                                 }
                             if (argument != null) {
+                                log.info(
+                                    "fsEntries.filter { it.destValueDepth == depth }.size: ${fsEntries.filter { it.destValueDepth == depth }.size}"
+                                )
                                 fsEntries
                                     .filter { it.destValueDepth == depth }
                                     .splitInto()
