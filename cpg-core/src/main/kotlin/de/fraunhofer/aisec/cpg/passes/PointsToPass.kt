@@ -1340,7 +1340,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
 
         val callingContextOut = CallingContextOut(mutableListOf(currentNode))
+        log.info("mapDstToSrc.size: ${mapDstToSrc.size}")
         mapDstToSrc.forEach { (dstAddr, values) ->
+            log.info("values.size: ${values.size}")
             doubleState =
                 writeMapEntriesToState(lattice, doubleState, dstAddr, values, callingContextOut)
         }
