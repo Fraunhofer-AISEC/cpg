@@ -1501,7 +1501,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         coroutineScope {
             val localResults =
                 values
-                    .splitInto()
+                    .splitInto(minPartSize = 1)
                     .map { chunk ->
                         async(Dispatchers.Default) {
                             val localLastWrites =
