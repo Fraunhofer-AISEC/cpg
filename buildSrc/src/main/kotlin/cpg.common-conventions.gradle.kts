@@ -143,5 +143,6 @@ dependencies {
     implementation(libs.apache.commons.lang3)
     implementation(libs.neo4j.ogm.core)
     implementation(libs.jackson)
+    implementation(libs.slf4j.api)
 }
 
