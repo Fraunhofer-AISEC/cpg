@@ -1251,9 +1251,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         coroutineScope {
             invokes.forEach { invoke ->
                 val inv = calculateFunctionSummaries(invoke)
-                log.info(
-                    "Back in handeCallExpression. currentNode: $currentNode. inv: $inv invokes.size: ${invokes.size}"
-                )
                 if (inv != null) {
                     //                    doubleState.mutex.withLock {
                     doubleState =
@@ -1267,7 +1264,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     // We can't go through all levels at once as a change at a lower level may
                     // affect a higher level. So let's do this step by step
                     for (depth in 0..3) {
-                        log.info("inv.functionSummary.size: ${inv.functionSummary.size}")
                         for ((param, fsEntries) in inv.functionSummary) {
                             //                        inv.functionSummary.map{ (param, fsEntries) ->
                             val argument =
@@ -1287,9 +1283,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     else -> null
                                 }
                             if (argument != null) {
-                                log.info(
-                                    "fsEntries.filter { it.destValueDepth == depth }.size: ${fsEntries.filter { it.destValueDepth == depth }.size}"
-                                )
                                 fsEntries
                                     .filter { it.destValueDepth == depth }
                                     .splitInto()
@@ -1333,7 +1326,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     }
                             }
                         }
-                        log.info("Finished with depth $depth")
                     }
                 }
             }
@@ -1504,83 +1496,101 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val lastWrites = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
         val destinations = identitySetOf<Node>()
 
+        log.info("writeMapEntries. calculated sources. ")
+
         coroutineScope {
-            values
-                .splitInto()
-                .map { chunk ->
-                    async(Dispatchers.Default) {
-                        val localLastWrites =
-                            PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
-                        val localDestinations = identitySetOf<Node>()
-                        for (value in chunk) {
-                            value.lastWrites.forEach { (lw, lwProps) ->
-                                // For short FunctionSummaries (AKA one of the lastWrite properties
-                                // set to 'true',
-                                // we don't add the callingContext
-                                val lwPropertySet = EqualLinkedHashSet<Any>()
-                                lwPropertySet.addAll(value.propertySet)
-                                // If this is not a shortFS edge, we add the new callingcontext and
-                                // have to
-                                // check if
-                                // we already have a list of callingcontexts in the properties
-                                if (value.propertySet.none { it == true }) {
-                                    val existingCallingContext =
-                                        lwProps.filterIsInstance<CallingContextOut>().singleOrNull()
-                                    if (existingCallingContext != null) {
-                                        if (
-                                            callingContext.calls.any { call ->
-                                                call !in existingCallingContext.calls
+            val localResults =
+                values
+                    .splitInto()
+                    .map { chunk ->
+                        async(Dispatchers.Default) {
+                            val localLastWrites =
+                                PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
+                            val localDestinations = identitySetOf<Node>()
+                            for (value in chunk) {
+                                value.lastWrites.forEach { (lw, lwProps) ->
+                                    // For short FunctionSummaries (AKA one of the lastWrite
+                                    // properties
+                                    // set to 'true',
+                                    // we don't add the callingContext
+                                    val lwPropertySet = EqualLinkedHashSet<Any>()
+                                    lwPropertySet.addAll(value.propertySet)
+                                    // If this is not a shortFS edge, we add the new callingcontext
+                                    // and
+                                    // have to
+                                    // check if
+                                    // we already have a list of callingcontexts in the properties
+                                    if (value.propertySet.none { it == true }) {
+                                        val existingCallingContext =
+                                            lwProps
+                                                .filterIsInstance<CallingContextOut>()
+                                                .singleOrNull()
+                                        if (existingCallingContext != null) {
+                                            if (
+                                                callingContext.calls.any { call ->
+                                                    call !in existingCallingContext.calls
+                                                }
+                                            ) {
+                                                val cpy =
+                                                    existingCallingContext.calls.toMutableList()
+                                                cpy.addAll(callingContext.calls)
+                                                lwPropertySet.add(CallingContextOut(cpy))
                                             }
-                                        ) {
-                                            val cpy = existingCallingContext.calls.toMutableList()
-                                            cpy.addAll(callingContext.calls)
-                                            lwPropertySet.add(CallingContextOut(cpy))
-                                        }
-                                    } else lwPropertySet.add(callingContext)
-                                }
-                                // Add all other previous properties
-                                lwPropertySet.addAll(lwProps.filter { it !is CallingContextOut })
-                                // Add them to the set of lastWrites if there is no same element in
-                                // there yet
-                                // Note: We will have to do the same checks again when merging the
-                                // results from the coroutines
-                                if (
-                                    localLastWrites.none {
-                                        it.first == lw &&
-                                            it.second.size == lwPropertySet.size &&
-                                            it.second.all { it in lwPropertySet }
+                                        } else lwPropertySet.add(callingContext)
                                     }
-                                )
-                                    localLastWrites.add(Pair(lw, lwPropertySet))
+                                    // Add all other previous properties
+                                    lwPropertySet.addAll(
+                                        lwProps.filter { it !is CallingContextOut }
+                                    )
+                                    // Add them to the set of lastWrites if there is no same element
+                                    // in
+                                    // there yet
+                                    // Note: We will have to do the same checks again when merging
+                                    // the
+                                    // results from the coroutines
+                                    if (
+                                        localLastWrites.none {
+                                            it.first == lw &&
+                                                it.second.size == lwPropertySet.size &&
+                                                it.second.all { it in lwPropertySet }
+                                        }
+                                    )
+                                        localLastWrites.add(Pair(lw, lwPropertySet))
+                                }
+                                localDestinations.addAll(value.dst)
                             }
-                            localDestinations.addAll(value.dst)
+                            Pair<
+                                PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
+                                IdentitySet<Node>,
+                            >(
+                                localLastWrites,
+                                localDestinations,
+                            )
                         }
-                        Pair<
-                            PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
-                            IdentitySet<Node>,
-                        >(
-                            localLastWrites,
-                            localDestinations,
-                        )
                     }
+                    .awaitAll()
+            //                localResults.awaitAll()
+            log.info("writeMapEntries. collected localResults. size: ${localResults.size}")
+            localResults.forEach { (localLastWrites, localDestinations) ->
+                // iterate through the lastWrites collected in the coroutines and add them to
+                // the global ones if they are not already in there
+                localLastWrites.forEach { localLastWrite ->
+                    if (
+                        lastWrites.none {
+                            it.first == localLastWrite.first &&
+                                it.second.size == localLastWrite.second.size &&
+                                it.second.all { it in localLastWrite.second }
+                        }
+                    )
+                        lastWrites.add(localLastWrite)
                 }
-                .awaitAll()
-                .forEach { (localLastWrites, localDestinations) ->
-                    // iterate through the lastWrites collected in the coroutines and add them to
-                    // the global ones if they are not already in there
-                    localLastWrites.forEach { localLastWrite ->
-                        if (
-                            lastWrites.none {
-                                it.first == localLastWrite.first &&
-                                    it.second.size == localLastWrite.second.size &&
-                                    it.second.all { it in localLastWrite.second }
-                            }
-                        )
-                            lastWrites.add(localLastWrite)
-                    }
-                    destinations.addAll(localDestinations)
-                }
+                destinations.addAll(localDestinations)
+            }
         }
+
+        log.info(
+            "writeMapEntries. updating values. sources.size: ${sources.size}, desinations.size: ${destinations.size}, lastWrites.size: ${lastWrites.size}"
+        )
 
         return doubleState.updateValues(
             lattice,
