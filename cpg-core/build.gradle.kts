@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.jacksonyml)
 
     testImplementation(libs.junit.params)
+    integrationTestImplementation(libs.kotlin.reflect)
 
     testFixturesApi(
         libs.kotlin.test.junit5
