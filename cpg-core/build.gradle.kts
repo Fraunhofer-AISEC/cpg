@@ -51,6 +51,7 @@ dependencies {
     implementation(libs.bundles.log4j)
     implementation(libs.kotlin.reflect)
     implementation(libs.jacksonyml)
+    implementation(libs.kotlinx.coroutines.core)
 
     testImplementation(libs.junit.params)
 
