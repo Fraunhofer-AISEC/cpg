@@ -456,7 +456,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                     else t in other
 
                 if (!isEqual) {
-                    return true
+                    return false
                 }
             }
             return true
