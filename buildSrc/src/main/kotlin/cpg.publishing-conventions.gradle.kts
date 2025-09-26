@@ -57,7 +57,7 @@ mavenPublishing {
         }
     }
 
-    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+    publishToMavenCentral()
 }
 
 // Sign the artifacts if the signingRequired property is set to true
