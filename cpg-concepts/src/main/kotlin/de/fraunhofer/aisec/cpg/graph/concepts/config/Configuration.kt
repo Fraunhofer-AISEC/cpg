@@ -44,7 +44,13 @@ import java.util.Objects
  * Often, the configuration is loaded from multiple sources, such as INI files, environment
  * variables, and command-line arguments.
  */
-open class Configuration(underlyingNode: Node? = null) : Concept(underlyingNode = underlyingNode) {
+open class Configuration(underlyingNode: Node? = null) : Concept() {
+    init {
+        if (underlyingNode != null) {
+            this.underlyingNode = underlyingNode
+        }
+    }
+
     var groups: MutableList<ConfigurationGroup> = mutableListOf()
 
     /**
@@ -68,8 +74,7 @@ open class Configuration(underlyingNode: Node? = null) : Concept(underlyingNode 
  * [ConfigurationGroup], and each key-value pair would be mapped to an [ConfigurationOption] within
  * this group.
  */
-open class ConfigurationGroup(underlyingNode: Node? = null, var conf: Configuration) :
-    Concept(underlyingNode = underlyingNode) {
+open class ConfigurationGroup(underlyingNode: Node? = null, var conf: Configuration) : Concept() {
     var options: MutableList<ConfigurationOption> = mutableListOf()
 
     override fun equals(other: Any?): Boolean {
@@ -98,7 +103,7 @@ open class ConfigurationOption(
      * Since initializers could potentially be empty, we make this nullable.
      */
     var value: Node? = null,
-) : Concept(underlyingNode = underlyingNode) {
+) : Concept() {
 
     override fun equals(other: Any?): Boolean {
         return other is ConfigurationOption &&
@@ -265,8 +270,7 @@ open class ProvideConfigurationOption(
  * INI file frontend, the whole file would be represented as a [TranslationUnitDeclaration]. This
  * translation unit declaration would be the source of the configuration.
  */
-open class ConfigurationSource(underlyingNode: Node? = null) :
-    Concept(underlyingNode = underlyingNode) {
+open class ConfigurationSource(underlyingNode: Node? = null) : Concept() {
     val groups: MutableList<ConfigurationGroupSource> = mutableListOf()
 
     /**
@@ -286,8 +290,7 @@ open class ConfigurationSource(underlyingNode: Node? = null) :
  * file with our INI file frontend, each section is presented as a [RecordDeclaration]. This record
  * declaration would be the source of the configuration group.
  */
-open class ConfigurationGroupSource(underlyingNode: Node? = null) :
-    Concept(underlyingNode = underlyingNode) {
+open class ConfigurationGroupSource(underlyingNode: Node? = null) : Concept() {
     val options: MutableList<ConfigurationOptionSource> = mutableListOf()
 }
 
@@ -299,7 +302,7 @@ open class ConfigurationGroupSource(underlyingNode: Node? = null) :
 open class ConfigurationOptionSource(
     underlyingNode: Node? = null,
     var group: ConfigurationGroupSource,
-) : Concept(underlyingNode = underlyingNode) {
+) : Concept() {
     override fun equals(other: Any?): Boolean {
         return other is ConfigurationOptionSource &&
             super.equals(other) &&
