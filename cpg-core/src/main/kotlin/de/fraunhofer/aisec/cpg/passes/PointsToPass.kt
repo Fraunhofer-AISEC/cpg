@@ -46,8 +46,10 @@ import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import java.text.NumberFormat
+import java.util.Collections
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.Pair
 import kotlin.collections.filter
 import kotlin.collections.map
@@ -1482,7 +1484,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         dstAddr: Node,
         values: IdentitySet<MapDstToSrcEntry>,
         callingContext: CallingContextOut,
-    ): PointsToState.Element {
+    ): PointsToState.Element = coroutineScope {
         // A triple: the sourceNode, a flag if this is a shortFS, and a flag if this is a
         // partialWrite
         val sources =
@@ -1493,112 +1495,72 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     it.propertySet.any { it is PartialDataflowGranularity<*> },
                 )
             }
-        val lastWrites = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
-        val destinations = identitySetOf<Node>()
+        //        val lastWrites = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
+        val lastWrites = CopyOnWriteArrayList<Pair<Node, EqualLinkedHashSet<Any>>>()
+        val destinations = Collections.synchronizedSet(mutableSetOf<Node>())
 
         log.info("writeMapEntries. calculated sources. ")
 
-        coroutineScope {
-            val localResults =
-                values
-                    .splitInto(minPartSize = 1)
-                    .map { chunk ->
-                        async(Dispatchers.Default) {
-                            val localLastWrites =
-                                PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
-                            val localDestinations = identitySetOf<Node>()
-                            for (value in chunk) {
-                                value.lastWrites.forEach { (lw, lwProps) ->
-                                    // For short FunctionSummaries (AKA one of the lastWrite
-                                    // properties
-                                    // set to 'true',
-                                    // we don't add the callingContext
-                                    val lwPropertySet = EqualLinkedHashSet<Any>()
-                                    lwPropertySet.addAll(value.propertySet)
-                                    // If this is not a shortFS edge, we add the new callingcontext
-                                    // and
-                                    // have to
-                                    // check if
-                                    // we already have a list of callingcontexts in the properties
-                                    if (value.propertySet.none { it == true }) {
-                                        val existingCallingContext =
-                                            lwProps
-                                                .filterIsInstance<CallingContextOut>()
-                                                .singleOrNull()
-                                        if (existingCallingContext != null) {
-                                            if (
-                                                callingContext.calls.any { call ->
-                                                    call !in existingCallingContext.calls
-                                                }
-                                            ) {
-                                                val cpy =
-                                                    existingCallingContext.calls.toMutableList()
-                                                cpy.addAll(callingContext.calls)
-                                                lwPropertySet.add(CallingContextOut(cpy))
+        val localResults =
+            values
+                .splitInto(minPartSize = 1)
+                .map { chunk ->
+                    launch(Dispatchers.Default) {
+                        for (value in chunk) {
+                            value.lastWrites.forEach { (lw, lwProps) ->
+                                // For short FunctionSummaries (AKA one of the lastWrite
+                                // properties set to 'true',
+                                // we don't add the callingContext
+                                val lwPropertySet = EqualLinkedHashSet<Any>()
+                                lwPropertySet.addAll(value.propertySet)
+                                // If this is not a shortFS edge, we add the new callingcontext
+                                // and have to check if
+                                // we already have a list of callingcontexts in the properties
+                                if (value.propertySet.none { it == true }) {
+                                    val existingCallingContext =
+                                        lwProps.filterIsInstance<CallingContextOut>().singleOrNull()
+                                    if (existingCallingContext != null) {
+                                        if (
+                                            callingContext.calls.any { call ->
+                                                call !in existingCallingContext.calls
                                             }
-                                        } else lwPropertySet.add(callingContext)
-                                    }
-                                    // Add all other previous properties
-                                    lwPropertySet.addAll(
-                                        lwProps.filter { it !is CallingContextOut }
-                                    )
-                                    // Add them to the set of lastWrites if there is no same element
-                                    // in
-                                    // there yet
-                                    // Note: We will have to do the same checks again when merging
-                                    // the
-                                    // results from the coroutines
-                                    if (
-                                        localLastWrites.none {
-                                            it.first == lw &&
-                                                it.second.size == lwPropertySet.size &&
-                                                it.second.all { it in lwPropertySet }
+                                        ) {
+                                            val cpy = existingCallingContext.calls.toMutableList()
+                                            cpy.addAll(callingContext.calls)
+                                            lwPropertySet.add(CallingContextOut(cpy))
                                         }
-                                    )
-                                        localLastWrites.add(Pair(lw, lwPropertySet))
+                                    } else lwPropertySet.add(callingContext)
                                 }
-                                localDestinations.addAll(value.dst)
+                                // Add all other previous properties
+                                lwPropertySet.addAll(lwProps.filter { it !is CallingContextOut })
+                                // Add them to the set of lastWrites if there is no same element
+                                // in there yet
+                                if (
+                                    lastWrites.none {
+                                        it.first == lw &&
+                                            it.second.size == lwPropertySet.size &&
+                                            it.second.all { it in lwPropertySet }
+                                    }
+                                )
+                                    lastWrites.add(Pair(lw, lwPropertySet))
                             }
-                            Pair<
-                                PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>,
-                                IdentitySet<Node>,
-                            >(
-                                localLastWrites,
-                                localDestinations,
-                            )
+                            destinations.addAll(value.dst)
                         }
                     }
-                    .awaitAll()
-            //                localResults.awaitAll()
-            log.info("writeMapEntries. collected localResults. size: ${localResults.size}")
-            localResults.forEach { (localLastWrites, localDestinations) ->
-                // iterate through the lastWrites collected in the coroutines and add them to
-                // the global ones if they are not already in there
-                localLastWrites.forEach { localLastWrite ->
-                    if (
-                        lastWrites.none {
-                            it.first == localLastWrite.first &&
-                                it.second.size == localLastWrite.second.size &&
-                                it.second.all { it in localLastWrite.second }
-                        }
-                    )
-                        lastWrites.add(localLastWrite)
                 }
-                destinations.addAll(localDestinations)
-            }
-        }
+                .joinAll()
 
-        log.info(
-            "writeMapEntries. updating values. sources.size: ${sources.size}, desinations.size: ${destinations.size}, lastWrites.size: ${lastWrites.size}"
-        )
+        log.info("writeMapEntries. Updating values")
 
-        return doubleState.updateValues(
+        return@coroutineScope doubleState.updateValues(
             lattice,
             doubleState,
             sources,
-            destinations,
+            destinations.toIdentitySet(),
             identitySetOf(dstAddr),
-            lastWrites,
+            PowersetLattice.Element(
+                lastWrites.map { it as Pair<Node, EqualLinkedHashSet<Any>> }.toSet()
+            ),
         )
     }
 
