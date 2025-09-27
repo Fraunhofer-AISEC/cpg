@@ -73,9 +73,10 @@ class PowersetLattice(override val elements: IdentitySet<Node>) :
 }
 
 /**
- * Stores the current state. I.e., it maps [K] (e.g. a [Node] or [Edge]) to a [LatticeElement]. It
- * provides some useful functions e.g. to check if the mapping has to be updated (e.g. because there
- * are new nodes or because a new lattice element is bigger than the old one).
+ * Stores the current state. I.e., it maps [K] (e.g. a [Node] or [PropertyEdge]) to a
+ * [LatticeElement]. It provides some useful functions e.g. to check if the mapping has to be
+ * updated (e.g. because there are new nodes or because a new lattice element is bigger than the old
+ * one).
  */
 open class State<K, V> : HashMap<K, LatticeElement<V>>() {
 
@@ -214,9 +215,6 @@ class Worklist<K : Any, N : Any, V>() {
         alreadySeen.add(node.first)
         return node
     }
-
-    /** Checks if [currentNode] has already been visited before. */
-    fun hasAlreadySeen(currentNode: K) = currentNode in alreadySeen
 
     /** Computes the meet over paths for all the states in [globalState]. */
     fun mop(): State<N, V>? {

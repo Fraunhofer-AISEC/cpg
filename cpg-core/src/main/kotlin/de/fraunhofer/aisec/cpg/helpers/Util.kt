@@ -409,7 +409,10 @@ object Util {
             target.receiver?.let { receiver ->
                 call.base
                     ?.nextDFGEdges
-                    ?.addContextSensitive(receiver, callingContext = CallingContextIn(call))
+                    ?.addContextSensitive(
+                        receiver,
+                        callingContext = CallingContextIn(mutableListOf(call)),
+                    )
             }
         }
 
@@ -424,7 +427,7 @@ object Util {
             if (namedEdge != null) {
                 param.prevDFGEdges.addContextSensitive(
                     namedEdge.end,
-                    callingContext = CallingContextIn(call),
+                    callingContext = CallingContextIn(mutableListOf(call)),
                 )
                 argumentIndex++
                 continue // Move to next parameter
@@ -441,7 +444,7 @@ object Util {
                         if (isKeywordVariadic) {
                             param.prevDFGEdges.addContextSensitive(
                                 edge.end,
-                                callingContext = CallingContextIn(call),
+                                callingContext = CallingContextIn(mutableListOf(call)),
                             )
                             argumentIndex++
                         } else {
@@ -450,7 +453,7 @@ object Util {
                             if (edge.name == null) {
                                 param.prevDFGEdges.addContextSensitive(
                                     edge.end,
-                                    callingContext = CallingContextIn(call),
+                                    callingContext = CallingContextIn(mutableListOf(call)),
                                 )
                                 argumentIndex++
                             }
@@ -464,7 +467,7 @@ object Util {
             if (argumentEdge != null && argumentEdge.name == null) {
                 param.prevDFGEdges.addContextSensitive(
                     argumentEdge.end,
-                    callingContext = CallingContextIn(call),
+                    callingContext = CallingContextIn(mutableListOf(call)),
                 )
                 argumentIndex++
                 continue // Move to next parameter
@@ -475,7 +478,7 @@ object Util {
             if (default != null) {
                 param.prevDFGEdges.addContextSensitive(
                     default,
-                    callingContext = CallingContextIn(call),
+                    callingContext = CallingContextIn(mutableListOf(call)),
                 )
             }
         }
