@@ -40,8 +40,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
-@Ignore
-// TODO Mathias
 class QueryTest {
     @Test
     fun testMemcpyTooLargeQuery2() {
@@ -569,6 +567,7 @@ class QueryTest {
         assertFalse(queryTreeResult2.value)*/
     }
 
+    @Ignore
     @Test
     fun testDataFlowRequirement() {
         val result = Query.getDataflow()
@@ -634,6 +633,7 @@ class QueryTest {
         assertEquals(1, queryTreeResult2Extended.children.size)
     }
 
+    @Ignore
     @Test
     fun testComplexDFGAndEOGRequirement() {
         val result = Query.getComplexDataflow()
@@ -656,6 +656,7 @@ class QueryTest {
         assertEquals(1, queryTreeResult.children.size)
     }
 
+    @Ignore
     @Test
     fun testComplexDFGAndEOGRequirement2() {
         val result = Query.getComplexDataflow2()
