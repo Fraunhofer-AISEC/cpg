@@ -46,10 +46,8 @@ import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import java.text.NumberFormat
-import java.util.Collections
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.Pair
 import kotlin.collections.filter
 import kotlin.collections.map
@@ -1478,6 +1476,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return invoke
     }
 
+    data class LastWriteKey(val node: Node, val props: EqualLinkedHashSet<Any>) {
+        // Since we are dealing with pairs, carefully check if we already have them
+        override fun equals(other: Any?): Boolean =
+            other is LastWriteKey &&
+                node == other.node &&
+                props.size == other.props.size &&
+                props.all { it in other.props }
+
+        override fun hashCode(): Int {
+            var h = node.hashCode()
+            for (p in props) h = 31 * h + p.hashCode()
+            return h
+        }
+    }
+
     private suspend fun writeMapEntriesToState(
         lattice: PointsToState,
         doubleState: PointsToState.Element,
@@ -1496,59 +1509,54 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 )
             }
         //        val lastWrites = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
-        val lastWrites = CopyOnWriteArrayList<Pair<Node, EqualLinkedHashSet<Any>>>()
-        val destinations = Collections.synchronizedSet(mutableSetOf<Node>())
+        val lastWrites: MutableSet<LastWriteKey> = ConcurrentHashMap.newKeySet()
+        val destinations = identitySetOf<Node>()
 
         log.info("writeMapEntries. calculated sources. ")
 
         val localResults =
-            values
-                .splitInto(minPartSize = 1)
-                .map { chunk ->
-                    launch(Dispatchers.Default) {
-                        for (value in chunk) {
-                            value.lastWrites.forEach { (lw, lwProps) ->
-                                // For short FunctionSummaries (AKA one of the lastWrite
-                                // properties set to 'true',
-                                // we don't add the callingContext
-                                val lwPropertySet = EqualLinkedHashSet<Any>()
-                                lwPropertySet.addAll(value.propertySet)
-                                // If this is not a shortFS edge, we add the new callingcontext
-                                // and have to check if
-                                // we already have a list of callingcontexts in the properties
-                                if (value.propertySet.none { it == true }) {
-                                    val existingCallingContext =
-                                        lwProps.filterIsInstance<CallingContextOut>().singleOrNull()
-                                    if (existingCallingContext != null) {
-                                        if (
-                                            callingContext.calls.any { call ->
-                                                call !in existingCallingContext.calls
-                                            }
-                                        ) {
-                                            val cpy = existingCallingContext.calls.toMutableList()
-                                            cpy.addAll(callingContext.calls)
-                                            lwPropertySet.add(CallingContextOut(cpy))
+            values.splitInto(minPartSize = 1).map { chunk ->
+                async(Dispatchers.Default) {
+                    val localDestinations = identitySetOf<Node>()
+                    for (value in chunk) {
+                        value.lastWrites.forEach { (lw, lwProps) ->
+                            // For short FunctionSummaries (AKA one of the lastWrite
+                            // properties set to 'true',
+                            // we don't add the callingContext
+                            val lwPropertySet = EqualLinkedHashSet<Any>()
+                            lwPropertySet.addAll(value.propertySet)
+                            // If this is not a shortFS edge, we add the new callingcontext
+                            // and have to check if
+                            // we already have a list of callingcontexts in the properties
+                            if (value.propertySet.none { it == true }) {
+                                val existingCallingContext =
+                                    lwProps.filterIsInstance<CallingContextOut>().singleOrNull()
+                                if (existingCallingContext != null) {
+                                    if (
+                                        callingContext.calls.any { call ->
+                                            call !in existingCallingContext.calls
                                         }
-                                    } else lwPropertySet.add(callingContext)
-                                }
-                                // Add all other previous properties
-                                lwPropertySet.addAll(lwProps.filter { it !is CallingContextOut })
-                                // Add them to the set of lastWrites if there is no same element
-                                // in there yet
-                                if (
-                                    lastWrites.none {
-                                        it.first == lw &&
-                                            it.second.size == lwPropertySet.size &&
-                                            it.second.all { it in lwPropertySet }
+                                    ) {
+                                        val cpy = existingCallingContext.calls.toMutableList()
+                                        cpy.addAll(callingContext.calls)
+                                        lwPropertySet.add(CallingContextOut(cpy))
                                     }
-                                )
-                                    lastWrites.add(Pair(lw, lwPropertySet))
+                                } else lwPropertySet.add(callingContext)
                             }
-                            destinations.addAll(value.dst)
+                            // Add all other previous properties
+                            lwPropertySet.addAll(lwProps.filter { it !is CallingContextOut })
+                            // Add them to the set of lastWrites if there is no same element
+                            // in there yet
+                            lastWrites.add(LastWriteKey(lw, lwPropertySet))
                         }
+                        localDestinations.addAll(value.dst)
                     }
+                    localDestinations
                 }
-                .joinAll()
+            }
+
+        log.info("Collecting destinations")
+        localResults.awaitAll().forEach { destinations.addAll(it) }
 
         log.info("writeMapEntries. Updating values")
 
@@ -1556,11 +1564,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             lattice,
             doubleState,
             sources,
-            destinations.toIdentitySet(),
+            destinations,
             identitySetOf(dstAddr),
-            PowersetLattice.Element(
-                lastWrites.map { it as Pair<Node, EqualLinkedHashSet<Any>> }.toSet()
-            ),
+            PowersetLattice.Element(lastWrites.map { Pair(it.node, it.props) }.toSet()),
         )
     }
 
