@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.LoopStatement
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.passes.PointsToState
 import java.io.Serializable
 import java.util.*
@@ -50,6 +51,9 @@ import kotlinx.coroutines.*
 var compareTime: Long = 0
 var mapLatticeLubTime: Long = 0
 var tupleLatticeLubTime: Long = 0
+var maxLubSize = 0
+var lubCounter = 0
+var lubSizeCounter = 0
 
 val CPU_CORES = Runtime.getRuntime().availableProcessors()
 val MIN_CHUNK_SIZE = 10
@@ -416,11 +420,14 @@ interface Lattice<T : Lattice.Element> {
         }
 
         println(
-            "+++ final state lub calculations took $finalStateCalcTime, PointsToState lub $pointsToStateLub, compareTime: ${compareTime/1000000}, tupleLattice lub time: ${tupleLatticeLubTime/1000000}, mapLattice lub time: ${mapLatticeLubTime/1000000}"
+            "+++ final state lub calculations took $finalStateCalcTime, PointsToState lub $pointsToStateLub, compareTime: ${compareTime/1000000}, tupleLattice lub time: ${tupleLatticeLubTime/1000000}, mapLattice lub time: ${mapLatticeLubTime/1000000}, maxLubsize: $maxLubSize, lubCounter: $lubCounter, lubSizeCounter: $lubSizeCounter"
         )
         compareTime = 0
         mapLatticeLubTime = 0
         tupleLatticeLubTime = 0
+        maxLubSize = 0
+        lubCounter = 0
+        lubSizeCounter = 0
 
         return finalState
     }
@@ -510,11 +517,23 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
             val (thisOnly, duration) =
                 measureTimedValue {
                     this.filterTo(IdentitySet<T>()) { t ->
-                        !if (t is Pair<*, *>) {
-                            otherOnly.removeIf { o ->
-                                o is Pair<*, *> && o.first === t.first && o.second == t.second
+                        !when (t) {
+                            is Pair<*, *> -> {
+                                otherOnly.removeIf { o ->
+                                    o is Pair<*, *> && o.first === t.first && o.second == t.second
+                                }
                             }
-                        } else otherOnly.remove(t)
+
+                            is PointsToPass.NodeWithPropertiesKey -> {
+                                otherOnly.removeIf { o ->
+                                    o is PointsToPass.NodeWithPropertiesKey &&
+                                        o.node === t.node &&
+                                        o.properties == t.properties
+                                }
+                            }
+
+                            else -> otherOnly.remove(t)
+                        }
                     }
                 }
             compareTime += duration.toLong(DurationUnit.NANOSECONDS)
@@ -554,7 +573,8 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                     }
             ) {
                 return false
-            }
+            } else if (element is PointsToPass.NodeWithPropertiesKey && this.any { it == element })
+                return false
             return super.add(element)
         }
     }
@@ -824,6 +844,11 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         widen: Boolean,
     ): Element<K, V> = coroutineScope {
         var result: Element<K, V>
+        lubCounter++
+        if (one.size > maxLubSize) maxLubSize = one.size
+        if (two.size > maxLubSize) maxLubSize = two.size
+        lubSizeCounter += one.size
+        lubSizeCounter += two.size
         mapLatticeLubTime += measureNanoTime {
             if (allowModify) {
                 val additionsPerChunk =
