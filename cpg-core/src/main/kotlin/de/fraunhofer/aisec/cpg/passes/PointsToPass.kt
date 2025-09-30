@@ -44,11 +44,13 @@ import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice.Element
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
+import de.fraunhofer.aisec.cpg.passes.PointsToPass.NodePropertiesKey
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import java.text.NumberFormat
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.Pair
+import kotlin.collections.MutableSet
 import kotlin.collections.filter
 import kotlin.collections.map
 import kotlin.let
@@ -1476,10 +1478,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return invoke
     }
 
-    data class LastWriteKey(val node: Node, val props: EqualLinkedHashSet<Any>) {
+    data class NodePropertiesKey(val node: Node, val props: EqualLinkedHashSet<Any>) {
         // Since we are dealing with pairs, carefully check if we already have them
         override fun equals(other: Any?): Boolean =
-            other is LastWriteKey &&
+            other is NodePropertiesKey &&
                 node == other.node &&
                 props.size == other.props.size &&
                 props.all { it in other.props }
@@ -1509,7 +1511,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 )
             }
         //        val lastWrites = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
-        val lastWrites: MutableSet<LastWriteKey> = ConcurrentHashMap.newKeySet()
+        val lastWrites: MutableSet<NodePropertiesKey> = ConcurrentHashMap.newKeySet()
         val destinations = identitySetOf<Node>()
 
         log.info("writeMapEntries. calculated sources. ")
@@ -1547,7 +1549,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             lwPropertySet.addAll(lwProps.filter { it !is CallingContextOut })
                             // Add them to the set of lastWrites if there is no same element
                             // in there yet
-                            lastWrites.add(LastWriteKey(lw, lwPropertySet))
+                            lastWrites.add(NodePropertiesKey(lw, lwPropertySet))
                         }
                         localDestinations.addAll(value.dst)
                     }
@@ -2951,12 +2953,11 @@ suspend fun PointsToState.Element.updateValues(
             // TODO: Do we also need to fetch some properties here?
             // If we already have exactly this value in the state for the prevDFGs, we take that in
             // order not to confuse the iterateEOG function
-            val prevDFG = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
+            val prevDFG: MutableSet<NodePropertiesKey> = ConcurrentHashMap.newKeySet()
             lastWrites
                 .splitInto()
                 .map { chunk ->
-                    async(Dispatchers.Default) {
-                        val local = PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>>()
+                    launch(Dispatchers.Default) {
                         for (lw in chunk) {
                             val existingEntries =
                                 doubleState.declarationsState[destAddr]?.third?.filter { entry ->
@@ -2964,14 +2965,15 @@ suspend fun PointsToState.Element.updateValues(
                                         lw.second.all { it in entry.second } &&
                                         lw.second.size == entry.second.size
                                 }
-                            if (existingEntries?.isNotEmpty() == true) local.addAll(existingEntries)
-                            else local.add(lw)
+                            if (existingEntries?.isNotEmpty() == true)
+                                existingEntries.forEach {
+                                    prevDFG.add(NodePropertiesKey(it.first, it.second))
+                                }
+                            else prevDFG.add(NodePropertiesKey(lw.first, lw.second))
                         }
-                        local
                     }
                 }
-                .awaitAll()
-                .forEach { prevDFG.addAll(it) }
+                .joinAll()
 
             // If we have any full writes, we eliminate the previous state
             //            doubleState.mutex.withLock {
@@ -2981,7 +2983,7 @@ suspend fun PointsToState.Element.updateValues(
                     DeclarationStateEntryElement(
                         PowersetLattice.Element(currentEntries),
                         PowersetLattice.Element(newSources),
-                        PowersetLattice.Element(prevDFG),
+                        PowersetLattice.Element(prevDFG.map { Pair(it.node, it.props) }.toSet()),
                     )
                 doubleState = PointsToState.Element(doubleState.generalState, newDeclState)
             } else {
@@ -2992,7 +2994,7 @@ suspend fun PointsToState.Element.updateValues(
                         DeclarationStateEntryElement(
                             PowersetLattice.Element(currentEntries),
                             PowersetLattice.Element(newSources),
-                            PowersetLattice.Element(prevDFG),
+                            PowersetLattice.Element(prevDFG.map { Pair(it.node, it.props) }.toSet()),
                         ),
                     )
             }
