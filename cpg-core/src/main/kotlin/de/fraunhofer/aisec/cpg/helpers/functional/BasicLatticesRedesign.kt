@@ -460,6 +460,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                         other.any {
                             it is Pair<*, *> && it.first === t.first && it.second == t.second
                         }
+                    else if (t is PointsToPass.NodeWithPropertiesKey) other.any { it == t }
                     else t in other
 
                 if (!isEqual) {

@@ -131,9 +131,19 @@ open class FunctionDeclaration :
         // Sometimes, we need a dummy of a functionSummary, for example to avoid recursion. We
         // indicate here if this is one
         val isDummy: Boolean = false,
-    )
+    ) {
+        override fun equals(other: Any?): Boolean =
+            other is FSEntry &&
+                destValueDepth == other.destValueDepth &&
+                srcNode == other.srcNode &&
+                srcValueDepth == other.srcValueDepth &&
+                subAccessName == other.subAccessName &&
+                lastWrites == other.lastWrites &&
+                properties == other.properties &&
+                isDummy == other.isDummy
+    }
 
-    var functionSummary = mutableMapOf<Node, MutableSet<FSEntry>>()
+    var functionSummary = ConcurrentHashMap<Node, MutableSet<FSEntry>>()
 
     /** Returns true, if this function has a [body] statement. */
     fun hasBody(): Boolean {
