@@ -490,11 +490,11 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                                                 it.second == t.second
                                         }
                                     else if (t is PointsToPass.NodeWithPropertiesKey)
-                                other.any {
-                                    it is PointsToPass.NodeWithPropertiesKey &&
-                                            it.node === t.node &&
-                                            it.properties == t.properties
-                                }
+                                        other.any {
+                                            it is PointsToPass.NodeWithPropertiesKey &&
+                                                it.node === t.node &&
+                                                it.properties == t.properties
+                                        }
                                     else t in other
 
                                 if (!isEqual) {

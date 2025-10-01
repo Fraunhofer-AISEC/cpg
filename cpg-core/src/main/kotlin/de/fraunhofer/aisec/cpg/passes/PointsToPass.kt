@@ -635,13 +635,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     ) {
         clearFSDummies(node.functionSummary)
         var dfgSearchTime: Long = 0
-        // We try to run this in outerConcurrencies for each param and inner concurrencies per
+        // We try to run this in outer coroutines for each param and inner coroutines per
         // param.
         // In order not to launch an immense amount of coroutines, we calculate their number before
-        val outerConcurrencyCounter = node.parameters.size
-        val innerConcurrencyCounter =
-            if (outerConcurrencyCounter == 0) CPU_CORES
-            else if (outerConcurrencyCounter > CPU_CORES) 1 else CPU_CORES / outerConcurrencyCounter
+        val outerCoroutineCounter = node.parameters.size
+        val innerCoroutineCounter =
+            if (outerCoroutineCounter == 0) CPU_CORES
+            else if (outerCoroutineCounter > CPU_CORES) 1 else CPU_CORES / outerCoroutineCounter
         val totalTime = measureTimeMillis {
             coroutineScope {
                 node.parameters.forEach { param ->
@@ -669,7 +669,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             }
                             // We are already inside $paramCount coroutines, so we have to divide
                             // the CPU_CORES by these routines
-                            .splitInto(maxParts = innerConcurrencyCounter)
+                            .splitInto(maxParts = innerCoroutineCounter)
                             .map { chunk ->
                                 launch(Dispatchers.Default) {
                                     for (value in chunk) {
@@ -704,7 +704,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 // FunctionSummary
                                 // We are already inside $paramCount coroutines, so we have to
                                 // divide the CPU_CORES by these routines
-                                .splitInto(maxParts = innerConcurrencyCounter, minPartSize = 1)
+                                .splitInto(maxParts = innerCoroutineCounter, minPartSize = 1)
                                 .map { chunk ->
                                     launch(Dispatchers.Default) {
                                         chunk.forEach { (value, shortFS, subAccessName, lastWrites)
@@ -1270,7 +1270,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         doubleState: PointsToState.Element,
     ): PointsToState.Element {
         var doubleState = doubleState
-        var mapDstToSrc = mutableMapOf<Node, IdentitySet<MapDstToSrcEntry>>()
+        val mapDstToSrc = ConcurrentHashMap<Node, IdentitySet<MapDstToSrcEntry>>()
 
         // The toIdentitySet avoids having the same elements multiple times
         val invokes = currentNode.invokes.toIdentitySet() // .toList()
@@ -1278,10 +1278,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             invokes.forEach { invoke ->
                 val inv = calculateFunctionSummaries(invoke)
                 if (inv != null) {
-                    //                    doubleState.mutex.withLock {
                     doubleState =
                         calculateIncomingCallingContexts(lattice, inv, currentNode, doubleState)
-                    //                    }
                     log.info("Finished calculating CallingContexsts")
 
                     // If we have a FunctionSummary, we push the values of the arguments and
@@ -1290,65 +1288,68 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     // We can't go through all levels at once as a change at a lower level may
                     // affect a higher level. So let's do this step by step
                     for (depth in 0..3) {
-                        for ((param, fsEntries) in inv.functionSummary) {
-                            val argument =
-                                when (param) {
-                                    is ParameterDeclaration -> {
-                                        // Dereference the parameter
-                                        if (param.argumentIndex < currentNode.arguments.size) {
-                                            currentNode.arguments[param.argumentIndex]
-                                        } else null
-                                    }
-
-                                    is ReturnStatement,
-                                    is FunctionDeclaration -> {
-                                        currentNode
-                                    }
-
-                                    else -> null
-                                }
-                            if (argument != null) {
-                                fsEntries
-                                    .filter { it.destValueDepth == depth }
-                                    .splitInto()
-                                    .map { chunk ->
-                                        async(Dispatchers.Default) {
-                                            val localMapDstToSrc =
-                                                mutableMapOf<Node, IdentitySet<MapDstToSrcEntry>>()
-                                            for ((
-                                                dstValueDepth,
-                                                srcNode,
-                                                srcValueDepth,
-                                                subAccessName,
-                                                lastWrites,
-                                                properties,
-                                            ) in chunk) {
-                                                writeEntry(
-                                                    doubleState,
-                                                    localMapDstToSrc,
-                                                    dstValueDepth,
-                                                    subAccessName,
-                                                    argument,
-                                                    properties,
-                                                    lastWrites,
-                                                    currentNode,
-                                                    inv,
-                                                    srcNode,
-                                                    srcValueDepth,
-                                                    param,
-                                                )
+                        coroutineScope {
+                            // We use coroutines in coroutines. So, in order not to launch way too
+                            // many of them, we calculate the amount of inner coroutines that we can
+                            // reasonably launch
+                            val outerConcurrencyCounter = inv.functionSummary.size
+                            val innerConcurrencyCounter =
+                                if (outerConcurrencyCounter == 0) CPU_CORES
+                                else if (outerConcurrencyCounter > CPU_CORES) 1
+                                else CPU_CORES / outerConcurrencyCounter
+                            for ((param, fsEntries) in inv.functionSummary) {
+                                launch(Dispatchers.Default) {
+                                    val argument =
+                                        when (param) {
+                                            is ParameterDeclaration -> {
+                                                // Dereference the parameter
+                                                if (
+                                                    param.argumentIndex < currentNode.arguments.size
+                                                ) {
+                                                    currentNode.arguments[param.argumentIndex]
+                                                } else null
                                             }
-                                            localMapDstToSrc
+
+                                            is ReturnStatement,
+                                            is FunctionDeclaration -> {
+                                                currentNode
+                                            }
+
+                                            else -> null
                                         }
+                                    if (argument != null) {
+                                        fsEntries
+                                            .filter { it.destValueDepth == depth }
+                                            .splitInto(maxParts = innerConcurrencyCounter)
+                                            .map { chunk ->
+                                                launch(Dispatchers.Default) {
+                                                    for ((
+                                                        dstValueDepth,
+                                                        srcNode,
+                                                        srcValueDepth,
+                                                        subAccessName,
+                                                        lastWrites,
+                                                        properties,
+                                                    ) in chunk) {
+                                                        writeEntry(
+                                                            doubleState,
+                                                            mapDstToSrc,
+                                                            dstValueDepth,
+                                                            subAccessName,
+                                                            argument,
+                                                            properties,
+                                                            lastWrites,
+                                                            currentNode,
+                                                            inv,
+                                                            srcNode,
+                                                            srcValueDepth,
+                                                            param,
+                                                        )
+                                                    }
+                                                }
+                                            }
                                     }
-                                    .awaitAll()
-                                    .forEach { subMap ->
-                                        subMap.forEach { (key, value) ->
-                                            mapDstToSrc
-                                                .computeIfAbsent(key) { identitySetOf() }
-                                                .addAll(value)
-                                        }
-                                    }
+                                }
                             }
                         }
                     }
@@ -1370,7 +1371,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     suspend fun writeEntry(
         doubleState: PointsToState.Element,
-        mapDstToSrc: MutableMap<Node, IdentitySet<MapDstToSrcEntry>>,
+        mapDstToSrc: ConcurrentHashMap<Node, IdentitySet<MapDstToSrcEntry>>,
         dstValueDepth: Int,
         subAccessName: String,
         argument: Expression,
@@ -1622,7 +1623,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
      */
     private suspend fun addEntryToMap(
         doubleState: PointsToState.Element,
-        mapDstToSrc: MutableMap<Node, IdentitySet<MapDstToSrcEntry>>,
+        mapDstToSrc: ConcurrentHashMap<Node, IdentitySet<MapDstToSrcEntry>>,
         destinationAddresses: IdentitySet<Node?>,
         destinations: IdentitySet<Node>,
         srcNode: Node?,
