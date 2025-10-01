@@ -25,14 +25,20 @@
  */
 package de.fraunhofer.aisec.cpg.query
 
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.IntegerIntervalEvaluator
 import de.fraunhofer.aisec.cpg.assumptions.addAssumptionDependence
-import de.fraunhofer.aisec.cpg.evaluation.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.evaluation.NumberSet
 import de.fraunhofer.aisec.cpg.evaluation.SizeEvaluator
 import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.helpers.functional.splitInto
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 
 /**
  * Evaluates if the conditions specified in [mustSatisfy] hold for all nodes in the graph.
@@ -65,16 +71,32 @@ inline fun <reified T> Node.evaluateExtended(
     noinline mustSatisfy: (T) -> QueryTree<Boolean>,
 ): List<QueryTree<Boolean>> {
     val nodes = this.allChildrenWithOverlays(sel)
-    return nodes.map { n ->
-        val res = mustSatisfy(n)
-        res.stringRepresentation =
-            "Starting at ${if(n is Node) n.compactToString() else n.toString()}: " +
-                res.stringRepresentation
-        if (n is Node) {
-            res.node = n
-        }
-        res.checkForSuppression()
-        res.addAssumptionDependence(this)
+    return runBlocking {
+        // Split the task into chunks of $CPU_SIZE and run them in coroutines. Collect the results
+        // for each chunk, and when all coroutines are finished, flatMap them together to the final
+        // result
+        nodes
+            .splitInto(minPartSize = 1)
+            .map { chunk ->
+                async(Dispatchers.Default) {
+                    val local = mutableListOf<QueryTree<Boolean>>()
+                    for (n in chunk) {
+                        val res = mustSatisfy(n)
+                        res.stringRepresentation =
+                            "Starting at ${if (n is Node) n.compactToString() else n.toString()}: " +
+                                res.stringRepresentation
+                        if (n is Node) {
+                            res.node = n
+                        }
+                        res.checkForSuppression()
+                        res.addAssumptionDependence(this@evaluateExtended)
+                        local.add(res)
+                    }
+                    local
+                }
+            }
+            .awaitAll()
+            .flatMap { it }
     }
 }
 
@@ -144,9 +166,19 @@ fun sizeof(n: Node?, eval: ValueEvaluator = SizeEvaluator()): QueryTree<Int> {
  *
  * @eval can be used to specify the evaluator but this method has to interpret the result correctly!
  */
-fun min(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Number> {
+fun min(n: Node?, eval: ValueEvaluator = IntegerIntervalEvaluator()): QueryTree<Number> {
     val evalRes = eval.evaluate(n)
-    if (evalRes is Number) {
+    if (evalRes is LatticeInterval) {
+        val result =
+            ((evalRes as? LatticeInterval.Bounded)?.upper as? LatticeInterval.Bound.Value)?.value
+                ?: Long.MIN_VALUE
+        return QueryTree(
+            result,
+            mutableListOf(QueryTree(n, operator = GenericQueryOperators.EVALUATE)),
+            node = n,
+            operator = GenericQueryOperators.EVALUATE,
+        )
+    } else if (evalRes is Number) {
         return QueryTree(
             evalRes,
             mutableListOf(QueryTree(n, operator = GenericQueryOperators.EVALUATE)),
@@ -170,7 +202,7 @@ fun min(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Numbe
  *
  * @eval can be used to specify the evaluator but this method has to interpret the result correctly!
  */
-fun min(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Number> {
+fun min(n: List<Node>?, eval: ValueEvaluator = IntegerIntervalEvaluator()): QueryTree<Number> {
     var result = Long.MAX_VALUE
     if (n == null)
         return QueryTree(
@@ -181,10 +213,27 @@ fun min(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree
 
     for (node in n) {
         val evalRes = eval.evaluate(node)
-        if (evalRes is Number && evalRes.toLong() < result) {
-            result = evalRes.toLong()
-        } else if (evalRes is NumberSet && evalRes.min() < result) {
-            result = evalRes.min()
+        when (evalRes) {
+            is LatticeInterval -> {
+                val minValue =
+                    ((evalRes as? LatticeInterval.Bounded)?.upper as? LatticeInterval.Bound.Value)
+                        ?.value
+                        ?: ((evalRes as? LatticeInterval.Bounded)?.upper
+                                as? LatticeInterval.Bound.INFINITE)
+                            ?.let { Long.MIN_VALUE }
+                        ?: Long.MAX_VALUE
+                if (minValue < result) {
+                    result = minValue
+                }
+            }
+
+            is Number if evalRes.toLong() < result -> {
+                result = evalRes.toLong()
+            }
+
+            is NumberSet if evalRes.min() < result -> {
+                result = evalRes.min()
+            }
         }
         // Extend this when we have other evaluators.
     }
@@ -196,7 +245,7 @@ fun min(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree
  *
  * @eval can be used to specify the evaluator but this method has to interpret the result correctly!
  */
-fun max(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Number> {
+fun max(n: List<Node>?, eval: ValueEvaluator = IntegerIntervalEvaluator()): QueryTree<Number> {
     var result = Long.MIN_VALUE
     if (n == null)
         return QueryTree(
@@ -207,10 +256,27 @@ fun max(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree
 
     for (node in n) {
         val evalRes = eval.evaluate(node)
-        if (evalRes is Number && evalRes.toLong() > result) {
-            result = evalRes.toLong()
-        } else if (evalRes is NumberSet && evalRes.max() > result) {
-            result = evalRes.max()
+        when (evalRes) {
+            is LatticeInterval -> {
+                val maxValue =
+                    ((evalRes as? LatticeInterval.Bounded)?.upper as? LatticeInterval.Bound.Value)
+                        ?.value
+                        ?: ((evalRes as? LatticeInterval.Bounded)?.upper
+                                as? LatticeInterval.Bound.INFINITE)
+                            ?.let { Long.MAX_VALUE }
+                        ?: Long.MIN_VALUE
+                if (maxValue > result) {
+                    result = maxValue
+                }
+            }
+
+            is Number if evalRes.toLong() > result -> {
+                result = evalRes.toLong()
+            }
+
+            is NumberSet if evalRes.max() > result -> {
+                result = evalRes.max()
+            }
         }
         // Extend this when we have other evaluators.
     }
@@ -222,9 +288,20 @@ fun max(n: List<Node>?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree
  *
  * @eval can be used to specify the evaluator but this method has to interpret the result correctly!
  */
-fun max(n: Node?, eval: ValueEvaluator = MultiValueEvaluator()): QueryTree<Number> {
+fun max(n: Node?, eval: ValueEvaluator = IntegerIntervalEvaluator()): QueryTree<Number> {
     val evalRes = eval.evaluate(n)
-    if (evalRes is Number) {
+
+    if (evalRes is LatticeInterval) {
+        val result =
+            ((evalRes as? LatticeInterval.Bounded)?.upper as? LatticeInterval.Bound.Value)?.value
+                ?: Long.MAX_VALUE
+        return QueryTree(
+            result,
+            mutableListOf(QueryTree(n, operator = GenericQueryOperators.EVALUATE)),
+            node = n,
+            operator = GenericQueryOperators.EVALUATE,
+        )
+    } else if (evalRes is Number) {
         return QueryTree(
             evalRes,
             mutableListOf(QueryTree(n, operator = GenericQueryOperators.EVALUATE)),

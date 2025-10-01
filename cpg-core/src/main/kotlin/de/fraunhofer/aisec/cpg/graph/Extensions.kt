@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
+import java.util.Objects
 import kotlin.collections.filter
 import kotlin.collections.firstOrNull
 import kotlin.math.absoluteValue
@@ -466,6 +467,16 @@ class Context(
         return this
     }
 
+    override fun equals(other: Any?): Boolean {
+        return other is Context &&
+            this.indexStack == other.indexStack &&
+            this.callStack == other.callStack
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hash(super.hashCode(), indexStack, callStack)
+    }
+
     companion object {
         /**
          * Creates a new [Context] with an empty index stack and call stack given by the
@@ -538,6 +549,30 @@ class SimpleStack<T> {
 
     operator fun contains(elem: T): Boolean {
         return deque.contains(elem)
+    }
+
+    /** Hack: Check if the items in the deque repeat themselves */
+    fun isLoop(): Boolean {
+        if (this.deque.isEmpty()) return false
+        val first = this.deque.removeFirst()
+        var current: T? = null
+        val pattern = mutableListOf(first)
+        var containsLoop = true
+
+        // Pop elements until we determine the pattern
+        while (current != first) {
+            if (this.deque.isEmpty()) return false
+            if (this.deque.first() == first) break
+            // We have a small loop over a single element
+            if (current != first) current = this.deque.removeFirst()
+            pattern.add(current)
+        }
+        // Now let's check if the pattern happens again
+        pattern.forEach {
+            if (this.deque.isEmpty()) return false
+            if (it != this.deque.removeFirst()) containsLoop = false
+        }
+        return containsLoop
     }
 }
 
@@ -858,6 +893,7 @@ fun Node.followXUntilHit(
             >,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    continueAfterHit: Boolean = false,
     ctx: Context = Context(steps = 0),
     earlyTermination: (Node, Context) -> Boolean,
     predicate: (Node) -> Boolean,
@@ -924,6 +960,15 @@ fun Node.followXUntilHit(
             // with the next step to the worklist.
             if (
                 !isNodeWithCallStackInPath(next, newContext, currentPath) &&
+                    // A hack that tries to ensure that we are not running in circles: Watch out if
+                    // the top of the newContext and the currentPath callStack are the same and not
+                    // null, this could indicate a loop
+                    // However, if the newContext and the currentPath last's callStack are the same,
+                    // it should be fine I guess
+                    !newContext.callStack.clone().isLoop() &&
+                    (newContext.callStack.top != currentPath.last().second.callStack.top ||
+                        newContext.callStack.top == null ||
+                        newContext.callStack == currentPath.last().second.callStack) &&
                     (findAllPossiblePaths ||
                         (!isNodeWithCallStackInPath(next, newContext, alreadySeenNodes) &&
                             worklist.none { isNodeWithCallStackInPath(next, newContext, it) }))
@@ -1454,9 +1499,8 @@ private fun Node.eogDistanceTo(to: Node): Int {
 fun Expression?.unwrapReference(): Reference? {
     return when {
         this is Reference -> this
-        this is UnaryOperator && (this.operatorCode == "*" || this.operatorCode == "&") ->
-            this.input.unwrapReference()
-
+        this is PointerReference -> this
+        this is PointerDereference -> this
         this is CastExpression -> this.expression.unwrapReference()
         else -> null
     }
