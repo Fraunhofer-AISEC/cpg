@@ -489,6 +489,12 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                                                 it.first === t.first &&
                                                 it.second == t.second
                                         }
+                                    else if (t is PointsToPass.NodeWithPropertiesKey)
+                                other.any {
+                                    it is PointsToPass.NodeWithPropertiesKey &&
+                                            it.node === t.node &&
+                                            it.properties == t.properties
+                                }
                                     else t in other
 
                                 if (!isEqual) {
@@ -498,7 +504,6 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                                 }
                             }
                         }
-                        //                        }
                     }
                 } catch (_: CancellationException) {
                     ret = false
