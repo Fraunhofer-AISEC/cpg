@@ -30,24 +30,10 @@ import java.util.Objects
 import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
-import kotlin.String
 
-/** Represents a cipher suite. E.g. `AES-XTS-plain64`. */
-public abstract class Cipher(
-    public val blockSize: Int?,
-    public val cipherName: String?,
-    public val keySize: Int?,
-    public val padding: Padding?,
-    underlyingNode: Node?,
-) : Functionality(underlyingNode) {
-    override fun equals(other: Any?): Boolean =
-        other is Cipher &&
-            super.equals(other) &&
-            other.blockSize == this.blockSize &&
-            other.cipherName == this.cipherName &&
-            other.keySize == this.keySize &&
-            other.padding == this.padding
+/** A certain Input for e.g. a function. */
+public abstract class Input(underlyingNode: Node?) : Functionality(underlyingNode) {
+    override fun equals(other: Any?): Boolean = other is Input && super.equals(other)
 
-    override fun hashCode(): Int =
-        Objects.hash(super.hashCode(), blockSize, cipherName, keySize, padding)
+    override fun hashCode(): Int = Objects.hash(super.hashCode())
 }

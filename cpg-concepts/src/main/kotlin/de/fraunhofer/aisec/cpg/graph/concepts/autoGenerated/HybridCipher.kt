@@ -32,22 +32,31 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
-/** Represents a cipher suite. E.g. `AES-XTS-plain64`. */
-public abstract class Cipher(
-    public val blockSize: Int?,
-    public val cipherName: String?,
-    public val keySize: Int?,
-    public val padding: Padding?,
+public abstract class HybridCipher(
+    public val keyDerivationFunction: KeyDerivationFunction?,
+    public val keyExchange: AsymmetricCipher?,
+    public val messageAuthenticationCode: MessageAuthenticationCode?,
+    public val symmetricCipher: SymmetricCipher?,
+    blockSize: Int?,
+    cipherName: String?,
+    keySize: Int?,
+    padding: Padding?,
     underlyingNode: Node?,
-) : Functionality(underlyingNode) {
+) : Cipher(blockSize, cipherName, keySize, padding, underlyingNode) {
     override fun equals(other: Any?): Boolean =
-        other is Cipher &&
+        other is HybridCipher &&
             super.equals(other) &&
-            other.blockSize == this.blockSize &&
-            other.cipherName == this.cipherName &&
-            other.keySize == this.keySize &&
-            other.padding == this.padding
+            other.keyDerivationFunction == this.keyDerivationFunction &&
+            other.keyExchange == this.keyExchange &&
+            other.messageAuthenticationCode == this.messageAuthenticationCode &&
+            other.symmetricCipher == this.symmetricCipher
 
     override fun hashCode(): Int =
-        Objects.hash(super.hashCode(), blockSize, cipherName, keySize, padding)
+        Objects.hash(
+            super.hashCode(),
+            keyDerivationFunction,
+            keyExchange,
+            messageAuthenticationCode,
+            symmetricCipher,
+        )
 }

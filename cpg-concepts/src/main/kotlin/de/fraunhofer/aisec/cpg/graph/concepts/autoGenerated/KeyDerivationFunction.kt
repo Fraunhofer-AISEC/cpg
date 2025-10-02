@@ -32,22 +32,16 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
-/** Represents a cipher suite. E.g. `AES-XTS-plain64`. */
-public abstract class Cipher(
-    public val blockSize: Int?,
-    public val cipherName: String?,
-    public val keySize: Int?,
-    public val padding: Padding?,
+public abstract class KeyDerivationFunction(
+    public val type: String?,
+    public val input: Input?,
     underlyingNode: Node?,
 ) : Functionality(underlyingNode) {
     override fun equals(other: Any?): Boolean =
-        other is Cipher &&
+        other is KeyDerivationFunction &&
             super.equals(other) &&
-            other.blockSize == this.blockSize &&
-            other.cipherName == this.cipherName &&
-            other.keySize == this.keySize &&
-            other.padding == this.padding
+            other.type == this.type &&
+            other.input == this.input
 
-    override fun hashCode(): Int =
-        Objects.hash(super.hashCode(), blockSize, cipherName, keySize, padding)
+    override fun hashCode(): Int = Objects.hash(super.hashCode(), type, input)
 }

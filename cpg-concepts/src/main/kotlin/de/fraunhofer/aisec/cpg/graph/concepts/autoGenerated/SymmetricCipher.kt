@@ -32,22 +32,24 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
-/** Represents a cipher suite. E.g. `AES-XTS-plain64`. */
-public abstract class Cipher(
-    public val blockSize: Int?,
-    public val cipherName: String?,
-    public val keySize: Int?,
-    public val padding: Padding?,
+/** Represents a symmetric cipher. */
+public abstract class SymmetricCipher(
+    public val authTagSize: Int?,
+    public val modus: String?,
+    public val initializationVector: InitializationVector?,
+    blockSize: Int?,
+    cipherName: String?,
+    keySize: Int?,
+    padding: Padding?,
     underlyingNode: Node?,
-) : Functionality(underlyingNode) {
+) : Cipher(blockSize, cipherName, keySize, padding, underlyingNode) {
     override fun equals(other: Any?): Boolean =
-        other is Cipher &&
+        other is SymmetricCipher &&
             super.equals(other) &&
-            other.blockSize == this.blockSize &&
-            other.cipherName == this.cipherName &&
-            other.keySize == this.keySize &&
-            other.padding == this.padding
+            other.authTagSize == this.authTagSize &&
+            other.modus == this.modus &&
+            other.initializationVector == this.initializationVector
 
     override fun hashCode(): Int =
-        Objects.hash(super.hashCode(), blockSize, cipherName, keySize, padding)
+        Objects.hash(super.hashCode(), authTagSize, modus, initializationVector)
 }

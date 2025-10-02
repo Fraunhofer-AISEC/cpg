@@ -33,8 +33,8 @@ import kotlin.Int
 import kotlin.String
 
 /**
- * Via the Authenticity relationship, the access type can be specified, e.g. public access (no
- * authentication), password-based, etc.
+ * An HTTP endpoint can set the \"proxyTarget\" property, in case that is routed through a (reverse)
+ * proxy, e.g. a load balancer.
  */
 public abstract class HttpEndpoint(
     public val handler: String?,

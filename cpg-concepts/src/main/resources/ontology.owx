@@ -13,6 +13,33 @@
     <Prefix name="xsd" IRI="http://www.w3.org/2001/XMLSchema#"/>
     <Prefix name="rdfs" IRI="http://www.w3.org/2000/01/rdf-schema#"/>
     <Declaration>
+        <Class IRI="#AsymmetricCipher"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#HybridCipher"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#InitializationVector"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#Input"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#Key"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#KeyDerivationFunction"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#MessageAuthenticationCode"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#Padding"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#SymmetricCipher"/>
+    </Declaration>
+    <Declaration>
         <Class IRI="/classes/ABAC"/>
     </Declaration>
     <Declaration>
@@ -730,6 +757,9 @@
         <Class IRI="/classes/ZoneRedundancy"/>
     </Declaration>
     <Declaration>
+        <ObjectProperty IRI="#keyExchange"/>
+    </Declaration>
+    <Declaration>
         <ObjectProperty IRI="/classes/basedOn"/>
     </Declaration>
     <Declaration>
@@ -833,6 +863,18 @@
     </Declaration>
     <Declaration>
         <ObjectProperty IRI="/properties/to"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="#authTagSize"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="#cipherName"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="#modus"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="#scheme"/>
     </Declaration>
     <Declaration>
         <DataProperty IRI="/classes/OneQubitErrorRate"/>
@@ -1379,6 +1421,133 @@
         </ObjectOneOf>
     </EquivalentClasses>
     <SubClassOf>
+        <Class IRI="#AsymmetricCipher"/>
+        <Class IRI="/classes/Cipher"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#HybridCipher"/>
+        <Class IRI="/classes/Cipher"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#HybridCipher"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="#keyExchange"/>
+            <Class IRI="#AsymmetricCipher"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#HybridCipher"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/properties/has"/>
+            <Class IRI="#KeyDerivationFunction"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#HybridCipher"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/properties/has"/>
+            <Class IRI="#MessageAuthenticationCode"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#HybridCipher"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/properties/has"/>
+            <Class IRI="#SymmetricCipher"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#InitializationVector"/>
+        <Class IRI="/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Input"/>
+        <Class IRI="/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Key"/>
+        <Class IRI="/classes/Data"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#KeyDerivationFunction"/>
+        <Class IRI="/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#KeyDerivationFunction"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/properties/has"/>
+            <Class IRI="#Input"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#KeyDerivationFunction"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="/classes/type"/>
+            <Datatype abbreviatedIRI="xsd:string"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#MessageAuthenticationCode"/>
+        <Class IRI="/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#MessageAuthenticationCode"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/properties/has"/>
+            <Class IRI="#Input"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#MessageAuthenticationCode"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/properties/has"/>
+            <Class IRI="#Key"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#MessageAuthenticationCode"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="/classes/type"/>
+            <Datatype abbreviatedIRI="xsd:string"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Padding"/>
+        <Class IRI="/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Padding"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="#scheme"/>
+            <Datatype abbreviatedIRI="xsd:string"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#SymmetricCipher"/>
+        <Class IRI="/classes/Cipher"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#SymmetricCipher"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/properties/has"/>
+            <Class IRI="#InitializationVector"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#SymmetricCipher"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="#authTagSize"/>
+            <Datatype abbreviatedIRI="xsd:int"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#SymmetricCipher"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="#modus"/>
+            <Datatype abbreviatedIRI="xsd:string"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
         <Class IRI="/classes/ABAC"/>
         <Class IRI="/classes/Authorization"/>
     </SubClassOf>
@@ -1683,6 +1852,20 @@
     </SubClassOf>
     <SubClassOf>
         <Class IRI="/classes/Cipher"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/properties/has"/>
+            <Class IRI="#Padding"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/Cipher"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="#cipherName"/>
+            <Datatype abbreviatedIRI="xsd:string"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/Cipher"/>
         <DataSomeValuesFrom>
             <DataProperty IRI="/classes/blockSize"/>
             <Datatype abbreviatedIRI="xsd:int"/>
@@ -1693,13 +1876,6 @@
         <DataSomeValuesFrom>
             <DataProperty IRI="/classes/keySize"/>
             <Datatype abbreviatedIRI="xsd:int"/>
-        </DataSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="/classes/Cipher"/>
-        <DataSomeValuesFrom>
-            <DataProperty IRI="/classes/name"/>
-            <Datatype abbreviatedIRI="xsd:string"/>
         </DataSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
@@ -4620,6 +4796,10 @@ ips += loadBalancerIP
 name = metadata.name</Literal>
     </DataPropertyAssertion>
     <SubObjectPropertyOf>
+        <ObjectProperty IRI="#keyExchange"/>
+        <ObjectProperty abbreviatedIRI="owl:topObjectProperty"/>
+    </SubObjectPropertyOf>
+    <SubObjectPropertyOf>
         <ObjectProperty IRI="/classes/hasMultipleSet"/>
         <ObjectProperty IRI="/properties/has"/>
     </SubObjectPropertyOf>
@@ -4679,6 +4859,22 @@ name = metadata.name</Literal>
         <ObjectProperty IRI="/classes/hasType"/>
         <Class IRI="/classes/ResourceType"/>
     </ObjectPropertyRange>
+    <SubDataPropertyOf>
+        <DataProperty IRI="#authTagSize"/>
+        <DataProperty abbreviatedIRI="owl:topDataProperty"/>
+    </SubDataPropertyOf>
+    <SubDataPropertyOf>
+        <DataProperty IRI="#cipherName"/>
+        <DataProperty abbreviatedIRI="owl:topDataProperty"/>
+    </SubDataPropertyOf>
+    <SubDataPropertyOf>
+        <DataProperty IRI="#modus"/>
+        <DataProperty abbreviatedIRI="owl:topDataProperty"/>
+    </SubDataPropertyOf>
+    <SubDataPropertyOf>
+        <DataProperty IRI="#scheme"/>
+        <DataProperty abbreviatedIRI="owl:topDataProperty"/>
+    </SubDataPropertyOf>
     <SubDataPropertyOf>
         <DataProperty IRI="/classes/blockSize"/>
         <DataProperty abbreviatedIRI="owl:topDataProperty"/>
@@ -4778,6 +4974,121 @@ name = metadata.name</Literal>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <AbbreviatedIRI>owl:Thing</AbbreviatedIRI>
         <Literal>owl:Thing</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#AsymmetricCipher</IRI>
+        <Literal>AsymmetricCipher</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#HybridCipher</IRI>
+        <Literal>HybridCipher</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#InitializationVector</IRI>
+        <Literal>Represents an Initialization Vector of a cipher.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#InitializationVector</IRI>
+        <Literal>InitializationVector</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#Input</IRI>
+        <Literal>A certain Input for e.g. a function.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#Input</IRI>
+        <Literal>Input</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#Key</IRI>
+        <Literal>A key used for encryption algorithms.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#Key</IRI>
+        <Literal>Key</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#KeyDerivationFunction</IRI>
+        <Literal>KeyDerivationFunction</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#MessageAuthenticationCode</IRI>
+        <Literal>MessageAuthenticationCode</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#Padding</IRI>
+        <Literal>A padding for a cipher.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#Padding</IRI>
+        <Literal>Padding</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#SymmetricCipher</IRI>
+        <Literal>Represents a symmetric cipher.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#SymmetricCipher</IRI>
+        <Literal>SymmetricCipher</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#authTagSize</IRI>
+        <Literal>AuthTagSize of a symmetric cipher</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#authTagSize</IRI>
+        <Literal>authTagSize</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#cipherName</IRI>
+        <Literal>Name of a cryptographic cipher.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#cipherName</IRI>
+        <Literal>cipherName</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#keyExchange</IRI>
+        <Literal>keyExchange</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#modus</IRI>
+        <Literal>Describes a modus of something being executed. (e.g. used by an Encryption)</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#modus</IRI>
+        <Literal>modus</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>#scheme</IRI>
+        <Literal>Describes a certain scheme e.g. a padding scheme.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#scheme</IRI>
+        <Literal>scheme</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
