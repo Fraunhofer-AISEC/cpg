@@ -1272,15 +1272,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         var doubleState = doubleState
         val mapDstToSrc = ConcurrentHashMap<Node, IdentitySet<MapDstToSrcEntry>>()
 
+        log.info("Starting handleCallExpression for $currentNode")
+
         // The toIdentitySet avoids having the same elements multiple times
-        val invokes = currentNode.invokes.toIdentitySet() // .toList()
+        val invokes = currentNode.invokes.toIdentitySet()
         coroutineScope {
             invokes.forEach { invoke ->
                 val inv = calculateFunctionSummaries(invoke)
                 if (inv != null) {
                     doubleState =
                         calculateIncomingCallingContexts(lattice, inv, currentNode, doubleState)
-                    log.info("Finished calculating CallingContexsts")
 
                     // If we have a FunctionSummary, we push the values of the arguments and
                     // return value
@@ -1358,14 +1359,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
 
         val callingContextOut = CallingContextOut(mutableListOf(currentNode))
-        log.info("mapDstToSrc.size: ${mapDstToSrc.size}")
         mapDstToSrc.forEach { (dstAddr, values) ->
-            log.info("values.size: ${values.size}")
             doubleState =
                 writeMapEntriesToState(lattice, doubleState, dstAddr, values, callingContextOut)
         }
 
-        log.info("Finished in handleCalLExpression")
+        log.info("Finished in handleCallExpression for $currentNode")
         return doubleState
     }
 
@@ -1537,11 +1536,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     it.propertySet.any { it is PartialDataflowGranularity<*> },
                 )
             }
-        //        val lastWrites = PowersetLattice.Element<NodeWithPropertiesKey>()
         val lastWrites: MutableSet<NodeWithPropertiesKey> = ConcurrentHashMap.newKeySet()
         val destinations = identitySetOf<Node>()
-
-        log.info("writeMapEntries. calculated sources. ")
 
         val localResults =
             values.splitInto(minPartSize = 1).map { chunk ->
@@ -1584,10 +1580,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 }
             }
 
-        log.info("Collecting destinations")
         localResults.awaitAll().forEach { destinations.addAll(it) }
-
-        log.info("writeMapEntries. Updating values")
 
         return@coroutineScope doubleState.updateValues(
             lattice,
