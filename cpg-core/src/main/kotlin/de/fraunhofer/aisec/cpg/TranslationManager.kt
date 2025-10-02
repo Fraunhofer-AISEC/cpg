@@ -47,12 +47,9 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicBoolean
-<<<<<<< HEAD
-import kotlin.io.path.name
-=======
 import kotlin.io.path.absolute
+import kotlin.io.path.name
 import kotlin.io.path.readText
->>>>>>> d3dbeb03950 (Changing function signature of `parse` to accept the file content instead of a file)
 import kotlin.reflect.full.findAnnotation
 import kotlin.time.DurationUnit
 import org.slf4j.LoggerFactory
@@ -126,8 +123,8 @@ private constructor(
             result.stats.totalLinesOfCode,
             (outerBench.duration / result.stats.totalLinesOfCode).toString(
                 DurationUnit.MILLISECONDS,
-                decimals = 3
-            )
+                decimals = 3,
+            ),
         )
 
         return result
@@ -450,7 +447,7 @@ private constructor(
 
         for (sourceLocation in sourceLocations) {
             ctx.currentComponent = component
-            val f = parse(component, result, ctx, ctx,sourceLocation)
+            val f = parse(component, result, ctx, ctx, sourceLocation)
             if (f != null) {
                 handleCompletion(result, usedFrontends, sourceLocation, f)
             }

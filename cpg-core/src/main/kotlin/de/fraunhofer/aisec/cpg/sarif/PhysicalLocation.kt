@@ -38,7 +38,12 @@ class PhysicalLocation(uri: URI?, region: Region) {
             return fileName
         }
 
-        val fileName = if(uri != null) { uri.path.substring(uri.path.lastIndexOf('/') + 1) } else { "unknown" }
+        val fileName =
+            if (uri != null) {
+                uri.path.substring(uri.path.lastIndexOf('/') + 1)
+            } else {
+                "unknown"
+            }
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
