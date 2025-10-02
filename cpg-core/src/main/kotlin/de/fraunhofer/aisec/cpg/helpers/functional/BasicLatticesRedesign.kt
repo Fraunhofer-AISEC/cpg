@@ -176,7 +176,7 @@ interface Lattice<T : Lattice.Element> {
         transformation: (Lattice<T>, EvaluationOrder, T) -> T,
         strategy: Strategy = Strategy.PRECISE,
         timeout: Long? = null,
-    ): T? {
+    ): T {
         return runBlocking {
             timeout?.let { timeout ->
                 withTimeoutOrNull(timeout) {
