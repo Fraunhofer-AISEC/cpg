@@ -25,7 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.fasterxml.jackson.annotation.JsonIdentityReference
+import com.fasterxml.jackson.annotation.JsonMerge
+import com.fasterxml.jackson.annotation.JsonProperty
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.HasBuiltins
 import de.fraunhofer.aisec.cpg.frontends.HasImplicitReceiver
@@ -41,7 +43,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.Imports
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
-import de.fraunhofer.aisec.cpg.graph.serialize.Serializers
 import de.fraunhofer.aisec.cpg.graph.statements.LabelStatement
 import de.fraunhofer.aisec.cpg.graph.statements.LookupScopeStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -66,7 +67,8 @@ typealias SymbolMap = MutableMap<Symbol, MutableList<Declaration>>
 @NodeEntity
 sealed class Scope(
     @Relationship(value = "SCOPE", direction = Relationship.Direction.INCOMING)
-    @JsonSerialize(using = Serializers.ReferenceSerializer::class)
+    @JsonIdentityReference(alwaysAsId = true)
+    @JsonProperty("astNode")
     open var astNode: Node?
 ) : Node() {
 
@@ -104,6 +106,7 @@ sealed class Scope(
      */
     @Relationship(value = "IMPORTS_SCOPE", direction = Relationship.Direction.OUTGOING)
     @PopulatedByPass(ImportResolver::class)
+    @JsonMerge
     val importedScopeEdges =
         Imports(this, mirrorProperty = NamespaceScope::importedByEdges, outgoing = true)
 

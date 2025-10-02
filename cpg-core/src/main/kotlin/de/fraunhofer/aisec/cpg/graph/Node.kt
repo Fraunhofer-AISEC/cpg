@@ -28,13 +28,13 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo
+import com.fasterxml.jackson.annotation.JsonIdentityReference
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonMerge
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
@@ -51,7 +51,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.graph.serialize.Serializers
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
@@ -185,7 +184,8 @@ abstract class Node() :
 
     @DoNotPersist
     @Transient
-    @JsonSerialize(using = Serializers.ReferenceSerializer::class)
+    // @JsonSerialize(using = Serializers.ReferenceSerializer::class)
+    @JsonIdentityReference(alwaysAsId = true)
     var astParent: Node? = null
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */

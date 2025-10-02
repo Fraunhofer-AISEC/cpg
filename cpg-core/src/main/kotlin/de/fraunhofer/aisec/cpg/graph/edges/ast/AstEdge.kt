@@ -25,19 +25,22 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edges.ast
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.fasterxml.jackson.annotation.JsonIdentityReference
+import com.fasterxml.jackson.annotation.JsonProperty
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSingletonList
-import de.fraunhofer.aisec.cpg.graph.serialize.Serializers
 import org.neo4j.ogm.annotation.*
 
 /** This property edge describes a parent/child relationship in the Abstract Syntax Tree (AST). */
 @RelationshipEntity
 open class AstEdge<T : Node>(
-    start: Node,
-    @JsonSerialize(using = Serializers.FullObjectSerializer::class) override var end: T,
+    @JsonProperty("start") start: Node,
+    @JsonProperty("end")
+    // @JsonSerialize(using = Serializers.FullObjectSerializer::class)
+    @JsonIdentityReference(alwaysAsId = false)
+    override var end: T,
 ) : Edge<T>(start, end) {
     init {
         end.astParent = start

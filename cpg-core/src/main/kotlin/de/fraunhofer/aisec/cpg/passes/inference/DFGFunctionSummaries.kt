@@ -76,7 +76,7 @@ class DFGFunctionSummaries {
         functionToChangedParameters[functionDeclaration] ?: mapOf()
 
     /** This function returns a list of [DataflowEntry] from the specified file. */
-    private fun addEntriesFromFile(file: File): Map<FunctionDeclarationEntry, List<DFGEntry>> {
+    fun addEntriesFromFile(file: File): Map<FunctionDeclarationEntry, List<DFGEntry>> {
         val mapper =
             if (file.extension.lowercase() in listOf("yaml", "yml")) {
                     ObjectMapper(YAMLFactory())

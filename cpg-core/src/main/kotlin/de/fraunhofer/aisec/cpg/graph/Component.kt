@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonMerge
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
@@ -50,9 +52,10 @@ import org.neo4j.ogm.annotation.Transient
 @Suppress("CONTEXT_RECEIVERS_DEPRECATED")
 open class Component : Node() {
     @Relationship("TRANSLATION_UNITS")
+    @JsonMerge
     val translationUnitEdges = astEdgesOf<TranslationUnitDeclaration>()
     /** All translation units belonging to this application. */
-    val translationUnits by unwrapping(Component::translationUnitEdges)
+    @get:JsonIgnore val translationUnits by unwrapping(Component::translationUnitEdges)
 
     /**
      * The import dependencies of [TranslationUnitDeclaration] nodes of this component. The

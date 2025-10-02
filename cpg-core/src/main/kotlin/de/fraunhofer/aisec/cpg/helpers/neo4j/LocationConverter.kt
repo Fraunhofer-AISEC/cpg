@@ -25,6 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.helpers.neo4j
 
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.JsonSerializer
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
@@ -90,5 +95,38 @@ class LocationConverter : CpgCompositeConverter<PhysicalLocation?> {
         const val START_COLUMN = "startColumn"
         const val END_COLUMN = "endColumn"
         const val ARTIFACT = "artifact"
+    }
+
+    class LocationSerializer : JsonSerializer<PhysicalLocation>() {
+        override fun serialize(
+            value: PhysicalLocation?,
+            gen: com.fasterxml.jackson.core.JsonGenerator?,
+            serializers: com.fasterxml.jackson.databind.SerializerProvider?,
+        ) {
+            if (value != null && gen != null) {
+                gen.writeStartObject()
+                gen.writeStringField(ARTIFACT, value.artifactLocation.uri.toString())
+                gen.writeNumberField(START_LINE, value.region.startLine)
+                gen.writeNumberField(END_LINE, value.region.endLine)
+                gen.writeNumberField(START_COLUMN, value.region.startColumn)
+                gen.writeNumberField(END_COLUMN, value.region.endColumn)
+                gen.writeEndObject()
+            }
+        }
+    }
+
+    class LocationDeserializer : JsonDeserializer<PhysicalLocation>() {
+        override fun deserialize(p: JsonParser?, ctxt: DeserializationContext?): PhysicalLocation? {
+            if (p != null) {
+                val node: JsonNode = p.codec.readTree(p)
+                val startLine = node.get(START_LINE)?.asInt() ?: return null
+                val endLine = node.get(END_LINE)?.asInt() ?: return null
+                val startColumn = node.get(START_COLUMN)?.asInt() ?: return null
+                val endColumn = node.get(END_COLUMN)?.asInt() ?: return null
+                val uri = URI.create(node.get(ARTIFACT)?.asText() ?: "")
+                return PhysicalLocation(uri, Region(startLine, startColumn, endLine, endColumn))
+            }
+            return null
+        }
     }
 }

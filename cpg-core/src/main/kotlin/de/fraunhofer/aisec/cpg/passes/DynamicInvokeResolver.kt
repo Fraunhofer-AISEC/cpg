@@ -64,7 +64,7 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     private var inferDfgForUnresolvedCalls = false
 
     override fun accept(component: Component) {
-        inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedSymbols
+        inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedCalls
         walker = ScopedWalker(scopeManager)
         walker.registerHandler { node -> handle(node) }
 

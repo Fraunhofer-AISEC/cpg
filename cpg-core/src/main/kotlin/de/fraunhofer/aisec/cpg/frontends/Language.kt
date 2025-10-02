@@ -29,7 +29,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.SerializerProvider
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer
 import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.SignatureResult
@@ -107,7 +106,8 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     /** The namespace delimiter used by the language. Often, this is "." */
     open val namespaceDelimiter: String = "."
 
-    @get:JsonSerialize(using = KClassSerializer::class)
+    // @get:JsonSerialize(using = KClassSerializer::class)
+    @get:JsonIgnore
     /** The class of the frontend which is used to parse files of this language. */
     abstract val frontend: KClass<out T>
 

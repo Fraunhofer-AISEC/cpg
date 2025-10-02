@@ -42,6 +42,7 @@ import com.fasterxml.jackson.databind.deser.ResolvableDeserializer
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator
 import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator
+import com.fasterxml.jackson.databind.jsontype.TypeDeserializer
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer
 import com.fasterxml.jackson.databind.module.SimpleKeyDeserializers
 import com.fasterxml.jackson.databind.module.SimpleModule
@@ -59,6 +60,8 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.parseName
+import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.IOException
 import kotlin.reflect.KClass
 import kotlin.uuid.Uuid
@@ -253,6 +256,14 @@ class NodeDelegatingDeserializer(
         @Suppress("UNCHECKED_CAST") val node = delegate.deserialize(p, ctxt) as Node
         registry.register(node)
         return node
+    }
+
+    override fun deserializeWithType(
+        p: JsonParser?,
+        ctxt: DeserializationContext?,
+        typeDeserializer: TypeDeserializer?,
+    ): Any? {
+        return delegate.deserializeWithType(p, ctxt, typeDeserializer)
     }
 
     override fun isCachable(): Boolean = true
@@ -501,7 +512,10 @@ fun serializeToJson(translationResult: TranslationResult): String {
                 SimpleModule().apply {
                     // setSerializerModifier(KClassBeanSerializerModifier())
 
-                    // addSerializer(KClass::class.java, KClassSerializer())
+                    addSerializer(
+                        PhysicalLocation::class.java,
+                        LocationConverter.LocationSerializer(),
+                    )
 
                     // val kclassImpl = Class.forName("kotlin.reflect.jvm.internal.KClassImpl")
                     // addSerializer(kclassImpl, KClassSerializer())
@@ -559,6 +573,11 @@ fun deserializeFromJson(json: String): TranslationResult {
                     )
                     addKeyDeserializer(ValueDeclaration::class.java, NodeKeyDeserializer(registry))
                     */
+
+                    addDeserializer(
+                        PhysicalLocation::class.java,
+                        LocationConverter.LocationDeserializer(),
+                    )
                     addDeserializer(Uuid::class.java, UuidDeserializer())
                     addDeserializer(KClass::class.java, KClassDeserializer())
                     setKeyDeserializers(NodeKeyDeserializers(registry))

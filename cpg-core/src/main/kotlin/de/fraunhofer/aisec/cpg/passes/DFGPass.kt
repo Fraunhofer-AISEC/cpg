@@ -52,7 +52,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             config.functionSummaries.functionToDFGEntryMap.size,
         )
 
-        val inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedSymbols
+        val inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedCalls
         val walker = IterativeGraphWalker()
         walker.registerOnNodeVisit { node, parent ->
             handle(node, parent, inferDfgForUnresolvedCalls, config.functionSummaries)

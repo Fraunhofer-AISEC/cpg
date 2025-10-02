@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edges.flows
 
+import com.fasterxml.jackson.annotation.JsonIdentityReference
+import com.fasterxml.jackson.annotation.JsonProperty
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
@@ -41,19 +43,22 @@ import org.neo4j.ogm.annotation.RelationshipEntity
 @RelationshipEntity
 // @JsonIdentityInfo(generator = ObjectIdGenerators.UUIDGenerator::class, property = "@id")
 class EvaluationOrder(
-    start: Node,
+    @JsonProperty("start") start: Node,
+    @JsonProperty("end")
+    // @JsonSerialize(using = Serializers.FullObjectSerializer::class)
+    @JsonIdentityReference(alwaysAsId = true)
     end: Node,
     /**
      * True, if the edge flows into unreachable code e.g. a branch condition which is always false.
      */
-    var unreachable: Boolean = false,
+    @JsonProperty("unreachable") var unreachable: Boolean = false,
 
     /**
      * If we have multiple EOG edges the branch property indicates which EOG edge leads to true
      * branch (expression evaluated to true) or the false branch (e.g. with an if/else condition).
      * Otherwise, this property is null.
      */
-    var branch: Boolean? = null,
+    @JsonProperty("branch") var branch: Boolean? = null,
 ) : Edge<Node>(start, end) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

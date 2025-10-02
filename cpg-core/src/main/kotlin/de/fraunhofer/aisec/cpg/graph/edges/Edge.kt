@@ -26,15 +26,14 @@
 package de.fraunhofer.aisec.cpg.graph.edges
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo
+import com.fasterxml.jackson.annotation.JsonIdentityReference
 import com.fasterxml.jackson.annotation.ObjectIdGenerators
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.TO_STRING_STYLE
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.Persistable
-import de.fraunhofer.aisec.cpg.graph.serialize.Serializers
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.*
@@ -61,12 +60,11 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable, HasAssumptions {
     @field:Id @field:GeneratedValue private val id: Long? = null
 
     // Node where the edge is outgoing
-    @JsonSerialize(using = Serializers.ReferenceSerializer::class) @field:StartNode var start: Node
+    // @JsonSerialize(using = Serializers.ReferenceSerializer::class)
+    @JsonIdentityReference(alwaysAsId = true) @field:StartNode open lateinit var start: Node
 
     // Node where the edge is ingoing
-    @JsonSerialize(using = Serializers.ReferenceSerializer::class)
-    @field:EndNode
-    open lateinit var end: NodeType
+    @JsonIdentityReference(alwaysAsId = true) @field:EndNode open lateinit var end: NodeType
 
     @DoNotPersist override val assumptions: MutableSet<Assumption> = mutableSetOf()
 
