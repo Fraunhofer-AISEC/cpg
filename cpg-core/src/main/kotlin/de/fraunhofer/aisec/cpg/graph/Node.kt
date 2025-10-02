@@ -236,9 +236,9 @@ abstract class Node() :
 
     /** Required field for object graph mapping. It contains the node id. */
     @DoNotPersist @Id @GeneratedValue var legacyId: Long? = availableID.let {
-        val id = availableID
+        val nextID = availableID
         availableID++
-        id
+        nextID
     }
 
     /**
@@ -366,7 +366,7 @@ abstract class Node() :
 
         const val EMPTY_NAME = ""
 
-        var availableID = 0
+        var availableID: Long = 0L
     }
 }
 
