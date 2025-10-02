@@ -27,11 +27,13 @@ package de.fraunhofer.aisec.cpg.frontends.ruby
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.SupportsNewParse
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
+import java.nio.file.Path
 import org.jruby.Ruby
 import org.jruby.ast.BlockNode
 import org.jruby.ast.MethodDefNode
@@ -39,20 +41,28 @@ import org.jruby.ast.RootNode
 import org.jruby.parser.Parser
 import org.jruby.parser.ParserConfiguration
 
-class RubyLanguageFrontend(ctx: TranslationContext, language: RubyLanguage) :
-    LanguageFrontend<org.jruby.ast.Node, org.jruby.ast.Node>(ctx, language) {
+class RubyLanguageFrontend(language: RubyLanguage, ctx: TranslationContext) :
+    LanguageFrontend<org.jruby.ast.Node, org.jruby.ast.Node>(ctx, language), SupportsNewParse {
     val declarationHandler: DeclarationHandler = DeclarationHandler(this)
     val expressionHandler: ExpressionHandler = ExpressionHandler(this)
     val statementHandler: StatementHandler = StatementHandler(this)
 
     override fun parse(file: File): TranslationUnitDeclaration {
+        return parse(file.readText(Charsets.UTF_8), file.toPath())
+    }
+
+    override fun parse(content: String, path: Path?): TranslationUnitDeclaration {
         val ruby = Ruby.getGlobalRuntime()
         val parser = Parser(ruby)
 
         val node =
             parser.parse(
-                file.path,
-                file.inputStream(),
+                if (path != null) {
+                    path.toString()
+                } else {
+                    "unknown"
+                },
+                content.byteInputStream(),
                 null,
                 ParserConfiguration(ruby, 0, false, true, false),
             ) as RootNode
