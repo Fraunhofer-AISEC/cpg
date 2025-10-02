@@ -40,7 +40,9 @@ repositories {
     mavenCentral()
 }
 
-group = "de.fraunhofer.aisec"
+allprojects {
+    group = "de.fraunhofer.aisec"
+}
 
 // Configure Dokka for the multi-module cpg project
 dokka {
