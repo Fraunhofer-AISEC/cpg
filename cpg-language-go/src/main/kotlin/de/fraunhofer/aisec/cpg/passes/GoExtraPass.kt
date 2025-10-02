@@ -152,7 +152,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         scopeManager.enterScope(record)
 
         // Loop through the embedded struct and add their methods to the record's scope.
-        for (method in record.embeddedStructs.flatMap { it.methods }) {
+        for (method in record.embeddedStructs.flatMap { it.toType().methods }) {
             // Add it to the scope, but do NOT add it to the underlying AST field (methods),
             // otherwise we would duplicate the method in the AST
             scopeManager.addDeclaration(method)
