@@ -123,7 +123,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                 firstBasicBlock.nextEOGEdges,
                 startState,
                 ::transfer,
-                passConfig<Configuration>()?.timeout,
+                timeout = passConfig<Configuration>()?.timeout,
             )
                 ?: run {
                     log.warn(
