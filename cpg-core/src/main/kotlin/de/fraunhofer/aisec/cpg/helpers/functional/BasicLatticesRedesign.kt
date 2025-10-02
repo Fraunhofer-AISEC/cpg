@@ -182,7 +182,7 @@ interface Lattice<T : Lattice.Element> {
                 withTimeoutOrNull(timeout) {
                     iterateEogInternal(startEdges, startState, transformation, strategy)
                 }
-            } ?: run { iterateEogInternal(startEdges, startState, transformation) }
+            } ?: run { iterateEogInternal(startEdges, startState, transformation, strategy) }
         }
     }
 
