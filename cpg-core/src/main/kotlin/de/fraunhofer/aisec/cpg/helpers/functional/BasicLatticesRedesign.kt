@@ -579,7 +579,14 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                     }
             ) {
                 return false
-            } else if (element is PointsToPass.NodeWithPropertiesKey && this.any { it == element })
+            } else if (
+                element is PointsToPass.NodeWithPropertiesKey &&
+                    this.any {
+                        it is PointsToPass.NodeWithPropertiesKey &&
+                            it.node === element.node &&
+                            it.properties == element.properties
+                    }
+            )
                 return false
             return super.add(element)
         }

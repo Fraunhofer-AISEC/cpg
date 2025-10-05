@@ -1504,7 +1504,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return invoke
     }
 
-    data class NodeWithPropertiesKey(val node: Node, val properties: EqualLinkedHashSet<Any>) {
+    data class NodeWithPropertiesKey(
+        val node: Node,
+        val properties: EqualLinkedHashSet<Any> = equalLinkedHashSetOf(),
+    ) {
         // Since we are dealing with pairs, carefully check if we already have them
         override fun equals(other: Any?): Boolean =
             other is NodeWithPropertiesKey &&
@@ -1885,8 +1888,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         it.first === newValueEntry.first && it.second == newValueEntry.second
                     } ?: newValueEntry
                 newLastWriteEntry =
-                    newDeclState[addr]?.third?.firstOrNull { it == newLastWriteEntry }
-                        ?: newLastWriteEntry
+                    newDeclState[addr]?.third?.firstOrNull {
+                        it.node === newLastWriteEntry.node && it.properties == it.properties
+                    } ?: newLastWriteEntry
 
                 newDeclState.replace(
                     addr,
@@ -2286,9 +2290,13 @@ suspend fun PointsToState.push(
     // If we already have exactly that entry, no need to re-write it, otherwise we might confuse the
     // iterateEOG function
     val newLatticeCopy = newLatticeElement.duplicate()
-    newLatticeElement.third.forEach { pair ->
-        if (currentState.generalState[newNode]?.third?.contains(pair) == true) {
-            newLatticeCopy.third.remove(pair)
+    newLatticeElement.third.forEach { existingEntry ->
+        if (
+            currentState.generalState[newNode]?.third?.any {
+                it.node === existingEntry.node && it.properties == existingEntry.properties
+            } == true
+        ) {
+            newLatticeCopy.third.remove(existingEntry)
         }
     }
 
@@ -2987,7 +2995,12 @@ suspend fun PointsToState.Element.updateValues(
                         for (lw in chunk) {
                             val existingEntries =
                                 doubleState.declarationsState[destAddr]?.third?.filter { entry ->
-                                    entry == lw
+                                    //                                    entry == lw
+                                    entry.node === lw.node &&
+                                        entry.properties.size == lw.properties.size &&
+                                        lw.properties.all { lwp ->
+                                            entry.properties.any { it == lw }
+                                        }
                                 }
                             if (existingEntries?.isNotEmpty() == true)
                                 prevDFG.addAll(existingEntries)
@@ -3040,7 +3053,8 @@ suspend fun PointsToState.Element.updateValues(
                                 } &&
                                     (sources.any { src ->
                                         src.first === lw.node &&
-                                            lw.properties.any { it == src.second }
+                                            /*lw.properties.any { it == src.second }*/
+                                            src.second in lw.properties
                                     } || lw.node in destinations)
                             ) {
                                 newLastWrites.remove(lw)
