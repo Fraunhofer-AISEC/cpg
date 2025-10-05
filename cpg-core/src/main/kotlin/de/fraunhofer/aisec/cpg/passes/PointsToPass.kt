@@ -1889,7 +1889,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     } ?: newValueEntry
                 newLastWriteEntry =
                     newDeclState[addr]?.third?.firstOrNull {
-                        it.node === newLastWriteEntry.node && it.properties == it.properties
+                        it.node === newLastWriteEntry.node && it.properties == newLastWriteEntry.properties
                     } ?: newLastWriteEntry
 
                 newDeclState.replace(
