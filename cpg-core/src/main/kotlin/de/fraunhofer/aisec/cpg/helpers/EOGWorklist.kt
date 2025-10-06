@@ -267,10 +267,10 @@ inline fun <reified K : Node, V> iterateEOG(
     return runBlocking {
         if (timeout != null) {
             withTimeoutOrNull(timeout) { iterateEogInternal(startNode, startState, transformation) }
-            }else{
-                iterateEogInternal(startNode, startState, transformation)
-            }
+        } else {
+            iterateEogInternal(startNode, startState, transformation)
         }
+    }
 }
 
 inline fun <reified K : Node, V> iterateEogInternal(
