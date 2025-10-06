@@ -265,10 +265,12 @@ inline fun <reified K : Node, V> iterateEOG(
     crossinline transformation: (K, State<K, V>, Worklist<K, K, V>) -> State<K, V>,
 ): State<K, V>? {
     return runBlocking {
-        timeout?.let { timeout ->
+        if (timeout != null) {
             withTimeoutOrNull(timeout) { iterateEogInternal(startNode, startState, transformation) }
-        } ?: run { iterateEogInternal(startNode, startState, transformation) }
-    }
+            }else{
+                iterateEogInternal(startNode, startState, transformation)
+            }
+        }
 }
 
 inline fun <reified K : Node, V> iterateEogInternal(
