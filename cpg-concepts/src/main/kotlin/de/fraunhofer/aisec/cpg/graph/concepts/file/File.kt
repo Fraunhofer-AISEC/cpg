@@ -82,7 +82,13 @@ abstract class FileLikeObject(
     underlyingNode: Node?,
     open val fileName: String,
     open var isTempFile: FileTempFileStatus,
-) : Concept(underlyingNode = underlyingNode), IsFile {
+) : Concept(), IsFile {
+    init {
+        if (underlyingNode != null) {
+            this.underlyingNode = underlyingNode
+        }
+    }
+
     override fun equals(other: Any?): Boolean {
         return other is FileLikeObject &&
             super.equals(other) &&
