@@ -1262,7 +1262,23 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val lastWrites: MutableSet<NodeWithPropertiesKey>,
         val propertySet: EqualLinkedHashSet<Any>,
         val dst: IdentitySet<Node> = identitySetOf(),
-    )
+    ) {
+        override fun equals(other: Any?): Boolean {
+            return other is MapDstToSrcEntry &&
+                srcNode === other.srcNode &&
+                lastWrites.all { lw -> other.lastWrites.any { it == lw } } &&
+                propertySet.all { p -> other.propertySet.any { it == p } } &&
+                dst == other.dst
+        }
+
+        override fun hashCode(): Int {
+            var result = srcNode?.hashCode() ?: 0
+            result = 31 * result + lastWrites.hashCode()
+            result = 31 * result + propertySet.hashCode()
+            result = 31 * result + dst.hashCode()
+            return result
+        }
+    }
 
     private suspend fun handleCallExpression(
         lattice: PointsToState,
@@ -1504,10 +1520,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return invoke
     }
 
-    data class NodeWithPropertiesKey(
-        val node: Node,
-        val properties: EqualLinkedHashSet<Any> = equalLinkedHashSetOf(),
-    ) {
+    data class NodeWithPropertiesKey(val node: Node, val properties: Set<Any> = emptySet<Any>()) {
         // Since we are dealing with pairs, carefully check if we already have them
         override fun equals(other: Any?): Boolean =
             other is NodeWithPropertiesKey &&
@@ -1526,19 +1539,31 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         lattice: PointsToState,
         doubleState: PointsToState.Element,
         dstAddr: Node,
-        values: IdentitySet<MapDstToSrcEntry>,
+        values: MutableSet<MapDstToSrcEntry>,
         callingContext: CallingContextOut,
     ): PointsToState.Element = coroutineScope {
         // A triple: the sourceNode, a flag if this is a shortFS, and a flag if this is a
         // partialWrite
         val sources =
-            values.mapTo(PowersetLattice.Element()) {
-                Triple(
-                    it.srcNode,
-                    true in it.propertySet,
-                    it.propertySet.any { it is PartialDataflowGranularity<*> },
-                )
-            }
+            // by first mapping to a Set, we filter out doubles that may have appeared due to
+            // concurrent processing of mapDstToSrc
+            PowersetLattice.Element(
+                values.mapTo(HashSet()) {
+                    Triple(
+                        it.srcNode,
+                        true in it.propertySet,
+                        it.propertySet.any { it is PartialDataflowGranularity<*> },
+                    )
+                }
+            )
+        /*        val sources =
+        values.mapTo(PowersetLattice.Element()) {
+            Triple(
+                it.srcNode,
+                true in it.propertySet,
+                it.propertySet.any { it is PartialDataflowGranularity<*> },
+            )
+        }*/
         val lastWrites: MutableSet<NodeWithPropertiesKey> = ConcurrentHashMap.newKeySet()
         val destinations = identitySetOf<Node>()
 
@@ -1708,8 +1733,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         if (it.argumentIndex < currentNode.arguments.size) {
                             val arg = currentNode.arguments[it.argumentIndex]
                             destinationAddresses.filterNotNull().forEach { d ->
-                                val updatedPropertySet = propertySet
-                                updatedPropertySet.add(shortFS)
+                                val updatedPropertySet =
+                                    equalLinkedHashSetOf<Any>().apply {
+                                        addAll(propertySet)
+                                        add(shortFS)
+                                    }
                                 val currentSet = mapDstToSrc.computeIfAbsent(d) { identitySetOf() }
                                 doubleState.getNestedValues(arg, srcValueDepth).forEach { (value, _)
                                     ->
@@ -1739,8 +1767,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             is MemoryAddress -> {
                 destinationAddresses.filterNotNull().forEach { d ->
                     val currentSet = mapDstToSrc.computeIfAbsent(d) { identitySetOf() }
-                    val updatedPropertySet = propertySet
-                    updatedPropertySet.add(shortFS)
+                    val updatedPropertySet =
+                        equalLinkedHashSetOf<Any>().apply {
+                            addAll(propertySet)
+                            add(shortFS)
+                        }
                     if (
                         currentSet.none {
                             it.srcNode === srcNode &&
@@ -1771,13 +1802,18 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     newSet.forEach { pair ->
                         if (
                             currentSet.none {
-                                it.srcNode === pair.first &&
+                                it.srcNode ===
+                                    pair
+                                        .first && /*it.lastWrites.all { lw -> lastWrites.any { it == lw } } &&*/
                                     it.lastWrites === lastWrites &&
                                     pair.second in it.propertySet
                             }
                         ) {
-                            val updatedPropertySet = propertySet
-                            updatedPropertySet.add(shortFS)
+                            val updatedPropertySet =
+                                equalLinkedHashSetOf<Any>().apply {
+                                    addAll(propertySet)
+                                    add(shortFS)
+                                }
                             currentSet +=
                                 MapDstToSrcEntry(
                                     pair.first,
