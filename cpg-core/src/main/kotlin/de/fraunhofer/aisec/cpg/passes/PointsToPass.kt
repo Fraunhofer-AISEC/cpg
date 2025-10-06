@@ -1444,7 +1444,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // If we have nothing, the last write is probably the functionDeclaration
         if (lastWrites.isEmpty()) ret.add(NodeWithPropertiesKey(invoke, equalLinkedHashSetOf()))
         lastWrites.forEach { (lw, properties) ->
-            val filteredProperties = properties
+            val filteredProperties = equalLinkedHashSetOf<Any>().apply { addAll(properties) }
             if (shortFS) {
                 when (lw) {
                     is FunctionDeclaration ->
@@ -1669,8 +1669,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             // The extracted value might come from a state we
                             // created for a short function summary. If so, we
                             // have to store that info in the map
-                            val updatedPropertySet = propertySet
-                            updatedPropertySet.add(shortFS)
+                            val updatedPropertySet =
+                                equalLinkedHashSetOf<Any>().apply {
+                                    addAll(propertySet)
+                                    add(shortFS)
+                                }
                             val currentSet = mapDstToSrc.computeIfAbsent(d) { identitySetOf() }
                             if (
                                 currentSet.none {
@@ -1889,7 +1892,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     } ?: newValueEntry
                 newLastWriteEntry =
                     newDeclState[addr]?.third?.firstOrNull {
-                        it.node === newLastWriteEntry.node && it.properties == newLastWriteEntry.properties
+                        it.node === newLastWriteEntry.node &&
+                            it.properties == newLastWriteEntry.properties
                     } ?: newLastWriteEntry
 
                 newDeclState.replace(
@@ -2551,7 +2555,8 @@ fun PointsToState.Element.getLastWrites(
                 // Usually, we should have a lastwrite, so we take that
                 if (lastWrite?.isNotEmpty() == true)
                     lastWrite.mapTo(PowersetLattice.Element()) {
-                        ret.add(NodeWithPropertiesKey(it.node, it.properties))
+                        val newProps = equalLinkedHashSetOf<Any>().apply { addAll(it.properties) }
+                        ret.add(NodeWithPropertiesKey(it.node, newProps))
                     }
                 // However, there might be cases were we don't yet have written to the dereferenced
                 // value, in this case we return an UnknownMemoryValue
@@ -2609,7 +2614,8 @@ fun PointsToState.Element.getLastWrites(
             // node was last written to
             this.getAddresses(node, node).flatMapTo(PowersetLattice.Element()) {
                 this.declarationsState[it]?.third?.map {
-                    NodeWithPropertiesKey(it.node, it.properties)
+                    val newProps = equalLinkedHashSetOf<Any>().apply { addAll(it.properties) }
+                    NodeWithPropertiesKey(it.node, newProps)
                 } ?: setOf()
             }
     }
@@ -3079,7 +3085,9 @@ suspend fun PointsToState.Element.updateValues(
                                             .mapTo(PowersetLattice.Element()) {
                                                 NodeWithPropertiesKey(
                                                     it.first!!,
-                                                    equalLinkedHashSetOf(it.second),
+                                                    equalLinkedHashSetOf<Any>().apply {
+                                                        add(it.second)
+                                                    },
                                                 )
                                             }
                                     ),
@@ -3111,7 +3119,7 @@ suspend fun PointsToState.Element.updateValues(
                                     entry.third.add(
                                         NodeWithPropertiesKey(
                                             it.first!!,
-                                            equalLinkedHashSetOf(it.second),
+                                            equalLinkedHashSetOf<Any>().apply { add(it.second) },
                                         )
                                     )
                                 }

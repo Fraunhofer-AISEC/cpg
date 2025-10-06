@@ -460,7 +460,12 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                         other.any {
                             it is Pair<*, *> && it.first === t.first && it.second == t.second
                         }
-                    else if (t is PointsToPass.NodeWithPropertiesKey) other.any { it == t }
+                    else if (t is PointsToPass.NodeWithPropertiesKey)
+                        other.any {
+                            it is PointsToPass.NodeWithPropertiesKey &&
+                                it.node === t.node &&
+                                it.properties.all { p -> t.properties.any { it == p } }
+                        }
                     else t in other
 
                 if (!isEqual) {
@@ -493,7 +498,9 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                                         other.any {
                                             it is PointsToPass.NodeWithPropertiesKey &&
                                                 it.node === t.node &&
-                                                it.properties == t.properties
+                                                it.properties.all { p ->
+                                                    t.properties.any { it == p }
+                                                }
                                         }
                                     else t in other
 
@@ -534,7 +541,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                                 otherOnly.removeIf { o ->
                                     o is PointsToPass.NodeWithPropertiesKey &&
                                         o.node === t.node &&
-                                        o.properties == t.properties
+                                        o.properties.all { p -> t.properties.any { it == p } }
                                 }
                             }
 
@@ -584,7 +591,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                     this.any {
                         it is PointsToPass.NodeWithPropertiesKey &&
                             it.node === element.node &&
-                            it.properties == element.properties
+                            it.properties.all { p -> element.properties.any { it == p } }
                     }
             )
                 return false
