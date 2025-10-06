@@ -176,13 +176,15 @@ interface Lattice<T : Lattice.Element> {
         transformation: (Lattice<T>, EvaluationOrder, T) -> T,
         strategy: Strategy = Strategy.PRECISE,
         timeout: Long? = null,
-    ): T {
+    ): T? {
         return runBlocking {
-            timeout?.let { timeout ->
+            if (timeout != null) {
                 withTimeoutOrNull(timeout) {
                     iterateEogInternal(startEdges, startState, transformation, strategy)
                 }
-            } ?: run { iterateEogInternal(startEdges, startState, transformation, strategy) }
+            } else {
+                iterateEogInternal(startEdges, startState, transformation, strategy)
+            }
         }
     }
 
