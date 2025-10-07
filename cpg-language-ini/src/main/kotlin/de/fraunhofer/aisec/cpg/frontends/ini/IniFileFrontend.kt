@@ -131,7 +131,7 @@ class IniFileFrontend(ctx: TranslationContext, language: Language<IniFileFronten
         section.entries.forEach {
             val field = handleEntry(it)
             scopeManager.addDeclaration(field)
-            record.innerFields += field
+            record.fields += field
         }
         scopeManager.leaveScope(record)
 

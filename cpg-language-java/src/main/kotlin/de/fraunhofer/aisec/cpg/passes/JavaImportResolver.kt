@@ -96,11 +96,11 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 val classes = listOf(base, *base.superTypeDeclarations.toTypedArray())
                 // Add all the static methods implemented in the class "base" and its superclasses
                 staticImports.addAll(
-                    classes.flatMap { it.innerMethods }.filter(MethodDeclaration::isStatic)
+                    classes.flatMap { it.methods }.filter(MethodDeclaration::isStatic)
                 )
                 // Add all the static fields implemented in the class "base" and its superclasses
                 staticImports.addAll(
-                    classes.flatMap { it.innerFields }.filter { "static" in it.modifiers }
+                    classes.flatMap { it.fields }.filter { "static" in it.modifiers }
                 )
             }
         }
@@ -112,21 +112,18 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     protected fun getOrCreateMembers(base: RecordDeclaration, name: String): Set<ValueDeclaration> {
-        val memberMethods =
-            base.innerMethods.filter { it.name.localName.endsWith(name) }.toMutableSet()
+        val memberMethods = base.methods.filter { it.name.localName.endsWith(name) }.toMutableSet()
 
         // add methods from superclasses
         memberMethods.addAll(
             base.superTypeDeclarations
-                .flatMap { it.innerMethods }
+                .flatMap { it.methods }
                 .filter { it.name.localName.endsWith(name) }
         )
-        val memberFields = base.innerFields.filter { it.name.localName == name }.toMutableSet()
+        val memberFields = base.fields.filter { it.name.localName == name }.toMutableSet()
         // add fields from superclasses
         memberFields.addAll(
-            base.superTypeDeclarations
-                .flatMap { it.innerFields }
-                .filter { it.name.localName == name }
+            base.superTypeDeclarations.flatMap { it.fields }.filter { it.name.localName == name }
         )
 
         val memberEntries = mutableSetOf<EnumConstantDeclaration>()
@@ -158,8 +155,8 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             targetMethod.language = base.language
             targetMethod.isInferred = true
 
-            base.addField(targetField)
-            base.addMethod(targetMethod)
+            base.fields += targetField
+            base.methods += targetMethod
             result.add(targetField)
             result.add(targetMethod)
         }

@@ -55,7 +55,7 @@ internal class CXXIncludeTest : BaseTest() {
         val main = tu.functions["main"]
         assertNotNull(main)
 
-        val someClassConstructor = someClass.innerConstructors["SomeClass::SomeClass"]
+        val someClassConstructor = someClass.constructors["SomeClass::SomeClass"]
         assertNotNull(someClassConstructor)
         assertEquals(someClass, someClassConstructor.recordDeclaration)
 
@@ -69,7 +69,7 @@ internal class CXXIncludeTest : BaseTest() {
         val ref = returnStatement.returnValue as Reference
         assertNotNull(ref)
 
-        val someField = someClass.innerFields["someField"]
+        val someField = someClass.fields["someField"]
         assertNotNull(someField)
         assertEquals(someField, ref.refersTo)
     }
@@ -86,7 +86,7 @@ internal class CXXIncludeTest : BaseTest() {
         val someClass = tu.records["SomeClass"]
         assertNotNull(someClass)
 
-        val decl = someClass.innerConstructors[0]
+        val decl = someClass.constructors[0]
         assertEquals("SomeClass();", decl.code)
 
         val location = decl.location

@@ -112,17 +112,17 @@ class LLVMIRLanguageFrontendTest {
         val st = tu.records["struct.ST"]
         assertNotNull(st)
 
-        assertEquals(3, st.innerFields.size)
+        assertEquals(3, st.fields.size)
 
-        var field = st.innerFields.firstOrNull()
+        var field = st.fields.firstOrNull()
         assertNotNull(field)
         assertLocalName("i32", field.type)
 
-        field = st.innerFields[1]
+        field = st.fields[1]
         assertNotNull(field)
         assertLocalName("double", field.type)
 
-        field = st.innerFields[2]
+        field = st.fields[2]
         assertNotNull(field)
         assertLocalName("struct.RT", field.type)
         assertSame(rt, (field.type as? ObjectType)?.recordDeclaration)
@@ -451,7 +451,7 @@ class LLVMIRLanguageFrontendTest {
 
         val record = fooType.recordDeclaration
         assertNotNull(record)
-        assertEquals(2, record.innerFields.size)
+        assertEquals(2, record.fields.size)
 
         val returnStatement = foo.returns.singleOrNull()
         assertNotNull(returnStatement)
@@ -584,7 +584,7 @@ class LLVMIRLanguageFrontendTest {
         assertIs<ObjectType>(fooType)
         val record = fooType.recordDeclaration
         assertNotNull(record)
-        assertEquals(2, record.innerFields.size)
+        assertEquals(2, record.fields.size)
 
         val declarationStatement = foo.bodyOrNull<DeclarationStatement>()
         assertNotNull(declarationStatement)

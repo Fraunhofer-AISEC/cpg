@@ -97,7 +97,7 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     protected fun getAllMethodsFromSupertypes(
         supertypeRecords: Set<RecordDeclaration>
     ): List<MethodDeclaration> {
-        return supertypeRecords.map { it.innerMethods }.flatten()
+        return supertypeRecords.map { it.methods }.flatten()
     }
 
     protected fun findSupertypeRecords(
@@ -122,7 +122,7 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     ) {
         for (superMethod in allMethodsFromSupertypes) {
             val overrideCandidates =
-                declaration.innerMethods.filter { superMethod.isOverrideCandidate(it) }
+                declaration.methods.filter { superMethod.isOverrideCandidate(it) }
             superMethod.addOverriddenBy(overrideCandidates)
             overrideCandidates.forEach { it.addOverrides(superMethod) }
         }

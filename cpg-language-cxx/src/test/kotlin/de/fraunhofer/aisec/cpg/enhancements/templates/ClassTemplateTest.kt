@@ -60,8 +60,8 @@ internal class ClassTemplateTest : BaseTest() {
         first: FieldDeclaration?,
         second: FieldDeclaration?,
     ) {
-        assertTrue(pair.innerFields.contains(first))
-        assertTrue(pair.innerFields.contains(second))
+        assertTrue(pair.fields.contains(first))
+        assertTrue(pair.fields.contains(second))
     }
 
     private fun testClassTemplatesTypes(
@@ -91,7 +91,7 @@ internal class ClassTemplateTest : BaseTest() {
         pairConstructorDeclaration: ConstructorDeclaration,
     ) {
         assertEquals(pair, pairConstructorDeclaration.recordDeclaration)
-        assertTrue(pair.innerConstructors.contains(pairConstructorDeclaration))
+        assertTrue(pair.constructors.contains(pairConstructorDeclaration))
 
         val type = pairConstructorDeclaration.type as? FunctionType
         assertNotNull(type)
@@ -153,7 +153,7 @@ internal class ClassTemplateTest : BaseTest() {
         val type2 = findByUniqueName(result.allChildren<TypeParameterDeclaration>(), "class Type2")
         val first = findByUniqueName(result.fields, "first")
         val second = findByUniqueName(result.fields, "second")
-        val constructor = pair.innerConstructors["Pair"]
+        val constructor = pair.constructors["Pair"]
         assertNotNull(constructor)
 
         val receiver = constructor.receiver
@@ -207,7 +207,7 @@ internal class ClassTemplateTest : BaseTest() {
         val pair = findByUniqueName(result.records, "Pair")
         val paramN = findByUniqueName(result.parameters, "N")
         val n = findByUniqueName(result.fields, "n")
-        val receiver = pair.innerConstructors["Pair"]?.receiver
+        val receiver = pair.constructors["Pair"]?.receiver
         assertNotNull(receiver)
 
         val pairConstructorDecl =
@@ -220,7 +220,7 @@ internal class ClassTemplateTest : BaseTest() {
         val point1 = findByUniqueName(result.variables, "point1")
         assertEquals(3, template.parameters.size)
         assertEquals(paramN, template.parameters[2])
-        assertTrue(pair.innerFields.contains(n))
+        assertTrue(pair.fields.contains(n))
         assertEquals(paramN, (n.initializer as? Reference)?.refersTo)
 
         // Test Type
@@ -329,9 +329,9 @@ internal class ClassTemplateTest : BaseTest() {
         assertEquals(2, pairType.generics.size)
         assertEquals(type1ParameterizedType, pairType.generics[0])
         assertEquals(type2ParameterizedType, pairType.generics[1])
-        assertEquals(2, pair.innerFields.size)
-        assertEquals(first, pair.innerFields[0])
-        assertEquals(second, pair.innerFields[1])
+        assertEquals(2, pair.fields.size)
+        assertEquals(first, pair.fields[0])
+        assertEquals(second, pair.fields[1])
         assertEquals(type1ParameterizedType, first.type)
         assertEquals(type2ParameterizedType, second.type)
         testStructTemplateWithSameDefaultTypeInvocation(
@@ -477,10 +477,10 @@ internal class ClassTemplateTest : BaseTest() {
         assertEquals(paramT, template.parameters[0])
         assertEquals(paramN, template.parameters[1])
         assertEquals(literal10, paramN.default)
-        assertEquals(1, array.innerFields.size)
-        assertEquals(mArray, array.innerFields[0])
+        assertEquals(1, array.fields.size)
+        assertEquals(mArray, array.fields[0])
 
-        val receiver = array.innerMethods["GetSize"]?.receiver
+        val receiver = array.methods["GetSize"]?.receiver
         assertNotNull(receiver)
 
         val arrayType = ((receiver.type as? PointerType)?.elementType) as? ObjectType

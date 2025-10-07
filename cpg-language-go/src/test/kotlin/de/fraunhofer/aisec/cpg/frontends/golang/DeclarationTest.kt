@@ -100,13 +100,13 @@ class DeclarationTest {
         assertNotNull(myStruct)
         assertEquals("struct", myStruct.kind)
 
-        val fields = myStruct.innerFields
+        val fields = myStruct.fields
         assertEquals(
             listOf("MyField", "OtherStruct", "EvenAnotherStruct"),
             fields.map { it.name.localName },
         )
 
-        var methods = myStruct.innerMethods
+        var methods = myStruct.methods
         assertEquals(
             0,
             methods.size,
@@ -128,7 +128,7 @@ class DeclarationTest {
         assertNotNull(myInterface)
         assertEquals("interface", myInterface.kind)
 
-        methods = myInterface.innerMethods
+        methods = myInterface.methods
 
         assertEquals(1, methods.size)
 
@@ -159,7 +159,7 @@ class DeclarationTest {
         assertNotNull(record)
         assertLocalName("struct{field int}", record)
 
-        val field = record.innerFields["field"]
+        val field = record.fields["field"]
         assertNotNull(field)
 
         val init = s.initializer
@@ -370,7 +370,7 @@ class DeclarationTest {
         val inner = result.records["inner"]
         assertNotNull(inner)
 
-        val field = inner.innerFields["field"]
+        val field = inner.fields["field"]
         assertNotNull(field)
 
         val assign = result.assignments.firstOrNull()

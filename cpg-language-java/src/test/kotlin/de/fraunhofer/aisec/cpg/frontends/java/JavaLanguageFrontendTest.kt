@@ -58,7 +58,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val declaration = tu.records["LargeNegativeNumber"]
         assertNotNull(declaration)
 
-        val main = declaration.innerMethods["main"]
+        val main = declaration.methods["main"]
         assertNotNull(main)
 
         val a = main.variables["a"]
@@ -95,7 +95,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val declaration = tu.declarations[0] as? RecordDeclaration
         assertNotNull(declaration)
 
-        val main = declaration.innerMethods[0]
+        val main = declaration.methods[0]
         val ls = main.variables["ls"]
         assertNotNull(ls)
 
@@ -122,7 +122,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val declaration = tu.declarations[0] as? RecordDeclaration
         assertNotNull(declaration)
 
-        val main = declaration.innerMethods[0]
+        val main = declaration.methods[0]
         val ls = main.variables["ls"]
         assertNotNull(ls)
 
@@ -171,7 +171,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val declaration = tu.declarations[0] as? RecordDeclaration
         assertNotNull(declaration)
 
-        val main = declaration.innerMethods[0]
+        val main = declaration.methods[0]
 
         // lets get our try statement
         val tryStatement = main.bodyOrNull<TryStatement>(0)
@@ -227,7 +227,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val declaration = tu.declarations[0] as? RecordDeclaration
         assertNotNull(declaration)
 
-        val main = declaration.innerMethods[0]
+        val main = declaration.methods[0]
 
         // int i = 1;
         val i = main.variables["i"]
@@ -294,13 +294,13 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val recordDeclaration = namespaceDeclaration.records["SimpleClass"]
         assertNotNull(recordDeclaration)
 
-        val fields = recordDeclaration.innerFields.map { it.name.localName }.toSet()
+        val fields = recordDeclaration.fields.map { it.name.localName }.toSet()
         assertTrue(fields.containsAll(setOf("field", "field1", "field2")))
 
-        assertLiteralValue(1, recordDeclaration.innerFields["field1"]?.initializer)
-        assertLiteralValue(2, recordDeclaration.innerFields["field2"]?.initializer)
+        assertLiteralValue(1, recordDeclaration.fields["field1"]?.initializer)
+        assertLiteralValue(2, recordDeclaration.fields["field2"]?.initializer)
 
-        val method = recordDeclaration.innerMethods[0]
+        val method = recordDeclaration.methods[0]
         assertNotNull(method)
         assertEquals(recordDeclaration, method.recordDeclaration)
         assertLocalName("method", method)
@@ -310,7 +310,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertNotNull(functionType)
         assertLocalName("method()java.lang.Integer", functionType)
 
-        val constructor = recordDeclaration.innerConstructors[0]
+        val constructor = recordDeclaration.constructors[0]
         assertEquals(recordDeclaration, constructor.recordDeclaration)
         assertLocalName("SimpleClass", constructor)
     }
@@ -363,7 +363,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         val record = namespaceDeclaration.records["Cast"]
         assertNotNull(record)
-        val main = record.innerMethods[0]
+        val main = record.methods[0]
         assertNotNull(main)
 
         // e = new ExtendedClass()
@@ -412,7 +412,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val record = namespaceDeclaration.records["Arrays"]
         assertNotNull(record)
 
-        val main = record.innerMethods[0]
+        val main = record.methods[0]
         assertNotNull(main)
 
         val statements = (main.body as? Block)?.statements
@@ -464,7 +464,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val record = namespaceDeclaration.records["FieldAccess"]
         assertNotNull(record)
 
-        val main = record.innerMethods[0]
+        val main = record.methods[0]
         assertNotNull(main)
 
         val statements = (main.body as? Block)?.statements
@@ -507,7 +507,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val record = namespaceDeclaration.declarations<RecordDeclaration>(0)
         assertNotNull(record)
 
-        val main = record.innerMethods[0]
+        val main = record.methods[0]
         assertNotNull(main)
 
         val location = main.location
@@ -548,7 +548,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertLocalName("value", value)
         assertEquals(2, (value.value as? Literal<*>)?.value)
 
-        var field = record.innerFields["field"]
+        var field = record.fields["field"]
         assertNotNull(field)
         annotations = field.annotations
         assertEquals(1, annotations.size)
@@ -556,7 +556,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         var forField = annotations[0]
         assertLocalName("AnnotatedField", forField)
 
-        field = record.innerFields["anotherField"]
+        field = record.fields["anotherField"]
         assertNotNull(field)
 
         annotations = field.annotations
@@ -580,7 +580,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val record = tu.declarations<RecordDeclaration>(0)
         assertNotNull(record)
 
-        val func = record.innerMethods.stream().findFirst().orElse(null)
+        val func = record.methods.stream().findFirst().orElse(null)
         assertNotNull(func)
         assertNotNull(func.receiver)
 
@@ -625,7 +625,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             val record = namespace.declarations<RecordDeclaration>(0)
             assertNotNull(record)
 
-            val constructor = record.innerConstructors[0]
+            val constructor = record.constructors[0]
             val op = constructor.bodyOrNull<AssignExpression>(0)
             assertNotNull(op)
 
@@ -746,19 +746,19 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val outerClass = tu.records["compiling.OuterClass"]
         assertNotNull(outerClass)
 
-        val innerClass = outerClass.innerRecords["InnerClass"]
+        val innerClass = outerClass.records["InnerClass"]
         assertNotNull(innerClass)
 
-        val thisOuterClass = innerClass.innerFields["this\$OuterClass"]
+        val thisOuterClass = innerClass.fields["this\$OuterClass"]
         assertNotNull(thisOuterClass)
 
-        val evenMoreInnerClass = innerClass.innerRecords["EvenMoreInnerClass"]
+        val evenMoreInnerClass = innerClass.records["EvenMoreInnerClass"]
         assertNotNull(evenMoreInnerClass)
 
-        val thisInnerClass = evenMoreInnerClass.innerFields["this\$InnerClass"]
+        val thisInnerClass = evenMoreInnerClass.fields["this\$InnerClass"]
         assertNotNull(thisInnerClass)
 
-        val doSomething = evenMoreInnerClass.innerMethods["doSomething"]
+        val doSomething = evenMoreInnerClass.methods["doSomething"]
         assertNotNull(doSomething)
 
         val assign = doSomething.bodyOrNull<AssignExpression>()
@@ -805,9 +805,9 @@ internal class JavaLanguageFrontendTest : BaseTest() {
             }
         val record = result.records["Operators"]
         assertNotNull(record)
-        assertFalse { record.innerMethods.isEmpty() }
+        assertFalse { record.methods.isEmpty() }
 
-        val mainMethod = record.innerMethods["main"]
+        val mainMethod = record.methods["main"]
 
         val expressionLists = mainMethod.mcalls
         assertEquals(6, expressionLists.size)
@@ -858,14 +858,14 @@ internal class JavaLanguageFrontendTest : BaseTest() {
 
         assertEquals(2, enum.entries.size)
 
-        val valueField = enum.innerFields["value"]
+        val valueField = enum.fields["value"]
         assertTrue { valueField?.modifiers?.contains("private") ?: false }
 
-        val nameField = enum.innerFields["NAME"]
+        val nameField = enum.fields["NAME"]
         assertTrue { nameField?.modifiers?.containsAll(listOf("public", "static")) ?: false }
 
-        assertEquals(1, enum.innerConstructors.size)
-        val constructor = enum.innerConstructors.first()
+        assertEquals(1, enum.constructors.size)
+        val constructor = enum.constructors.first()
         assertNotNull(constructor.parameters["value"])
         assertNotNull(constructor.bodyOrNull<AssignExpression>(0))
 
@@ -886,7 +886,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         )
         assertEquals(constructor, (entryTwo?.initializer as? ConstructExpression)?.constructor)
 
-        val mainMethod = enum.innerMethods["main"]
+        val mainMethod = enum.methods["main"]
         assertNotNull(mainMethod)
         assertNotNull(mainMethod.parameters["args"])
         assertNotNull(mainMethod.bodyOrNull<DeclarationStatement>(0))

@@ -336,9 +336,9 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(foo)
 
         assertLocalName("SomeClass", cls)
-        assertEquals(1, cls.innerMethods.size)
+        assertEquals(1, cls.methods.size)
 
-        val clsfunc = cls.innerMethods.firstOrNull()
+        val clsfunc = cls.methods.firstOrNull()
         assertLocalName("someFunc", clsfunc)
 
         assertLocalName("foo", foo)
@@ -358,7 +358,7 @@ class PythonFrontendTest : BaseTest() {
         assertLocalName("c1", c1)
         val ctor = c1.firstAssignment
         assertIs<ConstructExpression>(ctor)
-        assertEquals(ctor.constructor, cls.innerConstructors.firstOrNull())
+        assertEquals(ctor.constructor, cls.constructors.firstOrNull())
         assertFullName("simple_class.SomeClass", c1.type)
         ctor.arguments.forEach { assertEquals(ctor, it.astParent) }
 
@@ -434,23 +434,23 @@ class PythonFrontendTest : BaseTest() {
         val recordFoo = p.records["Foo"]
         assertNotNull(recordFoo)
         assertLocalName("Foo", recordFoo)
-        assertEquals(4, recordFoo.innerFields.size)
-        assertEquals(1, recordFoo.innerMethods.size)
+        assertEquals(4, recordFoo.fields.size)
+        assertEquals(1, recordFoo.methods.size)
 
         // TODO: When developing the new python frontend, remove the type specifier from the field
         //   again and check if the field still occurs. It's absolutely not clear to me who would be
         //   responsible for adding it but IMHO it should be the frontend. This, however, is
         //   currently not the case.
-        val fieldX = recordFoo.innerFields["x"]
+        val fieldX = recordFoo.fields["x"]
         assertNotNull(fieldX)
 
-        val fieldY = recordFoo.innerFields["y"]
+        val fieldY = recordFoo.fields["y"]
         assertNotNull(fieldY)
 
-        val fieldZ = recordFoo.innerFields["z"]
+        val fieldZ = recordFoo.fields["z"]
         assertNotNull(fieldZ)
 
-        val fieldBaz = recordFoo.innerFields["baz"]
+        val fieldBaz = recordFoo.fields["baz"]
         assertNotNull(fieldBaz)
 
         assertLocalName("x", fieldX)
@@ -463,7 +463,7 @@ class PythonFrontendTest : BaseTest() {
         assertNull(fieldZ.firstAssignment)
         assertNotNull(fieldBaz.firstAssignment)
 
-        val methBar = recordFoo.innerMethods[0]
+        val methBar = recordFoo.methods[0]
         assertNotNull(methBar)
         assertLocalName("bar", methBar)
 
@@ -475,7 +475,7 @@ class PythonFrontendTest : BaseTest() {
 
         val barBaz = methBarBody.statements[1]
         assertIs<AssignExpression>(barBaz)
-        val barBazInner = recordFoo.innerFields("baz").firstOrNull()
+        val barBazInner = recordFoo.fields("baz").firstOrNull()
         assertIs<FieldDeclaration>(barBazInner)
         assertNotNull(barBazInner.firstAssignment)
     }
@@ -497,15 +497,15 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(recordFoo)
         assertLocalName("Foo", recordFoo)
 
-        assertEquals(1, recordFoo.innerFields.size)
-        val somevar = recordFoo.innerFields["somevar"]
+        assertEquals(1, recordFoo.fields.size)
+        val somevar = recordFoo.fields["somevar"]
         assertNotNull(somevar)
         assertLocalName("somevar", somevar)
         // assertEquals(tu.parseType("int", false), somevar.type) TODO fix type deduction
 
-        assertEquals(2, recordFoo.innerMethods.size)
-        val bar = recordFoo.innerMethods[0]
-        val foo = recordFoo.innerMethods[1]
+        assertEquals(2, recordFoo.methods.size)
+        val bar = recordFoo.methods[0]
+        val foo = recordFoo.methods[1]
         assertNotNull(bar)
         assertNotNull(foo)
         assertLocalName("bar", bar)
@@ -600,11 +600,11 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(recordFoo)
         assertLocalName("Foo", recordFoo)
 
-        assertEquals(1, recordFoo.innerMethods.size)
-        assertEquals(1, recordFoo.innerConstructors.size)
-        val fooCtor = recordFoo.innerConstructors[0]
+        assertEquals(1, recordFoo.methods.size)
+        assertEquals(1, recordFoo.constructors.size)
+        val fooCtor = recordFoo.constructors[0]
         assertNotNull(fooCtor)
-        val foobar = recordFoo.innerMethods[0]
+        val foobar = recordFoo.methods[0]
         assertNotNull(foobar)
 
         assertLocalName(PythonLanguage.IDENTIFIER_INIT, fooCtor)
@@ -699,15 +699,15 @@ class PythonFrontendTest : BaseTest() {
         val cls1Super = clsC1.superClasses.firstOrNull()
         assertIs<ObjectType>(cls1Super)
         assertEquals(clsCounter, cls1Super.recordDeclaration)
-        assertEquals(1, clsC1.innerFields.size)
+        assertEquals(1, clsC1.fields.size)
 
-        val field = clsC1.innerFields[0]
+        val field = clsC1.fields[0]
         assertNotNull(field)
         assertLocalName("total", field)
 
         // TODO assert initializer "total = 0"
 
-        val meth = clsC1.innerMethods[0]
+        val meth = clsC1.methods[0]
         assertNotNull(meth)
         assertLocalName("inc", meth)
         assertEquals(clsC1, meth.recordDeclaration)
@@ -759,17 +759,17 @@ class PythonFrontendTest : BaseTest() {
         val clsFoo = p.records["Foo"]
         assertNotNull(clsFoo)
 
-        val methBar = clsFoo.innerMethods[0]
+        val methBar = clsFoo.methods[0]
         assertNotNull(methBar)
 
         // val stmtsOutsideCls TODO
-        val classFieldNoInitializer = clsFoo.innerFields["classFieldNoInitializer"]
+        val classFieldNoInitializer = clsFoo.fields["classFieldNoInitializer"]
         assertNotNull(classFieldNoInitializer)
 
-        val classFieldWithInit = clsFoo.innerFields["classFieldWithInit"]
+        val classFieldWithInit = clsFoo.fields["classFieldWithInit"]
         assertNotNull(classFieldWithInit)
 
-        val classFieldDeclaredInFunction = clsFoo.innerFields["classFieldDeclaredInFunction"]
+        val classFieldDeclaredInFunction = clsFoo.fields["classFieldDeclaredInFunction"]
         assertNotNull(classFieldDeclaredInFunction)
         assertNull(classFieldNoInitializer.initializer)
 
@@ -804,7 +804,7 @@ class PythonFrontendTest : BaseTest() {
         // self.classFieldDeclaredInFunction = 456
         val barStmt0 = barBody.statements[0]
         assertIs<AssignExpression>(barStmt0)
-        val decl0 = clsFoo.innerFields("classFieldDeclaredInFunction").firstOrNull()
+        val decl0 = clsFoo.fields("classFieldDeclaredInFunction").firstOrNull()
         assertIs<FieldDeclaration>(decl0)
         assertNotNull(decl0.firstAssignment)
 
@@ -1540,7 +1540,7 @@ class PythonFrontendTest : BaseTest() {
             val foo = records["Foo"]
             assertNotNull(foo)
 
-            val bar = foo.innerMethods["bar"]
+            val bar = foo.methods["bar"]
             assertNotNull(bar)
 
             assertEquals(assertResolvedType("int"), bar.returnTypes.singleOrNull())
@@ -1857,7 +1857,7 @@ class PythonFrontendTest : BaseTest() {
         val someClass = tu.records["SomeClass"]
         assertNotNull(someClass)
 
-        val fieldX = someClass.innerFields["x"]
+        val fieldX = someClass.fields["x"]
         assertNotNull(fieldX)
 
         val method = tu.functions["method"]
@@ -1866,7 +1866,7 @@ class PythonFrontendTest : BaseTest() {
         val variableB = method.variables["b"]
         assertNotNull(variableB)
         assertIsNot<FieldDeclaration>(variableB)
-        assertEquals(1, someClass.innerFields.size)
+        assertEquals(1, someClass.fields.size)
 
         val someClass2 = tu.records["SomeClass2"]
         assertNotNull(someClass2)
@@ -1875,7 +1875,7 @@ class PythonFrontendTest : BaseTest() {
         // static_method has two local variables which are "b" and "x"
         assertEquals(2, staticMethod.variables.filter { it !is FieldDeclaration }.size)
         assertEquals(setOf("b", "x"), staticMethod.variables.map { it.name.localName }.toSet())
-        assertTrue(someClass2.innerFields.isEmpty())
+        assertTrue(someClass2.fields.isEmpty())
 
         // There is no field called "b" in the result.
         assertNull(tu.fields["b"])

@@ -673,17 +673,17 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(recordDeclaration)
         assertLocalName("SomeClass", recordDeclaration)
         assertEquals("class", recordDeclaration.kind)
-        assertEquals(2, recordDeclaration.innerFields.size)
+        assertEquals(2, recordDeclaration.fields.size)
 
-        val field = recordDeclaration.innerFields["field"]
+        val field = recordDeclaration.fields["field"]
         assertNotNull(field)
 
-        val constant = recordDeclaration.innerFields["CONSTANT"]
+        val constant = recordDeclaration.fields["CONSTANT"]
         assertNotNull(constant)
         assertEquals(tu.incompleteType().reference(POINTER), field.type)
-        assertEquals(4, recordDeclaration.innerMethods.size)
+        assertEquals(4, recordDeclaration.methods.size)
 
-        val method = recordDeclaration.innerMethods[0]
+        val method = recordDeclaration.methods[0]
         assertLocalName("method", method)
         assertEquals(0, method.parameters.size)
         assertEquals("()void*", method.type.typeName)
@@ -695,7 +695,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals(0, definition.parameters.size)
         assertTrue(definition.isDefinition)
 
-        val methodWithParam = recordDeclaration.innerMethods[1]
+        val methodWithParam = recordDeclaration.methods[1]
         assertLocalName("method", methodWithParam)
         assertEquals(1, methodWithParam.parameters.size)
         assertEquals(tu.primitiveType("int"), methodWithParam.parameters[0].type)
@@ -716,7 +716,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals(1, definition.parameters.size)
         assertTrue(definition.isDefinition)
 
-        val inlineMethod = recordDeclaration.innerMethods[2]
+        val inlineMethod = recordDeclaration.methods[2]
         assertLocalName("inlineMethod", inlineMethod)
         assertEquals(
             FunctionType(
@@ -729,7 +729,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         )
         assertTrue(inlineMethod.hasBody())
 
-        val inlineConstructor = recordDeclaration.innerConstructors[0]
+        val inlineConstructor = recordDeclaration.constructors[0]
         assertEquals(recordDeclaration.name.localName, inlineConstructor.name.localName)
         assertEquals(
             FunctionType("()SomeClass", listOf(), listOf(tu.objectType("SomeClass")), language),
@@ -752,7 +752,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         )
         assertTrue(constructorDefinition.hasBody())
 
-        val constructorDeclaration = recordDeclaration.innerConstructors[1]
+        val constructorDeclaration = recordDeclaration.constructors[1]
         assertNotNull(constructorDeclaration)
         assertFalse(constructorDeclaration.isDefinition)
         assertEquals(constructorDefinition, constructorDeclaration.definition)
@@ -1179,7 +1179,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(someClass)
         assertLocalName("record_attribute", someClass.annotations[0])
 
-        val a = someClass.innerFields["a"]
+        val a = someClass.fields["a"]
         assertNotNull(a)
 
         var annotation = a.annotations[0]
@@ -1188,7 +1188,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals(3, annotation.members.size)
         assertEquals("a", (annotation.members[0].value as Literal<*>).value)
 
-        val b = someClass.innerFields["b"]
+        val b = someClass.fields["b"]
         assertNotNull(b)
 
         annotation = b.annotations[0]
@@ -1313,7 +1313,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val classT = tu.records["T"]
         assertNotNull(classT)
 
-        val classTFoo = classT.innerMethods.firstOrNull()
+        val classTFoo = classT.methods.firstOrNull()
         assertNotNull(classTFoo)
 
         val classTReturn = classTFoo.returns.firstOrNull()
@@ -1328,7 +1328,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val classS = tu.records["S"]
         assertNotNull(classS)
 
-        val classSFoo = classS.innerMethods.firstOrNull()
+        val classSFoo = classS.methods.firstOrNull()
         assertNotNull(classSFoo)
 
         val classSReturn = classSFoo.bodyOrNull<ReturnStatement>()
@@ -1399,7 +1399,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val myStruct = tu.records["MyStruct"]
         assertNotNull(myStruct)
 
-        val field = myStruct.innerFields["field"]
+        val field = myStruct.fields["field"]
         assertNotNull(field)
 
         val s = main.variables["s"]
@@ -1446,11 +1446,11 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertNotNull(myClass)
 
         val targetNoParam =
-            myClass.innerMethods[{ it.name.localName == "target" && it.parameters.isEmpty() }]
+            myClass.methods[{ it.name.localName == "target" && it.parameters.isEmpty() }]
         assertNotNull(targetNoParam)
 
         val targetSingleParam =
-            myClass.innerMethods[{ it.name.localName == "target" && it.parameters.size == 1 }]
+            myClass.methods[{ it.name.localName == "target" && it.parameters.size == 1 }]
         assertNotNull(targetSingleParam)
 
         val main = tu.functions["main"]

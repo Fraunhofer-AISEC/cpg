@@ -237,9 +237,9 @@ class TypeScriptLanguageFrontendTest {
         assertEquals("interface", user.kind)
         assertLocalName("User", user)
 
-        assertEquals(4, user.innerFields.size)
+        assertEquals(4, user.fields.size)
 
-        val lastName = user.innerFields.lastOrNull()
+        val lastName = user.fields.lastOrNull()
         assertNotNull(lastName)
         assertLocalName("lastName", lastName)
         assertEquals(tu.primitiveType("string"), lastName.type)
@@ -249,9 +249,9 @@ class TypeScriptLanguageFrontendTest {
         assertEquals("interface", usersState.kind)
         assertLocalName("UsersState", usersState)
 
-        assertEquals(1, usersState.innerFields.size)
+        assertEquals(1, usersState.fields.size)
 
-        val users = usersState.innerFields.firstOrNull()
+        val users = usersState.fields.firstOrNull()
         assertNotNull(users)
         assertLocalName("users", users)
         assertIs<PointerType>(users.type)
@@ -260,11 +260,11 @@ class TypeScriptLanguageFrontendTest {
         val usersComponent = tu.records["Users"]
         assertNotNull(usersComponent)
         assertLocalName("Users", usersComponent)
-        assertEquals(1, usersComponent.innerConstructors.size)
-        assertEquals(2, usersComponent.innerMethods.size)
-        assertEquals(0, usersComponent.innerFields.size)
+        assertEquals(1, usersComponent.constructors.size)
+        assertEquals(2, usersComponent.methods.size)
+        assertEquals(0, usersComponent.fields.size)
 
-        val render = usersComponent.innerMethods["render"]
+        val render = usersComponent.methods["render"]
         assertNotNull(render)
 
         val returnStatement = render.returns.firstOrNull()
@@ -322,11 +322,11 @@ class TypeScriptLanguageFrontendTest {
         assertNotNull(myClass)
         assertLocalName("awesome", myClass.annotations.firstOrNull())
 
-        val method = myClass.innerMethods.firstOrNull()
+        val method = myClass.methods.firstOrNull()
         assertNotNull(method)
         assertLocalName("dontcall", method.annotations.firstOrNull())
 
-        val field = myClass.innerFields["something"]
+        val field = myClass.fields["something"]
         assertNotNull(field)
 
         val annotation = field.annotations.firstOrNull()
@@ -388,11 +388,11 @@ class TypeScriptLanguageFrontendTest {
         assertNotNull(users)
         assertEquals("Comment on a record", users.comment)
 
-        val i = users.innerConstructors.firstOrNull()
+        val i = users.constructors.firstOrNull()
         assertNotNull(i)
         assertEquals("Comment on constructor", i.comment)
 
-        val j = users.innerMethods["componentDidMount"]
+        val j = users.methods["componentDidMount"]
         assertNotNull(j)
         assertEquals("Multiline comment inside of a file", j.comment)
 

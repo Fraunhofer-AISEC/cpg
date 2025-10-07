@@ -2069,10 +2069,10 @@ class CollectionComprehensionTest {
         )
         assertEquals(
             1,
-            magicClass.innerFields.size,
+            magicClass.fields.size,
             "We expect exactly one field inside the record declaration representing the class \"Magic\" and that's the field which we expect to represent the class' attribute \"a\".",
         )
-        val fieldA = magicClass.innerFields["a"]
+        val fieldA = magicClass.fields["a"]
         assertIs<FieldDeclaration>(
             fieldA,
             "We expect exactly one field inside the record declaration representing the class \"Magic\" and that's the field which we expect to represent the class' attribute \"a\".",

@@ -130,7 +130,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
                 val decl = newFieldDeclaration(fieldName, type, modifiers, rawNode = field)
                 frontend.scopeManager.addDeclaration(decl)
-                record.innerFields += decl
+                record.fields += decl
             }
         }
 
@@ -169,7 +169,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                     frontend.scopeManager.leaveScope(method)
 
                     frontend.scopeManager.addDeclaration(method)
-                    record.innerMethods += method
+                    record.methods += method
                 } else {
                     log.debug("Adding {} as super class of interface {}", type.name, record.name)
                     // Otherwise, it contains either types or interfaces. For now, we

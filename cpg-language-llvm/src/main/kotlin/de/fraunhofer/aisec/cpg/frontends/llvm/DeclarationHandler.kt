@@ -217,7 +217,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
 
             val field = newFieldDeclaration(fieldName, fieldType, listOf(), null, false)
             frontend.scopeManager.addDeclaration(field)
-            record.innerFields += field
+            record.fields += field
 
             frontend.scopeManager.leaveScope(record)
         }

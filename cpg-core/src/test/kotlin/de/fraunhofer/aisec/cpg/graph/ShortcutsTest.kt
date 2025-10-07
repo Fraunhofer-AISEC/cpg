@@ -67,7 +67,7 @@ class ShortcutsTest {
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
 
-        val main = classDecl.innerMethods["main"]
+        val main = classDecl.methods["main"]
         assertNotNull(main)
         val mainBody = main.body
         assertIs<Block>(mainBody)
@@ -90,7 +90,7 @@ class ShortcutsTest {
         assertIs<MemberCallExpression>(memberCall3)
         expected.add(memberCall3)
 
-        val print = classDecl.innerMethods["print"]
+        val print = classDecl.methods["print"]
         assertNotNull(print)
         val printBody0 = print.bodyOrNull<CallExpression>(0)
         assertNotNull(printBody0)
@@ -117,7 +117,7 @@ class ShortcutsTest {
         val classDecl = result.records["ShortcutClass"]
         assertNotNull(classDecl)
 
-        val main = classDecl.innerMethods["main"]
+        val main = classDecl.methods["main"]
         assertNotNull(main)
         val mainBody = main.body
         assertIs<Block>(mainBody)
@@ -134,19 +134,19 @@ class ShortcutsTest {
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
 
-        val print = classDecl.innerMethods["print"]
+        val print = classDecl.methods["print"]
         assertNotNull(print)
         expected.add(print)
 
-        val magic = classDecl.innerMethods["magic"]
+        val magic = classDecl.methods["magic"]
         assertNotNull(magic)
         expected.add(magic)
 
-        val magic2 = classDecl.innerMethods["magic2"]
+        val magic2 = classDecl.methods["magic2"]
         assertNotNull(magic2)
         expected.add(magic2)
 
-        val main = classDecl.innerMethods["main"]
+        val main = classDecl.methods["main"]
         assertNotNull(main)
         val actual = main.callees
 
@@ -172,7 +172,7 @@ class ShortcutsTest {
     fun testCallersOf() {
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
-        val print = classDecl.innerMethods["print"]
+        val print = classDecl.methods["print"]
         assertNotNull(print)
 
         val expected = mutableListOf<FunctionDeclaration>()
@@ -201,7 +201,7 @@ class ShortcutsTest {
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
 
-        val magic = classDecl.innerMethods["magic"]
+        val magic = classDecl.methods["magic"]
         assertNotNull(magic)
 
         val magicBody = magic.body
@@ -284,7 +284,7 @@ class ShortcutsTest {
         val classDecl = result.records["ShortcutClass"]
         assertNotNull(classDecl)
 
-        val magic = classDecl.innerMethods["magic"]
+        val magic = classDecl.methods["magic"]
         assertNotNull(magic)
 
         // get the statement attr = 3;
@@ -313,7 +313,7 @@ class ShortcutsTest {
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
 
-        val magic2 = classDecl.innerMethods["magic2"]
+        val magic2 = classDecl.methods["magic2"]
         assertNotNull(magic2)
 
         val magic2Body = magic2.body
@@ -334,7 +334,7 @@ class ShortcutsTest {
         assertIs<Literal<*>>(lastFulfilled2)
         assertLiteralValue(5, lastFulfilled2)
 
-        val magic = classDecl.innerMethods["magic"]
+        val magic = classDecl.methods["magic"]
         assertNotNull(magic)
 
         val magicBody = magic.body
@@ -361,7 +361,7 @@ class ShortcutsTest {
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
 
-        val magic = classDecl.innerMethods["magic"]
+        val magic = classDecl.methods["magic"]
         assertNotNull(magic)
 
         val magicBody = magic.body
@@ -391,7 +391,7 @@ class ShortcutsTest {
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
 
-        val magic = classDecl.innerMethods["magic"]
+        val magic = classDecl.methods["magic"]
         assertNotNull(magic)
 
         val magicBody = magic.body
@@ -441,7 +441,7 @@ class ShortcutsTest {
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
 
-        val magic = classDecl.innerMethods["magic"]
+        val magic = classDecl.methods["magic"]
         assertNotNull(magic)
 
         val magicBody = magic.body

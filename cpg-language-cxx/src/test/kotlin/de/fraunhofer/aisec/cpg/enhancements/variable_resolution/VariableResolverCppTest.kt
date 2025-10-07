@@ -87,9 +87,9 @@ internal class VariableResolverCppTest : BaseTest() {
         externVarName = externalClass.fields["varName"]
         externStaticVarName = externalClass.fields["staticVarName"]
         outerClass = records["ScopeVariables"]
-        outerVarName = outerClass?.innerFields["varName"]
-        outerStaticVarName = outerClass?.innerFields["staticVarName"]
-        function2Receiver = outerClass?.innerMethods["function2"]?.receiver
+        outerVarName = outerClass?.fields["varName"]
+        outerStaticVarName = outerClass?.fields["staticVarName"]
+        function2Receiver = outerClass?.methods["function2"]?.receiver
 
         // Inner class and its fields
         innerClass = records["ScopeVariables::InnerClass"]
@@ -98,14 +98,14 @@ internal class VariableResolverCppTest : BaseTest() {
         main = functions["main"]
 
         // Functions in the outer and inner object
-        outerFunction1 = outerClass?.innerMethods["function1"]
+        outerFunction1 = outerClass?.methods["function1"]
         forStatements = outerFunction1.forLoops
-        outerFunction2 = outerClass?.innerMethods["function2"]
-        outerFunction3 = outerClass?.innerMethods["function3"]
-        outerFunction4 = outerClass?.innerMethods["function4"]
-        outerFunction5 = outerClass?.innerMethods["function5"]
-        innerFunction1 = innerClass?.innerMethods["function1"]
-        innerFunction2 = innerClass?.innerMethods["function2"]
+        outerFunction2 = outerClass?.methods["function2"]
+        outerFunction3 = outerClass?.methods["function3"]
+        outerFunction4 = outerClass?.methods["function4"]
+        outerFunction5 = outerClass?.methods["function5"]
+        innerFunction1 = innerClass?.methods["function1"]
+        innerFunction2 = innerClass?.methods["function2"]
         for (call in calls) {
             val first = call.arguments[0]
             val logId = (first as Literal<*>).value.toString()

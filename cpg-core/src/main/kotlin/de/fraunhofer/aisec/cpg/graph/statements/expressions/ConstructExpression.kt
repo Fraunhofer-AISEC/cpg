@@ -52,7 +52,7 @@ class ConstructExpression : CallExpression() {
     var constructor: ConstructorDeclaration? = null
         get() =
             if (anonymousClass != null) {
-                anonymousClass?.innerConstructors?.firstOrNull()
+                anonymousClass?.constructors?.firstOrNull()
             } else {
                 field
             }

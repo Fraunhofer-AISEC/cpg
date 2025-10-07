@@ -158,7 +158,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                 // with the language, since in some languages the AST of a method declaration could
                 // be outside a method, but this will do for now
                 if (record != null && inferred is MethodDeclaration) {
-                    record.addMethod(inferred)
+                    record.methods += inferred
                 }
 
                 // "upgrade" our struct to a class, if it was inferred by us, since we are calling
@@ -187,7 +187,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             createInferredParameters(inferred, signature)
 
             scopeManager.addDeclaration(inferred)
-            record?.addConstructor(inferred)
+            record?.constructors += inferred
 
             inferred
         }

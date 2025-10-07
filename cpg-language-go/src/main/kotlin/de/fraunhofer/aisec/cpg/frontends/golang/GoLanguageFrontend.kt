@@ -551,7 +551,7 @@ fun funcTypeName(paramTypes: List<Type>, returnTypes: List<Type>): String {
 
 val RecordDeclaration.embeddedStructs: List<RecordDeclaration>
     get() {
-        return this.innerFields
+        return this.fields
             .filter { "embedded" in it.modifiers }
             .mapNotNull { it.type.root.recordDeclaration }
     }

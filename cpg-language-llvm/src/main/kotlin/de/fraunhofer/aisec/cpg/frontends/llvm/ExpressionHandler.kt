@@ -315,7 +315,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             if (expr.instantiates == null) return expr
 
             // loop through the operands
-            for (field in (expr.instantiates as RecordDeclaration).innerFields) {
+            for (field in (expr.instantiates as RecordDeclaration).fields) {
                 // and handle them as expressions themselves
                 val arg = initializeAsUndef(field.type, value)
                 expr.addArgument(arg)
@@ -343,7 +343,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             if (expr.instantiates == null) return expr
 
             // loop through the operands
-            for (field in (expr.instantiates as RecordDeclaration).innerFields) {
+            for (field in (expr.instantiates as RecordDeclaration).fields) {
                 // and handle them as expressions themselves
                 val arg = initializeAsZero(field.type, value)
                 expr.addArgument(arg)
@@ -465,7 +465,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 val field: FieldDeclaration?
                 val fieldName: String =
                     if (index is Int) {
-                        field = record.innerFields["field_$index"]
+                        field = record.fields["field_$index"]
                         field?.name?.localName ?: ""
                     } else {
                         // We won't find a field because it's accessed by a variable index.

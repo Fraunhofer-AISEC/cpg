@@ -711,7 +711,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     ): ConstructorDeclaration? {
         val signature = constructExpression.signature
         val constructorCandidate =
-            recordDeclaration.innerConstructors.firstOrNull {
+            recordDeclaration.constructors.firstOrNull {
                 it.matchesSignature(
                     signature,
                     constructExpression.arguments,

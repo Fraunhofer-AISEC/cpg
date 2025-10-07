@@ -214,10 +214,8 @@ class GoLanguage :
 
             // Our target struct type needs to implement all the functions of the interface
             // TODO(oxisto): Differentiate on the receiver (pointer vs non-pointer)
-            for (method in targetType.recordDeclaration?.innerMethods ?: listOf()) {
-                if (
-                    target?.innerMethods?.firstOrNull { it.signature == method.signature } != null
-                ) {
+            for (method in targetType.recordDeclaration?.methods ?: listOf()) {
+                if (target?.methods?.firstOrNull { it.signature == method.signature } != null) {
                     b = CastNotPossible
                 }
             }

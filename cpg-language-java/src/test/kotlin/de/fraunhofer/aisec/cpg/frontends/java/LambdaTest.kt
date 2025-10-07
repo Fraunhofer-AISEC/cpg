@@ -97,7 +97,7 @@ class JavaLambdaTest {
         // assertEquals("java.util.function.BiFunction",
         // anonymousRecord.superClasses.first().name.toString() )
 
-        val applyMethod = anonymousRecord.innerMethods["apply"]
+        val applyMethod = anonymousRecord.methods["apply"]
         assertNotNull(applyMethod)
         val returnStatement =
             (applyMethod.body as? Block)?.statements?.firstOrNull() as? ReturnStatement

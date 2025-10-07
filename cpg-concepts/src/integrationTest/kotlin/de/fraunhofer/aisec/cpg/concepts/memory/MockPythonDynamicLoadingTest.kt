@@ -134,7 +134,7 @@ class MockPythonDynamicLoadingTest {
         assertNotNull(fooCall)
         assertInvokes(
             fooCall,
-            simpleImplClass.innerMethods["foo"],
+            simpleImplClass.methods["foo"],
             "The call 'foo()' should invoke 'impl.simple.SimpleImplClass.foo'",
         )
     }

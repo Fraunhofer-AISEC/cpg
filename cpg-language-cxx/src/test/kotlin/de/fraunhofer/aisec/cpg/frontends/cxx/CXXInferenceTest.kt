@@ -92,31 +92,31 @@ class CXXInferenceTest {
         assertNotNull(json)
         assertTrue(json.isInferred)
 
-        val begin = json.innerMethods["begin"]
+        val begin = json.methods["begin"]
         assertNotNull(begin)
         assertTrue(begin.isInferred)
         assertLocalName("iterator*", begin.returnTypes.singleOrNull())
 
-        val end = json.innerMethods["end"]
+        val end = json.methods["end"]
         assertNotNull(end)
         assertTrue(end.isInferred)
         assertLocalName("iterator*", end.returnTypes.singleOrNull())
 
-        val size = json.innerMethods["size"]
+        val size = json.methods["size"]
         assertNotNull(size)
         assertTrue(size.isInferred)
         assertLocalName("int", size.returnTypes.singleOrNull())
 
-        val iterator = json.innerRecords["iterator"]
+        val iterator = json.records["iterator"]
         assertNotNull(iterator)
         assertTrue(iterator.isInferred)
 
-        val next = iterator.innerMethods["next"]
+        val next = iterator.methods["next"]
         assertNotNull(next)
         assertTrue(next.isInferred)
         assertLocalName("iterator*", next.returnTypes.singleOrNull())
 
-        val isValid = iterator.innerMethods["isValid"]
+        val isValid = iterator.methods["isValid"]
         assertNotNull(isValid)
         assertTrue(isValid.isInferred)
         assertIs<BooleanType>(isValid.returnTypes.singleOrNull())

@@ -76,7 +76,7 @@ class VisitorTest : BaseTest() {
         assertNotNull(record)
 
         val nodeList: MutableList<Node> = ArrayList()
-        val method = record.innerMethods["method"]
+        val method = record.methods["method"]
         assertNotNull(method)
 
         // the "first" statement includes the block itself, so we need to get index 1 instead of 0
