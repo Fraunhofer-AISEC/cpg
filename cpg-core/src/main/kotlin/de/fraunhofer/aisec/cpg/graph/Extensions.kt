@@ -41,6 +41,7 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
 import java.util.Objects
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.filter
 import kotlin.collections.firstOrNull
 import kotlin.math.absoluteValue
@@ -888,7 +889,7 @@ fun Node.followPrevCDGUntilHit(
  */
 fun Node.followXUntilHit(
     x:
-        (Node, Context, List<Pair<Node, Context>>, MutableList<NodePath>) -> Collection<
+        (Node, Context, List<Pair<Node, Context>>, MutableSet<NodePath>) -> Collection<
                 Pair<Node, Context>
             >,
     collectFailedPaths: Boolean = true,
@@ -903,7 +904,7 @@ fun Node.followXUntilHit(
     val fulfilledPaths = mutableListOf<NodePath>()
     // failedPaths: All the paths which do not satisfy "predicate"
     val failedPaths = mutableListOf<Pair<FailureReason, NodePath>>()
-    val loopingPaths = mutableListOf<NodePath>()
+    val loopingPaths: MutableSet<NodePath> = ConcurrentHashMap.newKeySet()
     // The list of paths where we're not done yet.
     val worklist = identitySetOf<List<Pair<Node, Context>>>()
     worklist.add(listOf(this to ctx)) // We start only with the "from" node (=this)
