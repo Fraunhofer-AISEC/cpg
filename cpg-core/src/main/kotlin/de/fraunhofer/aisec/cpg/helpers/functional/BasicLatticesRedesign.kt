@@ -460,12 +460,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                         other.any {
                             it is Pair<*, *> && it.first === t.first && it.second == t.second
                         }
-                    else if (t is PointsToPass.NodeWithPropertiesKey)
-                        other.any {
-                            it is PointsToPass.NodeWithPropertiesKey &&
-                                it.node === t.node &&
-                                it.properties.all { p -> t.properties.any { it == p } }
-                        }
+                    else if (t is PointsToPass.NodeWithPropertiesKey) other.any { it == t }
                     else t in other
 
                 if (!isEqual) {
@@ -496,11 +491,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                                         }
                                     else if (t is PointsToPass.NodeWithPropertiesKey)
                                         other.any {
-                                            it is PointsToPass.NodeWithPropertiesKey &&
-                                                it.node === t.node &&
-                                                it.properties.all { p ->
-                                                    t.properties.any { it == p }
-                                                }
+                                            it is PointsToPass.NodeWithPropertiesKey && it == t
                                         }
                                     else t in other
 
@@ -539,9 +530,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
 
                             is PointsToPass.NodeWithPropertiesKey -> {
                                 otherOnly.removeIf { o ->
-                                    o is PointsToPass.NodeWithPropertiesKey &&
-                                        o.node === t.node &&
-                                        o.properties.all { p -> t.properties.any { it == p } }
+                                    o is PointsToPass.NodeWithPropertiesKey && o == t
                                 }
                             }
 
@@ -588,11 +577,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
                 return false
             } else if (
                 element is PointsToPass.NodeWithPropertiesKey &&
-                    this.any {
-                        it is PointsToPass.NodeWithPropertiesKey &&
-                            it.node === element.node &&
-                            it.properties.all { p -> element.properties.any { it == p } }
-                    }
+                    this.any { it is PointsToPass.NodeWithPropertiesKey && it == element }
             )
                 return false
             return super.add(element)

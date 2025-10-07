@@ -3037,12 +3037,7 @@ suspend fun PointsToState.Element.updateValues(
                         for (lw in chunk) {
                             val existingEntries =
                                 doubleState.declarationsState[destAddr]?.third?.filter { entry ->
-                                    //                                    entry == lw
-                                    entry.node === lw.node &&
-                                        entry.properties.size == lw.properties.size &&
-                                        lw.properties.all { lwp ->
-                                            entry.properties.any { it == lw }
-                                        }
+                                    entry == lw
                                 }
                             if (existingEntries?.isNotEmpty() == true)
                                 prevDFG.addAll(existingEntries)
