@@ -23,7 +23,7 @@ publishing {
 // Only include javadoc if the includeJavadoc property is set to true (required for maven central)
 val includeJavadoc: String? by project
 val javadocJar = if(includeJavadoc.toBoolean()) {
-    JavadocJar.Dokka("dokkaHtml")
+    JavadocJar.Dokka("dokkaGenerateModuleHtml")
 } else {
     JavadocJar.Empty()
 }
@@ -57,7 +57,7 @@ mavenPublishing {
         }
     }
 
-    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+    publishToMavenCentral()
 }
 
 // Sign the artifacts if the signingRequired property is set to true
