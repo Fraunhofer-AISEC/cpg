@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.functional.splitInto
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
 import java.util.Objects
@@ -45,6 +46,10 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.filter
 import kotlin.collections.firstOrNull
 import kotlin.math.absoluteValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 
 /**
  * Flattens the AST beginning with this node and returns all nodes of type [T]. For convenience, an
@@ -96,12 +101,22 @@ inline fun <reified T> Node?.allChildrenWithOverlays(
 ): List<T> {
     val nodes = SubgraphWalker.flattenAST(this as AstNode?)
     val nodesWithOverlays = nodes + nodes.flatMap { it.overlays }
-    val filtered = nodesWithOverlays.filterIsInstance<T>()
-
-    return if (predicate != null) {
-        filtered.filter(predicate)
-    } else {
-        filtered
+    return runBlocking {
+        if (predicate != null) {
+            nodesWithOverlays
+                .splitInto()
+                .map { chunk ->
+                    async(Dispatchers.Default) { chunk.filterIsInstance<T>().filter(predicate) }
+                }
+                .awaitAll()
+                .flatten()
+        } else {
+            nodesWithOverlays
+                .splitInto()
+                .map { chunk -> async(Dispatchers.Default) { chunk.filterIsInstance<T>() } }
+                .awaitAll()
+                .flatten()
+        }
     }
 }
 

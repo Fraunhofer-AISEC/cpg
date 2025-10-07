@@ -3090,9 +3090,7 @@ suspend fun PointsToState.Element.updateValues(
                                     it is CallExpression && it.invokes.singleOrNull()?.body == null
                                 } &&
                                     (sources.any { src ->
-                                        src.first === lw.node &&
-                                            /*lw.properties.any { it == src.second }*/
-                                            src.second in lw.properties
+                                        src.first === lw.node && src.second in lw.properties
                                     } || lw.node in destinations)
                             ) {
                                 newLastWrites.remove(lw)
