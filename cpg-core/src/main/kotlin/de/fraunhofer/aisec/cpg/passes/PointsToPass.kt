@@ -1298,6 +1298,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 if (inv != null) {
                     doubleState =
                         calculateIncomingCallingContexts(lattice, inv, currentNode, doubleState)
+                    log.info("Finished with calculateIncomingCallingContexts")
 
                     // If we have a FunctionSummary, we push the values of the arguments and
                     // return value
@@ -1373,6 +1374,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 }
             }
         }
+
+        log.info("Collected all entries for mapDstToSrc. size: ${mapDstToSrc.size}")
 
         val callingContextOut = CallingContextOut(mutableListOf(currentNode))
         mapDstToSrc.forEach { (dstAddr, values) ->
