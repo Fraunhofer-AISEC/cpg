@@ -1530,7 +1530,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         override fun hashCode(): Int {
             var h = node.hashCode()
-            for (p in properties) h = 31 * h + p.hashCode()
+            // The order of the properties doesn't matter
+            for (p in properties) h = h + p.hashCode()
             return h
         }
     }
