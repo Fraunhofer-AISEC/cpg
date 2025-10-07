@@ -32,6 +32,11 @@ open class Properties {
     var propertyDescription: String = ""
     var isRootClassNameResource = false
     var isInterface = false
+    var enumTypeName: String? = null
+    var enumValues: List<String> = emptyList()
+
+    val hasEnum: Boolean
+        get() = !enumTypeName.isNullOrBlank() && enumValues.isNotEmpty()
 
     constructor(propertyType: String = "", propertyName: String = "") {
         this.propertyType = propertyType

@@ -171,6 +171,7 @@ private fun createKtSourceCodeString(
     }
 
     val fileSpecBuilder = FileSpec.builder(ktSource.packageName!!, ktSource.name)
+    val generatedEnumNames = mutableSetOf<String>()
 
     // build parent class in order to extend from it
     // Get the parent interface/class using its fully-qualified name.
@@ -214,6 +215,8 @@ private fun createKtSourceCodeString(
     val constructorBuilder = FunSpec.constructorBuilder()
 
     // writes own class properties into the constructor
+    addEnumDefinitions(ktSource.dataProperties, fileSpecBuilder, generatedEnumNames)
+
     addPropertiesToClass(
         ktSource.dataProperties,
         ktSource.objectProperties,
@@ -221,6 +224,7 @@ private fun createKtSourceCodeString(
         classBuilder,
         ktSource.name,
         fileSpecBuilder,
+        ktSource.packageName!!,
     )
 
     // Now we have to add each object and data property of all parents to the constructor of
@@ -234,6 +238,7 @@ private fun createKtSourceCodeString(
             classBuilder,
             ktSource.name,
             fileSpecBuilder,
+            ktSource.packageName!!,
             isParent = true,
         )
     }
@@ -308,6 +313,7 @@ private fun addPropertiesToClass(
     classBuilder: TypeSpec.Builder,
     className: String,
     fileSpecBuilder: FileSpec.Builder,
+    classPackage: String,
     isParent: Boolean = false,
 ) {
     // Track if we need to add an init block
@@ -317,7 +323,7 @@ private fun addPropertiesToClass(
     // Loop over the data properties.
     for (dataProp in dataProperties) {
         // Determine the correct TypeName based on the property type string.
-        val typeName: TypeName = extractDataProperties(dataProp)
+        val typeName: TypeName = extractDataProperties(dataProp, classPackage)
 
         if (typeName == ClassName("unknown", "unknown")) {
             println(
@@ -452,6 +458,27 @@ private fun addPropertiesToClass(
     }
 }
 
+private fun addEnumDefinitions(
+    dataProperties: LinkedHashSet<Properties>,
+    fileSpecBuilder: FileSpec.Builder,
+    generatedEnumNames: MutableSet<String>,
+) {
+    for (property in dataProperties) {
+        if (!property.hasEnum) {
+            continue
+        }
+
+        val enumName = property.enumTypeName ?: continue
+        if (!generatedEnumNames.add(enumName)) {
+            continue
+        }
+
+        val enumBuilder = TypeSpec.enumBuilder(enumName)
+        property.enumValues.forEach { enumBuilder.addEnumConstant(it) }
+        fileSpecBuilder.addType(enumBuilder.build())
+    }
+}
+
 public fun findAllParentsAndSaveToClassAbstraction(
     abstraction: ClassAbstractRepresentation,
     classAbstractions: LinkedHashSet<ClassAbstractRepresentation>,
@@ -475,7 +502,14 @@ public fun findAllParentsAndSaveToClassAbstraction(
     return null
 }
 
-private fun extractDataProperties(dataProp: Properties): TypeName {
+private fun extractDataProperties(dataProp: Properties, classPackage: String): TypeName {
+    if (dataProp.hasEnum) {
+        val enumType = dataProp.enumTypeName
+        if (!enumType.isNullOrEmpty()) {
+            return ClassName(classPackage, enumType).copy(nullable = true)
+        }
+    }
+
     val typeName: TypeName =
         when (dataProp.propertyType) {
             "java.time.Duration" -> ClassName("java.time", "Duration")

@@ -30,11 +30,21 @@ import java.util.Objects
 import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
-import kotlin.String
+
+public enum class LogLevel {
+    FATAL,
+    CRITICAL,
+    ERROR,
+    WARN,
+    INFO,
+    DEBUG,
+    TRACE,
+    UNKNOWN,
+}
 
 /** A log write operation e.g. `loggint.warn(\"...\")`. */
 public abstract class LogWrite(
-    public val logLevel: String?,
+    public val logLevel: LogLevel?,
     linkedConcept: Logging,
     underlyingNode: Node?,
 ) : LogOperation(linkedConcept, underlyingNode) {

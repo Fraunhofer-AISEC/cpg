@@ -433,8 +433,10 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
                 property.propertyName = classRelationshipPropertyName
                 // Set data properties description, e.g., for the property mixedDuties from the RBAC
                 // class
-                property.propertyDescription =
+                val description =
                     getDataPropertyDescription(ontology, classAxiom.dataPropertiesInSignature)
+                property.propertyDescription = description
+                applyEnumDirective(property, description)
             } else if (superClass.classExpressionType == ClassExpressionType.DATA_HAS_VALUE) {
                 // little but hacky,
                 classRelationshipPropertyName = getClassDataPropertyName(superClass)
@@ -443,8 +445,10 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
                     classDataPropertyValue = StringUtils.capitalize(classDataPropertyValue)
                 property.propertyType = classDataPropertyValue
                 property.propertyName = classRelationshipPropertyName
-                property.propertyDescription =
+                val description =
                     getDataPropertyDescription(ontology, classAxiom.dataPropertiesInSignature)
+                property.propertyDescription = description
+                applyEnumDirective(property, description)
                 //                // check, if the type is a Map, then we need to ignore it in neo4j
                 // for now
                 //                if (classDataPropertyValue.startsWith("java.util.Map")) {
@@ -868,6 +872,66 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
         }
         return ""
     }
+
+    private fun applyEnumDirective(property: Properties, description: String?) {
+        val directive = parseEnumDirective(description)
+        if (directive == null || !property.propertyType.equals("String", true)) {
+            return
+        }
+
+        val enumTypeName = StringUtils.capitalize(formatString(directive.typeName))
+        val enumValues = directive.values.mapNotNull { formatEnumEntry(it) }
+
+        if (enumTypeName.isEmpty() || enumValues.isEmpty()) {
+            return
+        }
+
+        property.enumTypeName = enumTypeName
+        property.enumValues = enumValues
+        property.propertyType = enumTypeName
+    }
+
+    private fun parseEnumDirective(comment: String?): EnumDirective? {
+        if (comment.isNullOrBlank()) {
+            return null
+        }
+
+        val directiveLine =
+            comment
+                .lineSequence()
+                .map { it.trim() }
+                .firstOrNull { it.startsWith("enum:", ignoreCase = true) } ?: return null
+
+        val payload = directiveLine.substringAfter(":", missingDelimiterValue = "").trim()
+        if (payload.isEmpty()) {
+            return null
+        }
+
+        val typePart = payload.substringBefore("=", missingDelimiterValue = "").trim()
+        val valuesPart = payload.substringAfter("=", missingDelimiterValue = "").trim()
+
+        if (typePart.isEmpty() || valuesPart.isEmpty()) {
+            return null
+        }
+
+        val values = valuesPart.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+        if (values.isEmpty()) {
+            return null
+        }
+
+        return EnumDirective(typePart, values)
+    }
+
+    private fun formatEnumEntry(raw: String): String? {
+        val sanitized = raw.trim().replace(Regex("[^A-Za-z0-9]+"), "_")
+        val normalized = sanitized.replace(Regex("_+"), "_").trim('_')
+        if (normalized.isEmpty()) {
+            return null
+        }
+        return normalized.uppercase()
+    }
+
+    private data class EnumDirective(val typeName: String, val values: List<String>)
 
     // Get class data property value (relationship in OWL)
     private fun getClassDataPropertyValue(nce: OWLDataHasValue): String {
