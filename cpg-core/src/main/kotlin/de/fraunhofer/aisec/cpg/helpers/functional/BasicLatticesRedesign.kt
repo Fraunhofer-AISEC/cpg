@@ -37,6 +37,8 @@ import kotlin.collections.fold
 import kotlin.collections.plusAssign
 import kotlin.collections.set
 import kotlin.math.ceil
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** Used to identify the order of elements */
 enum class Order {
@@ -163,13 +165,34 @@ interface Lattice<T : Lattice.Element> {
      * Computes a fixpoint by iterating over the EOG beginning with the [startEdges] and a state
      * [startState]. This means, it keeps applying [transformation] until the state does no longer
      * change. With state, we mean a mapping between the [EvaluationOrder] edges to the value of
-     * [Lattice] which represents possible values (or abstractions thereof) that they hold.
+     * [Lattice] which represents possible values (or abstractions thereof) that they hold. The
+     * [timeout] can be used to limit the time spent in this function. If the timeout is reached and
+     * the fixpoint is not reached yet, we return `null`. If [timeout] is `null`, we will not time
+     * out.
      */
     fun iterateEOG(
         startEdges: List<EvaluationOrder>,
         startState: T,
         transformation: (Lattice<T>, EvaluationOrder, T) -> T,
         strategy: Strategy = Strategy.PRECISE,
+        timeout: Long? = null,
+    ): T? {
+        return runBlocking {
+            if (timeout != null) {
+                withTimeoutOrNull(timeout) {
+                    iterateEogInternal(startEdges, startState, transformation, strategy)
+                }
+            } else {
+                iterateEogInternal(startEdges, startState, transformation, strategy)
+            }
+        }
+    }
+
+    private fun iterateEogInternal(
+        startEdges: List<EvaluationOrder>,
+        startState: T,
+        transformation: (Lattice<T>, EvaluationOrder, T) -> T,
+        strategy: Strategy,
     ): T {
         val globalState = IdentityHashMap<EvaluationOrder, T>()
         var finalState: T = this.bottom
