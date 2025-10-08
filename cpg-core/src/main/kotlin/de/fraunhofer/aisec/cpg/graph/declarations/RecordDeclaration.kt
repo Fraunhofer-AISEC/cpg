@@ -56,17 +56,17 @@ open class RecordDeclaration :
      * structure. This does not include any fields that might be declared in a base class or
      * interface or fields that are declared outside the AST structure.
      */
-    @Relationship(value = "INNER_FIELDS", direction = Relationship.Direction.OUTGOING)
-    var innerFieldEdges = astEdgesOf<FieldDeclaration>()
-    /** Virtual property to directly access the nodes in [innerFieldEdges]. */
-    var fields by unwrapping(RecordDeclaration::innerFieldEdges)
+    @Relationship(value = "FIELDS", direction = Relationship.Direction.OUTGOING)
+    var fieldEdges = astEdgesOf<FieldDeclaration>()
+    /** Virtual property to directly access the nodes in [fieldEdges]. */
+    var fields by unwrapping(RecordDeclaration::fieldEdges)
 
     /**
      * The [MethodDeclaration]s that are directly contained in this record declaration's AST
      * structure. This does not include any methods that might be declared in a base class or
      * interface or methods that are declared outside the AST structure.
      */
-    @Relationship(value = "INNER_METHODS", direction = Relationship.Direction.OUTGOING)
+    @Relationship(value = "METHODS", direction = Relationship.Direction.OUTGOING)
     var methodEdges = astEdgesOf<MethodDeclaration>()
     /** Virtual property to directly access the nodes in [methods]. */
     var methods by unwrapping(RecordDeclaration::methodEdges)
@@ -181,7 +181,7 @@ open class RecordDeclaration :
         return super.equals(other) &&
             kind == other.kind &&
             fields == other.fields &&
-            propertyEqualsList(innerFieldEdges, other.innerFieldEdges) &&
+            propertyEqualsList(fieldEdges, other.fieldEdges) &&
             methods == other.methods &&
             propertyEqualsList(methodEdges, other.methodEdges) &&
             constructors == other.constructors &&
@@ -199,7 +199,7 @@ open class RecordDeclaration :
         when (declaration) {
             is ConstructorDeclaration -> addIfNotContains(constructorEdges, declaration)
             is MethodDeclaration -> addIfNotContains(methodEdges, declaration)
-            is FieldDeclaration -> addIfNotContains(innerFieldEdges, declaration)
+            is FieldDeclaration -> addIfNotContains(fieldEdges, declaration)
             is RecordDeclaration -> addIfNotContains(recordEdges, declaration)
             is TemplateDeclaration -> addIfNotContains(templateEdges, declaration)
         }
