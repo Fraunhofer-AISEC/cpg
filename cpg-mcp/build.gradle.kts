@@ -75,6 +75,9 @@ dependencies {
     annotationProcessor(libs.picocli.codegen)
 
     integrationTestImplementation(libs.kotlin.reflect)
+    integrationTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0")
+    integrationTestImplementation(libs.mcp)
+    integrationTestImplementation(libs.ktor.serialization.kotlinx.json)
 
     implementation(project(":cpg-concepts"))
     implementation(project(":cpg-analysis"))

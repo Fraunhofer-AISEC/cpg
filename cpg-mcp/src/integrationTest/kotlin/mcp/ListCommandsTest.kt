@@ -59,6 +59,7 @@ import kotlinx.serialization.json.put
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.condition.EnabledIf
 
 class ListCommandsTest {
     private lateinit var server: Server
@@ -87,6 +88,7 @@ class ListCommandsTest {
     }
 
     @Test
+    @EnabledIf(value = "hasPythonFrontend", disabledReason = "missing Python language frontend")
     fun listFunctionsTest() = runTest {
         server.listFunctions()
 
@@ -277,5 +279,18 @@ class ListCommandsTest {
             result.content.isEmpty(),
             "We did not apply any concepts or operations, so it should be empty",
         )
+    }
+
+    fun hasPythonFrontend(): Boolean {
+        val config =
+            setupTranslationConfiguration(
+                topLevel = null,
+                files = emptyList(),
+                includePaths = emptyList(),
+            )
+
+        return config.languages.any {
+            it.qualifiedName == "de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage"
+        }
     }
 }
