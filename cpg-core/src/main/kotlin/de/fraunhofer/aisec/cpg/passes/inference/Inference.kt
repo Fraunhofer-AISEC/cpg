@@ -145,20 +145,13 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                     it,
                 )
 
-                // Add it to the scope
+                // Add it to the scope (and AST)
                 scopeManager.addDeclaration(inferred)
                 start.addDeclaration(inferred)
 
                 // Some magic that adds it to static imports. Not sure if this really needed
                 if (record != null && isStatic) {
                     record.staticImports.add(inferred)
-                }
-
-                // Some more magic, that adds it to the AST. Note: this might not be 100 % compliant
-                // with the language, since in some languages the AST of a method declaration could
-                // be outside a method, but this will do for now
-                if (record != null && inferred is MethodDeclaration) {
-                    record.methods += inferred
                 }
 
                 // "upgrade" our struct to a class, if it was inferred by us, since we are calling
