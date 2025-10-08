@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.passes.PointsToState
 import java.io.Serializable
 import java.util.*
-import java.util.Collections.addAll
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.plusAssign
@@ -212,7 +211,14 @@ interface Lattice<T : Lattice.Element> {
      * is modified if there is no element greater than each other (if set to `true`) or if a new
      * [Lattice.Element] is returned (if set to `false`).
      */
-    suspend fun lub(one: T, two: T, allowModify: Boolean = false, widen: Boolean = false): T
+    suspend fun lub(
+        one: T,
+        two: T,
+        allowModify: Boolean = false,
+        widen: Boolean = false,
+        // On how many cores do we want to do the work?
+        concurrencyCounter: Int = CPU_CORES,
+    ): T
 
     /** Computes the greatest lower bound (meet) of [one] and [two] */
     suspend fun glb(one: T, two: T): T
@@ -592,6 +598,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
         two: Element<T>,
         allowModify: Boolean,
         widen: Boolean,
+        concurrencyCounter: Int,
     ): Element<T> {
         if (allowModify) {
             one += two
@@ -847,6 +854,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         two: Element<K, V>,
         allowModify: Boolean,
         widen: Boolean,
+        concurrencyCounter: Int,
     ): Element<K, V> = coroutineScope {
         var result: Element<K, V>
         lubCounter++
@@ -875,6 +883,9 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                                             v,
                                             allowModify = true,
                                             widen = widen,
+                                            // We already run on $CPU_CORES coroutines, so we don't
+                                            // need any additional ones
+                                            1,
                                         )
                                     }
                                 }
@@ -907,6 +918,9 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                                             two = otherValue,
                                             allowModify = false,
                                             widen = widen,
+                                            // We already run on $CPU_CORES coroutines, so we don't
+                                            // need any additional ones
+                                            1,
                                         )
                                     } else thisValue ?: otherValue
                                 newValue?.let { local[key] = it }
@@ -1014,6 +1028,7 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
         two: Element<S, T>,
         allowModify: Boolean,
         widen: Boolean,
+        concurrencyCounter: Int,
     ): Element<S, T> {
         val result: Element<S, T>
         tupleLatticeLubTime += measureNanoTime {
@@ -1134,46 +1149,35 @@ open class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.E
         two: Element<R, S, T>,
         allowModify: Boolean,
         widen: Boolean,
+        concurrencyCounter: Int,
     ): Element<R, S, T> = coroutineScope {
         return@coroutineScope if (allowModify) {
-            //            val first = async {
             innerLattice1.lub(one = one.first, two = two.first, allowModify = true, widen = widen)
-            //            }
-            //            val second = async {
-            //            synchronized(one.second) {
             innerLattice2.lub(one = one.second, two = two.second, allowModify = true, widen = widen)
-            //            }
-            //            val third = async {
             innerLattice3.lub(one = one.third, two = two.third, allowModify = true, widen = widen)
-            //            }
-            //            awaitAll(first, second, third)
             one
         } else {
-            val first = /*async {*/
+            val first =
                 innerLattice1.lub(
                     one = one.first,
                     two = two.first,
                     allowModify = false,
                     widen = widen,
                 )
-            //            }
-            val second = /*async {*/
+            val second =
                 innerLattice2.lub(
                     one = one.second,
                     two = two.second,
                     allowModify = false,
                     widen = widen,
                 )
-            //            }
-            val third = /*async {*/
+            val third =
                 innerLattice3.lub(
                     one = one.third,
                     two = two.third,
                     allowModify = false,
                     widen = widen,
                 )
-            //            }
-            //            Element(first.await(), second.await(), third.await())
             Element(first, second, third)
         }
     }

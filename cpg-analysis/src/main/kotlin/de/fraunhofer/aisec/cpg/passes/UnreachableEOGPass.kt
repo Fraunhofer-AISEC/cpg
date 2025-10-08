@@ -302,6 +302,7 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
         two: Element,
         allowModify: Boolean,
         widen: Boolean,
+        concurrencyCounter: Int,
     ): Element {
         return if (allowModify) {
             val ret = compare(one, two)

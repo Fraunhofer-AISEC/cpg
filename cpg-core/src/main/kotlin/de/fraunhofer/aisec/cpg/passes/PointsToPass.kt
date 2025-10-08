@@ -178,8 +178,16 @@ class PointsToState(
         two: TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>,
         allowModify: Boolean,
         widen: Boolean,
+        concurrencyCounter: Int,
     ): PointsToState.Element {
-        val result = super.lub(one = one, two = two, allowModify = allowModify, widen = widen)
+        val result =
+            super.lub(
+                one = one,
+                two = two,
+                allowModify = allowModify,
+                widen = widen,
+                concurrencyCounter = CPU_CORES,
+            )
         return result as? PointsToState.Element ?: Element(result)
     }
 
