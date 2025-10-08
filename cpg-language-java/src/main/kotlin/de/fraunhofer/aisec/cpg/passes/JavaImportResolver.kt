@@ -155,8 +155,8 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             targetMethod.language = base.language
             targetMethod.isInferred = true
 
-            base.addField(targetField)
-            base.addMethod(targetMethod)
+            base.fields += targetField
+            base.methods += targetMethod
             result.add(targetField)
             result.add(targetMethod)
         }
