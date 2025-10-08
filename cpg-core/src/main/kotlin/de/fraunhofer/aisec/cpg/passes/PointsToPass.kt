@@ -288,6 +288,11 @@ fun resolveMemberExpression(node: MemberExpression): Pair<Node, Name> {
     return Pair(base, Name(newLocalname))
 }
 
+fun calculateInnerConcurrencyCounter(outerConcurrencyCounter: Int): Int {
+    return if (outerConcurrencyCounter == 0) CPU_CORES
+    else if (outerConcurrencyCounter > CPU_CORES) 1 else CPU_CORES / outerConcurrencyCounter
+}
+
 private fun isGlobal(node: Node): Boolean {
     return when (node) {
         is VariableDeclaration -> node.isGlobal
@@ -1082,6 +1087,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             CallingContextIn(
                 mutableListOf(callExpression)
             ) // TODO: Indicate somehow if this has already been done?
+        val innerConcurrencyCounter =
+            calculateInnerConcurrencyCounter(callExpression.arguments.size)
+        // We use caches to avoid double work
+        val getNestedValuesCache =
+            mutableMapOf<Triple<Node, Int, Boolean>, PowersetLattice.Element<Pair<Node, Boolean>>>()
+        val getLastWritesCache =
+            mutableMapOf<Node, PowersetLattice.Element<PointsToPass.NodeWithPropertiesKey>>()
+        val getValuesCache = mutableMapOf<Node, PowersetLattice.Element<Pair<Node, Boolean>>>()
         callExpression.arguments.forEach { arg ->
             if (arg.argumentIndex < functionDeclaration.parameters.size) {
                 // Create a DFG-Edge from the argument to the parameter's memoryValue
@@ -1090,11 +1103,15 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 var memVals = p.fullMemoryValues
                 // If this is not the case, they are still in the state
                 if (memVals.isEmpty()) {
-                    memVals = doubleState.getValues(p, p).map { it.first }.toSet()
+                    memVals =
+                        doubleState.getCachedValues(getValuesCache, p).mapTo(HashSet()) { it.first }
                     // If they are also not yet in the state, we have to calculate them
                     if (memVals.isEmpty()) {
                         initializeParameters(lattice, mutableListOf(p), doubleState, 2)
-                        memVals = doubleState.getValues(p, p).map { it.first }.toSet()
+                        memVals =
+                            doubleState.getCachedValues(getValuesCache, p).mapTo(HashSet()) {
+                                it.first
+                            }
                     }
                 }
                 memVals.filterIsInstance<ParameterMemoryValue>().forEach { paramVal ->
@@ -1132,12 +1149,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 )
                                     PowersetLattice.Element(Pair(arg, true))
                                 else
-                                    doubleState.getNestedValues(
+                                    doubleState.getCachedNestedValues(
+                                        getNestedValuesCache,
                                         arg,
                                         1,
-                                        fetchFields = false,
-                                        onlyFetchExistingEntries = true,
-                                        excludeShortFSValues = true,
+                                        false,
                                     )
                             argVals.forEach { (argVal, _) ->
                                 val argDerefVals =
@@ -1147,13 +1163,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     )
                                         equalLinkedHashSetOf<Node>(arg)
                                     else {
+
                                         doubleState
-                                            .getNestedValues(
+                                            .getCachedNestedValues(
+                                                getNestedValuesCache,
                                                 argVal,
                                                 1,
                                                 fetchFields = false,
-                                                onlyFetchExistingEntries = true,
-                                                excludeShortFSValues = true,
                                             )
                                             .mapTo(equalLinkedHashSetOf()) { it.first }
                                     }
@@ -1169,17 +1185,17 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                             )
                                         )
                                     else {
-                                        doubleState.getLastWrites(argVal).mapTo(
-                                            PowersetLattice.Element()
-                                        ) {
-                                            NodeWithPropertiesKey(
-                                                it.node,
-                                                equalLinkedHashSetOf(
-                                                    callingContext,
-                                                    true in it.properties,
-                                                ),
-                                            )
-                                        }
+                                        doubleState
+                                            .getCachedLastWrites(getLastWritesCache, argVal)
+                                            .mapTo(PowersetLattice.Element()) {
+                                                NodeWithPropertiesKey(
+                                                    it.node,
+                                                    equalLinkedHashSetOf(
+                                                        callingContext,
+                                                        true in it.properties,
+                                                    ),
+                                                )
+                                            }
                                     }
                                 doubleState =
                                     lattice.push(
@@ -1208,19 +1224,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     .forEach { derefderefPMV ->
                                         argDerefVals
                                             .flatMap {
-                                                doubleState.getNestedValues(
+                                                doubleState.getCachedNestedValues(
+                                                    getNestedValuesCache,
                                                     it,
                                                     1,
                                                     fetchFields = false,
-                                                    onlyFetchExistingEntries = true,
-                                                    excludeShortFSValues = true,
                                                 )
                                             }
                                             .forEach { (derefderefValue, _) ->
                                                 val lastDerefDerefWrites =
                                                     argDerefVals
                                                         .flatMapTo(PowersetLattice.Element()) {
-                                                            doubleState.getLastWrites(it)
+                                                            doubleState.getCachedLastWrites(
+                                                                getLastWritesCache,
+                                                                it,
+                                                            )
                                                         }
                                                         .mapTo(PowersetLattice.Element()) {
                                                             NodeWithPropertiesKey(
@@ -1310,11 +1328,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             // We use coroutines in coroutines. So, in order not to launch way too
                             // many of them, we calculate the amount of inner coroutines that we can
                             // reasonably launch
-                            val outerConcurrencyCounter = inv.functionSummary.size
                             val innerConcurrencyCounter =
-                                if (outerConcurrencyCounter == 0) CPU_CORES
-                                else if (outerConcurrencyCounter > CPU_CORES) 1
-                                else CPU_CORES / outerConcurrencyCounter
+                                calculateInnerConcurrencyCounter(inv.functionSummary.size)
                             for ((param, fsEntries) in inv.functionSummary) {
                                 launch(Dispatchers.Default) {
                                     val argument =
@@ -2661,6 +2676,15 @@ fun PointsToState.Element.getLastWrites(
     }
 }
 
+fun PointsToState.Element.getCachedLastWrites(
+    cache: MutableMap<Node, PowersetLattice.Element<PointsToPass.NodeWithPropertiesKey>>,
+    node: Node,
+): PowersetLattice.Element<PointsToPass.NodeWithPropertiesKey> {
+    // We cache some results. Cache is coming from the caller, it knows better when to refresh the
+    // cache.
+    return cache.getOrPut(node) { this.getLastWrites(node) }
+}
+
 fun PointsToState.Element.getValues(
     node: Node,
     startNode: Node,
@@ -2797,6 +2821,15 @@ fun PointsToState.Element.getValues(
         }
         else -> PowersetLattice.Element(Pair(node, false))
     }
+}
+
+fun PointsToState.Element.getCachedValues(
+    cache: MutableMap<Node, PowersetLattice.Element<Pair<Node, Boolean>>>,
+    node: Node,
+): PowersetLattice.Element<Pair<Node, Boolean>> {
+    // We cache some results. Cache is coming from the caller, it knows better when to refresh the
+    // cache.
+    return cache.getOrPut(node) { this.getValues(node, node) }
 }
 
 fun PointsToState.Element.getAddresses(node: Node, startNode: Node): IdentitySet<Node> {
@@ -2950,6 +2983,24 @@ fun PointsToState.Element.getNestedValues(
     }
     return ret
 }
+
+fun PointsToState.Element.getCachedNestedValues(
+    cache: MutableMap<Triple<Node, Int, Boolean>, PowersetLattice.Element<Pair<Node, Boolean>>>,
+    node: Node,
+    depth: Int,
+    fetchFields: Boolean,
+): PowersetLattice.Element<Pair<Node, Boolean>> =
+    // We cache some results. Cache is coming from the caller, it knows better when to refresh the
+    // cache.
+    cache.getOrPut(Triple(node, depth, fetchFields)) {
+        this.getNestedValues(
+            node,
+            depth,
+            fetchFields,
+            onlyFetchExistingEntries = true,
+            excludeShortFSValues = true,
+        )
+    }
 
 fun PointsToState.Element.fetchFieldAddresses(
     baseAddresses: IdentitySet<Node>,
