@@ -81,7 +81,21 @@ fun writeKotlinClassesToFolder(
         ktSource.dataProperties =
             ktSource.dataProperties.sortedBy { it.propertyName }.toCollection(linkedSetOf())
         ktSource.objectProperties =
-            ktSource.objectProperties.sortedBy { it.propertyName }.toCollection(linkedSetOf())
+            ktSource.objectProperties
+                .sortedWith(
+                    compareBy<Properties> {
+                            it.propertyName ==
+                                "linkedConcept" // linkedConcept always last Property.
+                        } // Hacky but needed because we ignore concept and always replace it with
+                        // linkedConcept.
+                        // When generating Operations, we always inherit from Operation which has a
+                        // concept and underlying node property. When now linkedConcept is directly
+                        // processed before concept then we skip linkedConcept and replace the
+                        // processing of concept with linkedConcept. When doing that the order stays
+                        // the same.
+                        .thenBy { it.propertyName }
+                )
+                .toCollection(linkedSetOf())
     }
 
     for (ktSource in sources) {
@@ -157,6 +171,7 @@ private fun createKtSourceCodeString(
     }
 
     val fileSpecBuilder = FileSpec.builder(ktSource.packageName!!, ktSource.name)
+    val generatedEnumNames = mutableSetOf<String>()
 
     // build parent class in order to extend from it
     // Get the parent interface/class using its fully-qualified name.
@@ -191,10 +206,17 @@ private fun createKtSourceCodeString(
                 .addModifiers(KModifier.ABSTRACT)
     }
 
+    // Add docstring in front of constructor if structDescription is available
+    if (!ktSource.structDescription.isNullOrBlank()) {
+        classBuilder.addKdoc("%L\n", ktSource.structDescription!!)
+    }
+
     // Create a constructor builder for adding parameters.
     val constructorBuilder = FunSpec.constructorBuilder()
 
     // writes own class properties into the constructor
+    addEnumDefinitions(ktSource.dataProperties, fileSpecBuilder, generatedEnumNames)
+
     addPropertiesToClass(
         ktSource.dataProperties,
         ktSource.objectProperties,
@@ -202,6 +224,7 @@ private fun createKtSourceCodeString(
         classBuilder,
         ktSource.name,
         fileSpecBuilder,
+        ktSource.packageName!!,
     )
 
     // Now we have to add each object and data property of all parents to the constructor of
@@ -215,6 +238,7 @@ private fun createKtSourceCodeString(
             classBuilder,
             ktSource.name,
             fileSpecBuilder,
+            ktSource.packageName!!,
             isParent = true,
         )
     }
@@ -222,11 +246,9 @@ private fun createKtSourceCodeString(
     // Set the primary constructor for the class.
     classBuilder.primaryConstructor(constructorBuilder.build())
 
-    // If current class is a operation we have to add equals method and hashCode method
-    if (ktSource.allParents.find { it.name == "Operation" } != null) {
-        addEqualsMethod(classBuilder, ktSource)
-        addHashCodeMethod(classBuilder, ktSource)
-    }
+    // We have to add equals method and hashCode method to concepts and operations
+    addEqualsMethod(classBuilder, ktSource)
+    addHashCodeMethod(classBuilder, ktSource)
 
     // Build the final file
     val file = fileSpecBuilder.addType(classBuilder.build()).build()
@@ -246,7 +268,9 @@ private fun addEqualsMethod(classBuilder: TypeSpec.Builder, ktSource: ClassAbstr
     conditions.add("super.equals(other)")
 
     // Add conditions for all data and object properties of the current class
-    for (property in ktSource.dataProperties + ktSource.objectProperties) {
+    for (property in
+        ktSource.dataProperties +
+            ktSource.objectProperties.filter { !it.propertyName.equals("linkedConcept") }) {
         conditions.add("other.${property.propertyName} == this.${property.propertyName}")
     }
 
@@ -268,7 +292,9 @@ private fun addHashCodeMethod(
     hashProperties.add("super.hashCode()")
 
     // Add all data and object properties of the current class
-    for (property in ktSource.dataProperties + ktSource.objectProperties) {
+    for (property in
+        ktSource.dataProperties +
+            ktSource.objectProperties.filter { !it.propertyName.equals("linkedConcept") }) {
         hashProperties.add(property.propertyName)
     }
 
@@ -287,6 +313,7 @@ private fun addPropertiesToClass(
     classBuilder: TypeSpec.Builder,
     className: String,
     fileSpecBuilder: FileSpec.Builder,
+    classPackage: String,
     isParent: Boolean = false,
 ) {
     // Track if we need to add an init block
@@ -296,7 +323,7 @@ private fun addPropertiesToClass(
     // Loop over the data properties.
     for (dataProp in dataProperties) {
         // Determine the correct TypeName based on the property type string.
-        val typeName: TypeName = extractDataProperties(dataProp)
+        val typeName: TypeName = extractDataProperties(dataProp, classPackage)
 
         if (typeName == ClassName("unknown", "unknown")) {
             println(
@@ -310,14 +337,14 @@ private fun addPropertiesToClass(
                     needsInitBlock = true
                     fileSpecBuilder.addImport("de.fraunhofer.aisec.cpg.graph", "Name")
                     initBlockBuilder.addStatement(
-                        "this.name = %T(localName = name)",
+                        "name?.let { this.name = %T(localName = it) }",
                         ClassName("de.fraunhofer.aisec.cpg.graph", "Name"),
                     )
                     "nameString"
                 }
                 "code" -> {
                     needsInitBlock = true
-                    initBlockBuilder.addStatement("this.code = code")
+                    initBlockBuilder.addStatement("code?.let { this.code = it }")
                     "codeString"
                 }
                 else -> dataProp.propertyName
@@ -350,6 +377,7 @@ private fun addPropertiesToClass(
 
     // Loop over the object properties.
     for (objectProp in objectProperties) {
+
         val typeName = extractObjectProperties(objectProp)
 
         if (typeName == ClassName("unknown", "unknown")) {
@@ -360,10 +388,20 @@ private fun addPropertiesToClass(
         if (objectProp.propertyProperty == "hasMultiple") {
             constructorBuilder.addParameter(
                 objectProp.propertyName,
-                ClassName("kotlin.collections", "MutableList").parameterizedBy(typeName),
+                ClassName("kotlin.collections", "MutableList")
+                    .parameterizedBy(typeName.copy(nullable = true)),
             )
         } else {
-            constructorBuilder.addParameter(objectProp.propertyName, typeName)
+            if (objectProp.propertyName != "concept") {
+                if (objectProp.propertyName == "linkedConcept") {
+                    constructorBuilder.addParameter(objectProp.propertyName, typeName)
+                } else {
+                    constructorBuilder.addParameter(
+                        objectProp.propertyName,
+                        typeName.copy(nullable = true),
+                    )
+                }
+            }
         }
 
         if (!isParent) {
@@ -372,32 +410,72 @@ private fun addPropertiesToClass(
                 classBuilder.addProperty(
                     PropertySpec.builder(
                             objectProp.propertyName,
-                            ClassName("kotlin.collections", "MutableList").parameterizedBy(typeName),
+                            ClassName("kotlin.collections", "MutableList")
+                                .parameterizedBy(typeName.copy(nullable = true)),
                         )
                         .initializer(objectProp.propertyName)
                         .build()
                 )
             } else {
-                classBuilder.addProperty(
-                    PropertySpec.builder(objectProp.propertyName, typeName)
-                        .initializer(objectProp.propertyName)
-                        .build()
-                )
+                if (objectProp.propertyName == "linkedConcept") {
+                    classBuilder.addProperty(
+                        PropertySpec.builder(objectProp.propertyName, typeName)
+                            .initializer(objectProp.propertyName)
+                            .build()
+                    )
+                } else {
+                    classBuilder.addProperty(
+                        PropertySpec.builder(
+                                objectProp.propertyName,
+                                typeName.copy(nullable = true),
+                            )
+                            .initializer(objectProp.propertyName)
+                            .build()
+                    )
+                }
             }
         }
 
         // Add a property to the class, initialized from the constructor parameter.
         classBuilder.primaryConstructor(constructorBuilder.build())
 
+        // If is parent -> SuperClassConstructorParameters have to be set
         if (isParent) {
             // Add SuperclassConstructorParameter for the property.
-            classBuilder.addSuperclassConstructorParameter(objectProp.propertyName).build()
+            if (objectProp.propertyName == "concept") {
+                classBuilder.addSuperclassConstructorParameter("linkedConcept").build()
+            } else if (objectProp.propertyName == "linkedConcept") {
+                continue
+            } else {
+                classBuilder.addSuperclassConstructorParameter(objectProp.propertyName).build()
+            }
         }
 
         // Add init block if needed
         if (needsInitBlock) {
             classBuilder.addInitializerBlock(initBlockBuilder.build())
         }
+    }
+}
+
+private fun addEnumDefinitions(
+    dataProperties: LinkedHashSet<Properties>,
+    fileSpecBuilder: FileSpec.Builder,
+    generatedEnumNames: MutableSet<String>,
+) {
+    for (property in dataProperties) {
+        if (!property.hasEnum) {
+            continue
+        }
+
+        val enumName = property.enumTypeName ?: continue
+        if (!generatedEnumNames.add(enumName)) {
+            continue
+        }
+
+        val enumBuilder = TypeSpec.enumBuilder(enumName)
+        property.enumValues.forEach { enumBuilder.addEnumConstant(it) }
+        fileSpecBuilder.addType(enumBuilder.build())
     }
 }
 
@@ -424,7 +502,14 @@ public fun findAllParentsAndSaveToClassAbstraction(
     return null
 }
 
-private fun extractDataProperties(dataProp: Properties): TypeName {
+private fun extractDataProperties(dataProp: Properties, classPackage: String): TypeName {
+    if (dataProp.hasEnum) {
+        val enumType = dataProp.enumTypeName
+        if (!enumType.isNullOrEmpty()) {
+            return ClassName(classPackage, enumType).copy(nullable = true)
+        }
+    }
+
     val typeName: TypeName =
         when (dataProp.propertyType) {
             "java.time.Duration" -> ClassName("java.time", "Duration")
@@ -445,7 +530,7 @@ private fun extractDataProperties(dataProp: Properties): TypeName {
             "de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression" ->
                 ClassName("de.fraunhofer.aisec.cpg.graph.statements.expressions", "CallExpression")
             "java.util.List<de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration>" ->
-                ClassName("java.util", "List")
+                ClassName("java.util", "List") // TODO: change to mutable list
                     .parameterizedBy(
                         ClassName(
                             "de.fraunhofer.aisec.cpg.graph.declarations",
@@ -453,7 +538,7 @@ private fun extractDataProperties(dataProp: Properties): TypeName {
                         )
                     )
             "java.util.List<de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression>" ->
-                ClassName("java.util", "List")
+                ClassName("java.util", "List") // TODO: change to mutable list
                     .parameterizedBy(
                         ClassName(
                             "de.fraunhofer.aisec.cpg.graph.statements.expressions",
@@ -466,11 +551,11 @@ private fun extractDataProperties(dataProp: Properties): TypeName {
 
             "dateTime" -> ClassName("java.time", "ZonedDateTime") // TODO: Check if this is correct
             "listString" ->
-                ClassName("java.util", "List")
+                ClassName("java.util", "List") // TODO: change to mutable list
                     .parameterizedBy(STRING) // TODO: Check if this is correct
             else -> ClassName("unknown", "unknown")
         }
-    return typeName
+    return typeName.copy(nullable = true)
 }
 
 private fun extractObjectProperties(objectProp: Properties): TypeName {
@@ -901,6 +986,31 @@ private fun extractObjectProperties(objectProp: Properties): TypeName {
                 ClassName("de.fraunhofer.aisec.cpg.graph.concepts.autoGenerated", "LogOperation")
             "LogOutput" ->
                 ClassName("de.fraunhofer.aisec.cpg.graph.concepts.autoGenerated", "LogOutput")
+            "Padding" ->
+                ClassName("de.fraunhofer.aisec.cpg.graph.concepts.autoGenerated", "Padding")
+            "KeyDerivationFunction" ->
+                ClassName(
+                    "de.fraunhofer.aisec.cpg.graph.concepts.autoGenerated",
+                    "KeyDerivationFunction",
+                )
+            "MessageAuthenticationCode" ->
+                ClassName(
+                    "de.fraunhofer.aisec.cpg.graph.concepts.autoGenerated",
+                    "MessageAuthenticationCode",
+                )
+            "AsymmetricCipher" ->
+                ClassName(
+                    "de.fraunhofer.aisec.cpg.graph.concepts.autoGenerated",
+                    "AsymmetricCipher",
+                )
+            "SymmetricCipher" ->
+                ClassName("de.fraunhofer.aisec.cpg.graph.concepts.autoGenerated", "SymmetricCipher")
+            "Input" -> ClassName("de.fraunhofer.aisec.cpg.graph.concepts.autoGenerated", "Input")
+            "InitializationVector" ->
+                ClassName(
+                    "de.fraunhofer.aisec.cpg.graph.concepts.autoGenerated",
+                    "InitializationVector",
+                )
 
             else -> ClassName("unknown", "unknown")
         }
