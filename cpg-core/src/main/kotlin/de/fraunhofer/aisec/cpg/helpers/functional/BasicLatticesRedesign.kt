@@ -865,7 +865,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         mapLatticeLubTime += measureNanoTime {
             if (allowModify) {
                 val additionsPerChunk =
-                    two.splitInto(CPU_CORES).map { chunk ->
+                    two.splitInto(concurrencyCounter).map { chunk ->
                         async(Dispatchers.Default) {
                             val local = Element<K, V>(chunk.size)
                             for ((k, v) in chunk) {
@@ -905,7 +905,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                         addAll(two.keys)
                     }
                 val partialMaps =
-                    allKeys.splitInto(CPU_CORES).map { chunk ->
+                    allKeys.splitInto(concurrencyCounter).map { chunk ->
                         async(Dispatchers.Default) {
                             val local = Element<K, V>(chunk.size)
                             for (key in chunk) {
