@@ -53,21 +53,11 @@ class CommentMatcher {
                 .filter {
                     artifactLocation == null || artifactLocation == it.location?.artifactLocation
                 }
-                .toMutableList()
-        // As some frontends add implicit namespaces ot nested constructs with no location we have
-        // to search amongst
-        // its children iteratively until we have the next best candidate with a location.
+                .toMutableSet()
 
-        var locationLess =
-            children.filter { node -> node.location == null || node.location?.region == Region() }
-        while (locationLess.isNotEmpty()) {
-            val containedChildren = locationLess.flatMap { it.astChildren }
-            locationLess =
-                containedChildren
-                    .filter { node -> node.location == null || node.location?.region == Region() }
-                    .filter { it !in children }
-            children.addAll(containedChildren)
-        }
+        // When a child has no location we can not properly decide if it encloses the comment, we
+        // instead consider its children with locations.
+        expandCandidatesByLocation(children)
 
         val enclosing =
             children.firstOrNull {
@@ -110,21 +100,8 @@ class CommentMatcher {
                 .toMutableSet()
 
         // When a child has no location we can not properly consider it for comment matching,
-        // however, it might have a child with a location that we want to consider. Because the so
-        // explored children
-        // might also have no location we have to repeat this until we have explored all children
-        // and ast leaf nodes are
-        // reached.
-        var locationLess =
-            children.filter { node -> node.location == null || node.location?.region == Region() }
-        while (locationLess.isNotEmpty()) {
-            val containedChildren = locationLess.flatMap { it.astChildren }
-            locationLess =
-                containedChildren
-                    .filter { node -> node.location == null || node.location?.region == Region() }
-                    .filter { it !in children }
-            children.addAll(containedChildren)
-        }
+        // however, instead we consider its contained children that have a location.
+        expandCandidatesByLocation(children)
 
         // Searching for the closest successor to our comment amongst the children of the smallest
         // enclosing nodes
@@ -177,5 +154,22 @@ class CommentMatcher {
         }
 
         closest.comment = (closest.comment ?: "") + comment
+    }
+
+    /**
+     * Expands the given list of candidates by exploring their children iteratively until all
+     * candidates without a location are expanded by their children with a location.
+     */
+    fun expandCandidatesByLocation(candidates: MutableSet<AstNode>) {
+        var locationLess =
+            candidates.filter { node -> node.location == null || node.location?.region == Region() }
+        while (locationLess.isNotEmpty()) {
+            val containedChildren = locationLess.flatMap { it.astChildren }
+            locationLess =
+                containedChildren
+                    .filter { node -> node.location == null || node.location?.region == Region() }
+                    .filter { it !in candidates }
+            candidates.addAll(containedChildren)
+        }
     }
 }
