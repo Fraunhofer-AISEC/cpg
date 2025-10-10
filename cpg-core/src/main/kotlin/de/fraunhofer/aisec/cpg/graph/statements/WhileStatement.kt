@@ -51,7 +51,7 @@ class WhileStatement : LoopStatement(), BranchingNode, ArgumentHolder {
     /** The condition that decides if the block is executed. */
     var condition by unwrapping(WhileStatement::conditionEdge)
 
-    override val branchedBy: Node?
+    override val branchedBy
         get() = condition ?: conditionDeclaration
 
     override fun toString(): String {

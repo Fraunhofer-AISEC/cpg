@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
@@ -100,7 +100,7 @@ class PerformanceRegressionTest {
         }
     }
 
-    fun doNothing(node: Node) {
+    fun doNothing(node: AstNode) {
         for (child in node.astChildren) {
             doNothing(child)
         }

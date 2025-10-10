@@ -36,8 +36,10 @@ class PhysicalLocation @JsonCreator constructor(uri: URI, region: Region) {
     class ArtifactLocation(val uri: URI) {
 
         override fun toString(): String {
-            return uri.path.substring(uri.path.lastIndexOf('/') + 1)
+            return fileName
         }
+
+        val fileName = uri.path.substring(uri.path.lastIndexOf('/') + 1)
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -45,7 +47,7 @@ class PhysicalLocation @JsonCreator constructor(uri: URI, region: Region) {
             return uri == other.uri
         }
 
-        override fun hashCode() = Objects.hashCode(uri)
+        override fun hashCode() = Objects.hashCode(fileName)
     }
 
     val artifactLocation: ArtifactLocation

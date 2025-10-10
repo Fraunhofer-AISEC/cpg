@@ -42,9 +42,8 @@ import de.fraunhofer.aisec.cpg.query.toQueryTree
  * Checks, if all dataflows of a [ProtectedAsset] that flow through an [ExitBoundary] operation are
  * protected by a [CheckAccess].
  */
-context(TranslationResult)
+context(tr: TranslationResult)
 fun assetsAreProtected(): QueryTree<Boolean> {
-    val tr = this@TranslationResult
     return tr.allExtended<ExitBoundary>(
         sel = {
             dataFlow(

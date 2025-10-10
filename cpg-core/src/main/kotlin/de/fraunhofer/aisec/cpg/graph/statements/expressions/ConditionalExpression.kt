@@ -75,7 +75,7 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
             .build()
     }
 
-    override val branchedBy: Node
+    override val branchedBy
         get() = condition
 
     override fun addArgument(expression: Expression) {

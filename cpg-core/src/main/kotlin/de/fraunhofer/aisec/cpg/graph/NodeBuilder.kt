@@ -42,7 +42,9 @@ import de.fraunhofer.aisec.cpg.passes.inference.IsImplicitProvider
 import de.fraunhofer.aisec.cpg.passes.inference.IsInferredProvider
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
+import java.io.File
 import java.net.URI
+import java.nio.file.Path
 import org.slf4j.LoggerFactory
 
 object NodeBuilder {
@@ -284,9 +286,9 @@ fun <T : Node> T.codeAndLocationFrom(other: Node): T {
  * code/location to the statement rather than the expression, after it comes back from the
  * expression handler.
  */
-context(CodeAndLocationProvider<AstNode>, ContextProvider)
+context(provider: CodeAndLocationProvider<AstNode>, contextProvider: ContextProvider)
 fun <T : Node, AstNode> T.codeAndLocationFromOtherRawNode(rawNode: AstNode?): T {
-    rawNode?.let { setCodeAndLocation(this@CodeAndLocationProvider, it) }
+    rawNode?.let { setCodeAndLocation(provider, it) }
     return this
 }
 
@@ -305,9 +307,9 @@ fun <T : Node, AstNode> T.codeAndLocationFromOtherRawNode(rawNode: AstNode?): T 
  *   This is needed because the location block spanning the children usually comprises more than one
  *   line.
  */
-context(CodeAndLocationProvider<AstNode>)
-fun <T : Node, AstNode> T.codeAndLocationFromChildren(
-    parentNode: AstNode,
+context(provider: CodeAndLocationProvider<AstNodeType>)
+fun <T : AstNode, AstNodeType> T.codeAndLocationFromChildren(
+    parentNode: AstNodeType,
     lineBreakSequence: CharSequence = "\n",
 ): T {
     var first: Node? = null
@@ -315,7 +317,7 @@ fun <T : Node, AstNode> T.codeAndLocationFromChildren(
 
     // Search through all children to find the first and last node based on region startLine and
     // startColumn
-    val worklist: MutableList<Node> = this.astChildren.toMutableList()
+    val worklist = this.astChildren.toMutableList()
     while (worklist.isNotEmpty()) {
         val current = worklist.removeFirst()
         if (current.location == null || current.location?.region == Region()) {
@@ -361,8 +363,8 @@ fun <T : Node, AstNode> T.codeAndLocationFromChildren(
         this.location =
             PhysicalLocation(first.location?.artifactLocation?.uri ?: URI(""), newRegion)
 
-        val parentCode = this@CodeAndLocationProvider.codeOf(parentNode)
-        val parentRegion = this@CodeAndLocationProvider.locationOf(parentNode)?.region
+        val parentCode = provider.codeOf(parentNode)
+        val parentRegion = provider.locationOf(parentNode)?.region
         if (parentCode != null && parentRegion != null) {
             // If the parent has code and region the new region is used to extract the code
             this.code = getCodeOfSubregion(parentCode, parentRegion, newRegion, lineBreakSequence)
@@ -376,12 +378,12 @@ fun <T : Node, AstNode> T.codeAndLocationFromChildren(
  * This internal function sets the code and location according to the [CodeAndLocationProvider].
  * This also performs some checks, e.g., if the config disabled setting the code.
  */
-context(ContextProvider)
+context(contextProvider: ContextProvider)
 private fun <AstNode> Node.setCodeAndLocation(
     provider: CodeAndLocationProvider<AstNode>,
     rawNode: AstNode,
 ) {
-    if (this@ContextProvider.ctx.config.codeInNodes == true) {
+    if (contextProvider.ctx.config.codeInNodes) {
         // only set code, if it's not already set or empty
         val code = provider.codeOf(rawNode)
         if (code != null) {
@@ -392,3 +394,30 @@ private fun <AstNode> Node.setCodeAndLocation(
     }
     this.location = provider.locationOf(rawNode)
 }
+
+/**
+ * This function tries to find the top-level file for a given [Path]. It first checks if the current
+ * component has a top-level file, then checks if the path is part of any configured include paths,
+ * and finally returns the parent directory of the path as a fallback.
+ */
+context(provider: ContextProvider)
+val Path.topLevel: File
+    get() {
+        // First, try to see if the current component has a top-level
+        val topLevel = provider.ctx.currentComponent?.topLevel()
+        if (topLevel != null) {
+            return topLevel
+        }
+
+        // Otherwise, we can try to see if the path is from a specified include
+        val includes = provider.ctx.config.includePaths
+        for (include in includes) {
+            if (startsWith(include)) {
+                // If the path starts with the include, we can return the include as top-level
+                return include.toFile()
+            }
+        }
+
+        // If no top-level was found, we return the path's parent as a file
+        return parent.toFile()
+    }

@@ -32,19 +32,19 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.boolean
 import com.github.ajalt.clikt.parameters.types.path
 import de.fraunhofer.aisec.codyze.dsl.ProjectBuilder
+import de.fraunhofer.aisec.codyze.dsl.RequirementCategoryBuilder
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
-import de.fraunhofer.aisec.cpg.query.Decision
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import io.github.detekt.sarif4k.*
 import java.io.File
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.isDirectory
-import kotlin.uuid.Uuid
 
 /** Options common to all subcommands dealing projects. */
 class ProjectOptions : OptionGroup("Project Options") {
@@ -87,7 +87,7 @@ class TranslationOptions : OptionGroup("CPG Translation Options") {
 data class AnalysisResult(
     val translationResult: TranslationResult,
     val sarif: SarifSchema210 = SarifSchema210(version = Version.The210, runs = listOf()),
-    val requirementsResults: Map<String, Decision> = mutableMapOf(),
+    val requirementsResults: Map<String, QueryTree<Boolean>> = mutableMapOf(),
     val project: AnalysisProject,
 ) : ContextProvider by translationResult {
     fun writeSarifJson(file: File) {
@@ -129,9 +129,9 @@ class AnalysisProject(
      * if the namespace starts with mylibrary.
      */
     var librariesPath: Path? = projectDir?.resolve("libraries"),
-    var requirementFunctions: Map<String, TranslationResult.() -> Decision> = emptyMap(),
-    var assumptionStatusFunctions: Map<String, TranslationResult.() -> AssumptionStatus> =
-        emptyMap(),
+    var requirementFunctions: Map<String, TranslationResult.() -> QueryTree<Boolean>> = emptyMap(),
+    var requirementCategories: Map<String, RequirementCategoryBuilder> = emptyMap(),
+    var assumptionStatusFunctions: Map<(Assumption) -> Boolean, AssumptionStatus> = emptyMap(),
     var suppressedQueryTreeIDs: Map<(QueryTree<*>) -> Boolean, Any> = emptyMap(),
     /** The translation configuration for the project. */
     var config: TranslationConfiguration,
@@ -146,15 +146,13 @@ class AnalysisProject(
 
     /** Analyzes the project and returns the result. */
     fun analyze(): AnalysisResult {
-        val tr = TranslationManager.builder().config(config).build().analyze().get()
-
-        // Propagate assumption status into a translation result
-        assumptionStatusFunctions.forEach { (uuid, func) ->
-            tr.assumptionStates[Uuid.parse(uuid)] = func(tr)
-        }
+        // Propagate assumption status
+        assumptionStatusFunctions.forEach { (key, status) -> Assumption.states[key] = status }
 
         // Propagate suppressed query tree IDs into translation result
         QueryTree.suppressions += suppressedQueryTreeIDs
+
+        val tr = TranslationManager.builder().config(config).build().analyze().get()
 
         // Run requirements
         val requirementsResults =

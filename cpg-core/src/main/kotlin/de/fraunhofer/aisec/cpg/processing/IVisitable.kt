@@ -25,17 +25,19 @@
  */
 package de.fraunhofer.aisec.cpg.processing
 
+import de.fraunhofer.aisec.cpg.graph.Node
+
 /**
  * An object that can be visited by a visitor.
  *
  * @param <V> </V>
  */
-interface IVisitable<V : IVisitable<V>> {
+interface IVisitable {
     /**
      * @param strategy Traversal strategy.
      * @param visitor Instance of the visitor to call.
      */
-    fun accept(strategy: IStrategy<V>, visitor: IVisitor<V>) {
+    fun <V : Node> accept(strategy: IStrategy<V>, visitor: IVisitor<V>) {
         @Suppress("UNCHECKED_CAST")
         if (visitor.visited.add(this as V)) {
             visitor.visit(this)

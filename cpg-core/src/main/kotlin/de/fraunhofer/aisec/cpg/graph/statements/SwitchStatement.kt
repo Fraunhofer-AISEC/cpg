@@ -61,7 +61,7 @@ class SwitchStatement : Statement(), BranchingNode {
      */
     var statement by unwrapping(SwitchStatement::statementEdge)
 
-    override val branchedBy: Node?
+    override val branchedBy
         get() = selector
 
     override fun equals(other: Any?): Boolean {

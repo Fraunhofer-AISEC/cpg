@@ -84,7 +84,7 @@ class BasicLatticesRedesignTest {
         assertNotSame(blaBlubLattice, powersetLattice.duplicate(blaBlubLattice))
 
         val emptyLubEmpty = powersetLattice.lub(emptyLattice1, emptyLattice1)
-        assertSame(emptyLattice1, emptyLubEmpty)
+        assertNotSame(emptyLattice1, emptyLubEmpty)
         assertEquals(emptyLattice1, emptyLubEmpty)
         assertEquals(Order.EQUAL, powersetLattice.compare(emptyLattice1, emptyLubEmpty))
         assertNotSame(emptyLattice2, emptyLubEmpty)
@@ -92,7 +92,7 @@ class BasicLatticesRedesignTest {
         assertEquals(Order.EQUAL, powersetLattice.compare(emptyLattice2, emptyLubEmpty))
 
         val empty1LubBla1 = powersetLattice.lub(emptyLattice1, blaLattice1)
-        assertSame(emptyLattice1, emptyLubEmpty)
+        assertNotSame(emptyLattice1, emptyLubEmpty)
         assertEquals(emptyLattice1, emptyLubEmpty)
         assertNotSame(emptyLattice1, empty1LubBla1)
         assertNotEquals(emptyLattice1, empty1LubBla1)
@@ -187,7 +187,7 @@ class BasicLatticesRedesignTest {
         assertEquals(aBlaBFooLattice, aBlaBFooLatticeDuplicate)
 
         val emptyLubEmpty = mapLattice.lub(emptyLattice1, emptyLattice1)
-        assertSame(emptyLattice1, emptyLubEmpty)
+        assertNotSame(emptyLattice1, emptyLubEmpty)
         assertEquals(emptyLattice1, emptyLubEmpty)
         assertEquals(Order.EQUAL, mapLattice.compare(emptyLattice1, emptyLubEmpty))
         assertNotSame(emptyLattice2, emptyLubEmpty)

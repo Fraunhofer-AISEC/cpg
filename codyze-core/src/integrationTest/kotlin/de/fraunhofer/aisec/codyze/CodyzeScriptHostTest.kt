@@ -23,18 +23,13 @@
  *                    \______/ \__|       \______/
  *
  */
-@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
-
 package de.fraunhofer.aisec.codyze
 
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.query.*
 import de.fraunhofer.aisec.cpg.test.assertInvokes
 import kotlin.io.path.Path
@@ -42,21 +37,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
-
-context(TranslationResult)
-fun goodCryptoFunc(): QueryTree<Boolean> {
-    return allExtended<CallExpression> { it.name eq "encrypt" }
-}
-
-context(TranslationResult)
-fun goodArgumentSize(): QueryTree<Boolean> {
-    return allExtended<CallExpression> { it.arguments.size eq 2 }
-}
-
-context(TranslationResult)
-fun veryLongFunctionName(): QueryTree<Boolean> {
-    return allExtended<FunctionDeclaration> { it.name.localName.length gt 7 }
-}
 
 class CodyzeExecutorTest {
     @Test
@@ -81,8 +61,10 @@ class CodyzeExecutorTest {
         assertFalse(specialFunc.isInferred)
 
         assertEquals(3, result.requirementsResults.size)
-        assertEquals(result.requirementsResults["RQ-ENCRYPTION-001"]?.value, Failed)
-        assertEquals(result.requirementsResults["RQ-ENCRYPTION-002"]?.value, Succeeded)
+        assertEquals(false, result.requirementsResults["RQ-ENCRYPTION-001"]?.value)
+        assertEquals(UndecidedResult, result.requirementsResults["RQ-ENCRYPTION-001"]?.confidence)
+        assertEquals(true, result.requirementsResults["RQ-ENCRYPTION-002"]?.value)
+        assertEquals(AcceptedResult, result.requirementsResults["RQ-ENCRYPTION-002"]?.confidence)
 
         val myFuncCall = result.translationResult.calls["special_func"]
         assertNotNull(myFuncCall)

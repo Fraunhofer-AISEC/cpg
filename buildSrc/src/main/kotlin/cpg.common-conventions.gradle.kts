@@ -1,6 +1,5 @@
 import org.gradle.accessors.dm.LibrariesForLibs
 import org.gradle.api.services.BuildServiceParameters.None
-import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -12,7 +11,6 @@ plugins {
     signing
     kotlin("jvm")
     kotlin("plugin.serialization")
-    id("org.jetbrains.dokka")
 }
 
 java {
@@ -45,13 +43,6 @@ tasks.withType<GenerateModuleMetadata> {
     enabled = false
 }
 
-val dokkaHtml by tasks.getting(DokkaTask::class)
-val javadocJar by tasks.registering(Jar::class) {
-    dependsOn(dokkaHtml)
-    archiveClassifier.set("javadoc")
-    from(dokkaHtml.outputDirectory)
-}
-
 //
 // common compilation configuration
 //
@@ -62,7 +53,12 @@ kotlin {
 
 tasks.withType<KotlinCompile> {
     compilerOptions {
-        freeCompilerArgs = listOf("-opt-in=kotlin.RequiresOptIn", "-opt-in=kotlin.uuid.ExperimentalUuidApi", "-opt-in=kotlin.experimental.ExperimentalTypeInference", "-Xcontext-receivers")
+        freeCompilerArgs = listOf(
+            "-opt-in=kotlin.RequiresOptIn",
+            "-opt-in=kotlin.uuid.ExperimentalUuidApi",
+            "-opt-in=kotlin.experimental.ExperimentalTypeInference",
+            "-Xcontext-parameters",
+        )
     }
 }
 

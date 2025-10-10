@@ -58,7 +58,7 @@ class ForStatement : LoopStatement(), BranchingNode, StatementHolder {
     @Relationship("ITERATION_STATEMENT") var iterationStatementEdge = astOptionalEdgeOf<Statement>()
     var iterationStatement by unwrapping(ForStatement::iterationStatementEdge)
 
-    override val branchedBy: Node?
+    override val branchedBy
         get() = condition ?: conditionDeclaration
 
     override var statementEdges: AstEdges<Statement, AstEdge<Statement>>
@@ -74,7 +74,9 @@ class ForStatement : LoopStatement(), BranchingNode, StatementHolder {
             // Nothing to do here
         }
 
-    override var statements by unwrapping(ForStatement::statementEdges)
+    override var statements: MutableList<Statement>
+        get() = unwrapping(ForStatement::statementEdges)
+        set(value) {}
 
     override fun toString() =
         ToStringBuilder(this, TO_STRING_STYLE)

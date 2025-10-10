@@ -32,16 +32,13 @@ import de.fraunhofer.aisec.codyze.AnalysisResult
 import de.fraunhofer.aisec.codyze.CodyzeScript
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.passes.concepts.TagOverlaysPass
 import de.fraunhofer.aisec.cpg.passes.concepts.TaggingContext
-import de.fraunhofer.aisec.cpg.query.*
-import de.fraunhofer.aisec.cpg.query.Decision
-import de.fraunhofer.aisec.cpg.query.DecisionState
 import de.fraunhofer.aisec.cpg.query.NotYetEvaluated
 import de.fraunhofer.aisec.cpg.query.QueryTree
-import de.fraunhofer.aisec.cpg.query.decide
 import de.fraunhofer.aisec.cpg.query.toQueryTree
 import io.github.detekt.sarif4k.ReportingDescriptor
 import io.github.detekt.sarif4k.Result
@@ -59,6 +56,8 @@ object AssumptionDecisions : IncludeCategory
 object ManualAssessment : IncludeCategory
 
 object Tagging : IncludeCategory
+
+object Suppressions : IncludeCategory
 
 /** Represents a builder to include other scripts. */
 class IncludeBuilder {
@@ -96,7 +95,7 @@ class RequirementCategoryBuilder(
     var description: String? = null
 
     /** The requirements in this category. */
-    internal val requirements = mutableMapOf<String, RequirementBuilder>()
+    val requirements = mutableMapOf<String, RequirementBuilder>()
 }
 
 /** Represents a builder for a single requirement of the evaluation project. */
@@ -113,10 +112,10 @@ class RequirementBuilder(
     var description: String? = null
 
     /**
-     * A function that returns a [Decision] that evaluates whether the requirement is fulfilled.
+     * A function that returns a [QueryTree] that evaluates whether the requirement is fulfilled.
      * This function is expected to be used in the context of a [TranslationResult].
      */
-    var fulfilledBy: TranslationResult.() -> Decision = { NotYetEvaluated.toQueryTree() }
+    var fulfilledBy: TranslationResult.() -> QueryTree<Boolean> = { NotYetEvaluated }
 }
 
 /** Represents a builder for suppressions of the evaluation project. */
@@ -129,14 +128,13 @@ class AssumptionsBuilder {
     internal val decisionBuilder = DecisionBuilder()
 
     class DecisionBuilder {
-        val assumptionStatusFunctions =
-            mutableMapOf<String, TranslationResult.() -> AssumptionStatus>()
+        val assumptionStatusFunctions = mutableMapOf<(Assumption) -> Boolean, AssumptionStatus>()
     }
 }
 
 /** Represents a builder for manual assessments of requirements. */
 class ManualAssessmentBuilder {
-    internal val assessments = mutableMapOf<String, TranslationResult.() -> Decision>()
+    internal val assessments = mutableMapOf<String, TranslationResult.() -> QueryTree<Boolean>>()
 }
 
 /** Represents a builder for tool metadata and configuration. */
@@ -301,6 +299,7 @@ class ProjectBuilder(val projectDir: Path = Path(".")) {
             name,
             projectDir = projectDir,
             requirementFunctions = requirementFunctions,
+            requirementCategories = requirementsBuilder.categoryBuilders,
             assumptionStatusFunctions =
                 assumptionsBuilder.decisionBuilder.assumptionStatusFunctions,
             suppressedQueryTreeIDs = suppressionsBuilder.suppressions,
@@ -316,10 +315,10 @@ fun CodyzeScript.include(block: IncludeBuilder.() -> Unit) {
     includeBuilder.apply(block)
 }
 
-context(IncludeBuilder)
+context(builder: IncludeBuilder)
 @CodyzeDsl
 infix fun IncludeCategory.from(path: String) {
-    (this@IncludeBuilder).includes[this] = path
+    (builder).includes[this] = path
 }
 
 /** Spans the project-Block */
@@ -375,12 +374,6 @@ fun ModulesBuilder.module(name: String, block: ModuleBuilder.() -> Unit) {
     modules += builder
 }
 
-sealed class FulfilledByReturnType
-
-object FulfilledByDecision : FulfilledByReturnType()
-
-object FulfilledByQueryTree : FulfilledByReturnType()
-
 /**
  * Generates a default identifier for the next requirement in the format
  * `RQ-<category_id>-<number>`,
@@ -392,7 +385,7 @@ fun RequirementCategoryBuilder.nextRQ(): String {
 
 /**
  * Describes a single requirement of the TOE (in the [DefaultCategory]) by a function that returns a
- * [Decision].
+ * [QueryTree] of [Boolean].
  *
  * An [id] can be provided to identify the requirement. If no [id] is provided, a default identifier
  * is generated based on the current size of the requirements map in the format specified by
@@ -419,7 +412,7 @@ fun RequirementsBuilder.category(id: String, block: RequirementCategoryBuilder.(
 
 /**
  * Describes a single requirement of the TOE (within the current requirement category) by a function
- * that returns a [Decision].
+ * that returns a [QueryTree] of [Boolean].
  *
  * An [id] can be provided to identify the requirement. If no [id] is provided, a default identifier
  * is generated based on the current size of the requirements map in the format specified by
@@ -437,34 +430,24 @@ fun RequirementCategoryBuilder.requirement(
     requirements[id] = builder
 }
 
-@CodyzeDsl
-@OverloadResolutionByLambdaReturnType
-fun RequirementBuilder.fulfilledBy(query: TranslationResult.() -> Decision): FulfilledByDecision {
-    fulfilledBy = query
-    return FulfilledByDecision
-}
-
 /**
  * Describes a single requirement of the TOE by a function that returns a [QueryTree] of [Boolean].
  */
 @CodyzeDsl
-fun RequirementBuilder.fulfilledBy(
-    query: TranslationResult.() -> QueryTree<Boolean>
-): FulfilledByQueryTree {
-    fulfilledBy = { query().decide() }
-    return FulfilledByQueryTree
+fun RequirementBuilder.fulfilledBy(query: TranslationResult.() -> QueryTree<Boolean>) {
+    fulfilledBy = { query() }
 }
 
 /** Describes that the requirement had to be checked manually. */
-context(ProjectBuilder, RequirementsBuilder, TranslationResult)
+context(builder: ProjectBuilder, _: RequirementsBuilder, result: TranslationResult)
 @CodyzeDsl
-fun manualAssessmentOf(id: String): Decision {
-    val manualAssessment = this@ProjectBuilder.manualAssessmentBuilder.assessments[id]
+fun manualAssessmentOf(id: String): QueryTree<Boolean> {
+    val manualAssessment = builder.manualAssessmentBuilder.assessments[id]
     if (manualAssessment == null) {
-        return NotYetEvaluated.toQueryTree()
+        return NotYetEvaluated
     }
 
-    return manualAssessment(this@TranslationResult)
+    return manualAssessment(result)
 }
 
 /** Describes the assumptions which have been handled and assessed. */
@@ -527,7 +510,20 @@ fun AssumptionsBuilder.decisions(block: AssumptionsBuilder.DecisionBuilder.() ->
  */
 @CodyzeDsl
 fun AssumptionsBuilder.DecisionBuilder.accept(uuid: String) {
-    assumptionStatusFunctions += uuid to { AssumptionStatus.Accepted }
+    assumptionStatusFunctions[{ it.id == Uuid.parse(uuid) }] = AssumptionStatus.Accepted
+}
+
+/**
+ * Describes that the assumption with the given [uuid] was assessed and considered as
+ * acceptable/valid.
+ *
+ * @param uuid The UUID of the assumption must be provided in string in the format
+ *   "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", where each 'x' is a hexadecimal digit, either lowercase
+ *   or uppercase.
+ */
+@CodyzeDsl
+fun AssumptionsBuilder.DecisionBuilder.accept(filter: (Assumption) -> Boolean) {
+    assumptionStatusFunctions[filter] = AssumptionStatus.Accepted
 }
 
 /**
@@ -540,7 +536,7 @@ fun AssumptionsBuilder.DecisionBuilder.accept(uuid: String) {
  */
 @CodyzeDsl
 fun AssumptionsBuilder.DecisionBuilder.reject(uuid: String) {
-    assumptionStatusFunctions += uuid to { AssumptionStatus.Rejected }
+    assumptionStatusFunctions[{ it.id == Uuid.parse(uuid) }] = AssumptionStatus.Rejected
 }
 
 /**
@@ -552,20 +548,7 @@ fun AssumptionsBuilder.DecisionBuilder.reject(uuid: String) {
  */
 @CodyzeDsl
 fun AssumptionsBuilder.DecisionBuilder.undecided(uuid: String) {
-    assumptionStatusFunctions += uuid to { AssumptionStatus.Undecided }
-}
-
-/**
- * Describes that the assumption with the given [uuid] was assessed and can be ignored in this
- * evaluation project.
- *
- * @param uuid The UUID of the assumption must be provided in string in the format
- *   "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", where each 'x' is a hexadecimal digit, either lowercase
- *   or uppercase.
- */
-@CodyzeDsl
-fun AssumptionsBuilder.DecisionBuilder.ignore(uuid: String) {
-    assumptionStatusFunctions += uuid to { AssumptionStatus.Ignored }
+    assumptionStatusFunctions[{ it.id == Uuid.parse(uuid) }] = AssumptionStatus.Undecided
 }
 
 /** Describes the manual assessments. */
@@ -576,47 +559,21 @@ fun ProjectBuilder.manualAssessment(block: ManualAssessmentBuilder.() -> Unit) {
 
 sealed class OfReturnType
 
-object OfDecision : OfReturnType()
-
-object OfDecisionState : OfReturnType()
-
 object OfQueryTree : OfReturnType()
 
 object OfBoolean : OfReturnType()
 
 /**
  * Describes a manual assessment of a requirement with the given [id]. The [block] is expected to
- * return a [Decision] that evaluates to [Succeeded] if the requirement is fulfilled.
- */
-@CodyzeDsl
-@OverloadResolutionByLambdaReturnType
-fun ManualAssessmentBuilder.of(id: String, block: TranslationResult.() -> Decision): OfDecision {
-    assessments[id] = block
-    return OfDecision
-}
-
-/**
- * Describes a manual assessment of a requirement with the given [id]. The [block] is expected to
- * return a [DecisionState] that evaluates to [Succeeded] if the requirement is fulfilled.
- */
-fun ManualAssessmentBuilder.of(
-    id: String,
-    block: TranslationResult.() -> DecisionState,
-): OfDecisionState {
-    assessments[id] = { block().toQueryTree() }
-    return OfDecisionState
-}
-
-/**
- * Describes a manual assessment of a requirement with the given [id]. The [block] is expected to
  * return a [QueryTree] that evaluates to `true` if the requirement is fulfilled.
  */
 @CodyzeDsl
+@OverloadResolutionByLambdaReturnType
 fun ManualAssessmentBuilder.of(
     id: String,
     block: TranslationResult.() -> QueryTree<Boolean>,
 ): OfQueryTree {
-    assessments[id] = { block().decide() }
+    assessments[id] = { block() }
     return OfQueryTree
 }
 
@@ -626,6 +583,6 @@ fun ManualAssessmentBuilder.of(
  */
 @CodyzeDsl
 fun ManualAssessmentBuilder.of(id: String, block: TranslationResult.() -> Boolean): OfBoolean {
-    assessments[id] = { block().toQueryTree().decide() }
+    assessments[id] = { block().toQueryTree(collectCallerInfo = true) }
     return OfBoolean
 }

@@ -40,6 +40,7 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /** Adds the DFG edges for various types of nodes. */
 @DependsOn(SymbolResolver::class)
@@ -52,8 +53,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             config.functionSummaries.functionToDFGEntryMap.size,
         )
 
-        val inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedCalls
-        val walker = IterativeGraphWalker()
+        val inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedSymbols
+        val walker = IterativeGraphWalker(Strategy::AST_FORWARD)
         walker.registerOnNodeVisit { node, parent ->
             handle(node, parent, inferDfgForUnresolvedCalls, config.functionSummaries)
         }
@@ -308,7 +309,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 node.variable.variables.lastOrNull()?.prevDFGEdges += iterable
                 node.assume(
                     AssumptionType.AmbiguityAssumption,
-                    "We assume that the last VariableDeclaration in the statement kept in \"variable\" is the variable we care about in the ForEachStatement if there is no DeclarationStatement related to $node.\n\n" +
+                    "We assume that the last VariableDeclaration in the statement kept in \"variable\" is the variable we care about in the ForEachStatement if there is no DeclarationStatement related to the iterable.\n\n" +
                         "To verify this assumption, we need to check if the last VariableDeclaration of the variable is indeed the one where we assign the iterable's elements to.",
                 )
             }

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.objectType
@@ -55,13 +56,13 @@ fun SymbolResolver.addRecursiveDefaultTemplateArgs(
     do {
         // Handle Explicit Template Arguments
         templateParameters = constructExpression.templateArguments.size
-        val templateParametersExplicitInitialization = mutableMapOf<Node, Node>()
+        val templateParametersExplicitInitialization = mutableMapOf<Node, AstNode>()
         handleExplicitTemplateParameters(
             constructExpression,
             template,
             templateParametersExplicitInitialization,
         )
-        val templateParameterRealDefaultInitialization = mutableMapOf<Node, Node?>()
+        val templateParameterRealDefaultInitialization = mutableMapOf<Node, AstNode?>()
 
         // Handle defaults of parameters
         handleDefaultTemplateParameters(template, templateParameterRealDefaultInitialization)
@@ -87,7 +88,7 @@ fun SymbolResolver.addRecursiveDefaultTemplateArgs(
 fun handleExplicitTemplateParameters(
     constructExpression: ConstructExpression,
     template: RecordTemplateDeclaration,
-    templateParametersExplicitInitialization: MutableMap<Node, Node>,
+    templateParametersExplicitInitialization: MutableMap<Node, AstNode>,
 ) {
     for (i in constructExpression.templateArguments.indices) {
         val explicit = constructExpression.templateArguments[i]
@@ -113,17 +114,17 @@ fun handleExplicitTemplateParameters(
 fun SymbolResolver.applyMissingParams(
     template: RecordTemplateDeclaration,
     constructExpression: ConstructExpression,
-    templateParametersExplicitInitialization: Map<Node, Node>,
-    templateParameterRealDefaultInitialization: Map<Node, Node?>,
+    templateParametersExplicitInitialization: Map<Node, AstNode>,
+    templateParameterRealDefaultInitialization: Map<Node, AstNode?>,
 ) {
     with(constructExpression) {
-        val missingParams: List<Node?> =
+        val missingParams =
             template.parameterDefaults.subList(
                 constructExpression.templateArguments.size,
                 template.parameterDefaults.size,
             )
         for (m in missingParams) {
-            var missingParam = m
+            var missingParam: Node? = m
             if (missingParam is Reference) {
                 if (missingParam.refersTo == null) {
                     val currentScope = scopeManager.currentScope
@@ -133,7 +134,11 @@ fun SymbolResolver.applyMissingParams(
                     scopeManager.jumpTo(currentScope)
                 }
                 missingParam = missingParam.refersTo
+            } else if (missingParam is TypeExpression) {
+                // If the missing parameter is a TypeExpression, we need to get the type
+                missingParam = missingParam.type
             }
+
             if (missingParam in templateParametersExplicitInitialization) {
                 // If default is a previously defined template argument that has been explicitly
                 // passed
@@ -143,6 +148,7 @@ fun SymbolResolver.applyMissingParams(
                         TemplateDeclaration.TemplateInitialization.DEFAULT,
                     )
                 }
+
                 // If template argument is a type add it as a generic to the type as well
                 (templateParametersExplicitInitialization[missingParam] as? TypeExpression)
                     ?.type
@@ -182,7 +188,7 @@ fun SymbolResolver.applyMissingParams(
  */
 fun handleDefaultTemplateParameters(
     template: RecordTemplateDeclaration,
-    templateParameterRealDefaultInitialization: MutableMap<Node, Node?>,
+    templateParameterRealDefaultInitialization: MutableMap<Node, AstNode?>,
 ) {
     val declaredTemplateTypes = mutableListOf<Type?>()
     val declaredNonTypeTemplate = mutableListOf<ParameterDeclaration>()
@@ -191,7 +197,7 @@ fun handleDefaultTemplateParameters(
         if (declaration is TypeParameterDeclaration) {
             declaredTemplateTypes.add(declaration.type)
             if (
-                declaration.default !in declaredTemplateTypes &&
+                declaration.default?.type !in declaredTemplateTypes &&
                     declaration in parametersWithDefaults
             ) {
                 templateParameterRealDefaultInitialization[declaration.type] = declaration.default

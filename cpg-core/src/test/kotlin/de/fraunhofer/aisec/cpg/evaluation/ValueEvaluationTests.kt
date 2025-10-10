@@ -192,7 +192,7 @@ class ValueEvaluationTests {
 
                                 declare {
                                     variable("h", t("bool")) {
-                                        literal(5, t("int")) lt literal(3, t("int"))
+                                        literal(5, t("int")) le literal(2, t("int"))
                                     }
                                 }
 

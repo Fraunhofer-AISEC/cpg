@@ -46,12 +46,11 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  */
 abstract class ConceptPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
-    lateinit var walker: SubgraphWalker.ScopedWalker
+    lateinit var walker: SubgraphWalker.ScopedWalker<Node>
 
     override fun accept(tu: TranslationUnitDeclaration) {
         ctx.currentComponent = tu.component
-        walker = SubgraphWalker.ScopedWalker(ctx.scopeManager)
-        walker.strategy = Strategy::EOG_FORWARD
+        walker = SubgraphWalker.ScopedWalker(ctx.scopeManager, Strategy::EOG_FORWARD)
         walker.registerHandler { node -> handleNode(node, tu) }
 
         // Gather all resolution EOG starters; and make sure they really do not have a

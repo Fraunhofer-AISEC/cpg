@@ -27,8 +27,8 @@
 
 package de.fraunhofer.aisec.cpg.graph
 
+import com.fasterxml.jackson.annotation.JsonBackReference
 import com.fasterxml.jackson.annotation.JsonIdentityInfo
-import com.fasterxml.jackson.annotation.JsonIdentityReference
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonMerge
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -44,14 +44,12 @@ import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.Overlays
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
 import de.fraunhofer.aisec.cpg.passes.*
@@ -82,7 +80,7 @@ import org.slf4j.LoggerFactory
 // @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY, property =
 // "@class")
 abstract class Node() :
-    IVisitable<Node>,
+    IVisitable,
     Persistable,
     LanguageProvider,
     ScopeProvider,
@@ -106,6 +104,7 @@ abstract class Node() :
      * [LanguageProvider] at the time when the node is created.
      */
     @Relationship(value = "LANGUAGE", direction = Relationship.Direction.OUTGOING)
+    @JsonBackReference
     override var language: Language<*> = UnknownLanguage
 
     /**
@@ -118,6 +117,7 @@ abstract class Node() :
      * class would be a [RecordScope] pointing to the [RecordDeclaration].
      */
     @Relationship(value = "SCOPE", direction = Relationship.Direction.OUTGOING)
+    @JsonBackReference
     override var scope: Scope? = null
 
     /** Optional comment of this node. */
@@ -167,26 +167,7 @@ abstract class Node() :
 
     @get:JsonIgnore var prevCDG by unwrapping(Node::prevCDGEdges)
 
-    /**
-     * Virtual property to return a list of the node's children. Uses the [SubgraphWalker] to
-     * retrieve the appropriate nodes.
-     *
-     * Note: This only returns the *direct* children of this node. If you want to have *all*
-     * children, e.g., a flattened AST, you need to call [Node.allChildren].
-     *
-     * For Neo4J OGM, this relationship will be automatically filled by a pre-save event before OGM
-     * persistence. Therefore, this property is a `var` and not a `val`.
-     */
-    @JsonIgnore
-    @Relationship("AST")
-    var astChildren: List<Node> = listOf()
-        get() = SubgraphWalker.getAstChildren(this)
-
-    @DoNotPersist
-    @Transient
-    // @JsonSerialize(using = Serializers.ReferenceSerializer::class)
-    @JsonIdentityReference(alwaysAsId = true)
-    var astParent: Node? = null
+    @DoNotPersist @Transient @JsonIgnore var astParent: AstNode? = null
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class)
@@ -255,7 +236,7 @@ abstract class Node() :
     @Relationship(value = "PDG", direction = Relationship.Direction.OUTGOING)
     @JsonMerge
     var nextPDGEdges: ProgramDependences<Node> =
-        ProgramDependences<Node>(this, mirrorProperty = Node::prevPDGEdges, outgoing = false)
+        ProgramDependences<Node>(this, mirrorProperty = Node::prevPDGEdges, outgoing = true)
         protected set
 
     @get:JsonIgnore var nextPDG by unwrapping(Node::nextPDGEdges)
@@ -298,21 +279,17 @@ abstract class Node() :
     @get:JsonProperty("id")
     @set:JsonProperty("id")
     var id: Uuid
-        get() =
-            Uuid.fromLongs(
+        get() {
+            val parent =
                 astParent?.id?.toLongs { mostSignificantBits, leastSignificantBits ->
                     leastSignificantBits
-                } ?: 0,
-                hashCode().toLong(),
-            )
+                }
+            return Uuid.fromLongs(parent ?: 0, hashCode().toLong())
+        }
         set(value) {}
 
     /** Index of the argument if this node is used in a function call or parameter list. */
     var argumentIndex = 0
-
-    /** List of annotations associated with that node. */
-    @Relationship("ANNOTATIONS") @JsonMerge var annotationEdges = astEdgesOf<Annotation>()
-    var annotations by unwrapping(Node::annotationEdges)
 
     /**
      * Additional problem nodes. These nodes represent problems which occurred during processing of
@@ -330,8 +307,8 @@ abstract class Node() :
      * Adds the [assumptions] attached to the [Node] and of relevant supernodes in the AST.
      * Currently, of the [Component].
      */
-    override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + (component?.collectAssumptions() ?: emptySet())
+    override fun relevantAssumptions(): Set<Assumption> {
+        return super.relevantAssumptions() + (component?.relevantAssumptions() ?: emptySet())
     }
 
     /**
@@ -343,10 +320,7 @@ abstract class Node() :
      * ATTENTION! Please note that this might kill an entire subgraph, if the node to disconnect has
      * further children that have no alternative connection paths to the rest of the graph.
      */
-    fun disconnectFromGraph() {
-        // Disconnect all AST children first
-        astChildren.forEach { it.disconnectFromGraph() }
-
+    open fun disconnectFromGraph() {
         nextDFGEdges.clear()
         prevDFGEdges.clear()
         prevCDGEdges.clear()
@@ -432,11 +406,11 @@ abstract class Node() :
  * Works similar to [apply] but before executing [block], it enters the scope for this object and
  * afterward leaves the scope again.
  */
-context(ContextProvider)
+context(provider: ContextProvider)
 inline fun <reified T : Node> T.applyWithScope(block: T.() -> Unit): T {
     return this.apply {
-        (this@ContextProvider).ctx.scopeManager.enterScope(this)
+        (provider).ctx.scopeManager.enterScope(this)
         block()
-        (this@ContextProvider).ctx.scopeManager.leaveScope(this)
+        (provider).ctx.scopeManager.leaveScope(this)
     }
 }

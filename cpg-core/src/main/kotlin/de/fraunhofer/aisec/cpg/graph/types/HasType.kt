@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.types
 
 import com.fasterxml.jackson.annotation.JsonBackReference
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.applyMetadata
@@ -146,10 +147,9 @@ interface HasType : LanguageProvider {
         /**
          * A helper function that can be used for [EdgeSingletonList.onChanged]. It unregisters this
          * [TypeObserver] with the [old] node and registers it with the [new] one. It updates the
-         * [de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression.access] property of
-         * [new.end].
+         * [Expression.access] property of [AstEdge.end].
          */
-        fun <NodeType : Node> exchangeTypeObserverWithAccessPropagation(
+        fun <NodeType : AstNode> exchangeTypeObserverWithAccessPropagation(
             old: AstEdge<NodeType>?,
             new: AstEdge<NodeType>?,
         ) {
@@ -159,10 +159,9 @@ interface HasType : LanguageProvider {
         /**
          * A helper function that can be used for [EdgeSingletonList.onChanged]. It unregisters this
          * [TypeObserver] with the [old] node and registers it with the [new] one. It also updates
-         * the [de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression.access] property of
-         * [new.end] if [propagateAccess] is set to `true`.
+         * the [Expression.access] property of [AstEdge.end] if [propagateAccess] is set to `true`.
          */
-        fun <NodeType : Node> exchangeTypeObserver(
+        fun <NodeType : AstNode> exchangeTypeObserver(
             old: AstEdge<NodeType>?,
             new: AstEdge<NodeType>?,
             propagateAccess: Boolean,
@@ -177,10 +176,9 @@ interface HasType : LanguageProvider {
         /**
          * A helper function that can be used for [EdgeSingletonList.onChanged]. It unregisters this
          * [TypeObserver] with the [old] node and registers it with the [new] one. It does not
-         * update the [de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression.access]
-         * property of [new.end].
+         * update the [Expression.access] property of [AstEdge.end].
          */
-        fun <NodeType : Node> exchangeTypeObserverWithoutAccessPropagation(
+        fun <NodeType : AstNode> exchangeTypeObserverWithoutAccessPropagation(
             old: AstEdge<NodeType>?,
             new: AstEdge<NodeType>?,
         ) {

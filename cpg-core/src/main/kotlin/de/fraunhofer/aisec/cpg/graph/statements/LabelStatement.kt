@@ -67,7 +67,9 @@ class LabelStatement : Statement(), StatementHolder {
             subStatement = value.toNodeCollection().firstOrNull()
         }
 
-    override var statements by unwrapping(LabelStatement::statementEdges)
+    override var statements: MutableList<Statement>
+        get() = unwrapping(LabelStatement::statementEdges)
+        set(value) {}
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

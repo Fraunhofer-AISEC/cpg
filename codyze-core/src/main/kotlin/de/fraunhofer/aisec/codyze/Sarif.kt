@@ -35,14 +35,11 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.query.DecisionState
-import de.fraunhofer.aisec.cpg.query.Failed
+import de.fraunhofer.aisec.cpg.query.AcceptedResult
 import de.fraunhofer.aisec.cpg.query.NotYetEvaluated
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.query.SinglePathResult
-import de.fraunhofer.aisec.cpg.query.Succeeded
-import de.fraunhofer.aisec.cpg.query.Undecided
-import de.fraunhofer.aisec.cpg.query.toQueryTree
+import de.fraunhofer.aisec.cpg.query.UndecidedResult
 import io.github.detekt.sarif4k.*
 import java.io.File
 import kotlin.io.path.relativeToOrSelf
@@ -55,12 +52,7 @@ fun AnalysisProject.buildSarif(
     val sarifRules = mutableListOf<ReportingDescriptor>()
     val sarifResults = mutableListOf<Result>()
 
-    for ((requirementID, decision) in result.requirementsResults) {
-        val passFail = decision.toBooleanQueryTree()
-        if (passFail == null) {
-            // If the decision is not yet evaluated, we skip this requirement
-            continue
-        }
+    for ((requirementID, passFail) in result.requirementsResults) {
         val sarifResult = passFail.toSarif(requirementID)
         val req = builder?.allRequirements[requirementID]
 
@@ -79,32 +71,6 @@ fun AnalysisProject.buildSarif(
 }
 
 /**
- * Converts a [QueryTree] of type [DecisionState] to a [QueryTree] of type [Boolean]. This is used
- * to determine if the query was successful or not. All states except [Succeeded] are considered as
- * failed, which results in a [QueryTree] with value `false`.
- *
- * We need to make this binary decision because SARIF only supports boolean results for individual
- * findings.
- */
-fun <T : DecisionState> QueryTree<T>.toBooleanQueryTree(): QueryTree<Boolean>? {
-    // If this decision state came from a boolean value, we can just convert it back
-    val onlyChild = children.singleOrNull()
-    if (onlyChild?.value is Boolean) {
-        @Suppress("UNCHECKED_CAST")
-        return onlyChild as? QueryTree<Boolean>
-    }
-
-    // If this decision state has no single boolean children, we can return a new value based on the
-    // decision state directly
-    return when (this.value) {
-        is Succeeded -> true.toQueryTree()
-        is Failed -> false.toQueryTree()
-        is Undecided -> false.toQueryTree()
-        is NotYetEvaluated -> null
-    }
-}
-
-/**
  * Converts a [QueryTree] to a list of [Result]s. This expects that the query tree is of type
  * [Boolean] and that the [QueryTree.children] represent the individual findings.
  */
@@ -115,10 +81,12 @@ fun QueryTree<Boolean>.toSarif(ruleID: String): List<Result> {
         Result(
             ruleID = ruleID,
             message =
-                if (result) {
-                    Message(text = "Query was successful")
+                if (result && child.confidence == AcceptedResult) {
+                    Message(text = "The query was successful")
+                } else if (child is NotYetEvaluated) {
+                    Message(text = "The query has not been evaluated yet")
                 } else {
-                    Message(text = "Query failed")
+                    Message(text = "The query failed")
                 },
             level =
                 if (result) {
@@ -127,8 +95,12 @@ fun QueryTree<Boolean>.toSarif(ruleID: String): List<Result> {
                     Level.Error
                 },
             kind =
-                if (result) {
+                if (result && child.confidence == AcceptedResult) {
                     ResultKind.Pass
+                } else if (child is NotYetEvaluated) {
+                    ResultKind.Open
+                } else if (child.confidence == UndecidedResult) {
+                    ResultKind.Review
                 } else {
                     ResultKind.Fail
                 },

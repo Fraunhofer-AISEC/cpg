@@ -29,8 +29,6 @@ package de.fraunhofer.aisec.cpg
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
-import de.fraunhofer.aisec.cpg.assumptions.Assumption
-import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.multiLanguage
@@ -49,7 +47,6 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
-import kotlin.uuid.Uuid
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
@@ -57,7 +54,7 @@ import org.neo4j.ogm.annotation.Transient
  * The global (intermediate) result of the translation. A [LanguageFrontend] will initially populate
  * it and a [Pass] can extend it.
  */
-class TranslationResult() : Node(), StatisticsHolder, ContextProvider {
+class TranslationResult() : AstNode(), StatisticsHolder, ContextProvider {
 
     constructor(translationManager: TranslationManager, finalCtx: TranslationContext) : this() {
         this.translationManager = translationManager
@@ -90,14 +87,6 @@ class TranslationResult() : Node(), StatisticsHolder, ContextProvider {
 
     /** Contains all languages that were considered in the translation process. */
     @Transient val usedLanguages = mutableSetOf<Language<*>>()
-
-    /**
-     * This map holds the status assigned to assumptions identified by a specific [Uuid] when being
-     * set manually. The map is empty after a new analysis and can be filled during manual
-     * evaluation of assumptions. The Map is then used when a decision is made based on the
-     * [Assumption].
-     */
-    @Transient @JsonIgnore val assumptionStates: MutableMap<Uuid, AssumptionStatus> = mutableMapOf()
 
     /**
      * Scratch storage that can be used by passes to store additional information in this result.

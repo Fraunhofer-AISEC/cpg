@@ -198,6 +198,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
             )
             return
         }
+
         scopeMap[scope.astNode] = scope
         if (scope is NameScope) {
             // for this to work, it is essential that RecordDeclaration and NamespaceDeclaration
@@ -267,6 +268,11 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         var existing = scopeMap[nodeToScope]
         if (existing != null) {
             currentScope = existing
+        }
+
+        // Update the "declaresScope", if the node is a declaration that declares a scope
+        if (nodeToScope is Declaration) {
+            nodeToScope.declaringScope = currentScope
         }
     }
 
@@ -350,8 +356,9 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      *
      * @param declaration the declaration to add
      */
-    fun addDeclaration(declaration: Declaration) {
+    fun <T : Declaration> addDeclaration(declaration: T): T {
         currentScope.addSymbol(declaration.symbol, declaration)
+        return declaration
     }
 
     /**
@@ -870,6 +877,10 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
     fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnitDeclaration {
         return source.language.translationUnitForInference<TypeToInfer>(source)
     }
+}
+
+fun <T : Declaration> ContextProvider.declare(declaration: T): T {
+    return ctx.scopeManager.addDeclaration(declaration)
 }
 
 /**

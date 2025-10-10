@@ -48,6 +48,9 @@ private constructor(
     /** Enables the inference of function declarations. */
     val inferFunctions: Boolean,
 
+    /** Enables the inference of field declarations. */
+    val inferFields: Boolean,
+
     /** Enables the inference of variables, such as global variables. */
     val inferVariables: Boolean,
 
@@ -61,16 +64,17 @@ private constructor(
      * Uses heuristics to add DFG edges for call expressions to unresolved functions (i.e.,
      * functions not implemented in the given source code).
      */
-    val inferDfgForUnresolvedCalls: Boolean,
+    val inferDfgForUnresolvedSymbols: Boolean,
 ) {
     class Builder(
         private var enabled: Boolean = true,
         private var inferNamespaces: Boolean = true,
         private var inferRecords: Boolean = true,
+        private var inferFields: Boolean = true,
         private var inferFunctions: Boolean = true,
         private var inferVariables: Boolean = true,
         private var inferReturnTypes: Boolean = false,
-        private var inferDfgForUnresolvedCalls: Boolean = true,
+        private var inferDfgForUnresolvedSymbols: Boolean = true,
     ) {
         fun enabled(infer: Boolean) = apply { this.enabled = infer }
 
@@ -80,12 +84,14 @@ private constructor(
 
         fun inferFunctions(infer: Boolean) = apply { this.inferFunctions = infer }
 
+        fun inferFields(infer: Boolean) = apply { this.inferFields = infer }
+
         fun inferVariables(infer: Boolean) = apply { this.inferVariables = infer }
 
         fun inferReturnTypes(infer: Boolean) = apply { this.inferReturnTypes = infer }
 
         fun inferDfgForUnresolvedCalls(infer: Boolean) = apply {
-            this.inferDfgForUnresolvedCalls = infer
+            this.inferDfgForUnresolvedSymbols = infer
         }
 
         fun build() =
@@ -94,9 +100,10 @@ private constructor(
                 inferNamespaces,
                 inferRecords,
                 inferFunctions,
+                inferFields,
                 inferVariables,
                 inferReturnTypes,
-                inferDfgForUnresolvedCalls,
+                inferDfgForUnresolvedSymbols,
             )
     }
 
@@ -110,7 +117,7 @@ private constructor(
     override fun toString(): String {
         return ToStringBuilder(this, ToStringStyle.JSON_STYLE)
             .append("inferRecords", inferRecords)
-            .append("inferDfgForUnresolvedCalls", inferDfgForUnresolvedCalls)
+            .append("inferDfgForUnresolvedSymbols", inferDfgForUnresolvedSymbols)
             .toString()
     }
 }

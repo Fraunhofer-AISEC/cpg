@@ -54,7 +54,7 @@ import kotlin.math.absoluteValue
  * @param predicate Indicates if the node should be included in the result.
  */
 @JvmOverloads
-inline fun <reified T> Node?.allChildren(
+inline fun <reified T> AstNode?.allChildren(
     noinline stopAtNode: (Node) -> Boolean = { false },
     noinline predicate: ((T) -> Boolean)? = null,
 ): List<T> {
@@ -69,6 +69,21 @@ inline fun <reified T> Node?.allChildren(
 }
 
 /**
+ * Checks, whether this [Node] has a location that matches the given parameters.
+ *
+ * @param pathSuffix The suffix of the path to match. The check is performed by [String.endsWith],
+ *   so there are no specific requirements on the format. If `null`, this is ignored.
+ * @param startLine The start line of the location to match. If `null`, this is ignored.
+ * @param endLine The end line of the location to match. If `null`, this is ignored.
+ */
+fun Node.hasLocation(pathSuffix: String?, startLine: Int?, endLine: Int?): Boolean {
+    return (pathSuffix == null ||
+        this.location?.artifactLocation?.uri?.path?.endsWith(pathSuffix) == true) &&
+        (startLine == null || this.location?.region?.startLine == startLine) &&
+        (endLine == null || this.location?.region?.endLine == endLine)
+}
+
+/**
  * Flattens the AST beginning with this node and returns all nodes of type [T]. For convenience, an
  * optional predicate function [predicate] can be supplied, which will be applied via
  * [Collection.filter]
@@ -77,7 +92,7 @@ inline fun <reified T> Node?.allChildren(
 inline fun <reified T> Node?.allChildrenWithOverlays(
     noinline predicate: ((T) -> Boolean)? = null
 ): List<T> {
-    val nodes = SubgraphWalker.flattenAST(this)
+    val nodes = SubgraphWalker.flattenAST(this as AstNode?)
     val nodesWithOverlays = nodes + nodes.flatMap { it.overlays }
     val filtered = nodesWithOverlays.filterIsInstance<T>()
 
@@ -103,7 +118,7 @@ inline fun <reified T : OverlayNode> Node.hasOverlay(): Boolean {
  * include retrieving it from either an individual [TranslationUnitDeclaration] or the complete
  * [TranslationResult].
  */
-val Node.allEOGStarters: List<Node>
+val AstNode.allEOGStarters: List<Node>
     get() {
         return this.allChildren<EOGStarterHolder>().flatMap { it.eogStarters }.distinct()
     }
@@ -112,7 +127,7 @@ val Node.allEOGStarters: List<Node>
  * Returns all EOG starters of this node that have no predecessors in the EOG as well as the node
  * itself if it is an EOG "single", in a way that is has neither a previous nor next EOG edge.
  */
-val Node.allUniqueEOGStartersOrSingles: List<Node>
+val AstNode.allUniqueEOGStartersOrSingles: List<Node>
     get() {
         return (allEOGStarters.filter { it.prevEOGEdges.isEmpty() } +
                 if (prevEOGEdges.isEmpty() && nextEOGEdges.isEmpty()) {
@@ -124,11 +139,11 @@ val Node.allUniqueEOGStartersOrSingles: List<Node>
     }
 
 @JvmName("astNodes")
-fun Node.ast(): List<Node> {
-    return this.ast<Node>()
+fun AstNode.ast(): List<AstNode> {
+    return this.ast<AstNode>()
 }
 
-inline fun <reified T : Node> Node.ast(): List<T> {
+inline fun <reified T : AstNode> AstNode.ast(): List<T> {
     val children = SubgraphWalker.getAstChildren(this)
 
     return children.filterIsInstance<T>()
@@ -273,8 +288,8 @@ data class NodePath(
      * Adds the [assumptions] attached to the [NodePath] itself and of all [Node] contained in the
      * path.
      */
-    override fun collectAssumptions(): Set<Assumption> {
-        return super.collectAssumptions() + nodes.flatMap { it.collectAssumptions() }
+    override fun relevantAssumptions(): Set<Assumption> {
+        return super.relevantAssumptions() + nodes.flatMap { it.relevantAssumptions() }
     }
 }
 
@@ -371,8 +386,15 @@ fun Node.followEOGEdgesUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return this.followXUntilHit(
-        x = { currentNode, ctx, path ->
-            direction.pickNextStep(currentNode, scope, ctx, sensitivities = sensitivities)
+        x = { currentNode, ctx, path, loopingPaths ->
+            direction.pickNextStep(
+                currentNode,
+                scope,
+                ctx,
+                path,
+                loopingPaths,
+                sensitivities = sensitivities,
+            )
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
@@ -396,15 +418,24 @@ fun Node.followDFGEdgesUntilHit(
     direction: AnalysisDirection = Forward(GraphToFollow.DFG),
     vararg sensitivities: AnalysisSensitivity = FieldSensitive + ContextSensitive,
     scope: AnalysisScope = Interprocedural(),
+    ctx: Context = Context(steps = 0),
     earlyTermination: (Node, Context) -> Boolean = { _, _ -> false },
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return this.followXUntilHit(
-        x = { currentNode, ctx, path ->
-            direction.pickNextStep(currentNode, scope, ctx, sensitivities = sensitivities)
+        x = { currentNode, ctx, path, loopingPaths ->
+            direction.pickNextStep(
+                currentNode,
+                scope,
+                ctx,
+                path,
+                loopingPaths,
+                sensitivities = sensitivities,
+            )
         },
         collectFailedPaths = collectFailedPaths,
         findAllPossiblePaths = findAllPossiblePaths,
+        ctx = ctx,
         earlyTermination = earlyTermination,
         predicate = predicate,
     )
@@ -421,7 +452,7 @@ fun Node.followDFGEdgesUntilHit(
 class Context(
     val indexStack: SimpleStack<IndexedDataflowGranularity> = SimpleStack(),
     val callStack: SimpleStack<CallExpression> = SimpleStack(),
-    var steps: Int,
+    var steps: Int = 0,
 ) : HasAssumptions {
 
     override val assumptions: MutableSet<Assumption> = mutableSetOf()
@@ -433,6 +464,18 @@ class Context(
     operator fun inc(): Context {
         this.steps++
         return this
+    }
+
+    companion object {
+        /**
+         * Creates a new [Context] with an empty index stack and call stack given by the
+         * [CallExpression]s provided in [calls].
+         */
+        fun ofCallStack(vararg calls: CallExpression): Context {
+            return Context(
+                callStack = SimpleStack<CallExpression>().apply { calls.forEach { push(it) } }
+            )
+        }
     }
 }
 
@@ -669,7 +712,7 @@ fun Node.followNextPDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx, _ ->
+        x = { currentNode, ctx, _, loopingPaths ->
             val nextNodes = currentNode.nextPDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
@@ -700,7 +743,7 @@ fun Node.followNextCDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx, _ ->
+        x = { currentNode, ctx, _, loopingPaths ->
             val nextNodes = currentNode.nextCDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
@@ -733,7 +776,7 @@ fun Node.followPrevPDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx, _ ->
+        x = { currentNode, ctx, _, loopingPaths ->
             val nextNodes = currentNode.prevPDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll(
@@ -775,7 +818,7 @@ fun Node.followPrevCDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx, _ ->
+        x = { currentNode, ctx, _, loopingPaths ->
             val nextNodes = currentNode.prevCDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll(
@@ -809,10 +852,13 @@ fun Node.followPrevCDGUntilHit(
  * not mandatory**. If the list "failed" is empty, the path is mandatory.
  */
 fun Node.followXUntilHit(
-    x: (Node, Context, List<Node>) -> Collection<Pair<Node, Context>>,
+    x:
+        (Node, Context, List<Pair<Node, Context>>, MutableList<NodePath>) -> Collection<
+                Pair<Node, Context>
+            >,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
-    context: Context = Context(steps = 0),
+    ctx: Context = Context(steps = 0),
     earlyTermination: (Node, Context) -> Boolean,
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
@@ -824,7 +870,7 @@ fun Node.followXUntilHit(
     val loopingPaths = mutableListOf<NodePath>()
     // The list of paths where we're not done yet.
     val worklist = identitySetOf<List<Pair<Node, Context>>>()
-    worklist.add(listOf(this to context)) // We start only with the "from" node (=this)
+    worklist.add(listOf(this to ctx)) // We start only with the "from" node (=this)
 
     val alreadySeenNodes = mutableSetOf<Pair<Node, Context>>()
     // First check if the current node satisfies the predicate.
@@ -837,12 +883,12 @@ fun Node.followXUntilHit(
         val currentPath = worklist.maxBy { it.size }
         worklist.remove(currentPath)
         val currentNode = currentPath.last().first
-        var currentContext = currentPath.last().second
+        val currentContext = currentPath.last().second
         alreadySeenNodes.add(currentNode to currentContext)
         val currentPathNodes = currentPath.map { it.first }
         // The last node of the path is where we continue. We get all of its outgoing CDG edges and
         // follow them
-        val nextNodes = x(currentNode, currentContext, currentPathNodes)
+        val nextNodes = x(currentNode, currentContext, currentPath, loopingPaths)
 
         // No further nodes in the path and the path criteria are not satisfied.
         if (nextNodes.isEmpty() && collectFailedPaths) {
@@ -856,7 +902,7 @@ fun Node.followXUntilHit(
         }
 
         for ((next, newContext) in nextNodes) {
-            // Copy the path for each outgoing CDG edge and add the next node
+            // Copy the path for each outgoing edge and add the next node
             if (predicate(next)) {
                 // We ended up in the node fulfilling "predicate", so we're done for this path. Add
                 // the path to the results.
@@ -924,10 +970,7 @@ fun isNodeWithCallStackInPath(
     context: Context,
     path: Collection<Pair<Node, Context>>,
 ): Boolean {
-    return path.any {
-        it.first == node &&
-            context.callStack.top?.let { top -> top in it.second.callStack } != false
-    }
+    return path.any { it.first == node && context.callStack == it.second.callStack }
 }
 
 /**
@@ -1075,131 +1118,131 @@ fun Node.followPrevDFG(predicate: (Node) -> Boolean): NodePath? {
 }
 
 /** Returns all [Node] children in the AST-subgraph, starting with this [Node]. */
-val Node?.nodes: List<Node>
+val AstNode?.nodes: List<AstNode>
     get() = this.allChildren()
 
 /** Returns all [CallExpression] children in this graph, starting with this [Node]. */
-val Node?.calls: List<CallExpression>
+val AstNode?.calls: List<CallExpression>
     get() = this.allChildren()
 
 /** Returns all [OperatorCallExpression] children in this graph, starting with this [Node]. */
-val Node?.operatorCalls: List<OperatorCallExpression>
+val AstNode?.operatorCalls: List<OperatorCallExpression>
     get() = this.allChildren()
 
 /** Returns all [MemberCallExpression] children in this graph, starting with this [Node]. */
-val Node?.mcalls: List<MemberCallExpression>
+val AstNode?.mcalls: List<MemberCallExpression>
     get() = this.allChildren()
 
 /** Returns all [CastExpression] children in this graph, starting with this [Node]. */
-val Node?.casts: List<CastExpression>
+val AstNode?.casts: List<CastExpression>
     get() = this.allChildren()
 
 /** Returns all [MethodDeclaration] children in this graph, starting with this [Node]. */
-val Node?.methods: List<MethodDeclaration>
+val AstNode?.methods: List<MethodDeclaration>
     get() = this.allChildren()
 
 /** Returns all [OperatorDeclaration] children in this graph, starting with this [Node]. */
-val Node?.operators: List<OperatorDeclaration>
+val AstNode?.operators: List<OperatorDeclaration>
     get() = this.allChildren()
 
 /** Returns all [FieldDeclaration] children in this graph, starting with this [Node]. */
-val Node?.fields: List<FieldDeclaration>
+val AstNode?.fields: List<FieldDeclaration>
     get() = this.allChildren()
 
 /** Returns all [ParameterDeclaration] children in this graph, starting with this [Node]. */
-val Node?.parameters: List<ParameterDeclaration>
+val AstNode?.parameters: List<ParameterDeclaration>
     get() = this.allChildren()
 
 /** Returns all [FunctionDeclaration] children in this graph, starting with this [Node]. */
-val Node?.functions: List<FunctionDeclaration>
+val AstNode?.functions: List<FunctionDeclaration>
     get() = this.allChildren()
 
 /** Returns all [RecordDeclaration] children in this graph, starting with this [Node]. */
-val Node?.records: List<RecordDeclaration>
+val AstNode?.records: List<RecordDeclaration>
     get() = this.allChildren()
 
 /** Returns all [RecordDeclaration] children in this graph, starting with this [Node]. */
-val Node?.namespaces: List<NamespaceDeclaration>
+val AstNode?.namespaces: List<NamespaceDeclaration>
     get() = this.allChildren()
 
 /** Returns all [ImportDeclaration] children in this graph, starting with this [Node]. */
-val Node?.imports: List<ImportDeclaration>
+val AstNode?.imports: List<ImportDeclaration>
     get() = this.allChildren()
 
 /** Returns all [VariableDeclaration] children in this graph, starting with this [Node]. */
-val Node?.variables: List<VariableDeclaration>
+val AstNode?.variables: List<VariableDeclaration>
     get() = this.allChildren()
 
 /** Returns all [Literal] children in this graph, starting with this [Node]. */
-val Node?.literals: List<Literal<*>>
+val AstNode?.literals: List<Literal<*>>
     get() = this.allChildren()
 
 /** Returns all [Block] child edges in this graph, starting with this [Node]. */
-val Node?.blocks: List<Block>
+val AstNode?.blocks: List<Block>
     get() = this.allChildren()
 
 /** Returns all [Reference] children in this graph, starting with this [Node]. */
-val Node?.refs: List<Reference>
+val AstNode?.refs: List<Reference>
     get() = this.allChildren()
 
 /** Returns all [MemberExpression] children in this graph, starting with this [Node]. */
-val Node?.memberExpressions: List<MemberExpression>
+val AstNode?.memberExpressions: List<MemberExpression>
     get() = this.allChildren()
 
 /** Returns all [Statement] child edges in this graph, starting with this [Node]. */
-val Node?.statements: List<Statement>
+val AstNode?.statements: List<Statement>
     get() = this.allChildren()
 
 /** Returns all [ForStatement] child edges in this graph, starting with this [Node]. */
-val Node?.forLoops: List<ForStatement>
+val AstNode?.forLoops: List<ForStatement>
     get() = this.allChildren()
 
 /** Returns all [TryStatement] child edges in this graph, starting with this [Node]. */
-val Node?.trys: List<TryStatement>
+val AstNode?.trys: List<TryStatement>
     get() = this.allChildren()
 
 /** Returns all [ThrowExpression] child edges in this graph, starting with this [Node]. */
-val Node?.throws: List<ThrowExpression>
+val AstNode?.throws: List<ThrowExpression>
     get() = this.allChildren()
 
 /** Returns all [ForEachStatement] child edges in this graph, starting with this [Node]. */
-val Node?.forEachLoops: List<ForEachStatement>
+val AstNode?.forEachLoops: List<ForEachStatement>
     get() = this.allChildren()
 
 /** Returns all [SwitchStatement] child edges in this graph, starting with this [Node]. */
-val Node?.switches: List<SwitchStatement>
+val AstNode?.switches: List<SwitchStatement>
     get() = this.allChildren()
 
 /** Returns all [WhileStatement] child edges in this graph, starting with this [Node]. */
-val Node?.whileLoops: List<WhileStatement>
+val AstNode?.whileLoops: List<WhileStatement>
     get() = this.allChildren()
 
 /** Returns all [DoStatement] child edges in this graph, starting with this [Node]. */
-val Node?.doLoops: List<DoStatement>
+val AstNode?.doLoops: List<DoStatement>
     get() = this.allChildren()
 
 /** Returns all [BreakStatement] child edges in this graph, starting with this [Node]. */
-val Node?.breaks: List<BreakStatement>
+val AstNode?.breaks: List<BreakStatement>
     get() = this.allChildren()
 
 /** Returns all [ContinueStatement] child edges in this graph, starting with this [Node]. */
-val Node?.continues: List<ContinueStatement>
+val AstNode?.continues: List<ContinueStatement>
     get() = this.allChildren()
 
 /** Returns all [IfStatement] child edges in this graph, starting with this [Node]. */
-val Node?.ifs: List<IfStatement>
+val AstNode?.ifs: List<IfStatement>
     get() = this.allChildren()
 
 /** Returns all [LabelStatement] child edges in this graph, starting with this [Node]. */
-val Node?.labels: List<LabelStatement>
+val AstNode?.labels: List<LabelStatement>
     get() = this.allChildren()
 
 /** Returns all [ReturnStatement] child edges in this graph, starting with this [Node]. */
-val Node?.returns: List<ReturnStatement>
+val AstNode?.returns: List<ReturnStatement>
     get() = this.allChildren()
 
 /** Returns all [AssignExpression] child edges in this graph, starting with this [Node]. */
-val Node?.assigns: List<AssignExpression>
+val AstNode?.assigns: List<AssignExpression>
     get() = this.allChildren()
 
 /**
@@ -1213,7 +1256,6 @@ val Node?.assigns: List<AssignExpression>
 inline fun <reified T : Node> Node.firstParentOrNull(
     noinline predicate: ((T) -> Boolean)? = null
 ): T? {
-
     // start at searchNodes parent
     var node = this.astParent
 
@@ -1258,7 +1300,7 @@ inline fun <reified T : Scope> Scope.firstScopeParentOrNull(
  * Return all [ProblemNode] children in this graph (either stored directly or in
  * [Node.additionalProblems]), starting with this [Node].
  */
-val Node?.problems: List<ProblemNode>
+val AstNode?.problems: List<ProblemNode>
     get() {
         val relevantNodes =
             this.allChildren<Node> { it is ProblemNode || it.additionalProblems.isNotEmpty() }
@@ -1278,7 +1320,7 @@ val Node?.problems: List<ProblemNode>
     }
 
 /** Returns all [Assignment] child edges in this graph, starting with this [Node]. */
-val Node?.assignments: List<Assignment>
+val AstNode?.assignments: List<Assignment>
     get() {
         return this?.allChildren<Node>()?.filterIsInstance<AssignmentHolder>()?.flatMap {
             it.assignments
@@ -1420,23 +1462,49 @@ fun Expression?.unwrapReference(): Reference? {
     }
 }
 
-/** Returns the [TranslationUnitDeclaration] where this node is located in. */
+/**
+ * Returns the [TranslationUnitDeclaration] where this node is located in.
+ *
+ * If this is an [OverlayNode], we start searching in the [OverlayNode.underlyingNode].
+ */
 val Node.translationUnit: TranslationUnitDeclaration?
     get() {
         return this as? TranslationUnitDeclaration
-            ?: firstParentOrNull<TranslationUnitDeclaration>()
+            ?: if (this is OverlayNode) {
+                this.underlyingNode?.firstParentOrNull<TranslationUnitDeclaration>()
+            } else {
+                this.firstParentOrNull<TranslationUnitDeclaration>()
+            }
     }
 
-/** Returns the [TranslationResult] where this node is located in. */
+/**
+ * Returns the [TranslationResult] where this node is located in.
+ *
+ * If this is an [OverlayNode], we start searching in the [OverlayNode.underlyingNode].
+ */
 val Node.translationResult: TranslationResult?
     get() {
-        return this as? TranslationResult ?: firstParentOrNull<TranslationResult>()
+        return this as? TranslationResult
+            ?: if (this is OverlayNode) {
+                this.underlyingNode?.firstParentOrNull<TranslationResult>()
+            } else {
+                this.firstParentOrNull<TranslationResult>()
+            }
     }
 
-/** Returns the [Component] where this node is located in. */
+/**
+ * Returns the [Component] where this node is located in.
+ *
+ * If this is an [OverlayNode], we start searching in the [OverlayNode.underlyingNode].
+ */
 val Node.component: Component?
     get() {
-        return this as? Component ?: firstParentOrNull<Component>()
+        return this as? Component
+            ?: if (this is OverlayNode) {
+                this.underlyingNode?.firstParentOrNull<Component>()
+            } else {
+                this.firstParentOrNull<Component>()
+            }
     }
 
 /**

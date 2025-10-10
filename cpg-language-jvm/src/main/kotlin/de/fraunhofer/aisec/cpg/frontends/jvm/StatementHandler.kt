@@ -31,21 +31,43 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import kotlin.jvm.optionals.getOrNull
 import sootup.core.jimple.common.stmt.*
 import sootup.core.model.Body
 import sootup.core.util.printer.NormalStmtPrinter
 
 class StatementHandler(frontend: JVMLanguageFrontend) :
-    Handler<Statement, Any, JVMLanguageFrontend>(::ProblemExpression, frontend) {
-    init {
-        map.put(Body::class.java) { handleBody(it as Body) }
-        map.put(JAssignStmt::class.java) { handleAbstractDefinitionStmt(it as JAssignStmt) }
-        map.put(JIdentityStmt::class.java) { handleAbstractDefinitionStmt(it as JIdentityStmt) }
-        map.put(JIfStmt::class.java) { handleIfStmt(it as JIfStmt) }
-        map.put(JGotoStmt::class.java) { handleGotoStmt(it as JGotoStmt) }
-        map.put(JInvokeStmt::class.java) { handleInvokeStmt(it as JInvokeStmt) }
-        map.put(JReturnStmt::class.java) { handleReturnStmt(it as JReturnStmt) }
-        map.put(JReturnVoidStmt::class.java) { handleReturnVoidStmt(it as JReturnVoidStmt) }
+    Handler<Statement?, Any, JVMLanguageFrontend>(::ProblemExpression, frontend) {
+
+    override fun handle(ctx: Any): Statement? {
+        return when (ctx) {
+            is Body -> handleBody(ctx)
+            is JAssignStmt -> handleAbstractDefinitionStmt(ctx)
+            is JIdentityStmt -> handleAbstractDefinitionStmt(ctx)
+            is JIfStmt -> handleIfStmt(ctx)
+            is JGotoStmt -> handleGotoStmt(ctx)
+            is JInvokeStmt -> handleInvokeStmt(ctx)
+            is JReturnStmt -> handleReturnStmt(ctx)
+            is JReturnVoidStmt -> handleReturnVoidStmt(ctx)
+            is JThrowStmt -> handleThrowExpression(ctx)
+            is JNopStmt -> newEmptyStatement(ctx)
+            else -> {
+                log.warn("Unhandled statement type: ${ctx.javaClass.simpleName}")
+                newProblemExpression(
+                    "Unhandled statement type: ${ctx.javaClass.simpleName}",
+                    rawNode = ctx,
+                )
+            }
+        }
+    }
+
+    private fun handleThrowExpression(throwStmt: JThrowStmt): ThrowExpression {
+        val expr = newThrowExpression(rawNode = throwStmt)
+        expr.exception =
+            frontend.expressionHandler.handle(throwStmt.op)
+                ?: newProblemExpression("missing throwable expression")
+
+        return expr
     }
 
     private fun handleBody(body: Body): Block {
@@ -150,7 +172,9 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
     }
 
     private fun handleInvokeStmt(invokeStmt: JInvokeStmt) =
-        frontend.expressionHandler.handle(invokeStmt.invokeExpr)
+        invokeStmt.invokeExpr.getOrNull()?.let { invokeExpr ->
+            frontend.expressionHandler.handle(invokeExpr)
+        }
 
     private fun handleReturnStmt(returnStmt: JReturnStmt): ReturnStatement {
         val stmt = newReturnStatement(rawNode = returnStmt)
