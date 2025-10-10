@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -63,11 +62,11 @@ class CommentMatcher {
             children.filter { node -> node.location == null || node.location?.region == Region() }
         while (locationLess.isNotEmpty()) {
             val containedChildren = locationLess.flatMap { it.astChildren }
-            children.addAll(containedChildren)
             locationLess =
                 containedChildren
                     .filter { node -> node.location == null || node.location?.region == Region() }
                     .filter { it !in children }
+            children.addAll(containedChildren)
         }
 
         val enclosing =
@@ -110,24 +109,22 @@ class CommentMatcher {
                 }
                 .toMutableSet()
 
-        // Because we sometimes wrap all elements into a NamespaceDeclaration we have to extract the
-        // children with a location
-        children.addAll(
-            children.filterIsInstance<NamespaceDeclaration>().flatMap { namespace ->
-                namespace.astChildren.filter { it !in children }
-            }
-        )
-
         // When a child has no location we can not properly consider it for comment matching,
-        // however, it might have
-        // a child with a location that we want to consider, this can overlap with namespaces but
-        // nodes are considered
-        // only once in the set
-        children.addAll(
-            children
-                .filter { node -> node.location == null || node.location?.region == Region() }
-                .flatMap { locationLess -> locationLess.astChildren.filter { it !in children } }
-        )
+        // however, it might have a child with a location that we want to consider. Because the so
+        // explored children
+        // might also have no location we have to repeat this until we have explored all children
+        // and ast leaf nodes are
+        // reached.
+        var locationLess =
+            children.filter { node -> node.location == null || node.location?.region == Region() }
+        while (locationLess.isNotEmpty()) {
+            val containedChildren = locationLess.flatMap { it.astChildren }
+            locationLess =
+                containedChildren
+                    .filter { node -> node.location == null || node.location?.region == Region() }
+                    .filter { it !in children }
+            children.addAll(containedChildren)
+        }
 
         // Searching for the closest successor to our comment amongst the children of the smallest
         // enclosing nodes
