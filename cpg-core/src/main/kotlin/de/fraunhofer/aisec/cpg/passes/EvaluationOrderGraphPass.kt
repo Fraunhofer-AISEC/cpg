@@ -29,15 +29,67 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.ProcessedListener
-import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
-import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.ast.AstNode
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.IncludeDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TemplateDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TupleDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.AssertStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.BreakStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.CaseStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ContinueStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.DefaultStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.DoStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.EmptyStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ForStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.GotoStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.LabelStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.LookupScopeStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.LoopStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.SwitchStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.SynchronizedStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ThrowExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.TryStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.WhileStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CastExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CollectionComprehension
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ComprehensionExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ConditionalExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.DeleteExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ExpressionList
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.InitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.KeyValueExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.LambdaExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.NewArrayExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.NewExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.RangeExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.SubscriptExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.TypeExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.TypeIdExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -70,7 +122,7 @@ import org.slf4j.LoggerFactory
  * constituted by its child nodes to represent branching. Nodes that manipulate the control flow of
  * a program have to be handled with more care, by adding and removing nodes from
  * [currentPredecessors] or even temporarily save and restore the valid eog exits of an ast subtree,
- * e.g. [IfStatement].
+ * e.g. [de.fraunhofer.aisec.cpg.graph.ast.statements.IfStatement].
  *
  * The EOG is similar to the CFG `ControlFlowGraphPass`, but there are some subtle differences:
  * * For methods without explicit return statement, EOF will have an edge to a virtual return node
@@ -93,18 +145,23 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected var nextEdgeBranch: Boolean? = null
 
     /**
-     * This maps nodes that have to handle throws, i.e. [TryStatement] and [FunctionDeclaration], to
-     * the [Type]s of errors that were thrown and the EOG exits of the throwing statements. Entries
-     * to the outer map will only be created if the node was identified to handle or relay a throw.
-     * Entries to the inner throw will only be created when the mapping type was thrown.
+     * This maps nodes that have to handle throws, i.e.
+     * [de.fraunhofer.aisec.cpg.graph.ast.statements.TryStatement] and
+     * [de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration], to the [Type]s of
+     * errors that were thrown and the EOG exits of the throwing statements. Entries to the outer
+     * map will only be created if the node was identified to handle or relay a throw. Entries to
+     * the inner throw will only be created when the mapping type was thrown.
      */
     val nodesToInternalThrows = mutableMapOf<Node, MutableMap<Type, MutableList<Node>>>()
 
     /**
-     * This maps nodes that have to handle [BreakStatement]s and [ContinueStatement]s, i.e.
-     * [LoopStatement]s and [SwitchStatement]s to the EOG exits of the node they have to handle. An
-     * entry will only be created if the statement was identified to handle the above-mentioned
-     * control flow statements.
+     * This maps nodes that have to handle
+     * [de.fraunhofer.aisec.cpg.graph.ast.statements.BreakStatement]s and
+     * [de.fraunhofer.aisec.cpg.graph.ast.statements.ContinueStatement]s, i.e.
+     * [de.fraunhofer.aisec.cpg.graph.ast.statements.LoopStatement]s and
+     * [de.fraunhofer.aisec.cpg.graph.ast.statements.SwitchStatement]s to the EOG exits of the node
+     * they have to handle. An entry will only be created if the statement was identified to handle
+     * the above-mentioned control flow statements.
      */
     val nodesWithContinuesAndBreaks = mutableMapOf<Node, MutableList<Node>>()
 
@@ -338,7 +395,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * stored in [currentPredecessors] contain the valid EOG exits of the subtree that will be
      * connected to the next handled subtree. Adding or removing nodes from the list allows for
      * custom adaptation of control flow behavior when handling nodes that influence control flow,
-     * e.g. [LoopStatement]s or [BreakStatement].
+     * e.g. [de.fraunhofer.aisec.cpg.graph.ast.statements.LoopStatement]s or
+     * [de.fraunhofer.aisec.cpg.graph.ast.statements.BreakStatement].
      */
     fun handleEOG(node: Node?) {
         if (node == null) {

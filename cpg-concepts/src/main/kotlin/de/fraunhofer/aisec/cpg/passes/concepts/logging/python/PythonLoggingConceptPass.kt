@@ -27,10 +27,10 @@ package de.fraunhofer.aisec.cpg.passes.concepts.logging.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.concepts.logging.*
-import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.passes.ComponentPass
 import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
@@ -78,8 +78,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * This pass is interested in [ImportDeclaration]s and
-     * [de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression]s as these are the
+     * This pass is interested in [ImportDeclaration]s and [CallExpression]s as these are the
      * relevant parts of the Python code for logging.
      */
     override fun accept(comp: Component) {
@@ -121,8 +120,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * - `logging.critical(...)` (and similar for `error` / `warn` / ...) is translated to a
      *   [de.fraunhofer.aisec.cpg.graph.concepts.logging.LogWrite]
      *
-     * @param callExpression The
-     *   [de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression] to handle
+     * @param callExpression The [CallExpression] to handle
      * @return n/a (The new node is created and added to the graph)
      */
     private fun handleCall(callExpression: CallExpression) {

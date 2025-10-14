@@ -27,10 +27,11 @@ package de.fraunhofer.aisec.cpg.graph.edges.flows
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.helpers.neo4j.DataflowGranularityConverter
 import java.util.Objects
@@ -55,7 +56,8 @@ data object FullDataflowGranularity : Granularity
 
 /**
  * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
- * [Dataflow.end] but only parts of it. Common examples include [MemberExpression]s, array or tuple
+ * [Dataflow.end] but only parts of it. Common examples include
+ * [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression]s, array or tuple
  * accesses. This class should allow
  */
 open class PartialDataflowGranularity<T>(
@@ -74,8 +76,9 @@ open class PartialDataflowGranularity<T>(
 /**
  * This dataflow granularity denotes that not the "whole" object is flowing from [Dataflow.start] to
  * [Dataflow.end] but only parts of it, where the part is identified by a (known)
- * [FieldDeclaration]. Common examples include [MemberExpression] nodes, where we model a dataflow
- * to the base, but only partially scoped to a particular field.
+ * [de.fraunhofer.aisec.cpg.graph.ast.declarations.FieldDeclaration]. Common examples include
+ * [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression] nodes, where we model
+ * a dataflow to the base, but only partially scoped to a particular field.
  */
 class FieldDataflowGranularity(partialTarget: FieldDeclaration) :
     PartialDataflowGranularity<FieldDeclaration>(partialTarget)
@@ -109,8 +112,10 @@ fun full(): Granularity {
 fun default() = full()
 
 /**
- * Creates a new [FieldDataflowGranularity]. The [target] is the [Declaration] that is affected by
- * the partial dataflow. Examples include a [FieldDeclaration] for a [MemberExpression].
+ * Creates a new [FieldDataflowGranularity]. The [target] is the
+ * [de.fraunhofer.aisec.cpg.graph.ast.declarations.Declaration] that is affected by the partial
+ * dataflow. Examples include a [FieldDeclaration] for a
+ * [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression].
  */
 fun field(target: FieldDeclaration): FieldDataflowGranularity {
     return FieldDataflowGranularity(target)
@@ -126,8 +131,9 @@ fun <T> partial(identifier: T): PartialDataflowGranularity<T> {
 
 /**
  * Creates a new [IndexedDataflowGranularity]. The [idx] is the index that is used for the partial
- * dataflow. An example is the access to an array or tuple element, or a [VariableDeclaration] for a
- * [TupleDeclaration].
+ * dataflow. An example is the access to an array or tuple element, or a
+ * [de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration] for a
+ * [de.fraunhofer.aisec.cpg.graph.ast.declarations.TupleDeclaration].
  */
 fun indexed(idx: Number): IndexedDataflowGranularity {
     return IndexedDataflowGranularity(idx)
