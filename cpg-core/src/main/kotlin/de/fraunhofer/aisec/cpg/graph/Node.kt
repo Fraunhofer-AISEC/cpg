@@ -27,7 +27,6 @@
 
 package de.fraunhofer.aisec.cpg.graph
 
-import com.fasterxml.jackson.annotation.JsonBackReference
 import com.fasterxml.jackson.annotation.JsonIdentityInfo
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonMerge
@@ -104,7 +103,7 @@ abstract class Node() :
      * [LanguageProvider] at the time when the node is created.
      */
     @Relationship(value = "LANGUAGE", direction = Relationship.Direction.OUTGOING)
-    @JsonBackReference
+    // @JsonBackReference THis should not be necessary when serializing with JSON Identity info
     override var language: Language<*> = UnknownLanguage
 
     /**
@@ -117,7 +116,7 @@ abstract class Node() :
      * class would be a [RecordScope] pointing to the [RecordDeclaration].
      */
     @Relationship(value = "SCOPE", direction = Relationship.Direction.OUTGOING)
-    @JsonBackReference
+    // @JsonBackReference THis should not be necessary when serializing with JSON Identity info
     override var scope: Scope? = null
 
     /** Optional comment of this node. */

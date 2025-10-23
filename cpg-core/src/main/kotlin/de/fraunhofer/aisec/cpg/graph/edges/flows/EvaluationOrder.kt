@@ -43,11 +43,10 @@ import org.neo4j.ogm.annotation.RelationshipEntity
 @RelationshipEntity
 // @JsonIdentityInfo(generator = ObjectIdGenerators.UUIDGenerator::class, property = "@id")
 class EvaluationOrder(
-    @JsonProperty("start") start: Node,
-    @JsonProperty("end")
+    @JsonProperty("start") @JsonIdentityReference(alwaysAsId = true) override var start: Node,
+
     // @JsonSerialize(using = Serializers.FullObjectSerializer::class)
-    @JsonIdentityReference(alwaysAsId = true)
-    end: Node,
+    @JsonProperty("end") @JsonIdentityReference(alwaysAsId = true) override var end: Node,
     /**
      * True, if the edge flows into unreachable code e.g. a branch condition which is always false.
      */
@@ -60,6 +59,7 @@ class EvaluationOrder(
      */
     @JsonProperty("branch") var branch: Boolean? = null,
 ) : Edge<Node>(start, end) {
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is EvaluationOrder) return false

@@ -506,6 +506,8 @@ fun serializeToJson(translationResult: TranslationResult): String {
     // objectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE)
     // objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY)
 
+    val toSerialize = translationResult
+
     return objectMapper
         .apply {
             val module =
@@ -530,7 +532,7 @@ fun serializeToJson(translationResult: TranslationResult): String {
         //    .activateDefaultTyping(typeValidator, DEFAULT_TYPING, typeIncludedAs)
         //    .configure(DeserializationFeature.ACCEPT_EMPTY_ARRAY_AS_NULL_OBJECT, true)
         .writerWithDefaultPrettyPrinter()
-        .writeValueAsString(translationResult)
+        .writeValueAsString(toSerialize)
 }
 
 fun deserializeFromJson(json: String): TranslationResult {

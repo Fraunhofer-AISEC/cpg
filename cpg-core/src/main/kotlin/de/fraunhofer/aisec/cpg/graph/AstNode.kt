@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonMerge
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -57,7 +58,7 @@ abstract class AstNode : Node() {
         get() = SubgraphWalker.getAstChildren(this)
 
     /** List of [Annotation]s associated with that node. */
-    @Relationship("ANNOTATIONS") var annotationEdges = astEdgesOf<Annotation>()
+    @Relationship("ANNOTATIONS") @JsonMerge var annotationEdges = astEdgesOf<Annotation>()
     @get:JsonIgnore var annotations by unwrapping(AstNode::annotationEdges)
 
     override fun disconnectFromGraph() {
