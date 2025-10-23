@@ -30,4 +30,4 @@ package de.fraunhofer.aisec.codyze.catalogs
  * agencies' recommendations or other entities defining their interpretation of the
  * state-of-the-art. These catalogs can be used to bundle queries for a specific evaluation project.
  */
-interface SotaRequirementsCatalog
+abstract class SotaRequirementsCatalog
