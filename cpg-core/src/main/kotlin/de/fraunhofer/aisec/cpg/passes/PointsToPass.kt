@@ -1090,197 +1090,220 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         callExpression: CallExpression,
         doubleState: PointsToState.Element,
     ): PointsToState.Element {
+        val generalStateUpdates = ConcurrentHashMap<Node, GeneralStateEntryElement>()
         var doubleState = doubleState
-        var callingContext =
+        val callingContext =
             CallingContextIn(
                 mutableListOf(callExpression)
             ) // TODO: Indicate somehow if this has already been done?
         val innerConcurrencyCounter =
             calculateInnerConcurrencyCounter(callExpression.arguments.size)
+
         // We use caches to avoid double work
         val getNestedValuesCache =
             mutableMapOf<Triple<Node, Int, Boolean>, PowersetLattice.Element<Pair<Node, Boolean>>>()
         val getLastWritesCache =
             mutableMapOf<Node, PowersetLattice.Element<PointsToPass.NodeWithPropertiesKey>>()
         val getValuesCache = mutableMapOf<Node, PowersetLattice.Element<Pair<Node, Boolean>>>()
-        callExpression.arguments.forEach { arg ->
-            if (arg.argumentIndex < functionDeclaration.parameters.size) {
-                // Create a DFG-Edge from the argument to the parameter's memoryValue
-                val p = functionDeclaration.parameters[arg.argumentIndex]
-                // First, check if we already assigned the PMV values in another function
-                var memVals = p.fullMemoryValues
-                // If this is not the case, they are still in the state
-                if (memVals.isEmpty()) {
-                    memVals =
-                        doubleState.getCachedValues(getValuesCache, p).mapTo(HashSet()) { it.first }
-                    // If they are also not yet in the state, we have to calculate them
-                    if (memVals.isEmpty()) {
-                        initializeParameters(lattice, mutableListOf(p), doubleState, 2)
-                        memVals =
-                            doubleState.getCachedValues(getValuesCache, p).mapTo(HashSet()) {
-                                it.first
+
+        coroutineScope {
+            callExpression.arguments.forEach { arg ->
+                launch(Dispatchers.Default) {
+                    if (arg.argumentIndex < functionDeclaration.parameters.size) {
+                        // Create a DFG-Edge from the argument to the parameter's memoryValue
+                        val p = functionDeclaration.parameters[arg.argumentIndex]
+                        // First, check if we already assigned the PMV values in another function
+                        var memVals = p.fullMemoryValues
+                        // If this is not the case, they are still in the state
+                        if (memVals.isEmpty()) {
+                            memVals =
+                                doubleState.getCachedValues(getValuesCache, p).mapTo(HashSet()) {
+                                    it.first
+                                }
+                            // If they are also not yet in the state, we have to calculate them
+                            if (memVals.isEmpty()) {
+                                initializeParameters(lattice, mutableListOf(p), doubleState, 2)
+                                memVals =
+                                    doubleState.getCachedValues(getValuesCache, p).mapTo(
+                                        HashSet()
+                                    ) {
+                                        it.first
+                                    }
+                            }
+                        }
+                        memVals
+                            .filterIsInstance<ParameterMemoryValue>()
+                            .splitInto(maxParts = innerConcurrencyCounter)
+                            .forEach { chunk ->
+                                launch(Dispatchers.Default) {
+                                    chunk.forEach { paramVal ->
+                                        innerCalculateIncomingCallingContexts(
+                                            doubleState,
+                                            generalStateUpdates,
+                                            paramVal,
+                                            arg,
+                                            callingContext,
+                                            p,
+                                            getLastWritesCache,
+                                            getNestedValuesCache,
+                                        )
+                                    }
+                                }
                             }
                     }
                 }
-                memVals.filterIsInstance<ParameterMemoryValue>().forEach { paramVal ->
-                    doubleState =
-                        lattice.push(
-                            doubleState,
-                            paramVal,
-                            GeneralStateEntryElement(
-                                PowersetLattice.Element(/*paramVal*/ ),
-                                PowersetLattice.Element(
-                                    NodeWithPropertiesKey(arg, equalLinkedHashSetOf())
-                                ),
-                                PowersetLattice.Element(
-                                    NodeWithPropertiesKey(arg, equalLinkedHashSetOf(callingContext))
-                                ),
-                            ),
+            }
+        }
+        coroutineScope {
+            lattice.innerLattice1.lub(
+                doubleState.generalState,
+                MapLattice.Element(generalStateUpdates),
+                allowModify = true,
+            )
+        }
+        return doubleState
+    }
+
+    private fun innerCalculateIncomingCallingContexts(
+        doubleState: PointsToState.Element,
+        generalStateUpdates: ConcurrentHashMap<Node, GeneralStateEntryElement>,
+        paramVal: ParameterMemoryValue,
+        arg: Expression,
+        callingContext: CallingContextIn,
+        p: ParameterDeclaration,
+        getLastWritesCache: MutableMap<Node, PowersetLattice.Element<NodeWithPropertiesKey>>,
+        getNestedValuesCache:
+            MutableMap<Triple<Node, Int, Boolean>, PowersetLattice.Element<Pair<Node, Boolean>>>,
+    ) {
+        updateGeneralStateUpdatesConcurrentHashMap(
+            generalStateUpdates,
+            paramVal,
+            PowersetLattice.Element(),
+            PowersetLattice.Element(NodeWithPropertiesKey(arg, equalLinkedHashSetOf())),
+            PowersetLattice.Element(
+                NodeWithPropertiesKey(arg, equalLinkedHashSetOf(callingContext))
+            ),
+        )
+        // Also draw the edges for the (deref)derefvalues if we have
+        // any and are
+        // dealing with a pointer parameter (AKA memoryValue is not
+        // null)
+        p.memoryValueEdges
+            .filter {
+                (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget == "derefvalue"
+            }
+            .map { it.start }
+            .forEach { derefPMV ->
+                val argVals =
+                    // In C(++), the reference to an array is a
+                    // pointer, leading to the
+                    // situation that handing "arg" or "&arg" as
+                    // argument is the same
+                    // We deal with this by drawing a DFG-Edge from
+                    // the arg to the
+                    // derefPMV in case of an array pointerType.
+                    if (
+                        (arg.type as? PointerType)?.pointerOrigin == PointerType.PointerOrigin.ARRAY
+                    )
+                        PowersetLattice.Element(Pair(arg, true))
+                    else doubleState.getCachedNestedValues(getNestedValuesCache, arg, 1, false)
+                argVals.forEach { (argVal, _) ->
+                    val argDerefVals =
+                        if (
+                            (arg.type as? PointerType)?.pointerOrigin ==
+                                PointerType.PointerOrigin.ARRAY
                         )
-                    // Also draw the edges for the (deref)derefvalues if we have any and are
-                    // dealing with a pointer parameter (AKA memoryValue is not null)
+                            equalLinkedHashSetOf<Node>(arg)
+                        else {
+                            doubleState
+                                .getCachedNestedValues(
+                                    getNestedValuesCache,
+                                    argVal,
+                                    1,
+                                    fetchFields = false,
+                                )
+                                .mapTo(equalLinkedHashSetOf()) { it.first }
+                        }
+                    val lastDerefWrites =
+                        if (
+                            (arg.type as? PointerType)?.pointerOrigin ==
+                                PointerType.PointerOrigin.ARRAY
+                        )
+                            PowersetLattice.Element(
+                                NodeWithPropertiesKey(
+                                    arg,
+                                    equalLinkedHashSetOf(callingContext, false),
+                                )
+                            )
+                        else {
+                            doubleState.getCachedLastWrites(getLastWritesCache, argVal).mapTo(
+                                PowersetLattice.Element()
+                            ) {
+                                NodeWithPropertiesKey(
+                                    it.node,
+                                    equalLinkedHashSetOf(callingContext, true in it.properties),
+                                )
+                            }
+                        }
+                    updateGeneralStateUpdatesConcurrentHashMap(
+                        generalStateUpdates,
+                        derefPMV,
+                        PowersetLattice.Element(),
+                        PowersetLattice.Element(
+                            argDerefVals.mapTo(PowersetLattice.Element()) {
+                                NodeWithPropertiesKey(it, equalLinkedHashSetOf())
+                            }
+                        ),
+                        lastDerefWrites,
+                    )
+                    // The same for the derefderef values
                     p.memoryValueEdges
                         .filter {
                             (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
-                                "derefvalue"
+                                "derefderefvalue"
                         }
                         .map { it.start }
-                        .forEach { derefPMV ->
-                            val argVals =
-                                // In C(++), the reference to an array is a pointer, leading to the
-                                // situation that handing "arg" or "&arg" as argument is the same
-                                // We deal with this by drawing a DFG-Edge from the arg to the
-                                // derefPMV in case of an array pointerType.
-                                if (
-                                    (arg.type as? PointerType)?.pointerOrigin ==
-                                        PointerType.PointerOrigin.ARRAY
-                                )
-                                    PowersetLattice.Element(Pair(arg, true))
-                                else
+                        .forEach { derefderefPMV ->
+                            argDerefVals
+                                .flatMap {
                                     doubleState.getCachedNestedValues(
                                         getNestedValuesCache,
-                                        arg,
+                                        it,
                                         1,
-                                        false,
+                                        fetchFields = false,
                                     )
-                            argVals.forEach { (argVal, _) ->
-                                val argDerefVals =
-                                    if (
-                                        (arg.type as? PointerType)?.pointerOrigin ==
-                                            PointerType.PointerOrigin.ARRAY
-                                    )
-                                        equalLinkedHashSetOf<Node>(arg)
-                                    else {
-
-                                        doubleState
-                                            .getCachedNestedValues(
-                                                getNestedValuesCache,
-                                                argVal,
-                                                1,
-                                                fetchFields = false,
-                                            )
-                                            .mapTo(equalLinkedHashSetOf()) { it.first }
-                                    }
-                                val lastDerefWrites =
-                                    if (
-                                        (arg.type as? PointerType)?.pointerOrigin ==
-                                            PointerType.PointerOrigin.ARRAY
-                                    )
-                                        PowersetLattice.Element(
-                                            NodeWithPropertiesKey(
-                                                arg,
-                                                equalLinkedHashSetOf(callingContext, false),
-                                            )
-                                        )
-                                    else {
-                                        doubleState
-                                            .getCachedLastWrites(getLastWritesCache, argVal)
+                                }
+                                .forEach { (derefderefValue, _) ->
+                                    val lastDerefDerefWrites =
+                                        argDerefVals
+                                            .flatMapTo(PowersetLattice.Element()) {
+                                                doubleState.getCachedLastWrites(
+                                                    getLastWritesCache,
+                                                    it,
+                                                )
+                                            }
                                             .mapTo(PowersetLattice.Element()) {
                                                 NodeWithPropertiesKey(
                                                     it.node,
-                                                    equalLinkedHashSetOf(
-                                                        callingContext,
-                                                        true in it.properties,
-                                                    ),
+                                                    equalLinkedHashSetOf<Any>(callingContext),
                                                 )
                                             }
-                                    }
-                                doubleState =
-                                    lattice.push(
-                                        doubleState,
-                                        derefPMV,
-                                        GeneralStateEntryElement(
-                                            PowersetLattice.Element(/*paramVal*/ ),
-                                            PowersetLattice.Element(
-                                                argDerefVals.mapTo(PowersetLattice.Element()) {
-                                                    NodeWithPropertiesKey(
-                                                        it,
-                                                        equalLinkedHashSetOf(),
-                                                    )
-                                                }
-                                            ),
-                                            PowersetLattice.Element(lastDerefWrites),
+                                    updateGeneralStateUpdatesConcurrentHashMap(
+                                        generalStateUpdates,
+                                        derefderefPMV,
+                                        PowersetLattice.Element(derefPMV),
+                                        PowersetLattice.Element(
+                                            NodeWithPropertiesKey(
+                                                derefderefValue,
+                                                equalLinkedHashSetOf(),
+                                            )
                                         ),
+                                        PowersetLattice.Element(lastDerefDerefWrites),
                                     )
-                                // The same for the derefderef values
-                                p.memoryValueEdges
-                                    .filter {
-                                        (it.granularity as? PartialDataflowGranularity<*>)
-                                            ?.partialTarget == "derefderefvalue"
-                                    }
-                                    .map { it.start }
-                                    .forEach { derefderefPMV ->
-                                        argDerefVals
-                                            .flatMap {
-                                                doubleState.getCachedNestedValues(
-                                                    getNestedValuesCache,
-                                                    it,
-                                                    1,
-                                                    fetchFields = false,
-                                                )
-                                            }
-                                            .forEach { (derefderefValue, _) ->
-                                                val lastDerefDerefWrites =
-                                                    argDerefVals
-                                                        .flatMapTo(PowersetLattice.Element()) {
-                                                            doubleState.getCachedLastWrites(
-                                                                getLastWritesCache,
-                                                                it,
-                                                            )
-                                                        }
-                                                        .mapTo(PowersetLattice.Element()) {
-                                                            NodeWithPropertiesKey(
-                                                                it.node,
-                                                                equalLinkedHashSetOf<Any>(
-                                                                    callingContext
-                                                                ),
-                                                            )
-                                                        }
-                                                doubleState =
-                                                    lattice.push(
-                                                        doubleState,
-                                                        derefderefPMV,
-                                                        GeneralStateEntryElement(
-                                                            PowersetLattice.Element(derefPMV),
-                                                            PowersetLattice.Element(
-                                                                NodeWithPropertiesKey(
-                                                                    derefderefValue,
-                                                                    equalLinkedHashSetOf(),
-                                                                )
-                                                            ),
-                                                            PowersetLattice.Element(
-                                                                lastDerefDerefWrites
-                                                            ),
-                                                        ),
-                                                    )
-                                            }
-                                    }
-                            }
+                                }
                         }
                 }
             }
-        }
-        return doubleState
     }
 
     data class MapDstToSrcEntry(
@@ -2336,6 +2359,26 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         //                }
         //        }
         return doubleState
+    }
+}
+
+/**
+ * Update the ConcurrentHashMap. If an entry exists, add the new values, otherwise, create a new
+ * entry
+ */
+private fun PointsToPass.updateGeneralStateUpdatesConcurrentHashMap(
+    generalStateUpdates: ConcurrentHashMap<Node, GeneralStateEntryElement>,
+    key: Node,
+    first: PowersetLattice.Element<Node>,
+    second: PowersetLattice.Element<NodeWithPropertiesKey>,
+    third: PowersetLattice.Element<NodeWithPropertiesKey>,
+) {
+    generalStateUpdates.compute(key) { _, existingValue ->
+        GeneralStateEntryElement(
+            existingValue?.first?.duplicate()?.apply { addAll(first) } ?: first,
+            existingValue?.second?.duplicate()?.apply { addAll(second) } ?: second,
+            existingValue?.third?.duplicate()?.apply { addAll(third) } ?: third,
+        )
     }
 }
 
