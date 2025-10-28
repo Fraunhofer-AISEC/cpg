@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.persistence
 
 import com.fasterxml.jackson.annotation.JacksonInject
 import com.fasterxml.jackson.annotation.JsonAutoDetect
+import com.fasterxml.jackson.annotation.JsonIdentityReference
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.annotation.PropertyAccessor
 import com.fasterxml.jackson.core.JsonFactory
@@ -59,11 +60,16 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
+import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.edges.edges
 import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.IOException
 import kotlin.reflect.KClass
+import kotlin.reflect.full.memberProperties
+import kotlin.reflect.jvm.isAccessible
 import kotlin.uuid.Uuid
 
 @JsonSerialize(using = KClassSerializer::class) interface KClassMixin
@@ -407,6 +413,16 @@ class WrappingBeanSerializer(private val defaultSerializer: BeanSerializer) :
     }
 }
 
+/**
+ * Explicitly deactivating the default behavior to only store references that is annotated in the
+ * class header for [Node] and [Edge]. This leads to the nodes and edges in the set being explicitly
+ * stored for the first time and a flattening of the graph.
+ */
+data class CPG(
+    @param:JsonIdentityReference(alwaysAsId = false) val nodes: Set<Node> = emptySet(),
+    @param:JsonIdentityReference(alwaysAsId = false) val edges: Set<Edge<*>> = emptySet(),
+)
+
 fun serializeToJson(translationResult: TranslationResult): String {
     val factory =
         JsonFactory.builder()
@@ -455,7 +471,7 @@ fun serializeToJson(translationResult: TranslationResult): String {
 
     val objectMapper =
         ObjectMapper(factory)
-            .deactivateDefaultTyping()
+            // .deactivateDefaultTyping()
             .findAndRegisterModules()
             // .registerModule(SerializationModule(Node::class.java))
             // .registerModule(loggingModule)
@@ -471,7 +487,9 @@ fun serializeToJson(translationResult: TranslationResult): String {
                                 beanDesc: BeanDescription,
                                 serializer: JsonSerializer<*>,
                             ): JsonSerializer<*> {
+                                println("modifySerializer")
                                 return if (Node::class.java.isAssignableFrom(beanDesc.beanClass)) {
+                                    println("Wrapping ${beanDesc.beanClass}")
                                     @Suppress("UNCHECKED_CAST")
                                     WrappingBeanSerializer(serializer as BeanSerializer)
                                         as JsonSerializer<Any>
@@ -488,6 +506,7 @@ fun serializeToJson(translationResult: TranslationResult): String {
                                 type: JavaType,
                                 beanDesc: BeanDescription?,
                             ): JsonSerializer<*>? {
+                                println("findSerializers")
                                 val raw = type.rawClass
                                 if (KClass::class.java.isAssignableFrom(raw)) {
                                     // Optionally log match for debugging:
@@ -505,6 +524,22 @@ fun serializeToJson(translationResult: TranslationResult): String {
 
     // objectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.NONE)
     // objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY)
+    val allNodes = translationResult.allChildrenWithOverlays<Node>().toMutableSet()
+    val allEdges = mutableSetOf<Edge<*>>()
+    var toExplore = allNodes.toSet()
+
+    while (toExplore.isNotEmpty()) {
+        val (exploredNodes, exploredEdges) =
+            allNodes
+                .map { it.explore() }
+                .let { pairOfLists ->
+                    pairOfLists.flatMap { it.first }.filter { it !in allNodes } to
+                        pairOfLists.flatMap { it.second }
+                }
+        allEdges.addAll(exploredEdges)
+        allNodes.addAll(exploredNodes)
+        toExplore = exploredNodes.toSet()
+    }
 
     val toSerialize = translationResult
 
@@ -532,7 +567,39 @@ fun serializeToJson(translationResult: TranslationResult): String {
         //    .activateDefaultTyping(typeValidator, DEFAULT_TYPING, typeIncludedAs)
         //    .configure(DeserializationFeature.ACCEPT_EMPTY_ARRAY_AS_NULL_OBJECT, true)
         .writerWithDefaultPrettyPrinter()
-        .writeValueAsString(toSerialize)
+        .writeValueAsString(CPG(allNodes, allEdges))
+}
+
+fun Node.explore(): Pair<Set<Node>, Set<Edge<*>>> {
+    val edges = this.edges<Edge<*>>().toSet()
+    val nodes = edges.flatMap { setOf(it.start, it.end) }.toMutableSet()
+    this.javaClass.declaredFields.forEach { field -> }
+
+    val kClass = this::class as KClass<Node>
+    kClass.memberProperties.forEach { prop ->
+        prop.isAccessible = true
+        val value =
+            try {
+                prop.get(this)
+            } catch (_: Exception) {
+                null
+            }
+        val toUnwrapp = mutableListOf(value)
+        while (toUnwrapp.isNotEmpty()) {
+            val current = toUnwrapp.removeFirst()
+            when (current) {
+                is Node -> nodes.add(current)
+                is Iterable<*> -> current.forEach { toUnwrapp.add(it) }
+                is Array<*> -> current.forEach { toUnwrapp.add(it) }
+                is Map<*, *> -> {
+                    current.keys.forEach { toUnwrapp.add(it) }
+                    current.values.forEach { toUnwrapp.add(it) }
+                }
+            }
+        }
+    }
+
+    return Pair(nodes, edges)
 }
 
 fun deserializeFromJson(json: String): TranslationResult {
@@ -590,5 +657,6 @@ fun deserializeFromJson(json: String): TranslationResult {
     // objectMapper
     //    .activateDefaultTyping(typeValidator, DEFAULT_TYPING, typeIncludedAs)
     //    .configure(DeserializationFeature.ACCEPT_EMPTY_ARRAY_AS_NULL_OBJECT, true)
-    return objectMapper.readValue(json, TranslationResult::class.java)
+    val cpg = objectMapper.readValue(json, CPG::class.java)
+    return cpg.nodes.filterIsInstance<TranslationResult>().first()
 }

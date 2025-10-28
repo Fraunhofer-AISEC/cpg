@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.graph.edges.ast
 
-import com.fasterxml.jackson.annotation.JsonIdentityReference
 import com.fasterxml.jackson.annotation.JsonProperty
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -40,7 +39,6 @@ open class AstEdge<T : AstNode>(
     @JsonProperty("start") start: AstNode,
     @JsonProperty("end")
     // @JsonSerialize(using = Serializers.FullObjectSerializer::class)
-    @JsonIdentityReference(alwaysAsId = false)
     override var end: T,
 ) : Edge<T>(start, end) {
     init {

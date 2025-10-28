@@ -55,6 +55,7 @@ import org.neo4j.ogm.annotation.*
  */
 @RelationshipEntity
 @JsonIdentityInfo(generator = ObjectIdGenerators.UUIDGenerator::class, property = "@id")
+@JsonIdentityReference(alwaysAsId = true)
 abstract class Edge<NodeType : Node> : Persistable, Cloneable, HasAssumptions {
     /** Required field for object graph mapping. It contains the node id. */
     @field:Id @field:GeneratedValue private val id: Long? = null

@@ -59,13 +59,14 @@ open class TranslationContext(
      */
     var currentComponent: Component? = null,
 ) : ContextProvider {
+
     /**
      * The scope manager which comprises the complete translation result. In case of sequential
      * parsing, this scope manager is passed to the individual frontends one after another. In case
      * of sequential parsing, individual scope managers will be passed to each language frontend
      * (through individual contexts) and then finally merged into a final one.
      */
-    val scopeManager: ScopeManager = ScopeManager(this)
+    var scopeManager: ScopeManager = ScopeManager(this)
 
     /**
      * Set of files, that are available for additional analysis. They are not the primary subjects
