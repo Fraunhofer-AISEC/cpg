@@ -403,7 +403,7 @@ val Expression.max: QueryTree<Number>
 val Expression.value: QueryTree<Any?>
     get() {
         return QueryTree(
-            evaluate(ValueEvaluator()),
+            evaluate(ValueEvaluator(), useCache = true),
             mutableListOf(),
             "$this",
             this,

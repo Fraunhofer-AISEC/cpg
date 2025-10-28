@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.IntegerType
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -42,10 +43,19 @@ import org.slf4j.LoggerFactory
  * the [IntegerValue] class to track possible values.
  */
 class IntegerIntervalEvaluator : ValueEvaluator() {
-    override fun evaluate(node: Any?): Any? {
+    /** Cache calculated values so that we don't have to calculate them each time */
+    companion object {
+        private val valuesCache = ConcurrentHashMap<Int, Any>()
+    }
+
+    override fun evaluate(node: Any?, useCache: Boolean): Any? {
         if (node !is Node) return cannotEvaluate(null, this)
 
-        return AbstractIntervalEvaluator().evaluate(node, IntegerValue::class)
+        return if (useCache)
+            valuesCache.getOrPut(node.hashCode()) {
+                AbstractIntervalEvaluator().evaluate(node, IntegerValue::class)
+            }
+        else AbstractIntervalEvaluator().evaluate(node, IntegerValue::class)
     }
 }
 
