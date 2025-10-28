@@ -1101,10 +1101,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         // We use caches to avoid double work
         val getNestedValuesCache =
-            mutableMapOf<Triple<Node, Int, Boolean>, PowersetLattice.Element<Pair<Node, Boolean>>>()
+            ConcurrentHashMap<
+                Triple<Node, Int, Boolean>,
+                PowersetLattice.Element<Pair<Node, Boolean>>,
+            >()
         val getLastWritesCache =
-            mutableMapOf<Node, PowersetLattice.Element<PointsToPass.NodeWithPropertiesKey>>()
-        val getValuesCache = mutableMapOf<Node, PowersetLattice.Element<Pair<Node, Boolean>>>()
+            ConcurrentHashMap<Node, PowersetLattice.Element<PointsToPass.NodeWithPropertiesKey>>()
+        val getValuesCache = ConcurrentHashMap<Node, PowersetLattice.Element<Pair<Node, Boolean>>>()
 
         coroutineScope {
             callExpression.arguments.forEach { arg ->
@@ -1315,7 +1318,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         override fun equals(other: Any?): Boolean {
             return other is MapDstToSrcEntry &&
                 srcNode === other.srcNode &&
+                lastWrites.size == other.lastWrites.size &&
                 lastWrites.all { lw -> other.lastWrites.any { it == lw } } &&
+                propertySet.size == other.propertySet.size &&
                 propertySet.all { p -> other.propertySet.any { it == p } } &&
                 dst == other.dst
         }
@@ -1852,9 +1857,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     newSet.forEach { pair ->
                         if (
                             currentSet.none {
-                                it.srcNode ===
-                                    pair
-                                        .first && /*it.lastWrites.all { lw -> lastWrites.any { it == lw } } &&*/
+                                it.srcNode === pair.first &&
                                     it.lastWrites === lastWrites &&
                                     pair.second in it.propertySet
                             }
