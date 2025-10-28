@@ -483,7 +483,7 @@ open class ValueEvaluator(
      * plus/minus/div/times-assign or a plusplus/minusminus, etc.
      */
     protected fun filterSelfReferences(ref: Reference, inDFG: List<Node>): List<Node> {
-        var list = inDFG.toList()
+        var list = inDFG
 
         // The ops +=, -=, ... and ++, -- have in common that we see the ref twice: Once to reach
         // the operator and once to leave it. We have to differentiate between these two cases.
