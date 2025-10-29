@@ -10,6 +10,7 @@ enableTypeScriptFrontend=true
 enableRubyFrontend=true
 enableJVMFrontend=true
 enableINIFrontend=true
+enableMCPModule=true
 
 org.jetbrains.dokka.experimental.gradle.pluginMode=V2Enabled
 ## Suppress warnings about using the experimental Dokka plugin

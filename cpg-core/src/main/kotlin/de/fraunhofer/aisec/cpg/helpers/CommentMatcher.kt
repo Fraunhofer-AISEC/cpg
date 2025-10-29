@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -54,14 +53,12 @@ class CommentMatcher {
                 .filter {
                     artifactLocation == null || artifactLocation == it.location?.artifactLocation
                 }
-                .toMutableList()
-        // As some frontends add regional implicit namespaces we have to search amongst its children
-        // instead.
-        children.addAll(
-            children.filterIsInstance<NamespaceDeclaration>().flatMap { namespace ->
-                namespace.astChildren.filter { it !in children }
-            }
-        )
+                .toMutableSet()
+
+        // When a child has no location we can not properly decide if it encloses the comment, we
+        // instead consider its children with locations.
+        expandCandidatesByLocation(children)
+
         val enclosing =
             children.firstOrNull {
                 val nodeRegion: Region = it.location?.region ?: Region()
@@ -102,24 +99,9 @@ class CommentMatcher {
                 }
                 .toMutableSet()
 
-        // Because we sometimes wrap all elements into a NamespaceDeclaration we have to extract the
-        // children with a location
-        children.addAll(
-            children.filterIsInstance<NamespaceDeclaration>().flatMap { namespace ->
-                namespace.astChildren.filter { it !in children }
-            }
-        )
-
         // When a child has no location we can not properly consider it for comment matching,
-        // however, it might have
-        // a child with a location that we want to consider, this can overlap with namespaces but
-        // nodes are considered
-        // only once in the set
-        children.addAll(
-            children
-                .filter { node -> node.location == null || node.location?.region == Region() }
-                .flatMap { locationLess -> locationLess.astChildren.filter { it !in children } }
-        )
+        // however, instead we consider its contained children that have a location.
+        expandCandidatesByLocation(children)
 
         // Searching for the closest successor to our comment amongst the children of the smallest
         // enclosing nodes
@@ -172,5 +154,22 @@ class CommentMatcher {
         }
 
         closest.comment = (closest.comment ?: "") + comment
+    }
+
+    /**
+     * Expands the given list of candidates by exploring their children iteratively until all
+     * candidates without a location are expanded by their children with a location.
+     */
+    fun expandCandidatesByLocation(candidates: MutableSet<AstNode>) {
+        var locationLess =
+            candidates.filter { node -> node.location == null || node.location?.region == Region() }
+        while (locationLess.isNotEmpty()) {
+            val containedChildren = locationLess.flatMap { it.astChildren }
+            locationLess =
+                containedChildren
+                    .filter { node -> node.location == null || node.location?.region == Region() }
+                    .filter { it !in candidates }
+            candidates.addAll(containedChildren)
+        }
     }
 }
