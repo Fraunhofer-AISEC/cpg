@@ -874,9 +874,12 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                                     // This key is not in "one", so we add the value from "two"
                                     // to "one"
                                     local[k] = v
-                                } else {
-                                    // This key already exists in "one", so we have to compute
-                                    // the lub of the values
+                                } else if (
+                                    two[k] != null && entry.compare(two[k]!!) != Order.EQUAL
+                                ) {
+                                    // This key already exists in "one" and the values in one and
+                                    // two are different,
+                                    // so we have to compute the lub of the values
                                     one[k]?.let { oneValue ->
                                         innerLattice.lub(
                                             oneValue,
