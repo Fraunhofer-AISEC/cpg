@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.passes.PointsToState
 import java.io.Serializable
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.plusAssign
@@ -56,6 +57,54 @@ var lubSizeCounter = 0
 
 val CPU_CORES = Runtime.getRuntime().availableProcessors()
 val MIN_CHUNK_SIZE = 10
+
+/** Thread-safe map whose keys are compared by reference (===), not by equals(). */
+class ConcurrentIdentityMap<K, V> : Map<K, V> {
+
+    // Internal wrapper that delegates equality / hash to object identity
+    private data class IdKey<T>(val ref: T) {
+        override fun equals(other: Any?) = (other as? IdKey<*>)?.ref === ref // reference equality
+
+        override fun hashCode(): Int = System.identityHashCode(ref) // identity hash
+    }
+
+    private val backing = ConcurrentHashMap<IdKey<K>, V>()
+
+    override operator fun get(key: K): V? = backing[IdKey(key)]
+
+    fun put(key: K, value: V): V? = backing.put(IdKey(key), value)
+
+    fun remove(key: K): V? = backing.remove(IdKey(key))
+
+    override fun containsKey(key: K): Boolean = backing.containsKey(IdKey(key))
+
+    override fun containsValue(value: V): Boolean = backing.containsValue(value)
+
+    override val size: Int
+        get() = backing.size
+
+    override val keys: Set<K>
+        get() = backing.keys.mapTo(IdentitySet(backing.size)) { it.ref }
+
+    override val values: Collection<V>
+        get() = backing.values
+
+    override val entries: Set<Map.Entry<K, V>>
+        get() =
+            backing.entries.mapTo(IdentitySet(backing.size)) { (idKey, v) ->
+                object : Map.Entry<K, V> {
+                    override val key: K
+                        get() = idKey.ref
+
+                    override val value: V
+                        get() = v
+                }
+            }
+
+    override fun isEmpty(): Boolean {
+        return backing.isEmpty()
+    }
+}
 
 class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
     override fun equals(other: Any?): Boolean {
@@ -857,12 +906,14 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         concurrencyCounter: Int,
     ): Element<K, V> = coroutineScope {
         var result: Element<K, V>
-        lubCounter++
-        if (one.size > maxLubSize) maxLubSize = one.size
-        if (two.size > maxLubSize) maxLubSize = two.size
-        lubSizeCounter += one.size
-        lubSizeCounter += two.size
-        mapLatticeLubTime += measureNanoTime {
+        if (concurrencyCounter == CPU_CORES && !allowModify) {
+            lubCounter++
+            if (one.size > maxLubSize) maxLubSize = one.size
+            if (two.size > maxLubSize) maxLubSize = two.size
+            lubSizeCounter += one.size
+            lubSizeCounter += two.size
+        }
+        var tmpTime = measureNanoTime {
             if (allowModify) {
                 val additionsPerChunk =
                     two.splitInto(concurrencyCounter).map { chunk ->
@@ -899,7 +950,6 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                 additionsPerChunk.awaitAll().forEach { addition ->
                     addition.forEach { (k, v) -> one[k] = v }
                 }
-                //                return@coroutineScope one
                 result = one
             } else {
                 val allKeys =
@@ -907,10 +957,11 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                         addAll(one.keys)
                         addAll(two.keys)
                     }
-                val partialMaps =
-                    allKeys.splitInto(concurrencyCounter).map { chunk ->
-                        async(Dispatchers.Default) {
-                            val local = Element<K, V>(chunk.size)
+                val newMap = ConcurrentIdentityMap<K, V>()
+                allKeys
+                    .splitInto(concurrencyCounter)
+                    .map { chunk ->
+                        launch(Dispatchers.Default) {
                             for (key in chunk) {
                                 val otherValue = two[key]
                                 val thisValue = one[key]
@@ -926,15 +977,18 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                                             1,
                                         )
                                     } else thisValue ?: otherValue
-                                newValue?.let { local[key] = it }
+                                newValue?.let { newMap.put(key, it) }
                             }
-                            local
+                            /*                            local*/
                         }
                     }
-                val newMap = Element<K, V>(allKeys.size)
-                partialMaps.awaitAll().forEach { part -> part.forEach { (k, v) -> newMap[k] = v } }
-                result = newMap
+                    .joinAll()
+                result = Element(newMap)
             }
+        }
+        if (concurrencyCounter == CPU_CORES && !allowModify) {
+            mapLatticeLubTime += tmpTime
+            //            println("---- $tmpTime")
         }
         return@coroutineScope result
     }

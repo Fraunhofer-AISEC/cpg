@@ -100,7 +100,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
 
         val (firstBasicBlock, basicBlocks, nodeToBBMap) = collectBasicBlocks(startNode, false)
 
-        log.trace("Retrieved network of BBs for {}", startNode.name)
+        log.info("Retrieved network of BBs for {}", startNode.name)
 
         val prevEOGState =
             PrevEOGState(innerLattice = PrevEOGLattice(innerLattice = PowersetLattice()))
