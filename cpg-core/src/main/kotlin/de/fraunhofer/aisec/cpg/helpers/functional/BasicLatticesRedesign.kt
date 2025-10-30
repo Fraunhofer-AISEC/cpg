@@ -61,22 +61,15 @@ val MIN_CHUNK_SIZE = 10
 /** Thread-safe map whose keys are compared by reference (===), not by equals(). */
 class ConcurrentIdentityMap<K, V> : Map<K, V> {
 
-    // Internal wrapper that delegates equality / hash to object identity
-    private data class IdKey<T>(val ref: T) {
-        override fun equals(other: Any?) = (other as? IdKey<*>)?.ref === ref // reference equality
+    private val backing = ConcurrentHashMap<PointsToPass.IdKey<K>, V>()
 
-        override fun hashCode(): Int = System.identityHashCode(ref) // identity hash
-    }
+    override operator fun get(key: K): V? = backing[PointsToPass.IdKey(key)]
 
-    private val backing = ConcurrentHashMap<IdKey<K>, V>()
+    fun put(key: K, value: V): V? = backing.put(PointsToPass.IdKey(key), value)
 
-    override operator fun get(key: K): V? = backing[IdKey(key)]
+    fun remove(key: K): V? = backing.remove(PointsToPass.IdKey(key))
 
-    fun put(key: K, value: V): V? = backing.put(IdKey(key), value)
-
-    fun remove(key: K): V? = backing.remove(IdKey(key))
-
-    override fun containsKey(key: K): Boolean = backing.containsKey(IdKey(key))
+    override fun containsKey(key: K): Boolean = backing.containsKey(PointsToPass.IdKey(key))
 
     override fun containsValue(value: V): Boolean = backing.containsValue(value)
 

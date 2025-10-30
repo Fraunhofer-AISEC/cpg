@@ -1578,6 +1578,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return invoke
     }
 
+    // Internal wrapper that delegates equality / hash to object identity
+    data class IdKey<T>(val ref: T) {
+        override fun equals(other: Any?) = (other as? IdKey<*>)?.ref === ref // reference equality
+
+        override fun hashCode(): Int = System.identityHashCode(ref) // identity hash
+    }
+
     data class NodeWithPropertiesKey(val node: Node, val properties: Set<Any> = emptySet<Any>()) {
         // Since we are dealing with pairs, carefully check if we already have them
         override fun equals(other: Any?): Boolean =
@@ -1615,21 +1622,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     )
                 }
             )
-        /*        val sources =
-        values.mapTo(PowersetLattice.Element()) {
-            Triple(
-                it.srcNode,
-                true in it.propertySet,
-                it.propertySet.any { it is PartialDataflowGranularity<*> },
-            )
-        }*/
-        val lastWrites: MutableSet<NodeWithPropertiesKey> = ConcurrentHashMap.newKeySet()
-        val destinations = identitySetOf<Node>()
 
-        val localResults =
-            values.splitInto(minPartSize = 1).map { chunk ->
-                async(Dispatchers.Default) {
-                    val localDestinations = identitySetOf<Node>()
+        val lastWrites: MutableSet<NodeWithPropertiesKey> = ConcurrentHashMap.newKeySet()
+        val destinations: MutableSet<IdKey<Node>> = ConcurrentHashMap.newKeySet()
+
+        values
+            .splitInto(minPartSize = 1)
+            .map { chunk ->
+                launch(Dispatchers.Default) {
                     for (value in chunk) {
                         value.lastWrites.forEach { (lw, lwProps) ->
                             // For short FunctionSummaries (AKA one of the lastWrite
@@ -1661,19 +1661,17 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             // in there yet
                             lastWrites.add(NodeWithPropertiesKey(lw, lwPropertySet))
                         }
-                        localDestinations.addAll(value.dst)
+                        value.dst.forEach { destinations.add(IdKey(it)) }
                     }
-                    localDestinations
                 }
             }
-
-        localResults.awaitAll().forEach { destinations.addAll(it) }
+            .joinAll()
 
         return@coroutineScope doubleState.updateValues(
             lattice,
             doubleState,
             sources,
-            destinations,
+            destinations.mapTo(IdentitySet()) { it.ref },
             identitySetOf(dstAddr),
             lastWrites,
         )
@@ -3216,7 +3214,7 @@ suspend fun PointsToState.Element.updateValues(
             destinations
                 .splitInto()
                 .map { chunk ->
-                    async(Dispatchers.Default) {
+                    launch(Dispatchers.Default) {
                         for (d in chunk) {
                             newGenState[d] =
                                 GeneralStateEntryElement(
@@ -3238,14 +3236,14 @@ suspend fun PointsToState.Element.updateValues(
                         }
                     }
                 }
-                .awaitAll()
+                .joinAll()
             doubleState = PointsToState.Element(newGenState, doubleState.declarationsState)
         } else {
             // For globals, we draw a DFG Edge from the source to the destination
             destinations
                 .splitInto()
                 .map { chunk ->
-                    async(Dispatchers.Default) {
+                    launch(Dispatchers.Default) {
                         for (d in chunk) {
                             val entry =
                                 doubleState.generalState.computeIfAbsent(d) {
@@ -3268,7 +3266,7 @@ suspend fun PointsToState.Element.updateValues(
                         }
                     }
                 }
-                .awaitAll()
+                .joinAll()
         }
     }
 
