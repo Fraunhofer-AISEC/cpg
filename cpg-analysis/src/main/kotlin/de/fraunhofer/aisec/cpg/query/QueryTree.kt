@@ -85,9 +85,6 @@ open class QueryTree<T>(
     val operator: QueryTreeOperators,
     val collectCallerInfo: Boolean = true,
 ) : Comparable<QueryTree<T>>, HasAssumptions {
-    /** The evidence ID is used to track which evidence this query tree represents. */
-    var evidenceId: String? = null
-
     /** The metric ID is used to track which metric this query tree represents. */
     var metricId: String? = null
 
@@ -145,13 +142,9 @@ open class QueryTree<T>(
         checkForSuppression()
     }
 
+    /** Sets the [metricId] and returns this [QueryTree]. */
     fun withMetricId(metricId: String?): QueryTree<T> {
         this.metricId = metricId
-        return this
-    }
-
-    fun withEvidenceId(evidenceId: String?): QueryTree<T> {
-        this.evidenceId = evidenceId
         return this
     }
 
