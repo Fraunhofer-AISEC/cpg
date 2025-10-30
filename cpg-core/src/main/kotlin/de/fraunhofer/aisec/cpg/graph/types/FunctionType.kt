@@ -26,11 +26,11 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration.Companion.BRACKET_LEFT
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration.Companion.BRACKET_RIGHT
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration.Companion.COMMA
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration.Companion.WHITESPACE
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration.Companion.BRACKET_LEFT
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration.Companion.BRACKET_RIGHT
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration.Companion.COMMA
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration.Companion.WHITESPACE
 import de.fraunhofer.aisec.cpg.graph.unknownType
 
 /**

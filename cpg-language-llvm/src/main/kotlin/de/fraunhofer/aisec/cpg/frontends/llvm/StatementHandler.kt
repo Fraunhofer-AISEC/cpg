@@ -28,10 +28,22 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.ast.AstNode
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.GotoStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.LabelStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.InitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -55,9 +67,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * usually mapped to statements.
      *
      * It is noteworthy, that LLVM IR is a single state assignment form, meaning, that all
-     * instructions that perform an assignment will result in a [DeclarationStatement] and a
-     * [VariableDeclaration], with the original instruction wrapped into the
-     * [VariableDeclaration.initializer] property.
+     * instructions that perform an assignment will result in a
+     * [ast.statements.DeclarationStatement] and a [VariableDeclaration], with the original
+     * instruction wrapped into the [VariableDeclaration.initializer] property.
      *
      * Currently, this wrapping is done in the individual instruction parsing functions, but should
      * be extracted from that, e.g. by routing it through the [DeclarationHandler].
@@ -484,7 +496,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     /**
      * Handles the ['alloca'](https://llvm.org/docs/LangRef.html#alloca-instruction) instruction,
      * which allocates a defined block of memory. The closest what we have in the graph is the
-     * [NewArrayExpression], which creates a fixed sized array, i.e., a block of memory.
+     * [ast.statements.expressions.NewArrayExpression], which creates a fixed sized array, i.e., a
+     * block of memory.
      */
     private fun handleAlloca(instr: LLVMValueRef): Statement {
         val array = newNewArrayExpression(rawNode = instr)
@@ -780,15 +793,15 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
 
     /**
      * Parses the [`cmpxchg`](https://llvm.org/docs/LangRef.html#cmpxchg-instruction) instruction.
-     * It returns a single [Statement] or a [Block] if the value is assigned to another variable.
-     * Performs the following operation atomically:
+     * It returns a single [ast.statements.Statement] or a [ast.statements.expressions.Block] if the
+     * value is assigned to another variable. Performs the following operation atomically:
      * ```
      * lhs = {*pointer, *pointer == cmp} // A struct of {T, i1}
      * if(*pointer == cmp) { *pointer = new }
      * ```
      *
-     * Returns a [Block] with those two instructions or, if `lhs` doesn't exist, only the if-then
-     * statement.
+     * Returns a [ast.statements.expressions.Block] with those two instructions or, if `lhs` doesn't
+     * exist, only the if-then statement.
      */
     private fun handleAtomiccmpxchg(instr: LLVMValueRef): Statement {
         val compoundStatement = newBlock(rawNode = instr)
@@ -848,8 +861,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     /**
-     * Parses the `atomicrmw` instruction. It returns either a single [Statement] or a [Block] if
-     * the value is assigned to another variable.
+     * Parses the `atomicrmw` instruction. It returns either a single [ast.statements.Statement] or
+     * a [ast.statements.expressions.Block] if the value is assigned to another variable.
      */
     private fun handleAtomicrmw(instr: LLVMValueRef): Statement {
         val lhs = LLVMGetValueName(instr).string
@@ -1048,7 +1061,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * used for the comparison of the "case" statements, the second one is the default location) or
      * if the number of operands is not even.
      *
-     * Returns a [SwitchStatement].
+     * Returns a [ast.statements.SwitchStatement].
      */
     private fun handleSwitchStatement(instr: LLVMValueRef): Statement {
         val numOps = LLVMGetNumOperands(instr)
@@ -1090,7 +1103,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * [`call`](https://llvm.org/docs/LangRef.html#call-instruction) and the
      * [`invoke`](https://llvm.org/docs/LangRef.html#invoke-instruction) instruction.
      *
-     * Returns either a [DeclarationStatement] or a [CallExpression].
+     * Returns either a [ast.statements.DeclarationStatement] or a
+     * [ast.statements.expressions.CallExpression].
      */
     private fun handleFunctionCall(instr: LLVMValueRef): Statement {
         val calledFunc = LLVMGetCalledValue(instr)
@@ -1437,7 +1451,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      * Most instructions in LLVM have a variable assignment as part of their instruction. Since LLVM
      * IR is SSA, we need to declare a new variable in this case, which is named according to
      * [valueRef]. In case the variable assignment is optional, and we directly return the
-     * [Expression] associated with the instruction.
+     * [ast.statements.expressions.Expression] associated with the instruction.
      */
     private fun declarationOrNot(rhs: Expression, valueRef: LLVMValueRef): Statement {
         val namePair = frontend.getNameOf(valueRef)
@@ -1467,8 +1481,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     /**
-     * Handles a basic block and returns a [Block] comprised of the statements of this block or a
-     * [LabelStatement] if the basic block has a label.
+     * Handles a basic block and returns a [ast.statements.expressions.Block] comprised of the
+     * statements of this block or a [ast.statements.LabelStatement] if the basic block has a label.
      */
     private fun handleBasicBlock(bb: LLVMBasicBlockRef): Statement {
         val compound = newBlock(rawNode = bb)
@@ -1499,8 +1513,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     /**
-     * Handles a binary operation and returns either a [BinaryOperator], [UnaryOperator],
-     * [CallExpression] or a [DeclarationStatement].
+     * Handles a binary operation and returns either a [ast.statements.expressions.BinaryOperator],
+     * [ast.statements.expressions.UnaryOperator], [ast.statements.expressions.CallExpression] or a
+     * [ast.statements.DeclarationStatement].
      *
      * It expects the llvm-instruction in [instr] and the operator in [op]. The argument [unsigned]
      * indicates if the operands have to be treated as unsigned integer values. In this case, a cast
@@ -1591,9 +1606,9 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     /**
-     * Generates a [GotoStatement] and either links it to the [LabelStatement] if that statement has
-     * already been processed or uses the listeners to generate the relation once the label
-     * statement has been processed.
+     * Generates a [ast.statements.GotoStatement] and either links it to the
+     * [ast.statements.LabelStatement] if that statement has already been processed or uses the
+     * listeners to generate the relation once the label statement has been processed.
      */
     private fun assembleGotoStatement(instr: LLVMValueRef, bbTarget: LLVMValueRef): GotoStatement {
         val goto = newGotoStatement(rawNode = instr)
@@ -1640,8 +1655,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     /**
-     * This functions creates a new [Reference] to an internal LLVM function. This would allow us to
-     * handle them all in the same way.
+     * This functions creates a new [ast.statements.expressions.Reference] to an internal LLVM
+     * function. This would allow us to handle them all in the same way.
      */
     private fun llvmInternalRef(name: String): Reference {
         return newReference(name)

@@ -26,15 +26,33 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.ast.AstNode
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.DeclarationSequence
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.EnumConstantDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.EnumDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionTemplateDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.IncludeDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ProblemDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TemplateDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TypeParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TypedefDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.function.Supplier
@@ -44,8 +62,9 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
 /**
  * This class is a [CXXHandler] which takes care of translating C/C++
- * [declarations](https://en.cppreference.com/w/cpp/language/declarations) into [Declaration] nodes.
- * It heavily relies on its sibling handler, the [DeclaratorHandler].
+ * [declarations](https://en.cppreference.com/w/cpp/language/declarations) into
+ * [ast.declarations.Declaration] nodes. It heavily relies on its sibling handler, the
+ * [DeclaratorHandler].
  *
  * In the C/C++ language, the meaning of a declaration depends on two major factors: First, a list
  * of so-called declaration
@@ -56,8 +75,9 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.*
  * function).
  *
  * Since the logic behind a declarator is quite complex, this logic is extracted into its own
- * handler. In fact, in most cases the [DeclaratorHandler] actually creates the CPG [Declaration]
- * and the [DeclarationHandler] modifies the declaration depending on the declaration specifiers.
+ * handler. In fact, in most cases the [DeclaratorHandler] actually creates the CPG
+ * [ast.declarations.Declaration] and the [DeclarationHandler] modifies the declaration depending on
+ * the declaration specifiers.
  */
 class DeclarationHandler(lang: CXXLanguageFrontend) :
     CXXHandler<Declaration, IASTNode>(Supplier(::ProblemDeclaration), lang) {
@@ -83,7 +103,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     /**
      * Translates a C++
      * [namespace alias](https://en.cppreference.com/w/cpp/language/namespace_alias) into an alias
-     * handled by an [ImportDeclaration].
+     * handled by an [ast.declarations.ImportDeclaration].
      */
     private fun handleNamespaceAlias(ctx: CPPASTNamespaceAlias): ImportDeclaration {
         val from = parseName(ctx.mappingName.toString())
@@ -98,7 +118,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     /**
      * Translates a C++
      * [using directive](https://en.cppreference.com/w/cpp/language/namespace#Using-directives) into
-     * a [ImportDeclaration].
+     * a [ast.declarations.ImportDeclaration].
      */
     private fun handleUsingDirective(ctx: CPPASTUsingDirective): Declaration {
         val import = parseName(ctx.qualifiedName.toString())
@@ -115,7 +135,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     /**
      * Translates a C++
      * [using declaration](https://en.cppreference.com/w/cpp/language/using_declaration) into a
-     * [ImportDeclaration].
+     * [ast.declarations.ImportDeclaration].
      */
     private fun handleUsingDeclaration(ctx: CPPASTUsingDeclaration): Declaration {
         val import = parseName(ctx.name.toString())
@@ -131,7 +151,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
     /**
      * Translates a C++ [namespace](https://en.cppreference.com/w/cpp/language/namespace#Namespaces)
-     * into a [NamespaceDeclaration].
+     * into a [ast.declarations.NamespaceDeclaration].
      */
     private fun handleNamespace(ctx: CPPASTNamespaceDefinition): NamespaceDeclaration {
         val nsd = newNamespaceDeclaration(ctx.name.toString(), rawNode = ctx)
@@ -165,10 +185,10 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
     /**
      * Translates a C/C++ (function)[https://en.cppreference.com/w/cpp/language/functions]
-     * definition into a [FunctionDeclaration]. A definition, in contrast to a declaration also has
-     * a function body. Function declarations are most likely handled by [handleSimpleDeclaration].
-     * However, in both cases, the majority of the function is described by a declarator, which gets
-     * parsed by [DeclaratorHandler.handleFunctionDeclarator].
+     * definition into a [ast.declarations.FunctionDeclaration]. A definition, in contrast to a
+     * declaration also has a function body. Function declarations are most likely handled by
+     * [handleSimpleDeclaration]. However, in both cases, the majority of the function is described
+     * by a declarator, which gets parsed by [DeclaratorHandler.handleFunctionDeclarator].
      */
     private fun handleFunctionDefinition(ctx: IASTFunctionDefinition): Declaration {
         // TODO: A problem with cpp functions is that we cannot know if they may throw an exception
@@ -364,9 +384,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     /**
-     * Adjusts the type created in a [RecordDeclaration] to include the parametrized types of the
-     * [templateDeclaration]. This is necessary because templates are being parsed after all record
-     * types (e.g. used in receivers) are created.
+     * Adjusts the type created in a [ast.declarations.RecordDeclaration] to include the
+     * parametrized types of the [templateDeclaration]. This is necessary because templates are
+     * being parsed after all record types (e.g. used in receivers) are created.
      *
      * @param templateDeclaration the template
      * @param innerDeclaration the record
@@ -526,8 +546,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
     /**
      * In C++, a [IASTDeclSpecifier] can potentially also contain declarations, e.g. records or
-     * enums. This function gathers these [Declaration] nodes, before processing the remainder of
-     * declarations within [IASTSimpleDeclaration.getDeclarators].
+     * enums. This function gathers these [ast.declarations.Declaration] nodes, before processing
+     * the remainder of declarations within [IASTSimpleDeclaration.getDeclarators].
      */
     private fun handleDeclarationSpecifier(
         declSpecifier: IASTDeclSpecifier?,
@@ -584,8 +604,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     /**
-     * Extracts template parameters (used for [VariableDeclaration.templateParameters] out of the
-     * declaration (if it has any), otherwise null is returned.
+     * Extracts template parameters (used for
+     * [ast.declarations.VariableDeclaration.templateParameters] out of the declaration (if it has
+     * any), otherwise null is returned.
      */
     private fun extractTemplateParams(
         ctx: IASTSimpleDeclaration,
@@ -756,7 +777,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
     /**
      * Translates a C++ (type alias)[https://en.cppreference.com/w/cpp/language/type_alias] into a
-     * [TypedefDeclaration].
+     * [ast.declarations.TypedefDeclaration].
      */
     private fun handleAliasDeclaration(ctx: CPPASTAliasDeclaration): TypedefDeclaration {
         val type = frontend.typeOf(ctx.mappingTypeId)

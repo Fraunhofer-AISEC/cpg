@@ -38,13 +38,16 @@ import com.github.javaparser.resolution.UnsolvedSymbolException
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.EnumConstantDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.DeclarationSequence
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.EnumConstantDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.EnumDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ProblemDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.NewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
@@ -57,7 +60,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     Handler<Declaration, Node, JavaLanguageFrontend>(Supplier { ProblemDeclaration() }, lang) {
     fun handleConstructorDeclaration(
         constructorDeclaration: ConstructorDeclaration
-    ): de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration {
+    ): de.fraunhofer.aisec.cpg.graph.ast.declarations.ConstructorDeclaration {
         val resolvedConstructor = constructorDeclaration.resolve()
         val currentRecordDecl = frontend.scopeManager.currentRecord
         val declaration =
@@ -104,7 +107,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
 
     fun handleMethodDeclaration(
         methodDecl: MethodDeclaration
-    ): de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration {
+    ): de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration {
         val resolvedMethod = methodDecl.resolve()
         val currentRecordDecl = frontend.scopeManager.currentRecord
         val functionDeclaration =
@@ -160,7 +163,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
 
     private fun createMethodReceiver(
         recordDeclaration: RecordDeclaration?,
-        functionDeclaration: de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration,
+        functionDeclaration: de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration,
     ) {
         // create the receiver
         val receiver =
@@ -242,7 +245,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 variable.initializer
                     .map { ctx: Expression -> frontend.expressionHandler.handle(ctx) }
                     .orElse(null)
-                    as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                    as? de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
             var type: Type
             try {
                 // Resolve type first with ParameterizedType
@@ -333,7 +336,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             when (decl) {
                 is MethodDeclaration -> {
                     val md =
-                        handle(decl) as de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+                        handle(decl)
+                            as de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration
                     frontend.scopeManager.addDeclaration(md)
                     recordDeclaration.methods += md
                 }
@@ -347,7 +351,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 is ConstructorDeclaration -> {
                     val c =
                         handle(decl)
-                            as de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
+                            as de.fraunhofer.aisec.cpg.graph.ast.declarations.ConstructorDeclaration
                     frontend.scopeManager.addDeclaration(c)
                     recordDeclaration.constructors += c
                 }
@@ -415,7 +419,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             val arguments =
                 enumConstDecl.arguments.mapNotNull {
                     frontend.expressionHandler.handle(it)
-                        as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                        as? de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
                 }
             // TODO: This call resolution in the frontend might fail, in particular if we haven't
             // processed the constructor yet. Should be cleaned up in the future but requires
@@ -464,7 +468,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         if (oInitializer.isPresent) {
             val initializer =
                 frontend.expressionHandler.handle(oInitializer.get())
-                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression?
+                    as de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression?
             if (initializer is NewArrayExpression) {
                 declaration.isArray = true
             }

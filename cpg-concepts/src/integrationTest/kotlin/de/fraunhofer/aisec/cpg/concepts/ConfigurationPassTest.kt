@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.evaluation.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.SubscriptExpression
 import de.fraunhofer.aisec.cpg.graph.concepts.config.Configuration
 import de.fraunhofer.aisec.cpg.graph.concepts.config.ConfigurationGroup
 import de.fraunhofer.aisec.cpg.graph.concepts.config.ConfigurationOption
@@ -38,7 +39,6 @@ import de.fraunhofer.aisec.cpg.graph.concepts.config.ReadConfigurationGroup
 import de.fraunhofer.aisec.cpg.graph.concepts.config.ReadConfigurationOption
 import de.fraunhofer.aisec.cpg.graph.concepts.config.RegisterConfigurationGroup
 import de.fraunhofer.aisec.cpg.graph.concepts.config.RegisterConfigurationOption
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
 import de.fraunhofer.aisec.cpg.passes.concepts.config.ProvideConfigPass
 import de.fraunhofer.aisec.cpg.passes.concepts.config.ini.IniFileConfigurationSourcePass
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass

@@ -28,7 +28,16 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.ResolveInFrontend
 import de.fraunhofer.aisec.cpg.frontends.isKnownOperatorName
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ProblemDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TypeParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -44,7 +53,7 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 /**
  * Takes care of translating a
  * [declarator](https://en.cppreference.com/w/cpp/language/declarations#Declarators) into a
- * [Declaration].
+ * [ast.declarations.Declaration].
  *
  * See [DeclarationHandler] for a detailed explanation, why this is split into a dedicated handler.
  */
@@ -128,7 +137,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
     /**
      * Translates (data members)[https://en.cppreference.com/w/cpp/language/data_members] of a C++
-     * class or C/C++ struct into a [FieldDeclaration].
+     * class or C/C++ struct into a [ast.declarations.FieldDeclaration].
      */
     private fun handleFieldDeclarator(ctx: IASTDeclarator): FieldDeclaration {
         val initializer = ctx.initializer?.let { frontend.initializerHandler.handle(it) }
@@ -149,10 +158,10 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     }
 
     /**
-     * A small utility function that creates a [ConstructorDeclaration], [MethodDeclaration] or
-     * [FunctionDeclaration] depending on which scope the function should live in. This basically
-     * checks if the scope is a namespace or a record and if the name matches to the record (in case
-     * of a constructor).
+     * A small utility function that creates a [ast.declarations.ConstructorDeclaration],
+     * [ast.declarations.MethodDeclaration] or [ast.declarations.FunctionDeclaration] depending on
+     * which scope the function should live in. This basically checks if the scope is a namespace or
+     * a record and if the name matches to the record (in case of a constructor).
      */
     private fun createAppropriateFunction(
         name: Name,
@@ -360,7 +369,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
     /**
      * This function takes cares of creating a receiver and setting it to the supplied
-     * [MethodDeclaration]. In C++ this is called the
+     * [ast.declarations.MethodDeclaration]. In C++ this is called the
      * [implicit object parameter](https://en.cppreference.com/w/cpp/language/overload_resolution#Implicit_object_parameter)
      * .
      */

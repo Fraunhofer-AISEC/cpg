@@ -26,8 +26,14 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CollectionComprehension
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ComprehensionExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ProblemExpression
 import jep.python.PyObject
 
 class ExpressionHandler(frontend: PythonLanguageFrontend) :
@@ -72,7 +78,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     /**
      * Translates a Python
      * [`comprehension`](https://docs.python.org/3/library/ast.html#ast.comprehension) into a
-     * [ComprehensionExpression].
+     * [ast.statements.expressions.ComprehensionExpression].
      *
      * Connects multiple predicates by `and`.
      */
@@ -102,7 +108,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     /**
      * Translates a Python
      * [`GeneratorExp`](https://docs.python.org/3/library/ast.html#ast.GeneratorExp) into a
-     * [CollectionComprehension].
+     * [ast.statements.expressions.CollectionComprehension].
      */
     private fun handleGeneratorExp(node: Python.AST.GeneratorExp): CollectionComprehension {
         return newCollectionComprehension(rawNode = node).applyWithScope {
@@ -114,7 +120,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python [`ListComp`](https://docs.python.org/3/library/ast.html#ast.ListComp)
-     * into a [CollectionComprehension].
+     * into a [ast.statements.expressions.CollectionComprehension].
      */
     private fun handleListComprehension(node: Python.AST.ListComp): CollectionComprehension {
         return newCollectionComprehension(rawNode = node).applyWithScope {
@@ -126,7 +132,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python [`SetComp`](https://docs.python.org/3/library/ast.html#ast.SetComp) into
-     * a [CollectionComprehension].
+     * a [ast.statements.expressions.CollectionComprehension].
      */
     private fun handleSetComprehension(node: Python.AST.SetComp): CollectionComprehension {
         return newCollectionComprehension(rawNode = node).applyWithScope {
@@ -138,7 +144,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python [`DictComp`](https://docs.python.org/3/library/ast.html#ast.DictComp)
-     * into a [CollectionComprehension].
+     * into a [ast.statements.expressions.CollectionComprehension].
      */
     private fun handleDictComprehension(node: Python.AST.DictComp): CollectionComprehension {
         return newCollectionComprehension(rawNode = node).applyWithScope {
@@ -155,7 +161,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python [`NamedExpr`](https://docs.python.org/3/library/ast.html#ast.NamedExpr)
-     * into an [AssignExpression].
+     * into an [ast.statements.expressions.AssignExpression].
      *
      * As opposed to the Assign node, both target and value must be single nodes.
      */
@@ -174,7 +180,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     /**
      * Translates a Python
      * [`FormattedValue`](https://docs.python.org/3/library/ast.html#ast.FormattedValue) into an
-     * [Expression].
+     * [ast.statements.expressions.Expression].
      *
      * We are handling the format handling, following [PEP 3101](https://peps.python.org/pep-3101).
      *
@@ -279,7 +285,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python [`JoinedStr`](https://docs.python.org/3/library/ast.html#ast.JoinedStr)
-     * into a [Expression].
+     * into a [ast.statements.expressions.Expression].
      */
     private fun handleJoinedStr(node: Python.AST.JoinedStr): Expression {
         val values = node.values.map(::handle)
@@ -293,9 +299,9 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * Joins the [nodes] with a [BinaryOperator] with the [operatorCode]. Nests the whole thing,
-     * where the first element in [nodes] is the lhs of the root of the tree of binary operators.
-     * The last operands are further down the tree.
+     * Joins the [nodes] with a [ast.statements.expressions.BinaryOperator] with the [operatorCode].
+     * Nests the whole thing, where the first element in [nodes] is the lhs of the root of the tree
+     * of binary operators. The last operands are further down the tree.
      */
     internal fun joinListWithBinOp(
         operatorCode: String,
@@ -343,11 +349,13 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * This method handles the python
      * [`BoolOp`](https://docs.python.org/3/library/ast.html#ast.BoolOp).
      *
-     * Generates a (potentially nested) [BinaryOperator] from a `BoolOp`. Less than two operands in
-     * [Python.AST.BoolOp.values] don't make sense and will generate a [ProblemExpression]. If only
-     * two operands exist, a simple [BinaryOperator] will be generated. More than two operands will
-     * lead to a nested [BinaryOperator]. E.g., if [Python.AST.BoolOp.values] contains the operators
-     * `[a, b, c]`, the result will be `a OP (b OP c)`.
+     * Generates a (potentially nested) [ast.statements.expressions.BinaryOperator] from a `BoolOp`.
+     * Less than two operands in [Python.AST.BoolOp.values] don't make sense and will generate a
+     * [ProblemExpression]. If only two operands exist, a simple
+     * [ast.statements.expressions.BinaryOperator] will be generated. More than two operands will
+     * lead to a nested [ast.statements.expressions.BinaryOperator]. E.g., if
+     * [Python.AST.BoolOp.values] contains the operators `[a, b, c]`, the result will be `a OP (b OP
+     * c)`.
      */
     private fun handleBoolOp(node: Python.AST.BoolOp): Expression {
         val op =
@@ -513,10 +521,10 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Handles an `ast.Call` Python node. This can be one of
-     * - [MemberCallExpression]
-     * - [ConstructExpression]
-     * - [CastExpression]
-     * - [CallExpression]
+     * - [ast.statements.expressions.MemberCallExpression]
+     * - [ast.statements.expressions.ConstructExpression]
+     * - [ast.statements.expressions.CastExpression]
+     * - [ast.statements.expressions.CallExpression]
      *
      * TODO: cast, memberexpression, magic
      */
