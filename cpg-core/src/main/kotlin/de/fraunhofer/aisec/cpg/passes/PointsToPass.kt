@@ -1348,7 +1348,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val invokes = currentNode.invokes.toIdentitySet()
         coroutineScope {
             invokes.forEach { invoke ->
+                log.info("Executing calculateFunctionSummary")
                 val inv = calculateFunctionSummaries(invoke)
+                log.info("Finished with calculateFunctionSummary")
                 if (inv != null) {
                     doubleState =
                         calculateIncomingCallingContexts(lattice, inv, currentNode, doubleState)
@@ -1563,12 +1565,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // Add a dummy function summary so that we don't try this every time
                 // In this dummy, all parameters point either to returns if we have any, or the
                 // FunctionDeclaration itself
+                log.info("Creating dummy function summary")
                 val newValues = ConcurrentHashMap.newKeySet<FSEntry>()
                 invoke.parameters.map { newValues.add(FSEntry(0, it, 1, "")) }
                 val entries = mutableSetOf<Node>()
                 if (invoke.returns.isNotEmpty()) entries.addAll(invoke.returns)
                 else entries.add(invoke)
                 entries.forEach { entry -> invoke.functionSummary[entry] = newValues }
+                log.info("Finished creating dummy function summary")
             }
         }
         return invoke
