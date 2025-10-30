@@ -1424,7 +1424,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             }
                         }
                     }
-                }
+                } else log.info("inv is null, skipping")
             }
         }
 
