@@ -217,7 +217,7 @@ fun LanguageFrontend<*, *>.method(
     scopeManager.leaveScope(node)
 
     scopeManager.addDeclaration(node)
-    record.addMethod(node)
+    record.methods += node
 
     return node
 }
@@ -239,7 +239,7 @@ fun LanguageFrontend<*, *>.constructor(
     scopeManager.leaveScope(node)
 
     scopeManager.addDeclaration(node)
-    recordDeclaration.addConstructor(node)
+    recordDeclaration.constructors += node
 
     return node
 }

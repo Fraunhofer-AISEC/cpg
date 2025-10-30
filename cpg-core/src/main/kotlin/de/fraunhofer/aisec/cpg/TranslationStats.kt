@@ -23,29 +23,17 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.edges
+package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.newMethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.newRecordDeclaration
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder
+import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder
 
-class EdgesTest {
-    @Test
-    fun testUnwrap() {
-        with(TestLanguageFrontend()) {
-            val record = newRecordDeclaration("myRecord", kind = "class")
-            val method = newMethodDeclaration("myFunc")
-            record.methods += method
+/**
+ * This class provides some statistics about our translation process. At some point this will fully
+ * replace [StatisticsHolder] and [MeasurementHolder]
+ */
+class TranslationStats {
 
-            assertEquals(1, record.methods.size)
-            assertEquals(method, record.methods.firstOrNull())
-
-            assertEquals(
-                "RecordDeclaration[name=myRecord,location=<null>,name=myRecord,kind=class,superTypeDeclarations=[],fields=[],methods=[MethodDeclaration[name=myFunc,location=<null>,parameters=[]]],constructors=[],records=[]]",
-                record.toString(),
-            )
-        }
-    }
+    /** The total lines of code that were translated into the CPG. */
+    var totalLinesOfCode: Int = 0
 }
