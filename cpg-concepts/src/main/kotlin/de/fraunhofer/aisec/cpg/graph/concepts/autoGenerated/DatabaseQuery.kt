@@ -41,6 +41,8 @@ public abstract class DatabaseQuery(
     linkedConcept: DatabaseStorage,
     underlyingNode: Node?,
 ) : DatabaseOperation(calls, databaseService, storage, linkedConcept, underlyingNode) {
+    val parameters: MutableList<Node> = mutableListOf()
+
     override fun equals(other: Any?): Boolean =
         other is DatabaseQuery && super.equals(other) && other.modify == this.modify
 
