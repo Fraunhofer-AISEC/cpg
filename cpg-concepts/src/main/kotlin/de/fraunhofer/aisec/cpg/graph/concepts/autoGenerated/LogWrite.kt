@@ -42,12 +42,14 @@ public enum class LogLevel {
     UNKNOWN,
 }
 
-/** A log write operation e.g. `loggint.warn(\"...\")`. */
+/** A log write operation e.g. `logging.warn(\"...\")`. */
 public abstract class LogWrite(
     public val logLevel: LogLevel?,
     linkedConcept: Logging,
     underlyingNode: Node?,
 ) : LogOperation(linkedConcept, underlyingNode) {
+    val logArguments: MutableList<Node?> = mutableListOf()
+
     override fun equals(other: Any?): Boolean =
         other is LogWrite && super.equals(other) && other.logLevel == this.logLevel
 

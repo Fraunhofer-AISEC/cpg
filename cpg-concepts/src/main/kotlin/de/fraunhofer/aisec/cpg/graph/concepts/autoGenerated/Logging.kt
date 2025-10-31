@@ -43,6 +43,8 @@ public abstract class Logging(
     public val loggingService: LoggingService?,
     underlyingNode: Node?,
 ) : Auditing(underlyingNode) {
+    var logLevelThreshold: LogLevel? = null
+
     init {
         name?.let { this.name = Name(localName = it) }
     }
