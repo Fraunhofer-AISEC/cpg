@@ -32,16 +32,15 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** HTTP Client. */
-public abstract class HttpClient(
-    public val isTLS: Boolean?,
-    public val authenticity: Authenticity?,
-    underlyingNode: Node?,
-) : Http(underlyingNode) {
+public abstract class HttpClient(public val authenticity: Authenticity?, underlyingNode: Node?) :
+    Http(underlyingNode) {
+    var protocol: TransportEncryption? = null
+
     override fun equals(other: Any?): Boolean =
         other is HttpClient &&
             super.equals(other) &&
-            other.isTLS == this.isTLS &&
+            other.protocol == this.protocol &&
             other.authenticity == this.authenticity
 
-    override fun hashCode(): Int = Objects.hash(super.hashCode(), isTLS, authenticity)
+    override fun hashCode(): Int = Objects.hash(super.hashCode(), protocol, authenticity)
 }
