@@ -60,7 +60,7 @@ class BSI_TR02102(override val requirePQC: Boolean = false) :
 
     context(kdf: KeyDerivationFunction)
     override fun checkKDF(): QueryTree<Boolean> {
-        TODO()
+        return kdf.type IN listOf("CatKDF")
     }
 
     context(signature: Signature)
