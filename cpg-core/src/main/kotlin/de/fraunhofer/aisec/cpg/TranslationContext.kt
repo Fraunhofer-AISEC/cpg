@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonMerge
 import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import de.fraunhofer.aisec.cpg.TranslationManager.AdditionalSource
@@ -52,14 +53,12 @@ open class TranslationContext(
      * instance of a [TypeManager] for the overall [TranslationResult].
      */
     val typeManager: TypeManager = TypeManager(),
-
+) : ContextProvider {
     /**
      * Some frontends need access to the current [Component] we are currently processing. Note: for
      * the [TranslationResult.finalCtx] this may either be null or the last component analyzed.
      */
-    var currentComponent: Component? = null,
-) : ContextProvider {
-
+    var currentComponent: Component? = null
     /**
      * The scope manager which comprises the complete translation result. In case of sequential
      * parsing, this scope manager is passed to the individual frontends one after another. In case
@@ -133,6 +132,7 @@ open class TranslationContext(
             return languages.firstOrNull()
         }
 
+    @get:JsonIgnore
     override val ctx: TranslationContext
         get() = this
 

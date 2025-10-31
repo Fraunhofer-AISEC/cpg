@@ -28,6 +28,7 @@
 package de.fraunhofer.aisec.cpg
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonMerge
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -70,7 +71,7 @@ class TranslationResult() : AstNode(), StatisticsHolder, ContextProvider {
      */
     lateinit var finalCtx: TranslationContext
 
-    @Relationship("COMPONENTS") val componentEdges = astEdgesOf<Component>()
+    @JsonMerge @Relationship("COMPONENTS") val componentEdges = astEdgesOf<Component>()
     /**
      * Entry points to the CPG: "SoftwareComponent" refer to programs, application, other "bundles"
      * of software.

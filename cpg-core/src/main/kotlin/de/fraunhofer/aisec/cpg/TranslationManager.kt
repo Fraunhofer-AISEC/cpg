@@ -369,7 +369,10 @@ private constructor(
             // Build a new translation context for this parallel parsing process. We need to do this
             // until we can use a single scope manager concurrently. We can re-use the global
             // configuration and type manager.
-            val ctx = TranslationContext(globalCtx.config, globalCtx.typeManager, component)
+            val ctx =
+                TranslationContext(globalCtx.config, globalCtx.typeManager).also {
+                    it.currentComponent = component
+                }
             parallelContexts.add(ctx)
 
             val future =

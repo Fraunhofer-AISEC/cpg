@@ -60,9 +60,9 @@ import java.util.IdentityHashMap
  * symbols and imports ideally. This is stored in [sorted] and is automatically computed the fist
  * time someone accesses the property.
  */
-class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T, IdentitySet<T>>() {
+class ImportDependencies<T : Node>() : IdentityHashMap<T, IdentitySet<T>>() {
 
-    init {
+    constructor(modules: MutableList<T>) : this() {
         // Populate the map with all modules so that we have an entry in our list
         // for all
         this += modules.map { Pair(it, identitySetOf()) }

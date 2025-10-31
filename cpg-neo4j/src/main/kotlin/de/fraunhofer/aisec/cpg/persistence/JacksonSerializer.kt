@@ -27,8 +27,10 @@ package de.fraunhofer.aisec.cpg.persistence
 
 import com.fasterxml.jackson.annotation.JacksonInject
 import com.fasterxml.jackson.annotation.JsonAutoDetect
+import com.fasterxml.jackson.annotation.JsonIdentityInfo
 import com.fasterxml.jackson.annotation.JsonIdentityReference
 import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.fasterxml.jackson.annotation.ObjectIdGenerators
 import com.fasterxml.jackson.annotation.PropertyAccessor
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.JsonGenerator
@@ -105,7 +107,6 @@ class NodeRegistry {
 
 class NodeKeyDeserializer(@JacksonInject val registry: NodeRegistry) : KeyDeserializer() {
     override fun deserializeKey(key: String, ctxt: DeserializationContext): Any {
-        println("Is this ever executed? $key")
         return registry.lookup(key)
             ?: throw IllegalStateException("Node with id='$key' not registered")
     }
@@ -185,10 +186,7 @@ class KClassKeySerializer : JsonSerializer<KClass<*>>() {
 
 class KClassKeyDeserializer : KeyDeserializer() {
     @Throws(IOException::class)
-    override fun deserializeKey(
-        key: String,
-        ctxt: com.fasterxml.jackson.databind.DeserializationContext,
-    ): Any {
+    override fun deserializeKey(key: String, ctxt: DeserializationContext): Any {
 
         val kclass = Class.forName(key).kotlin
 
@@ -210,10 +208,7 @@ class PairKeySerializer : JsonSerializer<Pair<*, *>>() {
 
 class PairKeyDeserializer : KeyDeserializer() {
     @Throws(IOException::class)
-    override fun deserializeKey(
-        key: String,
-        ctxt: com.fasterxml.jackson.databind.DeserializationContext,
-    ): Any {
+    override fun deserializeKey(key: String, ctxt: DeserializationContext): Any {
         // Expected format: "com.package.ClassA|com.package.ClassB"
         val parts = key.split("|")
         if (parts.size != 2) {
@@ -424,6 +419,7 @@ data class CPG(
 )
 
 fun serializeToJson(translationResult: TranslationResult): String {
+
     val factory =
         JsonFactory.builder()
             .streamWriteConstraints(
@@ -626,7 +622,7 @@ fun deserializeFromJson(json: String): TranslationResult {
 
     val objectMapper =
         ObjectMapper().setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY).apply {
-            registerModule(module)
+            // registerModule(module)
 
             // Allow injection of the registry instance
             setInjectableValues(InjectableValues.Std().addValue(NodeRegistry::class.java, registry))
