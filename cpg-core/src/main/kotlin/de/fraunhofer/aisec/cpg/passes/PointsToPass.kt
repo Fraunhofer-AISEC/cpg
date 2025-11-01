@@ -116,13 +116,14 @@ typealias DeclarationStateEntryElement =
         PowersetLattice.Element<NodeWithPropertiesKey>,
     >
 
-typealias SingleGeneralStateElement = MapLattice.Element<Node, GeneralStateEntryElement>
+typealias SingleGeneralStateElement = ConcurrentMapLattice.Element<Node, GeneralStateEntryElement>
 
-typealias SingleDeclarationStateElement = MapLattice.Element<Node, DeclarationStateEntryElement>
+typealias SingleDeclarationStateElement =
+    ConcurrentMapLattice.Element<Node, DeclarationStateEntryElement>
 
-typealias SingleGeneralState = MapLattice<Node, GeneralStateEntryElement>
+typealias SingleGeneralState = ConcurrentMapLattice<Node, GeneralStateEntryElement>
 
-typealias SingleDeclarationState = MapLattice<Node, DeclarationStateEntryElement>
+typealias SingleDeclarationState = ConcurrentMapLattice<Node, DeclarationStateEntryElement>
 
 class DeclarationStateEntry(
     addresses: PowersetLattice<Node>,
@@ -1160,7 +1161,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         coroutineScope {
             lattice.innerLattice1.lub(
                 doubleState.generalState,
-                MapLattice.Element(generalStateUpdates),
+                ConcurrentMapLattice.Element(generalStateUpdates),
                 allowModify = true,
             )
         }
@@ -1987,7 +1988,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             it.properties == newLastWriteEntry.properties
                     } ?: newLastWriteEntry
 
-                newDeclState.replace(
+                newDeclState.put(
                     addr,
                     DeclarationStateEntryElement(
                         PowersetLattice.Element(addr),
@@ -1997,7 +1998,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 )
             }
             doubleState =
-                PointsToState.Element(doubleState.generalState, MapLattice.Element(newDeclState))
+                PointsToState.Element(
+                    doubleState.generalState,
+                    ConcurrentMapLattice.Element(newDeclState),
+                )
         }
 
         doubleState =
@@ -2418,7 +2422,7 @@ suspend fun PointsToState.push(
     coroutineScope {
         this@push.innerLattice1.lub(
             currentState.generalState,
-            MapLattice.Element(newNode to newLatticeCopy),
+            ConcurrentMapLattice.Element(newNode to newLatticeCopy),
             true,
         )
     }
@@ -2469,7 +2473,7 @@ suspend fun PointsToState.pushToDeclarationsState(
 
     this@pushToDeclarationsState.innerLattice2.lub(
         currentState.declarationsState,
-        MapLattice.Element(newNode to newLatticeCopy),
+        ConcurrentMapLattice.Element(newNode to newLatticeCopy),
         true,
     )
     return@coroutineScope currentState
@@ -3079,12 +3083,14 @@ fun PointsToState.Element.fetchFieldAddresses(
                 )
 
             if (this.declarationsState[addr] == null) {
-                this.declarationsState[addr] =
+                this.declarationsState.put(
+                    addr,
                     TripleLattice.Element(
                         PowersetLattice.Element(addr),
                         PowersetLattice.Element(),
                         PowersetLattice.Element(),
-                    )
+                    ),
+                )
             }
 
             val newElements = this.declarationsState[addr]?.first
@@ -3162,12 +3168,14 @@ suspend fun PointsToState.Element.updateValues(
             //            doubleState.mutex.withLock {
             if (fullSourcesExist) {
                 val newDeclState = this@updateValues.declarationsState.duplicate()
-                newDeclState[destAddr] =
+                newDeclState.put(
+                    destAddr,
                     DeclarationStateEntryElement(
                         PowersetLattice.Element(currentEntries),
                         PowersetLattice.Element(newSources),
                         PowersetLattice.Element(prevDFG),
-                    )
+                    ),
+                )
                 doubleState = PointsToState.Element(doubleState.generalState, newDeclState)
             } else {
                 doubleState =
@@ -3216,7 +3224,8 @@ suspend fun PointsToState.Element.updateValues(
                 .map { chunk ->
                     launch(Dispatchers.Default) {
                         for (d in chunk) {
-                            newGenState[d] =
+                            newGenState.put(
+                                d,
                                 GeneralStateEntryElement(
                                     PowersetLattice.Element(destinationAddresses),
                                     PowersetLattice.Element(
@@ -3232,7 +3241,8 @@ suspend fun PointsToState.Element.updateValues(
                                             }
                                     ),
                                     PowersetLattice.Element(newLastWrites),
-                                )
+                                ),
+                            )
                         }
                     }
                 }
