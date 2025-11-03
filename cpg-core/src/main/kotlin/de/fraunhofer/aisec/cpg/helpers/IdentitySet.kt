@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentIdentityMap
 import java.lang.UnsupportedOperationException
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -84,7 +85,7 @@ open class IdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
      * Adds all [elements] to this [IdentitySet] without checking if they are already present. This
      * should only be used if this set is empty!
      */
-    fun addAllWithoutCheck(elements: IdentitySet<T>) {
+    open fun addAllWithoutCheck(elements: IdentitySet<T>) {
         // We rely on the input set and add everything without checking if an element is already
         // present.
         for (element in elements) {
@@ -102,6 +103,111 @@ open class IdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
 
     override fun iterator(): MutableIterator<T> {
         return map.keys.iterator()
+    }
+
+    /**
+     * Returns the contents of this [IdentitySet] as a sorted [List] according to order the nodes
+     * were inserted to. This is particularly useful, if you need to look up values in the list
+     * according to their "closeness" to the root AST node.
+     */
+    open fun toSortedList(): List<T> {
+        return map.entries.sortedBy { it.value }.map { it.key }
+    }
+
+    override fun addAll(elements: Collection<T>): Boolean {
+        // We need to keep track, whether we modified the set
+        var modified = false
+
+        elements.forEach {
+            if (add(it)) {
+                modified = true
+            }
+        }
+
+        return modified
+    }
+
+    override fun clear() {
+        map.clear()
+    }
+
+    override fun remove(element: T): Boolean {
+        return map.remove(element) != null
+    }
+
+    override fun removeAll(elements: Collection<T>): Boolean {
+        // We need to keep track, whether we modified the set
+        var modified = false
+
+        elements.forEach {
+            if (remove(it)) {
+                modified = true
+            }
+        }
+
+        return modified
+    }
+
+    override fun retainAll(elements: Collection<T>): Boolean {
+        throw UnsupportedOperationException()
+    }
+
+    override fun hashCode(): Int {
+        return map.hashCode()
+    }
+
+    override val size: Int
+        get() = map.size
+}
+
+open class ConcurrentIdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
+    private val map: ConcurrentIdentityMap<T, Int> = ConcurrentIdentityMap(expectedMaxSize * 2)
+    private val counter = AtomicInteger()
+
+    override operator fun contains(element: T): Boolean {
+        // We are using the backing reference-equality based map to check, if the element is already
+        // in the set.
+        return map.containsKey(element)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (other === this) return true
+        if (other !is Set<*>) return false
+        return this.size == other.size && this.containsAll(other)
+    }
+
+    override fun add(element: T): Boolean {
+        // Since we are a Set, we only want to add elements that are not already there
+        if (!contains(element)) {
+            map.put(element, counter.addAndGet(1))
+            return true
+        }
+
+        return false
+    }
+
+    /**
+     * Adds all [elements] to this [IdentitySet] without checking if they are already present. This
+     * should only be used if this set is empty!
+     */
+    fun addAllWithoutCheck(elements: ConcurrentIdentitySet<T>) {
+        // We rely on the input set and add everything without checking if an element is already
+        // present.
+        for (element in elements) {
+            map.put(element, counter.addAndGet(1))
+        }
+    }
+
+    override fun containsAll(elements: Collection<T>): Boolean {
+        return elements.all { map.containsKey(it) }
+    }
+
+    override fun isEmpty(): Boolean {
+        return map.isEmpty()
+    }
+
+    override fun iterator(): MutableIterator<T> {
+        return (map.keys as MutableSet).iterator()
     }
 
     /**
@@ -151,7 +257,9 @@ open class IdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
         throw UnsupportedOperationException()
     }
 
-    override fun hashCode() = map.hashCode()
+    override fun hashCode(): Int {
+        return map.hashCode()
+    }
 
     override val size: Int
         get() = map.size
@@ -159,6 +267,13 @@ open class IdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
 
 fun <T> identitySetOf(vararg elements: T): IdentitySet<T> {
     val set = IdentitySet<T>(elements.size)
+    for (element in elements) set.add(element)
+
+    return set
+}
+
+fun <T> concurrentIdentitySetOf(vararg elements: T): ConcurrentIdentitySet<T> {
+    val set = ConcurrentIdentitySet<T>(elements.size)
     for (element in elements) set.add(element)
 
     return set
@@ -173,6 +288,12 @@ infix fun <T> IdentitySet<T>.union(other: Iterable<T>): IdentitySet<T> {
 
 fun <T> Collection<T>.toIdentitySet(): IdentitySet<T> {
     val set = IdentitySet<T>(this.size)
+    set += this
+    return set
+}
+
+fun <T> Collection<T>.toConcurrentIdentitySet(): ConcurrentIdentitySet<T> {
+    val set = ConcurrentIdentitySet<T>(this.size)
     set += this
     return set
 }

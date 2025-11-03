@@ -27,7 +27,9 @@ package de.fraunhofer.aisec.cpg.helpers.functional
 
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.LoopStatement
+import de.fraunhofer.aisec.cpg.helpers.ConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
+import de.fraunhofer.aisec.cpg.helpers.toConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
 import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.passes.PointsToState
@@ -119,6 +121,10 @@ open class ConcurrentIdentityMap<K, V>(expectedMaxSize: Int) : Map<K, V> {
 
     /** Inserts all entries from the given [Sequence] of pairs. */
     fun putAll(pairs: Sequence<Pair<K, V>>) = putAll(pairs.asIterable())
+
+    fun clear() = backing.clear()
+
+    override fun hashCode() = backing.hashCode()
 }
 
 class EqualLinkedHashSet<T> : LinkedHashSet<T>() {
@@ -507,10 +513,11 @@ interface Lattice<T : Lattice.Element> {
 class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
     override lateinit var elements: Set<Element<T>>
 
-    class Element<T>(expectedMaxSize: Int) : IdentitySet<T>(expectedMaxSize), Lattice.Element {
+    class Element<T>(expectedMaxSize: Int) :
+        ConcurrentIdentitySet<T>(expectedMaxSize), Lattice.Element {
         // We make the new element a big bigger than the current size to avoid resizing
         constructor(set: Set<T>) : this(ceil(set.size * 1.5).toInt()) {
-            addAllWithoutCheck(set as? IdentitySet<T> ?: set.toIdentitySet())
+            addAllWithoutCheck(set as? ConcurrentIdentitySet<T> ?: set.toConcurrentIdentitySet())
         }
 
         constructor() : this(16)
@@ -547,7 +554,6 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
             var ret = true
             coroutineScope {
                 try {
-                    //                    coroutineScope {
                     this@Element.splitInto(CPU_CORES).forEach { chunk ->
                         launch(Dispatchers.Default) {
                             for (t in chunk) {
