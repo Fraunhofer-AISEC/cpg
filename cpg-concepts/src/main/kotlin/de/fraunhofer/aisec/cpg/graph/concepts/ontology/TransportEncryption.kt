@@ -1,0 +1,62 @@
+/*
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
+package de.fraunhofer.aisec.cpg.graph.concepts.ontology
+
+import de.fraunhofer.aisec.cpg.graph.Node
+import java.util.Objects
+import kotlin.Any
+import kotlin.Boolean
+import kotlin.Float
+import kotlin.Int
+import kotlin.String
+import kotlin.collections.MutableList
+
+/**
+ * enabled means the resource _can_ be reached via https, while enforced means it _can only_ be
+ * reached via https (or http traffic is redirected)
+ */
+public abstract class TransportEncryption(
+    public val enabled: Boolean?,
+    public val enforced: Boolean?,
+    public val protocol: String?,
+    public val protocolVersion: Float?,
+    public val cipherSuites: MutableList<CipherSuite?>,
+    basedOn: Cipher?,
+    secret: Secret?,
+    underlyingNode: Node?,
+) : Encryption(basedOn, secret, underlyingNode) {
+    override fun equals(other: Any?): Boolean =
+        other is TransportEncryption &&
+            super.equals(other) &&
+            other.enabled == this.enabled &&
+            other.enforced == this.enforced &&
+            other.protocol == this.protocol &&
+            other.protocolVersion == this.protocolVersion &&
+            other.cipherSuites == this.cipherSuites
+
+    override fun hashCode(): Int =
+        Objects.hash(super.hashCode(), enabled, enforced, protocol, protocolVersion, cipherSuites)
+}

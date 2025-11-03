@@ -1,0 +1,68 @@
+/*
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
+package de.fraunhofer.aisec.cpg.graph.concepts.ontology
+
+import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.Node
+import java.time.ZonedDateTime
+import java.util.Objects
+import kotlin.Any
+import kotlin.Boolean
+import kotlin.Int
+import kotlin.String
+import kotlin.collections.MutableMap
+
+/**
+ * Represents a configuration option within one [group]. Usually there is one option for each entry
+ * in a configuration data structure.
+ */
+public abstract class ConfigurationOption(
+    public val configurationGroup: ConfigurationGroup?,
+    public val selectorKey: SelectorKey?,
+    public val `value`: Value?,
+    dataLocation: DataLocation?,
+    creation_time: ZonedDateTime?,
+    description: String?,
+    labels: MutableMap<String, String>?,
+    name: String?,
+    raw: String?,
+    parent: Resource?,
+    underlyingNode: Node?,
+) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
+    init {
+        name?.let { this.name = Name(localName = it) }
+    }
+
+    override fun equals(other: Any?): Boolean =
+        other is ConfigurationOption &&
+            super.equals(other) &&
+            other.configurationGroup == this.configurationGroup &&
+            other.selectorKey == this.selectorKey &&
+            other.value == this.value
+
+    override fun hashCode(): Int =
+        Objects.hash(super.hashCode(), configurationGroup, selectorKey, value)
+}
