@@ -61,8 +61,6 @@ import kotlin.text.contains
 import kotlin.time.DurationUnit
 import kotlin.time.measureTimedValue
 import kotlinx.coroutines.*
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 val nodesCreatingUnknownValues = ConcurrentHashMap<Pair<Node, Name>, MemoryAddress>()
 var totalFunctionDeclarationCount = 0
@@ -217,8 +215,6 @@ class PointsToState(
             tupleState:
                 TupleLattice.Element<SingleGeneralStateElement, SingleDeclarationStateElement>
         ) : this(tupleState.first, tupleState.second)
-
-        val mutex = Mutex()
 
         override fun compare(other: Lattice.Element): Order {
             if (this === other) return Order.EQUAL
@@ -620,20 +616,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             )
                         val shortFsEntry = entry.properties.singleOrNull { it is Boolean }
                         if (shortFsEntry != null) propertySet.add(shortFsEntry)
-                        doubleState.mutex.withLock {
-                            doubleState =
-                                lattice.push(
-                                    doubleState,
-                                    dst,
-                                    GeneralStateEntryElement(
-                                        PowersetLattice.Element(),
-                                        PowersetLattice.Element(),
-                                        PowersetLattice.Element(
-                                            NodeWithPropertiesKey(src, propertySet)
-                                        ),
-                                    ),
-                                )
-                        }
+                        doubleState =
+                            lattice.push(
+                                doubleState,
+                                dst,
+                                GeneralStateEntryElement(
+                                    PowersetLattice.Element(),
+                                    PowersetLattice.Element(),
+                                    PowersetLattice.Element(NodeWithPropertiesKey(src, propertySet)),
+                                ),
+                            )
                     }
                 }
             }
@@ -1480,16 +1472,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     ): MutableMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>> {
         val shortFS = properties.any { it == true }
         val (destinationAddresses, destinations) =
-            doubleState.mutex.withLock {
-                calculateCallExpressionDestinations(
-                    doubleState,
-                    mapDstToSrc,
-                    dstValueDepth,
-                    subAccessName,
-                    argument,
-                    properties,
-                )
-            }
+            calculateCallExpressionDestinations(
+                doubleState,
+                mapDstToSrc,
+                dstValueDepth,
+                subAccessName,
+                argument,
+                properties,
+            )
         // Collect the properties for the
         // DeclarationStateEntry
         val propertySet = equalLinkedHashSetOf<Any>()
@@ -1506,28 +1496,24 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // functionSummary.
         // calculatePrev does this for us
         val prev = calculatePrevDFGs(lastWrites, shortFS, currentNode, inv)
-        // mapDstToSrc might be written, doubleState
-        // will be read, so we need a mutex
-        return doubleState.mutex.withLock {
-            addEntryToMap(
-                doubleState,
-                mapDstToSrc,
-                destinationAddresses,
-                destinations,
-                // To ensure that we have a
-                // unique Node, we take
-                // the allExpression if the FS
-                // said the srcNode is
-                // the FunctionDeclaration
-                if (srcNode is FunctionDeclaration) currentNode else srcNode,
-                shortFS,
-                srcValueDepth,
-                param,
-                propertySet,
-                currentNode,
-                prev,
-            )
-        }
+        return addEntryToMap(
+            doubleState,
+            mapDstToSrc,
+            destinationAddresses,
+            destinations,
+            // To ensure that we have a
+            // unique Node, we take
+            // the allExpression if the FS
+            // said the srcNode is
+            // the FunctionDeclaration
+            if (srcNode is FunctionDeclaration) currentNode else srcNode,
+            shortFS,
+            srcValueDepth,
+            param,
+            propertySet,
+            currentNode,
+            prev,
+        )
     }
 
     private fun calculatePrevDFGs(
@@ -1913,7 +1899,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     /** Returns a Pair of destination (for the general State) and destinationAddresses */
     private fun calculateCallExpressionDestinations(
         doubleState: PointsToState.Element,
-        mapDstToSrc: MutableMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>,
+        mapDstToSrc: ConcurrentHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>,
         dstValueDepth: Int,
         subAccessName: String,
         argument: Node,
@@ -3201,7 +3187,6 @@ suspend fun PointsToState.Element.updateValues(
                 .joinAll()
 
             // If we have any full writes, we eliminate the previous state
-            //            doubleState.mutex.withLock {
             if (fullSourcesExist) {
                 val newDeclState = this@updateValues.declarationsState.duplicate()
                 newDeclState.put(
