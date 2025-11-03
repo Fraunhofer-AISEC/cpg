@@ -32,8 +32,8 @@ import kotlin.Boolean
 import kotlin.Int
 
 /**
- * Represents an entry point into the execution of the program. This can be a \"local\" entry point,
- * such as a main function, a library initialization function or a \"remote\" entry point, such as a
+ * Represents an entry point into the execution of the program. This can be a "local" entry point,
+ * such as a main function, a library initialization function or a "remote" entry point, such as a
  * network endpoint.
  */
 public abstract class EntryPoint(underlyingNode: Node?) : Functionality(underlyingNode) {

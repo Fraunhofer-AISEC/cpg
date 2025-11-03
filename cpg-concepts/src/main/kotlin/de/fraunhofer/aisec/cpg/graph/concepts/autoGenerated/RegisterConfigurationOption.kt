@@ -33,7 +33,7 @@ import kotlin.Int
 
 /**
  * Represents an operation to register a new [ConfigurationOption]. This is often done with a call,
- * such as `conf.registerOption(\"option\", \"defaultValue\")`. This might not be necessary for all
+ * such as `conf.registerOption("option", "defaultValue")`. This might not be necessary for all
  * configuration frameworks, some might allow to directly read the group (via
  * [RegisterConfigurationOption]) without registering it first, or it is done implicitly. When code
  * and configuration is interacting, we expect that the configuration file (such as an INI file)

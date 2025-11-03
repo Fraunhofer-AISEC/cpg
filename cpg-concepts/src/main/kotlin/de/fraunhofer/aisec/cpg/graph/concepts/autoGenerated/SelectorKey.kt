@@ -36,8 +36,8 @@ import kotlin.String
 import kotlin.collections.MutableMap
 
 /**
- * The node that represents the \"key\" of this option. For example, in an INI file, this would be
- * the [FieldDeclaration] node that represents the key.
+ * The node that represents the "key" of this option. For example, in an INI file, this would be the
+ * [FieldDeclaration] node that represents the key.
  */
 public abstract class SelectorKey(
     public val algorithm: String?,

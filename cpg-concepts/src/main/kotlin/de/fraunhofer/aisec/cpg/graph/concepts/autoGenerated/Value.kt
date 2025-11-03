@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableMap
 
 /**
- * The node that represents the \"value\" of this option. For example, in an INI file, this would be
+ * The node that represents the "value" of this option. For example, in an INI file, this would be
  * the [FieldDeclaration.initializer] node that represents the value.
  */
 public abstract class Value(

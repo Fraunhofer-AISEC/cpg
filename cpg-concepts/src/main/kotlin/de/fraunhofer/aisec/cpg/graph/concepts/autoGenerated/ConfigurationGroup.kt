@@ -38,7 +38,7 @@ import kotlin.collections.MutableMap
 
 /**
  * Represents a group of configuration values within one [conf]. Depending on the type of
- * configuration data structure, there might only be one group (e.g., a \"default\" one), or there
+ * configuration data structure, there might only be one group (e.g., a "default" one), or there
  * might be several groups. For example, when loading a config from an INI file, each section would
  * be mapped to a [ConfigurationGroup], and each key-value pair would be mapped to an
  * [ConfigurationOption] within this group.

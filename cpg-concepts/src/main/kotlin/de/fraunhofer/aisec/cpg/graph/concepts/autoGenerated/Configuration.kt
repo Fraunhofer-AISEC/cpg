@@ -37,7 +37,7 @@ import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 /**
- * Represents the abstract concept of a \"configuration\". This is a common pattern in many
+ * Represents the abstract concept of a "configuration". This is a common pattern in many
  * programming languages, where a data structure in code represents an aggregation of configuration
  * values. For example, in Python, the
  * [`configparser`](https://docs.python.org/3/library/configparser.html) module is used to read INI

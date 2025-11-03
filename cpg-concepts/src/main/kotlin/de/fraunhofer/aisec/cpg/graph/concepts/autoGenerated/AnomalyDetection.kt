@@ -31,7 +31,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-/** Scope contains the resource ID of the protected resource. */
+/** Analyzes the activity of a NetworkService (which includes DatabaseServices). */
 public abstract class AnomalyDetection(
     public val enabled: Boolean?,
     public val applicationLogging: ApplicationLogging?,

@@ -34,7 +34,7 @@ import kotlin.Int
 /**
  * Represents an operation to read a specific configuration group. Often this is done with a member
  * access or a subscript operation on the configuration object, such as`conf.GROUP`
- * or`conf[\"GROUP\"]`.
+ * or`conf["GROUP"]`.
  */
 public abstract class ReadConfigurationGroup(
     public val configurationGroup: ConfigurationGroup?,

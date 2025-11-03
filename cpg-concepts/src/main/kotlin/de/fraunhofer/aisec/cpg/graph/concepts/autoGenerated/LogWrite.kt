@@ -42,7 +42,7 @@ public enum class LogLevel {
     UNKNOWN,
 }
 
-/** A log write operation e.g. `loggint.warn(\"...\")`. */
+/** A log write operation e.g. `loggint.warn("...")`. */
 public abstract class LogWrite(
     public val logLevel: LogLevel?,
     linkedConcept: Logging,
