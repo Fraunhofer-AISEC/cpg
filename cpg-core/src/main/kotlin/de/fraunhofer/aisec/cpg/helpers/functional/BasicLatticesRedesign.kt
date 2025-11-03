@@ -57,7 +57,7 @@ val CPU_CORES = Runtime.getRuntime().availableProcessors()
 val MIN_CHUNK_SIZE = 10
 
 /** Thread-safe map whose keys are compared by reference (===), not by equals(). */
-open class ConcurrentIdentityMap<K, V>(expectedMaxSize: Int) : Map<K, V> {
+open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V> {
 
     private val backing = ConcurrentHashMap<PointsToPass.IdKey<K>, V>(expectedMaxSize)
 
@@ -323,10 +323,10 @@ interface Lattice<T : Lattice.Element> {
     ): T {
         var finalStateCalcTime: Long = 0
         var pointsToStateLub: Long = 0
-        val globalState = IdentityHashMap<EvaluationOrder, T>()
+        val globalState = ConcurrentIdentityHashMap<EvaluationOrder, T>()
         var finalState: T = this.bottom
         for (startEdge in startEdges) {
-            globalState[startEdge] = startState
+            globalState.put(startEdge, startState)
         }
 
         // This list contains the edge(s) (probably only one unless we made a mistake) of the
@@ -401,84 +401,89 @@ interface Lattice<T : Lattice.Element> {
                     nextEdge,
                     if (isNotNearStartOrEndOfBasicBlock) nextGlobal else nextGlobal.duplicate() as T,
                 )
-            nextEdge.end.nextEOGEdges.forEach {
-                // We continue with the nextEOG edge if we haven't seen it before or if we
-                // updated
-                // the state in comparison to the previous time we were there.
+            coroutineScope {
+                // If we have multiple edges, we handle them in parallel
+                nextEdge.end.nextEOGEdges.forEach {
+                    launch(Dispatchers.Default) {
+                        // We continue with the nextEOG edge if we haven't seen it before or if we
+                        // updated
+                        // the state in comparison to the previous time we were there.
 
-                val oldGlobalIt = globalState[it]
+                        val oldGlobalIt = globalState[it]
 
-                // If we're on the loop head (some node is LoopStatement), and we use WIDENING
-                // or
-                // WIDENING_NARROWING, we have to apply the widening/narrowing here (if
-                // oldGlobalIt
-                // is not null).
-                val newGlobalIt =
-                    if (
-                        nextEdge.end is LoopStatement &&
-                            (strategy == Strategy.WIDENING ||
-                                strategy == Strategy.WIDENING_NARROWING) &&
-                            oldGlobalIt != null
-                    ) {
-                        this@Lattice.lub(
-                            one = newState,
-                            two = oldGlobalIt,
-                            allowModify = isNotNearStartOrEndOfBasicBlock,
-                            widen = true,
-                        )
-                    } else if (strategy == Strategy.NARROWING) {
-                        TODO()
-                    } else {
-                        val (result, time) =
-                            measureTimedValue {
-                                (oldGlobalIt?.let {
-                                    this@Lattice.lub(
-                                        one = newState,
-                                        two = it,
-                                        allowModify = isNotNearStartOrEndOfBasicBlock,
-                                    )
-                                } ?: newState)
-                            }
-                        pointsToStateLub += time.toLong(DurationUnit.MILLISECONDS)
-                        result
-                    }
-
-                globalState[it] = newGlobalIt
-
-                if (
-                    it !in currentBBEdgesList &&
-                        it !in nextBranchEdgesList &&
-                        it !in mergePointsEdgesList &&
-                        (isNoBranchingPoint ||
-                            oldGlobalIt == null ||
-                            // If we deal with PointsToState Elements, we use their special
-                            // parallelCompare function, otherwise, we resort to the traditional
-                            // compare
-                            ((newGlobalIt as? PointsToState.Element)?.parallelCompare(oldGlobalIt)
-                                ?: (newGlobalIt as? MapLattice.Element<*, *>)?.parallelCompare(
-                                    oldGlobalIt
+                        // If we're on the loop head (some node is LoopStatement), and we use
+                        // WIDENING or
+                        // WIDENING_NARROWING, we have to apply the widening/narrowing here (if
+                        // oldGlobalIt
+                        // is not null).
+                        val newGlobalIt =
+                            if (
+                                nextEdge.end is LoopStatement &&
+                                    (strategy == Strategy.WIDENING ||
+                                        strategy == Strategy.WIDENING_NARROWING) &&
+                                    oldGlobalIt != null
+                            ) {
+                                this@Lattice.lub(
+                                    one = newState,
+                                    two = oldGlobalIt,
+                                    allowModify = isNotNearStartOrEndOfBasicBlock,
+                                    widen = true,
                                 )
-                                ?: newGlobalIt.compare(oldGlobalIt)) in
-                                setOf(Order.GREATER, Order.UNEQUAL))
-                ) {
-                    if (it.start.prevEOGEdges.size > 1) {
-                        // This edge brings us to a merge point, so we add it to the list of
-                        // merge
-                        // points.
-                        mergePointsEdgesList.add(0, it)
-                    } else if (nextEdge.end.nextEOGEdges.size > 1) {
-                        // If we have multiple next edges, we add this edge to the list of edges
-                        // of
-                        // a next basic block.
-                        // We will process these after the current basic block has been
-                        // processed
-                        // (probably very soon).
-                        nextBranchEdgesList.add(0, it)
-                    } else {
-                        // If we have only one next edge, we add it to the current basic block
-                        // edges
-                        // list.
-                        currentBBEdgesList.add(0, it)
+                            } else if (strategy == Strategy.NARROWING) {
+                                TODO()
+                            } else {
+                                val (result, time) =
+                                    measureTimedValue {
+                                        (oldGlobalIt?.let {
+                                            this@Lattice.lub(
+                                                one = newState,
+                                                two = it,
+                                                allowModify = isNotNearStartOrEndOfBasicBlock,
+                                            )
+                                        } ?: newState)
+                                    }
+                                pointsToStateLub += time.toLong(DurationUnit.MILLISECONDS)
+                                result
+                            }
+
+                        globalState.put(it, newGlobalIt)
+
+                        if (
+                            it !in currentBBEdgesList &&
+                                it !in nextBranchEdgesList &&
+                                it !in mergePointsEdgesList &&
+                                (isNoBranchingPoint ||
+                                    oldGlobalIt == null ||
+                                    // If we deal with PointsToState Elements, we use their special
+                                    // parallelCompare function, otherwise, we resort to the
+                                    // traditional compare
+                                    ((newGlobalIt as? PointsToState.Element)?.parallelCompare(
+                                        oldGlobalIt
+                                    )
+                                        ?: (newGlobalIt as? MapLattice.Element<*, *>)
+                                            ?.parallelCompare(oldGlobalIt)
+                                        ?: newGlobalIt.compare(oldGlobalIt)) in
+                                        setOf(Order.GREATER, Order.UNEQUAL))
+                        ) {
+                            if (it.start.prevEOGEdges.size > 1) {
+                                // This edge brings us to a merge point, so we add it to the list of
+                                // merge
+                                // points.
+                                synchronized(mergePointsEdgesList) {
+                                    mergePointsEdgesList.add(0, it)
+                                }
+                            } else if (nextEdge.end.nextEOGEdges.size > 1) {
+                                // If we have multiple next edges, we add this edge to the list of
+                                // edges of a next basic block.
+                                // We will process these after the current basic block has been
+                                // processed (probably very soon).
+                                synchronized(nextBranchEdgesList) { nextBranchEdgesList.add(0, it) }
+                            } else {
+                                // If we have only one next edge, we add it to the current basic
+                                // block edges list.
+                                synchronized(currentBBEdgesList) { currentBBEdgesList.add(0, it) }
+                            }
+                        }
                     }
                 }
             }
@@ -742,7 +747,7 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
     }
 
     open class Element<K, V : Lattice.Element>(expectedMaxSize: Int) :
-        ConcurrentIdentityMap<K, V>(expectedMaxSize), Lattice.Element {
+        ConcurrentIdentityHashMap<K, V>(expectedMaxSize), Lattice.Element {
 
         constructor() : this(32)
 
@@ -1319,7 +1324,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                         addAll(one.keys)
                         addAll(two.keys)
                     }
-                val newMap = ConcurrentIdentityMap<K, V>(allKeys.size)
+                val newMap = ConcurrentIdentityHashMap<K, V>(allKeys.size)
                 allKeys
                     .splitInto(concurrencyCounter)
                     .map { chunk ->

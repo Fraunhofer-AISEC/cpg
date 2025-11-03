@@ -43,7 +43,6 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.concurrentIdentitySetOf
 import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice.Element
-import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.passes.PointsToPass.NodeWithPropertiesKey
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -768,7 +767,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                 if (existingEntry.none { it == shortFSEntry })
                                                     existingEntry.add(shortFSEntry)
                                             }
-                                            val propertySet = identitySetOf<Any>(true)
+                                            val propertySet = concurrentIdentitySetOf<Any>(true)
                                             if (subAccessName != "")
                                                 propertySet.add(
                                                     FieldDeclaration().apply {
@@ -932,13 +931,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 )
         if (
             (passConfig<Configuration>()?.maxAnalysisTime ?: 0L) != 0L &&
-                passConfig<Configuration>()?.maxAnalysisTime!! < (totalTimeinTransfer / 1000000000)
+                passConfig<Configuration>()?.maxAnalysisTime!! < (timeInTransfer / 1000000000)
         ) {
             if (!maxAnalysisTimeReachedOutputTriggered) {
                 log.info(
                     "Maximum analysis time (${passConfig<Configuration>()?.maxAnalysisTime}s) reached, skipping further analysis."
                 )
-                log.info("totalTimeinTransfer: $totalTimeinTransfer")
+                log.info("timeInTransfer: $timeInTransfer")
                 maxAnalysisTimeReachedOutputTriggered = true
             }
             return doubleState
@@ -2380,29 +2379,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     addresses = concurrentIdentitySetOf(pmv)
                 }
             }
-        //                }
-        //        }
         return doubleState
-    }
-}
-
-/**
- * Update the ConcurrentHashMap. If an entry exists, add the new values, otherwise, create a new
- * entry
- */
-private fun PointsToPass.updateGeneralStateUpdatesConcurrentHashMap(
-    generalStateUpdates: ConcurrentHashMap<Node, GeneralStateEntryElement>,
-    key: Node,
-    first: PowersetLattice.Element<Node>,
-    second: PowersetLattice.Element<NodeWithPropertiesKey>,
-    third: PowersetLattice.Element<NodeWithPropertiesKey>,
-) {
-    generalStateUpdates.compute(key) { _, existingValue ->
-        GeneralStateEntryElement(
-            existingValue?.first?.duplicate()?.apply { addAll(first) } ?: first,
-            existingValue?.second?.duplicate()?.apply { addAll(second) } ?: second,
-            existingValue?.third?.duplicate()?.apply { addAll(third) } ?: third,
-        )
     }
 }
 
@@ -3090,7 +3067,7 @@ fun PointsToState.Element.fetchFieldAddresses(
 
         if (elements.isNullOrEmpty()) {
             val newEntry =
-                identitySetOf<Node>(
+                concurrentIdentitySetOf<Node>(
                     nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, nodeName)) {
                         MemoryAddress(nodeName, isGlobal(addr))
                     }

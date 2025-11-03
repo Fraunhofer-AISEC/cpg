@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentIdentityMap
+import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentIdentityHashMap
 import java.lang.UnsupportedOperationException
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -161,7 +161,8 @@ open class IdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
 }
 
 open class ConcurrentIdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
-    private val map: ConcurrentIdentityMap<T, Int> = ConcurrentIdentityMap(expectedMaxSize * 2)
+    private val map: ConcurrentIdentityHashMap<T, Int> =
+        ConcurrentIdentityHashMap(expectedMaxSize * 2)
     private val counter = AtomicInteger()
 
     override operator fun contains(element: T): Boolean {
