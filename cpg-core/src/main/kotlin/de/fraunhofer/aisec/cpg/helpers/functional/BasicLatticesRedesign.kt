@@ -1290,17 +1290,15 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
         }
         var tmpTime = measureNanoTime {
             if (allowModify) {
-                val additionsPerChunk =
-                    two.splitInto(concurrencyCounter).map { chunk ->
-                        async(Dispatchers.Default) {
-                            val local = Element<K, V>(chunk.size)
+                two.splitInto(concurrencyCounter)
+                    .map { chunk ->
+                        launch(Dispatchers.Default) {
                             for ((k, v) in chunk) {
                                 val entry = one[k]
                                 if (entry == null) {
                                     // This key is not in "one", so we add the value from "two"
                                     // to "one"
-                                    //                                    local[k] = v
-                                    local.put(k, v)
+                                    one.put(k, v)
                                 } else if (
                                     two[k] != null && entry.compare(two[k]!!) != Order.EQUAL
                                 ) {
@@ -1320,15 +1318,9 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                                     }
                                 }
                             }
-                            local // return only new pairs
                         }
                     }
-                additionsPerChunk.awaitAll().forEach { addition ->
-                    addition.forEach { (k, v) ->
-                        //                        one[k] = v
-                        one.put(k, v)
-                    }
-                }
+                    .joinAll()
                 result = one
             } else {
                 val allKeys =
@@ -1358,7 +1350,6 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                                     } else thisValue ?: otherValue
                                 newValue?.let { newMap.put(key, it) }
                             }
-                            /*                            local*/
                         }
                     }
                     .joinAll()

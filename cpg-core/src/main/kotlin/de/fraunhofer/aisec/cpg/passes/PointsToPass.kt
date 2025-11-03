@@ -2472,9 +2472,10 @@ suspend fun PointsToState.pushToDeclarationsState(
     val newLatticeCopy = newLatticeElement.duplicate()
     val removeFromThird: MutableSet<NodeWithPropertiesKey> = ConcurrentHashMap.newKeySet()
 
-    val toRemoveSecond =
-        newLatticeElement.second.splitInto().map { chunk ->
-            async(Dispatchers.Default) {
+    newLatticeElement.second
+        .splitInto()
+        .map { chunk ->
+            launch(Dispatchers.Default) {
                 val local = PowersetLattice.Element<Pair<Node, Boolean>>()
                 for (pair in chunk) {
                     if (
@@ -2482,12 +2483,11 @@ suspend fun PointsToState.pushToDeclarationsState(
                             it.first === pair.first && it.second == pair.second
                         } == true
                     )
-                        local.add(pair)
+                        newLatticeCopy.second.remove(pair)
                 }
-                local
             }
         }
-    toRemoveSecond.awaitAll().forEach { subList -> newLatticeCopy.second.removeAll(subList) }
+        .joinAll()
 
     newLatticeElement.third
         .splitInto()
@@ -2495,13 +2495,12 @@ suspend fun PointsToState.pushToDeclarationsState(
             launch(Dispatchers.Default) {
                 for (nwpk in chunk) {
                     if (currentState.declarationsState[newNode]?.third?.contains(nwpk) == true) {
-                        removeFromThird.add(nwpk)
+                        newLatticeCopy.third.remove(nwpk)
                     }
                 }
             }
         }
         .joinAll()
-    newLatticeCopy.third.removeAll(removeFromThird)
 
     this@pushToDeclarationsState.innerLattice2.lub(
         currentState.declarationsState,
