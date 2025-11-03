@@ -975,32 +975,28 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
                         addAll(one.keys)
                         addAll(two.keys)
                     }
-                val newMap = ConcurrentIdentityMap<K, V>(allKeys.size)
-                allKeys
-                    .splitInto(concurrencyCounter)
-                    .map { chunk ->
-                        launch(Dispatchers.Default) {
-                            for (key in chunk) {
-                                val otherValue = two[key]
-                                val thisValue = one[key]
-                                val newValue =
-                                    if (thisValue != null && otherValue != null) {
-                                        innerLattice.lub(
-                                            one = thisValue,
-                                            two = otherValue,
-                                            allowModify = false,
-                                            widen = widen,
-                                            // We already run on $CPU_CORES coroutines, so we don't
-                                            // need any additional ones
-                                            1,
-                                        )
-                                    } else thisValue ?: otherValue
-                                newValue?.let { newMap.put(key, it) }
-                            }
+                result = Element()
+                allKeys.splitInto(concurrencyCounter).map { chunk ->
+                    launch(Dispatchers.Default) {
+                        for (key in chunk) {
+                            val otherValue = two[key]
+                            val thisValue = one[key]
+                            val newValue =
+                                if (thisValue != null && otherValue != null) {
+                                    innerLattice.lub(
+                                        one = thisValue,
+                                        two = otherValue,
+                                        allowModify = false,
+                                        widen = widen,
+                                        // We already run on $CPU_CORES coroutines, so we don't
+                                        // need any additional ones
+                                        1,
+                                    )
+                                } else thisValue ?: otherValue
+                            newValue?.let { result.put(key, it) }
                         }
                     }
-                    .joinAll()
-                result = Element(newMap)
+                }
             }
         }
         if (concurrencyCounter == CPU_CORES && !allowModify) {
@@ -1010,33 +1006,28 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
         return@coroutineScope result
     }
 
-    override suspend fun glb(one: Element<K, V>, two: Element<K, V>): Element<K, V> {
-        val allKeys = one.keys.intersect(two.keys).toIdentitySet()
-
-        val newMap = Element<K, V>(allKeys.size)
+    override suspend fun glb(one: Element<K, V>, two: Element<K, V>): Element<K, V> =
         coroutineScope {
-            val concurrentProcesses =
-                allKeys.map { key ->
-                    async {
+            val allKeys = one.keys.intersect(two.keys).toIdentitySet()
+
+            val newMap = Element<K, V>(allKeys.size)
+
+            allKeys.splitInto().forEach { chunk ->
+                launch(Dispatchers.Default) {
+                    for (key in chunk) {
                         val otherValue = two[key]
                         val thisValue = one[key]
                         val newValue =
                             if (thisValue != null && otherValue != null) {
                                 innerLattice.glb(thisValue, otherValue)
                             } else innerLattice.bottom
-                        key to newValue
+                        newMap.put(key, newValue)
                     }
                 }
-            concurrentProcesses.awaitAll().forEach { (key, value) ->
-                value.let {
-                    //                    newMap[key] = it
-                    newMap.put(key, it)
-                }
             }
-        }
 
-        return newMap
-    }
+            return@coroutineScope newMap
+        }
 
     override fun compare(one: Element<K, V>, two: Element<K, V>): Order {
         return one.compare(two)
@@ -1343,7 +1334,8 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                                             two = otherValue,
                                             allowModify = false,
                                             widen = widen,
-                                            // We already run on $CPU_CORES coroutines, so we don't
+                                            // We already run on $CPU_CORES coroutines, so we
+                                            // don't
                                             // need any additional ones
                                             1,
                                         )

@@ -704,9 +704,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                     .filterTo(PowersetLattice.Element()) {
                                         it.value.name != param.name
                                     }
-                            /*log.debug(
-                                "In storeFunctionSummary, param ${param.argumentIndex} (${param.name.localName}. Index ${index.name.localName} (${indexes.size} in total). stateEntries: ${stateEntries.size}"
-                            )*/
                             stateEntries
                                 /* See if we can find something that is different from the initial value*/
                                 .filterTo(PowersetLattice.Element()) {
@@ -2456,11 +2453,9 @@ suspend fun PointsToState.pushToDeclarationsState(
     // If we already have exactly that entry, no need to re-write it, otherwise we might confuse the
     // iterateEOG function
     val newLatticeCopy = newLatticeElement.duplicate()
-    val removeFromThird: MutableSet<NodeWithPropertiesKey> = ConcurrentHashMap.newKeySet()
 
-    newLatticeElement.second
-        .splitInto()
-        .map { chunk ->
+    coroutineScope {
+        newLatticeElement.second.splitInto().map { chunk ->
             launch(Dispatchers.Default) {
                 val local = PowersetLattice.Element<Pair<Node, Boolean>>()
                 for (pair in chunk) {
@@ -2473,11 +2468,8 @@ suspend fun PointsToState.pushToDeclarationsState(
                 }
             }
         }
-        .joinAll()
 
-    newLatticeElement.third
-        .splitInto()
-        .map { chunk ->
+        newLatticeElement.third.splitInto().map { chunk ->
             launch(Dispatchers.Default) {
                 for (nwpk in chunk) {
                     if (currentState.declarationsState[newNode]?.third?.contains(nwpk) == true) {
@@ -2486,7 +2478,7 @@ suspend fun PointsToState.pushToDeclarationsState(
                 }
             }
         }
-        .joinAll()
+    }
 
     this@pushToDeclarationsState.innerLattice2.lub(
         currentState.declarationsState,
