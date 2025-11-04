@@ -34,12 +34,12 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
-public abstract class DatabaseOperation(
+public open class DatabaseOperation(
     public val calls: List<String>?,
     public val databaseService: DatabaseService?,
     public val storage: DatabaseStorage?,
     public val linkedConcept: DatabaseStorage,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is DatabaseOperation &&

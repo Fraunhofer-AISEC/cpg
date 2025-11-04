@@ -31,7 +31,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class HttpClientLibrary(underlyingNode: Node?) : Framework(underlyingNode) {
+public open class HttpClientLibrary(underlyingNode: Node? = null) : Framework(underlyingNode) {
     override fun equals(other: Any?): Boolean = other is HttpClientLibrary && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

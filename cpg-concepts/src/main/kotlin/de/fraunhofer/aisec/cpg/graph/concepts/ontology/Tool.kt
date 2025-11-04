@@ -31,7 +31,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class Tool(underlyingNode: Node?) : Core(underlyingNode) {
+public open class Tool(underlyingNode: Node? = null) : Core(underlyingNode) {
     override fun equals(other: Any?): Boolean = other is Tool && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

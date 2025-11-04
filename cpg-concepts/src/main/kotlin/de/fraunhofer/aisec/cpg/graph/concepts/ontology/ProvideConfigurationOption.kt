@@ -35,11 +35,11 @@ import kotlin.Int
  * Represents an operation to provide a [ConfigurationOption]. It connects a
  * [ConfigurationOptionSource] with a [ConfigurationOption].
  */
-public abstract class ProvideConfigurationOption(
+public open class ProvideConfigurationOption(
     public val configurationOption: ConfigurationOption?,
     public val configurationOptionSource: ConfigurationOptionSource?,
     linkedConcept: Configuration,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : ConfigurationOperation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is ProvideConfigurationOption &&

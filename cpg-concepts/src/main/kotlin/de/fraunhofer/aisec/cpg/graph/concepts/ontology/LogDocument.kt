@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class LogDocument(
+public open class LogDocument(
     filetype: String?,
     documentChecksums: MutableList<DocumentChecksum?>,
     documentSignatures: MutableList<DocumentSignature?>,
@@ -49,7 +49,7 @@ public abstract class LogDocument(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Document(
         filetype,

@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableMap
 
 /** A Token used for TokenBasedAuthentication. */
-public abstract class Token(
+public open class Token(
     dataLocation: DataLocation?,
     creation_time: ZonedDateTime?,
     description: String?,
@@ -44,7 +44,7 @@ public abstract class Token(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
     init {
         name?.let { this.name = Name(localName = it) }

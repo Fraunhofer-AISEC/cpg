@@ -32,11 +32,11 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** Represents an operation that checks whether two principals are equal. */
-public abstract class EqualityCheck(
+public open class EqualityCheck(
     public val leftPrincipal: Principal?,
     public val rightPrincipal: Principal?,
     linkedConcept: Policy,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : PolicyOperation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is EqualityCheck &&

@@ -32,10 +32,10 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** Analyzes the activity of a NetworkService (which includes DatabaseServices). */
-public abstract class AnomalyDetection(
+public open class AnomalyDetection(
     public val enabled: Boolean?,
     public val applicationLogging: ApplicationLogging?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Auditing(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is AnomalyDetection &&

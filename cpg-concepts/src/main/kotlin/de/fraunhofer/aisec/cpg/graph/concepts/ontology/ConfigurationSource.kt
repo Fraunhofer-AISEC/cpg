@@ -41,7 +41,7 @@ import kotlin.collections.MutableMap
  * INI file frontend, the whole file would be represented as a [TranslationUnitDeclaration]. This
  * translation unit declaration would be the source of the configuration.
  */
-public abstract class ConfigurationSource(
+public open class ConfigurationSource(
     public val configurationGroupSources: MutableList<ConfigurationGroupSource?>,
     dataLocation: DataLocation?,
     creation_time: ZonedDateTime?,
@@ -50,7 +50,7 @@ public abstract class ConfigurationSource(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
     init {
         name?.let { this.name = Name(localName = it) }

@@ -32,9 +32,9 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class DiskEncryptionOperation(
+public open class DiskEncryptionOperation(
     public val linkedConcept: DiskEncryption,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is DiskEncryptionOperation && super.equals(other)

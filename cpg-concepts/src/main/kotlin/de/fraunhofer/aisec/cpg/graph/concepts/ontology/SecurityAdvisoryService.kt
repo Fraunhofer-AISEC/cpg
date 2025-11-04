@@ -43,7 +43,7 @@ import kotlin.collections.MutableMap
  * more feeds that contain the actual advisories as well as multiple (public) keys that are used to
  * sign the advisory documents.
  */
-public abstract class SecurityAdvisoryService(
+public open class SecurityAdvisoryService(
     public val securityAdvisoryFeeds: MutableList<SecurityAdvisoryFeed?>,
     public val selectorKeies: MutableList<SelectorKey?>,
     ips: Array<String>?,
@@ -63,7 +63,7 @@ public abstract class SecurityAdvisoryService(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     NetworkService(
         ips,

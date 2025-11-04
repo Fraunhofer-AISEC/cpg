@@ -31,7 +31,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class NoAuthentication(contextIsChecked: Boolean?, underlyingNode: Node?) :
+public open class NoAuthentication(contextIsChecked: Boolean?, underlyingNode: Node? = null) :
     Authenticity(contextIsChecked, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is NoAuthentication && super.equals(other)
 

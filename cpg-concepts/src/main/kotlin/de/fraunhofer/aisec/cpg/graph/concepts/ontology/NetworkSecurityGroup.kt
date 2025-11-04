@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class NetworkSecurityGroup(
+public open class NetworkSecurityGroup(
     internetAccessibleEndpoint: Boolean?,
     geoLocation: GeoLocation?,
     loggings: MutableList<Logging?>,
@@ -48,7 +48,7 @@ public abstract class NetworkSecurityGroup(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Networking(
         internetAccessibleEndpoint,

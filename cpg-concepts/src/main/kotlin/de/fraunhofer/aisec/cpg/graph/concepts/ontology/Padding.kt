@@ -33,7 +33,7 @@ import kotlin.Int
 import kotlin.String
 
 /** A padding for a cipher. */
-public abstract class Padding(public val scheme: String?, underlyingNode: Node?) :
+public open class Padding(public val scheme: String?, underlyingNode: Node? = null) :
     Functionality(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is Padding && super.equals(other) && other.scheme == this.scheme

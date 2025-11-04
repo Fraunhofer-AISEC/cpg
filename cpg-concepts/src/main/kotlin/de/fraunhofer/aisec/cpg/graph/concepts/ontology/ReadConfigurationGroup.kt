@@ -36,10 +36,10 @@ import kotlin.Int
  * access or a subscript operation on the configuration object, such as`conf.GROUP`
  * or`conf["GROUP"]`.
  */
-public abstract class ReadConfigurationGroup(
+public open class ReadConfigurationGroup(
     public val configurationGroup: ConfigurationGroup?,
     linkedConcept: Configuration,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : ConfigurationOperation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is ReadConfigurationGroup &&

@@ -32,7 +32,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class Functionality(underlyingNode: Node?) : Concept(underlyingNode) {
+public open class Functionality(underlyingNode: Node? = null) : Concept(underlyingNode) {
     override fun equals(other: Any?): Boolean = other is Functionality && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

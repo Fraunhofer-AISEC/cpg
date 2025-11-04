@@ -40,7 +40,7 @@ import kotlin.collections.MutableMap
  * file with our INI file frontend, each key-value pair is presented as a [FieldDeclaration]. This
  * field declaration would be the source to the configuration option.
  */
-public abstract class ConfigurationOptionSource(
+public open class ConfigurationOptionSource(
     dataLocation: DataLocation?,
     creation_time: ZonedDateTime?,
     description: String?,
@@ -48,7 +48,7 @@ public abstract class ConfigurationOptionSource(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
     init {
         name?.let { this.name = Name(localName = it) }

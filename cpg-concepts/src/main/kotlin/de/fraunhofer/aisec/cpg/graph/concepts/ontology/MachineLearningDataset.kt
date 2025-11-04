@@ -35,7 +35,7 @@ import kotlin.Int
 import kotlin.String
 import kotlin.collections.MutableMap
 
-public abstract class MachineLearningDataset(
+public open class MachineLearningDataset(
     public val size: Int?,
     public val type: String?,
     dataLocation: DataLocation?,
@@ -45,7 +45,7 @@ public abstract class MachineLearningDataset(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     MachineLearning(
         dataLocation,

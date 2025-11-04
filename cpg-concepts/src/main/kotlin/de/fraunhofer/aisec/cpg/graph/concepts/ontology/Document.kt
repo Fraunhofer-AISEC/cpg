@@ -37,7 +37,7 @@ import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 /** DataLocation: Describes the location as local or remote location */
-public abstract class Document(
+public open class Document(
     public val filetype: String?,
     public val documentChecksums: MutableList<DocumentChecksum?>,
     public val documentSignatures: MutableList<DocumentSignature?>,
@@ -50,7 +50,7 @@ public abstract class Document(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
     init {
         name?.let { this.name = Name(localName = it) }

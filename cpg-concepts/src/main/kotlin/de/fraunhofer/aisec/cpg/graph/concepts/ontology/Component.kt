@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class Component(
+public open class Component(
     public val libraries: MutableList<Library?>,
     codeModules: MutableList<CodeModule?>,
     codeRepository: CodeRepository?,
@@ -47,7 +47,7 @@ public abstract class Component(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Code(
         codeModules,

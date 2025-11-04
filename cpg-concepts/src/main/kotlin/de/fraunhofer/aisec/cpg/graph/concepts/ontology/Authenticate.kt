@@ -32,10 +32,10 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** Represents an authentication operation. */
-public abstract class Authenticate(
+public open class Authenticate(
     public val credential: Credential?,
     linkedConcept: Authenticity,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : AuthenticationOperation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is Authenticate && super.equals(other) && other.credential == this.credential

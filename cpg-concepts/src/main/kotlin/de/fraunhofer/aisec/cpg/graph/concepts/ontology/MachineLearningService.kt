@@ -38,7 +38,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class MachineLearningService(
+public open class MachineLearningService(
     public val machineLearnings: MutableList<MachineLearning?>,
     public val storage: MutableList<Storage?>,
     ips: Array<String>?,
@@ -58,7 +58,7 @@ public abstract class MachineLearningService(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     NetworkService(
         ips,

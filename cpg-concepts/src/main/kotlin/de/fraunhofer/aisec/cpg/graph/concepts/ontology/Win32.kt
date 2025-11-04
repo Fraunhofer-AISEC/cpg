@@ -37,7 +37,7 @@ import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 /** Represents a Win32 architecture, commonly found on Windows systems. */
-public abstract class Win32(
+public open class Win32(
     codeModules: MutableList<CodeModule?>,
     codeRepository: CodeRepository?,
     functionalities: MutableList<Functionality?>,
@@ -47,7 +47,7 @@ public abstract class Win32(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     OperatingSystemArchitecture(
         codeModules,

@@ -32,11 +32,11 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
-public abstract class MessageAuthenticationCode(
+public open class MessageAuthenticationCode(
     public val type: String?,
     public val input: Input?,
     public val key: Key?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Functionality(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is MessageAuthenticationCode &&

@@ -41,11 +41,11 @@ import kotlin.Int
  * The [ProvideConfiguration] operation is part of the [ConfigurationSource.ops] and not of the
  * [Configuration.ops] as it's an operation of the source, not the target.
  */
-public abstract class ProvideConfiguration(
+public open class ProvideConfiguration(
     public val configuration: Configuration?,
     public val configurationSource: ConfigurationSource?,
     linkedConcept: Configuration,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : ConfigurationOperation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is ProvideConfiguration &&

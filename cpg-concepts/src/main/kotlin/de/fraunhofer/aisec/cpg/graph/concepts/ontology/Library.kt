@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class Library(
+public open class Library(
     public val vulnerabilities: MutableList<Vulnerability?>,
     libraries: MutableList<Library?>,
     codeModules: MutableList<CodeModule?>,
@@ -48,7 +48,7 @@ public abstract class Library(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Component(
         libraries,

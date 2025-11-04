@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class Compute(
+public open class Compute(
     public val encryptionInUse: EncryptionInUse?,
     public val networkInterfaces: MutableList<NetworkInterface?>,
     public val remoteAttestation: RemoteAttestation?,
@@ -52,7 +52,7 @@ public abstract class Compute(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Infrastructure(
         internetAccessibleEndpoint,

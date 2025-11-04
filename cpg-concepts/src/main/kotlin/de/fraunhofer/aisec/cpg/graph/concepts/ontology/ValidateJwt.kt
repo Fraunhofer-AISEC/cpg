@@ -32,7 +32,7 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** Represents an operation to check the validity of a JWT token. */
-public abstract class ValidateJwt(linkedConcept: Authenticity, underlyingNode: Node?) :
+public open class ValidateJwt(linkedConcept: Authenticity, underlyingNode: Node? = null) :
     AuthenticationOperation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is ValidateJwt && super.equals(other)
 

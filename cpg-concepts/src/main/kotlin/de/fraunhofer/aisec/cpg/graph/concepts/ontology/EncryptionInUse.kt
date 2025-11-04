@@ -31,7 +31,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class EncryptionInUse(public val enabled: Boolean?, underlyingNode: Node?) :
+public open class EncryptionInUse(public val enabled: Boolean?, underlyingNode: Node? = null) :
     Confidentiality(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is EncryptionInUse && super.equals(other) && other.enabled == this.enabled

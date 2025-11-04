@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class Container(
+public open class Container(
     public val image: Image?,
     encryptionInUse: EncryptionInUse?,
     networkInterfaces: MutableList<NetworkInterface?>,
@@ -53,7 +53,7 @@ public abstract class Container(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Compute(
         encryptionInUse,

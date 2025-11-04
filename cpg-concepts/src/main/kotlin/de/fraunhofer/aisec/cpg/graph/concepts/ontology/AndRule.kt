@@ -39,7 +39,7 @@ import kotlin.collections.MutableMap
  * Represents a rule that combines two other rules using a logical AND operation. This means that
  * both rules must be satisfied for the combined rule to be satisfied.
  */
-public abstract class AndRule(
+public open class AndRule(
     dataLocation: DataLocation?,
     creation_time: ZonedDateTime?,
     description: String?,
@@ -47,7 +47,7 @@ public abstract class AndRule(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     PolicyRule(
         dataLocation,

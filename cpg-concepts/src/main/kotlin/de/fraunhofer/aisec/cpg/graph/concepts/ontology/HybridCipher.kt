@@ -32,7 +32,7 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
-public abstract class HybridCipher(
+public open class HybridCipher(
     public val keyDerivationFunction: KeyDerivationFunction?,
     public val keyExchange: AsymmetricCipher?,
     public val messageAuthenticationCode: MessageAuthenticationCode?,
@@ -41,7 +41,7 @@ public abstract class HybridCipher(
     cipherName: String?,
     keySize: Int?,
     padding: Padding?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Cipher(blockSize, cipherName, keySize, padding, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is HybridCipher &&

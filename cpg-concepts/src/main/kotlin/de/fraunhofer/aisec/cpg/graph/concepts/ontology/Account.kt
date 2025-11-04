@@ -37,7 +37,7 @@ import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 /** This represents the cloud account as a whole, e.g., an Azure subscription. */
-public abstract class Account(
+public open class Account(
     internetAccessibleEndpoint: Boolean?,
     geoLocation: GeoLocation?,
     loggings: MutableList<Logging?>,
@@ -49,7 +49,7 @@ public abstract class Account(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Infrastructure(
         internetAccessibleEndpoint,

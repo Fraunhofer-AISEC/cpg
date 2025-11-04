@@ -32,13 +32,13 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
-public abstract class CustomerKeyEncryption(
+public open class CustomerKeyEncryption(
     algorithm: String?,
     enabled: Boolean?,
     keyUrl: String?,
     basedOn: Cipher?,
     secret: Secret?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : AtRestEncryption(algorithm, enabled, keyUrl, basedOn, secret, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is CustomerKeyEncryption && super.equals(other)

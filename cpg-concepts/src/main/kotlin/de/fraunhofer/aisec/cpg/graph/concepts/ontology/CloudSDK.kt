@@ -31,7 +31,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class CloudSDK(underlyingNode: Node?) : Framework(underlyingNode) {
+public open class CloudSDK(underlyingNode: Node? = null) : Framework(underlyingNode) {
     override fun equals(other: Any?): Boolean = other is CloudSDK && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

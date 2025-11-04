@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class Storage(
+public open class Storage(
     public val activityLogging: ActivityLogging?,
     public val atRestEncryption: Boolean?,
     public val backups: MutableList<Backup?>,
@@ -53,7 +53,7 @@ public abstract class Storage(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Infrastructure(
         internetAccessibleEndpoint,

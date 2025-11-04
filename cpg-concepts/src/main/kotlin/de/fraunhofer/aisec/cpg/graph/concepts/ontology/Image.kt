@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class Image(
+public open class Image(
     public val application: Application?,
     internetAccessibleEndpoint: Boolean?,
     geoLocation: GeoLocation?,
@@ -49,7 +49,7 @@ public abstract class Image(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Infrastructure(
         internetAccessibleEndpoint,

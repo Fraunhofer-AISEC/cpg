@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class CICDService(
+public open class CICDService(
     internetAccessibleEndpoint: Boolean?,
     geoLocation: GeoLocation?,
     loggings: MutableList<Logging?>,
@@ -48,7 +48,7 @@ public abstract class CICDService(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Infrastructure(
         internetAccessibleEndpoint,

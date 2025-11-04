@@ -32,11 +32,11 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
-public abstract class LocalDataLocation(
+public open class LocalDataLocation(
     public val atRestEncryption: AtRestEncryption?,
     path: String?,
     storage: Storage?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : DataLocation(path, storage, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is LocalDataLocation &&

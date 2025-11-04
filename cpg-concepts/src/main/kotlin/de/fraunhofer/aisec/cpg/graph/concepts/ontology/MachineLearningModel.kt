@@ -37,7 +37,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class MachineLearningModel(
+public open class MachineLearningModel(
     public val adv_robustness: Float?,
     public val explainability: Float?,
     public val poisonLevel: Float?,
@@ -52,7 +52,7 @@ public abstract class MachineLearningModel(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     MachineLearning(
         dataLocation,

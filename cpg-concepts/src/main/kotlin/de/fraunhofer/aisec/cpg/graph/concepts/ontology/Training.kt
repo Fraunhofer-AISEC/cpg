@@ -35,7 +35,7 @@ import kotlin.Int
 import kotlin.String
 import kotlin.collections.MutableMap
 
-public abstract class Training(
+public open class Training(
     public val annualUpdateCompleted: Boolean?,
     public val successfullyCompletedPercentage: Boolean?,
     creation_time: ZonedDateTime?,
@@ -44,7 +44,7 @@ public abstract class Training(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : HumanResources(creation_time, description, labels, name, raw, parent, underlyingNode) {
     init {
         name?.let { this.name = Name(localName = it) }

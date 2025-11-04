@@ -40,7 +40,7 @@ import kotlin.collections.MutableMap
  * file with our INI file frontend, each section is presented as a [RecordDeclaration]. This record
  * declaration would be the source of the configuration group.
  */
-public abstract class ConfigurationGroupSource(
+public open class ConfigurationGroupSource(
     dataLocation: DataLocation?,
     creation_time: ZonedDateTime?,
     description: String?,
@@ -48,7 +48,7 @@ public abstract class ConfigurationGroupSource(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
     init {
         name?.let { this.name = Name(localName = it) }

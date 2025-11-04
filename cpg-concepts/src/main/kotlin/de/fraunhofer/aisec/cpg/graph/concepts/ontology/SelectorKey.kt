@@ -39,7 +39,7 @@ import kotlin.collections.MutableMap
  * The node that represents the "key" of this option. For example, in an INI file, this would be the
  * [FieldDeclaration] node that represents the key.
  */
-public abstract class SelectorKey(
+public open class SelectorKey(
     public val algorithm: String?,
     public val keySize: Int?,
     dataLocation: DataLocation?,
@@ -49,7 +49,7 @@ public abstract class SelectorKey(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
     init {
         name?.let { this.name = Name(localName = it) }

@@ -33,13 +33,13 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** RetentionPeriod in hours */
-public abstract class Backup(
+public open class Backup(
     public val enabled: Boolean?,
     public val interval: Duration?,
     public val retentionPeriod: Duration?,
     public val storage: Storage?,
     public val transportEncryption: Boolean?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Availability(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is Backup &&

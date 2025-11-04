@@ -31,10 +31,10 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class RegisterHttpEndpoint(
+public open class RegisterHttpEndpoint(
     public val httpEndpoint: HttpEndpoint?,
     linkedConcept: HttpRequestHandler,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : HttpRequestHandlerOperation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is RegisterHttpEndpoint &&

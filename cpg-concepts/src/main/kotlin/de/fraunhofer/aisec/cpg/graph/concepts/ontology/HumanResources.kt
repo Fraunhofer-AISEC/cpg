@@ -35,14 +35,14 @@ import kotlin.Int
 import kotlin.String
 import kotlin.collections.MutableMap
 
-public abstract class HumanResources(
+public open class HumanResources(
     creation_time: ZonedDateTime?,
     description: String?,
     labels: MutableMap<String, String>?,
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Resource(creation_time, description, labels, name, raw, parent, underlyingNode) {
     init {
         name?.let { this.name = Name(localName = it) }

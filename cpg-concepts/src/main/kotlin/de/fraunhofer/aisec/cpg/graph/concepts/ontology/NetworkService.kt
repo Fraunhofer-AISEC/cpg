@@ -42,7 +42,7 @@ import kotlin.collections.MutableMap
  * A NetworkService is an application (on the network layer) running on a Compute resource. It
  * provides access to a resource
  */
-public abstract class NetworkService(
+public open class NetworkService(
     public val ips: Array<String>?,
     public val ports: Array<Short>?,
     public val authenticity: Boolean?,
@@ -60,7 +60,7 @@ public abstract class NetworkService(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Networking(
         internetAccessibleEndpoint,

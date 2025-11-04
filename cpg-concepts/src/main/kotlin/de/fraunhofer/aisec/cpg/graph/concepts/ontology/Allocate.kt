@@ -31,7 +31,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class Allocate(linkedConcept: Memory, underlyingNode: Node?) :
+public open class Allocate(linkedConcept: Memory, underlyingNode: Node? = null) :
     MemoryOperation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is Allocate && super.equals(other)
 

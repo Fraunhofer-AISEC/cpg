@@ -36,9 +36,9 @@ import kotlin.Int
  * Base class for operations that involve protected assets. These operations can include checks for
  * access permissions, modifications, or any other actions that require validation against a policy.
  */
-public abstract class ProtectedAssetOperation(
+public open class ProtectedAssetOperation(
     public val linkedConcept: ProtectedAsset,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is ProtectedAssetOperation && super.equals(other)

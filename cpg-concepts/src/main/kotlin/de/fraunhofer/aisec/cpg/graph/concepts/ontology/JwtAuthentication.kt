@@ -32,12 +32,12 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** Represents a JWT-based authentication, which extends the [TokenBasedAuth]. */
-public abstract class JwtAuthentication(
+public open class JwtAuthentication(
     enabled: Boolean?,
     enforced: Boolean?,
     token: Token?,
     contextIsChecked: Boolean?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : TokenBasedAuthentication(enabled, enforced, token, contextIsChecked, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is JwtAuthentication && super.equals(other)
 

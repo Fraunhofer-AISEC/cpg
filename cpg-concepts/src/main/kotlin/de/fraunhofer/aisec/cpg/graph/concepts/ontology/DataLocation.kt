@@ -33,10 +33,10 @@ import kotlin.Int
 import kotlin.String
 
 /** path: Describes either local path or path in URL format */
-public abstract class DataLocation(
+public open class DataLocation(
     public val path: String?,
     public val storage: Storage?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Functionality(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is DataLocation &&

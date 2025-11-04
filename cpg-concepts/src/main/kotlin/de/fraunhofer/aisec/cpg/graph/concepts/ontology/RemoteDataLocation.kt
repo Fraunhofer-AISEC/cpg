@@ -32,12 +32,12 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
-public abstract class RemoteDataLocation(
+public open class RemoteDataLocation(
     public val authenticity: Authenticity?,
     public val transportEncryption: TransportEncryption?,
     path: String?,
     storage: Storage?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : DataLocation(path, storage, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is RemoteDataLocation &&

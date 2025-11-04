@@ -43,7 +43,7 @@ import kotlin.collections.MutableMap
  * a database service (with a host and IP) and the individual tables or collections would be
  * modelled as a DatabaseStorage entity.
  */
-public abstract class DatabaseService(
+public open class DatabaseService(
     public val anomalyDetections: AnomalyDetection?,
     public val httpEndpoint: HttpEndpoint?,
     public val malwareProtection: MalwareProtection?,
@@ -66,7 +66,7 @@ public abstract class DatabaseService(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     StorageService(
         activityLogging,

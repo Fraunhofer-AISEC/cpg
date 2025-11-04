@@ -32,7 +32,7 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** A log get operation e.g. `logging.getLogger("...")`. */
-public abstract class LogGet(linkedConcept: Logging, underlyingNode: Node?) :
+public open class LogGet(linkedConcept: Logging, underlyingNode: Node? = null) :
     LogOperation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is LogGet && super.equals(other)
 

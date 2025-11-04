@@ -32,11 +32,11 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
-public abstract class L3Firewall(
+public open class L3Firewall(
     public val enabled: Boolean?,
     public val inbound: Boolean?,
     public val restrictedPorts: String?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Firewall(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is L3Firewall &&

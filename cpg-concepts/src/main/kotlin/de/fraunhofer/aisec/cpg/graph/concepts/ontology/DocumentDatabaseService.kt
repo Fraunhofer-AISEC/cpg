@@ -38,7 +38,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class DocumentDatabaseService(
+public open class DocumentDatabaseService(
     anomalyDetections: AnomalyDetection?,
     httpEndpoint: HttpEndpoint?,
     malwareProtection: MalwareProtection?,
@@ -61,7 +61,7 @@ public abstract class DocumentDatabaseService(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     DatabaseService(
         anomalyDetections,

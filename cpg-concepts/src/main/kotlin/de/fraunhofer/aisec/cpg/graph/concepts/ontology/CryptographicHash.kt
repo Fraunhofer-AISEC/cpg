@@ -32,11 +32,11 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
-public abstract class CryptographicHash(
+public open class CryptographicHash(
     public val algorithm: String?,
     public val usesSalt: Boolean?,
     linkedConcept: Confidentiality,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : CryptographicOperation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is CryptographicHash &&

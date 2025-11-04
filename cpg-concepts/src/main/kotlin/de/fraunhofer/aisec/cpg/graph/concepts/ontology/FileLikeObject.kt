@@ -39,7 +39,7 @@ import kotlin.collections.MutableMap
  * This is the base class for all file-like objects. It provides the common properties and methods
  * that are shared by all file-like objects.
  */
-public abstract class FileLikeObject(
+public open class FileLikeObject(
     dataLocation: DataLocation?,
     creation_time: ZonedDateTime?,
     description: String?,
@@ -47,7 +47,7 @@ public abstract class FileLikeObject(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
     init {
         name?.let { this.name = Name(localName = it) }

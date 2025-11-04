@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class Identifiable(
+public open class Identifiable(
     public val activated: Boolean?,
     public val authenticity: Authenticity?,
     public val authorization: Authorization?,
@@ -51,7 +51,7 @@ public abstract class Identifiable(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Infrastructure(
         internetAccessibleEndpoint,

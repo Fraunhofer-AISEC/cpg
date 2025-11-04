@@ -39,10 +39,10 @@ import kotlin.Int
  * expect that the configuration file (such as an INI file) contains the [ConfigurationGroup] node
  * and the code contains the [RegisterConfigurationGroup] and [ReadConfigurationGroup] nodes.
  */
-public abstract class RegisterConfigurationGroup(
+public open class RegisterConfigurationGroup(
     public val configurationGroup: ConfigurationGroup?,
     linkedConcept: Configuration,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : ConfigurationOperation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is RegisterConfigurationGroup &&

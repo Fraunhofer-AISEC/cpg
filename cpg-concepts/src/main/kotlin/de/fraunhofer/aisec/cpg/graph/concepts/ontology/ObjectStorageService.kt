@@ -43,7 +43,7 @@ import kotlin.collections.MutableMap
  * storage containers. The storage itself is modelled as a ObjectStorage. The service has an http
  * endpoint.
  */
-public abstract class ObjectStorageService(
+public open class ObjectStorageService(
     public val httpEndpoint: HttpEndpoint?,
     activityLogging: ActivityLogging?,
     storage: MutableList<Storage?>,
@@ -64,7 +64,7 @@ public abstract class ObjectStorageService(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     StorageService(
         activityLogging,

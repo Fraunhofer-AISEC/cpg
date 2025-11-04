@@ -32,10 +32,10 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** Represents an operation used by the [DynamicLoading] concept. */
-public abstract class DynamicLoadingOperation(
+public open class DynamicLoadingOperation(
     public val operatingSystemArchitecture: OperatingSystemArchitecture?,
     linkedConcept: Memory,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : MemoryOperation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is DynamicLoadingOperation &&

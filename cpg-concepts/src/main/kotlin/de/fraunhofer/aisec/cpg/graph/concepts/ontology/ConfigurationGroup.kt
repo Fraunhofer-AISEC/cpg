@@ -43,7 +43,7 @@ import kotlin.collections.MutableMap
  * be mapped to a [ConfigurationGroup], and each key-value pair would be mapped to an
  * [ConfigurationOption] within this group.
  */
-public abstract class ConfigurationGroup(
+public open class ConfigurationGroup(
     public val configuration: Configuration?,
     public val configurationOptions: MutableList<ConfigurationOption?>,
     dataLocation: DataLocation?,
@@ -53,7 +53,7 @@ public abstract class ConfigurationGroup(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
     init {
         name?.let { this.name = Name(localName = it) }

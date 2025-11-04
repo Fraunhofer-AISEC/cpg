@@ -32,7 +32,7 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
-public abstract class GeoLocation(public val region: String?, underlyingNode: Node?) :
+public open class GeoLocation(public val region: String?, underlyingNode: Node? = null) :
     Availability(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is GeoLocation && super.equals(other) && other.region == this.region

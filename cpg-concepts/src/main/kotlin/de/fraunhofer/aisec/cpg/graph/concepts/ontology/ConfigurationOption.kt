@@ -39,7 +39,7 @@ import kotlin.collections.MutableMap
  * Represents a configuration option within one [group]. Usually there is one option for each entry
  * in a configuration data structure.
  */
-public abstract class ConfigurationOption(
+public open class ConfigurationOption(
     public val configurationGroup: ConfigurationGroup?,
     public val selectorKey: SelectorKey?,
     public val `value`: Value?,
@@ -50,7 +50,7 @@ public abstract class ConfigurationOption(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
     init {
         name?.let { this.name = Name(localName = it) }

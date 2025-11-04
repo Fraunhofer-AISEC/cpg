@@ -32,10 +32,10 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** HTTP Client. */
-public abstract class HttpClient(
+public open class HttpClient(
     public val isTLS: Boolean?,
     public val authenticity: Authenticity?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Http(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is HttpClient &&

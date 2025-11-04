@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class NetworkInterface(
+public open class NetworkInterface(
     public val accessRestriction: Boolean?,
     public val networkService: NetworkService?,
     internetAccessibleEndpoint: Boolean?,
@@ -50,7 +50,7 @@ public abstract class NetworkInterface(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Networking(
         internetAccessibleEndpoint,

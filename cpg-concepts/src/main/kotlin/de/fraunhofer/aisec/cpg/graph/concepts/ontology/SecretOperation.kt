@@ -32,7 +32,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class SecretOperation(public val linkedConcept: Secret, underlyingNode: Node?) :
+public open class SecretOperation(public val linkedConcept: Secret, underlyingNode: Node? = null) :
     Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is SecretOperation && super.equals(other)
 

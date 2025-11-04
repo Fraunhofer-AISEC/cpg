@@ -37,7 +37,7 @@ import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 /** Represents a POSIX architecture, commonly found on Linux systems. */
-public abstract class POSIX(
+public open class POSIX(
     codeModules: MutableList<CodeModule?>,
     codeRepository: CodeRepository?,
     functionalities: MutableList<Functionality?>,
@@ -47,7 +47,7 @@ public abstract class POSIX(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     OperatingSystemArchitecture(
         codeModules,

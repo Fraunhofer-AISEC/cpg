@@ -31,7 +31,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class UsageStatistics(public val apiHitsPerMonth: Int?, underlyingNode: Node?) :
+public open class UsageStatistics(public val apiHitsPerMonth: Int?, underlyingNode: Node? = null) :
     Auditing(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is UsageStatistics &&

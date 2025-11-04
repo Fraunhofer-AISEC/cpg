@@ -36,7 +36,7 @@ import kotlin.String
  * An HTTP endpoint can set the "proxyTarget" property, in case that is routed through a (reverse)
  * proxy, e.g. a load balancer.
  */
-public abstract class HttpEndpoint(
+public open class HttpEndpoint(
     public val handler: String?,
     public val method: String?,
     public val path: String?,
@@ -46,7 +46,7 @@ public abstract class HttpEndpoint(
     public val httpRequestContext: HttpRequestContext?,
     public val proxyTarget: HttpEndpoint?,
     public val transportEncryption: TransportEncryption?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : RemoteEntryPoint(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is HttpEndpoint &&

@@ -32,9 +32,9 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.collections.MutableList
 
-public abstract class GeoRedundancy(
+public open class GeoRedundancy(
     geoLocations: MutableList<GeoLocation?>,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Redundancy(geoLocations, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is GeoRedundancy && super.equals(other)
 

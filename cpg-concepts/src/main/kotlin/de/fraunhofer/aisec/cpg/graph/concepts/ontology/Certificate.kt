@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class Certificate(
+public open class Certificate(
     enabled: Boolean?,
     expirationDate: ZonedDateTime?,
     isManaged: Boolean?,
@@ -53,7 +53,7 @@ public abstract class Certificate(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Credential(
         enabled,

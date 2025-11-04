@@ -39,7 +39,7 @@ import kotlin.collections.MutableMap
  * Represents a rule that is part of a policy. This can be used to define conditions that must be
  * met for the policy to be enforced.
  */
-public abstract class PolicyRule(
+public open class PolicyRule(
     dataLocation: DataLocation?,
     creation_time: ZonedDateTime?,
     description: String?,
@@ -47,7 +47,7 @@ public abstract class PolicyRule(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
     init {
         name?.let { this.name = Name(localName = it) }

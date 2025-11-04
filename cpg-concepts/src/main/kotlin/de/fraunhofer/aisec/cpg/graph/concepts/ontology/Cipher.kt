@@ -33,12 +33,12 @@ import kotlin.Int
 import kotlin.String
 
 /** Represents a cipher suite. E.g. `AES-XTS-plain64`. */
-public abstract class Cipher(
+public open class Cipher(
     public val blockSize: Int?,
     public val cipherName: String?,
     public val keySize: Int?,
     public val padding: Padding?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Functionality(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is Cipher &&

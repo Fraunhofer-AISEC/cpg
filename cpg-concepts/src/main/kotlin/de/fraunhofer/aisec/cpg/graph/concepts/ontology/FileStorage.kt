@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class FileStorage(
+public open class FileStorage(
     public val publicAccess: Boolean?,
     activityLogging: ActivityLogging?,
     atRestEncryption: Boolean?,
@@ -54,7 +54,7 @@ public abstract class FileStorage(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Storage(
         activityLogging,

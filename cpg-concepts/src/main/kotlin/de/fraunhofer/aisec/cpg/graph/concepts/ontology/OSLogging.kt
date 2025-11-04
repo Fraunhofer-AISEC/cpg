@@ -34,14 +34,14 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
-public abstract class OSLogging(
+public open class OSLogging(
     enabled: Boolean?,
     monitoringEnabled: Boolean?,
     name: String?,
     retentionPeriod: Duration?,
     securityAlertsEnabled: Boolean?,
     loggingService: LoggingService?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Logging(
         enabled,

@@ -43,7 +43,7 @@ import kotlin.collections.MutableMap
  * backend. It has multiple subclasses, e.g., for databases or object stores. It has a list of
  * storage resources associated to it.
  */
-public abstract class StorageService(
+public open class StorageService(
     public val activityLogging: ActivityLogging?,
     public val storage: MutableList<Storage?>,
     ips: Array<String>?,
@@ -63,7 +63,7 @@ public abstract class StorageService(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     NetworkService(
         ips,

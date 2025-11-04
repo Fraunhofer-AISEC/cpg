@@ -32,10 +32,10 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
-public abstract class KeyDerivationFunction(
+public open class KeyDerivationFunction(
     public val type: String?,
     public val input: Input?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Functionality(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is KeyDerivationFunction &&

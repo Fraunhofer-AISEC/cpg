@@ -31,7 +31,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class DDoSProtection(underlyingNode: Node?) : Availability(underlyingNode) {
+public open class DDoSProtection(underlyingNode: Node? = null) : Availability(underlyingNode) {
     override fun equals(other: Any?): Boolean = other is DDoSProtection && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

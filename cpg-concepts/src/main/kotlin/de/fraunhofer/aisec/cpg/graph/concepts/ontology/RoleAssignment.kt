@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class RoleAssignment(
+public open class RoleAssignment(
     activated: Boolean?,
     authenticity: Authenticity?,
     authorization: Authorization?,
@@ -51,7 +51,7 @@ public abstract class RoleAssignment(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Identifiable(
         activated,

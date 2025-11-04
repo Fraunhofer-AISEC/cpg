@@ -34,14 +34,14 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
-public abstract class ResourceLogging(
+public open class ResourceLogging(
     enabled: Boolean?,
     monitoringEnabled: Boolean?,
     name: String?,
     retentionPeriod: Duration?,
     securityAlertsEnabled: Boolean?,
     loggingService: LoggingService?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Logging(
         enabled,

@@ -39,7 +39,7 @@ import kotlin.collections.MutableMap
  * A generic concept to describe memory operations with a program. This includes allocation and
  * de-allocation of memory as well as copying memory regions.
  */
-public abstract class Memory(
+public open class Memory(
     public val mode: String?,
     creation_time: ZonedDateTime?,
     description: String?,
@@ -47,7 +47,7 @@ public abstract class Memory(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Resource(creation_time, description, labels, name, raw, parent, underlyingNode) {
     init {
         name?.let { this.name = Name(localName = it) }

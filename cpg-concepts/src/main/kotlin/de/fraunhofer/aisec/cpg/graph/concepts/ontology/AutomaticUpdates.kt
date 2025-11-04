@@ -36,11 +36,11 @@ import kotlin.Int
  * This feature is, e.g., available on some VM services to automatically update their software. It
  * ensures that a resource is protected from tampering with its state.
  */
-public abstract class AutomaticUpdates(
+public open class AutomaticUpdates(
     public val enabled: Boolean?,
     public val interval: Duration?,
     public val securityOnly: Boolean?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Integrity(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is AutomaticUpdates &&

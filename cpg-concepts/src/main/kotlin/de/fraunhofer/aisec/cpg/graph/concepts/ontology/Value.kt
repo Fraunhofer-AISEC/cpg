@@ -39,7 +39,7 @@ import kotlin.collections.MutableMap
  * The node that represents the "value" of this option. For example, in an INI file, this would be
  * the [FieldDeclaration.initializer] node that represents the value.
  */
-public abstract class Value(
+public open class Value(
     dataLocation: DataLocation?,
     creation_time: ZonedDateTime?,
     description: String?,
@@ -47,7 +47,7 @@ public abstract class Value(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
     init {
         name?.let { this.name = Name(localName = it) }

@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class Secret(
+public open class Secret(
     public val keySize: Int?,
     public val basedOn: Cipher?,
     enabled: Boolean?,
@@ -55,7 +55,7 @@ public abstract class Secret(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Credential(
         enabled,

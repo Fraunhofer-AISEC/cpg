@@ -33,10 +33,10 @@ import kotlin.Int
 import kotlin.String
 import kotlin.collections.MutableList
 
-public abstract class DocumentSignature(
+public open class DocumentSignature(
     public val algorithm: String?,
     public val errors: MutableList<Error?>,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Integrity(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is DocumentSignature &&

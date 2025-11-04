@@ -40,7 +40,7 @@ import kotlin.collections.MutableMap
  * Represents a policy that can be applied to a resource or a set of resources. Policies can contain
  * rules and operations that define how access to the resource is controlled.
  */
-public abstract class Policy(
+public open class Policy(
     public val context: Context?,
     public val policyRules: MutableList<PolicyRule?>,
     dataLocation: DataLocation?,
@@ -50,7 +50,7 @@ public abstract class Policy(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
     init {
         name?.let { this.name = Name(localName = it) }

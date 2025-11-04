@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class Identity(
+public open class Identity(
     public val disablePasswordPolicy: Boolean?,
     public val enforceMFA: Boolean?,
     public val lastActivity: ZonedDateTime?,
@@ -56,7 +56,7 @@ public abstract class Identity(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Identifiable(
         activated,

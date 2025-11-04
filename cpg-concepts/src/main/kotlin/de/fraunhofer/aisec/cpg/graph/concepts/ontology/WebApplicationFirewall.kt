@@ -32,8 +32,10 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** A WAF is a L7 firewall that includes L3 capabilities */
-public abstract class WebApplicationFirewall(public val enabled: Boolean?, underlyingNode: Node?) :
-    Firewall(underlyingNode) {
+public open class WebApplicationFirewall(
+    public val enabled: Boolean?,
+    underlyingNode: Node? = null,
+) : Firewall(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is WebApplicationFirewall && super.equals(other) && other.enabled == this.enabled
 

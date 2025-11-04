@@ -37,7 +37,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class QPU(
+public open class QPU(
     public val OneQubitErrorRate: Float?,
     public val SpamErrorRate: Float?,
     public val TwoQubitErrorRate: Float?,
@@ -57,7 +57,7 @@ public abstract class QPU(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Compute(
         encryptionInUse,

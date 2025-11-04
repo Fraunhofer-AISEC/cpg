@@ -31,10 +31,10 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class CertificateBasedAuthentication(
+public open class CertificateBasedAuthentication(
     public val enabled: Boolean?,
     contextIsChecked: Boolean?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Authenticity(contextIsChecked, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is CertificateBasedAuthentication &&

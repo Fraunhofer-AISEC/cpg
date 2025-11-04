@@ -43,7 +43,7 @@ import kotlin.collections.MutableMap
  * storage shares. The storage itself is modelled as a FileStorage. The service has an http
  * endpoint.
  */
-public abstract class FileStorageService(
+public open class FileStorageService(
     public val httpEndpoint: HttpEndpoint?,
     activityLogging: ActivityLogging?,
     storage: MutableList<Storage?>,
@@ -64,7 +64,7 @@ public abstract class FileStorageService(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     StorageService(
         activityLogging,

@@ -36,9 +36,9 @@ import kotlin.Int
  * Represents an exit operation that is part of a [Boundary]. This operation is used to define the
  * point at which data leaves the boundary.
  */
-public abstract class ExitBoundaryOperation(
+public open class ExitBoundaryOperation(
     public val linkedConcept: Boundary,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is ExitBoundaryOperation && super.equals(other)

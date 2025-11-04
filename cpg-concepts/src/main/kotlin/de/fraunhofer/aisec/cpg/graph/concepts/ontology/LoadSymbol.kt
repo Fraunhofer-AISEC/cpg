@@ -35,10 +35,10 @@ import kotlin.Int
  * Represents an operation that loads a symbol during runtime. A common example would be a call
  * to`dlsym` in C/C++.
  */
-public abstract class LoadSymbol(
+public open class LoadSymbol(
     operatingSystemArchitecture: OperatingSystemArchitecture?,
     linkedConcept: Memory,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : DynamicLoadingOperation(operatingSystemArchitecture, linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is LoadSymbol && super.equals(other)
 

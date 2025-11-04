@@ -31,7 +31,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class Confidentiality(underlyingNode: Node?) : SecurityFeature(underlyingNode) {
+public open class Confidentiality(underlyingNode: Node? = null) : SecurityFeature(underlyingNode) {
     override fun equals(other: Any?): Boolean = other is Confidentiality && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class Code(
+public open class Code(
     public val codeModules: MutableList<CodeModule?>,
     public val codeRepository: CodeRepository?,
     public val functionalities: MutableList<Functionality?>,
@@ -46,7 +46,7 @@ public abstract class Code(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Resource(creation_time, description, labels, name, raw, parent, underlyingNode) {
     init {
         name?.let { this.name = Name(localName = it) }

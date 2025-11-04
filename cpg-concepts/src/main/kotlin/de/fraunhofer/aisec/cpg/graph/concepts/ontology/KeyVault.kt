@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class KeyVault(
+public open class KeyVault(
     public val credentials: MutableList<Credential?>,
     internetAccessibleEndpoint: Boolean?,
     geoLocation: GeoLocation?,
@@ -49,7 +49,7 @@ public abstract class KeyVault(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Infrastructure(
         internetAccessibleEndpoint,

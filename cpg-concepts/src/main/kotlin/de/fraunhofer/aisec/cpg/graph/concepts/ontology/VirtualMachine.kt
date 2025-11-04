@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class VirtualMachine(
+public open class VirtualMachine(
     public val activityLogging: ActivityLogging?,
     public val automaticUpdates: AutomaticUpdates?,
     public val blockStorage: MutableList<BlockStorage?>,
@@ -58,7 +58,7 @@ public abstract class VirtualMachine(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Compute(
         encryptionInUse,

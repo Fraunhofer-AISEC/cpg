@@ -39,7 +39,7 @@ import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 /** A generic network service. */
-public abstract class GenericNetworkService(
+public open class GenericNetworkService(
     ips: Array<String>?,
     ports: Array<Short>?,
     authenticity: Boolean?,
@@ -57,7 +57,7 @@ public abstract class GenericNetworkService(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     NetworkService(
         ips,

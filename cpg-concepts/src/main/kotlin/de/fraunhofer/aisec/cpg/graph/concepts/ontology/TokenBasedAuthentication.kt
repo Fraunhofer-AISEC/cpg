@@ -32,12 +32,12 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** Represents a token-based authentication. */
-public abstract class TokenBasedAuthentication(
+public open class TokenBasedAuthentication(
     public val enabled: Boolean?,
     public val enforced: Boolean?,
     public val token: Token?,
     contextIsChecked: Boolean?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Authenticity(contextIsChecked, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is TokenBasedAuthentication &&

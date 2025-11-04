@@ -35,7 +35,7 @@ import kotlin.Int
 import kotlin.String
 import kotlin.collections.MutableMap
 
-public abstract class SecurityTraining(
+public open class SecurityTraining(
     annualUpdateCompleted: Boolean?,
     successfullyCompletedPercentage: Boolean?,
     creation_time: ZonedDateTime?,
@@ -44,7 +44,7 @@ public abstract class SecurityTraining(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Training(
         annualUpdateCompleted,

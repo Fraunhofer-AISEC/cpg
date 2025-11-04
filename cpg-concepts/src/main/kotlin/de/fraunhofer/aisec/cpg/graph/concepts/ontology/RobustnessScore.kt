@@ -31,7 +31,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class RobustnessScore(underlyingNode: Node?) : Reliability(underlyingNode) {
+public open class RobustnessScore(underlyingNode: Node? = null) : Reliability(underlyingNode) {
     override fun equals(other: Any?): Boolean = other is RobustnessScore && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

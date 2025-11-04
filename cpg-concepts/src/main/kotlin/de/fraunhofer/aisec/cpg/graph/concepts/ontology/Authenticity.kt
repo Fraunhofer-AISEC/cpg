@@ -31,8 +31,10 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class Authenticity(public val contextIsChecked: Boolean?, underlyingNode: Node?) :
-    SecurityFeature(underlyingNode) {
+public open class Authenticity(
+    public val contextIsChecked: Boolean?,
+    underlyingNode: Node? = null,
+) : SecurityFeature(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is Authenticity &&
             super.equals(other) &&

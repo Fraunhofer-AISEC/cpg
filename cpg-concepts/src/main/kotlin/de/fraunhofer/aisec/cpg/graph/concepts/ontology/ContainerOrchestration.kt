@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class ContainerOrchestration(
+public open class ContainerOrchestration(
     public val managementUrl: String?,
     public val containers: MutableList<Container?>,
     public val resourceLogging: ResourceLogging?,
@@ -51,7 +51,7 @@ public abstract class ContainerOrchestration(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Infrastructure(
         internetAccessibleEndpoint,

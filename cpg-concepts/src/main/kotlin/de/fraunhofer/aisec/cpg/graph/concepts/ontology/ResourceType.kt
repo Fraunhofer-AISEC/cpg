@@ -31,7 +31,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class ResourceType(underlyingNode: Node?) : Core(underlyingNode) {
+public open class ResourceType(underlyingNode: Node? = null) : Core(underlyingNode) {
     override fun equals(other: Any?): Boolean = other is ResourceType && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

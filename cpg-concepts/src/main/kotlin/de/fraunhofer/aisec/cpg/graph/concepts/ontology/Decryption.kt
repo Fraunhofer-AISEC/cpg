@@ -32,11 +32,11 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
-public abstract class Decryption(
+public open class Decryption(
     public val algorithm: String?,
     public val secret: Secret?,
     linkedConcept: Cipher,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : CipherOperation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is Decryption &&

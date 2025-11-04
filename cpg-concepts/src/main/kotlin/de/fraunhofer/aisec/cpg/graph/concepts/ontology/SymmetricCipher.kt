@@ -33,7 +33,7 @@ import kotlin.Int
 import kotlin.String
 
 /** Represents a symmetric cipher. */
-public abstract class SymmetricCipher(
+public open class SymmetricCipher(
     public val authTagSize: Int?,
     public val modus: String?,
     public val initializationVector: InitializationVector?,
@@ -41,7 +41,7 @@ public abstract class SymmetricCipher(
     cipherName: String?,
     keySize: Int?,
     padding: Padding?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Cipher(blockSize, cipherName, keySize, padding, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is SymmetricCipher &&

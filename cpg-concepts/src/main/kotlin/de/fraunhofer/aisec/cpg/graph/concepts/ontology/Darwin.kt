@@ -40,7 +40,7 @@ import kotlin.collections.MutableMap
  * Represents a Darwin architecture, commonly found on macOS systems. macOS is a certified.
  * [UNIX](https://www.opengroup.org/openbrand/register/apple.htm) and is (mostly) POSIX compatible.
  */
-public abstract class Darwin(
+public open class Darwin(
     codeModules: MutableList<CodeModule?>,
     codeRepository: CodeRepository?,
     functionalities: MutableList<Functionality?>,
@@ -50,7 +50,7 @@ public abstract class Darwin(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     OperatingSystemArchitecture(
         codeModules,

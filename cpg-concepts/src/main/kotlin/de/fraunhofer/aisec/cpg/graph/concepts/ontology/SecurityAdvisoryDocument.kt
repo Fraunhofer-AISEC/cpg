@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class SecurityAdvisoryDocument(
+public open class SecurityAdvisoryDocument(
     public val vulnerabilities: MutableList<Vulnerability?>,
     filetype: String?,
     documentChecksums: MutableList<DocumentChecksum?>,
@@ -50,7 +50,7 @@ public abstract class SecurityAdvisoryDocument(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Document(
         filetype,

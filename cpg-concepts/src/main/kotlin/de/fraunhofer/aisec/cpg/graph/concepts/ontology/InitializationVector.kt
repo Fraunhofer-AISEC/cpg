@@ -32,7 +32,8 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** Represents an Initialization Vector of a cipher. */
-public abstract class InitializationVector(underlyingNode: Node?) : Functionality(underlyingNode) {
+public open class InitializationVector(underlyingNode: Node? = null) :
+    Functionality(underlyingNode) {
     override fun equals(other: Any?): Boolean = other is InitializationVector && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

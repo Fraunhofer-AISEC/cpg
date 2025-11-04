@@ -31,7 +31,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class Evidence(underlyingNode: Node?) : Core(underlyingNode) {
+public open class Evidence(underlyingNode: Node? = null) : Core(underlyingNode) {
     override fun equals(other: Any?): Boolean = other is Evidence && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

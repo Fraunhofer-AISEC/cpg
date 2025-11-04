@@ -33,11 +33,11 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
-public abstract class ObjectStorageRequest(
+public open class ObjectStorageRequest(
     public val source: String?,
     public val objectStorage: ObjectStorage?,
     public val linkedConcept: Storage,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is ObjectStorageRequest &&

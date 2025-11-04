@@ -38,7 +38,7 @@ import kotlin.collections.MutableList
  * enabled means the resource _can_ be reached via https, while enforced means it _can only_ be
  * reached via https (or http traffic is redirected)
  */
-public abstract class TransportEncryption(
+public open class TransportEncryption(
     public val enabled: Boolean?,
     public val enforced: Boolean?,
     public val protocol: String?,
@@ -46,7 +46,7 @@ public abstract class TransportEncryption(
     public val cipherSuites: MutableList<CipherSuite?>,
     basedOn: Cipher?,
     secret: Secret?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Encryption(basedOn, secret, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is TransportEncryption &&

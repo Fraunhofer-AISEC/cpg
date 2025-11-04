@@ -33,11 +33,11 @@ import kotlin.Int
 import kotlin.String
 import kotlin.collections.MutableList
 
-public abstract class HttpRequestHandler(
+public open class HttpRequestHandler(
     public val path: String?,
     public val application: Application?,
     public val httpEndpoints: MutableList<HttpEndpoint?>,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Http(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is HttpRequestHandler &&

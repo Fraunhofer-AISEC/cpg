@@ -45,7 +45,7 @@ import kotlin.collections.MutableMap
  * configuration is loaded from multiple sources, such as INI files, environment variables, and
  * command-line arguments.
  */
-public abstract class Configuration(
+public open class Configuration(
     public val configurationGroups: MutableList<ConfigurationGroup?>,
     dataLocation: DataLocation?,
     creation_time: ZonedDateTime?,
@@ -54,7 +54,7 @@ public abstract class Configuration(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
     init {
         name?.let { this.name = Name(localName = it) }

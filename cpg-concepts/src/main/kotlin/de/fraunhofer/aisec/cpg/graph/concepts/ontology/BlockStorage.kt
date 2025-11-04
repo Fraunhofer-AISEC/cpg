@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class BlockStorage(
+public open class BlockStorage(
     activityLogging: ActivityLogging?,
     atRestEncryption: Boolean?,
     backups: MutableList<Backup?>,
@@ -53,7 +53,7 @@ public abstract class BlockStorage(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Storage(
         activityLogging,

@@ -32,7 +32,7 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** Abstract class for all HTTP related functionalities. */
-public abstract class Http(underlyingNode: Node?) : Functionality(underlyingNode) {
+public open class Http(underlyingNode: Node? = null) : Functionality(underlyingNode) {
     override fun equals(other: Any?): Boolean = other is Http && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

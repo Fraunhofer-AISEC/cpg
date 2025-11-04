@@ -37,7 +37,7 @@ import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 /** Represents an architecture of an operating system. */
-public abstract class OperatingSystemArchitecture(
+public open class OperatingSystemArchitecture(
     codeModules: MutableList<CodeModule?>,
     codeRepository: CodeRepository?,
     functionalities: MutableList<Functionality?>,
@@ -47,7 +47,7 @@ public abstract class OperatingSystemArchitecture(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Code(
         codeModules,

@@ -36,10 +36,10 @@ import kotlin.collections.MutableList
  * Represents an asset that is protected by a policy. This can be an in-memory data structure, a
  * file, a database, or any other resource that requires access control.
  */
-public abstract class ProtectedAsset(
+public open class ProtectedAsset(
     public val policies: MutableList<Policy?>,
     public val protects: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Functionality(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is ProtectedAsset &&

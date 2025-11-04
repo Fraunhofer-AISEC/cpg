@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableMap
 
 /** This class represents a file handle. */
-public abstract class FileHandle(
+public open class FileHandle(
     dataLocation: DataLocation?,
     creation_time: ZonedDateTime?,
     description: String?,
@@ -44,7 +44,7 @@ public abstract class FileHandle(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     FileLikeObject(
         dataLocation,

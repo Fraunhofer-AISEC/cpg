@@ -32,7 +32,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class FileOperation(public val linkedConcept: File, underlyingNode: Node?) :
+public open class FileOperation(public val linkedConcept: File, underlyingNode: Node? = null) :
     Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is FileOperation && super.equals(other)
 

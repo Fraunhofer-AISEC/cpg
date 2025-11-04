@@ -32,7 +32,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class Core(underlyingNode: Node?) : Concept(underlyingNode) {
+public open class Core(underlyingNode: Node? = null) : Concept(underlyingNode) {
     override fun equals(other: Any?): Boolean = other is Core && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

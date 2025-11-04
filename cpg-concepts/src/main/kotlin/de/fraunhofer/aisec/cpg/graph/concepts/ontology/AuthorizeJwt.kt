@@ -32,7 +32,7 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** Represents an authorization operation based on JWT tokens. */
-public abstract class AuthorizeJwt(linkedConcept: Authenticity, underlyingNode: Node?) :
+public open class AuthorizeJwt(linkedConcept: Authenticity, underlyingNode: Node? = null) :
     AuthenticationOperation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is AuthorizeJwt && super.equals(other)
 

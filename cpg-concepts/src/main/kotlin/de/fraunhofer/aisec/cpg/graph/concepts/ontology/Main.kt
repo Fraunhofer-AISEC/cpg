@@ -32,7 +32,7 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** The main function of a program. */
-public abstract class Main(target: OperatingSystemArchitecture?, underlyingNode: Node?) :
+public open class Main(target: OperatingSystemArchitecture?, underlyingNode: Node? = null) :
     LocalEntryPoint(target, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is Main && super.equals(other)
 

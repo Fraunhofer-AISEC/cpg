@@ -35,11 +35,11 @@ import kotlin.Int
  * Represents an operation to provide a [ConfigurationGroup]. It connects a
  * [ConfigurationGroupSource] with a [ConfigurationGroup].
  */
-public abstract class ProvideConfigurationGroup(
+public open class ProvideConfigurationGroup(
     public val configurationGroup: ConfigurationGroup?,
     public val configurationGroupSource: ConfigurationGroupSource?,
     linkedConcept: Configuration,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : ConfigurationOperation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is ProvideConfigurationGroup &&

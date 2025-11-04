@@ -37,7 +37,7 @@ import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 /** usedByMultiple: In which resources the credential is being used */
-public abstract class Credential(
+public open class Credential(
     public val enabled: Boolean?,
     public val expirationDate: ZonedDateTime?,
     public val isManaged: Boolean?,
@@ -54,7 +54,7 @@ public abstract class Credential(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Infrastructure(
         internetAccessibleEndpoint,

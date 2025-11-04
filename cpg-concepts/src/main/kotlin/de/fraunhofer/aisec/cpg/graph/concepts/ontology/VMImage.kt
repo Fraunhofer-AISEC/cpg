@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class VMImage(
+public open class VMImage(
     application: Application?,
     internetAccessibleEndpoint: Boolean?,
     geoLocation: GeoLocation?,
@@ -49,7 +49,7 @@ public abstract class VMImage(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Image(
         application,

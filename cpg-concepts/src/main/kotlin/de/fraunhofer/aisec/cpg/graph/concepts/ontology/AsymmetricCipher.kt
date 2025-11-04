@@ -32,12 +32,12 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
-public abstract class AsymmetricCipher(
+public open class AsymmetricCipher(
     blockSize: Int?,
     cipherName: String?,
     keySize: Int?,
     padding: Padding?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Cipher(blockSize, cipherName, keySize, padding, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is AsymmetricCipher && super.equals(other)
 

@@ -32,10 +32,10 @@ import kotlin.Boolean
 import kotlin.Float
 import kotlin.Int
 
-public abstract class RBAC(
+public open class RBAC(
     public val broadAssignments: Float?,
     public val mixedDuties: Float?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Authorization(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is RBAC &&

@@ -39,7 +39,7 @@ import kotlin.collections.MutableMap
  * Represents a context in which a policy is applied. Typically, a context contains information
  * about a user or some other form of identity (e.g. a [Principal]).
  */
-public abstract class Context(
+public open class Context(
     dataLocation: DataLocation?,
     creation_time: ZonedDateTime?,
     description: String?,
@@ -47,7 +47,7 @@ public abstract class Context(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
     init {
         name?.let { this.name = Name(localName = it) }

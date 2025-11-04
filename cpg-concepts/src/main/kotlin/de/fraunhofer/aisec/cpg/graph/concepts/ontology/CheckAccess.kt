@@ -32,7 +32,7 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** Represents an operation that checks whether a user or principal has access to a protected */
-public abstract class CheckAccess(linkedConcept: ProtectedAsset, underlyingNode: Node?) :
+public open class CheckAccess(linkedConcept: ProtectedAsset, underlyingNode: Node? = null) :
     ProtectedAssetOperation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is CheckAccess && super.equals(other)
 

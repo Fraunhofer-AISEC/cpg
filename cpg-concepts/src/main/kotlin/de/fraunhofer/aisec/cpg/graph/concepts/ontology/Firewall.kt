@@ -31,7 +31,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class Firewall(underlyingNode: Node?) : AccessRestriction(underlyingNode) {
+public open class Firewall(underlyingNode: Node? = null) : AccessRestriction(underlyingNode) {
     override fun equals(other: Any?): Boolean = other is Firewall && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

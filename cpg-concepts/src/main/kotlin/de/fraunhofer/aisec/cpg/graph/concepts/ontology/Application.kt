@@ -38,7 +38,7 @@ import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 /** This encapsulates the whole (source) code of an application. */
-public abstract class Application(
+public open class Application(
     public val programmingLanguage: String?,
     public val programmingVersion: String?,
     public val translationUnits: List<String>?,
@@ -54,7 +54,7 @@ public abstract class Application(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Component(
         libraries,

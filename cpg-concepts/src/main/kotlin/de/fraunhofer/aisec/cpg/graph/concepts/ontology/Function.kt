@@ -36,7 +36,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class Function(
+public open class Function(
     public val runtimeLanguage: String?,
     public val runtimeVersion: String?,
     encryptionInUse: EncryptionInUse?,
@@ -54,7 +54,7 @@ public abstract class Function(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Compute(
         encryptionInUse,

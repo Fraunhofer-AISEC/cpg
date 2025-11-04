@@ -42,7 +42,7 @@ import kotlin.collections.MutableMap
  * A logging-as-a-service offering, e.g. for analyzing logs; has a Storage resource that stores the
  * logs
  */
-public abstract class LoggingService(
+public open class LoggingService(
     public val storage: MutableList<Storage?>,
     ips: Array<String>?,
     ports: Array<Short>?,
@@ -61,7 +61,7 @@ public abstract class LoggingService(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     NetworkService(
         ips,

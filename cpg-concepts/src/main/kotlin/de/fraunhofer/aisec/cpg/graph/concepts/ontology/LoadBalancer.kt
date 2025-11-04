@@ -39,7 +39,7 @@ import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 /** A Load Balancer may have multiple access restriction features, e.g. a L3 firewall and a WAF */
-public abstract class LoadBalancer(
+public open class LoadBalancer(
     public val url: String?,
     public val accessRestriction: Boolean?,
     public val httpEndpoints: MutableList<HttpEndpoint?>,
@@ -61,7 +61,7 @@ public abstract class LoadBalancer(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     NetworkService(
         ips,

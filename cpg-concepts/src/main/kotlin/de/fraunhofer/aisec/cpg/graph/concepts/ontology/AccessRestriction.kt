@@ -31,7 +31,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class AccessRestriction(underlyingNode: Node?) : Authorization(underlyingNode) {
+public open class AccessRestriction(underlyingNode: Node? = null) : Authorization(underlyingNode) {
     override fun equals(other: Any?): Boolean = other is AccessRestriction && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

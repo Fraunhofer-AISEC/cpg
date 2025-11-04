@@ -34,14 +34,14 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
-public abstract class Logging(
+public open class Logging(
     public val enabled: Boolean?,
     public val monitoringEnabled: Boolean?,
     name: String?,
     public val retentionPeriod: Duration?,
     public val securityAlertsEnabled: Boolean?,
     public val loggingService: LoggingService?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Auditing(underlyingNode) {
     init {
         name?.let { this.name = Name(localName = it) }

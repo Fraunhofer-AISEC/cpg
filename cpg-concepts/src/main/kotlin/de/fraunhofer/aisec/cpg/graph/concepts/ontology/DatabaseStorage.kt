@@ -37,7 +37,7 @@ import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 /** describes the actual database or a table in a database */
-public abstract class DatabaseStorage(
+public open class DatabaseStorage(
     activityLogging: ActivityLogging?,
     atRestEncryption: Boolean?,
     backups: MutableList<Backup?>,
@@ -54,7 +54,7 @@ public abstract class DatabaseStorage(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     Storage(
         activityLogging,

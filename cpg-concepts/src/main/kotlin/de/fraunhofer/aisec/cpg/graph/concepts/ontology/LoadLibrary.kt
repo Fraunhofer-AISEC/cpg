@@ -36,11 +36,11 @@ import kotlin.collections.MutableList
  * Represents an operation that loads a shared library during runtime. A common example would be a
  * call to `dlopen` in C/C++.
  */
-public abstract class LoadLibrary(
+public open class LoadLibrary(
     public val entryPoints: MutableList<EntryPoint?>,
     operatingSystemArchitecture: OperatingSystemArchitecture?,
     linkedConcept: Memory,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : DynamicLoadingOperation(operatingSystemArchitecture, linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is LoadLibrary && super.equals(other) && other.entryPoints == this.entryPoints

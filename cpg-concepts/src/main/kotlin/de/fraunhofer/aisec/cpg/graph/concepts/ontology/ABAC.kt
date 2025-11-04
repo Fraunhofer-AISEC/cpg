@@ -31,7 +31,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class ABAC(underlyingNode: Node?) : Authorization(underlyingNode) {
+public open class ABAC(underlyingNode: Node? = null) : Authorization(underlyingNode) {
     override fun equals(other: Any?): Boolean = other is ABAC && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

@@ -36,7 +36,7 @@ import kotlin.Int
  * such as a main function, a library initialization function or a "remote" entry point, such as a
  * network endpoint.
  */
-public abstract class EntryPoint(underlyingNode: Node?) : Functionality(underlyingNode) {
+public open class EntryPoint(underlyingNode: Node? = null) : Functionality(underlyingNode) {
     override fun equals(other: Any?): Boolean = other is EntryPoint && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

@@ -40,7 +40,7 @@ import kotlin.collections.MutableMap
  * internetAccessibleEndpoint: Is true if the management API endpoint is reachable from everywhere.
  * Access controls can still apply.
  */
-public abstract class Infrastructure(
+public open class Infrastructure(
     public val internetAccessibleEndpoint: Boolean?,
     public val geoLocation: GeoLocation?,
     public val loggings: MutableList<Logging?>,
@@ -52,7 +52,7 @@ public abstract class Infrastructure(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Resource(creation_time, description, labels, name, raw, parent, underlyingNode) {
     init {
         name?.let { this.name = Name(localName = it) }

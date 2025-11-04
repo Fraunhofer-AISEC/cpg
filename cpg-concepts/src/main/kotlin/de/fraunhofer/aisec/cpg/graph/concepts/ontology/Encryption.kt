@@ -32,10 +32,10 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** This represents an encryption. */
-public abstract class Encryption(
+public open class Encryption(
     public val basedOn: Cipher?,
     public val secret: Secret?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Confidentiality(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is Encryption &&

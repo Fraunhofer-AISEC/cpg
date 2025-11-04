@@ -31,7 +31,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class Auditing(underlyingNode: Node?) : SecurityFeature(underlyingNode) {
+public open class Auditing(underlyingNode: Node? = null) : SecurityFeature(underlyingNode) {
     override fun equals(other: Any?): Boolean = other is Auditing && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

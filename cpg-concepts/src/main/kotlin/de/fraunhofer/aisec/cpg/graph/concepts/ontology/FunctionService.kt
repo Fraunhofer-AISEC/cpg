@@ -38,7 +38,7 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-public abstract class FunctionService(
+public open class FunctionService(
     public val functions: MutableList<Function?>,
     ips: Array<String>?,
     ports: Array<Short>?,
@@ -57,7 +57,7 @@ public abstract class FunctionService(
     name: String?,
     raw: String?,
     parent: Resource?,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) :
     NetworkService(
         ips,

@@ -31,7 +31,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class ExplainableResults(underlyingNode: Node?) : Reliability(underlyingNode) {
+public open class ExplainableResults(underlyingNode: Node? = null) : Reliability(underlyingNode) {
     override fun equals(other: Any?): Boolean = other is ExplainableResults && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

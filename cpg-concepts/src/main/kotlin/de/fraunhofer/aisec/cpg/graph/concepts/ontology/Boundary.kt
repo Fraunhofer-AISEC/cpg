@@ -37,7 +37,7 @@ import kotlin.Int
  * [HttpEndpoint], so that the policy applies once data either comes in or goes out of the HTTP
  * endpoint.
  */
-public abstract class Boundary(underlyingNode: Node?) : Functionality(underlyingNode) {
+public open class Boundary(underlyingNode: Node? = null) : Functionality(underlyingNode) {
     override fun equals(other: Any?): Boolean = other is Boundary && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

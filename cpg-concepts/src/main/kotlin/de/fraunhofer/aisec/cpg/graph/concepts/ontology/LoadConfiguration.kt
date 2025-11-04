@@ -32,7 +32,7 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** Represents an operation to load a configuration from a source, such as a file. */
-public abstract class LoadConfiguration(linkedConcept: Configuration, underlyingNode: Node?) :
+public open class LoadConfiguration(linkedConcept: Configuration, underlyingNode: Node? = null) :
     ConfigurationOperation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is LoadConfiguration && super.equals(other)
 

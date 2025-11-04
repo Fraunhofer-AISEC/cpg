@@ -43,10 +43,10 @@ public enum class LogLevel {
 }
 
 /** A log write operation e.g. `loggint.warn("...")`. */
-public abstract class LogWrite(
+public open class LogWrite(
     public val logLevel: LogLevel?,
     linkedConcept: Logging,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : LogOperation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is LogWrite && super.equals(other) && other.logLevel == this.logLevel

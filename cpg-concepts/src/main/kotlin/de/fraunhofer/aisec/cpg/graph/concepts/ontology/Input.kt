@@ -32,7 +32,7 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** A certain Input for e.g. a function. */
-public abstract class Input(underlyingNode: Node?) : Functionality(underlyingNode) {
+public open class Input(underlyingNode: Node? = null) : Functionality(underlyingNode) {
     override fun equals(other: Any?): Boolean = other is Input && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

@@ -33,12 +33,12 @@ import kotlin.Int
 import kotlin.String
 import kotlin.collections.MutableList
 
-public abstract class CipherSuite(
+public open class CipherSuite(
     public val authenticationMechanism: String?,
     public val keyExchangeAlgorithm: String?,
     public val macAlgorithm: String?,
     public val ciphers: MutableList<Cipher?>,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Functionality(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is CipherSuite &&

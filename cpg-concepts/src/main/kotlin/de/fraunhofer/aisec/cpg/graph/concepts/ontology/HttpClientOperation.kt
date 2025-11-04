@@ -33,9 +33,9 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** Base class for operations on an [HttpClient]. */
-public abstract class HttpClientOperation(
+public open class HttpClientOperation(
     public val linkedConcept: HttpClient,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is HttpClientOperation && super.equals(other)
 

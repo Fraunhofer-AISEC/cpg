@@ -32,9 +32,9 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.collections.MutableList
 
-public abstract class SecurityAdvisoryFeed(
+public open class SecurityAdvisoryFeed(
     public val securityAdvisoryDocuments: MutableList<SecurityAdvisoryDocument?>,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : Functionality(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is SecurityAdvisoryFeed &&

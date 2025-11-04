@@ -31,7 +31,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class Reliability(underlyingNode: Node?) : SecurityFeature(underlyingNode) {
+public open class Reliability(underlyingNode: Node? = null) : SecurityFeature(underlyingNode) {
     override fun equals(other: Any?): Boolean = other is Reliability && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

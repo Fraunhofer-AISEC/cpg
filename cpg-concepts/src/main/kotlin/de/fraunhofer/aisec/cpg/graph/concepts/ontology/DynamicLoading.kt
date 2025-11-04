@@ -36,7 +36,7 @@ import kotlin.Int
  * class loader in Java, loading shared library code in C++. Interpreters, such as Python can also
  * load code dynamically during runtime.
  */
-public abstract class DynamicLoading(underlyingNode: Node?) : Functionality(underlyingNode) {
+public open class DynamicLoading(underlyingNode: Node? = null) : Functionality(underlyingNode) {
     override fun equals(other: Any?): Boolean = other is DynamicLoading && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

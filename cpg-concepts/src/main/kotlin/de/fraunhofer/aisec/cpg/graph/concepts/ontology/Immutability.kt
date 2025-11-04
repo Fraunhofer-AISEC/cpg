@@ -31,7 +31,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public abstract class Immutability(public val enabled: Boolean?, underlyingNode: Node?) :
+public open class Immutability(public val enabled: Boolean?, underlyingNode: Node? = null) :
     Integrity(underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is Immutability && super.equals(other) && other.enabled == this.enabled

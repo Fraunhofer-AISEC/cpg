@@ -33,13 +33,13 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
-public abstract class DatabaseQuery(
+public open class DatabaseQuery(
     public val modify: Boolean?,
     calls: List<String>?,
     databaseService: DatabaseService?,
     storage: DatabaseStorage?,
     linkedConcept: DatabaseStorage,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : DatabaseOperation(calls, databaseService, storage, linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is DatabaseQuery && super.equals(other) && other.modify == this.modify

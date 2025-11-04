@@ -40,10 +40,10 @@ import kotlin.Int
  * contains the [ConfigurationOption] node and the code contains the [RegisterConfigurationOption]
  * and [ReadConfigurationOption] nodes.
  */
-public abstract class RegisterConfigurationOption(
+public open class RegisterConfigurationOption(
     public val configurationOption: ConfigurationOption?,
     linkedConcept: Configuration,
-    underlyingNode: Node?,
+    underlyingNode: Node? = null,
 ) : ConfigurationOperation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is RegisterConfigurationOption &&

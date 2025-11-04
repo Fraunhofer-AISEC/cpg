@@ -35,7 +35,7 @@ import kotlin.Int
  * An operation that retrieves a secret from a (remote) location. This can be a local keystore, a
  * remote key server or a hardware device such as a TPM or HSM.
  */
-public abstract class GetSecret(linkedConcept: Secret, underlyingNode: Node?) :
+public open class GetSecret(linkedConcept: Secret, underlyingNode: Node? = null) :
     SecretOperation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is GetSecret && super.equals(other)
 
