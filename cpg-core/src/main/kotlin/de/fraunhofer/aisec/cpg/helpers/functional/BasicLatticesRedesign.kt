@@ -48,9 +48,11 @@ import kotlinx.coroutines.*
 
 var compareTime: Long = 0
 var mapLatticeLubTime: Long = 0
+var innerMapLatticeLubTime: Long = 0
 var tupleLatticeLubTime: Long = 0
 var maxLubSize = 0
 var lubCounter = 0
+var innerlubCounter = 0
 var lubSizeCounter = 0
 
 val CPU_CORES = Runtime.getRuntime().availableProcessors()
@@ -322,6 +324,7 @@ interface Lattice<T : Lattice.Element> {
         strategy: Strategy = Strategy.PRECISE,
     ): T {
         var finalStateCalcTime: Long = 0
+        var newCompareTime = 0L
         var pointsToStateLub: Long = 0
         val globalState = ConcurrentIdentityHashMap<EvaluationOrder, T>()
         var finalState: T = this.bottom
@@ -457,13 +460,19 @@ interface Lattice<T : Lattice.Element> {
                                     // If we deal with PointsToState Elements, we use their special
                                     // parallelCompare function, otherwise, we resort to the
                                     // traditional compare
-                                    ((newGlobalIt as? PointsToState.Element)?.parallelCompare(
-                                        oldGlobalIt
-                                    )
-                                        ?: (newGlobalIt as? MapLattice.Element<*, *>)
-                                            ?.parallelCompare(oldGlobalIt)
-                                        ?: newGlobalIt.compare(oldGlobalIt)) in
-                                        setOf(Order.GREATER, Order.UNEQUAL))
+                                    measureTimedValue {
+                                            ((newGlobalIt as? PointsToState.Element)
+                                                ?.parallelCompare(oldGlobalIt)
+                                                ?: (newGlobalIt
+                                                        as? ConcurrentMapLattice.Element<*, *>)
+                                                    ?.compare(oldGlobalIt)
+                                                ?: newGlobalIt.compare(oldGlobalIt)) in
+                                                setOf(Order.GREATER, Order.UNEQUAL)
+                                        }
+                                        .let { (ret, time) ->
+                                            newCompareTime += time.toLong(DurationUnit.MILLISECONDS)
+                                            ret
+                                        })
                         ) {
                             if (it.start.prevEOGEdges.size > 1) {
                                 // This edge brings us to a merge point, so we add it to the list of
@@ -501,14 +510,16 @@ interface Lattice<T : Lattice.Element> {
         }
 
         println(
-            "+++ final state lub calculations took $finalStateCalcTime, PointsToState lub $pointsToStateLub, compareTime: ${compareTime/1000000}, tupleLattice lub time: ${tupleLatticeLubTime/1000000}, mapLattice lub time: ${mapLatticeLubTime/1000000}, maxLubsize: $maxLubSize, lubCounter: $lubCounter, lubSizeCounter: $lubSizeCounter"
+            "+++ final state lub calculations took $finalStateCalcTime, PointsToState lub $pointsToStateLub, compareTime: ${compareTime/1000000}, tupleLattice lub time: ${tupleLatticeLubTime/1000000}, mapLattice lub time: ${mapLatticeLubTime/1000000}, innermapLattice lub time: ${innerMapLatticeLubTime/1000000}, maxLubsize: $maxLubSize, innerlubCounter: $innerlubCounter, lubCounter: $lubCounter, lubSizeCounter: $lubSizeCounter, new compare time: $newCompareTime"
         )
         compareTime = 0
         mapLatticeLubTime = 0
+        innerMapLatticeLubTime = 0
         tupleLatticeLubTime = 0
         maxLubSize = 0
         lubCounter = 0
         lubSizeCounter = 0
+        innerlubCounter = 0
 
         return finalState
     }
@@ -933,81 +944,85 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
         concurrencyCounter: Int,
     ): Element<K, V> = coroutineScope {
         var result: Element<K, V>
-        if (concurrencyCounter == CPU_CORES && !allowModify) {
+        if (concurrencyCounter == CPU_CORES /*&& !allowModify*/) {
             lubCounter++
             if (one.size > maxLubSize) maxLubSize = one.size
             if (two.size > maxLubSize) maxLubSize = two.size
             lubSizeCounter += one.size
             lubSizeCounter += two.size
-        }
+        } else if (concurrencyCounter == 1) innerlubCounter++
         var tmpTime = measureNanoTime {
-            if (allowModify) {
-                two.splitInto(concurrencyCounter)
-                    .map { chunk ->
+            coroutineScope {
+                if (allowModify) {
+                    two.splitInto(concurrencyCounter)
+                        .map { chunk ->
+                            launch(Dispatchers.Default) {
+                                for ((k, v) in chunk) {
+                                    val entry = one[k]
+                                    if (entry == null) {
+                                        // This key is not in "one", so we add the value from "two"
+                                        // to "one"
+                                        one.put(k, v)
+                                    } else if (
+                                        two[k] != null && entry.compare(two[k]!!) != Order.EQUAL
+                                    ) {
+                                        // This key already exists in "one" and the values in one
+                                        // and
+                                        // two are different,
+                                        // so we have to compute the lub of the values
+                                        one[k]?.let { oneValue ->
+                                            innerLattice.lub(
+                                                oneValue,
+                                                v,
+                                                allowModify = true,
+                                                widen = widen,
+                                                // We already run on $CPU_CORES coroutines, so we
+                                                // don't
+                                                // need any additional ones
+                                                1,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .joinAll()
+                    result = one
+                } else {
+                    val allKeys =
+                        IdentitySet<K>(one.keys.size + two.keys.size).apply {
+                            addAll(one.keys)
+                            addAll(two.keys)
+                        }
+                    result = Element()
+                    allKeys.splitInto(concurrencyCounter).map { chunk ->
                         launch(Dispatchers.Default) {
-                            for ((k, v) in chunk) {
-                                val entry = one[k]
-                                if (entry == null) {
-                                    // This key is not in "one", so we add the value from "two"
-                                    // to "one"
-                                    one.put(k, v)
-                                } else if (
-                                    two[k] != null && entry.compare(two[k]!!) != Order.EQUAL
-                                ) {
-                                    // This key already exists in "one" and the values in one and
-                                    // two are different,
-                                    // so we have to compute the lub of the values
-                                    one[k]?.let { oneValue ->
+                            for (key in chunk) {
+                                val otherValue = two[key]
+                                val thisValue = one[key]
+                                val newValue =
+                                    if (thisValue != null && otherValue != null) {
                                         innerLattice.lub(
-                                            oneValue,
-                                            v,
-                                            allowModify = true,
+                                            one = thisValue,
+                                            two = otherValue,
+                                            allowModify = false,
                                             widen = widen,
                                             // We already run on $CPU_CORES coroutines, so we don't
                                             // need any additional ones
                                             1,
                                         )
-                                    }
-                                }
+                                    } else thisValue ?: otherValue
+                                newValue?.let { result.put(key, it) }
                             }
-                        }
-                    }
-                    .joinAll()
-                result = one
-            } else {
-                val allKeys =
-                    IdentitySet<K>(one.keys.size + two.keys.size).apply {
-                        addAll(one.keys)
-                        addAll(two.keys)
-                    }
-                result = Element()
-                allKeys.splitInto(concurrencyCounter).map { chunk ->
-                    launch(Dispatchers.Default) {
-                        for (key in chunk) {
-                            val otherValue = two[key]
-                            val thisValue = one[key]
-                            val newValue =
-                                if (thisValue != null && otherValue != null) {
-                                    innerLattice.lub(
-                                        one = thisValue,
-                                        two = otherValue,
-                                        allowModify = false,
-                                        widen = widen,
-                                        // We already run on $CPU_CORES coroutines, so we don't
-                                        // need any additional ones
-                                        1,
-                                    )
-                                } else thisValue ?: otherValue
-                            newValue?.let { result.put(key, it) }
                         }
                     }
                 }
             }
         }
-        if (concurrencyCounter == CPU_CORES && !allowModify) {
+        if (concurrencyCounter == CPU_CORES /*&& !allowModify*/) {
             mapLatticeLubTime += tmpTime
             //            println("---- $tmpTime")
-        }
+        } else if (concurrencyCounter == 1) innerMapLatticeLubTime += tmpTime
         return@coroutineScope result
     }
 
