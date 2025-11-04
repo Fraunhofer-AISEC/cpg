@@ -1178,67 +1178,52 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     ),
                 ),
             )
-        // Also draw the edges for the (deref)derefvalues if we have
-        // any and are
-        // dealing with a pointer parameter (AKA memoryValue is not
-        // null)
-        p.memoryValueEdges
-            .filter {
-                (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget == "derefvalue"
-            }
-            .map { it.start }
-            .forEach { derefPMV ->
-                val argVals =
-                    // In C(++), the reference to an array is a
-                    // pointer, leading to the
-                    // situation that handing "arg" or "&arg" as
-                    // argument is the same
-                    // We deal with this by drawing a DFG-Edge from
-                    // the arg to the
-                    // derefPMV in case of an array pointerType.
-                    if (
-                        (arg.type as? PointerType)?.pointerOrigin == PointerType.PointerOrigin.ARRAY
+        val argVals =
+            // In C(++), the reference to an array is a
+            // pointer, leading to the
+            // situation that handing "arg" or "&arg" as
+            // argument is the same
+            // We deal with this by drawing a DFG-Edge from
+            // the arg to the
+            // derefPMV in case of an array pointerType.
+            if ((arg.type as? PointerType)?.pointerOrigin == PointerType.PointerOrigin.ARRAY)
+                PowersetLattice.Element(Pair(arg, true))
+            else doubleState.getCachedNestedValues(getNestedValuesCache, arg, 1, false)
+        argVals.forEach { (argVal, _) ->
+            val argDerefVals =
+                if ((arg.type as? PointerType)?.pointerOrigin == PointerType.PointerOrigin.ARRAY)
+                    equalLinkedHashSetOf<Node>(arg)
+                else {
+                    doubleState
+                        .getCachedNestedValues(getNestedValuesCache, argVal, 1, fetchFields = false)
+                        .mapTo(equalLinkedHashSetOf()) { it.first }
+                }
+            val lastDerefWrites =
+                if ((arg.type as? PointerType)?.pointerOrigin == PointerType.PointerOrigin.ARRAY)
+                    PowersetLattice.Element(
+                        NodeWithPropertiesKey(arg, equalLinkedHashSetOf(callingContext, false))
                     )
-                        PowersetLattice.Element(Pair(arg, true))
-                    else doubleState.getCachedNestedValues(getNestedValuesCache, arg, 1, false)
-                argVals.forEach { (argVal, _) ->
-                    val argDerefVals =
-                        if (
-                            (arg.type as? PointerType)?.pointerOrigin ==
-                                PointerType.PointerOrigin.ARRAY
+                else {
+                    doubleState.getCachedLastWrites(getLastWritesCache, argVal).mapTo(
+                        PowersetLattice.Element()
+                    ) {
+                        NodeWithPropertiesKey(
+                            it.node,
+                            equalLinkedHashSetOf(callingContext, true in it.properties),
                         )
-                            equalLinkedHashSetOf<Node>(arg)
-                        else {
-                            doubleState
-                                .getCachedNestedValues(
-                                    getNestedValuesCache,
-                                    argVal,
-                                    1,
-                                    fetchFields = false,
-                                )
-                                .mapTo(equalLinkedHashSetOf()) { it.first }
-                        }
-                    val lastDerefWrites =
-                        if (
-                            (arg.type as? PointerType)?.pointerOrigin ==
-                                PointerType.PointerOrigin.ARRAY
-                        )
-                            PowersetLattice.Element(
-                                NodeWithPropertiesKey(
-                                    arg,
-                                    equalLinkedHashSetOf(callingContext, false),
-                                )
-                            )
-                        else {
-                            doubleState.getCachedLastWrites(getLastWritesCache, argVal).mapTo(
-                                PowersetLattice.Element()
-                            ) {
-                                NodeWithPropertiesKey(
-                                    it.node,
-                                    equalLinkedHashSetOf(callingContext, true in it.properties),
-                                )
-                            }
-                        }
+                    }
+                }
+            // Also draw the edges for the (deref)derefvalues if we have
+            // any and are
+            // dealing with a pointer parameter (AKA memoryValue is not
+            // null)
+            p.memoryValueEdges
+                .filter {
+                    (it.granularity as? PartialDataflowGranularity<*>)?.partialTarget ==
+                        "derefvalue"
+                }
+                .map { it.start }
+                .forEach { derefPMV ->
                     doubleState =
                         lattice.push(
                             doubleState,
@@ -1303,7 +1288,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 }
                         }
                 }
-            }
+        }
     }
 
     data class MapDstToSrcEntry(
