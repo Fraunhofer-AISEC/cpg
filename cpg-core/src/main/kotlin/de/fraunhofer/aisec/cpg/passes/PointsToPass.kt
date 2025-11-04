@@ -929,19 +929,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 ?: throw java.lang.IllegalArgumentException(
                     "Expected the state to be of type PointsToState.Element"
                 )
-        if (
-            (passConfig<Configuration>()?.maxAnalysisTime ?: 0L) != 0L &&
-                passConfig<Configuration>()?.maxAnalysisTime!! < (timeInTransfer / 1000000000)
-        ) {
-            if (!maxAnalysisTimeReachedOutputTriggered) {
-                log.info(
-                    "Maximum analysis time (${passConfig<Configuration>()?.maxAnalysisTime}s) reached, skipping further analysis."
-                )
-                log.info("timeInTransfer: $timeInTransfer")
-                maxAnalysisTimeReachedOutputTriggered = true
-            }
-            return doubleState
-        }
         transferActionCounter++
         PointsTotransferCounter++
         if (transferActionCounter == 10000L) {
@@ -1123,48 +1110,46 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val getValuesCache = ConcurrentHashMap<Node, PowersetLattice.Element<Pair<Node, Boolean>>>()
 
         callExpression.arguments.forEach { arg ->
-            launch(Dispatchers.Default) {
-                if (arg.argumentIndex < functionDeclaration.parameters.size) {
-                    // Create a DFG-Edge from the argument to the parameter's memoryValue
-                    val p = functionDeclaration.parameters[arg.argumentIndex]
-                    // First, check if we already assigned the PMV values in another function
-                    var memVals = p.fullMemoryValues
-                    // If this is not the case, they are still in the state
+            //            launch(Dispatchers.Default) {
+            if (arg.argumentIndex < functionDeclaration.parameters.size) {
+                // Create a DFG-Edge from the argument to the parameter's memoryValue
+                val p = functionDeclaration.parameters[arg.argumentIndex]
+                // First, check if we already assigned the PMV values in another function
+                var memVals = p.fullMemoryValues
+                // If this is not the case, they are still in the state
+                if (memVals.isEmpty()) {
+                    memVals =
+                        doubleState.getCachedValues(getValuesCache, p).mapTo(HashSet()) { it.first }
+                    // If they are also not yet in the state, we have to calculate them
                     if (memVals.isEmpty()) {
+                        initializeParameters(lattice, mutableListOf(p), doubleState, 2)
                         memVals =
                             doubleState.getCachedValues(getValuesCache, p).mapTo(HashSet()) {
                                 it.first
                             }
-                        // If they are also not yet in the state, we have to calculate them
-                        if (memVals.isEmpty()) {
-                            initializeParameters(lattice, mutableListOf(p), doubleState, 2)
-                            memVals =
-                                doubleState.getCachedValues(getValuesCache, p).mapTo(HashSet()) {
-                                    it.first
-                                }
-                        }
                     }
-                    memVals
-                        .filterIsInstance<ParameterMemoryValue>()
-                        .splitInto(maxParts = innerConcurrencyCounter)
-                        .forEach { chunk ->
-                            launch(Dispatchers.Default) {
-                                chunk.forEach { paramVal ->
-                                    innerCalculateIncomingCallingContexts(
-                                        lattice,
-                                        doubleState,
-                                        paramVal,
-                                        arg,
-                                        callingContext,
-                                        p,
-                                        getLastWritesCache,
-                                        getNestedValuesCache,
-                                    )
-                                }
+                }
+                memVals
+                    .filterIsInstance<ParameterMemoryValue>()
+                    .splitInto(/*maxParts = innerConcurrencyCounter*/ )
+                    .forEach { chunk ->
+                        launch(Dispatchers.Default) {
+                            chunk.forEach { paramVal ->
+                                innerCalculateIncomingCallingContexts(
+                                    lattice,
+                                    doubleState,
+                                    paramVal,
+                                    arg,
+                                    callingContext,
+                                    p,
+                                    getLastWritesCache,
+                                    getNestedValuesCache,
+                                )
                             }
                         }
-                }
+                    }
             }
+            //            }
         }
         return@coroutineScope doubleState
     }
@@ -1358,86 +1343,82 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         // The toIdentitySet avoids having the same elements multiple times
         val invokes = currentNode.invokes.toConcurrentIdentitySet()
-        coroutineScope {
-            invokes.forEach { invoke ->
-                log.info("Executing calculateFunctionSummary")
-                val inv = calculateFunctionSummaries(invoke)
-                log.info("Finished with calculateFunctionSummary")
-                if (inv != null) {
-                    doubleState =
-                        calculateIncomingCallingContexts(lattice, inv, currentNode, doubleState)
-                    log.info("Finished with calculateIncomingCallingContexts")
+        invokes.forEach { invoke ->
+            log.info("Executing calculateFunctionSummary")
+            val inv = calculateFunctionSummaries(invoke)
+            log.info("Finished with calculateFunctionSummary")
+            if (inv != null) {
+                doubleState =
+                    calculateIncomingCallingContexts(lattice, inv, currentNode, doubleState)
+                log.info("Finished with calculateIncomingCallingContexts")
 
-                    // If we have a FunctionSummary, we push the values of the arguments and
-                    // return value
-                    // after executing the function call to our doubleState.
-                    // We can't go through all levels at once as a change at a lower level may
-                    // affect a higher level. So let's do this step by step
-                    for (depth in 0..3) {
-                        coroutineScope {
-                            // We use coroutines in coroutines. So, in order not to launch way too
-                            // many of them, we calculate the amount of inner coroutines that we can
-                            // reasonably launch
-                            val innerConcurrencyCounter =
-                                calculateInnerConcurrencyCounter(inv.functionSummary.size)
-                            for ((param, fsEntries) in inv.functionSummary) {
-                                launch(Dispatchers.Default) {
-                                    val argument =
-                                        when (param) {
-                                            is ParameterDeclaration -> {
-                                                // Dereference the parameter
-                                                if (
-                                                    param.argumentIndex < currentNode.arguments.size
-                                                ) {
-                                                    currentNode.arguments[param.argumentIndex]
-                                                } else null
-                                            }
-
-                                            is ReturnStatement,
-                                            is FunctionDeclaration -> {
-                                                currentNode
-                                            }
-
-                                            else -> null
+                // If we have a FunctionSummary, we push the values of the arguments and
+                // return value
+                // after executing the function call to our doubleState.
+                // We can't go through all levels at once as a change at a lower level may
+                // affect a higher level. So let's do this step by step
+                for (depth in 0..3) {
+                    coroutineScope {
+                        // We use coroutines in coroutines. So, in order not to launch way too
+                        // many of them, we calculate the amount of inner coroutines that we can
+                        // reasonably launch
+                        val innerConcurrencyCounter =
+                            calculateInnerConcurrencyCounter(inv.functionSummary.size)
+                        for ((param, fsEntries) in inv.functionSummary) {
+                            launch(Dispatchers.Default) {
+                                val argument =
+                                    when (param) {
+                                        is ParameterDeclaration -> {
+                                            // Dereference the parameter
+                                            if (param.argumentIndex < currentNode.arguments.size) {
+                                                currentNode.arguments[param.argumentIndex]
+                                            } else null
                                         }
-                                    if (argument != null) {
-                                        fsEntries
-                                            .filter { it.destValueDepth == depth }
-                                            .splitInto(maxParts = innerConcurrencyCounter)
-                                            .map { chunk ->
-                                                launch(Dispatchers.Default) {
-                                                    for ((
+
+                                        is ReturnStatement,
+                                        is FunctionDeclaration -> {
+                                            currentNode
+                                        }
+
+                                        else -> null
+                                    }
+                                if (argument != null) {
+                                    fsEntries
+                                        .filter { it.destValueDepth == depth }
+                                        .splitInto(maxParts = innerConcurrencyCounter)
+                                        .map { chunk ->
+                                            launch(Dispatchers.Default) {
+                                                for ((
+                                                    dstValueDepth,
+                                                    srcNode,
+                                                    srcValueDepth,
+                                                    subAccessName,
+                                                    lastWrites,
+                                                    properties,
+                                                ) in chunk) {
+                                                    writeEntry(
+                                                        doubleState,
+                                                        mapDstToSrc,
                                                         dstValueDepth,
+                                                        subAccessName,
+                                                        argument,
+                                                        properties,
+                                                        lastWrites,
+                                                        currentNode,
+                                                        inv,
                                                         srcNode,
                                                         srcValueDepth,
-                                                        subAccessName,
-                                                        lastWrites,
-                                                        properties,
-                                                    ) in chunk) {
-                                                        writeEntry(
-                                                            doubleState,
-                                                            mapDstToSrc,
-                                                            dstValueDepth,
-                                                            subAccessName,
-                                                            argument,
-                                                            properties,
-                                                            lastWrites,
-                                                            currentNode,
-                                                            inv,
-                                                            srcNode,
-                                                            srcValueDepth,
-                                                            param,
-                                                        )
-                                                    }
+                                                        param,
+                                                    )
                                                 }
                                             }
-                                    }
+                                        }
                                 }
                             }
                         }
                     }
-                } else log.info("inv is null, skipping")
-            }
+                }
+            } else log.info("inv is null, skipping")
         }
 
         log.info("Collected all entries for mapDstToSrc. size: ${mapDstToSrc.size}")
