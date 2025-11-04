@@ -16,6 +16,9 @@
         <Class IRI="#AsymmetricCipher"/>
     </Declaration>
     <Declaration>
+        <Class IRI="#GetCurrentTimeOperation"/>
+    </Declaration>
+    <Declaration>
         <Class IRI="#HybridCipher"/>
     </Declaration>
     <Declaration>
@@ -23,6 +26,12 @@
     </Declaration>
     <Declaration>
         <Class IRI="#Input"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#InputValidationOperation"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#InstallUpdate"/>
     </Declaration>
     <Declaration>
         <Class IRI="#Key"/>
@@ -34,10 +43,19 @@
         <Class IRI="#MessageAuthenticationCode"/>
     </Declaration>
     <Declaration>
+        <Class IRI="#Output"/>
+    </Declaration>
+    <Declaration>
         <Class IRI="#Padding"/>
     </Declaration>
     <Declaration>
+        <Class IRI="#RateLimiting"/>
+    </Declaration>
+    <Declaration>
         <Class IRI="#SymmetricCipher"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="#Time"/>
     </Declaration>
     <Declaration>
         <Class IRI="/classes/ABAC"/>
@@ -871,10 +889,16 @@
         <DataProperty IRI="#cipherName"/>
     </Declaration>
     <Declaration>
+        <DataProperty IRI="#maxRequests"/>
+    </Declaration>
+    <Declaration>
         <DataProperty IRI="#modus"/>
     </Declaration>
     <Declaration>
         <DataProperty IRI="#scheme"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="#timeWindowSeconds"/>
     </Declaration>
     <Declaration>
         <DataProperty IRI="/classes/OneQubitErrorRate"/>
@@ -1425,6 +1449,17 @@
         <Class IRI="/classes/Cipher"/>
     </SubClassOf>
     <SubClassOf>
+        <Class IRI="#GetCurrentTimeOperation"/>
+        <Class IRI="/classes/Operation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#GetCurrentTimeOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/classes/linkedConcept"/>
+            <Class IRI="#Time"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
         <Class IRI="#HybridCipher"/>
         <Class IRI="/classes/Cipher"/>
     </SubClassOf>
@@ -1463,6 +1498,49 @@
     <SubClassOf>
         <Class IRI="#Input"/>
         <Class IRI="/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#InputValidationOperation"/>
+        <Class IRI="/classes/Operation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#InputValidationOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/classes/linkedConcept"/>
+            <Class IRI="#Input"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#InputValidationOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/properties/has"/>
+            <Class IRI="#Input"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#InputValidationOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/properties/has"/>
+            <Class IRI="#Output"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#InstallUpdate"/>
+        <Class IRI="/classes/Operation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#InstallUpdate"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/classes/linkedConcept"/>
+            <Class IRI="/classes/AutomaticUpdates"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#InstallUpdate"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/properties/has"/>
+            <Class IRI="/classes/AutomaticUpdates"/>
+        </ObjectSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
         <Class IRI="#Key"/>
@@ -1512,6 +1590,10 @@
         </DataSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
+        <Class IRI="#Output"/>
+        <Class IRI="/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
         <Class IRI="#Padding"/>
         <Class IRI="/classes/Functionality"/>
     </SubClassOf>
@@ -1520,6 +1602,24 @@
         <DataSomeValuesFrom>
             <DataProperty IRI="#scheme"/>
             <Datatype abbreviatedIRI="xsd:string"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#RateLimiting"/>
+        <Class IRI="/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#RateLimiting"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="#maxRequests"/>
+            <Datatype abbreviatedIRI="xsd:int"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#RateLimiting"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="#timeWindowSeconds"/>
+            <Datatype abbreviatedIRI="xsd:int"/>
         </DataSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
@@ -1546,6 +1646,10 @@
             <DataProperty IRI="#modus"/>
             <Datatype abbreviatedIRI="xsd:string"/>
         </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="#Time"/>
+        <Class IRI="/classes/Functionality"/>
     </SubClassOf>
     <SubClassOf>
         <Class IRI="/classes/ABAC"/>
@@ -4868,11 +4972,19 @@ name = metadata.name</Literal>
         <DataProperty abbreviatedIRI="owl:topDataProperty"/>
     </SubDataPropertyOf>
     <SubDataPropertyOf>
+        <DataProperty IRI="#maxRequests"/>
+        <DataProperty abbreviatedIRI="owl:topDataProperty"/>
+    </SubDataPropertyOf>
+    <SubDataPropertyOf>
         <DataProperty IRI="#modus"/>
         <DataProperty abbreviatedIRI="owl:topDataProperty"/>
     </SubDataPropertyOf>
     <SubDataPropertyOf>
         <DataProperty IRI="#scheme"/>
+        <DataProperty abbreviatedIRI="owl:topDataProperty"/>
+    </SubDataPropertyOf>
+    <SubDataPropertyOf>
+        <DataProperty IRI="#timeWindowSeconds"/>
         <DataProperty abbreviatedIRI="owl:topDataProperty"/>
     </SubDataPropertyOf>
     <SubDataPropertyOf>
@@ -4982,6 +5094,11 @@ name = metadata.name</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#GetCurrentTimeOperation</IRI>
+        <Literal>GetCurrentTimeOperation</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>#HybridCipher</IRI>
         <Literal>HybridCipher</Literal>
     </AnnotationAssertion>
@@ -5006,6 +5123,16 @@ name = metadata.name</Literal>
         <Literal>Input</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#InputValidationOperation</IRI>
+        <Literal>InputValidationOperation</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#InstallUpdate</IRI>
+        <Literal>InstallUpdateOperation</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
         <IRI>#Key</IRI>
         <Literal>A key used for encryption algorithms.</Literal>
@@ -5026,6 +5153,11 @@ name = metadata.name</Literal>
         <Literal>MessageAuthenticationCode</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#Output</IRI>
+        <Literal>Output</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
         <IRI>#Padding</IRI>
         <Literal>A padding for a cipher.</Literal>
@@ -5036,6 +5168,11 @@ name = metadata.name</Literal>
         <Literal>Padding</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#RateLimiting</IRI>
+        <Literal>RateLimiting</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
         <IRI>#SymmetricCipher</IRI>
         <Literal>Represents a symmetric cipher.</Literal>
@@ -5044,6 +5181,11 @@ name = metadata.name</Literal>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>#SymmetricCipher</IRI>
         <Literal>SymmetricCipher</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#Time</IRI>
+        <Literal>Time</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
@@ -5071,6 +5213,11 @@ name = metadata.name</Literal>
         <Literal>keyExchange</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#maxRequests</IRI>
+        <Literal>maxRequests</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
         <IRI>#modus</IRI>
         <Literal>Describes a modus of something being executed. (e.g. used by an Encryption)</Literal>
@@ -5089,6 +5236,11 @@ name = metadata.name</Literal>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>#scheme</IRI>
         <Literal>scheme</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>#timeWindowSeconds</IRI>
+        <Literal>timeWindowSeconds</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
@@ -5488,7 +5640,7 @@ name = metadata.name</Literal>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>/classes/CryptographicHash</IRI>
-        <Literal>DocumentChecksum</Literal>
+        <Literal>CryptographicHash</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>

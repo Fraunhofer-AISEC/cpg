@@ -39,7 +39,7 @@ import kotlin.collections.MutableMap
 /** DataLocation: Describes the location as local or remote location */
 public open class Document(
     public val filetype: String?,
-    public val documentChecksums: MutableList<DocumentChecksum?>,
+    public val cryptographicHashs: MutableList<CryptographicHash?>,
     public val documentSignatures: MutableList<DocumentSignature?>,
     public val securityFeatures: MutableList<SecurityFeature?>,
     public val validatedBy: SchemaValidation?,
@@ -60,7 +60,7 @@ public open class Document(
         other is Document &&
             super.equals(other) &&
             other.filetype == this.filetype &&
-            other.documentChecksums == this.documentChecksums &&
+            other.cryptographicHashs == this.cryptographicHashs &&
             other.documentSignatures == this.documentSignatures &&
             other.securityFeatures == this.securityFeatures &&
             other.validatedBy == this.validatedBy
@@ -69,7 +69,7 @@ public open class Document(
         Objects.hash(
             super.hashCode(),
             filetype,
-            documentChecksums,
+            cryptographicHashs,
             documentSignatures,
             securityFeatures,
             validatedBy,

@@ -38,7 +38,7 @@ import kotlin.collections.MutableMap
 
 public open class LogDocument(
     filetype: String?,
-    documentChecksums: MutableList<DocumentChecksum?>,
+    cryptographicHashs: MutableList<CryptographicHash?>,
     documentSignatures: MutableList<DocumentSignature?>,
     securityFeatures: MutableList<SecurityFeature?>,
     validatedBy: SchemaValidation?,
@@ -53,7 +53,7 @@ public open class LogDocument(
 ) :
     Document(
         filetype,
-        documentChecksums,
+        cryptographicHashs,
         documentSignatures,
         securityFeatures,
         validatedBy,

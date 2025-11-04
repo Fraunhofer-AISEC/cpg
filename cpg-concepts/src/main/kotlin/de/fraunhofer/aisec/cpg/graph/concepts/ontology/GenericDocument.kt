@@ -39,7 +39,7 @@ import kotlin.collections.MutableMap
 /** This is a placeholder for all other documents, e.g. index.txt */
 public open class GenericDocument(
     filetype: String?,
-    documentChecksums: MutableList<DocumentChecksum?>,
+    cryptographicHashs: MutableList<CryptographicHash?>,
     documentSignatures: MutableList<DocumentSignature?>,
     securityFeatures: MutableList<SecurityFeature?>,
     validatedBy: SchemaValidation?,
@@ -54,7 +54,7 @@ public open class GenericDocument(
 ) :
     Document(
         filetype,
-        documentChecksums,
+        cryptographicHashs,
         documentSignatures,
         securityFeatures,
         validatedBy,

@@ -46,6 +46,12 @@ object SemanticNodeGenerator {
 
         var owlInputPath = "external/security-metrics/ontology/1.0/ontology-merged.owx"
 
+        // TODO: Remove the following two lines of code since ontology was merged with the version
+        // of the secrity-metrics repo
+        var owlInputPathLocal = "cpg-concepts/src/main/resources/ontology.owx"
+
+        owlInputPath = owlInputPathLocal
+
         val file = File(owlInputPath)
         if (!file.exists()) {
             println("File not found at ${file.absolutePath}")

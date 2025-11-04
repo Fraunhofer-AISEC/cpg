@@ -26,23 +26,21 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.ontology
 
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import java.util.Objects
 import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
-import kotlin.String
-import kotlin.collections.MutableList
 
-public open class DocumentChecksum(
-    public val algorithm: String?,
-    public val errors: MutableList<Error?>,
+public open class InstallUpdateOperation(
+    public val automaticUpdates: AutomaticUpdates?,
+    public val linkedConcept: AutomaticUpdates,
     underlyingNode: Node? = null,
-) : Integrity(underlyingNode) {
+) : Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
-        other is DocumentChecksum &&
+        other is InstallUpdateOperation &&
             super.equals(other) &&
-            other.algorithm == this.algorithm &&
-            other.errors == this.errors
+            other.automaticUpdates == this.automaticUpdates
 
-    override fun hashCode(): Int = Objects.hash(super.hashCode(), algorithm, errors)
+    override fun hashCode(): Int = Objects.hash(super.hashCode(), automaticUpdates)
 }

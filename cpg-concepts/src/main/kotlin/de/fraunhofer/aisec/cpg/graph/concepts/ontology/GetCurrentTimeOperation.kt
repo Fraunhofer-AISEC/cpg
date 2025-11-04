@@ -25,53 +25,19 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.ontology
 
-import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
-import java.time.ZonedDateTime
+import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import java.util.Objects
 import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
-import kotlin.String
-import kotlin.collections.MutableList
-import kotlin.collections.MutableMap
 
-public open class ServiceMetadataDocument(
-    filetype: String?,
-    cryptographicHashs: MutableList<CryptographicHash?>,
-    documentSignatures: MutableList<DocumentSignature?>,
-    securityFeatures: MutableList<SecurityFeature?>,
-    validatedBy: SchemaValidation?,
-    dataLocation: DataLocation?,
-    creation_time: ZonedDateTime?,
-    description: String?,
-    labels: MutableMap<String, String>?,
-    name: String?,
-    raw: String?,
-    parent: Resource?,
+public open class GetCurrentTimeOperation(
+    public val linkedConcept: Time,
     underlyingNode: Node? = null,
-) :
-    Document(
-        filetype,
-        cryptographicHashs,
-        documentSignatures,
-        securityFeatures,
-        validatedBy,
-        dataLocation,
-        creation_time,
-        description,
-        labels,
-        name,
-        raw,
-        parent,
-        underlyingNode,
-    ) {
-    init {
-        name?.let { this.name = Name(localName = it) }
-    }
-
+) : Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
-        other is ServiceMetadataDocument && super.equals(other)
+        other is GetCurrentTimeOperation && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())
 }

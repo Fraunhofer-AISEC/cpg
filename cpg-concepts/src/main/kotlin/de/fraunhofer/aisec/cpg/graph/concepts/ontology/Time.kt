@@ -25,53 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.ontology
 
-import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
-import java.time.ZonedDateTime
 import java.util.Objects
 import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
-import kotlin.String
-import kotlin.collections.MutableList
-import kotlin.collections.MutableMap
 
-public open class ServiceMetadataDocument(
-    filetype: String?,
-    cryptographicHashs: MutableList<CryptographicHash?>,
-    documentSignatures: MutableList<DocumentSignature?>,
-    securityFeatures: MutableList<SecurityFeature?>,
-    validatedBy: SchemaValidation?,
-    dataLocation: DataLocation?,
-    creation_time: ZonedDateTime?,
-    description: String?,
-    labels: MutableMap<String, String>?,
-    name: String?,
-    raw: String?,
-    parent: Resource?,
-    underlyingNode: Node? = null,
-) :
-    Document(
-        filetype,
-        cryptographicHashs,
-        documentSignatures,
-        securityFeatures,
-        validatedBy,
-        dataLocation,
-        creation_time,
-        description,
-        labels,
-        name,
-        raw,
-        parent,
-        underlyingNode,
-    ) {
-    init {
-        name?.let { this.name = Name(localName = it) }
-    }
-
-    override fun equals(other: Any?): Boolean =
-        other is ServiceMetadataDocument && super.equals(other)
+public open class Time(underlyingNode: Node? = null) : Functionality(underlyingNode) {
+    override fun equals(other: Any?): Boolean = other is Time && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())
 }
