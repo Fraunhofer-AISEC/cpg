@@ -33,7 +33,6 @@ object SemanticNodeGenerator {
     @JvmStatic
     fun main(args: Array<String>) {
 
-        // TODO During development, the following parameters are default values
         var outputBaseGo = "output/go/"
         var packageNameGo = "voc"
         var outputBaseJava = "output/java/"
@@ -45,7 +44,7 @@ object SemanticNodeGenerator {
 
         // IMPORTANT: Only OWL/XML and RDF/XML are supported
 
-        var owlInputPath = "cpg-concepts/src/main/resources/ontology.owx"
+        var owlInputPath = "external/security-metrics/ontology/1.0/ontology-merged.owx"
 
         val file = File(owlInputPath)
         if (!file.exists()) {

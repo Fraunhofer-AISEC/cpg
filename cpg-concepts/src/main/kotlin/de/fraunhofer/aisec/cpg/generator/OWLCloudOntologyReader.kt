@@ -40,6 +40,8 @@ import org.semanticweb.owlapi.apibinding.OWLManager
 import org.semanticweb.owlapi.model.*
 import org.semanticweb.owlapi.model.parameters.Imports
 import org.semanticweb.owlapi.search.EntitySearcher
+import org.semanticweb.owlapi.util.AutoIRIMapper
+import org.semanticweb.owlapi.util.SimpleIRIMapper
 import uk.ac.manchester.cs.owl.owlapi.*
 
 /**
@@ -63,8 +65,43 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
     private fun readOwlFile(filepath: String) {
         println("Read owl file")
         val manager = OWLManager.createOWLOntologyManager()
-        ontology = manager.loadOntologyFromOntologyDocument(File(filepath))
+        val owlFile = File(filepath).canonicalFile
+        val baseDir = owlFile.parentFile
+        baseDir
+            ?.takeIf { it.exists() }
+            ?.let { dir ->
+                registerCatalogMappings(dir, manager)
+                manager.iriMappers.add(AutoIRIMapper(dir, true))
+            }
+        manager.iriMappers.add(
+            SimpleIRIMapper(
+                IRI.create("https://ontology.cybersecuritycertcluster.eu"),
+                IRI.create(owlFile),
+            )
+        )
+        ontology = manager.loadOntologyFromOntologyDocument(owlFile)
         df = manager.owlDataFactory
+    }
+
+    private fun registerCatalogMappings(baseDir: File, manager: OWLOntologyManager) {
+        val catalogFile = File(baseDir, "catalog-v001.xml")
+        if (!catalogFile.exists()) {
+            return
+        }
+        val pattern = Regex("""name="([^"]+)"\s+uri="([^"]+)"""")
+        catalogFile.useLines { lines ->
+            lines.forEach { line ->
+                val match = pattern.find(line) ?: return@forEach
+                val iriValue = match.groupValues[1].removePrefix("duplicate:")
+                val relativePath = match.groupValues[2]
+                val mappedFile = File(baseDir, relativePath).canonicalFile
+                if (mappedFile.exists()) {
+                    manager.iriMappers.add(
+                        SimpleIRIMapper(IRI.create(iriValue), IRI.create(mappedFile))
+                    )
+                }
+            }
+        }
     }
 
     // Get list of AbstractRepresentation of OWL classes
