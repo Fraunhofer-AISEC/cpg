@@ -1,4 +1,6 @@
 /*
+ * cpg-language-typescript module gradle build config
+ *
  * Copyright (c) 2022, Fraunhofer AISEC. All rights reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,6 +31,15 @@ import io.github.masch0212.deno.RunDenoTask
 plugins {
     id("cpg.frontend-conventions")
     alias(libs.plugins.deno)
+}
+
+dependencies {
+    implementation(kotlin("stdlib-jdk8"))
+    implementation(project(":cpg-core"))
+    implementation(libs.jackson)
+    implementation(libs.slf4j.api)
+    // Potentially add a logging backend if not provided by cpg.frontend-conventions
+    // runtimeOnly(libs.logback.classic)
 }
 
 mavenPublishing {
