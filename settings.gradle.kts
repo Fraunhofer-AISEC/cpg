@@ -33,6 +33,10 @@ val enablePythonFrontend: Boolean by extra {
     val enablePythonFrontend: String? by settings
     enablePythonFrontend.toBoolean()
 }
+val enableRustFrontend: Boolean by extra {
+    val enableRustFrontend: String? by settings
+    enableRustFrontend.toBoolean()
+}
 val enableLLVMFrontend: Boolean by extra {
     val enableLLVMFrontend: String? by settings
     enableLLVMFrontend.toBoolean()
@@ -63,6 +67,7 @@ if (enableCXXFrontend) include(":cpg-language-cxx")
 if (enableGoFrontend) include(":cpg-language-go")
 if (enableLLVMFrontend) include(":cpg-language-llvm")
 if (enablePythonFrontend) include(":cpg-language-python")
+if (enableRustFrontend) include(":cpg-language-rust")
 if (enableTypeScriptFrontend) include(":cpg-language-typescript")
 if (enableRubyFrontend) include(":cpg-language-ruby")
 if (enableJVMFrontend) include(":cpg-language-jvm")
