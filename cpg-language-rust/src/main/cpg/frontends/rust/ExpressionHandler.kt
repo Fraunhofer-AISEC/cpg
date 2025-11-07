@@ -23,17 +23,16 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.frontends.python
+package de.fraunhofer.aisec.cpg.frontends.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import jep.python.PyObject
 
 class ExpressionHandler(frontend: RustLanguageFrontend) :
     Handler<Statement, ..., RustLanguageFrontend>(Supplier { ProblemExpression() }, lang) {
 
-    override fun handleNode(node: Python.AST.BaseExpr): Expression {
+    override fun handleNode(node: ...): Expression {
         return when (node) {
             is ... -> handle...(node)
         }

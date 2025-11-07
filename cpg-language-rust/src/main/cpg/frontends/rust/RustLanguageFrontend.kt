@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.frontends.python
+package de.fraunhofer.aisec.cpg.frontends.rust
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
@@ -42,7 +42,6 @@ import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
-import jep.python.PyObject
 import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.pathString
 import kotlin.math.min
@@ -50,15 +49,6 @@ import kotlin.math.min
 /**
  * The [LanguageFrontend] for Rust. It uses the TreeSitter project to generate a RUST AST.
  *
- * It requires the Python interpreter (and the JEP library) to be installed on the system. The
- * frontend registers two additional passes.
- *
- * ## Adding dynamic variable declarations
- *
- * The [PythonAddDeclarationsPass] adds dynamic declarations to the CPG. Python does not have the
- * concept of a "declaration", but rather values are assigned to variables and internally variable
- * are represented by a dictionary. This pass adds a declaration for each variable that is assigned
- * a value (on the first assignment).
  */
 
 @SupportsParallelParsing(true)
