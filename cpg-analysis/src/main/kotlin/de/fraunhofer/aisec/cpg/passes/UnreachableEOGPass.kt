@@ -262,10 +262,10 @@ enum class Reachability {
 class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
     class Element(var reachability: Reachability) : Lattice.Element {
         override fun equals(other: Any?): Boolean {
-            return other is Element && runBlocking { this@Element.compare(other) == Order.EQUAL }
+            return other is Element && this@Element.compare(other) == Order.EQUAL
         }
 
-        override suspend fun compare(other: Lattice.Element): Order {
+        override fun compare(other: Lattice.Element): Order {
             return when {
                 other !is Element ->
                     throw IllegalArgumentException(
@@ -302,10 +302,10 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
         two: Element,
         allowModify: Boolean,
         widen: Boolean,
+        concurrencyCounter: Int,
     ): Element {
         return if (allowModify) {
-            val ret: Order
-            runBlocking { ret = compare(one, two) }
+            val ret = compare(one, two)
             when (ret) {
                 Order.EQUAL -> one
                 Order.GREATER -> one
@@ -325,7 +325,7 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
         return Element(minOf(one.reachability, two.reachability))
     }
 
-    override suspend fun compare(one: Element, two: Element): Order {
+    override fun compare(one: Element, two: Element): Order {
         return one.compare(two)
     }
 

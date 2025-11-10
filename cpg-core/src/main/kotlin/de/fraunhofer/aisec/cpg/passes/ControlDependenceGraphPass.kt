@@ -41,8 +41,8 @@ import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ComprehensionExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
+import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentMapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
-import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import java.io.File
@@ -121,7 +121,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             nodeToBBMap = tmp.third
         }
 
-        log.trace("Retrieved network of BBs for {}", startNode.name)
+        log.info("Retrieved network of BBs for {}", startNode.name)
 
         val prevEOGState =
             PrevEOGState(innerLattice = PrevEOGLattice(innerLattice = PowersetLattice()))
@@ -254,6 +254,8 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         log.info(
             "Done creating CDG for function ${startNode.name}. Cyclomatic complexity: ${startNode.cyclomaticComplexity()}; Special complexity: $c; bbConstructionTime: $bbConstructionTime; eogIterationTime: $eogIterationTime; afterworkTime: $afterworkTime"
         )
+
+        log.info("CDG Transfer counter: $CDGTransferCounter")
     }
 
     /*
@@ -308,11 +310,14 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
  *
  * Returns the updated state and true because we always expect an update of the state.
  */
+var CDGTransferCounter: Long = 0
+
 suspend fun transfer(
     lattice: Lattice<PrevEOGStateElement>,
     currentEdge: EvaluationOrder,
     currentState: PrevEOGStateElement,
 ): PrevEOGStateElement {
+    CDGTransferCounter++
     val lattice = lattice as? PrevEOGState ?: return currentState
     var newState = currentState
 
@@ -413,13 +418,14 @@ private fun IfStatement.allBranchesFromMyThenBranchGoThrough(node: Node?): Boole
     return true
 }
 
-typealias PrevEOGLatticeElement = MapLattice.Element<Node, PowersetLattice.Element<BasicBlock>>
+typealias PrevEOGLatticeElement =
+    ConcurrentMapLattice.Element<Node, PowersetLattice.Element<BasicBlock>>
 
-typealias PrevEOGLattice = MapLattice<Node, PowersetLattice.Element<BasicBlock>>
+typealias PrevEOGLattice = ConcurrentMapLattice<Node, PowersetLattice.Element<BasicBlock>>
 
-typealias PrevEOGStateElement = MapLattice.Element<BasicBlock, PrevEOGLatticeElement>
+typealias PrevEOGStateElement = ConcurrentMapLattice.Element<BasicBlock, PrevEOGLatticeElement>
 
-typealias PrevEOGState = MapLattice<BasicBlock, PrevEOGLatticeElement>
+typealias PrevEOGState = ConcurrentMapLattice<BasicBlock, PrevEOGLatticeElement>
 
 suspend fun PrevEOGState.push(
     currentElement: PrevEOGStateElement,

@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.evaluation
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -39,11 +40,18 @@ class SizeEvaluator : ValueEvaluator() {
     override val log: Logger
         get() = LoggerFactory.getLogger(SizeEvaluator::class.java)
 
-    override fun evaluate(node: Any?): Any? {
+    /** Cache calculated values so that we don't have to calculate them each time */
+    companion object {
+        private val valuesCache = ConcurrentHashMap<Int, Any>()
+    }
+
+    override fun evaluate(node: Any?, useCache: Boolean): Any? {
         if (node is String) {
             return node.length
         }
-        return evaluateInternal(node as? Node, 0)
+        return if (useCache)
+            valuesCache.getOrPut(node.hashCode()) { evaluateInternal(node as? Node, 0) }
+        else evaluateInternal(node as? Node, 0)
     }
 
     override fun evaluateInternal(node: Node?, depth: Int): Any? {

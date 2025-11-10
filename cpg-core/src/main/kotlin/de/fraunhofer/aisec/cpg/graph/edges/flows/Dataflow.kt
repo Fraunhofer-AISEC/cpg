@@ -207,9 +207,7 @@ class CallingContextIn(override val calls: MutableList<CallExpression>) : Callin
     }
 
     override fun hashCode(): Int {
-        var result = super.hashCode()
-        result = 31 * result + calls.hashCode()
-        return result
+        return 31 * calls.hashCode()
     }
 }
 
@@ -224,9 +222,7 @@ class CallingContextOut(
     }
 
     override fun hashCode(): Int {
-        var result = super.hashCode()
-        result = 31 * result + calls.hashCode()
-        return result
+        return 31 * calls.hashCode()
     }
 }
 

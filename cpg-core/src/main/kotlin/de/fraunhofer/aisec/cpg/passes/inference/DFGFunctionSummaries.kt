@@ -57,6 +57,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.equalLinkedHashSetOf
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.passes.DFGPass
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.tryCast
 import java.io.File
 import org.slf4j.Logger
@@ -383,7 +384,12 @@ class DFGFunctionSummaries {
                                 from,
                                 srcValueDepth,
                                 "",
-                                PowersetLattice.Element(Pair(destNode, equalLinkedHashSetOf())),
+                                PowersetLattice.Element(
+                                    PointsToPass.NodeWithPropertiesKey(
+                                        destNode,
+                                        equalLinkedHashSetOf(),
+                                    )
+                                ),
                                 equalLinkedHashSetOf(granularity, false),
                             )
                         )

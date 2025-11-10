@@ -43,10 +43,11 @@ import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.functional.EqualLinkedHashSet
-import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.equalLinkedHashSetOf
+import de.fraunhofer.aisec.cpg.passes.PointsToPass.NodeWithPropertiesKey
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
@@ -122,10 +123,7 @@ open class FunctionDeclaration :
         val srcValueDepth: Int = 1, // 0: Address, 1: Value, 2: DerefValue, 3:
         val subAccessName: String,
         // Node which a set of possible properties, such as a callingcontext
-        val lastWrites: PowersetLattice.Element<Pair<Node, EqualLinkedHashSet<Any>>> =
-            PowersetLattice.Element(),
-        //        val lastWrites: EqualLinkedHashSet<Pair<Node, EqualLinkedHashSet<Any>>> =
-        //            equalLinkedHashSetOf(),
+        val lastWrites: MutableSet<NodeWithPropertiesKey> = ConcurrentHashMap.newKeySet(),
         // Additional properties such the granularity or the shortFS
         // We use shortFunctionSummaries to draw "short" DFG-Edges that allow us to follow DFG Paths
         // without going into functions. Not as detailed, but faster
@@ -133,9 +131,19 @@ open class FunctionDeclaration :
         // Sometimes, we need a dummy of a functionSummary, for example to avoid recursion. We
         // indicate here if this is one
         val isDummy: Boolean = false,
-    )
+    ) {
+        override fun equals(other: Any?): Boolean =
+            other is FSEntry &&
+                destValueDepth == other.destValueDepth &&
+                srcNode == other.srcNode &&
+                srcValueDepth == other.srcValueDepth &&
+                subAccessName == other.subAccessName &&
+                lastWrites == other.lastWrites &&
+                properties == other.properties &&
+                isDummy == other.isDummy
+    }
 
-    var functionSummary = mutableMapOf<Node, MutableSet<FSEntry>>()
+    var functionSummary = ConcurrentHashMap<Node, MutableSet<FSEntry>>()
 
     /** Returns true, if this function has a [body] statement. */
     fun hasBody(): Boolean {
@@ -310,6 +318,11 @@ fun Statement.specialComplexity(depth: Int = 1): Long {
                 i += depth + ((stmt.statement?.specialComplexity(depth + 1) ?: 0))
             }
             is GotoStatement -> {
+                // Analyze where the goto jumps to. Then go through the target block and fetch its
+                // complexity
+                /*                stmt.nextEOG.forEach { next ->
+                    i += next.firstParentOrNull<Block>()?.cyclomaticComplexity(depth + 1) ?: 0
+                }*/
                 // add the depth
                 i += depth
             }

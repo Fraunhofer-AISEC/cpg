@@ -59,6 +59,7 @@ class TupleState<NodeId>(
         two: TupleStateElement<NodeId>,
         allowModify: Boolean,
         widen: Boolean,
+        concurrencyCounter: Int,
     ): TupleStateElement<NodeId> {
         return if (allowModify) {
             innerLattice1.lub(one = one.first, two = two.first, allowModify = true, widen = widen)
@@ -96,8 +97,9 @@ class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>
         two: Element<NodeId, NewIntervalLattice.Element>,
         allowModify: Boolean,
         widen: Boolean,
+        concurrencyCounter: Int,
     ): Element<NodeId, NewIntervalLattice.Element> {
-        val result = super.lub(one, two, allowModify, widen)
+        val result = super.lub(one, two, allowModify, widen, concurrencyCounter)
         if (result is DeclarationStateElement<NodeId>) {
             // If the result is a DeclarationStateElement, we can return it directly
             return result
@@ -139,7 +141,7 @@ class DeclarationState<NodeId>(innerLattice: Lattice<NewIntervalLattice.Element>
 
         override fun equals(other: Any?): Boolean {
             return other is DeclarationStateElement<NodeId> &&
-                runBlocking { this@DeclarationStateElement.compare(other) == Order.EQUAL }
+                this@DeclarationStateElement.compare(other) == Order.EQUAL
         }
 
         override fun hashCode(): Int {
@@ -206,6 +208,7 @@ class NewIntervalLattice() :
         two: Element,
         allowModify: Boolean,
         widen: Boolean,
+        concurrencyCounter: Int,
     ): Element {
         val oneElem = one.element
         val twoElem = two.element
@@ -299,7 +302,7 @@ class NewIntervalLattice() :
         }
     }
 
-    override suspend fun compare(one: Element, two: Element): Order {
+    override fun compare(one: Element, two: Element): Order {
         return one.compare(two)
     }
 
@@ -320,7 +323,7 @@ class NewIntervalLattice() :
             return "IntervalLattice.Element(elements=$element)"
         }
 
-        override suspend fun compare(other: Lattice.Element): Order {
+        override fun compare(other: Lattice.Element): Order {
             //            var ret: Order
             //            runBlocking { ret = innerCompare(other) }
             //            return ret

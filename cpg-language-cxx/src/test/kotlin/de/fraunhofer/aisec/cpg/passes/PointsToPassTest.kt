@@ -3572,4 +3572,27 @@ class PointsToPassTest {
             }
         assertNotNull(tu)
     }
+
+    @Test
+    fun testShortFS2() {
+        val file = File("src/test/resources/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+        val outerSubFSEntries =
+            tu.functions
+                .filter { it.name.localName == "outer_sub" }
+                .singleOrNull()
+                ?.functionSummary
+                ?.entries
+                ?.singleOrNull()
+        assertNotNull(outerSubFSEntries)
+        val outerSubShortFSEntries = outerSubFSEntries.value.filter { it.properties.contains(true) }
+        // One short FS for the parameter, one for the function itself
+        assertEquals(2, outerSubShortFSEntries.size)
+    }
 }
