@@ -54,7 +54,7 @@ abstract class OverlayNode() : Node() {
             this.code = value?.code
             this.location = value?.location
         }
-    
+
     /**
      * Compares this [OverlayNode] to another object. We also include the [underlyingNode] in this
      * process, meaning that two overlay nodes with the equal properties will not be equal if they
