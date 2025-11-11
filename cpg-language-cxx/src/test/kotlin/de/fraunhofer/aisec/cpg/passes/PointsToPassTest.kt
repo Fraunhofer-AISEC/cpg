@@ -1968,15 +1968,13 @@ class PointsToPassTest {
             .singleOrNull()
             ?.value
             ?.filter { it.properties.none { it == true } }
-            ?.any { it.srcNode is UnknownMemoryValue && it.srcNode?.name?.localName == "CONCAT71" }
+            ?.any { (it.srcNode as? UnknownMemoryValue)?.name?.localName == "CONCAT71" }
             ?.let { assertTrue(it) }
         fsecallkeytoout.entries
             .singleOrNull()
             ?.value
             ?.filter { it.properties.none { it == true } }
-            ?.any {
-                it.srcNode is UnknownMemoryValue && it.srcNode?.name?.localName == "DAT_0011b1c8"
-            }
+            ?.any { (it.srcNode as? UnknownMemoryValue)?.name?.localName == "DAT_0011b1c8" }
             ?.let { assertTrue(it) }
         fsecallkeytoout.entries
             .singleOrNull()
@@ -2032,9 +2030,7 @@ class PointsToPassTest {
                 .entries
                 .firstOrNull()
                 ?.value
-                ?.filter {
-                    it.srcNode is UnknownMemoryValue && it.srcNode?.name?.localName == "CONCAT71"
-                }
+                ?.filter { (it.srcNode as? UnknownMemoryValue)?.name?.localName == "CONCAT71" }
                 ?.size,
         )
         assertEquals(
@@ -2044,10 +2040,7 @@ class PointsToPassTest {
                 .entries
                 .firstOrNull()
                 ?.value
-                ?.filter {
-                    it.srcNode is UnknownMemoryValue &&
-                        it.srcNode?.name?.localName == "DAT_0011b1c8"
-                }
+                ?.filter { (it.srcNode as? UnknownMemoryValue)?.name?.localName == "DAT_0011b1c8" }
                 ?.size,
         )
     }
@@ -3434,13 +3427,13 @@ class PointsToPassTest {
             .singleOrNull()
             ?.value
             ?.filter { it.properties.none { it == true } }
-            ?.any { it.srcNode is UnknownMemoryValue && it.srcNode?.name?.localName == "CONCAT71" }
+            ?.any { (it.srcNode as? UnknownMemoryValue)?.name?.localName == "CONCAT71" }
             ?.let { assertTrue(it) }
         fsecallkeytoout2.entries
             .singleOrNull()
             ?.value
             ?.filter { it.properties.none { it == true } }
-            ?.any { it.srcNode is UnknownMemoryValue && it.srcNode?.name?.localName == "key" }
+            ?.any { (it.srcNode as? UnknownMemoryValue)?.name?.localName == "key" }
             ?.let { assertTrue(it) }
         fsecallkeytoout2.entries
             .singleOrNull()
@@ -3497,9 +3490,7 @@ class PointsToPassTest {
                 .entries
                 .firstOrNull()
                 ?.value
-                ?.filter {
-                    it.srcNode is UnknownMemoryValue && it.srcNode?.name?.localName == "CONCAT71"
-                }
+                ?.filter { (it.srcNode as? UnknownMemoryValue)?.name?.localName == "CONCAT71" }
                 ?.size,
         )
         // From the in_outptr: The unknown value from the global key variable in Line 498
@@ -3510,9 +3501,7 @@ class PointsToPassTest {
                 .entries
                 .firstOrNull()
                 ?.value
-                ?.filter {
-                    it.srcNode is UnknownMemoryValue && it.srcNode?.name?.localName == "key"
-                }
+                ?.filter { (it.srcNode as? UnknownMemoryValue)?.name?.localName == "key" }
                 ?.size,
         )
 
@@ -3544,7 +3533,7 @@ class PointsToPassTest {
                 .entries
                 .firstOrNull()
                 ?.value
-                ?.filter { it.srcNode is UnknownMemoryValue && it.srcNode?.name?.localName == "0" }
+                ?.filter { (it.srcNode as? UnknownMemoryValue)?.name?.localName == "0" }
                 ?.size,
         )
     }
