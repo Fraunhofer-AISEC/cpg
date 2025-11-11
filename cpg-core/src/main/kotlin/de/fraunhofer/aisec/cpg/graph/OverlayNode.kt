@@ -46,8 +46,15 @@ abstract class OverlayNode() : Node() {
     var underlyingNodeEdge: OverlaySingleEdge =
         OverlaySingleEdge(this, of = null, mirrorProperty = Node::overlayEdges, outgoing = false)
 
-    var underlyingNode by unwrapping(OverlayNode::underlyingNodeEdge)
-
+    private var _underlyingNode by unwrapping(OverlayNode::underlyingNodeEdge)
+    var underlyingNode: Node?
+        get() = _underlyingNode
+        set(value) {
+            _underlyingNode = value
+            this.code = value?.code
+            this.location = value?.location
+        }
+    
     /**
      * Compares this [OverlayNode] to another object. We also include the [underlyingNode] in this
      * process, meaning that two overlay nodes with the equal properties will not be equal if they

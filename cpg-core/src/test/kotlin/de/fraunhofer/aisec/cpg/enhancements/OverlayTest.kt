@@ -29,6 +29,9 @@ import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.newLiteral
+import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
+import de.fraunhofer.aisec.cpg.sarif.Region
+import java.net.URI
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -82,6 +85,23 @@ class OverlayTest {
             assertTrue(overlay2.nextDFGEdges.first().overlaying)
             assertFalse(codeNode1.nextDFGEdges.first().overlaying)
             assertTrue(codeNode2.nextDFGEdges.first().overlaying)
+        }
+    }
+
+    @Test
+    fun testUnderlyingNodePropagation() {
+        with(TestLanguageFrontend()) {
+            val overlay: OverlayNode = object : OverlayNode() {}
+            assertTrue { overlay.underlyingNode == null }
+
+            val node = object : Node() {}
+            node.location = PhysicalLocation(URI.create(""), Region(10, 10, 10, 10))
+            node.code = "Test"
+
+            overlay.underlyingNode = node
+            assertTrue { overlay.underlyingNode != null }
+            assertTrue { overlay.location == node.location }
+            assertTrue { overlay.code == node.code }
         }
     }
 }
