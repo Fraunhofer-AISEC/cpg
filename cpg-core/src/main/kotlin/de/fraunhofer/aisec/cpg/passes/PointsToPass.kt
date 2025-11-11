@@ -276,6 +276,9 @@ fun clearFSDummies(functionSummary: MutableMap<Node, MutableSet<FunctionDeclarat
         .forEach { functionSummary.remove(it) }
 }
 
+private val callExpressionToMemAddrMap =
+    ConcurrentIdentityHashMap<CallExpression, ConcurrentIdentityHashMap<Name, MemoryAddress>>()
+
 /**
  * Resolve a MemberExpression as long as it's base no longer is a MemberExpression itself. Returns
  * the base a Name that identifies the access
@@ -1448,7 +1451,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         lastWrites: MutableSet<NodeWithPropertiesKey>,
         currentNode: CallExpression,
         inv: FunctionDeclaration,
-        srcNode: Node?,
+        srcNode: Any?,
         srcValueDepth: Int,
         param: Node,
     ): MutableMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>> {
@@ -1472,6 +1475,23 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             )
         }
 
+        // If the srcNode is a MemoryAddress, we look it up in a map to ensure that we have a
+        // different MemoryAddress for each CallExpression, but the same if the CalLExpression is
+        // the same
+        val srcNode =
+            if (srcNode is FunctionDeclaration)
+            // To ensure that we have a unique Node, we take the callExpression if the
+            // FS said the srcNode is the FunctionDeclaration
+            currentNode
+            else if (srcNode is Name) {
+                val memoryAddress =
+                    callExpressionToMemAddrMap
+                        .computeIfAbsent(currentNode) { ConcurrentIdentityHashMap() }
+                        .computeIfAbsent(srcNode) { MemoryAddress(srcNode) }
+                // We didn't previously add the DFG Edge for the memoryAddress, so we do that now
+                memoryAddress.nextDFGEdges += Dataflow(memoryAddress, inv)
+                memoryAddress
+            } else srcNode as? Node
         // Especially for shortFS, we need to update the
         // prevDFGs with
         // information we didn't have when creating the
@@ -1483,12 +1503,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             mapDstToSrc,
             destinationAddresses,
             destinations,
-            // To ensure that we have a
-            // unique Node, we take
-            // the allExpression if the FS
-            // said the srcNode is
-            // the FunctionDeclaration
-            if (srcNode is FunctionDeclaration) currentNode else srcNode,
+            srcNode,
             shortFS,
             srcValueDepth,
             param,
@@ -2066,7 +2081,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     ): PointsToState.Element {
         var doubleState = doubleState
 
-        /* If we have an Expression that is written to, we handle it's values later and ignore it now */
+        /* If we have an Expression that is written to, we handle its values later and ignore it now */
         val access =
             if (currentNode is Reference || currentNode is BinaryOperator) currentNode.access
             else if (currentNode is SubscriptExpression && currentNode.arrayExpression is Reference)
@@ -2083,8 +2098,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     .mapTo(ConcurrentIdentitySet()) { it.first }
             val prevDFGs = doubleState.getLastWrites(currentNode)
 
-            // If we have any information from the dereferenced value, we also fetch that
-            if ((passConfig<Configuration>()?.drawCurrentDerefDFG != false)) {
+            // If we have any information from the dereferenced value, we also fetch that (if it's
+            // not written to)
+            if ((passConfig<Configuration>()?.drawCurrentDerefDFG != false) /*&&
+                    (currentNode.astParent as? PointerDereference)?.access != AccessValues.WRITE*/) {
                 values
                     .filterTo(concurrentIdentitySetOf()) {
                         doubleState.hasDeclarationStateEntry(it, true)
@@ -2119,33 +2136,32 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 excludeShortFSValues = true,
                             )
                             .map { it.value }
+                            .filter { derefValue ->
+                                doubleState.hasDeclarationStateEntry(derefValue)
+                            }
                             .forEach { derefValue ->
-                                if (doubleState.hasDeclarationStateEntry(derefValue)) {
-                                    doubleState
-                                        .getLastWrites(derefValue)
-                                        .filter { it.properties.none { it == true } }
-                                        .forEach {
-                                            prevDFGs.add(
-                                                NodeWithPropertiesKey(
-                                                    it.node,
-                                                    equalLinkedHashSetOf<Any>(
-                                                        PointerDataflowGranularity(
-                                                            PointerAccess.currentDerefDerefValue
-                                                        ),
-                                                        // Here again, filter the
-                                                        // FullDataflowGranularity since
-                                                        // we indicate a
-                                                        // currentDerefDerefValue
-                                                        *it.properties
-                                                            .filter {
-                                                                it !is FullDataflowGranularity
-                                                            }
-                                                            .toTypedArray(),
+                                doubleState
+                                    .getLastWrites(derefValue)
+                                    .filter { it.properties.none { it == true } }
+                                    .forEach {
+                                        prevDFGs.add(
+                                            NodeWithPropertiesKey(
+                                                it.node,
+                                                equalLinkedHashSetOf<Any>(
+                                                    PointerDataflowGranularity(
+                                                        PointerAccess.currentDerefDerefValue
                                                     ),
-                                                )
+                                                    // Here again, filter the
+                                                    // FullDataflowGranularity since
+                                                    // we indicate a
+                                                    // currentDerefDerefValue
+                                                    *it.properties
+                                                        .filter { it !is FullDataflowGranularity }
+                                                        .toTypedArray(),
+                                                ),
                                             )
-                                        }
-                                }
+                                        )
+                                    }
                             }
                     }
             }

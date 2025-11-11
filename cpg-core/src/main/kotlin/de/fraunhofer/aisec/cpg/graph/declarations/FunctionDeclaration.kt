@@ -119,7 +119,7 @@ open class FunctionDeclaration :
     data class FSEntry(
         val destValueDepth: Int =
             1, // 0: Address, 1: Value, 2: DerefValue, 3: DerefderefValue, ....
-        val srcNode: Node?,
+        val srcNode: Any?,
         val srcValueDepth: Int = 1, // 0: Address, 1: Value, 2: DerefValue, 3:
         val subAccessName: String,
         // Node which a set of possible properties, such as a callingcontext

@@ -47,7 +47,6 @@ import de.fraunhofer.aisec.cpg.graph.newFunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.newParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.returns
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemoryAddress
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnknownMemoryValue
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -280,9 +279,6 @@ class DFGFunctionSummaries {
         }
     }
 
-    private val functionDeclarationToMemAddrMap =
-        mutableMapOf<FunctionDeclaration, MutableMap<Name, MemoryAddress>>()
-
     /**
      * This method parses the [DFGEntry] entries in [dfgEntries] and adds the respective DFG edges
      * between the parameters, receiver and potentially the [functionDeclaration] itself.
@@ -298,7 +294,7 @@ class DFGFunctionSummaries {
                 if (entry.dfgType == "partial") PartialDataflowGranularity("hardcoded")
                 else default()
             val destNodes: MutableSet<Node> = mutableSetOf()
-            val from: Node? =
+            val from: Any? =
                 if (entry.from.startsWith("param")) {
                     try {
                         val e = entry.from.split(".")
@@ -312,10 +308,7 @@ class DFGFunctionSummaries {
                         null
                     }
                 } else if (entry.from.startsWith("NewMemoryAddress")) {
-                    val memAddrName = Name(entry.from, functionDeclaration.name)
-                    functionDeclarationToMemAddrMap
-                        .computeIfAbsent(functionDeclaration) { mutableMapOf() }
-                        .computeIfAbsent(memAddrName) { MemoryAddress(memAddrName) }
+                    Name(entry.from, functionDeclaration.name)
                 } else if (entry.from == "base") {
                     (functionDeclaration as? MethodDeclaration)?.receiver
                 } else {
@@ -401,7 +394,11 @@ class DFGFunctionSummaries {
             // TODO: Unsure if we still need this. We currently draw the edges between the
             // ParameterMemoryValues. We can't do this here because we don't yet have them, so we do
             // this in handleCallExpression in the pointsToPass
-            to?.let { from?.nextDFGEdges += Dataflow(from, it, granularity = granularity) }
+            // Note: When we have a Name for a memoryAddress that does not yet exist, we need to
+            // draw the DFG edge later in writeEntry()
+            to?.let {
+                (from as? Node)?.nextDFGEdges += Dataflow(from, it, granularity = granularity)
+            }
         }
     }
 
