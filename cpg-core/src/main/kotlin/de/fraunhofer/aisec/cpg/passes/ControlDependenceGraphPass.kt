@@ -47,7 +47,9 @@ import java.text.NumberFormat
 import java.util.Locale
 import kotlin.collections.component1
 import kotlin.collections.component2
+import kotlin.system.measureNanoTime
 import kotlin.system.measureTimeMillis
+import kotlin.time.measureTimedValue
 import kotlinx.coroutines.runBlocking
 
 /** This pass builds the Control Dependence Graph (CDG) by iterating through the EOG. */
@@ -79,6 +81,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
      *    Repeat step 3) until you cannot move the node upwards in the CDG anymore.
      */
     override fun accept(startNode: Node) {
+        timeInTransfer = 0
         // For now, we only execute this for function declarations, we will support all EOG starters
         // in the future.
         if (startNode !is FunctionDeclaration) {
@@ -96,11 +99,13 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             "[CDG] Analyzing function ${startNode.name}. Complexity: ${NumberFormat.getNumberInstance(Locale.US).format(c)}"
         )
 
-        log.trace("Creating CDG for {} with complexity {}", startNode.name, c)
+        log.info("Creating CDG for {} with complexity {}", startNode.name, c)
 
-        val (firstBasicBlock, basicBlocks, nodeToBBMap) = collectBasicBlocks(startNode, false)
+        val (ret, time) = measureTimedValue { collectBasicBlocks(startNode, false) }
+        val (firstBasicBlock, basicBlocks, nodeToBBMap) = ret
 
         log.info("Retrieved network of BBs for {}", startNode.name)
+        log.info("Time for calculateBasicBlocks: $time")
 
         val prevEOGState =
             PrevEOGState(innerLattice = PrevEOGLattice(innerLattice = PowersetLattice()))
@@ -110,14 +115,17 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         // result in the basicBlock, we use the dominator's state instead (i.e., we move the
         // basicBlock one layer upwards)
         var startState: PrevEOGStateElement = prevEOGState.bottom
-        startState = runBlocking {
-            prevEOGState.push(
-                startState,
-                firstBasicBlock,
-                PrevEOGLatticeElement(startNode to PowersetLattice.Element(firstBasicBlock)),
-                true,
-            )
+        val startStateTime = measureTimeMillis {
+            startState = runBlocking {
+                prevEOGState.push(
+                    startState,
+                    firstBasicBlock,
+                    PrevEOGLatticeElement(startNode to PowersetLattice.Element(firstBasicBlock)),
+                    true,
+                )
+            }
         }
+        log.info("startStateTime: $startStateTime")
 
         log.trace("Iterating EOG of {}", firstBasicBlock)
         var finalState: PrevEOGStateElement
@@ -131,8 +139,9 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         // branchingNodeConditionals is a map organized as follows:
         //   BranchingNode -> Set of BasicBlocks where, if we visited all of these, the
         //      branchingNode does not dominate us anymore (we are after the merge point).
-        val branchingNodeConditionals =
-            getBranchingNodeConditions(startNode, basicBlocks, nodeToBBMap)
+        val (branchingNodeConditionals, getBranchingTime) =
+            measureTimedValue { getBranchingNodeConditions(startNode, basicBlocks, nodeToBBMap) }
+        log.info("getBranchingTime: $getBranchingTime")
 
         // final state is a map organized as follows:
         //   BasicBlock -> Map<Node, Set<BasicBlock>> with
@@ -232,6 +241,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         )
 
         log.info("CDG Transfer counter: $CDGTransferCounter")
+        log.info("time in Transfer: ${timeInTransfer/1000000}")
     }
 
     /*
@@ -296,45 +306,44 @@ suspend fun transfer(
     CDGTransferCounter++
     val lattice = lattice as? PrevEOGState ?: return currentState
     var newState = currentState
+    timeInTransfer += measureNanoTime {
+        val currentStart =
+            currentEdge.start as? BasicBlock
+                ?: throw IllegalArgumentException(
+                    "Current edge start must be a BasicBlock, but was ${currentEdge.start}"
+                )
+        val currentEnd =
+            currentEdge.end as? BasicBlock
+                ?: throw IllegalArgumentException(
+                    "Current edge end must be a BasicBlock, but was ${currentEdge.end}"
+                )
 
-    val currentStart =
-        currentEdge.start as? BasicBlock
-            ?: throw IllegalArgumentException(
-                "Current edge start must be a BasicBlock, but was ${currentEdge.start}"
-            )
-    val currentEnd =
-        currentEdge.end as? BasicBlock
-            ?: throw IllegalArgumentException(
-                "Current edge end must be a BasicBlock, but was ${currentEdge.end}"
-            )
+        // Check if we start in a branching node and if this edge leads to the conditional
+        // branch. In this case, the next node will move "one layer downwards" in the CDG.
+        val branchingNode = currentStart.branchingNode
+        if (branchingNode != null) {
+            // We start in a branching node and end in one of the branches, so we have the
+            // following state:
+            // for the branching node "start", we have a path through "end".
+            val prevPathLattice =
+                newState[currentStart]
+                    ?.filter { (k, _) -> k != branchingNode }
+                    ?.let { PrevEOGLatticeElement(it) } ?: PrevEOGLatticeElement()
 
-    // Check if we start in a branching node and if this edge leads to the conditional
-    // branch. In this case, the next node will move "one layer downwards" in the CDG.
-    val branchingNode = currentStart.branchingNode
-    if (branchingNode != null) {
-        // We start in a branching node and end in one of the branches, so we have the
-        // following state:
-        // for the branching node "start", we have a path through "end".
-        val prevPathLattice =
-            newState[currentStart]
-                ?.filter { (k, _) -> k != branchingNode }
-                ?.let { PrevEOGLatticeElement(it) } ?: PrevEOGLatticeElement()
-
-        val map = PrevEOGLatticeElement(branchingNode to PowersetLattice.Element(currentEnd))
-        runBlocking {
+            val map = PrevEOGLatticeElement(branchingNode to PowersetLattice.Element(currentEnd))
             val newPath = lattice.innerLattice.lub(map, prevPathLattice, true)
             newState = lattice.push(newState, currentEnd, newPath, true)
+        } else {
+            // We did not start in a branching node, so for the next node, we have the same path
+            // (last branching + first end node) as for the start node of this edge.
+            // If there is no state for the start node (most likely, this is the case for the
+            // first edge in a function), we generate a new state where we start in "start" end
+            // have "end" as the first node in the "branch".
+            val state =
+                newState[currentStart]?.let { PrevEOGLatticeElement(it) }
+                    ?: PrevEOGLatticeElement(currentStart to PowersetLattice.Element(currentEnd))
+            newState = lattice.push(newState, currentEnd, state, true)
         }
-    } else {
-        // We did not start in a branching node, so for the next node, we have the same path
-        // (last branching + first end node) as for the start node of this edge.
-        // If there is no state for the start node (most likely, this is the case for the
-        // first edge in a function), we generate a new state where we start in "start" end
-        // have "end" as the first node in the "branch".
-        val state =
-            newState[currentStart]?.let { PrevEOGLatticeElement(it) }
-                ?: PrevEOGLatticeElement(currentStart to PowersetLattice.Element(currentEnd))
-        runBlocking { newState = lattice.push(newState, currentEnd, state, true) }
     }
     return newState
 }
