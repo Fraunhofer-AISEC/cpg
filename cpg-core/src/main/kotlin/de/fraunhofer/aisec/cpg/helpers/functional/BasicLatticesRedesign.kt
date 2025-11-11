@@ -465,7 +465,7 @@ interface Lattice<T : Lattice.Element> {
                                                 ?.parallelCompare(oldGlobalIt)
                                                 ?: (newGlobalIt
                                                         as? ConcurrentMapLattice.Element<*, *>)
-                                                    ?.compare(oldGlobalIt)
+                                                    ?.parallelCompare(oldGlobalIt)
                                                 ?: newGlobalIt.compare(oldGlobalIt)) in
                                                 setOf(Order.GREATER, Order.UNEQUAL)
                                         }
