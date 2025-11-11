@@ -2100,8 +2100,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
             // If we have any information from the dereferenced value, we also fetch that (if it's
             // not written to)
-            if ((passConfig<Configuration>()?.drawCurrentDerefDFG != false) /*&&
-                    (currentNode.astParent as? PointerDereference)?.access != AccessValues.WRITE*/) {
+            if (
+                (passConfig<Configuration>()?.drawCurrentDerefDFG != false) &&
+                    (currentNode.astParent as? PointerDereference)?.access != AccessValues.WRITE
+            ) {
                 values
                     .filterTo(concurrentIdentitySetOf()) {
                         doubleState.hasDeclarationStateEntry(it, true)
