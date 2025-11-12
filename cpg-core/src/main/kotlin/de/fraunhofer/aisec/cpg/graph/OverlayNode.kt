@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.NoLanguage
+import de.fraunhofer.aisec.cpg.graph.edges.overlay.OverlayEdge
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.OverlaySingleEdge
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.Objects
@@ -44,16 +45,33 @@ abstract class OverlayNode() : Node() {
     @Relationship(value = "OVERLAY", direction = Relationship.Direction.INCOMING)
     /** All [OverlayNode]s nodes are connected to an original cpg [Node] by this. */
     var underlyingNodeEdge: OverlaySingleEdge =
-        OverlaySingleEdge(this, of = null, mirrorProperty = Node::overlayEdges, outgoing = false)
+        OverlaySingleEdge(
+            this,
+            of = null,
+            mirrorProperty = Node::overlayEdges,
+            outgoing = false,
+            onChange = this::propagateNodePropertiesFromUnderlyingNode,
+        )
 
-    private var _underlyingNode by unwrapping(OverlayNode::underlyingNodeEdge)
-    var underlyingNode: Node?
-        get() = _underlyingNode
-        set(value) {
-            _underlyingNode = value
-            this.code = value?.code
-            this.location = value?.location
-        }
+    var underlyingNode by unwrapping(OverlayNode::underlyingNodeEdge)
+
+    /**
+     * Propagates information from the [underlyingNode] into this [OverlayNode], when setting an
+     * [underlyingNode] as part of an [OverlaySingleEdge.onChanged] callback in our delegated
+     * property [underlyingNodeEdge].
+     *
+     * Note: The new [underlyingNode] is the start node of [newEdge], because our
+     * [underlyingNodeEdge] is not outgoing.
+     */
+    private fun propagateNodePropertiesFromUnderlyingNode(
+        oldEdge: OverlayEdge?,
+        newEdge: OverlayEdge?,
+    ) {
+        val newUnderlyingNode = newEdge?.start
+
+        code = newUnderlyingNode?.code
+        location = newUnderlyingNode?.location
+    }
 
     /**
      * Compares this [OverlayNode] to another object. We also include the [underlyingNode] in this

@@ -99,7 +99,7 @@ class OverlayTest {
             node.code = "Test"
 
             overlay.underlyingNode = node
-            assertTrue { overlay.underlyingNode != null }
+            assertTrue { overlay.underlyingNode == node }
             assertTrue { overlay.location == node.location }
             assertTrue { overlay.code == node.code }
         }
