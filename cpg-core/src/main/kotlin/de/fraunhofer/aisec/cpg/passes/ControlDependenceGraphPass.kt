@@ -62,7 +62,13 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
          * [de.fraunhofer.aisec.cpg.graph.statements.Statement.cyclomaticComplexity]) a
          * [FunctionDeclaration] must have in order to be considered.
          */
-        var maxComplexity: Int? = null
+        var maxComplexity: Int? = null,
+        /**
+         * This specifies the maximum time (in ms) we want to spend analyzing a single
+         * [de.fraunhofer.aisec.cpg.graph.EOGStarterHolder]. If the time is exceeded, we skip the
+         * function (or whatever is starting the EOG). If `null`, no time limit is enforced.
+         */
+        var timeout: Long? = null,
     ) : PassConfiguration()
 
     override fun cleanup() {
@@ -87,6 +93,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         if (startNode !is FunctionDeclaration) {
             return
         }
+
         val max = passConfig<Configuration>()?.maxComplexity
         val c = startNode.body?.cyclomaticComplexity() ?: 0
         if (max != null && c > max) {
@@ -95,6 +102,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             )
             return
         }
+
         log.info(
             "[CDG] Analyzing function ${startNode.name}. Complexity: ${NumberFormat.getNumberInstance(Locale.US).format(c)}"
         )
@@ -104,8 +112,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         val (ret, time) = measureTimedValue { collectBasicBlocks(startNode, false) }
         val (firstBasicBlock, basicBlocks, nodeToBBMap) = ret
 
-        log.info("Retrieved network of BBs for {}", startNode.name)
-        log.info("Time for calculateBasicBlocks: $time")
+        log.trace("Retrieved network of BBs for {} in $time ms", startNode.name)
 
         val prevEOGState =
             PrevEOGState(innerLattice = PrevEOGLattice(innerLattice = PowersetLattice()))
@@ -130,10 +137,24 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         log.trace("Iterating EOG of {}", firstBasicBlock)
         var finalState: PrevEOGStateElement
         val eogIterationTime = measureTimeMillis {
-            finalState = runBlocking {
-                prevEOGState.iterateEOG(firstBasicBlock.nextEOGEdges, startState, ::transfer)
-            }
+            finalState =
+                runBlocking {
+                    prevEOGState.iterateEOG(
+                        firstBasicBlock.nextEOGEdges,
+                        startState,
+                        ::transfer,
+                        timeout = passConfig<Configuration>()?.timeout,
+                    )
+                }
+                    ?: run {
+                        log.warn(
+                            "Timeout while computing CDG for {}, skipping CDG generation",
+                            startNode.name,
+                        )
+                        return@accept
+                    }
         }
+
         log.trace("Done iterating EOG for {}. Generating the edges now.", startNode.name)
 
         // branchingNodeConditionals is a map organized as follows:
@@ -218,14 +239,14 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                                                 (branchingNodeConditionals[finalDominator]?.size
                                                     ?: 0) >
                                                     1 -> { // Note: branchesSet must be empty here
-                                                // The
-                                                // if
+                                                // The if
                                                 // statement has only a then branch but there's a
                                                 // way
                                                 // to "jump out" of this branch. In this case, we
                                                 // want to set the false property here.
                                                 setOf(false)
                                             }
+
                                             else -> setOf()
                                         }
                                 }

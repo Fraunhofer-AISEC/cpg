@@ -36,6 +36,10 @@ import de.fraunhofer.aisec.cpg.passes.PointsToState
 import java.io.Serializable
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.plusAssign
+import kotlin.collections.set
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
@@ -265,9 +269,6 @@ interface Lattice<T : Lattice.Element> {
          */
         fun compare(other: Element): Order
 
-        /** Does the actual, concurrent work */
-        // suspend fun innerCompare(other: Element): Order
-
         /** Duplicates this element, i.e., it creates a new object with equal contents. */
         fun duplicate(): Element
     }
@@ -315,13 +316,34 @@ interface Lattice<T : Lattice.Element> {
      * Computes a fixpoint by iterating over the EOG beginning with the [startEdges] and a state
      * [startState]. This means, it keeps applying [transformation] until the state does no longer
      * change. With state, we mean a mapping between the [EvaluationOrder] edges to the value of
-     * [Lattice] which represents possible values (or abstractions thereof) that they hold.
+     * [Lattice] which represents possible values (or abstractions thereof) that they hold. The
+     * [timeout] can be used to limit the time spent in this function. If the timeout is reached and
+     * the fixpoint is not reached yet, we return `null`. If [timeout] is `null`, we will not time
+     * out.
      */
-    suspend fun iterateEOG(
+    fun iterateEOG(
         startEdges: List<EvaluationOrder>,
         startState: T,
         transformation: suspend (Lattice<T>, EvaluationOrder, T) -> T,
         strategy: Strategy = Strategy.PRECISE,
+        timeout: Long? = null,
+    ): T? {
+        return runBlocking {
+            if (timeout != null) {
+                withTimeoutOrNull(timeout) {
+                    iterateEogInternal(startEdges, startState, transformation, strategy)
+                }
+            } else {
+                iterateEogInternal(startEdges, startState, transformation, strategy)
+            }
+        }
+    }
+
+    suspend fun iterateEogInternal(
+        startEdges: List<EvaluationOrder>,
+        startState: T,
+        transformation: suspend (Lattice<T>, EvaluationOrder, T) -> T,
+        strategy: Strategy,
     ): T {
         var finalStateCalcTime: Long = 0
         var newCompareTime = 0L
@@ -358,10 +380,8 @@ interface Lattice<T : Lattice.Element> {
                 } else if (nextBranchEdgesList.isNotEmpty()) {
                     // If we have points splitting up the EOG, we prefer to process these before
                     // merging the EOG again. This is to hopefully reduce the number of merges
-                    // that
-                    // we have to compute and that we hopefully reduce the number of
-                    // re-processing
-                    // the same basic blocks.
+                    // that we have to compute and that we hopefully reduce the number of
+                    // re-processing the same basic blocks.
                     nextBranchEdgesList.removeFirst()
                 } else {
                     // We have a merge point, we try to process this after having processed all
@@ -370,8 +390,7 @@ interface Lattice<T : Lattice.Element> {
                 }
 
             // Compute the effects of "nextEdge" on the state by applying the transformation to
-            // its
-            // state.
+            // its state.
             val nextGlobal = globalState[nextEdge] ?: continue
 
             // Either immediately before or after this edge, there's a branching node. In these
@@ -382,15 +401,11 @@ interface Lattice<T : Lattice.Element> {
                     nextEdge.start.nextEOGEdges.size == 1 &&
                     nextEdge.start.prevEOGEdges.size == 1
             // Either before or after this edge, there's a branching node within two steps
-            // (start,
-            // end and the nodes before/after these). We have to ensure that we copy the state
-            // for
-            // all these nodes to enable the update checks conducted ib the branching edges. We
-            // need
-            // one more step for this, otherwise we will fail recognizing the updates for a node
-            // "x"
-            // which is a branching edge because the next node would already modify the state of
-            // x.
+            // (start, end and the nodes before/after these). We have to ensure that we copy the
+            // state for all these nodes to enable the update checks conducted ib the branching
+            // edges. We need one more step for this, otherwise we will fail recognizing the updates
+            // for a node "x" which is a branching edge because the next node would already modify
+            // the state of x.
             val isNotNearStartOrEndOfBasicBlock =
                 isNoBranchingPoint &&
                     nextEdge.end.nextEOGEdges.single().end.nextEOGEdges.size == 1 &&
@@ -409,16 +424,13 @@ interface Lattice<T : Lattice.Element> {
                 nextEdge.end.nextEOGEdges.forEach {
                     launch(Dispatchers.Default) {
                         // We continue with the nextEOG edge if we haven't seen it before or if we
-                        // updated
-                        // the state in comparison to the previous time we were there.
+                        // updated the state in comparison to the previous time we were there.
 
                         val oldGlobalIt = globalState[it]
 
                         // If we're on the loop head (some node is LoopStatement), and we use
-                        // WIDENING or
-                        // WIDENING_NARROWING, we have to apply the widening/narrowing here (if
-                        // oldGlobalIt
-                        // is not null).
+                        // WIDENING or WIDENING_NARROWING, we have to apply the widening/narrowing
+                        // here (if oldGlobalIt is not null).
                         val newGlobalIt =
                             if (
                                 nextEdge.end is LoopStatement &&
@@ -476,8 +488,7 @@ interface Lattice<T : Lattice.Element> {
                         ) {
                             if (it.start.prevEOGEdges.size > 1) {
                                 // This edge brings us to a merge point, so we add it to the list of
-                                // merge
-                                // points.
+                                // merge points.
                                 synchronized(mergePointsEdgesList) {
                                     mergePointsEdgesList.add(0, it)
                                 }

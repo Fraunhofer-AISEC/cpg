@@ -1099,7 +1099,11 @@ class PythonFrontendTest : BaseTest() {
     fun testCommentMatching() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val tu =
-            analyzeAndGetFirstTU(listOf(topLevel.resolve("comments.py").toFile()), topLevel, true) {
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("outerNamespace").toFile()),
+                topLevel,
+                true,
+            ) {
                 it.registerLanguage<PythonLanguage>().matchCommentsToNodes(true)
             }
         assertNotNull(tu)

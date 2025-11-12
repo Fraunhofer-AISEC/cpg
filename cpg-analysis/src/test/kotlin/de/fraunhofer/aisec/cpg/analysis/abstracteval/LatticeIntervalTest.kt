@@ -373,29 +373,23 @@ class LatticeIntervalTest {
 
     @Test
     fun testWrapper() {
-        val bottomWrapper = IntervalLattice(BOTTOM)
-        val zeroWrapper = IntervalLattice(Bounded(0, 0))
-        val outerWrapper = IntervalLattice(Bounded(-5, 5))
-        val infinityWrapper = IntervalLattice(Bounded(NEGATIVE_INFINITE, INFINITE))
+        val bottom = BOTTOM
+        val zero = Bounded(0, 0)
+        val outer = Bounded(-5, 5)
+        val infinity = Bounded(NEGATIVE_INFINITE, INFINITE)
 
         // compare to
-        assertEquals(-1, bottomWrapper.compareTo(zeroWrapper))
-        assertEquals(0, zeroWrapper.compareTo(zeroWrapper))
-        assertEquals(1, zeroWrapper.compareTo(bottomWrapper))
-
-        // contains
-        assertFalse(bottomWrapper.contains(zeroWrapper))
-        assertFalse(zeroWrapper.contains(bottomWrapper))
-        assertFalse(zeroWrapper.contains(outerWrapper))
-        assertTrue(outerWrapper.contains(zeroWrapper))
+        assertEquals(-1, bottom.compareTo(zero))
+        assertEquals(0, zero.compareTo(zero))
+        assertEquals(1, zero.compareTo(bottom))
 
         // widen
-        assertEquals(outerWrapper, outerWrapper.widen(zeroWrapper))
-        assertEquals(infinityWrapper, zeroWrapper.widen(outerWrapper))
+        assertEquals(outer, outer.widen(zero))
+        assertEquals(infinity, zero.widen(outer))
 
         // narrow
-        assertEquals(outerWrapper, infinityWrapper.narrow(outerWrapper))
-        assertEquals(outerWrapper, outerWrapper.narrow(zeroWrapper))
-        assertEquals(outerWrapper, outerWrapper.narrow(infinityWrapper))
+        assertEquals(outer, infinity.narrow(outer))
+        assertEquals(outer, outer.narrow(zero))
+        assertEquals(outer, outer.narrow(infinity))
     }
 }

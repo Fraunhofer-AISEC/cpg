@@ -165,9 +165,9 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    // Comparing two Intervals. They are treated as equal if they overlap
-    // BOTTOM intervals are considered "smaller" than known intervals
     override fun compareTo(other: LatticeInterval): Int {
+        // Comparing two Intervals. They are treated as equal if they overlap
+        // BOTTOM intervals are considered "smaller" than known intervals
         return when {
             this is BOTTOM && other !is BOTTOM -> -1
             other is BOTTOM && this !is BOTTOM -> 1
@@ -182,9 +182,9 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    // Equals check is only true if both Intervals are true or have the same boundaries
-    // Not the same as a zero result in compareTo!
     override fun equals(other: Any?): Boolean {
+        // Equals check is only true if both Intervals are true or have the same boundaries
+        // Not the same as a zero result in compareTo!
         return when (other) {
             !is LatticeInterval -> return false
             is BOTTOM -> this is BOTTOM
@@ -350,8 +350,8 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    // Addition operator
     operator fun plus(other: LatticeInterval): LatticeInterval {
+        // Addition operator
         return when {
             this is BOTTOM || other is BOTTOM -> BOTTOM
             this is Bounded && other is Bounded -> {
@@ -372,8 +372,8 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    // Subtraction operator
     operator fun minus(other: LatticeInterval): LatticeInterval {
+        // Subtraction operator
         return when {
             this is BOTTOM || other is BOTTOM -> BOTTOM
             this is Bounded && other is Bounded -> {
@@ -394,8 +394,8 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    // Multiplication operator
     operator fun times(other: LatticeInterval): LatticeInterval {
+        // Multiplication operator
         return when {
             this is BOTTOM || other is BOTTOM -> BOTTOM
             this is Bounded && other is Bounded -> {
@@ -416,8 +416,8 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    // Division operator
     operator fun div(other: LatticeInterval): LatticeInterval {
+        // Division operator
         return when {
             this is BOTTOM || other is BOTTOM -> BOTTOM
             this is Bounded && other is Bounded -> {
@@ -439,8 +439,8 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    // Modulo operator
     operator fun rem(other: LatticeInterval): LatticeInterval {
+        // Modulo operator
         return when {
             this is BOTTOM || other is BOTTOM -> BOTTOM
             this is Bounded && other is Bounded -> {
@@ -461,8 +461,8 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    // Join Operation
     fun join(other: LatticeInterval): LatticeInterval {
+        // Join Operation
         return when {
             this is BOTTOM || other is BOTTOM -> BOTTOM
             this is Bounded && other is Bounded -> {
@@ -477,8 +477,8 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    // Meet Operation
     fun meet(other: LatticeInterval): LatticeInterval {
+        // Meet Operation
         return when {
             this is BOTTOM -> other
             other is BOTTOM -> this
@@ -496,8 +496,8 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         }
     }
 
-    // Widening
     fun widen(other: LatticeInterval): LatticeInterval {
+        // Widening
         if (this !is Bounded) {
             return other
         } else if (other !is Bounded) {
@@ -520,8 +520,8 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
         return Bounded(lower, upper)
     }
 
-    // Narrowing
     fun narrow(other: LatticeInterval): LatticeInterval {
+        // Narrowing
         if (this !is Bounded || other !is Bounded) {
             return BOTTOM
         }
