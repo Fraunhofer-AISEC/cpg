@@ -25,31 +25,19 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.rust
 
-import de.fraunhofer.aisec.cpg.frontends.HasOperatorOverloading
-import de.fraunhofer.aisec.cpg.frontends.isKnownOperatorName
+import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
-import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
-import de.fraunhofer.aisec.cpg.helpers.Util
+import java.util.function.Supplier
 
 
 class DeclarationHandler(frontend: RustLanguageFrontend) :
-    Handler<Declaration, ..., RustLanguageFrontend>(Supplier { ProblemDeclaration() }, lang) {
-    override fun handleNode(node: ...): Declaration {
+    Handler<Declaration, Rust.AST, RustLanguageFrontend>(Supplier { ProblemDeclaration() }, frontend) {
+    override fun handleNode(node: Rust.AST): Declaration {
         return when (node) {
             is ... -> handle...(node)
         }
     }
 
-
-    private fun handle...(stmt: ...): ... {
-
-
-        return ...
-    }
 
 }

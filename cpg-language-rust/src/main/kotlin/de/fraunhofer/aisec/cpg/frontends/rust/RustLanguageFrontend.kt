@@ -25,38 +25,25 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.rust
 
-import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.types.AutoType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.helpers.CommentMatcher
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.net.URI
-import java.nio.file.Path
-import kotlin.io.path.nameWithoutExtension
-import kotlin.io.path.pathString
-import kotlin.math.min
 
-/**
- * The [LanguageFrontend] for Rust. It uses the TreeSitter project to generate a RUST AST.
- *
- */
-
+/** The [LanguageFrontend] for Rust. It uses the TreeSitter project to generate a RUST AST. */
 @SupportsParallelParsing(true)
 class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLanguageFrontend>) :
-    LanguageFrontend<..., ...>(ctx, language) {
+    LanguageFrontend<Rust.AST, Rust.Type>(ctx, language) {
     val lineSeparator = "\n"
     private val tokenTypeIndex = 0
-
 
     internal val declarationHandler = DeclarationHandler(this)
     internal var statementHandler = StatementHandler(this)
@@ -77,9 +64,9 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
         lastLineNumber = fileAsLines.size
         lastColumnLength = fileAsLines.lastOrNull()?.length ?: -1
 
-        val tud = ... // Todo parsing
+        // Todo parsing
         val tud =
-            newTranslationUnitDeclaration(path.toString(), rawNode = ...).apply {
+            newTranslationUnitDeclaration(file.path, rawNode = null).apply {
                 this.location =
                     PhysicalLocation(
                         uri = uri,
@@ -93,28 +80,11 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
                     )
             }
 
-            return tud
-        }
+        return tud
     }
 
-
-
-
-    override fun typeOf(type: ...NodeType): Type {
-        return when (type) {
-
-            is Name -> {
-                this.typeOf(type.id)
-            }
-
-            is ... ->
-
-            else -> {
-                // The AST supplied us with some kind of type information, but we could not parse
-                // it, so we need to return the unknown type.
-                unknownType()
-            }
-        }
+    override fun typeOf(type: Rust.Type): Type {
+        return unknownType()
     }
 
     /** Resolves a [Type] based on its string identifier. */
@@ -131,16 +101,21 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
         return objectType(name)
     }
 
-
-    override fun codeOf(astNode: ...NodeType): String? {
-        return ...
+    override fun codeOf(astNode: Rust.AST): String? {
+        return astNode.toString() // Todo parse the code itself
     }
 
+    override fun locationOf(astNode: Rust.AST): PhysicalLocation? {
+        TODO("Not yet implemented")
+    }
 
+    override fun setComment(node: Node, astNode: Rust.AST) {
+        TODO("Not yet implemented")
+    }
 
-    fun operatorToString(op: ...) =
+    fun operatorToString(op: Rust.AST) =
         when (op) {
-            is ... -> "+"
+            /*is ... -> "+"
             is ... -> "-"
             is ... -> "*"
             is ... -> "*"
@@ -152,15 +127,16 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
             is ... -> "|"
             is ... -> "^"
             is ... -> "&"
-            is ... -> "//"
+            is ... -> "//"*/
+            else -> ""
         }
 
-    fun operatorUnaryToString(op: ...) =
+    fun operatorUnaryToString(op: Rust.AST) =
         when (op) {
-            is ... -> "~"
-            is ... -> "not"
-            is ... -> "+"
-            is ... -> "-"
+            else -> ""
+        /*          is ... -> "~"
+        is ... -> "not"
+        is ... -> "+"
+        is ... -> "-"*/
         }
 }
-

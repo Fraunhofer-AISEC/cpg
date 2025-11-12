@@ -23,41 +23,30 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.frontends.rist
+package de.fraunhofer.aisec.cpg.frontends.rust
 
-import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
-import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
-import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
-import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
-import de.fraunhofer.aisec.cpg.graph.statements.CatchClause
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
-import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import java.util.function.Supplier
 import kotlin.collections.plusAssign
 
 class StatementHandler(frontend: RustLanguageFrontend) :
-    Handler<Statement, ..., RustLanguageFrontend>(Supplier { ProblemExpression() }, lang) { {
+    Handler<Statement, Rust.AST, RustLanguageFrontend>(Supplier { ProblemExpression() }, frontend) {
 
-    override fun handleNode(node: ...): Statement {
+    fun handleNode(node: Rust.AST): Statement {
         return when (node) {
-            is ... -> return newEmptyStatement(rawNode = node)
-
+            else -> return newEmptyStatement(rawNode = node)
         }
     }
 
-
-
-    private fun handle...(node: ..., ...): ... {
+    /*private fun handle...(node: ..., ...): ... {
         val statements = mutableListOf<Statement>()
 
         return statements
-    }
+    }*/
 
 }

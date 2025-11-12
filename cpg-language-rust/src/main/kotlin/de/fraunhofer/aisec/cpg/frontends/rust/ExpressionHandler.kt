@@ -25,24 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.rust
 
+import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import java.util.function.Supplier
 
 class ExpressionHandler(frontend: RustLanguageFrontend) :
-    Handler<Statement, ..., RustLanguageFrontend>(Supplier { ProblemExpression() }, lang) {
-
-    override fun handleNode(node: ...): Expression {
-        return when (node) {
-            is ... -> handle...(node)
-        }
-    }
+    Handler<Statement, Rust.AST, RustLanguageFrontend>(Supplier { ProblemExpression() }, frontend) {
+        
 
 
-    private fun handle...(
-        node: ...,
-    ): ... {
-        return ...
-    }
 
 }
