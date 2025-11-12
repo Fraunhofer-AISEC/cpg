@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.helpers.functional
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.LoopStatement
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
@@ -209,16 +210,44 @@ interface Lattice<T : Lattice.Element> {
         // This list contains the merge points that we have to process. We process these after the
         // current basic block and the next branches have been processed to reduce the amount of
         // merges.
-        val mergePointsEdgesList = mutableListOf<EvaluationOrder>()
+        val mergePointsEdgesMap = IdentityHashMap<EvaluationOrder, MutableSet<Pair<Node, Node>>>()
+
+        fun IdentityHashMap<EvaluationOrder, MutableSet<Pair<Node, Node>>>.hasCandidate(): Boolean {
+            return this.entries.any { (_, v) -> v.isEmpty() }
+        }
+
+        fun IdentityHashMap<EvaluationOrder, MutableSet<Pair<Node, Node>>>
+            .removeIncomingEdgeFromMergePoint(
+            mergePointNextEdge: EvaluationOrder,
+            incomingEdge: EvaluationOrder,
+        ) {
+            if (mergePointNextEdge !in this) {
+                this[mergePointNextEdge] =
+                    mergePointNextEdge.start.prevEOGEdges
+                        .map { Pair(it.end, it.start) }
+                        .toMutableSet()
+            }
+            this[mergePointNextEdge]?.remove(Pair(incomingEdge.start, incomingEdge.end))
+        }
+
+        fun IdentityHashMap<EvaluationOrder, MutableSet<Pair<Node, Node>>>.removeCandidate():
+            EvaluationOrder {
+            val key = this.entries.firstOrNull { (_, v) -> v.isEmpty() }?.key ?: this.keys.first()
+            this.remove(key)
+            return key
+        }
+
         startEdges.forEach { nextBranchEdgesList.add(it) }
 
         while (
             currentBBEdgesList.isNotEmpty() ||
                 nextBranchEdgesList.isNotEmpty() ||
-                mergePointsEdgesList.isNotEmpty()
+                mergePointsEdgesMap.isNotEmpty()
         ) {
             val nextEdge =
-                if (currentBBEdgesList.isNotEmpty()) {
+                if (mergePointsEdgesMap.hasCandidate()) {
+                    mergePointsEdgesMap.removeCandidate()
+                } else if (currentBBEdgesList.isNotEmpty()) {
                     // If we have edges in the current basic block, we take these. We prefer to
                     // finish with the whole Basic Block before moving somewhere else.
                     currentBBEdgesList.removeFirst()
@@ -229,9 +258,7 @@ interface Lattice<T : Lattice.Element> {
                     // the same basic blocks.
                     nextBranchEdgesList.removeFirst()
                 } else {
-                    // We have a merge point, we try to process this after having processed all
-                    // branches leading there.
-                    mergePointsEdgesList.removeFirst()
+                    mergePointsEdgesMap.removeCandidate()
                 }
 
             // Compute the effects of "nextEdge" on the state by applying the transformation to its
@@ -301,7 +328,7 @@ interface Lattice<T : Lattice.Element> {
                 if (
                     it !in currentBBEdgesList &&
                         it !in nextBranchEdgesList &&
-                        it !in mergePointsEdgesList &&
+                        it !in mergePointsEdgesMap.keys &&
                         (isNoBranchingPoint ||
                             oldGlobalIt == null ||
                             newGlobalIt.compare(oldGlobalIt) == Order.GREATER ||
@@ -310,7 +337,7 @@ interface Lattice<T : Lattice.Element> {
                     if (it.start.prevEOGEdges.size > 1) {
                         // This edge brings us to a merge point, so we add it to the list of merge
                         // points.
-                        mergePointsEdgesList.add(0, it)
+                        mergePointsEdgesMap.removeIncomingEdgeFromMergePoint(it, nextEdge)
                     } else if (nextEdge.end.nextEOGEdges.size > 1) {
                         // If we have multiple next edges, we add this edge to the list of edges of
                         // a next basic block.
@@ -329,7 +356,7 @@ interface Lattice<T : Lattice.Element> {
                 nextEdge.end.nextEOGEdges.isEmpty() ||
                     (currentBBEdgesList.isEmpty() &&
                         nextBranchEdgesList.isEmpty() &&
-                        mergePointsEdgesList.isEmpty())
+                        mergePointsEdgesMap.isEmpty())
             ) {
                 finalState = this.lub(finalState, newState, false)
             }
