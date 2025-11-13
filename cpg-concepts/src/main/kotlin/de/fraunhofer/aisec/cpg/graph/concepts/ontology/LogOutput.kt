@@ -33,7 +33,7 @@ import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
 
-/** A generic LogOutput. */
+/** A generic Logoutput. */
 public open class LogOutput(
     public val call: String?,
     public val `value`: String?,

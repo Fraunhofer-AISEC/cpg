@@ -37,6 +37,7 @@ public open class CipherSuite(
     public val authenticationMechanism: String?,
     public val keyExchangeAlgorithm: String?,
     public val macAlgorithm: String?,
+    public val sessionCipher: String?,
     public val ciphers: MutableList<Cipher?>,
     underlyingNode: Node? = null,
 ) : Functionality(underlyingNode) {
@@ -46,6 +47,7 @@ public open class CipherSuite(
             other.authenticationMechanism == this.authenticationMechanism &&
             other.keyExchangeAlgorithm == this.keyExchangeAlgorithm &&
             other.macAlgorithm == this.macAlgorithm &&
+            other.sessionCipher == this.sessionCipher &&
             other.ciphers == this.ciphers
 
     override fun hashCode(): Int =
@@ -54,6 +56,7 @@ public open class CipherSuite(
             authenticationMechanism,
             keyExchangeAlgorithm,
             macAlgorithm,
+            sessionCipher,
             ciphers,
         )
 }

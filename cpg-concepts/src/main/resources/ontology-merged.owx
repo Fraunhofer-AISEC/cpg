@@ -1,62 +1,16 @@
 <?xml version="1.0"?>
 <Ontology xmlns="http://www.w3.org/2002/07/owl#"
-     xml:base="https://ontology.emerald-he.eu"
+     xml:base="https://ontology.cybersecuritycertcluster.eu"
      xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
      xmlns:xml="http://www.w3.org/XML/1998/namespace"
      xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
      xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
-     ontologyIRI="https://ontology.emerald-he.eu">
-    <Prefix name="" IRI="http://www.w3.org/2002/07/owl#"/>
+     ontologyIRI="https://ontology.cybersecuritycertcluster.eu">
     <Prefix name="owl" IRI="http://www.w3.org/2002/07/owl#"/>
     <Prefix name="rdf" IRI="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
     <Prefix name="xml" IRI="http://www.w3.org/XML/1998/namespace"/>
     <Prefix name="xsd" IRI="http://www.w3.org/2001/XMLSchema#"/>
     <Prefix name="rdfs" IRI="http://www.w3.org/2000/01/rdf-schema#"/>
-    <Declaration>
-        <Class IRI="#AsymmetricCipher"/>
-    </Declaration>
-    <Declaration>
-        <Class IRI="#GetCurrentTimeOperation"/>
-    </Declaration>
-    <Declaration>
-        <Class IRI="#HybridCipher"/>
-    </Declaration>
-    <Declaration>
-        <Class IRI="#InitializationVector"/>
-    </Declaration>
-    <Declaration>
-        <Class IRI="#Input"/>
-    </Declaration>
-    <Declaration>
-        <Class IRI="#InputValidationOperation"/>
-    </Declaration>
-    <Declaration>
-        <Class IRI="#InstallUpdate"/>
-    </Declaration>
-    <Declaration>
-        <Class IRI="#Key"/>
-    </Declaration>
-    <Declaration>
-        <Class IRI="#KeyDerivationFunction"/>
-    </Declaration>
-    <Declaration>
-        <Class IRI="#MessageAuthenticationCode"/>
-    </Declaration>
-    <Declaration>
-        <Class IRI="#Output"/>
-    </Declaration>
-    <Declaration>
-        <Class IRI="#Padding"/>
-    </Declaration>
-    <Declaration>
-        <Class IRI="#RateLimiting"/>
-    </Declaration>
-    <Declaration>
-        <Class IRI="#SymmetricCipher"/>
-    </Declaration>
-    <Declaration>
-        <Class IRI="#Time"/>
-    </Declaration>
     <Declaration>
         <Class IRI="/classes/ABAC"/>
     </Declaration>
@@ -86,6 +40,9 @@
     </Declaration>
     <Declaration>
         <Class IRI="/classes/ApplicationLog"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="/classes/AsymmetricCipher"/>
     </Declaration>
     <Declaration>
         <Class IRI="/classes/AtRestEncryption"/>
@@ -143,9 +100,6 @@
     </Declaration>
     <Declaration>
         <Class IRI="/classes/CertificateBasedAuthentication"/>
-    </Declaration>
-    <Declaration>
-        <Class IRI="/classes/CertificationTarget"/>
     </Declaration>
     <Declaration>
         <Class IRI="/classes/CheckAccess"/>
@@ -313,9 +267,6 @@
         <Class IRI="/classes/Error"/>
     </Declaration>
     <Declaration>
-        <Class IRI="/classes/Evidence"/>
-    </Declaration>
-    <Declaration>
         <Class IRI="/classes/ExitBoundaryOperation"/>
     </Declaration>
     <Declaration>
@@ -367,7 +318,13 @@
         <Class IRI="/classes/GeoRedundancy"/>
     </Declaration>
     <Declaration>
+        <Class IRI="/classes/GetCurrentTimeOperation"/>
+    </Declaration>
+    <Declaration>
         <Class IRI="/classes/GetSecret"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="/classes/Hardware"/>
     </Declaration>
     <Declaration>
         <Class IRI="/classes/HashOperation"/>
@@ -409,6 +366,9 @@
         <Class IRI="/classes/HumanResources"/>
     </Declaration>
     <Declaration>
+        <Class IRI="/classes/HybridCipher"/>
+    </Declaration>
+    <Declaration>
         <Class IRI="/classes/Identifiable"/>
     </Declaration>
     <Declaration>
@@ -419,6 +379,18 @@
     </Declaration>
     <Declaration>
         <Class IRI="/classes/Immutability"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="/classes/InitializationVector"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="/classes/Input"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="/classes/InputValidationOperation"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="/classes/InstallUpdate"/>
     </Declaration>
     <Declaration>
         <Class IRI="/classes/Integrity"/>
@@ -440,6 +412,9 @@
     </Declaration>
     <Declaration>
         <Class IRI="/classes/Key"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="/classes/KeyDerivationFunction"/>
     </Declaration>
     <Declaration>
         <Class IRI="/classes/KeyValueDatabaseService"/>
@@ -532,6 +507,9 @@
         <Class IRI="/classes/MemoryOperation"/>
     </Declaration>
     <Declaration>
+        <Class IRI="/classes/MessageAuthenticationCode"/>
+    </Declaration>
+    <Declaration>
         <Class IRI="/classes/MessagingHub"/>
     </Declaration>
     <Declaration>
@@ -580,7 +558,16 @@
         <Class IRI="/classes/Operation"/>
     </Declaration>
     <Declaration>
+        <Class IRI="/classes/Output"/>
+    </Declaration>
+    <Declaration>
         <Class IRI="/classes/POSIX"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="/classes/Package"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="/classes/Padding"/>
     </Declaration>
     <Declaration>
         <Class IRI="/classes/PasswordBasedAuthentication"/>
@@ -623,6 +610,9 @@
     </Declaration>
     <Declaration>
         <Class IRI="/classes/RBAC"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="/classes/RateLimiting"/>
     </Declaration>
     <Declaration>
         <Class IRI="/classes/ReadConfiguration"/>
@@ -724,10 +714,13 @@
         <Class IRI="/classes/StorageService"/>
     </Declaration>
     <Declaration>
-        <Class IRI="/classes/Token"/>
+        <Class IRI="/classes/SymmetricCipher"/>
     </Declaration>
     <Declaration>
-        <Class IRI="/classes/Tool"/>
+        <Class IRI="/classes/Time"/>
+    </Declaration>
+    <Declaration>
+        <Class IRI="/classes/Token"/>
     </Declaration>
     <Declaration>
         <Class IRI="/classes/Training"/>
@@ -775,31 +768,13 @@
         <Class IRI="/classes/ZoneRedundancy"/>
     </Declaration>
     <Declaration>
-        <ObjectProperty IRI="#keyExchange"/>
-    </Declaration>
-    <Declaration>
-        <ObjectProperty IRI="#/properties/has"/>
-    </Declaration>
-    <Declaration>
         <ObjectProperty IRI="/classes/basedOn"/>
-    </Declaration>
-    <Declaration>
-        <ObjectProperty IRI="/classes/belongsTo"/>
     </Declaration>
     <Declaration>
         <ObjectProperty IRI="/classes/bootLog"/>
     </Declaration>
     <Declaration>
-        <ObjectProperty IRI="/classes/describes"/>
-    </Declaration>
-    <Declaration>
-        <ObjectProperty IRI="/classes/extractedBy"/>
-    </Declaration>
-    <Declaration>
-        <ObjectProperty IRI="/classes/hasMultipleSet"/>
-    </Declaration>
-    <Declaration>
-        <ObjectProperty IRI="/classes/hasType"/>
+        <ObjectProperty IRI="/classes/keyExchange"/>
     </Declaration>
     <Declaration>
         <ObjectProperty IRI="/classes/leftPrincipal"/>
@@ -886,40 +861,13 @@
         <ObjectProperty IRI="/properties/to"/>
     </Declaration>
     <Declaration>
-        <DataProperty IRI="#authTagSize"/>
-    </Declaration>
-    <Declaration>
-        <DataProperty IRI="#cipherName"/>
-    </Declaration>
-    <Declaration>
-        <DataProperty IRI="#maxRequests"/>
-    </Declaration>
-    <Declaration>
-        <DataProperty IRI="#modus"/>
-    </Declaration>
-    <Declaration>
-        <DataProperty IRI="#scheme"/>
-    </Declaration>
-    <Declaration>
-        <DataProperty IRI="#timeWindowSeconds"/>
-    </Declaration>
-    <Declaration>
-        <DataProperty IRI="/classes/OneQubitErrorRate"/>
-    </Declaration>
-    <Declaration>
-        <DataProperty IRI="/classes/SpamErrorRate"/>
-    </Declaration>
-    <Declaration>
-        <DataProperty IRI="/classes/TwoQubitErrorRate"/>
-    </Declaration>
-    <Declaration>
         <DataProperty IRI="/classes/adv_robustness"/>
     </Declaration>
     <Declaration>
-        <DataProperty IRI="/classes/annualUpdateCompleted"/>
+        <DataProperty IRI="/classes/apiHitsPerMonth"/>
     </Declaration>
     <Declaration>
-        <DataProperty IRI="/classes/apiHitsPerMonth"/>
+        <DataProperty IRI="/classes/authTagSize"/>
     </Declaration>
     <Declaration>
         <DataProperty IRI="/classes/authenticationMechanism"/>
@@ -932,6 +880,9 @@
     </Declaration>
     <Declaration>
         <DataProperty IRI="/classes/calls"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="/classes/cipherName"/>
     </Declaration>
     <Declaration>
         <DataProperty IRI="/classes/code"/>
@@ -965,9 +916,6 @@
     </Declaration>
     <Declaration>
         <DataProperty IRI="/classes/enforceMFA"/>
-    </Declaration>
-    <Declaration>
-        <DataProperty IRI="/classes/errorCorrectionEnabled"/>
     </Declaration>
     <Declaration>
         <DataProperty IRI="/classes/expirationDate"/>
@@ -1033,6 +981,9 @@
         <DataProperty IRI="/classes/macAlgorithm"/>
     </Declaration>
     <Declaration>
+        <DataProperty IRI="/classes/maxRequests"/>
+    </Declaration>
+    <Declaration>
         <DataProperty IRI="/classes/message"/>
     </Declaration>
     <Declaration>
@@ -1040,6 +991,9 @@
     </Declaration>
     <Declaration>
         <DataProperty IRI="/classes/mode"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="/classes/modus"/>
     </Declaration>
     <Declaration>
         <DataProperty IRI="/classes/monitoringEnabled"/>
@@ -1063,16 +1017,7 @@
         <DataProperty IRI="/classes/overridePasswordPolicy"/>
     </Declaration>
     <Declaration>
-        <DataProperty IRI="/classes/poisonLevel"/>
-    </Declaration>
-    <Declaration>
         <DataProperty IRI="/classes/poison_level"/>
-    </Declaration>
-    <Declaration>
-        <DataProperty IRI="/classes/privacyLabel"/>
-    </Declaration>
-    <Declaration>
-        <DataProperty IRI="/classes/privacyLevel"/>
     </Declaration>
     <Declaration>
         <DataProperty IRI="/classes/privacy_level"/>
@@ -1108,7 +1053,7 @@
         <DataProperty IRI="/classes/retentionPeriod"/>
     </Declaration>
     <Declaration>
-        <DataProperty IRI="/classes/robustness"/>
+        <DataProperty IRI="/classes/rotationInterval"/>
     </Declaration>
     <Declaration>
         <DataProperty IRI="/classes/runtimeLanguage"/>
@@ -1118,6 +1063,9 @@
     </Declaration>
     <Declaration>
         <DataProperty IRI="/classes/schemaURL"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="/classes/scheme"/>
     </Declaration>
     <Declaration>
         <DataProperty IRI="/classes/securityAlertsEnabled"/>
@@ -1132,9 +1080,6 @@
         <DataProperty IRI="/classes/sessionCipher"/>
     </Declaration>
     <Declaration>
-        <DataProperty IRI="/classes/size"/>
-    </Declaration>
-    <Declaration>
         <DataProperty IRI="/classes/startColumn"/>
     </Declaration>
     <Declaration>
@@ -1144,10 +1089,7 @@
         <DataProperty IRI="/classes/status"/>
     </Declaration>
     <Declaration>
-        <DataProperty IRI="/classes/successfullyCompletedPercentage"/>
-    </Declaration>
-    <Declaration>
-        <DataProperty IRI="/classes/type"/>
+        <DataProperty IRI="/classes/timeWindowSeconds"/>
     </Declaration>
     <Declaration>
         <DataProperty IRI="/classes/usesSalt"/>
@@ -1169,6 +1111,9 @@
     </Declaration>
     <Declaration>
         <DataProperty IRI="/properties/call"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="/properties/criticality"/>
     </Declaration>
     <Declaration>
         <DataProperty IRI="/properties/enabled"/>
@@ -1268,12 +1213,6 @@
     </Declaration>
     <Declaration>
         <DataProperty IRI="/properties/value"/>
-    </Declaration>
-    <Declaration>
-        <NamedIndividual IRI="/classes/Implementation"/>
-    </Declaration>
-    <Declaration>
-        <NamedIndividual IRI="/classes/Specification"/>
     </Declaration>
     <Declaration>
         <NamedIndividual IRI="/individuals/AmazonWebServices"/>
@@ -1440,6 +1379,57 @@
     <Declaration>
         <Datatype abbreviatedIRI="xsd:listString"/>
     </Declaration>
+    <Declaration>
+        <DataProperty IRI="/classes/OneQubitErrorRate"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="/classes/SpamErrorRate"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="/classes/privacyLabel"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="/classes//mode"/>
+    </Declaration>
+    <Declaration>
+        <ObjectProperty IRI="/classes/describes"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="/classes/privacyLevel"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="/classes/size"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="/classes/TwoQubitErrorRate"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="/classes/errorCorrectionEnabled"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="/classes/poisonLevel"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="/classes/successfullyCompletedPercentage"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="/classes/type"/>
+    </Declaration>
+    <Declaration>
+        <NamedIndividual IRI="/classes/Implementation"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="/classes/robustness"/>
+    </Declaration>
+    <Declaration>
+        <ObjectProperty IRI="/classes/hasType"/>
+    </Declaration>
+    <Declaration>
+        <DataProperty IRI="/classes/annualUpdateCompleted"/>
+    </Declaration>
+    <Declaration>
+        <NamedIndividual IRI="/classes/Specification"/>
+    </Declaration>
     <EquivalentClasses>
         <Class IRI="/classes/ResourceType"/>
         <ObjectOneOf>
@@ -1447,213 +1437,6 @@
             <NamedIndividual IRI="/classes/Specification"/>
         </ObjectOneOf>
     </EquivalentClasses>
-    <SubClassOf>
-        <Class IRI="#AsymmetricCipher"/>
-        <Class IRI="/classes/Cipher"/>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#GetCurrentTimeOperation"/>
-        <Class IRI="/classes/Operation"/>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#GetCurrentTimeOperation"/>
-        <ObjectSomeValuesFrom>
-            <ObjectProperty IRI="/classes/linkedConcept"/>
-            <Class IRI="#Time"/>
-        </ObjectSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#HybridCipher"/>
-        <Class IRI="/classes/Cipher"/>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#HybridCipher"/>
-        <ObjectSomeValuesFrom>
-            <ObjectProperty IRI="#keyExchange"/>
-            <Class IRI="#AsymmetricCipher"/>
-        </ObjectSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#HybridCipher"/>
-        <ObjectSomeValuesFrom>
-            <ObjectProperty IRI="/properties/has"/>
-            <Class IRI="#KeyDerivationFunction"/>
-        </ObjectSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#HybridCipher"/>
-        <ObjectSomeValuesFrom>
-            <ObjectProperty IRI="/properties/has"/>
-            <Class IRI="#MessageAuthenticationCode"/>
-        </ObjectSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#HybridCipher"/>
-        <ObjectSomeValuesFrom>
-            <ObjectProperty IRI="/properties/has"/>
-            <Class IRI="#SymmetricCipher"/>
-        </ObjectSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#InitializationVector"/>
-        <Class IRI="/classes/Functionality"/>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#Input"/>
-        <Class IRI="/classes/Functionality"/>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#InputValidationOperation"/>
-        <Class IRI="/classes/Operation"/>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#InputValidationOperation"/>
-        <ObjectSomeValuesFrom>
-            <ObjectProperty IRI="/classes/linkedConcept"/>
-            <Class IRI="#Input"/>
-        </ObjectSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#InputValidationOperation"/>
-        <ObjectSomeValuesFrom>
-            <ObjectProperty IRI="/properties/has"/>
-            <Class IRI="#Input"/>
-        </ObjectSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#InputValidationOperation"/>
-        <ObjectSomeValuesFrom>
-            <ObjectProperty IRI="/properties/has"/>
-            <Class IRI="#Output"/>
-        </ObjectSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#InstallUpdate"/>
-        <Class IRI="/classes/Operation"/>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#InstallUpdate"/>
-        <ObjectSomeValuesFrom>
-            <ObjectProperty IRI="/classes/linkedConcept"/>
-            <Class IRI="/classes/AutomaticUpdates"/>
-        </ObjectSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#InstallUpdate"/>
-        <ObjectSomeValuesFrom>
-            <ObjectProperty IRI="/properties/has"/>
-            <Class IRI="/classes/AutomaticUpdates"/>
-        </ObjectSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#Key"/>
-        <Class IRI="/classes/Data"/>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#KeyDerivationFunction"/>
-        <Class IRI="/classes/Functionality"/>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#KeyDerivationFunction"/>
-        <ObjectSomeValuesFrom>
-            <ObjectProperty IRI="/properties/has"/>
-            <Class IRI="#Input"/>
-        </ObjectSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#KeyDerivationFunction"/>
-        <DataSomeValuesFrom>
-            <DataProperty IRI="/classes/type"/>
-            <Datatype abbreviatedIRI="xsd:string"/>
-        </DataSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#MessageAuthenticationCode"/>
-        <Class IRI="/classes/Functionality"/>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#MessageAuthenticationCode"/>
-        <ObjectSomeValuesFrom>
-            <ObjectProperty IRI="/properties/has"/>
-            <Class IRI="#Input"/>
-        </ObjectSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#MessageAuthenticationCode"/>
-        <ObjectSomeValuesFrom>
-            <ObjectProperty IRI="/properties/has"/>
-            <Class IRI="#Key"/>
-        </ObjectSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#MessageAuthenticationCode"/>
-        <DataSomeValuesFrom>
-            <DataProperty IRI="/classes/type"/>
-            <Datatype abbreviatedIRI="xsd:string"/>
-        </DataSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#Output"/>
-        <Class IRI="/classes/Functionality"/>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#Padding"/>
-        <Class IRI="/classes/Functionality"/>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#Padding"/>
-        <DataSomeValuesFrom>
-            <DataProperty IRI="#scheme"/>
-            <Datatype abbreviatedIRI="xsd:string"/>
-        </DataSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#RateLimiting"/>
-        <Class IRI="/classes/Functionality"/>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#RateLimiting"/>
-        <DataSomeValuesFrom>
-            <DataProperty IRI="#maxRequests"/>
-            <Datatype abbreviatedIRI="xsd:int"/>
-        </DataSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#RateLimiting"/>
-        <DataSomeValuesFrom>
-            <DataProperty IRI="#timeWindowSeconds"/>
-            <Datatype abbreviatedIRI="xsd:int"/>
-        </DataSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#SymmetricCipher"/>
-        <Class IRI="/classes/Cipher"/>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#SymmetricCipher"/>
-        <ObjectSomeValuesFrom>
-            <ObjectProperty IRI="/properties/has"/>
-            <Class IRI="#InitializationVector"/>
-        </ObjectSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#SymmetricCipher"/>
-        <DataSomeValuesFrom>
-            <DataProperty IRI="#authTagSize"/>
-            <Datatype abbreviatedIRI="xsd:int"/>
-        </DataSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#SymmetricCipher"/>
-        <DataSomeValuesFrom>
-            <DataProperty IRI="#modus"/>
-            <Datatype abbreviatedIRI="xsd:string"/>
-        </DataSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="#Time"/>
-        <Class IRI="/classes/Functionality"/>
-    </SubClassOf>
     <SubClassOf>
         <Class IRI="/classes/ABAC"/>
         <Class IRI="/classes/Authorization"/>
@@ -1751,6 +1534,10 @@
         <Class IRI="/classes/Logging"/>
     </SubClassOf>
     <SubClassOf>
+        <Class IRI="/classes/AsymmetricCipher"/>
+        <Class IRI="/classes/Cipher"/>
+    </SubClassOf>
+    <SubClassOf>
         <Class IRI="/classes/AtRestEncryption"/>
         <Class IRI="/classes/Encryption"/>
     </SubClassOf>
@@ -1821,6 +1608,13 @@
         <DataSomeValuesFrom>
             <DataProperty IRI="/classes/contextIsChecked"/>
             <Datatype abbreviatedIRI="xsd:boolean"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/Authenticity"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="/classes/rotationInterval"/>
+            <Datatype abbreviatedIRI="xsd:int"/>
         </DataSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
@@ -1946,10 +1740,6 @@
         </DataSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
-        <Class IRI="/classes/CertificationTarget"/>
-        <Class IRI="/classes/Core"/>
-    </SubClassOf>
-    <SubClassOf>
         <Class IRI="/classes/CheckAccess"/>
         <Class IRI="/classes/ProtectedAssetOperation"/>
     </SubClassOf>
@@ -1961,21 +1751,21 @@
         <Class IRI="/classes/Cipher"/>
         <ObjectSomeValuesFrom>
             <ObjectProperty IRI="/properties/has"/>
-            <Class IRI="#Padding"/>
+            <Class IRI="/classes/Padding"/>
         </ObjectSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="/classes/Cipher"/>
-        <DataSomeValuesFrom>
-            <DataProperty IRI="#cipherName"/>
-            <Datatype abbreviatedIRI="xsd:string"/>
-        </DataSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
         <Class IRI="/classes/Cipher"/>
         <DataSomeValuesFrom>
             <DataProperty IRI="/classes/blockSize"/>
             <Datatype abbreviatedIRI="xsd:int"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/Cipher"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="/classes/cipherName"/>
+            <Datatype abbreviatedIRI="xsd:string"/>
         </DataSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
@@ -2025,6 +1815,13 @@
         <Class IRI="/classes/CipherSuite"/>
         <DataSomeValuesFrom>
             <DataProperty IRI="/classes/macAlgorithm"/>
+            <Datatype abbreviatedIRI="xsd:string"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/CipherSuite"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="/classes/sessionCipher"/>
             <Datatype abbreviatedIRI="xsd:string"/>
         </DataSomeValuesFrom>
     </SubClassOf>
@@ -2638,6 +2435,10 @@
     </SubClassOf>
     <SubClassOf>
         <Class IRI="/classes/EncryptionOperation"/>
+        <Class IRI="/classes/CryptographicOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/EncryptionOperation"/>
         <Class IRI="/classes/Operation"/>
     </SubClassOf>
     <SubClassOf>
@@ -2693,10 +2494,6 @@
             <DataProperty IRI="/classes/message"/>
             <Datatype abbreviatedIRI="xsd:string"/>
         </DataSomeValuesFrom>
-    </SubClassOf>
-    <SubClassOf>
-        <Class IRI="/classes/Evidence"/>
-        <Class IRI="/classes/Core"/>
     </SubClassOf>
     <SubClassOf>
         <Class IRI="/classes/ExitBoundaryOperation"/>
@@ -2823,8 +2620,23 @@
         <Class IRI="/classes/Redundancy"/>
     </SubClassOf>
     <SubClassOf>
+        <Class IRI="/classes/GetCurrentTimeOperation"/>
+        <Class IRI="/classes/Operation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/GetCurrentTimeOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/classes/linkedConcept"/>
+            <Class IRI="/classes/Time"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
         <Class IRI="/classes/GetSecret"/>
         <Class IRI="/classes/SecretOperation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/Hardware"/>
+        <Class IRI="/classes/Resource"/>
     </SubClassOf>
     <SubClassOf>
         <Class IRI="/classes/HashOperation"/>
@@ -3040,6 +2852,38 @@
         <Class IRI="/classes/Resource"/>
     </SubClassOf>
     <SubClassOf>
+        <Class IRI="/classes/HybridCipher"/>
+        <Class IRI="/classes/Cipher"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/HybridCipher"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/classes/keyExchange"/>
+            <Class IRI="/classes/AsymmetricCipher"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/HybridCipher"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/properties/has"/>
+            <Class IRI="/classes/KeyDerivationFunction"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/HybridCipher"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/properties/has"/>
+            <Class IRI="/classes/MessageAuthenticationCode"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/HybridCipher"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/properties/has"/>
+            <Class IRI="/classes/SymmetricCipher"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
         <Class IRI="/classes/Identifiable"/>
         <Class IRI="/classes/CloudResource"/>
     </SubClassOf>
@@ -3126,6 +2970,57 @@
         </DataSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
+        <Class IRI="/classes/InitializationVector"/>
+        <Class IRI="/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/Input"/>
+        <Class IRI="/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/InputValidationOperation"/>
+        <Class IRI="/classes/Operation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/InputValidationOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/classes/linkedConcept"/>
+            <Class IRI="/classes/Input"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/InputValidationOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/properties/has"/>
+            <Class IRI="/classes/Input"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/InputValidationOperation"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/properties/has"/>
+            <Class IRI="/classes/Output"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/InstallUpdate"/>
+        <Class IRI="/classes/Operation"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/InstallUpdate"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/classes/linkedConcept"/>
+            <Class IRI="/classes/AutomaticUpdates"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/InstallUpdate"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/properties/has"/>
+            <Class IRI="/classes/AutomaticUpdates"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
         <Class IRI="/classes/Integrity"/>
         <Class IRI="/classes/SecurityFeature"/>
     </SubClassOf>
@@ -3189,6 +3084,24 @@
         <Class IRI="/classes/Key"/>
         <DataSomeValuesFrom>
             <DataProperty IRI="/properties/algorithm"/>
+            <Datatype abbreviatedIRI="xsd:string"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/KeyDerivationFunction"/>
+        <Class IRI="/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/KeyDerivationFunction"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/properties/has"/>
+            <Class IRI="/classes/Input"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/KeyDerivationFunction"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="/classes/type"/>
             <Datatype abbreviatedIRI="xsd:string"/>
         </DataSomeValuesFrom>
     </SubClassOf>
@@ -3586,12 +3499,12 @@
     </SubClassOf>
     <SubClassOf>
         <Class IRI="/classes/Memory"/>
-        <Class IRI="/classes/Resource"/>
+        <Class IRI="/classes/Hardware"/>
     </SubClassOf>
     <SubClassOf>
         <Class IRI="/classes/Memory"/>
         <DataSomeValuesFrom>
-            <DataProperty IRI="/classes/mode"/>
+            <DataProperty IRI="/classes//mode"/>
             <Datatype abbreviatedIRI="xsd:string"/>
         </DataSomeValuesFrom>
     </SubClassOf>
@@ -3605,6 +3518,31 @@
             <ObjectProperty IRI="/classes/linkedConcept"/>
             <Class IRI="/classes/Memory"/>
         </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/MessageAuthenticationCode"/>
+        <Class IRI="/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/MessageAuthenticationCode"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/properties/has"/>
+            <Class IRI="/classes/Input"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/MessageAuthenticationCode"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/properties/has"/>
+            <Class IRI="/classes/Key"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/MessageAuthenticationCode"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="/classes/type"/>
+            <Datatype abbreviatedIRI="xsd:string"/>
+        </DataSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
         <Class IRI="/classes/MessagingHub"/>
@@ -3783,8 +3721,27 @@
         </ObjectSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
+        <Class IRI="/classes/Output"/>
+        <Class IRI="/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
         <Class IRI="/classes/POSIX"/>
         <Class IRI="/classes/OperatingSystemArchitecture"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/Package"/>
+        <Class IRI="/classes/Module"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/Padding"/>
+        <Class IRI="/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/Padding"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="/classes/scheme"/>
+            <Datatype abbreviatedIRI="xsd:string"/>
+        </DataSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
         <Class IRI="/classes/PasswordBasedAuthentication"/>
@@ -3973,6 +3930,24 @@
         <DataSomeValuesFrom>
             <DataProperty IRI="/classes/mixedDuties"/>
             <Datatype abbreviatedIRI="xsd:float"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/RateLimiting"/>
+        <Class IRI="/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/RateLimiting"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="/classes/maxRequests"/>
+            <Datatype abbreviatedIRI="xsd:int"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/RateLimiting"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="/classes/timeWindowSeconds"/>
+            <Datatype abbreviatedIRI="xsd:int"/>
         </DataSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
@@ -4384,12 +4359,37 @@
         </ObjectSomeValuesFrom>
     </SubClassOf>
     <SubClassOf>
-        <Class IRI="/classes/Token"/>
-        <Class IRI="/classes/Data"/>
+        <Class IRI="/classes/SymmetricCipher"/>
+        <Class IRI="/classes/Cipher"/>
     </SubClassOf>
     <SubClassOf>
-        <Class IRI="/classes/Tool"/>
-        <Class IRI="/classes/Core"/>
+        <Class IRI="/classes/SymmetricCipher"/>
+        <ObjectSomeValuesFrom>
+            <ObjectProperty IRI="/properties/has"/>
+            <Class IRI="/classes/InitializationVector"/>
+        </ObjectSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/SymmetricCipher"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="/classes/authTagSize"/>
+            <Datatype abbreviatedIRI="xsd:int"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/SymmetricCipher"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="/classes/modus"/>
+            <Datatype abbreviatedIRI="xsd:string"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/Time"/>
+        <Class IRI="/classes/Functionality"/>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/Token"/>
+        <Class IRI="/classes/Data"/>
     </SubClassOf>
     <SubClassOf>
         <Class IRI="/classes/Training"/>
@@ -4558,6 +4558,13 @@
         <Class IRI="/classes/Vulnerability"/>
         <DataSomeValuesFrom>
             <DataProperty IRI="/classes/name"/>
+            <Datatype abbreviatedIRI="xsd:string"/>
+        </DataSomeValuesFrom>
+    </SubClassOf>
+    <SubClassOf>
+        <Class IRI="/classes/Vulnerability"/>
+        <DataSomeValuesFrom>
+            <DataProperty IRI="/properties/criticality"/>
             <Datatype abbreviatedIRI="xsd:string"/>
         </DataSomeValuesFrom>
     </SubClassOf>
@@ -4903,30 +4910,6 @@ ips += loadBalancerIP
 name = metadata.name</Literal>
     </DataPropertyAssertion>
     <SubObjectPropertyOf>
-        <ObjectProperty IRI="#keyExchange"/>
-        <ObjectProperty abbreviatedIRI="owl:topObjectProperty"/>
-    </SubObjectPropertyOf>
-    <SubObjectPropertyOf>
-        <ObjectProperty IRI="#/properties/has"/>
-        <ObjectProperty abbreviatedIRI="owl:topObjectProperty"/>
-    </SubObjectPropertyOf>
-    <SubObjectPropertyOf>
-        <ObjectProperty IRI="/classes/hasMultipleSet"/>
-        <ObjectProperty IRI="/properties/has"/>
-    </SubObjectPropertyOf>
-    <SubObjectPropertyOf>
-        <ObjectProperty IRI="/classes/leftPrincipal"/>
-        <ObjectProperty abbreviatedIRI="owl:topObjectProperty"/>
-    </SubObjectPropertyOf>
-    <SubObjectPropertyOf>
-        <ObjectProperty IRI="/classes/protects"/>
-        <ObjectProperty abbreviatedIRI="owl:topObjectProperty"/>
-    </SubObjectPropertyOf>
-    <SubObjectPropertyOf>
-        <ObjectProperty IRI="/classes/rightPrincipal"/>
-        <ObjectProperty abbreviatedIRI="owl:topObjectProperty"/>
-    </SubObjectPropertyOf>
-    <SubObjectPropertyOf>
         <ObjectProperty IRI="/classes/usedBy"/>
         <ObjectProperty abbreviatedIRI="owl:topObjectProperty"/>
     </SubObjectPropertyOf>
@@ -4939,77 +4922,17 @@ name = metadata.name</Literal>
         <ObjectProperty IRI="/properties/has"/>
     </SubObjectPropertyOf>
     <ObjectPropertyDomain>
-        <ObjectProperty IRI="/classes/belongsTo"/>
-        <Class IRI="/classes/Evidence"/>
-    </ObjectPropertyDomain>
-    <ObjectPropertyDomain>
-        <ObjectProperty IRI="/classes/describes"/>
-        <Class IRI="/classes/Evidence"/>
-    </ObjectPropertyDomain>
-    <ObjectPropertyDomain>
-        <ObjectProperty IRI="/classes/extractedBy"/>
-        <Class IRI="/classes/Evidence"/>
-    </ObjectPropertyDomain>
-    <ObjectPropertyDomain>
         <ObjectProperty IRI="/classes/hasType"/>
         <Class IRI="/classes/Resource"/>
     </ObjectPropertyDomain>
-    <ObjectPropertyRange>
-        <ObjectProperty IRI="/classes/belongsTo"/>
-        <Class IRI="/classes/CertificationTarget"/>
-    </ObjectPropertyRange>
     <ObjectPropertyRange>
         <ObjectProperty IRI="/classes/describes"/>
         <Class IRI="/classes/SecurityFeature"/>
     </ObjectPropertyRange>
     <ObjectPropertyRange>
-        <ObjectProperty IRI="/classes/extractedBy"/>
-        <Class IRI="/classes/Tool"/>
-    </ObjectPropertyRange>
-    <ObjectPropertyRange>
         <ObjectProperty IRI="/classes/hasType"/>
         <Class IRI="/classes/ResourceType"/>
     </ObjectPropertyRange>
-    <SubDataPropertyOf>
-        <DataProperty IRI="#authTagSize"/>
-        <DataProperty abbreviatedIRI="owl:topDataProperty"/>
-    </SubDataPropertyOf>
-    <SubDataPropertyOf>
-        <DataProperty IRI="#cipherName"/>
-        <DataProperty abbreviatedIRI="owl:topDataProperty"/>
-    </SubDataPropertyOf>
-    <SubDataPropertyOf>
-        <DataProperty IRI="#maxRequests"/>
-        <DataProperty abbreviatedIRI="owl:topDataProperty"/>
-    </SubDataPropertyOf>
-    <SubDataPropertyOf>
-        <DataProperty IRI="#modus"/>
-        <DataProperty abbreviatedIRI="owl:topDataProperty"/>
-    </SubDataPropertyOf>
-    <SubDataPropertyOf>
-        <DataProperty IRI="#scheme"/>
-        <DataProperty abbreviatedIRI="owl:topDataProperty"/>
-    </SubDataPropertyOf>
-    <SubDataPropertyOf>
-        <DataProperty IRI="#timeWindowSeconds"/>
-        <DataProperty abbreviatedIRI="owl:topDataProperty"/>
-    </SubDataPropertyOf>
-    <SubDataPropertyOf>
-        <DataProperty IRI="/classes/blockSize"/>
-        <DataProperty abbreviatedIRI="owl:topDataProperty"/>
-    </SubDataPropertyOf>
-    <SubDataPropertyOf>
-        <DataProperty IRI="/classes/isTLS"/>
-        <DataProperty abbreviatedIRI="owl:topDataProperty"/>
-    </SubDataPropertyOf>
-    <SubDataPropertyOf>
-        <DataProperty IRI="/classes/keySize"/>
-        <DataProperty abbreviatedIRI="owl:topDataProperty"/>
-    </SubDataPropertyOf>
-    <SubDataPropertyOf>
-        <DataProperty IRI="/classes/logLevel"/>
-        <DataProperty abbreviatedIRI="owl:topDataProperty"/>
-    </SubDataPropertyOf>
     <SubDataPropertyOf>
         <DataProperty IRI="/properties/algorithm"/>
         <DataProperty abbreviatedIRI="owl:topDataProperty"/>
@@ -5076,11 +4999,6 @@ name = metadata.name</Literal>
     </DataPropertyRange>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>http://purl.org/dc/elements/1.1/description</IRI>
-        <Literal>leftPrincipal</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <AbbreviatedIRI>xsd:de.fraunhofer.aisec.cpg.graph.Node</AbbreviatedIRI>
         <Literal xml:lang="english">xsd:de.fraunhofer.aisec.cpg.graph.Node</Literal>
     </AnnotationAssertion>
@@ -5093,161 +5011,6 @@ name = metadata.name</Literal>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <AbbreviatedIRI>owl:Thing</AbbreviatedIRI>
         <Literal>owl:Thing</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>#AsymmetricCipher</IRI>
-        <Literal>AsymmetricCipher</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>#GetCurrentTimeOperation</IRI>
-        <Literal>GetCurrentTimeOperation</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>#HybridCipher</IRI>
-        <Literal>HybridCipher</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
-        <IRI>#InitializationVector</IRI>
-        <Literal>Represents an Initialization Vector of a cipher.</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>#InitializationVector</IRI>
-        <Literal>InitializationVector</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
-        <IRI>#Input</IRI>
-        <Literal>A certain Input for e.g. a function.</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>#Input</IRI>
-        <Literal>Input</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>#InputValidationOperation</IRI>
-        <Literal>InputValidationOperation</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>#InstallUpdate</IRI>
-        <Literal>InstallUpdateOperation</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
-        <IRI>#Key</IRI>
-        <Literal>A key used for encryption algorithms.</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>#Key</IRI>
-        <Literal>Key</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>#KeyDerivationFunction</IRI>
-        <Literal>KeyDerivationFunction</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>#MessageAuthenticationCode</IRI>
-        <Literal>MessageAuthenticationCode</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>#Output</IRI>
-        <Literal>Output</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
-        <IRI>#Padding</IRI>
-        <Literal>A padding for a cipher.</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>#Padding</IRI>
-        <Literal>Padding</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>#RateLimiting</IRI>
-        <Literal>RateLimiting</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
-        <IRI>#SymmetricCipher</IRI>
-        <Literal>Represents a symmetric cipher.</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>#SymmetricCipher</IRI>
-        <Literal>SymmetricCipher</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>#Time</IRI>
-        <Literal>Time</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
-        <IRI>#authTagSize</IRI>
-        <Literal>AuthTagSize of a symmetric cipher</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>#authTagSize</IRI>
-        <Literal>authTagSize</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
-        <IRI>#cipherName</IRI>
-        <Literal>Name of a cryptographic cipher.</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>#cipherName</IRI>
-        <Literal>cipherName</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>#keyExchange</IRI>
-        <Literal>keyExchange</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>#maxRequests</IRI>
-        <Literal>maxRequests</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
-        <IRI>#modus</IRI>
-        <Literal>Describes a modus of something being executed. (e.g. used by an Encryption)</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>#modus</IRI>
-        <Literal>modus</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
-        <IRI>#scheme</IRI>
-        <Literal>Describes a certain scheme e.g. a padding scheme.</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>#scheme</IRI>
-        <Literal>scheme</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>#timeWindowSeconds</IRI>
-        <Literal>timeWindowSeconds</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
@@ -5328,6 +5091,11 @@ name = metadata.name</Literal>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>/classes/ApplicationLog</IRI>
         <Literal>ApplicationLogging</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/AsymmetricCipher</IRI>
+        <Literal>AsymmetricCipher</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
@@ -5651,6 +5419,11 @@ name = metadata.name</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/CryptographicHash</IRI>
+        <Literal>DocumentChecksum</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>/classes/CryptographicOperation</IRI>
         <Literal>CryptographicOperation</Literal>
     </AnnotationAssertion>
@@ -5940,6 +5713,11 @@ name = metadata.name</Literal>
         <Literal>GeoRedundancy</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/GetCurrentTimeOperation</IRI>
+        <Literal>GetCurrentTimeOperation</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
         <IRI>/classes/GetSecret</IRI>
         <Literal>An operation that retrieves a secret from a (remote) location. This can be a local keystore, a remote key server or a hardware device such as a TPM or HSM.</Literal>
@@ -6046,6 +5824,11 @@ name = metadata.name</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/HybridCipher</IRI>
+        <Literal>HybridCipher</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>/classes/Identifiable</IRI>
         <Literal>Identifiable</Literal>
     </AnnotationAssertion>
@@ -6063,6 +5846,36 @@ name = metadata.name</Literal>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>/classes/Immutability</IRI>
         <Literal xml:lang="english">Immutability</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>/classes/InitializationVector</IRI>
+        <Literal>Represents an Initialization Vector of a cipher.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/InitializationVector</IRI>
+        <Literal>InitializationVector</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>/classes/Input</IRI>
+        <Literal>A certain Input for e.g. a function.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/Input</IRI>
+        <Literal>Input</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/InputValidationOperation</IRI>
+        <Literal>InputValidationOperation</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/InstallUpdate</IRI>
+        <Literal>InstallUpdateOperation</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
@@ -6112,6 +5925,11 @@ name = metadata.name</Literal>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
         <IRI>/classes/Key</IRI>
+        <Literal>A key used for encryption algorithms.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>/classes/Key</IRI>
         <Literal>The node that represents the &quot;key&quot; of this option. For example, in an INI file, this would be the [FieldDeclaration] node that represents the key.</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
@@ -6123,6 +5941,11 @@ name = metadata.name</Literal>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>/classes/Key</IRI>
         <Literal>SelectorKey</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/KeyDerivationFunction</IRI>
+        <Literal>KeyDerivationFunction</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
@@ -6237,7 +6060,7 @@ name = metadata.name</Literal>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
         <IRI>/classes/LogOutput</IRI>
-        <Literal>A generic LogOutput.</Literal>
+        <Literal>A generic Logoutput.</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
@@ -6323,6 +6146,11 @@ name = metadata.name</Literal>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>/classes/MemoryOperation</IRI>
         <Literal>MemoryOperation</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/MessageAuthenticationCode</IRI>
+        <Literal>MessageAuthenticationCode</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
@@ -6435,6 +6263,11 @@ name = metadata.name</Literal>
         <Literal>Operation</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/Output</IRI>
+        <Literal>Output</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
         <IRI>/classes/POSIX</IRI>
         <Literal>Represents a POSIX architecture, commonly found on Linux systems.</Literal>
@@ -6443,6 +6276,26 @@ name = metadata.name</Literal>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>/classes/POSIX</IRI>
         <Literal>POSIX</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>/classes/Package</IRI>
+        <Literal>Represents a grouping of (source) code into logical unit, for example a package for a namespace.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/Package</IRI>
+        <Literal>Package</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>/classes/Padding</IRI>
+        <Literal>A padding for a cipher.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/Padding</IRI>
+        <Literal>Padding</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
@@ -6525,11 +6378,6 @@ name = metadata.name</Literal>
         <Literal>ProvideConfiguration</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
-        <IRI>/classes/ProvideConfigurationGroup</IRI>
-        <Literal>Represents an operation to provide a [ConfigurationGroup]. It connects a [ConfigurationGroupSource] with a [ConfigurationGroup].</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>/classes/ProvideConfigurationGroup</IRI>
         <Literal>ProvideConfigurationGroup</Literal>
@@ -6548,6 +6396,11 @@ name = metadata.name</Literal>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>/classes/RBAC</IRI>
         <Literal xml:lang="english">RBAC</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/RateLimiting</IRI>
+        <Literal>RateLimiting</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
@@ -6716,6 +6569,21 @@ name = metadata.name</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>/classes/SymmetricCipher</IRI>
+        <Literal>Represents a symmetric cipher.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/SymmetricCipher</IRI>
+        <Literal>SymmetricCipher</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/Time</IRI>
+        <Literal>Time</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
         <IRI>/classes/Token</IRI>
         <Literal>A Token used for TokenBasedAuthentication.</Literal>
     </AnnotationAssertion>
@@ -6841,6 +6709,16 @@ name = metadata.name</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>/classes/authTagSize</IRI>
+        <Literal>AuthTagSize of a symmetric cipher</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/authTagSize</IRI>
+        <Literal>authTagSize</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
         <IRI>/classes/authenticationMechanism</IRI>
         <Literal>for example: RSA, ECDSA</Literal>
     </AnnotationAssertion>
@@ -6883,6 +6761,16 @@ name = metadata.name</Literal>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>/classes/calls</IRI>
         <Literal>calls</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>/classes/cipherName</IRI>
+        <Literal>Name of a cryptographic cipher.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/cipherName</IRI>
+        <Literal>cipherName</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
@@ -6971,11 +6859,6 @@ name = metadata.name</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
-        <IRI>/classes/hasMultipleSet</IRI>
-        <Literal>hasMultipleSet</Literal>
-    </AnnotationAssertion>
-    <AnnotationAssertion>
-        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>/classes/id</IRI>
         <Literal>id</Literal>
     </AnnotationAssertion>
@@ -7003,6 +6886,11 @@ name = metadata.name</Literal>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>/classes/isManaged</IRI>
         <Literal>isManaged</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/keyExchange</IRI>
+        <Literal>keyExchange</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
@@ -7076,6 +6964,11 @@ name = metadata.name</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/maxRequests</IRI>
+        <Literal>maxRequests</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>/classes/measures</IRI>
         <Literal>measures</Literal>
     </AnnotationAssertion>
@@ -7103,6 +6996,16 @@ name = metadata.name</Literal>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>/classes/mode</IRI>
         <Literal>mode</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>/classes/modus</IRI>
+        <Literal>Describes a modus of something being executed. (e.g. used by an Encryption)</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/modus</IRI>
+        <Literal>modus</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
@@ -7230,6 +7133,16 @@ name = metadata.name</Literal>
         <Literal>rightPrincipal</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>/classes/rotationInterval</IRI>
+        <Literal>Maximum password rotation interval in months</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/rotationInterval</IRI>
+        <Literal>rotationInterval</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>/classes/runtimeLanguage</IRI>
         <Literal>runtimeLanguage</Literal>
@@ -7243,6 +7156,16 @@ name = metadata.name</Literal>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>/classes/schemaURL</IRI>
         <Literal>schemaURL</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>/classes/scheme</IRI>
+        <Literal>Describes a certain scheme e.g. a padding scheme.</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/scheme</IRI>
+        <Literal>scheme</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
@@ -7298,6 +7221,11 @@ name = metadata.name</Literal>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>/classes/target</IRI>
         <Literal>target</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:label"/>
+        <IRI>/classes/timeWindowSeconds</IRI>
+        <Literal>timeWindowSeconds</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
@@ -7625,6 +7553,11 @@ name = metadata.name</Literal>
         <Literal xml:lang="english">collectionOf</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
+        <AnnotationProperty abbreviatedIRI="rdfs:comment"/>
+        <IRI>/properties/criticality</IRI>
+        <Literal>criticality: Contains the criticality of a vulnerability, e.g., low, medium, high, critical</Literal>
+    </AnnotationAssertion>
+    <AnnotationAssertion>
         <AnnotationProperty abbreviatedIRI="rdfs:label"/>
         <IRI>/properties/deployedOn</IRI>
         <Literal xml:lang="english">deployedOn</Literal>
@@ -7841,12 +7774,12 @@ name = metadata.name</Literal>
     </AnnotationAssertion>
     <AnnotationAssertion>
         <AnnotationProperty IRI="http://purl.org/dc/elements/1.1/description"/>
-        <IRI>wptmp:entityhttps://ontology.emerald-he.eu/classes/contextIsChecked</IRI>
+        <IRI>wptmp:entity#contextIsChecked</IRI>
         <Literal>Check additional information, e.g. which device is used or the time of the login</Literal>
     </AnnotationAssertion>
 </Ontology>
 
 
 
-<!-- Generated by the OWL API (version 4.5.29.2024-05-13T12:11:03Z) https://github.com/owlcs/owlapi -->
+<!-- Generated by the OWL API (version 4.5.26) https://github.com/owlcs/owlapi -->
 

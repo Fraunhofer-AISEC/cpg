@@ -34,8 +34,9 @@ import kotlin.Int
 public open class CertificateBasedAuthentication(
     public val enabled: Boolean?,
     contextIsChecked: Boolean?,
+    rotationInterval: Int?,
     underlyingNode: Node? = null,
-) : Authenticity(contextIsChecked, underlyingNode) {
+) : Authenticity(contextIsChecked, rotationInterval, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is CertificateBasedAuthentication &&
             super.equals(other) &&

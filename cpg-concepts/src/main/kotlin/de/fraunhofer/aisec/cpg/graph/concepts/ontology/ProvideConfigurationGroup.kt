@@ -31,10 +31,6 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-/**
- * Represents an operation to provide a [ConfigurationGroup]. It connects a
- * [ConfigurationGroupSource] with a [ConfigurationGroup].
- */
 public open class ProvideConfigurationGroup(
     public val configurationGroup: ConfigurationGroup?,
     public val configurationGroupSource: ConfigurationGroupSource?,

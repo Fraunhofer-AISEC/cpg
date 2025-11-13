@@ -48,7 +48,7 @@ public open class Memory(
     raw: String?,
     parent: Resource?,
     underlyingNode: Node? = null,
-) : Resource(creation_time, description, labels, name, raw, parent, underlyingNode) {
+) : Hardware(creation_time, description, labels, name, raw, parent, underlyingNode) {
     init {
         name?.let { this.name = Name(localName = it) }
     }

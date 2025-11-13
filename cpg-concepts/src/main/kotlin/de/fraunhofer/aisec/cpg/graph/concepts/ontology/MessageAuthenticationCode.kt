@@ -35,7 +35,7 @@ import kotlin.String
 public open class MessageAuthenticationCode(
     public val type: String?,
     public val input: Input?,
-    public val key: Key?,
+    public val selectorKey: SelectorKey?,
     underlyingNode: Node? = null,
 ) : Functionality(underlyingNode) {
     override fun equals(other: Any?): Boolean =
@@ -43,7 +43,7 @@ public open class MessageAuthenticationCode(
             super.equals(other) &&
             other.type == this.type &&
             other.input == this.input &&
-            other.key == this.key
+            other.selectorKey == this.selectorKey
 
-    override fun hashCode(): Int = Objects.hash(super.hashCode(), type, input, key)
+    override fun hashCode(): Int = Objects.hash(super.hashCode(), type, input, selectorKey)
 }

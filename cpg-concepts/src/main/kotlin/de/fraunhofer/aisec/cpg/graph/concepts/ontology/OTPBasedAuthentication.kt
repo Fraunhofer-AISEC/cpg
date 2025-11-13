@@ -34,8 +34,9 @@ import kotlin.Int
 public open class OTPBasedAuthentication(
     public val activated: Boolean?,
     contextIsChecked: Boolean?,
+    rotationInterval: Int?,
     underlyingNode: Node? = null,
-) : Authenticity(contextIsChecked, underlyingNode) {
+) : Authenticity(contextIsChecked, rotationInterval, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is OTPBasedAuthentication && super.equals(other) && other.activated == this.activated
 

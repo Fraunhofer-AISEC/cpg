@@ -25,14 +25,30 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.ontology
 
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import java.time.ZonedDateTime
 import java.util.Objects
 import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
+import kotlin.String
+import kotlin.collections.MutableMap
 
-public open class CertificationTarget(underlyingNode: Node? = null) : Core(underlyingNode) {
-    override fun equals(other: Any?): Boolean = other is CertificationTarget && super.equals(other)
+public open class Hardware(
+    creation_time: ZonedDateTime?,
+    description: String?,
+    labels: MutableMap<String, String>?,
+    name: String?,
+    raw: String?,
+    parent: Resource?,
+    underlyingNode: Node? = null,
+) : Resource(creation_time, description, labels, name, raw, parent, underlyingNode) {
+    init {
+        name?.let { this.name = Name(localName = it) }
+    }
+
+    override fun equals(other: Any?): Boolean = other is Hardware && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())
 }

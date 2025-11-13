@@ -37,8 +37,9 @@ public open class TokenBasedAuthentication(
     public val enforced: Boolean?,
     public val token: Token?,
     contextIsChecked: Boolean?,
+    rotationInterval: Int?,
     underlyingNode: Node? = null,
-) : Authenticity(contextIsChecked, underlyingNode) {
+) : Authenticity(contextIsChecked, rotationInterval, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is TokenBasedAuthentication &&
             super.equals(other) &&

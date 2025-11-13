@@ -33,16 +33,23 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 import kotlin.String
+import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-/**
- * The node that represents the "key" of this option. For example, in an INI file, this would be the
- * [FieldDeclaration] node that represents the key.
- */
+/** A key used for encryption algorithms. */
 public open class SelectorKey(
     public val algorithm: String?,
     public val keySize: Int?,
-    dataLocation: DataLocation?,
+    enabled: Boolean?,
+    expirationDate: ZonedDateTime?,
+    isManaged: Boolean?,
+    notBeforeDate: ZonedDateTime?,
+    usedByMultiple: Infrastructure?,
+    internetAccessibleEndpoint: Boolean?,
+    geoLocation: GeoLocation?,
+    loggings: MutableList<Logging?>,
+    redundancies: Redundancy?,
+    usageStatistics: UsageStatistics?,
     creation_time: ZonedDateTime?,
     description: String?,
     labels: MutableMap<String, String>?,
@@ -50,7 +57,26 @@ public open class SelectorKey(
     raw: String?,
     parent: Resource?,
     underlyingNode: Node? = null,
-) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
+) :
+    Credential(
+        enabled,
+        expirationDate,
+        isManaged,
+        notBeforeDate,
+        usedByMultiple,
+        internetAccessibleEndpoint,
+        geoLocation,
+        loggings,
+        redundancies,
+        usageStatistics,
+        creation_time,
+        description,
+        labels,
+        name,
+        raw,
+        parent,
+        underlyingNode,
+    ) {
     init {
         name?.let { this.name = Name(localName = it) }
     }

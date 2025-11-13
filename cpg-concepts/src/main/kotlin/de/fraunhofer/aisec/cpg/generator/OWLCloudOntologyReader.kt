@@ -1059,10 +1059,6 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
 
             // If superclass is 'Node', do nothing
             if (StringUtils.substringAfterLast(jcs.superType, ".") == "Node") continue
-            // HCKY HACK HACK
-            if (jcs.name == "HttpRequest") {
-                continue
-            }
 
             // Set superclass call
             addSuperclassCall(jcs, jcsList)

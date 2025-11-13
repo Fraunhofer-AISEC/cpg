@@ -37,8 +37,17 @@ public open class JwtAuthentication(
     enforced: Boolean?,
     token: Token?,
     contextIsChecked: Boolean?,
+    rotationInterval: Int?,
     underlyingNode: Node? = null,
-) : TokenBasedAuthentication(enabled, enforced, token, contextIsChecked, underlyingNode) {
+) :
+    TokenBasedAuthentication(
+        enabled,
+        enforced,
+        token,
+        contextIsChecked,
+        rotationInterval,
+        underlyingNode,
+    ) {
     override fun equals(other: Any?): Boolean = other is JwtAuthentication && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

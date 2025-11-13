@@ -31,8 +31,11 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public open class NoAuthentication(contextIsChecked: Boolean?, underlyingNode: Node? = null) :
-    Authenticity(contextIsChecked, underlyingNode) {
+public open class NoAuthentication(
+    contextIsChecked: Boolean?,
+    rotationInterval: Int?,
+    underlyingNode: Node? = null,
+) : Authenticity(contextIsChecked, rotationInterval, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is NoAuthentication && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

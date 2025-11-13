@@ -61,3 +61,11 @@ dependencies {
     implementation("org.apache.jena:jena-arq:3.4.0")
     implementation(libs.reflections)
 }
+
+// ---- Run the generator ----
+tasks.register<JavaExec>("runSemanticNodeGenerator") {
+    group = "application"
+    description = "Runs de.fraunhofer.aisec.cpg.SemanticNodeGenerator"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass.set("de.fraunhofer.aisec.cpg.SemanticNodeGenerator")
+}
