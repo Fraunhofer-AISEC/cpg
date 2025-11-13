@@ -64,7 +64,7 @@ object JepSingleton {
         val virtualEnvName = System.getenv("CPG_PYTHON_VIRTUALENV") ?: "cpg"
         val virtualEnvPath =
             Paths.get(System.getProperty("user.home"), ".virtualenvs", virtualEnvName)
-        val pythonVersions = listOf("3.8", "3.9", "3.10", "3.11", "3.12", "3.13")
+        val pythonVersions = listOf("3.10", "3.11", "3.12", "3.13", "3.14", "3.15")
         val wellKnownPaths = mutableListOf<Path>()
         pythonVersions.forEach { version ->
             // Linux
