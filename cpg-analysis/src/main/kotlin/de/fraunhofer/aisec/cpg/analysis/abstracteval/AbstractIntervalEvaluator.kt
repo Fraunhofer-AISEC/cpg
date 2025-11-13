@@ -411,7 +411,7 @@ class AbstractIntervalEvaluator {
                 ::handleNode,
                 strategy = Lattice.Strategy.WIDENING_NARROWING,
             )
-        return finalState.second.get(targetNode)?.element ?: LatticeInterval.BOTTOM
+        return finalState?.second?.get(targetNode)?.element ?: LatticeInterval.BOTTOM
     }
 
     /**

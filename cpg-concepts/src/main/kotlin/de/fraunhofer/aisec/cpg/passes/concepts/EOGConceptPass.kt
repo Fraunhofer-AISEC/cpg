@@ -87,7 +87,10 @@ open class EOGConceptPass(ctx: TranslationContext) :
 
         val nextEog = node.nextEOGEdges.toList()
         val finalState =
-            lattice.lub(lattice.iterateEOG(nextEog, startState, ::transfer), startState, true)
+            lattice.iterateEOG(nextEog, startState, ::transfer)?.let { tmpFinalState ->
+                lattice.lub(tmpFinalState, startState, true)
+            } ?: startState
+
         // We set the underlying node based on the final state
         for ((underlyingNode, overlayNodes) in finalState) {
             overlayNodes.forEach {

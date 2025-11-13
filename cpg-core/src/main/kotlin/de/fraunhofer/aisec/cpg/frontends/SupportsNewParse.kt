@@ -23,29 +23,16 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.edges
+package de.fraunhofer.aisec.cpg.frontends
 
-import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.newMethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.newRecordDeclaration
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import java.nio.file.Path
 
-class EdgesTest {
-    @Test
-    fun testUnwrap() {
-        with(TestLanguageFrontend()) {
-            val record = newRecordDeclaration("myRecord", kind = "class")
-            val method = newMethodDeclaration("myFunc")
-            record.methods += method
-
-            assertEquals(1, record.methods.size)
-            assertEquals(method, record.methods.firstOrNull())
-
-            assertEquals(
-                "RecordDeclaration[name=myRecord,location=<null>,name=myRecord,kind=class,superTypeDeclarations=[],fields=[],methods=[MethodDeclaration[name=myFunc,location=<null>,parameters=[]]],constructors=[],records=[]]",
-                record.toString(),
-            )
-        }
-    }
+interface SupportsNewParse {
+    /**
+     * Parses the given [content] with the language frontend into a [TranslationUnitDeclaration]. If
+     * known, a [path] should be specified, so that the language frontend can potentially use more
+     * advanced features like module resolution.
+     */
+    fun parse(content: String, path: Path? = null): TranslationUnitDeclaration
 }
