@@ -235,7 +235,15 @@ abstract class Node() :
     var isImplicit = false
 
     /** Required field for object graph mapping. It contains the node id. */
-    @DoNotPersist @Id @GeneratedValue var legacyId: Long? = null
+    @DoNotPersist
+    @Id
+    @GeneratedValue
+    var legacyId: Long? =
+        availableID.let {
+            val nextID = availableID
+            availableID++
+            nextID
+        }
 
     /**
      * A (more or less) unique identifier for this node. It is a [Uuid] derived from
@@ -361,6 +369,8 @@ abstract class Node() :
         @JvmStatic protected val log: Logger = LoggerFactory.getLogger(Node::class.java)
 
         const val EMPTY_NAME = ""
+
+        var availableID: Long = 0L
     }
 }
 
