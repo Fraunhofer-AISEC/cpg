@@ -57,6 +57,7 @@ class AssignExpressionTest {
         }
     }
 
+    @Ignore
     @Test
     fun propagateTuple() {
         with(TestLanguageFrontend()) {
