@@ -27,9 +27,13 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -41,7 +45,7 @@ import org.bytedeco.llvm.global.LLVM.*
 
 /**
  * This handler primarily handles operands, as returned by [LLVMGetOperand] and turns them into an
- * [Expression]. Operands are basically arguments to an instruction.
+ * [ast.statements.expressions.Expression]. Operands are basically arguments to an instruction.
  */
 class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
     Handler<Expression, LLVMValueRef, LLVMIRLanguageFrontend>(::ProblemExpression, lang) {
@@ -116,7 +120,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
         }
     }
 
-    /** Returns a [Reference] for a function (pointer). */
+    /** Returns a [ast.statements.expressions.Reference] for a function (pointer). */
     private fun handleFunction(valueRef: LLVMValueRef): Expression {
         return newReference(valueRef.name, frontend.typeOf(valueRef), rawNode = valueRef)
     }
@@ -236,7 +240,8 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * Handles a constant struct value, which belongs to the
      * [complex constants](https://llvm.org/docs/LangRef.html#complex-constants). Its type needs to
      * be a structure type (either identified or literal) and we currently map this to a
-     * [ConstructExpression], with the individual struct members being added as arguments.
+     * [ast.statements.expressions.ConstructExpression], with the individual struct members being
+     * added as arguments.
      */
     private fun handleConstantStructValue(value: LLVMValueRef): Expression {
         // retrieve the type
@@ -262,7 +267,8 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * Handles a constant array value, which belongs to the
      * [complex constants](https://llvm.org/docs/LangRef.html#complex-constants). Their element
      * types and number of elements needs to match the specified array type. We parse the array
-     * contents as an [InitializerListExpression], similar to the C syntax of `int a[] = { 1, 2 }`.
+     * contents as an [ast.statements.expressions.InitializerListExpression], similar to the C
+     * syntax of `int a[] = { 1, 2 }`.
      *
      * There is a special case, in which LLVM allows to represent the array as a double-quoted
      * string, prefixed with `c`. In this case we
@@ -298,9 +304,9 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
 
     /**
      * Recursively creates a structure of [type] and initializes all its fields with a `null`-
-     * [Literal] as this is closest to `undef`.
+     * [ast.statements.expressions.Literal] as this is closest to `undef`.
      *
-     * Returns a [ConstructExpression].
+     * Returns a [ast.statements.expressions.ConstructExpression].
      */
     private fun initializeAsUndef(type: Type, value: LLVMValueRef): Expression {
         return if (
@@ -326,9 +332,10 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
     }
 
     /**
-     * Recursively creates a structure of [type] and initializes all its fields with 0-[Literal].
+     * Recursively creates a structure of [type] and initializes all its fields with
+     * 0-[ast.statements.expressions.Literal].
      *
-     * Returns a [ConstructExpression].
+     * Returns a [ast.statements.expressions.ConstructExpression].
      */
     private fun initializeAsZero(type: Type, value: LLVMValueRef): Expression {
         return if (
@@ -365,10 +372,11 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * [`extractvalue`](https://llvm.org/docs/LangRef.html#extractvalue-instruction) instruction
      * which works in a similar way.
      *
-     * We try to convert it either into an [SubscriptExpression] or an [MemberExpression], depending
-     * on whether the accessed variable is a struct or an array. Furthermore, since `getelementptr`
-     * allows an (infinite) chain of sub-element access within a single instruction, we need to
-     * unwrap those into individual expressions.
+     * We try to convert it either into an [ast.statements.expressions.SubscriptExpression] or an
+     * [ast.statements.expressions.MemberExpression], depending on whether the accessed variable is
+     * a struct or an array. Furthermore, since `getelementptr` allows an (infinite) chain of
+     * sub-element access within a single instruction, we need to unwrap those into individual
+     * expressions.
      */
     internal fun handleGetElementPtr(instr: LLVMValueRef): Expression {
         val isGetElementPtr =
@@ -499,7 +507,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
 
     /**
      * Handles the [`select`](https://llvm.org/docs/LangRef.html#i-select) instruction, which
-     * behaves like a [ConditionalExpression].
+     * behaves like a [ast.statements.expressions.ConditionalExpression].
      */
     fun handleSelect(instr: LLVMValueRef): Expression {
         val cond = frontend.getOperandValueAtIndex(instr, 0)

@@ -29,14 +29,48 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.assumptions.addAssumptionDependence
-import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.ast.AstNode
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.OperatorDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.BreakStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ContinueStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.DoStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ForStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.LabelStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.SwitchStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ThrowExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.TryStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.WhileStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CastExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.NewArrayExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.OperatorCallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.SubscriptExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ControlDependence
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
@@ -115,8 +149,8 @@ inline fun <reified T : OverlayNode> Node.hasOverlay(): Boolean {
  * [EOGStarterHolder].
  *
  * While it is in theory possible to retrieve this property from all nodes, most use cases should
- * include retrieving it from either an individual [TranslationUnitDeclaration] or the complete
- * [TranslationResult].
+ * include retrieving it from either an individual [ast.declarations.TranslationUnitDeclaration] or
+ * the complete [TranslationResult].
  */
 val AstNode.allEOGStarters: List<Node>
     get() {
@@ -154,11 +188,12 @@ inline fun <reified T : Node> Node.dfgFrom(): List<T> {
 }
 
 /**
- * This function retrieves the [CallExpression]s of [this] by their fully qualified name (FQN). The
- * match is performed on the [CallExpression.reconstructedImportName].
+ * This function retrieves the [ast.statements.expressions.CallExpression]s of [this] by their fully
+ * qualified name (FQN). The match is performed on the
+ * [ast.statements.expressions.CallExpression.reconstructedImportName].
  *
  * @param fqn The fully qualified name of the calls to retrieve.
- * @return A list of [CallExpression] nodes matching the provided FQN.
+ * @return A list of [ast.statements.expressions.CallExpression] nodes matching the provided FQN.
  */
 fun <T : CallExpression> Collection<T>.byFQN(fqn: String): List<T> {
     return this.filter { call -> call.reconstructedImportName.toString() == fqn }
@@ -469,7 +504,7 @@ class Context(
     companion object {
         /**
          * Creates a new [Context] with an empty index stack and call stack given by the
-         * [CallExpression]s provided in [calls].
+         * [ast.statements.expressions.CallExpression]s provided in [calls].
          */
         fun ofCallStack(vararg calls: CallExpression): Context {
             return Context(
@@ -1000,9 +1035,9 @@ fun Node.followNextFullDFGEdgesUntilHit(
 }
 
 /**
- * Returns a [Collection] of last nodes in the EOG of this [FunctionDeclaration]. If there's no
- * function body, it will return a list of this function declaration. This function does not
- * propagate assumptions currently.
+ * Returns a [Collection] of last nodes in the EOG of this [ast.declarations.FunctionDeclaration].
+ * If there's no function body, it will return a list of this function declaration. This function
+ * does not propagate assumptions currently.
  */
 val FunctionDeclaration.lastEOGNodes: Collection<Node>
     get() {
@@ -1121,127 +1156,210 @@ fun Node.followPrevDFG(predicate: (Node) -> Boolean): NodePath? {
 val AstNode?.nodes: List<AstNode>
     get() = this.allChildren()
 
-/** Returns all [CallExpression] children in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.statements.expressions.CallExpression] children in this graph, starting with
+ * this [Node].
+ */
 val AstNode?.calls: List<CallExpression>
     get() = this.allChildren()
 
-/** Returns all [OperatorCallExpression] children in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.statements.expressions.OperatorCallExpression] children in this graph, starting
+ * with this [Node].
+ */
 val AstNode?.operatorCalls: List<OperatorCallExpression>
     get() = this.allChildren()
 
-/** Returns all [MemberCallExpression] children in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.statements.expressions.MemberCallExpression] children in this graph, starting
+ * with this [Node].
+ */
 val AstNode?.mcalls: List<MemberCallExpression>
     get() = this.allChildren()
 
-/** Returns all [CastExpression] children in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.statements.expressions.CastExpression] children in this graph, starting with
+ * this [Node].
+ */
 val AstNode?.casts: List<CastExpression>
     get() = this.allChildren()
 
-/** Returns all [MethodDeclaration] children in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.declarations.MethodDeclaration] children in this graph, starting with this
+ * [Node].
+ */
 val AstNode?.methods: List<MethodDeclaration>
     get() = this.allChildren()
 
-/** Returns all [OperatorDeclaration] children in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.declarations.OperatorDeclaration] children in this graph, starting with this
+ * [Node].
+ */
 val AstNode?.operators: List<OperatorDeclaration>
     get() = this.allChildren()
 
-/** Returns all [FieldDeclaration] children in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.declarations.FieldDeclaration] children in this graph, starting with this
+ * [Node].
+ */
 val AstNode?.fields: List<FieldDeclaration>
     get() = this.allChildren()
 
-/** Returns all [ParameterDeclaration] children in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.declarations.ParameterDeclaration] children in this graph, starting with this
+ * [Node].
+ */
 val AstNode?.parameters: List<ParameterDeclaration>
     get() = this.allChildren()
 
-/** Returns all [FunctionDeclaration] children in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.declarations.FunctionDeclaration] children in this graph, starting with this
+ * [Node].
+ */
 val AstNode?.functions: List<FunctionDeclaration>
     get() = this.allChildren()
 
-/** Returns all [RecordDeclaration] children in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.declarations.RecordDeclaration] children in this graph, starting with this
+ * [Node].
+ */
 val AstNode?.records: List<RecordDeclaration>
     get() = this.allChildren()
 
-/** Returns all [RecordDeclaration] children in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.declarations.RecordDeclaration] children in this graph, starting with this
+ * [Node].
+ */
 val AstNode?.namespaces: List<NamespaceDeclaration>
     get() = this.allChildren()
 
-/** Returns all [ImportDeclaration] children in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.declarations.ImportDeclaration] children in this graph, starting with this
+ * [Node].
+ */
 val AstNode?.imports: List<ImportDeclaration>
     get() = this.allChildren()
 
-/** Returns all [VariableDeclaration] children in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.declarations.VariableDeclaration] children in this graph, starting with this
+ * [Node].
+ */
 val AstNode?.variables: List<VariableDeclaration>
     get() = this.allChildren()
 
-/** Returns all [Literal] children in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.statements.expressions.Literal] children in this graph, starting with this
+ * [Node].
+ */
 val AstNode?.literals: List<Literal<*>>
     get() = this.allChildren()
 
-/** Returns all [Block] child edges in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.statements.expressions.Block] child edges in this graph, starting with this
+ * [Node].
+ */
 val AstNode?.blocks: List<Block>
     get() = this.allChildren()
 
-/** Returns all [Reference] children in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.statements.expressions.Reference] children in this graph, starting with this
+ * [Node].
+ */
 val AstNode?.refs: List<Reference>
     get() = this.allChildren()
 
-/** Returns all [MemberExpression] children in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.statements.expressions.MemberExpression] children in this graph, starting with
+ * this [Node].
+ */
 val AstNode?.memberExpressions: List<MemberExpression>
     get() = this.allChildren()
 
-/** Returns all [Statement] child edges in this graph, starting with this [Node]. */
+/** Returns all [ast.statements.Statement] child edges in this graph, starting with this [Node]. */
 val AstNode?.statements: List<Statement>
     get() = this.allChildren()
 
-/** Returns all [ForStatement] child edges in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.statements.ForStatement] child edges in this graph, starting with this [Node].
+ */
 val AstNode?.forLoops: List<ForStatement>
     get() = this.allChildren()
 
-/** Returns all [TryStatement] child edges in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.statements.TryStatement] child edges in this graph, starting with this [Node].
+ */
 val AstNode?.trys: List<TryStatement>
     get() = this.allChildren()
 
-/** Returns all [ThrowExpression] child edges in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.statements.ThrowExpression] child edges in this graph, starting with this
+ * [Node].
+ */
 val AstNode?.throws: List<ThrowExpression>
     get() = this.allChildren()
 
-/** Returns all [ForEachStatement] child edges in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.statements.ForEachStatement] child edges in this graph, starting with this
+ * [Node].
+ */
 val AstNode?.forEachLoops: List<ForEachStatement>
     get() = this.allChildren()
 
-/** Returns all [SwitchStatement] child edges in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.statements.SwitchStatement] child edges in this graph, starting with this
+ * [Node].
+ */
 val AstNode?.switches: List<SwitchStatement>
     get() = this.allChildren()
 
-/** Returns all [WhileStatement] child edges in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.statements.WhileStatement] child edges in this graph, starting with this [Node].
+ */
 val AstNode?.whileLoops: List<WhileStatement>
     get() = this.allChildren()
 
-/** Returns all [DoStatement] child edges in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.statements.DoStatement] child edges in this graph, starting with this [Node].
+ */
 val AstNode?.doLoops: List<DoStatement>
     get() = this.allChildren()
 
-/** Returns all [BreakStatement] child edges in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.statements.BreakStatement] child edges in this graph, starting with this [Node].
+ */
 val AstNode?.breaks: List<BreakStatement>
     get() = this.allChildren()
 
-/** Returns all [ContinueStatement] child edges in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.statements.ContinueStatement] child edges in this graph, starting with this
+ * [Node].
+ */
 val AstNode?.continues: List<ContinueStatement>
     get() = this.allChildren()
 
-/** Returns all [IfStatement] child edges in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.statements.IfStatement] child edges in this graph, starting with this [Node].
+ */
 val AstNode?.ifs: List<IfStatement>
     get() = this.allChildren()
 
-/** Returns all [LabelStatement] child edges in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.statements.LabelStatement] child edges in this graph, starting with this [Node].
+ */
 val AstNode?.labels: List<LabelStatement>
     get() = this.allChildren()
 
-/** Returns all [ReturnStatement] child edges in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.statements.ReturnStatement] child edges in this graph, starting with this
+ * [Node].
+ */
 val AstNode?.returns: List<ReturnStatement>
     get() = this.allChildren()
 
-/** Returns all [AssignExpression] child edges in this graph, starting with this [Node]. */
+/**
+ * Returns all [ast.statements.expressions.AssignExpression] child edges in this graph, starting
+ * with this [Node].
+ */
 val AstNode?.assigns: List<AssignExpression>
     get() = this.allChildren()
 
@@ -1353,7 +1471,10 @@ operator fun <N : Expression> Expression?.invoke(): N? {
     return this as? N
 }
 
-/** Returns all [CallExpression]s in this graph which call a method with the given [name]. */
+/**
+ * Returns all [ast.statements.expressions.CallExpression]s in this graph which call a method with
+ * the given [name].
+ */
 fun TranslationResult.callsByName(name: String): List<CallExpression> {
     @Suppress("UNCHECKED_CAST")
     return SubgraphWalker.flattenAST(this).filter { node ->
@@ -1440,11 +1561,12 @@ private fun Node.eogDistanceTo(to: Node): Int {
 }
 
 /**
- * This is a small utility function to "unwrap" a [Reference] that it is wrapped in (multiple)
- * [Expression] nodes. This will only work on expression that only have one "argument" (such as a
- * unary operator), in order to avoid ambiguous results. This can be useful for data-flow analysis,
- * if you want to quickly retrieve the reference that is affected by an operation. For example in
- * C++ it is common to take an address of a variable and cast it into an appropriate type:
+ * This is a small utility function to "unwrap" a [ast.statements.expressions.Reference] that it is
+ * wrapped in (multiple) [ast.statements.expressions.Expression] nodes. This will only work on
+ * expression that only have one "argument" (such as a unary operator), in order to avoid ambiguous
+ * results. This can be useful for data-flow analysis, if you want to quickly retrieve the reference
+ * that is affected by an operation. For example in C++ it is common to take an address of a
+ * variable and cast it into an appropriate type:
  * ```cpp
  * int64_t addr = (int64_t) &a;
  * ```
@@ -1463,7 +1585,7 @@ fun Expression?.unwrapReference(): Reference? {
 }
 
 /**
- * Returns the [TranslationUnitDeclaration] where this node is located in.
+ * Returns the [ast.declarations.TranslationUnitDeclaration] where this node is located in.
  *
  * If this is an [OverlayNode], we start searching in the [OverlayNode.underlyingNode].
  */
@@ -1508,11 +1630,12 @@ val Node.component: Component?
     }
 
 /**
- * This helper function be used to find out if a particular expression (usually a [CallExpression]
- * or a [Reference]) is imported through a [ImportDeclaration].
+ * This helper function be used to find out if a particular expression (usually a
+ * [ast.statements.expressions.CallExpression] or a [ast.statements.expressions.Reference]) is
+ * imported through a [ast.declarations.ImportDeclaration].
  *
  * It returns a [Pair], with the [Pair.first] being a boolean value whether it was imported and
- * [Pair.second] the [ImportDeclaration] if applicable.
+ * [Pair.second] the [ast.declarations.ImportDeclaration] if applicable.
  */
 val Expression.importedFrom: List<ImportDeclaration>
     get() {

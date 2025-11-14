@@ -35,7 +35,9 @@ import de.fraunhofer.aisec.cpg.SignatureMatches
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.parseName
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
@@ -50,7 +52,7 @@ import org.slf4j.LoggerFactory
  * If the user of the library registers one or multiple DFG-function summary files (via
  * [TranslationConfiguration.Builder.registerFunctionSummaries]), this class is responsible for
  * parsing the files, caching the result and adding the respective DFG summaries to the
- * [FunctionDeclaration].
+ * [de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration].
  */
 class DFGFunctionSummaries {
     private constructor()
@@ -61,9 +63,12 @@ class DFGFunctionSummaries {
     /**
      * Saves the information on which parameter(s) of a function are modified by the function. This
      * is interesting since we need to add DFG edges between the modified parameter and the
-     * respective argument(s). For each [ParameterDeclaration] as well as the
-     * [MethodDeclaration.receiver] that has some incoming DFG-edge within this
-     * [FunctionDeclaration], we store all previous DFG nodes.
+     * respective argument(s). For each
+     * [de.fraunhofer.aisec.cpg.graph.ast.declarations.ParameterDeclaration] as well as the
+     * [de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration.receiver] that has some
+     * incoming DFG-edge within this
+     * [de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration], we store all previous
+     * DFG nodes.
      */
     val functionToChangedParameters =
         mutableMapOf<FunctionDeclaration, MutableMap<ValueDeclaration, MutableSet<Node>>>()

@@ -31,17 +31,23 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.IDENTIF
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_KEYWORD_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_POSITIONAL_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.Annotation
-import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.ast.Annotation
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ConstructorDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ProblemDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.helpers.Util
 
 /**
  * In Python, all definitions/declarations are statements. This class handles the parsing of
- * [Python.AST.Def] nodes to be represented as [Declaration] nodes in our CPG.
+ * [Python.AST.Def] nodes to be represented as [ast.declarations.Declaration] nodes in our CPG.
  *
  * For declarations encountered directly on a namespace and classes, we directly invoke the
  * [DeclarationHandler], for others, the [StatementHandler] will forward these statements to us.
@@ -58,7 +64,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python [`ClassDef`](https://docs.python.org/3/library/ast.html#ast.ClassDef)
-     * into an [RecordDeclaration].
+     * into an [ast.declarations.RecordDeclaration].
      */
     private fun handleClassDef(stmt: Python.AST.ClassDef): RecordDeclaration {
         val cls = newRecordDeclaration(stmt.name, "class", rawNode = stmt)
@@ -98,8 +104,9 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
      *       [ConstructorDeclaration]
      *     - a [FunctionDeclaration] if neither of the above apply
      *
-     * In case of a [ConstructorDeclaration] or[MethodDeclaration]: the first argument is the
-     * `receiver` (most often called `self`).
+     * In case of a [ast.declarations.ConstructorDeclaration]
+     * or[ast.declarations.MethodDeclaration]: the first argument is the `receiver` (most often
+     * called `self`).
      */
     private fun handleFunctionDef(s: Python.AST.NormalOrAsyncFunctionDef): FunctionDeclaration {
         var recordDeclaration =
@@ -202,7 +209,8 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
      * This function creates a [newParameterDeclaration] for the argument, setting any modifiers
      * (like positional-only or keyword-only) and [defaultValue] if applicable.
      *
-     * This also adds the [ParameterDeclaration] to the [FunctionDeclaration.parameters].
+     * This also adds the [ast.declarations.ParameterDeclaration] to the
+     * [ast.declarations.FunctionDeclaration.parameters].
      */
     internal fun handleArgument(
         func: FunctionDeclaration,

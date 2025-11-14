@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.concepts.flows
 
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.OperatingSystemArchitecture
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import java.util.Objects
 
 /**

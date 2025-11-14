@@ -35,9 +35,13 @@ import de.fraunhofer.aisec.cpg.frontends.HasFunctionStyleConstruction
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.ast.AstNode
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
@@ -51,11 +55,13 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
  * If a [Language] has the trait [HasCallExpressionAmbiguity], we cannot distinguish between
- * [CallExpression], [CastExpression] or [ConstructExpression] during the initial translation. This
- * stems from the fact that we might not know all the types yet. We therefore need to handle them as
- * regular call expression in a [LanguageFrontend] or [Handler] and then later replace them with a
- * [CastExpression] or [ConstructExpression], if the [CallExpression.callee] refers to name of a
- * [Type] / [RecordDeclaration] rather than a function.
+ * [ast.statements.expressions.CallExpression], [ast.statements.expressions.CastExpression] or
+ * [ast.statements.expressions.ConstructExpression] during the initial translation. This stems from
+ * the fact that we might not know all the types yet. We therefore need to handle them as regular
+ * call expression in a [LanguageFrontend] or [Handler] and then later replace them with a
+ * [ast.statements.expressions.CastExpression] or [ast.statements.expressions.ConstructExpression],
+ * if the [ast.statements.expressions.CallExpression.callee] refers to name of a [Type] /
+ * [RecordDeclaration] rather than a function.
  */
 @ExecuteBefore(EvaluationOrderGraphPass::class)
 @DependsOn(TypeResolver::class)

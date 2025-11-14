@@ -25,11 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph.overlays
 
-import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
-import de.fraunhofer.aisec.cpg.graph.statements.LoopStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ComprehensionExpression
+import de.fraunhofer.aisec.cpg.graph.ast.BranchingNode
+import de.fraunhofer.aisec.cpg.graph.ast.statements.LoopStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ComprehensionExpression
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI

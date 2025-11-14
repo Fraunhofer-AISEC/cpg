@@ -35,22 +35,26 @@ import com.github.javaparser.utils.Pair
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
-import de.fraunhofer.aisec.cpg.graph.statements.BreakStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ContinueStatement
-import de.fraunhofer.aisec.cpg.graph.statements.DoStatement
-import de.fraunhofer.aisec.cpg.graph.statements.EmptyStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.SwitchStatement
-import de.fraunhofer.aisec.cpg.graph.statements.SynchronizedStatement
-import de.fraunhofer.aisec.cpg.graph.statements.TryStatement
-import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.AssertStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.BreakStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ContinueStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.DoStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.EmptyStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ForStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.LabelStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.SwitchStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.SynchronizedStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.TryStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.WhileStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -59,13 +63,14 @@ import kotlin.collections.set
 import org.slf4j.LoggerFactory
 
 class StatementHandler(lang: JavaLanguageFrontend?) :
-    Handler<de.fraunhofer.aisec.cpg.graph.statements.Statement, Statement, JavaLanguageFrontend>(
-        Supplier { ProblemExpression() },
-        lang!!,
-    ) {
+    Handler<
+        de.fraunhofer.aisec.cpg.graph.ast.statements.Statement,
+        Statement,
+        JavaLanguageFrontend,
+    >(Supplier { ProblemExpression() }, lang!!) {
     fun handleExpressionStatement(
         stmt: Statement
-    ): de.fraunhofer.aisec.cpg.graph.statements.Statement? {
+    ): de.fraunhofer.aisec.cpg.graph.ast.statements.Statement? {
         // We want to use the code of the stmt, rather than the expression
         val expr =
             frontend.expressionHandler
@@ -77,26 +82,26 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
     private fun handleThrowStmt(
         stmt: Statement
-    ): de.fraunhofer.aisec.cpg.graph.statements.Statement {
+    ): de.fraunhofer.aisec.cpg.graph.ast.statements.Statement {
         val throwStmt = stmt as ThrowStmt
         val throwOperation = newThrowExpression(rawNode = stmt)
         throwOperation.exception =
             frontend.expressionHandler.handle(throwStmt.expression)
-                as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                as de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
         return throwOperation
     }
 
     private fun handleReturnStatement(stmt: Statement): ReturnStatement {
         val returnStmt = stmt.asReturnStmt()
         val optionalExpression = returnStmt.expression
-        var expression: de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression? = null
+        var expression: de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression? = null
         if (optionalExpression.isPresent) {
             val expr = optionalExpression.get()
 
             // handle the expression as the first argument
             expression =
                 frontend.expressionHandler.handle(expr)
-                    as? de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                    as? de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
         }
         val returnStatement = this.newReturnStatement(rawNode = stmt)
         // JavaParser seems to add implicit return statements, that are not part of the original
@@ -119,7 +124,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         ifStatement.thenStatement = handle(thenStatement)
         ifStatement.condition =
             frontend.expressionHandler.handle(conditionExpression)
-                as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                as de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
         optionalElseStatement.ifPresent { ifStatement.elseStatement = handle(it) }
         frontend.scopeManager.leaveScope(ifStatement)
         return ifStatement
@@ -132,7 +137,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val assertStatement = newAssertStatement(rawNode = stmt)
         assertStatement.condition =
             frontend.expressionHandler.handle(conditionExpression)
-                as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                as de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
         thenStatement.ifPresent {
             assertStatement.message = frontend.expressionHandler.handle(thenStatement.get())
         }
@@ -148,7 +153,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         whileStatement.statement = handle(statement)
         whileStatement.condition =
             frontend.expressionHandler.handle(conditionExpression)
-                as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                as de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
         frontend.scopeManager.leaveScope(whileStatement)
         return whileStatement
     }
@@ -195,7 +200,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         forStmt.compare.ifPresent { condition: Expression ->
             statement.condition =
                 frontend.expressionHandler.handle(condition)
-                    as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                    as de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
         }
 
         // Adds true expression node where default empty condition evaluates to true, remove here
@@ -239,7 +244,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         doStatement.statement = handle(statement)
         doStatement.condition =
             frontend.expressionHandler.handle(conditionExpression)
-                as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                as de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
         frontend.scopeManager.leaveScope(doStatement)
         return doStatement
     }
@@ -253,7 +258,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val synchronizedCPG = newSynchronizedStatement(rawNode = stmt)
         synchronizedCPG.expression =
             frontend.expressionHandler.handle(synchronizedJava.expression)
-                as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                as de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
         synchronizedCPG.block = handle(synchronizedJava.body) as Block?
         return synchronizedCPG
     }
@@ -299,7 +304,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
     fun handleCaseDefaultStatement(
         caseExpression: Expression?,
         sEntry: SwitchEntry,
-    ): de.fraunhofer.aisec.cpg.graph.statements.Statement {
+    ): de.fraunhofer.aisec.cpg.graph.ast.statements.Statement {
         val parentLocation = frontend.locationOf(sEntry)
         val optionalTokenRange = sEntry.tokenRange
         var caseTokens = Pair<JavaToken?, JavaToken?>(null, null)
@@ -338,7 +343,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val caseStatement = this.newCaseStatement()
         caseStatement.caseExpression =
             frontend.expressionHandler.handle(caseExpression)
-                as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                as de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
         caseStatement.location = getLocationsFromTokens(parentLocation, caseTokens.a, caseTokens.b)
         return caseStatement
     }
@@ -414,7 +419,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         frontend.scopeManager.enterScope(switchStatement)
         switchStatement.selector =
             frontend.expressionHandler.handle(switchStmt.selector)
-                as de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+                as de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
 
         // Compute region and code for self generated compound statement to match the c++ versions
         var start: JavaToken? = null
@@ -476,7 +481,9 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
         val arguments =
             explicitConstructorInvocationStmt.arguments
                 .map(frontend.expressionHandler::handle)
-                .filterIsInstance<de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression>()
+                .filterIsInstance<
+                    de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
+                >()
                 .toMutableList()
         node.arguments = arguments
 
@@ -513,7 +520,7 @@ class StatementHandler(lang: JavaLanguageFrontend?) :
 
     private fun handleCatchClause(
         catchCls: CatchClause
-    ): de.fraunhofer.aisec.cpg.graph.statements.CatchClause {
+    ): de.fraunhofer.aisec.cpg.graph.ast.statements.CatchClause {
         val cClause = newCatchClause(rawNode = catchCls)
         frontend.scopeManager.enterScope(cClause)
         val possibleTypes = mutableSetOf<Type>()

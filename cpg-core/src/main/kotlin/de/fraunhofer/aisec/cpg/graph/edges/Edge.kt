@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.TO_STRING_STYLE
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.Persistable
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.*
 import kotlin.reflect.KProperty
@@ -45,9 +44,10 @@ import org.neo4j.ogm.annotation.*
  * store additional information that relate to the relationship between the two nodes that belong to
  * neither of the two nodes directly.
  *
- * An example would be the name (in this case `a`) of an argument between a [CallExpression] (`foo`)
- * and its argument (a [Literal] of `2`) in languages that support keyword arguments, such as
- * Python:
+ * An example would be the name (in this case `a`) of an argument between a
+ * [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression] (`foo`) and its
+ * argument (a [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal] of `2`) in
+ * languages that support keyword arguments, such as Python:
  * ```python
  * foo("bar", a = 2)
  * ```

@@ -29,9 +29,28 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.CaseStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.DefaultStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.GotoStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ThrowExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.TryStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CastExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.InitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.NewArrayExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.SubscriptExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
@@ -258,7 +277,8 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(main)
 
         // Test that the types and values of the comparison expression are correct
-        val icmpStatement = main.bodyOrNull<DeclarationStatement>(1)
+        val icmpStatement =
+            main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(1)
         assertNotNull(icmpStatement)
         val variableDecl = icmpStatement.declarations[0]
         assertIs<VariableDeclaration>(variableDecl)
@@ -492,7 +512,8 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(globalA)
         assertEquals("i32*", globalA.type.typeName)
 
-        val loadXStatement = main.bodyOrNull<DeclarationStatement>(1)
+        val loadXStatement =
+            main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(1)
         assertNotNull(loadXStatement)
         assertLocalName("locX", loadXStatement.singleDeclaration)
 
@@ -507,7 +528,8 @@ class LLVMIRLanguageFrontendTest {
         assertLocalName("x", ref)
         assertRefersTo(ref, globalX)
 
-        val loadAStatement = main.bodyOrNull<DeclarationStatement>(2)
+        val loadAStatement =
+            main.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>(2)
         assertNotNull(loadAStatement)
         val loadADeclaration = loadAStatement.singleDeclaration
         assertIs<VariableDeclaration>(loadADeclaration)
@@ -536,7 +558,10 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(main)
 
         // %ptr = alloca i32
-        val ptr = main.bodyOrNull<DeclarationStatement>()?.singleDeclaration
+        val ptr =
+            main
+                .bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>()
+                ?.singleDeclaration
         assertIs<VariableDeclaration>(ptr)
 
         val alloca = ptr.initializer
@@ -586,7 +611,8 @@ class LLVMIRLanguageFrontendTest {
         assertNotNull(record)
         assertEquals(2, record.fields.size)
 
-        val declarationStatement = foo.bodyOrNull<DeclarationStatement>()
+        val declarationStatement =
+            foo.bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement>()
         assertNotNull(declarationStatement)
 
         val varDeclaration = declarationStatement.singleDeclaration
@@ -884,7 +910,12 @@ class LLVMIRLanguageFrontendTest {
         val funcF = tu.functions["f"]
         assertNotNull(funcF)
 
-        val tryStatement = funcF.bodyOrNull<LabelStatement>(0)?.subStatement?.trys?.firstOrNull()
+        val tryStatement =
+            funcF
+                .bodyOrNull<de.fraunhofer.aisec.cpg.graph.ast.statements.LabelStatement>(0)
+                ?.subStatement
+                ?.trys
+                ?.firstOrNull()
         assertNotNull(tryStatement)
         val tryBlock = tryStatement.tryBlock
         assertNotNull(tryBlock)

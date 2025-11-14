@@ -25,20 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.analysis.abstracteval
 
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.*
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.Value
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.passes.objectIdentifier
-import kotlin.collections.component1
-import kotlin.collections.component2
-import kotlin.collections.putAll
-import kotlin.collections.set
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
-import kotlin.to
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
