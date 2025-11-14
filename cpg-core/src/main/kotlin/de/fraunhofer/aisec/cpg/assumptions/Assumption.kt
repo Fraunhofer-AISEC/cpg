@@ -392,7 +392,7 @@ fun <T : HasAssumptions> T.addAssumptionDependence(haveAssumptions: Collection<H
  * function is intentionally made private to avoid outside use and functions if it is called inside
  * of [HasAssumptions].
  */
-private fun getCallerFileAndLine(): PhysicalLocation {
+public fun getCallerFileAndLine(): PhysicalLocation {
     // The first stack trace element is the call to Thread.getStackTrace. which we do not need
     val stackTrace = Thread.currentThread().stackTrace.toList().drop(1)
 
