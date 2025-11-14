@@ -25,21 +25,18 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.rust
 
-import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import java.util.function.Supplier
 import kotlin.collections.plusAssign
 
 class StatementHandler(frontend: RustLanguageFrontend) :
-    Handler<Statement, Rust.AST, RustLanguageFrontend>(Supplier { ProblemExpression() }, frontend) {
-
-    fun handleNode(node: Rust.AST): Statement {
+    RustHandler<Statement, Rust.AST>(::ProblemExpression, frontend) {
+    override fun handleNode(node: Rust.AST): Statement {
         return when (node) {
-            else -> return newEmptyStatement(rawNode = node)
+            else -> handleNotSupported(node, node::class.simpleName ?: "")
         }
     }
 

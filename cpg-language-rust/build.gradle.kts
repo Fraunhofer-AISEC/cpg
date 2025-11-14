@@ -31,3 +31,5 @@ mavenPublishing {
         description.set("A Rust language frontend for the CPG")
     }
 }
+
+dependencies { implementation(libs.jna) }

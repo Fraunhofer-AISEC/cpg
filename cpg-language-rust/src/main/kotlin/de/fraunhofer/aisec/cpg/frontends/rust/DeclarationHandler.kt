@@ -25,19 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.rust
 
-import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import java.util.function.Supplier
-
 
 class DeclarationHandler(frontend: RustLanguageFrontend) :
-    Handler<Declaration, Rust.AST, RustLanguageFrontend>(Supplier { ProblemDeclaration() }, frontend) {
+    RustHandler<Declaration, Rust.AST>(::ProblemDeclaration, frontend) {
     override fun handleNode(node: Rust.AST): Declaration {
         return when (node) {
-            is ... -> handle...(node)
+            else -> handleNotSupported(node, node::class.simpleName ?: "")
         }
     }
-
-
 }
