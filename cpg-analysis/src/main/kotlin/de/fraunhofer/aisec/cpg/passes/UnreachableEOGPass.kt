@@ -75,7 +75,15 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         }
 
         val nextEog = node.nextEOGEdges.toList()
-        val finalStateNew = unreachabilityState.iterateEOG(nextEog, startState, ::transfer)
+        val finalStateNew =
+            unreachabilityState.iterateEOG(nextEog, startState, ::transfer)
+                ?: run {
+                    log.warn(
+                        "Could not compute unreachability of EOG edges for {}, reached a timeout",
+                        node.name,
+                    )
+                    return@handle
+                }
 
         for ((key, value) in finalStateNew) {
             if (value.reachability == Reachability.UNREACHABLE) {
@@ -292,7 +300,7 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
     override val bottom: Element
         get() = Element(Reachability.BOTTOM)
 
-    override fun lub(one: Element, two: Element, allowModify: Boolean): Element {
+    override fun lub(one: Element, two: Element, allowModify: Boolean, widen: Boolean): Element {
         return if (allowModify) {
             when (compare(one, two)) {
                 Order.EQUAL -> one
