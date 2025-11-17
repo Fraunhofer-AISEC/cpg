@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
-import io.ktor.http.HttpHeaders
+import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -37,11 +37,15 @@ import kotlinx.serialization.json.Json
 
 /**
  * This function starts the embedded server for the web console. It uses the Netty engine and
- * listens on localhost at port 8080. The server is configured using the [configureWebconsole]
- * function.
+ * listens on [host] (default: localhost) at [port] (default: 8080). The server is configured using
+ * the [configureWebconsole] function.
  */
-fun ConsoleService.startConsole(chatService: ChatService = ChatService()) {
-    embeddedServer(Netty, host = "localhost", port = 8080) {
+fun ConsoleService.startConsole(
+    host: String = "localhost",
+    port: Int = 8080,
+    chatService: ChatService = ChatService(),
+) {
+    embeddedServer(Netty, host = host, port = port) {
             configureWebconsole(this@startConsole, chatService)
         }
         .start(wait = true)
@@ -88,12 +92,4 @@ fun Application.configureRouting(
         apiRoutes(service, chatService)
         frontendRoutes()
     }
-}
-
-fun Application.module() {
-    val config = environment.config
-
-    val provider = config.property("llm.provider").getString()
-    val baseUrl = config.property("llm.baseUrl").getString()
-    val model = config.property("llm.model").getString()
 }

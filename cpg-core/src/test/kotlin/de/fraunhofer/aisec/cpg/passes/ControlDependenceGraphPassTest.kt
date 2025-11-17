@@ -111,6 +111,12 @@ class ControlDependenceGraphPassTest {
         assertFalse(forEachStmt in printAfterLoop.prevCDG)
     }
 
+    @Test
+    fun testTimoutEffective() {
+        val result = getTimeoutTest()
+        assertTrue { result.allChildren<Node>().flatMap { it.nextCDG }.isEmpty() }
+    }
+
     companion object {
         fun getIfTest() =
             testFrontend(
@@ -175,6 +181,45 @@ class ControlDependenceGraphPassTest {
                                     }
                                     call("printf") { literal("1\n", t("string")) }
 
+                                    returnStmt { ref("i") }
+                                }
+                            }
+                        }
+                    }
+                }
+
+        fun getTimeoutTest() =
+            testFrontend(
+                    TranslationConfiguration.builder()
+                        .registerLanguage<TestLanguageWithColon>()
+                        .defaultPasses()
+                        .registerPass<ControlDependenceGraphPass>()
+                        .configurePass<ControlDependenceGraphPass>(
+                            ControlDependenceGraphPass.Configuration(timeout = 0L)
+                        )
+                        .build()
+                )
+                .build {
+                    translationResult {
+                        translationUnit("if.cpp") {
+                            // The main method
+                            function("main", t("int")) {
+                                body {
+                                    declare { variable("i", t("int")) { literal(0, t("int")) } }
+                                    ifStmt {
+                                        condition { ref("i") lt literal(1, t("int")) }
+                                        thenStmt {
+                                            ref("i") assign literal(1, t("int"))
+                                            call("printf") { literal("0\n", t("string")) }
+                                        }
+                                    }
+                                    call("printf") { literal("1\n", t("string")) }
+                                    ifStmt {
+                                        condition { ref("i") gt literal(0, t("int")) }
+                                        thenStmt { ref("i") assign literal(2, t("int")) }
+                                        elseStmt { ref("i") assign literal(3, t("int")) }
+                                    }
+                                    call("printf") { literal("2\n", t("string")) }
                                     returnStmt { ref("i") }
                                 }
                             }

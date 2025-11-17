@@ -117,8 +117,8 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 val type = frontend.typeOf(field.type)
 
                 // A field can also have no name, which means that it is embedded. In this case, it
-                // can be accessed by the local name of its type and therefore we name the field
-                // accordingly. We use the modifiers property to denote that this is an embedded
+                // can be accessed by the local name of its type, and therefore we name the field
+                // accordingly. We use the "modifiers" property to denote that this is an embedded
                 // field, so we can easily retrieve them later
                 val (fieldName, modifiers) =
                     if (field.names.isEmpty()) {

@@ -50,7 +50,7 @@ class OverlayNodeEquality {
         call2.location = PhysicalLocation(URI("./some/path"), Region(1, 2, 1, 3))
 
         file1.underlyingNode = call1
-        assertEquals(file1, file2)
+        assertNotEquals(file1, file2)
         file2.underlyingNode = call2
         assertNotEquals(file1, file2)
     }

@@ -1,35 +1,77 @@
+##### Here start the pass specific ownerships, new passes should be added here #####
+
+# Core Semantic Passes
+
+*/EvaluationOrderGraphPass*.kt @konradweiss
+*/SymbolResolver*.kt @oxisto @konradweiss
+*/DFGPass*.kt @KuechA @konradweiss @oxisto
+*/ControlFlowSensitiveDFGPass*.kt @KuechA @konradweiss @oxisto
+*/ControlDependenceGraphPass*.kt @KuechA @konradweiss @oxisto
+*/ProgramDependenceGraphPass*.kt @KuechA @konradweiss @oxisto
+
+# Resolvers
+
+*/ImportResolver*.kt @oxisto @konradweiss @maximiliankaul
+*/TypeResolver*.kt @oxisto @konradweiss
+*/TypeHierarchyResolver*.kt @oxisto @konradweiss
+*/DynamicInvokeResolver*.kt @oxisto @peckto
+*/ResolveCallExpressionAmbiguityPass*.kt @oxisto @peckto
+*/ResolveMemberExpressionAmbiguityPass*.kt @oxisto @peckto
+
+# Extra Passes
+
+*/UnreachableEOGPass*.kt @KuechA @konradweiss
+*/PrepareSerialization*.kt @peckto @konradweiss
+
+# Concepts Passes
+
+*/PythonTempFilePass*.kt @maximiliankaul @lshala
+*/PythonFileJoinPass*.kt @maximiliankaul @lshala
+*/PythonFileConceptPass*.kt @maximiliankaul @lshala
+*/PythonLoggingConceptPass*.kt @maximiliankaul @lshala
+*/PythonStdLibConfigurationPass*.kt @oxisto @KuechA
+*/TagOverlaysPass*.kt @KuechA @lshala @oxisto
+*/LoadPersistedConcepts*.kt @maximiliankaul @lshala
+*/ProvideConfigPass*.kt @lshala @oxisto
+*/IniFileConfigurationSourcePass*.kt @lshala @oxisto
+*/CXXEntryPointsPass*.kt @maximiliankaul @oxisto @KuechA
+*/CXXDynamicLoadingPass*.kt @oxisto @KuechA
+
+
+##### Here start the language and module based ownership definitions #####
+
 *                       @konradweiss @oxisto @KuechA
 
-*.go                    @oxisto
-cpg-language-go         @oxisto
+*.go                    @oxisto @fwendland
+cpg-language-go         @oxisto @fwendland
 
-*.ts                    @oxisto
-cpg-language-typescript @oxisto
+*.ts                    @oxisto @konradweiss
+cpg-language-typescript @oxisto @konradweiss
 
 *.py                    @maximiliankaul @lshala
 cpg-language-python     @maximiliankaul @lshala
 
-*.c                     @peckto
-*.cpp                   @peckto
-cpg-language-cxx        @peckto
+*.c                     @peckto @fwendland
+*.cpp                   @peckto @fwendland
+cpg-language-cxx        @peckto @fwendland
 
-*.ll                    @KuechA
-cpg-language-llvm       @KuechA
-cpg-analysis            @KuechA
+*.ll                    @KuechA @oxisto
+cpg-language-llvm       @KuechA @oxisto
+cpg-analysis            @KuechA @oxisto
 
-*.java                  @konradweiss
-cpg-language-java       @konradweiss
+*.java                  @konradweiss @oxisto
+cpg-language-java       @konradweiss @oxisto
 
-cpg-language-jvm        @oxisto
+cpg-language-jvm        @oxisto @konradweiss
 
-cpg-language-ruby       @oxisto
+cpg-language-ruby       @oxisto @konradweiss
 
-cpg-neo4j               @peckto
+cpg-neo4j               @peckto @konradweiss
 
 build.gradle.kts        @oxisto
 .github                 @oxisto
 
-cpg-language-ini        @maximiliankaul
+cpg-language-ini        @maximiliankaul @konradweiss
 
 cpg-concepts            @maximiliankaul
 

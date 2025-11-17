@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder
 import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder
+import de.fraunhofer.aisec.cpg.helpers.neo4j.TranslationStatsConverter
 import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.passes.Pass
@@ -48,6 +49,7 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
+import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /**
  * The global (intermediate) result of the translation. A [LanguageFrontend] will initially populate
@@ -100,6 +102,8 @@ class TranslationResult(
 
     val isCancelled: Boolean
         get() = translationManager.isCancelled()
+
+    @Convert(TranslationStatsConverter::class) var stats = TranslationStats()
 
     /**
      * Checks if only a single software component has been analyzed and returns its translation

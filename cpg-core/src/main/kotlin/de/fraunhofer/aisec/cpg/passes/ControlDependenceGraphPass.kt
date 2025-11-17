@@ -56,7 +56,13 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
          * [de.fraunhofer.aisec.cpg.graph.statements.Statement.cyclomaticComplexity]) a
          * [FunctionDeclaration] must have in order to be considered.
          */
-        var maxComplexity: Int? = null
+        var maxComplexity: Int? = null,
+        /**
+         * This specifies the maximum time (in ms) we want to spend analyzing a single
+         * [de.fraunhofer.aisec.cpg.graph.EOGStarterHolder]. If the time is exceeded, we skip the
+         * function (or whatever is starting the EOG). If `null`, no time limit is enforced.
+         */
+        var timeout: Long? = null,
     ) : PassConfiguration()
 
     override fun cleanup() {
@@ -80,6 +86,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         if (startNode !is FunctionDeclaration) {
             return
         }
+
         val max = passConfig<Configuration>()?.maxComplexity
         val c = startNode.body?.cyclomaticComplexity ?: 0
         if (max != null && c > max) {
@@ -112,7 +119,20 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             )
         log.trace("Iterating EOG of {}", firstBasicBlock)
         val finalState =
-            prevEOGState.iterateEOG(firstBasicBlock.nextEOGEdges, startState, ::transfer)
+            prevEOGState.iterateEOG(
+                firstBasicBlock.nextEOGEdges,
+                startState,
+                ::transfer,
+                timeout = passConfig<Configuration>()?.timeout,
+            )
+                ?: run {
+                    log.warn(
+                        "Timeout while computing CDG for {}, skipping CDG generation",
+                        startNode.name,
+                    )
+                    return@accept
+                }
+
         log.trace("Done iterating EOG for {}. Generating the edges now.", startNode.name)
 
         // branchingNodeConditionals is a map organized as follows:
