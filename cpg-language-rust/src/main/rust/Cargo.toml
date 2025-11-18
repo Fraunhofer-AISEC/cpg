@@ -9,7 +9,12 @@ crate-type = ["cdylib"]
 path = "lib.rs"
 
 [dependencies]
-# syn = { version = "2.0", features = ["full"] }
-# serde = { version = "1.0", features = ["derive"] }
-# serde_json = "1.0"
-libc = "0.2"
+uniffi = { version = "0.30.0", features = [ "cli" ] }
+
+[build-dependencies]
+uniffi = { version = "0.30.0", features = [ "build" ] }
+
+[[bin]]
+# This binary for binding generation comes from https://mozilla.github.io/uniffi-rs/latest/tutorial/foreign_language_bindings.html
+name = "uniffi-bindgen"
+path = "uniffi-bindgen.rs"
