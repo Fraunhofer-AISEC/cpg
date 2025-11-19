@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.net.URI
+import uniffi.cpgrust.printString
 
 /** The [LanguageFrontend] for Rust. It uses the TreeSitter project to generate a RUST AST. */
 @SupportsParallelParsing(true)
@@ -64,6 +65,7 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
         lastLineNumber = fileAsLines.size
         lastColumnLength = fileAsLines.lastOrNull()?.length ?: -1
 
+        printString("Print this rust string")
         // Todo parsing
         val tud =
             newTranslationUnitDeclaration(file.path, rawNode = null).apply {

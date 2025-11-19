@@ -25,23 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.rust
 
-import com.sun.jna.Library
-import com.sun.jna.Native
-import com.sun.jna.Pointer
-
-
-
-interface Rust : Library {
-
-    public interface RustAPI : Library {
-
-        fun parse_rust(src: String?): Pointer?
-
-        companion object {
-            var INSTANCE: RustAPI? = Native.load("cpgrust", RustAPI::class.java)
-        }
-    }
-
+interface Rust {
 
     interface AST {}
 

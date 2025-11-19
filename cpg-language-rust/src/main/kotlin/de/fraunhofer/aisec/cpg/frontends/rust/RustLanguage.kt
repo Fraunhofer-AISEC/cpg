@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
-import de.fraunhofer.aisec.cpg.graph.unknownType
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
 import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
@@ -113,7 +112,6 @@ class RustLanguage :
         )
 
     /** See [Documentation](https://doc.rust-lang.org/stable/std/index.html#primitives). */
-    // Todo
     @Transient
     override val builtInTypes =
         mapOf<String, Type>(
@@ -179,7 +177,7 @@ class RustLanguage :
             "[]" to
                 ListType(
                     typeName = "array",
-                    elementType = unknownType(),
+                    elementType = ObjectType(),
                     language = this,
                     primitive = false,
                 ),
