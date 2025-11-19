@@ -32,4 +32,23 @@ mavenPublishing {
     }
 }
 
+sourceSets { main { kotlin { srcDir("src/main/rust") } } }
+
 dependencies { implementation(libs.jna) }
+
+val nativeSrc =
+    layout.projectDirectory.dir(
+        "src/main/rust/target/release"
+    ) // adjust path to where cargo builds .so
+val nativeName = "libcpgrust.so"
+val resourceSubdir = "linux-x86-64" // Todo Can I extend this to all possible targets?
+
+tasks.register<Copy>("copyRustSharedLibToResources") {
+    from(nativeSrc.file(nativeName))
+    into(layout.buildDirectory.dir("resources/main/$resourceSubdir"))
+    doFirst {
+        println("Copying native lib from ${nativeSrc.file(nativeName).asFile} to resources...")
+    }
+}
+
+tasks.named("processResources") { dependsOn("copyRustSharedLibToResources") }
