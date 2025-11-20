@@ -60,3 +60,11 @@ data class ConceptAssignment(
 @Serializable data class CpgDataflowPayload(val from: String, val to: String)
 
 @Serializable data class CpgLlmAnalyzePayload(val description: String? = null)
+
+@Serializable
+data class PassInfo(
+    val fqn: String,
+    val description: String,
+    val requiredNodeType: String,
+    val dependsOn: List<String>,
+)
