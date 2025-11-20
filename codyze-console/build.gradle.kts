@@ -65,3 +65,5 @@ tasks.processResources { dependsOn(pnpmBuild) }
 var jarTasks = tasks.withType<Jar>()
 
 jarTasks.forEach { it.dependsOn(pnpmBuild) }
+
+tasks.shadowJar { setProperty("zip64", true) }
