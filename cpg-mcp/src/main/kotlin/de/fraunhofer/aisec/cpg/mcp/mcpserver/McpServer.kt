@@ -29,6 +29,8 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgAnalyzeTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgApplyConceptsTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgDataflowTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgLlmAnalyzeTool
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgTranslate
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addListPasses
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getAllArgs
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getArgByIndexOrName
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listAvailableConcepts
@@ -43,7 +45,26 @@ import io.modelcontextprotocol.kotlin.sdk.ServerCapabilities
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 
-fun configureServer(): Server {
+fun configureServer(
+    configure: Server.() -> Server = {
+        this.addCpgTranslate()
+        this.addListPasses()
+        this.addCpgAnalyzeTool()
+        this.addCpgLlmAnalyzeTool()
+        this.addCpgApplyConceptsTool()
+        this.addCpgDataflowTool()
+        this.listFunctions()
+        this.listRecords()
+        this.listCalls()
+        this.listCallsTo()
+        this.listAvailableConcepts()
+        this.listAvailableOperations()
+        this.getAllArgs()
+        this.getArgByIndexOrName()
+        this.listConceptsAndOperations()
+        this
+    }
+): Server {
     val info = Implementation(name = "cpg-mcp-server", version = "1.0.0")
 
     val options =
@@ -56,22 +77,7 @@ fun configureServer(): Server {
                 )
         )
 
-    val server = Server(info, options)
-    server.addCpgAnalyzeTool()
-    server.addCpgLlmAnalyzeTool()
-    server.addCpgApplyConceptsTool()
-    server.addCpgDataflowTool()
-    server.listFunctions()
-    server.listRecords()
-    server.listCalls()
-    server.listCallsTo()
-    server.listAvailableConcepts()
-    server.listAvailableOperations()
-    server.getAllArgs()
-    server.getArgByIndexOrName()
-    server.listConceptsAndOperations()
-
-    return server
+    return Server(info, options).configure()
 }
 
 const val cpgDescription =
