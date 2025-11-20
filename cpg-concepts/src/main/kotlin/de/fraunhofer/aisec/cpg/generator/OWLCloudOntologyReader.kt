@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.models.ClassAbstractRepresentation
 import de.fraunhofer.aisec.cpg.models.Properties
 import java.io.File
+import java.util.Locale
 import java.util.stream.Collectors
 import org.apache.commons.lang3.StringUtils
 import org.jboss.forge.roaster.Roaster
@@ -39,6 +40,8 @@ import org.semanticweb.owlapi.apibinding.OWLManager
 import org.semanticweb.owlapi.model.*
 import org.semanticweb.owlapi.model.parameters.Imports
 import org.semanticweb.owlapi.search.EntitySearcher
+import org.semanticweb.owlapi.util.AutoIRIMapper
+import org.semanticweb.owlapi.util.SimpleIRIMapper
 import uk.ac.manchester.cs.owl.owlapi.*
 
 /**
@@ -62,8 +65,43 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
     private fun readOwlFile(filepath: String) {
         println("Read owl file")
         val manager = OWLManager.createOWLOntologyManager()
-        ontology = manager.loadOntologyFromOntologyDocument(File(filepath))
+        val owlFile = File(filepath).canonicalFile
+        val baseDir = owlFile.parentFile
+        baseDir
+            ?.takeIf { it.exists() }
+            ?.let { dir ->
+                registerCatalogMappings(dir, manager)
+                manager.iriMappers.add(AutoIRIMapper(dir, true))
+            }
+        manager.iriMappers.add(
+            SimpleIRIMapper(
+                IRI.create("https://ontology.cybersecuritycertcluster.eu"),
+                IRI.create(owlFile),
+            )
+        )
+        ontology = manager.loadOntologyFromOntologyDocument(owlFile)
         df = manager.owlDataFactory
+    }
+
+    private fun registerCatalogMappings(baseDir: File, manager: OWLOntologyManager) {
+        val catalogFile = File(baseDir, "catalog-v001.xml")
+        if (!catalogFile.exists()) {
+            return
+        }
+        val pattern = Regex("""name="([^"]+)"\s+uri="([^"]+)"""")
+        catalogFile.useLines { lines ->
+            lines.forEach { line ->
+                val match = pattern.find(line) ?: return@forEach
+                val iriValue = match.groupValues[1].removePrefix("duplicate:")
+                val relativePath = match.groupValues[2]
+                val mappedFile = File(baseDir, relativePath).canonicalFile
+                if (mappedFile.exists()) {
+                    manager.iriMappers.add(
+                        SimpleIRIMapper(IRI.create(iriValue), IRI.create(mappedFile))
+                    )
+                }
+            }
+        }
     }
 
     // Get list of AbstractRepresentation of OWL classes
@@ -830,24 +868,18 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
         return formatString(nce.toString().split("/").toTypedArray().last())
     }
 
-    // TODO(all): Refactor methods getClassDescription() and getDataPropertyDescription()
     // Get class description from OWLClassExpression
     private fun getClassDescription(nce: OWLClassExpression, ontology: OWLOntology?): String {
-        val description: String
-        for (elem in nce.classesInSignature) {
-            for (item in EntitySearcher.getAnnotationObjects(elem, ontology!!)) {
-                if (item != null) {
-                    if (
-                        item.property.iri.remainder.get() == "comment" ||
-                            item.property.iri.remainder.get() == "description"
-                    ) {
-                        description = item.value.toString()
-                        return description.substring(1, description.length - 1)
-                    }
-                }
-            }
+        if (ontology == null) {
+            return ""
         }
-        return ""
+
+        val annotations =
+            nce.classesInSignature
+                .sortedBy { it.iri.toString() }
+                .flatMap { EntitySearcher.getAnnotationObjects(it, ontology).toList() }
+
+        return selectDescriptionFromAnnotations(annotations)
     }
 
     // Get description from a data property, e.g., interval
@@ -855,22 +887,79 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
         ontology: OWLOntology?,
         props: MutableSet<OWLDataProperty>,
     ): String {
-        val description: String
+        if (ontology == null || props.isEmpty()) {
+            return ""
+        }
 
-        for (elem in ontology!!.dataPropertiesInSignature) {
-            for (item in EntitySearcher.getAnnotationObjects(props.elementAt(0), ontology)) {
-                if (item != null) {
-                    if (
-                        item.property.iri.remainder.get() == "comment" ||
-                            item.property.iri.remainder.get() == "description"
-                    ) {
-                        description = item.value.toString()
-                        return description.substring(1, description.length - 1)
-                    }
-                }
+        val annotations =
+            props
+                .toList()
+                .sortedBy { it.iri.toString() }
+                .flatMap { EntitySearcher.getAnnotationObjects(it, ontology).toList() }
+
+        return selectDescriptionFromAnnotations(annotations)
+    }
+
+    private fun selectDescriptionFromAnnotations(annotations: List<OWLAnnotation>): String {
+        if (annotations.isEmpty()) {
+            return ""
+        }
+
+        val bestAnnotation =
+            annotations
+                .asSequence()
+                .filter { it.isDescriptionAnnotation() }
+                .sortedWith(descriptionAnnotationComparator)
+                .firstOrNull() ?: return ""
+
+        return bestAnnotation.asPlainText()
+    }
+
+    private val descriptionAnnotationComparator =
+        compareBy<OWLAnnotation> { it.annotationPriority() }
+            .thenBy { it.languagePriority() }
+            .thenBy { it.languageTagSafe().lowercase(Locale.ROOT) }
+            .thenBy { it.literalOrNull() ?: it.value.toString() }
+
+    private fun OWLAnnotation.annotationPriority(): Int =
+        when (annotationKey()) {
+            "comment" -> 0
+            "description" -> 1
+            else -> 2
+        }
+
+    private fun OWLAnnotation.languagePriority(): Int =
+        when (val lang = languageTagSafe().lowercase(Locale.ROOT)) {
+            "en" -> 0
+            "" -> 1
+            else -> 2
+        }
+
+    private fun OWLAnnotation.languageTagSafe(): String = value.asLiteral().orNull()?.lang ?: ""
+
+    private fun OWLAnnotation.literalOrNull(): String? = value.asLiteral().orNull()?.literal?.trim()
+
+    private fun OWLAnnotation.isDescriptionAnnotation(): Boolean {
+        val key = annotationKey()
+        return key == "comment" || key == "description"
+    }
+
+    private fun OWLAnnotation.annotationKey(): String =
+        property.iri.remainder.orNull()?.lowercase(Locale.ROOT) ?: ""
+
+    private fun OWLAnnotation.asPlainText(): String {
+        val literal = literalOrNull()
+        if (!literal.isNullOrBlank()) {
+            return literal
+        }
+        val raw = value.toString().trim()
+        if (raw.startsWith("\"")) {
+            val closingQuote = raw.indexOf('\"', startIndex = 1)
+            if (closingQuote > 0) {
+                return raw.substring(1, closingQuote).trim()
             }
         }
-        return ""
+        return raw
     }
 
     private fun applyEnumDirective(property: Properties, description: String?) {
@@ -970,10 +1059,6 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
 
             // If superclass is 'Node', do nothing
             if (StringUtils.substringAfterLast(jcs.superType, ".") == "Node") continue
-            // HCKY HACK HACK
-            if (jcs.name == "HttpRequest") {
-                continue
-            }
 
             // Set superclass call
             addSuperclassCall(jcs, jcsList)
