@@ -40,16 +40,26 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewExpression
 import de.fraunhofer.aisec.cpg.graph.types.ListType
 import de.fraunhofer.aisec.cpg.graph.types.SetType
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A [ValueEvaluator] which evaluates the size of mutable sets. It uses the [MutableSetSize] class
  * to track the size of the collection.
  */
 class SetSizeEvaluator : ValueEvaluator() {
-    override fun evaluate(node: Any?): Any? {
+    /** Cache calculated values so that we don't have to calculate them each time */
+    companion object {
+        private val valuesCache = ConcurrentHashMap<Int, Any>()
+    }
+
+    override fun evaluate(node: Any?, useCache: Boolean): Any? {
         if (node !is Node) return cannotEvaluate(null, this)
 
-        return AbstractIntervalEvaluator().evaluate(node, MutableSetSize::class)
+        return if (useCache)
+            valuesCache.getOrPut(node.hashCode()) {
+                AbstractIntervalEvaluator().evaluate(node, MutableSetSize::class)
+            }
+        else AbstractIntervalEvaluator().evaluate(node, MutableSetSize::class)
     }
 }
 
