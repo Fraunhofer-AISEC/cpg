@@ -25,190 +25,129 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
+import ai.koog.agents.core.agent.AIAgent
+import ai.koog.agents.mcp.McpToolRegistryProvider
+import ai.koog.prompt.executor.llms.all.simpleGoogleAIExecutor
+import ai.koog.prompt.executor.llms.all.simpleOllamaAIExecutor
+import ai.koog.prompt.llm.LLMCapability
+import ai.koog.prompt.llm.LLMProvider
+import ai.koog.prompt.llm.LLModel
 import com.typesafe.config.ConfigFactory
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.configureServer
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.listTools
-import io.ktor.client.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
-import io.ktor.utils.io.*
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.encodeToJsonElement
-import kotlinx.serialization.json.jsonObject
 
 @Serializable data class ChatMessageJSON(val role: String, val content: String)
 
 @Serializable data class ChatRequestJSON(val messages: List<ChatMessageJSON>)
 
-enum class LLMProvider {
-    OLLAMA,
-    OPENAI,
-    ANTHROPIC,
-}
-
-@Serializable
-private data class LLMRequest(
-    val model: String,
-    val messages: List<ChatMessageJSON>,
-    val maxTokens: Int? = null,
-    val stream: Boolean = false,
-    val tools: List<JsonObject>? = null,
-)
-
-@Serializable private data class MCPToolCall(val function: MCPToolCallFunction)
-
-@Serializable private data class MCPToolCallFunction(val name: String, val arguments: JsonObject)
-
-@Serializable
-private data class LLMResponse(
-    val model: String? = null,
-    val message: LLMMessage? = null,
-    val done: Boolean? = null,
-)
-
-@Serializable
-private data class LLMMessage(
-    val role: String? = null,
-    val content: String? = null,
-    val tool_calls: List<MCPToolCall>? = null,
-)
-
-class ChatService {
-    private val httpClient =
-        HttpClient(CIO) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+class ChatService() {
     val config = ConfigFactory.load()
+    val provider: String = config.getString("llm.provider")
+    val mcpServerUrl: String = config.getString("mcp.serverUrl")
 
-    val provider = LLMProvider.valueOf(config.getString("llm.provider").uppercase())
-    val baseUrl = config.getString("llm.baseUrl")
-    val model = config.getString("llm.model")
+    fun chat(request: ChatRequestJSON): Flow<String> = channelFlow {
+        val userMessage = request.messages.lastOrNull()?.content ?: ""
 
-    // MCP Server Integration
-    private val mcpServer = configureServer()
+        // Connect to MCP server via SSE
+        val transport = McpToolRegistryProvider.defaultSseTransport(mcpServerUrl)
 
-    /** Get available tools from MCP server (tools/list) */
-    private fun getAvailableTools(): List<JsonObject> {
-        return mcpServer.listTools().map { registeredTool ->
-            Json.encodeToJsonElement(registeredTool).jsonObject
-        }
-    }
+        // Create tool registry from MCP server
+        val toolRegistry =
+            McpToolRegistryProvider.fromTransport(
+                transport = transport,
+                name = "codyze-console",
+                version = "1.0.0",
+            )
 
-    /** Execute MCP tool call (tools/call) */
-    private fun executeToolCall(toolCall: MCPToolCall): String {
-        return try {
-            val toolName = toolCall.function.name
-            val mcpTool = mcpServer.tools[toolName]
+        // Get provider-specific configuration
+        val (executor, llmModel) =
+            when (provider.lowercase()) {
+                "gemini" -> {
+                    val apiKey =
+                        System.getenv("GEMINI_API_KEY")
+                            ?: throw IllegalStateException(
+                                "GEMINI_API_KEY environment variable not set"
+                            )
+                    val model = config.getString("llm.gemini.model")
 
-            if (mcpTool != null) {
-                // TODO: Invoke tool call properly
-                // val result = mcpTool.handler.invoke(toolCall.function.arguments)
-                // For now, simulate execution
-                "Tool '$toolName' executed with args: ${toolCall.function.arguments}"
-            } else {
-                "Error: Tool '$toolName' not found"
-            }
-        } catch (e: Exception) {
-            "Error executing tool '${toolCall.function.name}': ${e.message}"
-        }
-    }
-
-    fun chat(request: ChatRequestJSON): Flow<String> = flow {
-        if (baseUrl.isNullOrEmpty()) {
-            emit("{\"error\":\"LLM configuration missing: LLM_BASE_URL not set\"}")
-            return@flow
-        }
-
-        if (model.isNullOrEmpty()) {
-            emit("{\"error\":\"LLM configuration missing: LLM_MODEL not set\"}")
-            return@flow
-        }
-
-        try {
-            when (provider) {
-                LLMProvider.OLLAMA -> {
-                    chatOllamaStream(request.messages).collect { chunk -> emit(chunk) }
-                }
-
-                LLMProvider.OPENAI -> TODO()
-                LLMProvider.ANTHROPIC -> TODO()
-            }
-        } catch (e: Exception) {
-            emit("{\"error\":\"Chat error: ${e.message}\"}")
-        }
-    }
-
-    private fun chatOllamaStream(messages: List<ChatMessageJSON>): Flow<String> = flow {
-        try {
-            // Get available MCP tools
-            val availableTools = getAvailableTools()
-
-            val response =
-                httpClient.post("$baseUrl/api/chat") {
-                    contentType(ContentType.Application.Json)
-                    setBody(
-                        LLMRequest(
-                            model = model!!,
-                            messages = messages,
-                            stream = true,
-                            tools = availableTools.ifEmpty { null },
+                    val executor = simpleGoogleAIExecutor(apiKey = apiKey)
+                    val llmModel =
+                        LLModel(
+                            provider = LLMProvider.Google,
+                            id = model,
+                            capabilities = listOf(LLMCapability.Temperature, LLMCapability.Tools),
+                            contextLength = 128000,
+                            maxOutputTokens = 8192,
                         )
-                    )
+
+                    executor to llmModel
                 }
 
-            if (response.status.isSuccess()) {
-                val channel = response.bodyAsChannel()
-                val jsonParser = Json { ignoreUnknownKeys = true }
+                "ollama" -> {
+                    val baseUrl = config.getString("llm.ollama.baseUrl")
+                    val model = config.getString("llm.ollama.model")
 
-                while (!channel.isClosedForRead) {
-                    val chunk = channel.readUTF8Line()
-                    if (chunk != null && chunk.isNotBlank()) {
-                        try {
-                            val llmResponse = jsonParser.decodeFromString<LLMResponse>(chunk)
+                    val executor = simpleOllamaAIExecutor(baseUrl = baseUrl)
+                    val llmModel =
+                        LLModel(
+                            provider = LLMProvider.Ollama,
+                            id = model,
+                            capabilities = listOf(LLMCapability.Tools),
+                            contextLength = 65536,
+                            maxOutputTokens = 8192,
+                        )
 
-                            if (llmResponse.done == true) {
-                                break
-                            }
-
-                            val message = llmResponse.message
-
-                            // Handle text content
-                            val content = message?.content
-                            if (!content.isNullOrEmpty()) {
-                                emit(content)
-                            }
-
-                            // Handle tool calls
-                            val toolCalls = message?.tool_calls
-                            if (!toolCalls.isNullOrEmpty()) {
-                                emit("\n\n**Tools Called:**\n")
-                                for (toolCall in toolCalls) {
-                                    emit("- **${toolCall.function.name}**\n")
-                                    val result = executeToolCall(toolCall)
-                                    emit("  Result: $result\n")
-                                }
-
-                                emit("\n")
-                            }
-                        } catch (e: Exception) {
-                            // Skip invalid JSON lines
-                            continue
-                        }
-                    }
+                    executor to llmModel
                 }
-            } else {
-                emit(
-                    "{\"error\":\"Ollama request failed: ${response.status} - Check if Ollama server is running at $baseUrl\"}"
-                )
+
+                "vLLM" -> {
+                    val baseUrl = config.getString("llm.vLLM.baseUrl")
+                    val model = config.getString("llm.vLLM.model")
+
+                    val executor = simpleOllamaAIExecutor(baseUrl = baseUrl)
+                    val llmModel =
+                        LLModel(
+                            provider = LLMProvider.OpenAI,
+                            id = model,
+                            capabilities = listOf(LLMCapability.Tools),
+                            contextLength = 65536,
+                            maxOutputTokens = 8192,
+                        )
+
+                    executor to llmModel
+                }
+
+                else -> throw IllegalArgumentException("Unsupported LLM provider: $provider")
             }
-        } catch (e: Exception) {
-            emit("{\"error\":\"Failed to connect to Ollama server at $baseUrl: ${e.message}\"}")
-        }
+
+        // Create the agent
+        val agent =
+            AIAgent(
+                promptExecutor = executor,
+                llmModel = llmModel,
+                systemPrompt =
+                    """
+                    You are a helpful assistant for code analysis using the Code Property Graph (CPG).
+                    You have access to various CPG analysis tools through MCP.
+                    Use these tools proactively to analyze code and answer questions about code structure.
+
+                    When multiple independent tools are needed, call them in a single turn if possible.
+                """
+                        .trimIndent(),
+                toolRegistry = toolRegistry,
+                maxIterations = 100,
+            )
+
+        // Send initial empty data to establish the SSE connection.
+        send("")
+
+        val result = agent.run(userMessage)
+
+        println("Debug: Agent completed with result length: ${result.length}")
+
+        // Send the complete result
+        send(result)
+        send("[DONE]")
     }
 }

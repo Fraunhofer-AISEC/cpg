@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.configureServer
+import de.fraunhofer.aisec.cpg.mcp.runSseMcpServerUsingKtorPlugin
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -33,6 +35,7 @@ import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 
 /**
@@ -45,10 +48,20 @@ fun ConsoleService.startConsole(
     port: Int = 8080,
     chatService: ChatService = ChatService(),
 ) {
-    embeddedServer(Netty, host = host, port = port) {
-            configureWebconsole(this@startConsole, chatService)
-        }
-        .start(wait = true)
+    // TODO(): MCP server should only run when cpg-mcp module enabled
+    runBlocking {
+        // Start MCP server in background (wait = false means it won't block)
+        println("Starting MCP server on port 8081...")
+        runSseMcpServerUsingKtorPlugin(8081, configureServer())
+
+        // Start main server (also with wait = false to avoid blocking)
+        println("Starting main server on port 8080...")
+        val mainServer =
+            embeddedServer(Netty, host = host, port = port) {
+                configureWebconsole(this@startConsole, chatService)
+            }
+        mainServer.start(wait = true)
+    }
 }
 
 /**

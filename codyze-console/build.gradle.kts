@@ -28,13 +28,17 @@ dependencies {
     implementation("io.ktor:ktor-client-cio:${libs.versions.ktor.get()}")
     implementation("io.ktor:ktor-client-content-negotiation:${libs.versions.ktor.get()}")
 
+    // Ktor SSE plugin
+    implementation("io.ktor:ktor-server-sse:${libs.versions.ktor.get()}")
+
+    implementation(libs.koog.agents)
+    implementation(libs.koog.tools)
+    implementation(libs.koog.executor.ollama.client)
+    implementation(libs.koog.executor.google.client)
+
     // Serialization
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.jacksonyml)
-
-    implementation("dev.langchain4j:langchain4j-mcp:1.4.0-beta10")
-    implementation("dev.langchain4j:langchain4j:1.4.0")
-    implementation("dev.langchain4j:langchain4j-ollama:1.4.0")
 
     // Testing
     testImplementation(libs.ktor.server.test.host)

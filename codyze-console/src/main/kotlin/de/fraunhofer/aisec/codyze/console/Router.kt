@@ -246,19 +246,17 @@ fun Routing.apiRoutes(service: ConsoleService, chatService: ChatService) {
         }
 
         post("/chat") {
-            try {
-                val request = call.receive<ChatRequestJSON>()
-                call.respondTextWriter(contentType = ContentType.Text.EventStream) {
+            val request = call.receive<ChatRequestJSON>()
+            call.respondTextWriter(contentType = ContentType.Text.EventStream) {
+                try {
                     chatService.chat(request).collect { chunk ->
-                        write("data: $chunk\n\n")
+                        chunk.split("\n").forEach { line -> write("data: $line\n") }
+                        write("\n") // Empty line marks end of event
                         flush()
                     }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
-            } catch (e: Exception) {
-                call.respond(
-                    HttpStatusCode.InternalServerError,
-                    mapOf("error" to "Chat request failed: ${e.message}"),
-                )
             }
         }
 

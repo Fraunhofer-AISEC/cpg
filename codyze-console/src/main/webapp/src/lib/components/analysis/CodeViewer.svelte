@@ -75,7 +75,7 @@
   });
 </script>
 
-<div class="h-full flex">
+<div class="flex h-full">
   <!-- Code display -->
   <div class="flex-1 overflow-auto" bind:this={codeContainerElement}>
     <div class="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2">

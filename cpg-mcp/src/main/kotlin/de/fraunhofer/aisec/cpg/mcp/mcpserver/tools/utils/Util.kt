@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import io.modelcontextprotocol.kotlin.sdk.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.CallToolResult
@@ -43,6 +44,7 @@ import io.modelcontextprotocol.kotlin.sdk.TextContent
 import java.util.function.BiFunction
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 fun Node.toNodeInfo(): NodeInfo {
     return NodeInfo(this)
@@ -97,17 +99,30 @@ fun CallToolRequest.runOnCpg(
     query: BiFunction<TranslationResult, CallToolRequest, CallToolResult>
 ): CallToolResult {
     return try {
-        val result =
-            globalAnalysisResult
-                ?: return CallToolResult(
-                    content =
-                        listOf(
-                            TextContent(
-                                "No analysis result available. Please analyze your code first using cpg_analyze."
-                            )
+        var result = globalAnalysisResult
+
+        if (result == null) {
+            val content =
+                this.arguments["content"]?.let { if (it is JsonPrimitive) it.content else null }
+            val extension =
+                this.arguments["extension"]?.let { if (it is JsonPrimitive) it.content else null }
+
+            if (content != null && extension != null) {
+                val payload = CpgAnalyzePayload(content = content, extension = extension)
+                runCpgAnalyze(payload)
+                result = globalAnalysisResult
+            }
+        }
+
+        result?.let { query.apply(it, this) }
+            ?: CallToolResult(
+                content =
+                    listOf(
+                        TextContent(
+                            "No analysis result available. Either run cpg_analyze first or provide 'content' and 'extension' parameters."
                         )
-                )
-        query.apply(result, this)
+                    )
+            )
     } catch (e: Exception) {
         CallToolResult(
             content =

@@ -64,7 +64,7 @@ class McpServer : CliktCommand(name = "mcp-server") {
         val port = ssePort
         if (port != null) {
             println("Starting MCP server in SSE mode on port $port...")
-            runSseMcpServerUsingKtorPlugin(port, configureServer())
+            runBlocking { runSseMcpServerUsingKtorPlugin(port, configureServer()) }
         } else {
             println("Starting MCP server in stdio mode...")
             runMcpServerUsingStdio()
@@ -91,6 +91,6 @@ fun runMcpServerUsingStdio() {
  *
  * @param port The port number on which the SSE MCP server will listen for client connections.
  */
-fun runSseMcpServerUsingKtorPlugin(port: Int, server: Server) = runBlocking {
-    embeddedServer(CIO, host = "0.0.0.0", port = port) { mcp { server } }.start(wait = true)
+suspend fun runSseMcpServerUsingKtorPlugin(port: Int, server: Server) {
+    embeddedServer(CIO, host = "0.0.0.0", port = port) { mcp { server } }.start(wait = false)
 }

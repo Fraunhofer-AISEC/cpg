@@ -91,7 +91,7 @@
 </script>
 
 <div class="p-4">
-  <h3 class="text-sm font-semibold text-gray-900 mb-3">Files</h3>
+  <h3 class="mb-3 text-sm font-semibold text-gray-900">Files</h3>
 
   {#snippet TreeNode(nodes: TreeNode[], depth = 0)}
     <ul class="space-y-1">
@@ -106,12 +106,20 @@
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                class="mr-1 h-3 w-3 transition-transform {expandedFolders.has(node.path) || node.expanded ? 'rotate-90' : ''}"
+                class="mr-1 h-3 w-3 transition-transform {expandedFolders.has(node.path) ||
+                node.expanded
+                  ? 'rotate-90'
+                  : ''}"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
               >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -119,7 +127,9 @@
                 fill="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
+                <path
+                  d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"
+                />
               </svg>
               <span class="text-xs font-medium">{node.name}</span>
             </button>
@@ -131,14 +141,17 @@
             <!-- File -->
             <button
               onclick={() => node.unit && handleFileClick(node.unit)}
-              class="flex w-full items-center rounded-md px-2 py-1 text-left text-sm {currentUnitId === node.unit?.id
+              class="flex w-full items-center rounded-md px-2 py-1 text-left text-sm {currentUnitId ===
+              node.unit?.id
                 ? 'border border-blue-200 bg-blue-50 text-blue-700'
                 : 'text-gray-700 hover:bg-gray-50'}"
               style="padding-left: {depth * 12 + 20}px"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                class="mr-1 h-3 w-3 {currentUnitId === node.unit?.id ? 'text-blue-600' : 'text-gray-400'}"
+                class="mr-1 h-3 w-3 {currentUnitId === node.unit?.id
+                  ? 'text-blue-600'
+                  : 'text-gray-400'}"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
