@@ -6,11 +6,17 @@ export default defineConfig({
   plugins: [tailwindcss(), sveltekit()],
   server: {
     proxy: {
-      '/api': 'http://localhost:8080',
-      '/ollama': {
-        target: 'http://localhost:11434',
+      '/api': {
+        target: 'http://localhost:8080',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/ollama/, '')
+        timeout: 0,
+        proxyTimeout: 0,
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => {
+            // Ensure connection stays alive for SSE
+            proxyReq.setHeader('Connection', 'keep-alive');
+          });
+        }
       }
     }
   }

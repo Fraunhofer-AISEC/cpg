@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.nodes
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConcepts
@@ -309,6 +310,8 @@ class ConsoleService {
     companion object {
         /** Creates a new [ConsoleService] instance from the given [AnalysisResult]. */
         fun fromAnalysisResult(result: AnalysisResult): ConsoleService {
+            // TODO: Might lead to an error when mcp module not enabled
+            globalAnalysisResult = result.translationResult
             val service = ConsoleService()
             service.analysisResult = result.toJSON()
             service.lastProject = result.project

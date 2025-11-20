@@ -14,6 +14,7 @@ sarif4k = "0.6.0"
 ktor = "3.3.0"
 node = "22.14.0"
 deno-plugin = "0.1.5"
+koog = "0.5.0"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin"}
@@ -25,6 +26,11 @@ kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", versi
 kotlin-serialization = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-json" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version = "1.10.2"}
+
+koog-agents = { module = "ai.koog:koog-agents", version.ref = "koog" }
+koog-tools = { module = "ai.koog:agents-tools", version.ref = "koog" }
+koog-executor-ollama-client = { module = "ai.koog:prompt-executor-ollama-client", version.ref = "koog" }
+koog-executor-google-client = { module = "ai.koog:prompt-executor-google-client", version.ref = "koog" }
 
 reflections = { module = "org.reflections:reflections", version = "0.10.2"}
 
