@@ -41,12 +41,13 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.FunctionInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.NodeInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.RecordInfo
-import io.modelcontextprotocol.kotlin.sdk.CallToolRequest
-import io.modelcontextprotocol.kotlin.sdk.Implementation
-import io.modelcontextprotocol.kotlin.sdk.ServerCapabilities
-import io.modelcontextprotocol.kotlin.sdk.TextContent
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequestParams
+import io.modelcontextprotocol.kotlin.sdk.types.Implementation
+import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
+import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -91,7 +92,10 @@ class ListCommandsTest {
         server.listFunctions()
 
         val tool = server.tools["cpg_list_functions"] ?: error("Tool not registered")
-        val request = CallToolRequest(name = "cpg_list_functions", arguments = buildJsonObject {})
+        val request =
+            CallToolRequest(
+                CallToolRequestParams(name = "cpg_list_functions", arguments = buildJsonObject {})
+            )
         val result = tool.handler(request)
 
         assertNotNull(result, "Result should not be null")
@@ -115,7 +119,10 @@ class ListCommandsTest {
     fun listRecordsTest() = runTest {
         server.listRecords()
         val tool = server.tools["cpg_list_records"] ?: error("Tool not registered")
-        val request = CallToolRequest(name = "cpg_list_records", arguments = buildJsonObject {})
+        val request =
+            CallToolRequest(
+                CallToolRequestParams(name = "cpg_list_records", arguments = buildJsonObject {})
+            )
         val result = tool.handler(request)
         assertNotNull(result)
         assertTrue(
@@ -133,7 +140,10 @@ class ListCommandsTest {
     fun listCallsTest() = runTest {
         server.listCalls()
         val tool = server.tools["cpg_list_calls"] ?: error("Tool not registered")
-        val request = CallToolRequest(name = "cpg_list_calls", arguments = buildJsonObject {})
+        val request =
+            CallToolRequest(
+                CallToolRequestParams(name = "cpg_list_calls", arguments = buildJsonObject {})
+            )
         val result = tool.handler(request)
         assertNotNull(result)
         assertEquals(1, result.content.size, "Should return one call expression")
@@ -145,8 +155,10 @@ class ListCommandsTest {
         val tool = server.tools["cpg_list_calls_to"] ?: error("Tool not registered")
         val request =
             CallToolRequest(
-                name = "cpg_list_calls_to",
-                arguments = buildJsonObject { put("name", "print") },
+                CallToolRequestParams(
+                    name = "cpg_list_calls_to",
+                    arguments = buildJsonObject { put("name", "print") },
+                )
             )
         val result = tool.handler(request)
         assertNotNull(result)
@@ -157,7 +169,10 @@ class ListCommandsTest {
     fun getAllArgsTest() = runTest {
         server.listCalls()
         val callsTool = server.tools["cpg_list_calls"] ?: error("Tool not registered")
-        val callsRequest = CallToolRequest(name = "cpg_list_calls", arguments = buildJsonObject {})
+        val callsRequest =
+            CallToolRequest(
+                CallToolRequestParams(name = "cpg_list_calls", arguments = buildJsonObject {})
+            )
         val callsResult = callsTool.handler(callsRequest)
         val callId =
             Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text ?: "")
@@ -167,8 +182,10 @@ class ListCommandsTest {
         val argsTool = server.tools["cpg_list_call_args"] ?: error("Tool not registered")
         val argsRequest =
             CallToolRequest(
-                name = "cpg_list_call_args",
-                arguments = buildJsonObject { put("id", callId) },
+                CallToolRequestParams(
+                    name = "cpg_list_call_args",
+                    arguments = buildJsonObject { put("id", callId) },
+                )
             )
         val argsResult = argsTool.handler(argsRequest)
         assertNotNull(argsResult)
@@ -180,8 +197,10 @@ class ListCommandsTest {
         }
         val wrongArgsRequest =
             CallToolRequest(
-                name = "cpg_list_call_args",
-                arguments = buildJsonObject { put("nodeId", callId) },
+                CallToolRequestParams(
+                    name = "cpg_list_call_args",
+                    arguments = buildJsonObject { put("nodeId", callId) },
+                )
             )
         val wrongArgsResult = argsTool.handler(wrongArgsRequest)
         assertNotNull(wrongArgsResult)
@@ -197,7 +216,10 @@ class ListCommandsTest {
     fun getArgByIndexOrNameTest() = runTest {
         server.listCalls()
         val callsTool = server.tools["cpg_list_calls"] ?: error("Tool not registered")
-        val callsRequest = CallToolRequest(name = "cpg_list_calls", arguments = buildJsonObject {})
+        val callsRequest =
+            CallToolRequest(
+                CallToolRequestParams(name = "cpg_list_calls", arguments = buildJsonObject {})
+            )
         val callsResult = callsTool.handler(callsRequest)
         val callId =
             Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text ?: "")
@@ -209,12 +231,14 @@ class ListCommandsTest {
 
         val argRequestByIndex =
             CallToolRequest(
-                name = "cpg_list_call_arg_by_name_or_index",
-                arguments =
-                    buildJsonObject {
-                        put("id", callId)
-                        put("index", 0)
-                    },
+                CallToolRequestParams(
+                    name = "cpg_list_call_arg_by_name_or_index",
+                    arguments =
+                        buildJsonObject {
+                            put("id", callId)
+                            put("index", 0)
+                        },
+                )
             )
         val argResultByIndex = argTool.handler(argRequestByIndex)
         assertNotNull(argResultByIndex)
@@ -227,8 +251,10 @@ class ListCommandsTest {
 
         val argRequestByName =
             CallToolRequest(
-                name = "cpg_list_call_arg_by_name_or_index",
-                arguments = buildJsonObject { put("id", callId) },
+                CallToolRequestParams(
+                    name = "cpg_list_call_arg_by_name_or_index",
+                    arguments = buildJsonObject { put("id", callId) },
+                )
             )
         val argResultByName = argTool.handler(argRequestByName)
         assertNotNull(argResultByName)
@@ -245,7 +271,12 @@ class ListCommandsTest {
         server.listAvailableConcepts()
         val tool = server.tools["cpg_list_available_concepts"] ?: error("Tool not registered")
         val request =
-            CallToolRequest(name = "cpg_list_available_concepts", arguments = buildJsonObject {})
+            CallToolRequest(
+                CallToolRequestParams(
+                    name = "cpg_list_available_concepts",
+                    arguments = buildJsonObject {},
+                )
+            )
         val result = tool.handler(request)
         assertNotNull(result)
         assertTrue(result.content.isNotEmpty(), "Should return available concepts")
@@ -256,7 +287,12 @@ class ListCommandsTest {
         server.listAvailableOperations()
         val tool = server.tools["cpg_list_available_operations"] ?: error("Tool not registered")
         val request =
-            CallToolRequest(name = "cpg_list_available_operations", arguments = buildJsonObject {})
+            CallToolRequest(
+                CallToolRequestParams(
+                    name = "cpg_list_available_operations",
+                    arguments = buildJsonObject {},
+                )
+            )
         val result = tool.handler(request)
         assertNotNull(result)
         assertTrue(result.content.isNotEmpty(), "Should return available operations")
@@ -268,8 +304,10 @@ class ListCommandsTest {
         val tool = server.tools["cpg_list_concepts_and_operations"] ?: error("Tool not registered")
         val request =
             CallToolRequest(
-                name = "cpg_list_concepts_and_operations",
-                arguments = buildJsonObject {},
+                CallToolRequestParams(
+                    name = "cpg_list_concepts_and_operations",
+                    arguments = buildJsonObject {},
+                )
             )
         val result = tool.handler(request)
         assertNotNull(result)

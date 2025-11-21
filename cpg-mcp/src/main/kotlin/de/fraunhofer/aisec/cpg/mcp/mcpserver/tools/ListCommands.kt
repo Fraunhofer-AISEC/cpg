@@ -37,11 +37,11 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgNamePayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.runOnCpg
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toJson
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
-import io.modelcontextprotocol.kotlin.sdk.CallToolRequest
-import io.modelcontextprotocol.kotlin.sdk.CallToolResult
-import io.modelcontextprotocol.kotlin.sdk.TextContent
-import io.modelcontextprotocol.kotlin.sdk.Tool
 import io.modelcontextprotocol.kotlin.sdk.server.Server
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
+import io.modelcontextprotocol.kotlin.sdk.types.TextContent
+import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
@@ -131,7 +131,7 @@ fun Server.listCallsTo() {
             .trimIndent()
 
     val inputSchema =
-        Tool.Input(
+        ToolSchema(
             properties =
                 buildJsonObject {
                     putJsonObject("name") {
@@ -151,7 +151,16 @@ fun Server.listCallsTo() {
         inputSchema = inputSchema,
     ) { request ->
         request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
-            val payload = request.arguments.toObject<CpgNamePayload>()
+            val payload =
+                request.arguments?.toObject<CpgNamePayload>()
+                    ?: return@runOnCpg CallToolResult(
+                        content =
+                            listOf(
+                                TextContent(
+                                    "Invalid or missing payload for cpg_list_calls_to tool."
+                                )
+                            )
+                    )
 
             CallToolResult(content = result.calls(payload.name).map { TextContent(it.toJson()) })
         }
@@ -168,7 +177,7 @@ fun Server.getAllArgs() {
             .trimIndent()
 
     val inputSchema =
-        Tool.Input(
+        ToolSchema(
             properties =
                 buildJsonObject {
                     putJsonObject("id") {
@@ -188,7 +197,16 @@ fun Server.getAllArgs() {
         inputSchema = inputSchema,
     ) { request ->
         request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
-            val payload = request.arguments.toObject<CpgIdPayload>()
+            val payload =
+                request.arguments?.toObject<CpgIdPayload>()
+                    ?: return@runOnCpg CallToolResult(
+                        content =
+                            listOf(
+                                TextContent(
+                                    "Invalid or missing payload for cpg_list_call_args tool."
+                                )
+                            )
+                    )
 
             CallToolResult(
                 content =
@@ -215,7 +233,7 @@ fun Server.getArgByIndexOrName() {
             .trimIndent()
 
     val inputSchema =
-        Tool.Input(
+        ToolSchema(
             properties =
                 buildJsonObject {
                     putJsonObject("id") {
@@ -249,7 +267,16 @@ fun Server.getArgByIndexOrName() {
         inputSchema = inputSchema,
     ) { request ->
         request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
-            val payload = request.arguments.toObject<CpgCallArgumentByNameOrIndexPayload>()
+            val payload =
+                request.arguments?.toObject<CpgCallArgumentByNameOrIndexPayload>()
+                    ?: return@runOnCpg CallToolResult(
+                        content =
+                            listOf(
+                                TextContent(
+                                    "Invalid or missing payload for cpg_list_call_arg_by_name_or_index tool."
+                                )
+                            )
+                    )
 
             CallToolResult(
                 content =
@@ -261,7 +288,7 @@ fun Server.getArgByIndexOrName() {
                                     name = payload.argumentName,
                                     position = payload.index,
                                 )
-                                ?.toJson()
+                                ?.toJson() ?: "No argument found with the given name or index."
                         )
                     )
             )

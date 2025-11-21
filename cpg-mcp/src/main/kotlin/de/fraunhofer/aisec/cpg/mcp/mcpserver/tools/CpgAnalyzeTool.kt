@@ -68,10 +68,10 @@ import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
 import de.fraunhofer.aisec.cpg.passes.hardDependencies
-import io.modelcontextprotocol.kotlin.sdk.CallToolResult
-import io.modelcontextprotocol.kotlin.sdk.TextContent
-import io.modelcontextprotocol.kotlin.sdk.Tool
 import io.modelcontextprotocol.kotlin.sdk.server.Server
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
+import io.modelcontextprotocol.kotlin.sdk.types.TextContent
+import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import java.io.File
 import kotlin.String
 import kotlin.reflect.KClass
@@ -98,7 +98,7 @@ val toolDescription =
         .trimIndent()
 
 val inputSchema =
-    Tool.Input(
+    ToolSchema(
         properties =
             buildJsonObject {
                 putJsonObject("content") {
@@ -120,7 +120,7 @@ fun Server.addCpgAnalyzeTool() {
     this.addTool(name = "cpg_analyze", description = toolDescription, inputSchema = inputSchema) {
         request ->
         try {
-            val payload = request.arguments.toObject<CpgAnalyzePayload>()
+            val payload = request.arguments?.toObject<CpgAnalyzePayload>()
             val analysisResult = runCpgAnalyze(payload, true)
             val jsonResult = Json.encodeToString(analysisResult)
             CallToolResult(content = listOf(TextContent(jsonResult)))
@@ -132,10 +132,10 @@ fun Server.addCpgAnalyzeTool() {
     }
 }
 
-fun runCpgAnalyze(payload: CpgAnalyzePayload, runPasses: Boolean): CpgAnalysisResult {
+fun runCpgAnalyze(payload: CpgAnalyzePayload?, runPasses: Boolean): CpgAnalysisResult {
     val file =
         when {
-            payload.content != null -> {
+            payload?.content != null -> {
                 val extension =
                     if (payload.extension != null) {
                         if (payload.extension.startsWith(".")) payload.extension
