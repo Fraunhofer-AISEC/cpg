@@ -212,7 +212,7 @@ fun Server.addCpgTranslate() {
         inputSchema = inputSchema,
     ) { request ->
         try {
-            val payload = request.arguments.toObject<CpgAnalyzePayload>()
+            val payload = request.arguments?.toObject<CpgAnalyzePayload>()
             val analysisResult = runCpgAnalyze(payload, false)
             val jsonResult = Json.encodeToString(analysisResult)
             CallToolResult(content = listOf(TextContent(jsonResult)))
@@ -231,7 +231,7 @@ fun Server.addListPasses() {
         description =
             """Provides a list of all available passes that can be applied to the CPG. It also lists dependencies and what kind of node the pass expects."""
                 .trimIndent(),
-        inputSchema = Tool.Input(properties = buildJsonObject {}, required = listOf()),
+        inputSchema = ToolSchema(properties = buildJsonObject {}, required = listOf()),
     ) { request ->
         try {
 
@@ -378,7 +378,7 @@ fun Server.addRunPass() {
             """Runs a given Pass on a specified Node. The given node must meet the type of node the pass operates on."""
                 .trimIndent(),
         inputSchema =
-            Tool.Input(
+            ToolSchema(
                 properties =
                     buildJsonObject {
                         putJsonObject("pass_name") {
@@ -394,7 +394,7 @@ fun Server.addRunPass() {
             ),
     ) { request ->
         try {
-            // TODO!!
+            TODO()
             CallToolResult(content = listOf(TextContent("Not implemented yet")))
         } catch (e: Exception) {
             CallToolResult(
