@@ -43,8 +43,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.overlay.Overlays
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlockEdges
-import de.fraunhofer.aisec.cpg.graph.overlays.StronglyConnectedComponent
-import de.fraunhofer.aisec.cpg.graph.overlays.StronglyConnectedComponentEdges
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -132,18 +130,6 @@ abstract class Node() :
         protected set
 
     var basicBlock by unwrapping(Node::basicBlockEdges)
-
-    @Relationship(value = "SCC", direction = Relationship.Direction.OUTGOING)
-    @PopulatedByPass(SccPass::class)
-    var stronglyConnectedComponentEdges: StronglyConnectedComponentEdges<Node> =
-        StronglyConnectedComponentEdges<Node>(
-            this,
-            mirrorProperty = StronglyConnectedComponent::nodeEdges,
-            outgoing = true,
-        )
-        protected set
-
-    var scc by unwrapping(Node::stronglyConnectedComponentEdges)
 
     /**
      * The nodes which are control-flow dominated, i.e., the children of the Control Dependence
