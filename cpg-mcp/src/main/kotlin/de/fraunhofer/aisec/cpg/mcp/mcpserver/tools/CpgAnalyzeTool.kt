@@ -37,10 +37,10 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toNodeInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
 import de.fraunhofer.aisec.cpg.mcp.setupTranslationConfiguration
-import io.modelcontextprotocol.kotlin.sdk.CallToolResult
-import io.modelcontextprotocol.kotlin.sdk.TextContent
-import io.modelcontextprotocol.kotlin.sdk.Tool
 import io.modelcontextprotocol.kotlin.sdk.server.Server
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
+import io.modelcontextprotocol.kotlin.sdk.types.TextContent
+import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import java.io.File
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
@@ -65,7 +65,7 @@ val toolDescription =
         .trimIndent()
 
 val inputSchema =
-    Tool.Input(
+    ToolSchema(
         properties =
             buildJsonObject {
                 putJsonObject("content") {
@@ -87,7 +87,7 @@ fun Server.addCpgAnalyzeTool() {
     this.addTool(name = "cpg_analyze", description = toolDescription, inputSchema = inputSchema) {
         request ->
         try {
-            val payload = request.arguments.toObject<CpgAnalyzePayload>()
+            val payload = request.arguments?.toObject<CpgAnalyzePayload>()
             val analysisResult = runCpgAnalyze(payload)
             val jsonResult = Json.encodeToString(analysisResult)
             CallToolResult(content = listOf(TextContent(jsonResult)))
@@ -99,10 +99,10 @@ fun Server.addCpgAnalyzeTool() {
     }
 }
 
-fun runCpgAnalyze(payload: CpgAnalyzePayload): CpgAnalysisResult {
+fun runCpgAnalyze(payload: CpgAnalyzePayload?): CpgAnalysisResult {
     val file =
         when {
-            payload.content != null -> {
+            payload?.content != null -> {
                 val extension =
                     if (payload.extension != null) {
                         if (payload.extension.startsWith(".")) payload.extension
