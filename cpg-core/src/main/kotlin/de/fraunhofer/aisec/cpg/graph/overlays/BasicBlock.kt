@@ -99,18 +99,26 @@ class BasicBlock(var startNode: Node) : OverlayNode() {
 
     override var location: PhysicalLocation? = null
         get() {
+            val startLine = nodes.mapNotNull { it.location?.region?.startLine }.minOrNull() ?: -1
+            val startColumn =
+                nodes
+                    .filter { it.location?.region?.startLine == startLine }
+                    .mapNotNull { it.location?.region?.startColumn }
+                    .minOrNull() ?: -1
+            val endLine = nodes.mapNotNull { it.location?.region?.endLine }.maxOrNull() ?: -1
+            val endColumn =
+                nodes
+                    .filter { it.location?.region?.endLine == endLine }
+                    .mapNotNull { it.location?.region?.endColumn }
+                    .maxOrNull() ?: -1
             return PhysicalLocation(
                 uri = startNode.location?.artifactLocation?.uri ?: URI(""),
                 region =
                     Region(
-                        startLine =
-                            nodes.mapNotNull { it.location?.region?.startLine }.minOrNull() ?: -1,
-                        startColumn =
-                            nodes.mapNotNull { it.location?.region?.startColumn }.minOrNull() ?: -1,
-                        endLine =
-                            nodes.mapNotNull { it.location?.region?.endLine }.maxOrNull() ?: -1,
-                        endColumn =
-                            nodes.mapNotNull { it.location?.region?.endColumn }.maxOrNull() ?: -1,
+                        startLine = startLine,
+                        startColumn = startColumn,
+                        endLine = endLine,
+                        endColumn = endColumn,
                     ),
             )
         }
