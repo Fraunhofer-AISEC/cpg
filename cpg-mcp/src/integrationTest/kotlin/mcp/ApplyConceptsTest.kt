@@ -59,7 +59,7 @@ class ApplyConceptsTest {
                     "class Foo:\n    secretKey = '0000'\ndef hello():\n    print('Hello World')",
                 extension = "py",
             )
-        val analysisResult = runCpgAnalyze(payload)
+        val analysisResult = runCpgAnalyze(payload, true)
         assertNotNull(globalAnalysisResult, "Result should be set after tool execution")
 
         assertEquals(2, analysisResult.functions)
