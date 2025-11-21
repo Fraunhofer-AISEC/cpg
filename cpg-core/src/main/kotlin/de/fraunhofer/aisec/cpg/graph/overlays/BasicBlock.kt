@@ -136,6 +136,6 @@ class BasicBlock(var startNode: Node) : OverlayNode() {
     }
 
     override fun toString(): String {
-        return "$startNode - $endNode"
+        return "BasicBlock from ${startNode::class.simpleName} ${startNode.name} to ${(endNode ?: startNode)::class.simpleName} ${endNode?.name} in $location"
     }
 }
