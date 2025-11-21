@@ -40,6 +40,8 @@ class CpgAnalyzeToolTest {
         val testServer = configureServer()
         assertEquals(
             setOf(
+                "cpg_translate",
+                "list_passes",
                 "cpg_analyze",
                 "cpg_llm_analyze",
                 "cpg_apply_concepts",
