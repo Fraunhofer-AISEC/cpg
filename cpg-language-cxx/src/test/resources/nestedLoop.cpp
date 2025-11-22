@@ -1,0 +1,16 @@
+#include<stdio.h>
+
+int main() {
+  if ( 1 == 2 ) {
+    printf("huh?");
+  } else {
+//    for ( int i = 0; i < 5; i++) {
+      for (int j = 0; j < 10; j++) {
+        printf("didoo");
+      }
+     printf("woop");
+    }
+//  }
+  printf("test");
+  return 2;
+}
