@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.OverlayNode
  * This class represents a strongly connected component (SCC), i.e. a set of nodes where each node
  * is reachable from one another.
  */
-class StronglyConnectedComponent() : OverlayNode() {
+class StronglyConnectedComponent(val priority: Int) : OverlayNode() {
     /** Contains all [Node]s that are part of this strongly connected component. */
     var nodes = mutableSetOf<Node>()
 }
