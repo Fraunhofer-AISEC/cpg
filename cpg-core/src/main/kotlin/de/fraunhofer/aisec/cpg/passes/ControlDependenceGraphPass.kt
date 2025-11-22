@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
+import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
@@ -48,6 +49,7 @@ import kotlin.collections.component2
 
 /** This pass builds the Control Dependence Graph (CDG) by iterating through the EOG. */
 @DependsOn(EvaluationOrderGraphPass::class)
+@DependsOn(BasicBlockCollectorPass::class)
 open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     class Configuration(
@@ -98,7 +100,9 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
 
         log.trace("Creating CDG for {} with complexity {}", startNode.name, c)
 
-        val (firstBasicBlock, basicBlocks, nodeToBBMap) = collectBasicBlocks(startNode, false)
+        val firstBasicBlock =
+            (startNode as? EOGStarterHolder)?.firstBasicBlock
+                ?: BasicBlockCollectorPass(ctx).collectBasicBlocks(startNode, false).first
 
         log.trace("Retrieved network of BBs for {}", startNode.name)
 
@@ -138,8 +142,9 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
         // branchingNodeConditionals is a map organized as follows:
         //   BranchingNode -> Set of BasicBlocks where, if we visited all of these, the
         //      branchingNode does not dominate us anymore (we are after the merge point).
+        val nodeToBBMap = finalState.keys.flatMap { it.nodes.map { node -> node to it } }.toMap()
         val branchingNodeConditionals =
-            getBranchingNodeConditions(startNode, basicBlocks, nodeToBBMap)
+            getBranchingNodeConditions(startNode, finalState.keys, nodeToBBMap)
 
         // final state is a map organized as follows:
         //   BasicBlock -> Map<Node, Set<BasicBlock>> with
