@@ -38,9 +38,9 @@ import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 public open class QPU(
-    public val OneQubitErrorRate: Float?,
-    public val SpamErrorRate: Float?,
-    public val TwoQubitErrorRate: Float?,
+    public val oneQubitErrorRate: Float?,
+    public val spamErrorRate: Float?,
+    public val twoQubitErrorRate: Float?,
     public val errorCorrectionEnabled: Boolean?,
     encryptionInUse: EncryptionInUse?,
     networkInterfaces: MutableList<NetworkInterface?>,
@@ -84,17 +84,17 @@ public open class QPU(
     override fun equals(other: Any?): Boolean =
         other is QPU &&
             super.equals(other) &&
-            other.OneQubitErrorRate == this.OneQubitErrorRate &&
-            other.SpamErrorRate == this.SpamErrorRate &&
-            other.TwoQubitErrorRate == this.TwoQubitErrorRate &&
+            other.oneQubitErrorRate == this.oneQubitErrorRate &&
+            other.spamErrorRate == this.spamErrorRate &&
+            other.twoQubitErrorRate == this.twoQubitErrorRate &&
             other.errorCorrectionEnabled == this.errorCorrectionEnabled
 
     override fun hashCode(): Int =
         Objects.hash(
             super.hashCode(),
-            OneQubitErrorRate,
-            SpamErrorRate,
-            TwoQubitErrorRate,
+            oneQubitErrorRate,
+            spamErrorRate,
+            twoQubitErrorRate,
             errorCorrectionEnabled,
         )
 }

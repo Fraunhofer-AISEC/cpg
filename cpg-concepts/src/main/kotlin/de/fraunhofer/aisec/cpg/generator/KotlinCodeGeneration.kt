@@ -279,7 +279,8 @@ private fun addEqualsMethod(classBuilder: TypeSpec.Builder, ktSource: ClassAbstr
     for (property in
         ktSource.dataProperties +
             ktSource.objectProperties.filter { !it.propertyName.equals("linkedConcept") }) {
-        conditions.add("other.${property.propertyName} == this.${property.propertyName}")
+        val propertyName = property.propertyName.replaceFirstChar { it.lowercase() }
+        conditions.add("other.${propertyName} == this.${propertyName}")
     }
 
     val returnStatement = "return " + conditions.joinToString(" &&\n            ")
@@ -303,7 +304,8 @@ private fun addHashCodeMethod(
     for (property in
         ktSource.dataProperties +
             ktSource.objectProperties.filter { !it.propertyName.equals("linkedConcept") }) {
-        hashProperties.add(property.propertyName)
+        val propertyName = property.propertyName.replaceFirstChar { it.lowercase() }
+        hashProperties.add(propertyName)
     }
 
     val hashStatement =
@@ -339,10 +341,14 @@ private fun addPropertiesToClass(
                 "Unknown type: ${dataProp.propertyType} for property ${dataProp.propertyName} of class ${className}"
             )
         }
-        if (dataProp.propertyName == "id") continue
+
+        // Enforce camel case: convert first letter to lowercase
+        val propertyName = dataProp.propertyName.replaceFirstChar { it.lowercase() }
+
+        if (propertyName == "id") continue
 
         // Special handling for 'name' and 'code' properties
-        if (dataProp.propertyName == "name") {
+        if (propertyName == "name") {
             needsInitBlock = true
             fileSpecBuilder.addImport("de.fraunhofer.aisec.cpg.graph", "Name")
             initBlockBuilder.addStatement(
@@ -351,7 +357,7 @@ private fun addPropertiesToClass(
             )
             // Always pass name through without storing it
             constructorBuilder.addParameter("name", typeName)
-        } else if (dataProp.propertyName == "code") {
+        } else if (propertyName == "code") {
             needsInitBlock = true
             initBlockBuilder.addStatement("code?.let { this.code = it }")
             // Always pass code through without storing it
@@ -359,14 +365,12 @@ private fun addPropertiesToClass(
         } else if (!isParent) {
             // For own properties: add as val in constructor (stored in class)
             classBuilder.addProperty(
-                PropertySpec.builder(dataProp.propertyName, typeName)
-                    .initializer(dataProp.propertyName)
-                    .build()
+                PropertySpec.builder(propertyName, typeName).initializer(propertyName).build()
             )
-            constructorBuilder.addParameter(dataProp.propertyName, typeName)
+            constructorBuilder.addParameter(propertyName, typeName)
         } else {
             // For parent properties: add as regular parameter (not stored in class)
-            constructorBuilder.addParameter(dataProp.propertyName, typeName)
+            constructorBuilder.addParameter(propertyName, typeName)
         }
 
         // Add a property to the class, initialized from the constructor parameter.
@@ -374,7 +378,7 @@ private fun addPropertiesToClass(
 
         if (isParent) {
             // Add SuperclassConstructorParameter for the property.
-            classBuilder.addSuperclassConstructorParameter(dataProp.propertyName).build()
+            classBuilder.addSuperclassConstructorParameter(propertyName).build()
         }
     }
 
@@ -387,6 +391,9 @@ private fun addPropertiesToClass(
             println("Unknown type: ${objectProp.propertyType}")
         }
 
+        // Enforce camel case: convert first letter to lowercase
+        val propertyName = objectProp.propertyName.replaceFirstChar { it.lowercase() }
+
         // Add a constructor parameter for the property.
         if (objectProp.propertyProperty == "hasMultiple") {
             val parameterType =
@@ -395,34 +402,30 @@ private fun addPropertiesToClass(
             if (!isParent) {
                 // For own properties: add as property stored in class
                 classBuilder.addProperty(
-                    PropertySpec.builder(objectProp.propertyName, parameterType)
-                        .initializer(objectProp.propertyName)
+                    PropertySpec.builder(propertyName, parameterType)
+                        .initializer(propertyName)
                         .build()
                 )
             }
-            constructorBuilder.addParameter(objectProp.propertyName, parameterType)
-        } else if (objectProp.propertyName != "concept") {
+            constructorBuilder.addParameter(propertyName, parameterType)
+        } else if (propertyName != "concept") {
             val parameterType =
-                if (objectProp.propertyName == "linkedConcept") typeName
-                else typeName.copy(nullable = true)
+                if (propertyName == "linkedConcept") typeName else typeName.copy(nullable = true)
 
             // For own properties: add as property stored in class
             // For parent properties: just pass through without storing
             // Special case: linkedConcept should only be stored in Operation class
-            if (
-                !isParent &&
-                    (objectProp.propertyName != "linkedConcept" || className == "Operation")
-            ) {
+            if (!isParent && (propertyName != "linkedConcept" || className == "Operation")) {
                 classBuilder.addProperty(
-                    PropertySpec.builder(objectProp.propertyName, parameterType)
-                        .initializer(objectProp.propertyName)
+                    PropertySpec.builder(propertyName, parameterType)
+                        .initializer(propertyName)
                         .build()
                 )
             }
 
             val parameterBuilder =
-                ParameterSpec.builder(objectProp.propertyName, parameterType).apply {
-                    if (objectProp.propertyName == "underlyingNode") {
+                ParameterSpec.builder(propertyName, parameterType).apply {
+                    if (propertyName == "underlyingNode") {
                         defaultValue("null")
                     }
                 }
@@ -435,12 +438,12 @@ private fun addPropertiesToClass(
         // If is parent -> SuperClassConstructorParameters have to be set
         if (isParent) {
             // Add SuperclassConstructorParameter for the property.
-            if (objectProp.propertyName == "concept") {
+            if (propertyName == "concept") {
                 classBuilder.addSuperclassConstructorParameter("linkedConcept").build()
-            } else if (objectProp.propertyName == "linkedConcept") {
+            } else if (propertyName == "linkedConcept") {
                 continue
             } else {
-                classBuilder.addSuperclassConstructorParameter(objectProp.propertyName).build()
+                classBuilder.addSuperclassConstructorParameter(propertyName).build()
             }
         }
     }
