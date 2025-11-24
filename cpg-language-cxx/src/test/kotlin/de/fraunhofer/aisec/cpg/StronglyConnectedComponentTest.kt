@@ -27,9 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.functions
-import de.fraunhofer.aisec.cpg.graph.refs
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.io.File
@@ -50,40 +48,24 @@ internal class StronglyConnectedComponentTest : BaseTest() {
         val mainFD = result.functions.singleOrNull { it.name.localName == "main" }
         assertNotNull(mainFD)
 
-        val printfLine9Ref = mainFD.refs[1]
-        assertNotNull(printfLine9Ref)
+        ///////// First, check on node-level
+        // All 3 ForStatements should have one edge with an SCC of priority respective to their
+        // level, and one without SCC
+        for (level in 0..2) {
+            val forStmt = mainFD.allChildren<ForStatement>()[level]
+            assertNotNull(forStmt)
+            // The level 0 forStatement node should have one nextEOG edge with an SCC-property
+            // priority
+            // 0, and one without (exiting the loop)
+            assertEquals(1, forStmt.nextEOGEdges.filter { it.scc?.priority == level }.size)
+            assertEquals(1, forStmt.nextEOGEdges.filter { it.scc == null }.size)
 
-        val forLoopNode = mainFD.allChildren<ForStatement>().first()
-        assertNotNull(forLoopNode)
-        // The for loop node should have one nextEOG edge with an SCC-property, and one without
-        // (exiting the loop)
-        assertEquals(
-            1,
-            forLoopNode.nextEOGEdges.filter { it.scc != null && it.end == printfLine9Ref }.size,
-        )
-        assertEquals(1, forLoopNode.nextEOGEdges.filter { it.scc == null }.size)
-
-        val unaryOP = mainFD.allChildren<UnaryOperator>().singleOrNull()
-        assertNotNull(unaryOP)
-        // on the end of the loop, the unaryOP also has an SCC-labeled edge (not sure if this is
-        // really necessary)
-        assertNotNull(unaryOP.nextEOGEdges.singleOrNull()?.scc)
-
-        val forLoopBlock = forLoopNode.basicBlock.singleOrNull()
-        assertNotNull(forLoopBlock)
-        // The forLoop BB has 2 next Edges. On into the loop (with SCC), and one to the outside
-        assertEquals(1, forLoopBlock.nextEOGEdges.filter { it.scc != null }.size)
-        assertEquals(1, forLoopBlock.nextEOGEdges.filter { it.scc == null }.size)
-
-        // The other BB in the loop has only one edge, also with an SCC
-        assertEquals(
-            1,
-            forLoopBlock.nextEOGEdges
-                .singleOrNull { it.scc != null }
-                ?.end
-                ?.nextEOGEdges
-                ?.filter { it.scc != null }
-                ?.size,
-        )
+            // The same applies on BB-Level
+            val forLoopBlock = forStmt.basicBlock.singleOrNull()
+            assertNotNull(forLoopBlock)
+            // The forLoop BB has 2 next Edges. On into the loop (with SCC), and one to the outside
+            assertEquals(1, forLoopBlock.nextEOGEdges.filter { it.scc?.priority == level }.size)
+            assertEquals(1, forLoopBlock.nextEOGEdges.filter { it.scc == null }.size)
+        }
     }
 }
