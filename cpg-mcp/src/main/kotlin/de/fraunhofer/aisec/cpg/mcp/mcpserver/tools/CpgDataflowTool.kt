@@ -39,11 +39,11 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toQueryTreeNode
 import de.fraunhofer.aisec.cpg.query.May
 import de.fraunhofer.aisec.cpg.query.dataFlow
-import io.modelcontextprotocol.kotlin.sdk.CallToolRequest
-import io.modelcontextprotocol.kotlin.sdk.CallToolResult
-import io.modelcontextprotocol.kotlin.sdk.TextContent
-import io.modelcontextprotocol.kotlin.sdk.Tool
 import io.modelcontextprotocol.kotlin.sdk.server.Server
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
+import io.modelcontextprotocol.kotlin.sdk.types.TextContent
+import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -71,7 +71,7 @@ fun Server.addCpgDataflowTool() {
             .trimIndent()
 
     val inputSchema =
-        Tool.Input(
+        ToolSchema(
             properties =
                 buildJsonObject {
                     putJsonObject("from") {
@@ -95,11 +95,16 @@ fun Server.addCpgDataflowTool() {
     this.addTool(name = "cpg_dataflow", description = toolDescription, inputSchema = inputSchema) {
         request ->
         request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
-            val payload = request.arguments.toObject<CpgDataflowPayload>()
+            val payload =
+                request.arguments?.toObject<CpgDataflowPayload>()
+                    ?: return@runOnCpg CallToolResult(
+                        content =
+                            listOf(TextContent("Invalid or missing payload for cpg_dataflow tool."))
+                    )
 
             val allOverlayNodes = result.allChildrenWithOverlays<OverlayNode>()
-            val sourceNodes = allOverlayNodes.filter { it.name.localName == payload.from }
-            val targetNodes = allOverlayNodes.filter { it.name.localName == payload.to }
+            val sourceNodes = allOverlayNodes.filter { it.name.localName == payload?.from }
+            val targetNodes = allOverlayNodes.filter { it.name.localName == payload?.to }
 
             if (sourceNodes.isEmpty() || targetNodes.isEmpty()) {
                 return@runOnCpg CallToolResult(
