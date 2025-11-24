@@ -44,6 +44,7 @@ val nativeName = "libcpgrust.so"
 val resourceSubdir = "linux-x86-64" // Todo Can I extend this to all possible targets?
 
 tasks.register<Copy>("copyRustSharedLibToResources") {
+    // Todo Extend this to also do the cargo build and bindings generation part
     from(nativeSrc.file(nativeName))
     into(layout.buildDirectory.dir("resources/main/$resourceSubdir"))
     doFirst {

@@ -45,10 +45,9 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
 class RustLanguage :
     Language<RustLanguageFrontend>(),
     HasShortCircuitOperators,
-    // ! HasDefaultArguments
-    // ! HasOperatorOverloading but std operators can be implemented for custom types
     HasOperatorOverloading,
     HasFunctionStyleConstruction
+    // ! HasDefaultArguments
     // HasMemberExpressionAmbiguity,
     // HasBuiltins,
 
