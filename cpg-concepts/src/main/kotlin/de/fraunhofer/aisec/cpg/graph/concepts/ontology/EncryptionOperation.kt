@@ -36,7 +36,7 @@ import kotlin.String
 public open class EncryptionOperation(
     public val algorithm: String?,
     public val secret: Secret?,
-    public val linkedConcept: Encryption,
+    linkedConcept: Encryption,
     underlyingNode: Node? = null,
 ) : Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =

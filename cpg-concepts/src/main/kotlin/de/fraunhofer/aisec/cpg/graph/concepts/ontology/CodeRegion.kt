@@ -41,6 +41,10 @@ public open class CodeRegion(
     public val startLine: Int?,
     underlyingNode: Node? = null,
 ) : Functionality(underlyingNode) {
+    init {
+        code?.let { this.code = it }
+    }
+
     override fun equals(other: Any?): Boolean =
         other is CodeRegion &&
             super.equals(other) &&

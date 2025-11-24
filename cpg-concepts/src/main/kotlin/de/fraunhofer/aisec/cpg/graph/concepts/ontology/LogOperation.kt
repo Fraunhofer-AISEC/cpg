@@ -32,7 +32,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public open class LogOperation(public val linkedConcept: Logging, underlyingNode: Node? = null) :
+public open class LogOperation(linkedConcept: Logging, underlyingNode: Node? = null) :
     Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is LogOperation && super.equals(other)
 

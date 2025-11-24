@@ -33,7 +33,7 @@ import kotlin.Boolean
 import kotlin.Int
 
 public open class CryptographicOperation(
-    public val linkedConcept: Confidentiality,
+    linkedConcept: Confidentiality,
     underlyingNode: Node? = null,
 ) : Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =

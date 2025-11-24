@@ -32,10 +32,8 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public open class BlockStorageOperation(
-    public val linkedConcept: BlockStorage,
-    underlyingNode: Node? = null,
-) : Operation(linkedConcept, underlyingNode) {
+public open class BlockStorageOperation(linkedConcept: BlockStorage, underlyingNode: Node? = null) :
+    Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is BlockStorageOperation && super.equals(other)
 

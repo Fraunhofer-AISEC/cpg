@@ -33,10 +33,8 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** Base class for operations on an [HttpClient]. */
-public open class HttpClientOperation(
-    public val linkedConcept: HttpClient,
-    underlyingNode: Node? = null,
-) : Operation(linkedConcept, underlyingNode) {
+public open class HttpClientOperation(linkedConcept: HttpClient, underlyingNode: Node? = null) :
+    Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is HttpClientOperation && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

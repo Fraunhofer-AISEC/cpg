@@ -33,10 +33,8 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** Base class for operations on an [HttpEndpoint]. */
-public open class HttpEndpointOperation(
-    public val linkedConcept: Http,
-    underlyingNode: Node? = null,
-) : Operation(linkedConcept, underlyingNode) {
+public open class HttpEndpointOperation(linkedConcept: Http, underlyingNode: Node? = null) :
+    Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is HttpEndpointOperation && super.equals(other)
 

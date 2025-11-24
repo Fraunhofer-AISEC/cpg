@@ -35,7 +35,7 @@ import kotlin.Int
 public open class InputValidationOperation(
     public val input: Input?,
     public val output: Output?,
-    public val linkedConcept: Input,
+    linkedConcept: Input,
     underlyingNode: Node? = null,
 ) : Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =

@@ -34,7 +34,7 @@ import kotlin.Int
 
 /** Abstract base class for all authentication operations. */
 public open class AuthenticationOperation(
-    public val linkedConcept: Authenticity,
+    linkedConcept: Authenticity,
     underlyingNode: Node? = null,
 ) : Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =

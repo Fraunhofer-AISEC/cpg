@@ -32,10 +32,8 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public open class GetCurrentTimeOperation(
-    public val linkedConcept: Time,
-    underlyingNode: Node? = null,
-) : Operation(linkedConcept, underlyingNode) {
+public open class GetCurrentTimeOperation(linkedConcept: Time, underlyingNode: Node? = null) :
+    Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is GetCurrentTimeOperation && super.equals(other)
 

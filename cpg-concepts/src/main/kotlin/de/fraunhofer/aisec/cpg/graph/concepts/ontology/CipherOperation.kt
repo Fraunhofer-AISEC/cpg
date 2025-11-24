@@ -32,7 +32,7 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public open class CipherOperation(public val linkedConcept: Cipher, underlyingNode: Node? = null) :
+public open class CipherOperation(linkedConcept: Cipher, underlyingNode: Node? = null) :
     Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is CipherOperation && super.equals(other)
 

@@ -38,7 +38,7 @@ public open class LogOutput(
     public val call: String?,
     public val `value`: String?,
     public val logging: Logging?,
-    public val linkedConcept: Logging,
+    linkedConcept: Logging,
     underlyingNode: Node? = null,
 ) : Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =

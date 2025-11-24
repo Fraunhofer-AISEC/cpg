@@ -36,7 +36,7 @@ import kotlin.Int
  * Represents an operation that is part of a policy. This can be used to define rules or checks that
  * need to be performed to enforce the policy.
  */
-public open class PolicyOperation(public val linkedConcept: Policy, underlyingNode: Node? = null) :
+public open class PolicyOperation(linkedConcept: Policy, underlyingNode: Node? = null) :
     Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is PolicyOperation && super.equals(other)
 

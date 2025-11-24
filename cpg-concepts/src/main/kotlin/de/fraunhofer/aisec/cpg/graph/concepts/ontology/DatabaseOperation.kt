@@ -38,7 +38,7 @@ public open class DatabaseOperation(
     public val calls: List<String>?,
     public val databaseService: DatabaseService?,
     public val storage: DatabaseStorage?,
-    public val linkedConcept: DatabaseStorage,
+    linkedConcept: DatabaseStorage,
     underlyingNode: Node? = null,
 ) : Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =

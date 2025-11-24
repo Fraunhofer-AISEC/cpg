@@ -33,7 +33,7 @@ import kotlin.Boolean
 import kotlin.Int
 
 public open class DiskEncryptionOperation(
-    public val linkedConcept: DiskEncryption,
+    linkedConcept: DiskEncryption,
     underlyingNode: Node? = null,
 ) : Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =

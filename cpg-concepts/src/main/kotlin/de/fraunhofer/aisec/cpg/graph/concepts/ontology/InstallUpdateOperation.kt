@@ -34,7 +34,7 @@ import kotlin.Int
 
 public open class InstallUpdateOperation(
     public val automaticUpdates: AutomaticUpdates?,
-    public val linkedConcept: AutomaticUpdates,
+    linkedConcept: AutomaticUpdates,
     underlyingNode: Node? = null,
 ) : Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =

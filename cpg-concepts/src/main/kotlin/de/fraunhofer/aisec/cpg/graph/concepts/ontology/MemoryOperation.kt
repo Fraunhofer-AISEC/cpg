@@ -33,7 +33,7 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** A common abstract class for memory operations. */
-public open class MemoryOperation(public val linkedConcept: Memory, underlyingNode: Node? = null) :
+public open class MemoryOperation(linkedConcept: Memory, underlyingNode: Node? = null) :
     Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is MemoryOperation && super.equals(other)
 

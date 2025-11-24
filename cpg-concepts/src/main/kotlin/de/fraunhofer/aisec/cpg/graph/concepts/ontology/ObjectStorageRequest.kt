@@ -36,7 +36,7 @@ import kotlin.String
 public open class ObjectStorageRequest(
     public val source: String?,
     public val objectStorage: ObjectStorage?,
-    public val linkedConcept: Storage,
+    linkedConcept: Storage,
     underlyingNode: Node? = null,
 ) : Operation(linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =

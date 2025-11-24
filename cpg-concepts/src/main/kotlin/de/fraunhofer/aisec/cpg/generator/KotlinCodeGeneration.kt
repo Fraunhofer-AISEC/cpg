@@ -339,40 +339,34 @@ private fun addPropertiesToClass(
                 "Unknown type: ${dataProp.propertyType} for property ${dataProp.propertyName} of class ${className}"
             )
         }
-        // Special handling for 'name' and 'code' properties in object properties too
-        val paramName =
-            when (dataProp.propertyName) {
-                "name" -> {
-                    needsInitBlock = true
-                    fileSpecBuilder.addImport("de.fraunhofer.aisec.cpg.graph", "Name")
-                    initBlockBuilder.addStatement(
-                        "name?.let { this.name = %T(localName = it) }",
-                        ClassName("de.fraunhofer.aisec.cpg.graph", "Name"),
-                    )
-                    "nameString"
-                }
-                "code" -> {
-                    needsInitBlock = true
-                    initBlockBuilder.addStatement("code?.let { this.code = it }")
-                    "codeString"
-                }
-                else -> dataProp.propertyName
-            }
-
         if (dataProp.propertyName == "id") continue
 
-        // Add a constructor parameter for the property
-        constructorBuilder.addParameter(dataProp.propertyName, typeName)
-
-        // For code and id we do not want to store these values since Class "Node" from the cpg
-        // already have them
-        if (!isParent && dataProp.propertyName != "code" && dataProp.propertyName != "name") {
-            // Add a property to the class, initialized from the constructor parameter.
+        // Special handling for 'name' and 'code' properties
+        if (dataProp.propertyName == "name") {
+            needsInitBlock = true
+            fileSpecBuilder.addImport("de.fraunhofer.aisec.cpg.graph", "Name")
+            initBlockBuilder.addStatement(
+                "name?.let { this.name = %T(localName = it) }",
+                ClassName("de.fraunhofer.aisec.cpg.graph", "Name"),
+            )
+            // Always pass name through without storing it
+            constructorBuilder.addParameter("name", typeName)
+        } else if (dataProp.propertyName == "code") {
+            needsInitBlock = true
+            initBlockBuilder.addStatement("code?.let { this.code = it }")
+            // Always pass code through without storing it
+            constructorBuilder.addParameter("code", typeName)
+        } else if (!isParent) {
+            // For own properties: add as val in constructor (stored in class)
             classBuilder.addProperty(
                 PropertySpec.builder(dataProp.propertyName, typeName)
                     .initializer(dataProp.propertyName)
                     .build()
             )
+            constructorBuilder.addParameter(dataProp.propertyName, typeName)
+        } else {
+            // For parent properties: add as regular parameter (not stored in class)
+            constructorBuilder.addParameter(dataProp.propertyName, typeName)
         }
 
         // Add a property to the class, initialized from the constructor parameter.
@@ -395,15 +389,37 @@ private fun addPropertiesToClass(
 
         // Add a constructor parameter for the property.
         if (objectProp.propertyProperty == "hasMultiple") {
-            constructorBuilder.addParameter(
-                objectProp.propertyName,
+            val parameterType =
                 ClassName("kotlin.collections", "MutableList")
-                    .parameterizedBy(typeName.copy(nullable = true)),
-            )
+                    .parameterizedBy(typeName.copy(nullable = true))
+            if (!isParent) {
+                // For own properties: add as property stored in class
+                classBuilder.addProperty(
+                    PropertySpec.builder(objectProp.propertyName, parameterType)
+                        .initializer(objectProp.propertyName)
+                        .build()
+                )
+            }
+            constructorBuilder.addParameter(objectProp.propertyName, parameterType)
         } else if (objectProp.propertyName != "concept") {
             val parameterType =
                 if (objectProp.propertyName == "linkedConcept") typeName
                 else typeName.copy(nullable = true)
+
+            // For own properties: add as property stored in class
+            // For parent properties: just pass through without storing
+            // Special case: linkedConcept should only be stored in Operation class
+            if (
+                !isParent &&
+                    (objectProp.propertyName != "linkedConcept" || className == "Operation")
+            ) {
+                classBuilder.addProperty(
+                    PropertySpec.builder(objectProp.propertyName, parameterType)
+                        .initializer(objectProp.propertyName)
+                        .build()
+                )
+            }
+
             val parameterBuilder =
                 ParameterSpec.builder(objectProp.propertyName, parameterType).apply {
                     if (objectProp.propertyName == "underlyingNode") {
@@ -411,38 +427,6 @@ private fun addPropertiesToClass(
                     }
                 }
             constructorBuilder.addParameter(parameterBuilder.build())
-        }
-
-        if (!isParent) {
-            // Add a property to the class, initialized from the constructor parameter.
-            if (objectProp.propertyProperty == "hasMultiple") {
-                classBuilder.addProperty(
-                    PropertySpec.builder(
-                            objectProp.propertyName,
-                            ClassName("kotlin.collections", "MutableList")
-                                .parameterizedBy(typeName.copy(nullable = true)),
-                        )
-                        .initializer(objectProp.propertyName)
-                        .build()
-                )
-            } else {
-                if (objectProp.propertyName == "linkedConcept") {
-                    classBuilder.addProperty(
-                        PropertySpec.builder(objectProp.propertyName, typeName)
-                            .initializer(objectProp.propertyName)
-                            .build()
-                    )
-                } else {
-                    classBuilder.addProperty(
-                        PropertySpec.builder(
-                                objectProp.propertyName,
-                                typeName.copy(nullable = true),
-                            )
-                            .initializer(objectProp.propertyName)
-                            .build()
-                    )
-                }
-            }
         }
 
         // Add a property to the class, initialized from the constructor parameter.
@@ -459,11 +443,11 @@ private fun addPropertiesToClass(
                 classBuilder.addSuperclassConstructorParameter(objectProp.propertyName).build()
             }
         }
+    }
 
-        // Add init block if needed
-        if (needsInitBlock) {
-            classBuilder.addInitializerBlock(initBlockBuilder.build())
-        }
+    // Add init block if needed (after all properties are processed)
+    if (needsInitBlock) {
+        classBuilder.addInitializerBlock(initBlockBuilder.build())
     }
 }
 
