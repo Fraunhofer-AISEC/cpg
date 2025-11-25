@@ -204,6 +204,10 @@ interface Lattice<T : Lattice.Element> {
         // current basic block that we are currently processing. We select this one with priority
         // over the other options.
         val currentBBEdgesList = mutableListOf<EvaluationOrder>()
+        // The second priority are edges that point to a node within the same loop
+        // A high priority in the SCC-Label indicates a high priority in the queue
+        val sccEdgesQueue =
+            PriorityQueue<Pair<Int, EvaluationOrder>>(compareByDescending { it.first })
         // This list contains the edge(s) that are the next branch(es) to process. We process these
         // after the current basic block has been processed.
         val nextBranchEdgesList = mutableListOf<EvaluationOrder>()
@@ -227,7 +231,9 @@ interface Lattice<T : Lattice.Element> {
                         .map { Pair(it.end, it.start) }
                         .toMutableSet()
             }
-            this[mergePointNextEdge]?.remove(Pair(incomingEdge.start, incomingEdge.end))
+            this[mergePointNextEdge]?.removeIf {
+                it.first == incomingEdge.end && it.second == incomingEdge.start
+            }
         }
 
         fun IdentityHashMap<EvaluationOrder, MutableSet<Pair<Node, Node>>>.removeCandidate():
@@ -251,6 +257,9 @@ interface Lattice<T : Lattice.Element> {
                     // If we have edges in the current basic block, we take these. We prefer to
                     // finish with the whole Basic Block before moving somewhere else.
                     currentBBEdgesList.removeFirst()
+                } else if (sccEdgesQueue.isNotEmpty()) {
+                    // if we have edges pointing into the same SCC, that's our next priority
+                    sccEdgesQueue.poll().second
                 } else if (nextBranchEdgesList.isNotEmpty()) {
                     // If we have points splitting up the EOG, we prefer to process these before
                     // merging the EOG again. This is to hopefully reduce the number of merges that
@@ -328,22 +337,31 @@ interface Lattice<T : Lattice.Element> {
                 if (
                     it !in currentBBEdgesList &&
                         it !in nextBranchEdgesList &&
-                        it !in mergePointsEdgesMap.keys &&
+                        //                        it !in mergePointsEdgesMap.keys &&
                         (isNoBranchingPoint ||
                             oldGlobalIt == null ||
-                            newGlobalIt.compare(oldGlobalIt) == Order.GREATER ||
-                            newGlobalIt.compare(oldGlobalIt) == Order.UNEQUAL)
+                            newGlobalIt.compare(oldGlobalIt) in setOf(Order.GREATER, Order.UNEQUAL))
                 ) {
-                    if (it.start.prevEOGEdges.size > 1) {
+                    if (
+                        it.start.prevEOGEdges.size > 1
+                        // Check also if we are at the beginning of a loop. In this case, we don't
+                        // add the merge point, but instead add the edge that stays in the loop with
+                        // high priority to the edges to be processed
+                        && it.start.nextEOGEdges.none { it.scc != null }
+                    ) {
                         // This edge brings us to a merge point, so we add it to the list of merge
                         // points.
                         mergePointsEdgesMap.removeIncomingEdgeFromMergePoint(it, nextEdge)
                     } else if (nextEdge.end.nextEOGEdges.size > 1) {
-                        // If we have multiple next edges, we add this edge to the list of edges of
-                        // a next basic block.
+                        // If we have multiple next edges, we add the ones that stay inside the loop
+                        // (AKA have an SCC label) to the SCCEdgesList
+                        // The other edges we add to the list of edges of to next basic block
+                        // (outside the loop, or for a branch).
                         // We will process these after the current basic block has been processed
                         // (probably very soon).
-                        nextBranchEdgesList.add(0, it)
+                        val sccPriority = it.scc?.priority
+                        if (sccPriority != null) sccEdgesQueue.add(Pair(sccPriority, it))
+                        else nextBranchEdgesList.add(0, it)
                     } else {
                         // If we have only one next edge, we add it to the current basic block edges
                         // list.

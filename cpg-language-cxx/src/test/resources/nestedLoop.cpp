@@ -14,5 +14,9 @@ int main() {
     }
   }
   printf("test");
+  if ( 2 == 3) 
+    printf("bla");
+  else
+    printf("blubb");
   return 2;
 }
