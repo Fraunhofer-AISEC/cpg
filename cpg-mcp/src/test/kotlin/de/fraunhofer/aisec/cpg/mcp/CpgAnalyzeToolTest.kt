@@ -41,7 +41,8 @@ class CpgAnalyzeToolTest {
         assertEquals(
             setOf(
                 "cpg_translate",
-                "list_passes",
+                "cpg_list_passes",
+                "cpg_run_pass",
                 "cpg_analyze",
                 "cpg_llm_analyze",
                 "cpg_apply_concepts",

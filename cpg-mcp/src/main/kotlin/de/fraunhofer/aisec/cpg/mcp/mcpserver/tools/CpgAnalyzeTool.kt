@@ -252,7 +252,7 @@ fun Server.addCpgTranslate() {
 /** Provide a list of all passes that can be applied to the CPG. */
 fun Server.addListPasses() {
     this.addTool(
-        name = "list_passes",
+        name = "cpg_list_passes",
         description =
             """Provides a list of all available passes that can be applied to the CPG. It also lists dependencies and what kind of node the pass expects."""
                 .trimIndent(),
@@ -398,7 +398,7 @@ fun Server.addListPasses() {
 /** Runs a specified [de.fraunhofer.aisec.cpg.passes.Pass] on a specified [Node]. */
 fun Server.addRunPass() {
     this.addTool(
-        name = "run_pass",
+        name = "cpg_run_pass",
         description =
             """Runs a given Pass on a specified Node. The given node must meet the type of node the pass operates on."""
                 .trimIndent(),

@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgDataflowTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgLlmAnalyzeTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgTranslate
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addListPasses
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addRunPass
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getAllArgs
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.getArgByIndexOrName
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listAvailableConcepts
@@ -49,6 +50,7 @@ fun configureServer(
     configure: Server.() -> Server = {
         this.addCpgTranslate()
         this.addListPasses()
+        this.addRunPass()
         this.addCpgAnalyzeTool()
         this.addCpgLlmAnalyzeTool()
         this.addCpgApplyConceptsTool()
