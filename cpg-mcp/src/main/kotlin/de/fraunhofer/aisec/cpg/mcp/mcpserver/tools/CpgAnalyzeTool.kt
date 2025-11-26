@@ -37,7 +37,9 @@ import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.cpgDescription
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgRunPassPayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.PassInfo
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.runOnCpg
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toNodeInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
 import de.fraunhofer.aisec.cpg.mcp.setupTranslationConfiguration
@@ -67,20 +69,25 @@ import de.fraunhofer.aisec.cpg.passes.TranslationUnitPass
 import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
+import de.fraunhofer.aisec.cpg.passes.consumeTargets
 import de.fraunhofer.aisec.cpg.passes.hardDependencies
 import io.modelcontextprotocol.kotlin.sdk.server.Server
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import java.io.File
 import kotlin.String
 import kotlin.reflect.KClass
+import kotlin.reflect.full.primaryConstructor
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 
 var globalAnalysisResult: TranslationResult? = null
+
+var ctx: TranslationContext? = null
 
 val toolDescription =
     """
@@ -121,7 +128,7 @@ fun Server.addCpgAnalyzeTool() {
         request ->
         try {
             val payload = request.arguments?.toObject<CpgAnalyzePayload>()
-            val analysisResult = runCpgAnalyze(payload, true)
+            val analysisResult = runCpgAnalyze(payload, true, true)
             val jsonResult = Json.encodeToString(analysisResult)
             CallToolResult(content = listOf(TextContent(jsonResult)))
         } catch (e: Exception) {
@@ -132,7 +139,11 @@ fun Server.addCpgAnalyzeTool() {
     }
 }
 
-fun runCpgAnalyze(payload: CpgAnalyzePayload?, runPasses: Boolean): CpgAnalysisResult {
+fun runCpgAnalyze(
+    payload: CpgAnalyzePayload?,
+    runPasses: Boolean,
+    cleanup: Boolean,
+): CpgAnalysisResult {
     val file =
         when {
             payload?.content != null -> {
@@ -162,9 +173,23 @@ fun runCpgAnalyze(payload: CpgAnalyzePayload?, runPasses: Boolean): CpgAnalysisR
             includePaths = emptyList(),
             runPasses = runPasses,
         )
+    config.disableCleanup = !cleanup
+
+    if (ctx != null) {
+        ctx?.executedFrontends?.forEach { frontend ->
+            // If there has been another analysis before, reset the context and clean up all
+            // frontends.
+            frontend.cleanup()
+        }
+
+        ctx = null
+    }
 
     val analyzer = TranslationManager.builder().config(config).build()
-    val result = analyzer.analyze().get()
+    ctx = TranslationContext(config)
+    val result =
+        ctx?.let { ctx -> analyzer.analyze(ctx).get() }
+            ?: throw IllegalStateException("Translation context is not initialized")
 
     // Store the result globally
     globalAnalysisResult = result
@@ -213,7 +238,7 @@ fun Server.addCpgTranslate() {
     ) { request ->
         try {
             val payload = request.arguments?.toObject<CpgAnalyzePayload>()
-            val analysisResult = runCpgAnalyze(payload, false)
+            val analysisResult = runCpgAnalyze(payload, false, false)
             val jsonResult = Json.encodeToString(analysisResult)
             CallToolResult(content = listOf(TextContent(jsonResult)))
         } catch (e: Exception) {
@@ -393,13 +418,115 @@ fun Server.addRunPass() {
                 required = listOf("pass_name", "node_id"),
             ),
     ) { request ->
-        try {
-            TODO()
-            CallToolResult(content = listOf(TextContent("Not implemented yet")))
-        } catch (e: Exception) {
-            CallToolResult(
-                content = listOf(TextContent("Error: ${e.message ?: e::class.simpleName}"))
-            )
+        request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
+            val payload =
+                request.arguments?.toObject<CpgRunPassPayload>()
+                    ?: return@runOnCpg CallToolResult(
+                        content =
+                            listOf(TextContent("Invalid or missing payload for run_pass tool."))
+                    )
+            val passClass =
+                (Class.forName(payload.passName).kotlin as? KClass<out Pass<*>>)
+                    ?: return@runOnCpg CallToolResult(
+                        content =
+                            listOf(TextContent("Could not find the pass ${payload.passName}."))
+                    )
+
+            // TODO: Check if all required passes have been run before executing this pass.
+
+            ctx?.let { ctx ->
+                val prototype =
+                    passClass.primaryConstructor?.call(ctx)
+                        ?: return@runOnCpg CallToolResult(
+                            content =
+                                listOf(
+                                    TextContent("Could not create the pass ${payload.passName}.")
+                                )
+                        )
+
+                val node = result.nodes.find { it.id.toString() == payload.nodeId }
+                when (prototype) {
+                    is TranslationResultPass ->
+                        if (node is TranslationResult) {
+                            consumeTargets(
+                                cls = prototype::class,
+                                ctx = ctx,
+                                targets = listOf(node),
+                                executedFrontends = ctx.executedFrontends,
+                            )
+                        } else {
+                            CallToolResult(
+                                content =
+                                    listOf(
+                                        TextContent(
+                                            "Expected node of type TranslationResult for pass ${payload.passName}, but got ${node?.javaClass?.simpleName}"
+                                        )
+                                    )
+                            )
+                        }
+                    is ComponentPass ->
+                        if (node is Component) {
+                            consumeTargets(
+                                cls = prototype::class,
+                                ctx = ctx,
+                                targets = listOf(node),
+                                executedFrontends = ctx.executedFrontends,
+                            )
+                        } else {
+                            CallToolResult(
+                                content =
+                                    listOf(
+                                        TextContent(
+                                            "Expected node of type Component for pass ${payload.passName}, but got ${node?.javaClass?.simpleName}"
+                                        )
+                                    )
+                            )
+                        }
+                    is TranslationUnitPass ->
+                        if (node is TranslationUnitDeclaration) {
+                            consumeTargets(
+                                cls = prototype::class,
+                                ctx = ctx,
+                                targets = listOf(node),
+                                executedFrontends = ctx.executedFrontends,
+                            )
+                        } else {
+                            CallToolResult(
+                                content =
+                                    listOf(
+                                        TextContent(
+                                            "Expected node of type TranslationUnitDeclaration for pass ${payload.passName}, but got ${node?.javaClass?.simpleName}"
+                                        )
+                                    )
+                            )
+                        }
+                    is EOGStarterPass -> {
+                        if (node is EOGStarterHolder) {
+                            consumeTargets(
+                                cls = prototype::class,
+                                ctx = ctx,
+                                targets = listOf(node),
+                                executedFrontends = ctx.executedFrontends,
+                            )
+                        } else {
+                            CallToolResult(
+                                content =
+                                    listOf(
+                                        TextContent(
+                                            "Expected node of type EOGStarterHolder for pass ${payload.passName}, but got ${node?.javaClass?.simpleName}"
+                                        )
+                                    )
+                            )
+                        }
+                    }
+                }
+
+                CallToolResult(content = listOf(TextContent("Not implemented yet")))
+            }
+                ?: return@runOnCpg CallToolResult(
+                    content =
+                        listOf(TextContent("Cannot run run_pass without translation context."))
+                )
         }
     }
 }
