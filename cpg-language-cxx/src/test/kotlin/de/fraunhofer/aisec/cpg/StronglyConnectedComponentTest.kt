@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
@@ -50,17 +51,21 @@ internal class StronglyConnectedComponentTest : BaseTest() {
         val mainFD = result.functions.singleOrNull { it.name.localName == "main" }
         assertNotNull(mainFD)
 
-        ///////// First, check on node-level
-        // All 3 ForStatements should have one edge with an SCC of priority respective to their
-        // level, and one without SCC
         for (level in 0..2) {
             val forStmt = mainFD.allChildren<ForStatement>()[level]
             assertNotNull(forStmt)
-            // The level 0 forStatement node should have one nextEOG edge with an SCC-property
-            // priority
-            // 0, and one without (exiting the loop)
+            ///////// First, check on node-level
+            // All 3 ForStatements should have one edge with an SCC of priority respective to their
+            // level, and one without SCC (exiting the loop)
             assertEquals(1, forStmt.nextEOGEdges.filter { it.scc?.priority == level }.size)
             assertEquals(1, forStmt.nextEOGEdges.filter { it.scc == null }.size)
+
+            // The respective merge points are the conditions. Those should have one incoming edge
+            // with SCC-Label, and one without
+            val mergeNode = (forStmt.condition as BinaryOperator).lhs
+            assertNotNull(mergeNode)
+            assertEquals(1, mergeNode.prevEOGEdges.filter { it.scc?.priority == level }.size)
+            assertEquals(1, mergeNode.prevEOGEdges.filter { it.scc == null }.size)
 
             // The same applies on BB-Level
             val forLoopBlock = forStmt.basicBlock.singleOrNull()
@@ -68,6 +73,11 @@ internal class StronglyConnectedComponentTest : BaseTest() {
             // The forLoop BB has 2 next Edges. On into the loop (with SCC), and one to the outside
             assertEquals(1, forLoopBlock.nextEOGEdges.filter { it.scc?.priority == level }.size)
             assertEquals(1, forLoopBlock.nextEOGEdges.filter { it.scc == null }.size)
+
+            val mergeBlock = mergeNode.basicBlock.singleOrNull()
+            assertNotNull(mergeBlock)
+            assertEquals(1, mergeBlock.prevEOGEdges.filter { it.scc?.priority == level }.size)
+            assertEquals(1, mergeBlock.prevEOGEdges.filter { it.scc == null }.size)
         }
     }
 }

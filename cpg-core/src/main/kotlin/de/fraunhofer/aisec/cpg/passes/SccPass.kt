@@ -98,6 +98,18 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 }
                 println()
 
+                val loopEntryElement = sccElements.single { it.prevEOG.any { it !in sccElements } }
+                loopEntryElement.prevEOGEdges
+                    .single { edge -> edge.start in sccElements }
+                    .let { edge ->
+                        edge.scc = scc
+                        // also label the respective edges between node
+                        (edge.start as? BasicBlock)?.endNode?.nextEOGEdges?.single()?.let { nodeEdge
+                            ->
+                            nodeEdge.scc = scc
+                        }
+                    }
+
                 // label the edge of the element that exits the SCC
                 // Find the element that points to the outside of the SCC
                 val loopExitElement =
@@ -110,11 +122,10 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                     .let { edge ->
                         edge.scc = scc
                         // also label the respective edges between node
-                        (edge.start as? BasicBlock)
-                            ?.endNode
-                            ?.nextEOGEdges
-                            ?.single { it.end == (edge.end as? BasicBlock)?.startNode }
-                            ?.let { nodeEdge -> nodeEdge.scc = scc }
+                        (edge.end as? BasicBlock)?.startNode?.prevEOGEdges?.single()?.let { nodeEdge
+                            ->
+                            nodeEdge.scc = scc
+                        }
                     }
 
                 //// find nested loops

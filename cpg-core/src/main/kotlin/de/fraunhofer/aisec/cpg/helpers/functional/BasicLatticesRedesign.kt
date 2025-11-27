@@ -345,9 +345,8 @@ interface Lattice<T : Lattice.Element> {
                     if (
                         it.start.prevEOGEdges.size > 1
                         // Check also if we are at the beginning of a loop. In this case, we don't
-                        // add the merge point, but instead add the edge that stays in the loop with
-                        // high priority to the edges to be processed
-                        && it.start.nextEOGEdges.none { it.scc != null }
+                        // add the merge point
+                        && it.start.prevEOGEdges.none { it.scc != null }
                     ) {
                         // This edge brings us to a merge point, so we add it to the list of merge
                         // points.
