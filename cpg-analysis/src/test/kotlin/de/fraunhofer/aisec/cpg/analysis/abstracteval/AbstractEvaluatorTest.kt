@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.analysis.abstracteval
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.value.IntegerIntervalEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.testcases.AbstractEvaluationTests
 import kotlin.test.Test
 import kotlin.test.assertEquals

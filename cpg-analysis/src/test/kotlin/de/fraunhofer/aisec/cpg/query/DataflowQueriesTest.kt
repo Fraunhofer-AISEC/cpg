@@ -26,11 +26,11 @@
 package de.fraunhofer.aisec.cpg.query
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import de.fraunhofer.aisec.cpg.testcases.FlowQueriesTest
 import kotlin.test.Test

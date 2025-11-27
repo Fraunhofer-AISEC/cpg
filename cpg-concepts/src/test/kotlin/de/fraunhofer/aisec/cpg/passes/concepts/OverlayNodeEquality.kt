@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.passes.concepts
 
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.concepts.file.File
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI

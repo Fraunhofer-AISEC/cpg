@@ -27,10 +27,10 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
 import java.util.IdentityHashMap
 import kotlin.collections.set
 

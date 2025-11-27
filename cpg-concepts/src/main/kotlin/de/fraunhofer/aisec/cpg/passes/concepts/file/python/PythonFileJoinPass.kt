@@ -27,13 +27,13 @@ package de.fraunhofer.aisec.cpg.passes.concepts.file.python
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.concepts.file.File
 import de.fraunhofer.aisec.cpg.graph.concepts.file.FileLikeObject
 import de.fraunhofer.aisec.cpg.graph.concepts.file.FileTempFileStatus
 import de.fraunhofer.aisec.cpg.graph.concepts.file.newFile
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.concepts.EOGConceptPass

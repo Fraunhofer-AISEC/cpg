@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ParameterDeclaration
 
 /**
  * Represents a scope that is only visible in the current function. This is usually used to hold

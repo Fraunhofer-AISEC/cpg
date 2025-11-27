@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.passes.EOGStarterPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 

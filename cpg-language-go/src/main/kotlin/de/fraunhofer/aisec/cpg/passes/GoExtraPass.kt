@@ -28,11 +28,18 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.golang.*
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.ast.AstNode
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.InitializerListExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.KeyValueExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -79,19 +86,20 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  * ```
  *
  * In the frontend we only do the assignment, therefore we need to create a new
- * [VariableDeclaration] for `b` and inject a [DeclarationStatement].
+ * [ast.declarations.VariableDeclaration] for `b` and inject a [DeclarationStatement].
  *
  * ## Adjust Names of Keys in Key Value Expressions to FQN
  *
- * This pass also adjusts the names of keys in a [KeyValueExpression], which is part of an
- * [InitializerListExpression] to a fully-qualified name that contains the name of the [ObjectType]
- * that the expression is creating. This way we can resolve the static references to the field to
- * the actual field.
+ * This pass also adjusts the names of keys in a [ast.statements.expressions.KeyValueExpression],
+ * which is part of an [ast.statements.expressions.InitializerListExpression] to a fully-qualified
+ * name that contains the name of the [ObjectType] that the expression is creating. This way we can
+ * resolve the static references to the field to the actual field.
  *
  * ## Add Methods of Embedded Structs to the Record's Scope
  *
- * This pass also adds methods of [RecordDeclaration.embeddedStructs] into the scope of the
- * [RecordDeclaration] itself, so that it can be resolved using the regular [SymbolResolver].
+ * This pass also adds methods of [ast.declarations.RecordDeclaration.embeddedStructs] into the
+ * scope of the [ast.declarations.RecordDeclaration] itself, so that it can be resolved using the
+ * regular [SymbolResolver].
  */
 @ExecuteBefore(SymbolResolver::class)
 @ExecuteBefore(EvaluationOrderGraphPass::class)
@@ -126,8 +134,8 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * This function adds methods of [RecordDeclaration.embeddedStructs] into the scope of the
-     * struct itself, so we can resolve method calls of embedded structs.
+     * This function adds methods of [ast.declarations.RecordDeclaration.embeddedStructs] into the
+     * scope of the struct itself, so we can resolve method calls of embedded structs.
      *
      * For example, if a struct embeds another struct (see https://go.dev/ref/spec#Struct_types), we
      * can call any methods of the embedded struct on the one that embeds it:
@@ -229,8 +237,9 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * handleInitializerListExpression changes the references of keys in a [KeyValueExpression] to
-     * include the object it is creating as a parent name.
+     * handleInitializerListExpression changes the references of keys in a
+     * [ast.statements.expressions.KeyValueExpression] to include the object it is creating as a
+     * parent name.
      */
     private fun handleInitializerListExpression(node: InitializerListExpression) {
         var type: Type? = node.type
@@ -335,8 +344,8 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * This function gets called for every [AssignExpression], to check, whether we need to
-     * implicitly define any variables assigned in the statement.
+     * This function gets called for every [ast.statements.expressions.AssignExpression], to check,
+     * whether we need to implicitly define any variables assigned in the statement.
      */
     private fun handleAssign(assign: AssignExpression) {
         // Only filter nodes that could potentially declare
@@ -348,7 +357,12 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         for ((idx, expr) in assign.lhs.withIndex()) {
             if (expr is Reference) {
                 // And try to resolve it as a variable
-                val ref = scopeManager.lookupSymbolByNodeNameOfType<VariableDeclaration>(expr)
+                val ref =
+                    scopeManager.lookupSymbolByNodeNameOfType<
+                        de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
+                    >(
+                        expr
+                    )
                 if (ref.isEmpty()) {
                     // We need to implicitly declare it, if it's not declared before.
                     val decl = newVariableDeclaration(expr.name, expr.autoType())

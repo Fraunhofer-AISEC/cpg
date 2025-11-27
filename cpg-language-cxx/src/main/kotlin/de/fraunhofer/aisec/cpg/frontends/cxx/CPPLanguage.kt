@@ -29,17 +29,22 @@ import de.fraunhofer.aisec.cpg.CallResolutionResult
 import de.fraunhofer.aisec.cpg.SignatureMatches
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
-import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
-import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.ast.AstNode
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TemplateDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.passes.*
@@ -247,7 +252,11 @@ open class CPPLanguage() :
         needsExactMatch: Boolean,
     ): Pair<Boolean, List<FunctionDeclaration>> {
         val instantiationCandidates =
-            ctx.scopeManager.lookupSymbolByNodeNameOfType<FunctionTemplateDeclaration>(templateCall)
+            ctx.scopeManager.lookupSymbolByNodeNameOfType<
+                de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionTemplateDeclaration
+            >(
+                templateCall
+            )
         for (functionTemplateDeclaration in instantiationCandidates) {
             val initializationType =
                 mutableMapOf<AstNode?, TemplateDeclaration.TemplateInitialization?>()

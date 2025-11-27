@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.evaluation
 import de.fraunhofer.aisec.cpg.frontends.TestHandler
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
 import kotlin.test.*
 
 class MultiValueEvaluatorTest {

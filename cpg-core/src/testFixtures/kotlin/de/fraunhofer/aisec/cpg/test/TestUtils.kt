@@ -32,11 +32,15 @@ import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.get
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.test.TestUtils.ENFORCE_MEMBER_EXPRESSION
 import de.fraunhofer.aisec.cpg.test.TestUtils.ENFORCE_REFERENCES
@@ -275,9 +279,11 @@ fun assertUsageOf(usingNode: Node?, usedNode: Node?) {
 
 /**
  * Asserts that `usingNode` uses/references the provided `usedBase` and `usedMember`. If
- * [ENFORCE_MEMBER_EXPRESSION] is true, `usingNode` must be a [MemberExpression] where
- * [MemberExpression.base] uses `usedBase` and [ ][MemberExpression.refersTo] uses `usedMember`.
- * Using is checked as preformed per [assertUsageOf]
+ * [ENFORCE_MEMBER_EXPRESSION] is true, `usingNode` must be a
+ * [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression] where
+ * [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression.base] uses `usedBase`
+ * and [ ][MemberExpression.refersTo] uses `usedMember`. Using is checked as preformed per
+ * [assertUsageOf]
  *
  * @param usingNode
  * - Node that uses some member
@@ -317,7 +323,8 @@ fun assertLocalName(localName: String, node: Node?, message: String? = null) {
 
 /**
  * Asserts that
- * - the expression in [expr] is a [Literal] and
+ * - the expression in [expr] is a
+ *   [de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal] and
  * - that it's value is equal to [expected].
  *
  * Guarantees that [expr] is not null if the assertion on the value succeeds.

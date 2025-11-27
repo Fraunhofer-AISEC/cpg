@@ -30,10 +30,10 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import java.util.*

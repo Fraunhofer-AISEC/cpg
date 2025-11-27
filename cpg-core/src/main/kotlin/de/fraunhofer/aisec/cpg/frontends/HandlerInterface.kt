@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends
 
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
 
 /**
  * This functional interface specifies how a handler class should translate raw AST nodes into CPG

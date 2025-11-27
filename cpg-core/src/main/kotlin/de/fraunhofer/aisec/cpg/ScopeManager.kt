@@ -27,10 +27,28 @@ package de.fraunhofer.aisec.cpg
 
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TemplateDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TypedefDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.AssertStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.CatchClause
+import de.fraunhofer.aisec.cpg.graph.ast.statements.DoStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ForEachStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ForStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.LabelStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.SwitchStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.TryStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.WhileStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CollectionComprehension
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.scopes.*
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -46,12 +64,13 @@ import org.slf4j.LoggerFactory
  * identify outer scopes that should be the target of a jump (continue, break, throw).
  *
  * Language frontends MUST call [enterScope] and [leaveScope] when they encounter nodes that modify
- * the scope and [resetToGlobal] when they first handle a new [TranslationUnitDeclaration].
- * Afterward the currently valid "stack" of scopes within the tree can be accessed.
+ * the scope and [resetToGlobal] when they first handle a new
+ * [ast.declarations.TranslationUnitDeclaration]. Afterward the currently valid "stack" of scopes
+ * within the tree can be accessed.
  *
- * If a language frontend encounters a [Declaration] node, it MUST call [addDeclaration], rather
- * than adding the declaration to the node itself. This ensures that all declarations are properly
- * registered in the scope map and can be resolved later.
+ * If a language frontend encounters a [ast.declarations.Declaration] node, it MUST call
+ * [addDeclaration], rather than adding the declaration to the node itself. This ensures that all
+ * declarations are properly registered in the scope map and can be resolved later.
  */
 class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, ContextProvider {
 
@@ -221,10 +240,10 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * on-the-fly, if they do not exist.
      *
      * The scope manager has an internal association between the type of scope, e.g. a [LocalScope]
-     * and the CPG node it represents, e.g. a [Block].
+     * and the CPG node it represents, e.g. a [ast.statements.expressions.Block].
      *
-     * Afterward, all calls to [addDeclaration] will be distributed to the [DeclarationHolder] that
-     * is currently in-scope.
+     * Afterward, all calls to [addDeclaration] will be distributed to the [ast.DeclarationHolder]
+     * that is currently in-scope.
      */
     fun enterScope(nodeToScope: Node) {
         // check, if the node does not have an entry in the scope map
@@ -279,12 +298,13 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * A small internal helper function used by [enterScope] to create a [NamespaceScope].
      *
      * The issue with name scopes, such as a namespace, is that it can exist across several files,
-     * i.e. translation units, represented by different [NamespaceDeclaration] nodes. But, in order
-     * to make namespace resolution work across files, only one [NameScope] must exist that holds
-     * all declarations, such as classes, independently of the translation units. Therefore, we need
-     * to check, whether such as node already exists. If it does already exist:
-     * - we update the scope map so that the current [NamespaceDeclaration] points to the existing
-     *   [NamespaceScope]
+     * i.e. translation units, represented by different [ast.declarations.NamespaceDeclaration]
+     * nodes. But, in order to make namespace resolution work across files, only one [NameScope]
+     * must exist that holds all declarations, such as classes, independently of the translation
+     * units. Therefore, we need to check, whether such as node already exists. If it does already
+     * exist:
+     * - we update the scope map so that the current [ast.declarations.NamespaceDeclaration] points
+     *   to the existing [NamespaceScope]
      * - we return null, indicating to [enterScope], that no new scope needs to be pushed by
      *   [enterScope].
      *
@@ -350,8 +370,9 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
     }
 
     /**
-     * This function MUST be called when a language frontend first handles a [Declaration]. It adds
-     * a declaration to the scope manager, taking into account the currently active scope.
+     * This function MUST be called when a language frontend first handles a
+     * [ast.declarations.Declaration]. It adds a declaration to the scope manager, taking into
+     * account the currently active scope.
      *
      * @param declaration the declaration to add
      */
@@ -425,9 +446,10 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
     }
 
     /**
-     * This function retrieves the [LabelStatement] associated with the [labelString]. This depicts
-     * the feature of some languages to attach a label to a point in the source code and use it as
-     * the target for control flow manipulation, e.g. [BreakStatement], [GotoStatement].
+     * This function retrieves the [ast.statements.LabelStatement] associated with the
+     * [labelString]. This depicts the feature of some languages to attach a label to a point in the
+     * source code and use it as the target for control flow manipulation, e.g.
+     * [ast.statements.BreakStatement], [ast.statements.GotoStatement].
      */
     fun getLabelStatement(labelString: String?): LabelStatement? {
         if (labelString == null) return null
@@ -552,7 +574,8 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
     /**
      * This function looks up a [Scope] by its [name] relative to [startScope]. The reason why this
      * is necessary is that the [name] could potentially include aliases set by an
-     * [ImportDeclaration] and therefore can not directly be found in the [nameScopeMap].
+     * [ast.declarations.ImportDeclaration] and therefore can not directly be found in the
+     * [nameScopeMap].
      *
      * It works by splitting the name into its parts and then iteratively looking up the scope for
      * each part, starting at the "beginning". For example if we have a name `A::B::C`, we first
@@ -647,7 +670,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
     }
 
     /**
-     * Retrieves the [RecordDeclaration] for the given name in the given scope.
+     * Retrieves the [ast.declarations.RecordDeclaration] for the given name in the given scope.
      *
      * @param name the name
      * * @param scope the scope. Default is [currentScope]
@@ -867,8 +890,8 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
     }
 
     /**
-     * Returns the [TranslationUnitDeclaration] that should be used for inference, especially for
-     * global declarations.
+     * Returns the [ast.declarations.TranslationUnitDeclaration] that should be used for inference,
+     * especially for global declarations.
      *
      * @param TypeToInfer the type of the node that should be inferred
      * @param source the source that was responsible for the inference
@@ -883,9 +906,10 @@ fun <T : Declaration> ContextProvider.declare(declaration: T): T {
 }
 
 /**
- * [SignatureResult] will be the result of the function [FunctionDeclaration.matchesSignature] which
- * calculates whether the provided [CallExpression] will match the signature of the current
- * [FunctionDeclaration].
+ * [SignatureResult] will be the result of the function
+ * [ast.declarations.FunctionDeclaration.matchesSignature] which calculates whether the provided
+ * [ast.statements.expressions.CallExpression] will match the signature of the current
+ * [ast.declarations.FunctionDeclaration].
  */
 sealed class SignatureResult(open val casts: List<CastResult>? = null) {
     val ranking: Int
@@ -980,15 +1004,19 @@ fun FunctionDeclaration.matchesSignature(
  * [bestViable]) of the call resolution.
  */
 data class CallResolutionResult(
-    /** The original expression that triggered the resolution. Most likely a [CallExpression]. */
+    /**
+     * The original expression that triggered the resolution. Most likely a
+     * [ast.statements.expressions.CallExpression].
+     */
     val source: Expression,
 
     /** The arguments that were supplied to the expression. */
     val arguments: List<Expression>,
 
     /**
-     * A set of candidate symbols we discovered based on the [CallExpression.callee] (using
-     * [ScopeManager.lookupSymbolByName]), more specifically a list of [FunctionDeclaration] nodes.
+     * A set of candidate symbols we discovered based on the
+     * [ast.statements.expressions.CallExpression.callee] (using [ScopeManager.lookupSymbolByName]),
+     * more specifically a list of [ast.declarations.FunctionDeclaration] nodes.
      */
     var candidateFunctions: Set<FunctionDeclaration>,
 
@@ -999,7 +1027,8 @@ data class CallResolutionResult(
 
     /**
      * A helper map to store the [SignatureResult] of each call to
-     * [FunctionDeclaration.matchesSignature] for each function in [viableFunctions].
+     * [ast.declarations.FunctionDeclaration.matchesSignature] for each function in
+     * [viableFunctions].
      */
     var signatureResults: Map<FunctionDeclaration, SignatureResult>,
 
@@ -1030,8 +1059,8 @@ data class CallResolutionResult(
          * Ideally, we have only one function in [bestViable], but it could be that we still have
          * multiple functions in this list. The most common scenario for this is if we have a member
          * call to an interface, and we know at least partially which implemented classes could be
-         * in the [MemberExpression.base]. In this case, all best viable functions of each of the
-         * implemented classes are contained in [bestViable].
+         * in the [ast.statements.expressions.MemberExpression.base]. In this case, all best viable
+         * functions of each of the implemented classes are contained in [bestViable].
          */
         SUCCESSFUL,
 

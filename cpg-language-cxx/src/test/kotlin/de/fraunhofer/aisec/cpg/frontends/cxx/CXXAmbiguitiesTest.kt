@@ -26,9 +26,11 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ProblemDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CastExpression
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.Test
@@ -80,7 +82,8 @@ class CXXAmbiguitiesTest {
 
     /**
      * In CXX there is an ambiguity with the statement: "(A)(B);" 1) If A is a function pointer,
-     * this is a [CallExpression] 2) If A is a type, this is a [CastExpression]
+     * this is a [ast.statements.expressions.CallExpression] 2) If A is a type, this is a
+     * [ast.statements.expressions.CastExpression]
      */
     @Test
     fun testFunctionCallOrTypeCast() {
@@ -119,7 +122,8 @@ class CXXAmbiguitiesTest {
 
     /**
      * In CXX there is an ambiguity with the statement: "(A.B)(C);" 1) If B is a method, this is a
-     * [MemberCallExpression] 2) if B is a function pointer, this is a [CallExpression].
+     * [ast.statements.expressions.MemberCallExpression] 2) if B is a function pointer, this is a
+     * [ast.statements.expressions.CallExpression].
      *
      * Function pointer as a struct member are currently not supported in the cpg. This test case
      * will just ensure that there will be no crash when parsing such a statement. When adding this

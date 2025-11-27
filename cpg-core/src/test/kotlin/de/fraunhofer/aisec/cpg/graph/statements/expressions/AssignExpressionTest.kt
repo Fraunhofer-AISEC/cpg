@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.builder.function
 import de.fraunhofer.aisec.cpg.graph.builder.translationResult
 import de.fraunhofer.aisec.cpg.graph.builder.translationUnit

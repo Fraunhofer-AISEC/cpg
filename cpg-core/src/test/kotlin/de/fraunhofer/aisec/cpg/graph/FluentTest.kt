@@ -28,16 +28,22 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CollectionComprehension
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ComprehensionExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.LocalScope
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
@@ -122,7 +128,13 @@ class FluentTest {
         // The "then" should have a call to "printf" with argument "then"
         var printf = ifStatement.thenStatement.calls["printf"]
         assertNotNull(printf)
-        assertEquals("then", printf.arguments[0]<Literal<*>>()?.value)
+        assertEquals(
+            "then",
+            printf.arguments[0]<
+                    de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal<*>
+                >()
+                ?.value,
+        )
 
         // The "else" contains another if (else-if) and a call to "printf" with argument "elseIf"
         val elseIf = ifStatement.elseStatement as? IfStatement
@@ -130,11 +142,23 @@ class FluentTest {
 
         printf = elseIf.thenStatement.calls["printf"]
         assertNotNull(printf)
-        assertEquals("elseIf", printf.arguments[0]<Literal<*>>()?.value)
+        assertEquals(
+            "elseIf",
+            printf.arguments[0]<
+                    de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal<*>
+                >()
+                ?.value,
+        )
 
         printf = elseIf.elseStatement.calls["printf"]
         assertNotNull(printf)
-        assertEquals("else", printf.arguments[0]<Literal<*>>()?.value)
+        assertEquals(
+            "else",
+            printf.arguments[0]<
+                    de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal<*>
+                >()
+                ?.value,
+        )
 
         var ref = condition.lhs<Reference>()
         assertNotNull(ref)

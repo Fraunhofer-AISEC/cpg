@@ -27,8 +27,17 @@ package de.fraunhofer.aisec.cpg.enhancements.templates
 
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ConstructorDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordTemplateDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TemplateDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TypeParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.NewExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.TypeExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType

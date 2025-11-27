@@ -29,6 +29,12 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.assumptions.addAssumptionDependence
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.OperatingSystemArchitecture
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.POSIX
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.Win32
@@ -38,13 +44,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadLibrary
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadSymbol
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.newLoadLibrary
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.newLoadSymbol
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.DynamicInvokeResolver

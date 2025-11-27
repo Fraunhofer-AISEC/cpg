@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.scopes
 
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
 
 /**
  * Represents a scope that is only visible in the current file. This is usually used in programming

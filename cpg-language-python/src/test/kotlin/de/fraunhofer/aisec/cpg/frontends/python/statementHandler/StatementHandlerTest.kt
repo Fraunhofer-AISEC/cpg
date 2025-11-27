@@ -28,10 +28,10 @@ package de.fraunhofer.aisec.cpg.frontends.python.statementHandler
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.AssertStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.DeleteExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.AssertStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.DeleteExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.SubscriptExpression
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path

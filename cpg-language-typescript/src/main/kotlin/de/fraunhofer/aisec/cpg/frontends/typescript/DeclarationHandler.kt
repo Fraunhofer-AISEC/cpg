@@ -27,7 +27,15 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ProblemDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.VariableDeclaration
 
 class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
     Handler<Declaration, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemDeclaration, lang) {

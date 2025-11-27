@@ -27,12 +27,12 @@ package de.fraunhofer.aisec.cpg.passes.concepts
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.edges.flows.insertNodeAfterwardInEOGPath
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice

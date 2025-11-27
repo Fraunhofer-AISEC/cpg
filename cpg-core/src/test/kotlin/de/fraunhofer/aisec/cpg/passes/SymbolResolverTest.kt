@@ -27,10 +27,10 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ReferenceTag
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ConstructExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ReferenceTag
 import de.fraunhofer.aisec.cpg.test.assertInvokes
 import de.fraunhofer.aisec.cpg.test.assertRefersTo
 import kotlin.test.Test

@@ -27,11 +27,11 @@ package de.fraunhofer.aisec.cpg.passes.concepts.config.ini
 
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.conceptNodes
 import de.fraunhofer.aisec.cpg.graph.concepts.config.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass

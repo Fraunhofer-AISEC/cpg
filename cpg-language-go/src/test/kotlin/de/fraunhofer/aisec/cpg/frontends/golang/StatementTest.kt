@@ -26,8 +26,18 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.ast.statements.BreakStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.CaseStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ContinueStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.DefaultStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.LabelStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.SwitchStatement
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.Test

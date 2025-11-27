@@ -26,12 +26,11 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.builder.plus
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextIn
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

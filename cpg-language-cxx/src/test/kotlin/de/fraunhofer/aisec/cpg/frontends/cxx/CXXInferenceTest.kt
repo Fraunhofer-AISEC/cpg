@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.types.BooleanType
 import de.fraunhofer.aisec.cpg.test.*

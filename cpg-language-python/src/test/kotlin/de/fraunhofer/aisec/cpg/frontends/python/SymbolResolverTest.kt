@@ -26,11 +26,11 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberCallExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertFullName
 import de.fraunhofer.aisec.cpg.test.assertNotRefersTo

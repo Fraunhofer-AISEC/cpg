@@ -27,10 +27,10 @@ package de.fraunhofer.aisec.cpg.frontends.jvm
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.statements.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.AssignExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.*
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.AssignExpression
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.ast.statements.expressions.ProblemExpression
 import kotlin.jvm.optionals.getOrNull
 import sootup.core.jimple.common.stmt.*
 import sootup.core.model.Body

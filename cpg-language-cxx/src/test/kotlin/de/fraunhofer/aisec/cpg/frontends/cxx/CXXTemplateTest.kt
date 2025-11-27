@@ -25,7 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
-import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
+import de.fraunhofer.aisec.cpg.graph.ast.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.methods
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
