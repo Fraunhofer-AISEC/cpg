@@ -1,6 +1,6 @@
 #include<stdio.h>
 
-int main() {
+int nested() {
   if ( 1 == 2 ) {
     printf("huh?");
   } else {
@@ -19,4 +19,12 @@ int main() {
   else
     printf("blubb");
   return 2;
+}
+
+int breakloop() {
+  for (int i = 0; i< 5; i++) {
+    printf("a");
+    if ( 1 == 2) break;
+  }
+  printf("done");
 }

@@ -40,7 +40,7 @@ import org.junit.jupiter.api.assertNotNull
 internal class StronglyConnectedComponentTest : BaseTest() {
     @Test
     fun testNestedLoop() {
-        val file = File("src/test/resources/nestedLoop.cpp")
+        val file = File("src/test/resources/sccTest.cpp")
         val result =
             analyze(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
@@ -48,11 +48,11 @@ internal class StronglyConnectedComponentTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val mainFD = result.functions.singleOrNull { it.name.localName == "main" }
-        assertNotNull(mainFD)
+        val nestedFD = result.functions.singleOrNull { it.name.localName == "nested" }
+        assertNotNull(nestedFD)
 
         for (level in 0..2) {
-            val forStmt = mainFD.allChildren<ForStatement>()[level]
+            val forStmt = nestedFD.allChildren<ForStatement>()[level]
             assertNotNull(forStmt)
             ///////// First, check on node-level
             // All 3 ForStatements should have one edge with an SCC of priority respective to their

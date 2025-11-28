@@ -98,49 +98,56 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 }
                 println()
 
-                val loopEntryElement = sccElements.single { it.prevEOG.any { it !in sccElements } }
-                loopEntryElement.prevEOGEdges
-                    .single { edge -> edge.start in sccElements }
-                    .let { edge ->
-                        edge.scc = scc
-                        // also label the respective edges between node
-                        (edge.start as? BasicBlock)?.endNode?.nextEOGEdges?.single()?.let { nodeEdge
-                            ->
-                            nodeEdge.scc = scc
+                val loopEntryElements = sccElements.filter { it.prevEOG.any { it !in sccElements } }
+                loopEntryElements.forEach { loopEntryElement ->
+                    loopEntryElement.prevEOGEdges
+                        .filter { edge -> edge.start in sccElements }
+                        .forEach { edge ->
+                            edge.scc = scc
+                            // also label the respective edges between node
+                            (edge.start as? BasicBlock)?.endNode?.nextEOGEdges?.forEach { nodeEdge
+                                ->
+                                nodeEdge.scc = scc
+                            }
                         }
-                    }
+                }
 
-                // label the edge of the element that exits the SCC
-                // Find the element that points to the outside of the SCC
-                val loopExitElement =
-                    sccElements.single { it.nextEOG.any { nextEOG -> nextEOG !in sccElements } }
+                // label the edge of elements that exit the SCC
+                // Find elements that have edges pointing to the outside of the SCC
+                val loopExitElements =
+                    sccElements.filter { it.nextEOG.any { nextEOG -> nextEOG !in sccElements } }
 
-                // get the edge that's part of the SCC (AKA points to an element on the
-                // stack) and label it
-                loopExitElement.nextEOGEdges
-                    .single { edge -> edge.end in sccElements }
-                    .let { edge ->
-                        edge.scc = scc
-                        // also label the respective edges between node
-                        (edge.end as? BasicBlock)?.startNode?.prevEOGEdges?.single()?.let { nodeEdge
-                            ->
-                            nodeEdge.scc = scc
+                // get the edges that are part of the SCC (AKA points to an element on the
+                // stack) and label them
+                loopExitElements.forEach { loopExitElement ->
+                    loopExitElement.nextEOGEdges
+                        .filter { edge -> edge.end in sccElements }
+                        .forEach { edge ->
+                            edge.scc = scc
+                            // also label the respective edges between node
+                            (edge.end as? BasicBlock)?.startNode?.prevEOGEdges?.forEach { nodeEdge
+                                ->
+                                nodeEdge.scc = scc
+                            }
                         }
-                    }
+                }
 
                 //// find nested loops
-                // We should always first find the outer loop. Now let's see if the elements in the
-                // SCC again contain a loop if we remove the exit node
-                val blackList = tarjanInfoMap[level]!!.blackList.toMutableList()
-                val innerLevel = level + 1
-                // blacklist the exitElement and see if we still have a loop, that would be an
-                // inner loop
-                blackList.add(loopExitElement)
-                sccElements.remove(loopExitElement)
-                tarjanInfoMap.computeIfAbsent(innerLevel) { tarjanInfo(blackList) }
-                sccElements.forEach { element ->
-                    if (element !in tarjanInfoMap[innerLevel]?.visited!!) {
-                        tarjan(element, innerLevel)
+                if (loopEntryElements.isNotEmpty() && loopExitElements.isNotEmpty()) {
+                    // We should always first find the outer loop. Now let's see if the elements in
+                    // the
+                    // SCC again contain a loop if we remove the exit node
+                    val blackList = tarjanInfoMap[level]!!.blackList.toMutableList()
+                    val innerLevel = level + 1
+                    // blacklist the exitElement and see if we still have a loop, that would be an
+                    // inner loop
+                    blackList.addAll(loopExitElements)
+                    sccElements.removeAll(loopExitElements)
+                    tarjanInfoMap.computeIfAbsent(innerLevel) { tarjanInfo(blackList) }
+                    sccElements.forEach { element ->
+                        if (element !in tarjanInfoMap[innerLevel]?.visited!!) {
+                            tarjan(element, innerLevel)
+                        }
                     }
                 }
             }
@@ -148,6 +155,7 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     override fun accept(node: Node) {
+        if (node.basicBlock.isEmpty()) return
         val bb = node.basicBlock.single() as BasicBlock
         tarjanInfoMap.computeIfAbsent(0) { tarjanInfo(emptyList()) }
         if (bb !in tarjanInfoMap[0]?.visited!!) {
