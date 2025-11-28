@@ -34,7 +34,7 @@ import kotlin.math.min
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(BasicBlockCollectorPass::class, softDependency = true)
 class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
-    data class tarjanInfo(val blackList: List<Node>) {
+    data class TarjanInfo(val blackList: List<Node>) {
         var blockCounter = 0
         var stack = mutableListOf<Node>()
         var visited = mutableSetOf<Node>()

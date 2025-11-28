@@ -29,9 +29,7 @@ import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
-import de.fraunhofer.aisec.cpg.graph.edges.Edge
-import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
-import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
+import de.fraunhofer.aisec.cpg.graph.edges.overlay.BasicBlockEdges
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.LoopStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ComprehensionExpression
@@ -41,33 +39,8 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
 import java.util.Objects
-import kotlin.reflect.KProperty
 import org.neo4j.ogm.annotation.Relationship
-import org.neo4j.ogm.annotation.RelationshipEntity
 import org.neo4j.ogm.annotation.typeconversion.Convert
-
-@RelationshipEntity
-class BasicBlockEdge(start: Node, end: Node) : Edge<Node>(start, end) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is BasicBlockEdge) return false
-        return super.equals(other)
-    }
-
-    override fun hashCode(): Int {
-        return super.hashCode()
-    }
-
-    override var labels = setOf("BB")
-}
-
-class BasicBlockEdges<NodeType : Node>(
-    thisRef: Node,
-    override var mirrorProperty: KProperty<MutableCollection<BasicBlockEdge>>,
-    outgoing: Boolean = true,
-) :
-    EdgeList<Node, BasicBlockEdge>(thisRef = thisRef, init = ::BasicBlockEdge, outgoing = outgoing),
-    MirroredEdgeCollection<Node, BasicBlockEdge>
 
 /**
  * A node representing a basic block, i.e. a sequence of nodes without any branching or merge
@@ -76,16 +49,28 @@ class BasicBlockEdges<NodeType : Node>(
  * Note that there is not a single [underlyingNode] because the basic block can span multiple nodes
  * which are kept in [nodes].
  */
-class BasicBlock(var startNode: Node) : OverlayNode() {
+class BasicBlock(
+    /**
+     * The starting node of this basic block. I.e., the first node in the BB's internal EOG. It's
+     * either a merge point or the first node in a branch.
+     */
+    var startNode: Node
+) : OverlayNode() {
 
+    /** The edges connecting this basic block to its member nodes. */
     @Relationship(value = "BB", direction = Relationship.Direction.INCOMING)
     @PopulatedByPass(BasicBlockCollectorPass::class)
     var nodeEdges: BasicBlockEdges<Node> =
         BasicBlockEdges(this, mirrorProperty = Node::basicBlockEdges, outgoing = false)
         protected set
 
+    /** The nodes contained in this basic block. */
     var nodes by unwrapping(BasicBlock::nodeEdges)
 
+    /**
+     * The ending node of this basic block. I.e., the last node in the BB's internal EOG. The next
+     * node in the EOG is a merge point or a branch.
+     */
     val endNode: Node?
         get() = nodes.lastOrNull()
 
