@@ -197,7 +197,6 @@ class ArgumentsHandlerTest {
         assertEquals(2.toLong(), parameterC.default?.evaluate())
     }
 
-    @Ignore
     @Test
     fun testSignatureMatch() {
         val func = result.functions["kw_args_and_default"]

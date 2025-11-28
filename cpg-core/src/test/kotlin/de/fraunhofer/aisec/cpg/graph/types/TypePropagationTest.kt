@@ -37,8 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.*
 
-@Ignore
-// TODO Mathias
 class TypePropagationTest {
     @Test
     fun testBinopTypePropagation() {

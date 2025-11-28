@@ -62,7 +62,6 @@ class ExamplesTest {
         assertNotNull(tu)
     }
 
-    @Ignore
     @Test
     fun testLiftedClient() {
         val topLevel = Path.of("src", "test", "resources", "llvm", "examples", "retdec")

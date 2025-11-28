@@ -1288,8 +1288,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertTrue(eogEdges.contains(returnStatement))
     }
 
-    @Ignore
-    // TODO Mathias
     @Test
     @Throws(Exception::class)
     fun testParenthesis() {
@@ -1471,7 +1469,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         }
     }
 
-    @Ignore
     @Test
     @Throws(Exception::class)
     fun testFunctionPointerToClassMethodSimple() {
@@ -1540,7 +1537,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertRefersTo(callee.rhs, singleParam)
     }
 
-    @Ignore
     @Test
     @Throws(Exception::class)
     fun testFunctionPointerCallWithCDFG() {
@@ -1585,7 +1581,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertInvokes(assertNotNull(targetCall), target)
     }
 
-    @Ignore
     @Test
     @Throws(Exception::class)
     fun testFunctionPointerCallWithNormalDFG() {

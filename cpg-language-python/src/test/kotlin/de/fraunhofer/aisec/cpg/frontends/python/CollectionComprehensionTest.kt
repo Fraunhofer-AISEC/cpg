@@ -91,7 +91,6 @@ class CollectionComprehensionTest {
         assertNotNull(result)
     }
 
-    @Ignore
     @Test
     fun testComprehensionExpressionTuple() {
         // Get the function tuple_comp

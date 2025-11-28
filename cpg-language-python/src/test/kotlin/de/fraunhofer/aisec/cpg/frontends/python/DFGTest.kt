@@ -51,7 +51,6 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
-@Ignore
 class DFGTest {
     fun checkCallFlowsToTupleElements(body: Block, functionName: String) {
         val assignment = body.statements[0]

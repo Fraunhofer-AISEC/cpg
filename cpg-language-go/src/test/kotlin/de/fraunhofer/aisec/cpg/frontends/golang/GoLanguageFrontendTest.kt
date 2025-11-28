@@ -1079,7 +1079,6 @@ class GoLanguageFrontendTest : BaseTest() {
         assertRefersTo(mce, field)
     }
 
-    @Ignore
     @Test
     fun testChainedCall() {
         val topLevel = Path.of("src", "test", "resources", "golang", "chained")
@@ -1115,7 +1114,6 @@ class GoLanguageFrontendTest : BaseTest() {
         )
     }
 
-    @Ignore
     @Test
     fun testComplexResolution() {
         val topLevel = Path.of("src", "test", "resources", "golang", "complex_resolution")
@@ -1180,7 +1178,6 @@ class GoLanguageFrontendTest : BaseTest() {
         assertNotNull(result)
     }
 
-    @Ignore
     @Test
     fun testMultiValueEvaluate() {
         val topLevel = Path.of("src", "test", "resources", "golang")

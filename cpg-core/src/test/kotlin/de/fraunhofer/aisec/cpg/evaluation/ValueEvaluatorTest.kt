@@ -158,7 +158,6 @@ class ValueEvaluatorTest {
         assertFalse(value as Boolean)
     }
 
-    @Ignore
     @Test
     fun testComplex() {
         val tu =

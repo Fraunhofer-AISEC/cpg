@@ -45,7 +45,6 @@ import kotlin.test.*
  * A class for integration tests. They depend on the Python frontend, so we classify them as an
  * integration test. This might be replaced with a language-neutral test at some point.
  */
-@Ignore
 class LoggingConceptTest : BaseTest() {
     @Test
     fun testSimpleLog() {

@@ -171,8 +171,6 @@ class MultiValueEvaluatorTest {
     }
 
     @Test
-    @Ignore
-    // TODO Mathias
     fun testLoop() {
         val tu = ValueEvaluationTests.getCfExample().components.first().translationUnits.first()
 

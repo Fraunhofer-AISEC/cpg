@@ -51,13 +51,12 @@ import de.fraunhofer.aisec.cpg.queries.concepts.policy.assetsAreProtected
 import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.test.analyze
 import kotlin.io.path.Path
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Assertions.assertFalse
 
-@Ignore
+
 class PolicyTest {
     @Test
     fun testPolicy() {

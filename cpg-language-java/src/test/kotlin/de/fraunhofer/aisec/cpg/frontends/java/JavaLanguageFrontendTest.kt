@@ -112,7 +112,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertEquals(Region(9, 10, 9, 22), location.region)
     }
 
-    @Ignore
     @Test
     fun testForeach() {
         val file = File("src/test/resources/components/ForEachStmt.java")
@@ -770,7 +769,6 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertSame(ref, thisOuterClass)
     }
 
-    @Ignore
     @Test
     fun testForEach() {
         val file = File("src/test/resources/compiling/ForEach.java")

@@ -84,7 +84,6 @@ class JVMLanguageFrontendTest {
         assertFalse(refersTo.isInferred)
     }
 
-    @Ignore
     @Test
     fun testMethodsClass() {
         // This will be our classpath
@@ -343,7 +342,6 @@ class JVMLanguageFrontendTest {
         println(haveFun.code)
     }
 
-    @Ignore
     @Test
     fun testArraysClass() {
         // This will be our classpath

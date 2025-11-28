@@ -129,7 +129,6 @@ class PythonValueEvaluatorTest {
         }
     }
 
-    @Ignore
     @Test
     fun testArithmetic() {
         val topLevel = File("src/test/resources/python/consteval")

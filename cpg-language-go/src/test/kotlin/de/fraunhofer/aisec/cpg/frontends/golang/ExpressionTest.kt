@@ -156,7 +156,6 @@ class ExpressionTest {
         }
     }
 
-    @Ignore
     @Test
     fun testShortAssign() {
         val topLevel = Path.of("src", "test", "resources", "golang")

@@ -33,13 +33,11 @@ import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.query.*
 import de.fraunhofer.aisec.cpg.test.assertInvokes
 import kotlin.io.path.Path
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 
-@Ignore
 class CodyzeExecutorTest {
     @Test
     fun testEvaluate() {

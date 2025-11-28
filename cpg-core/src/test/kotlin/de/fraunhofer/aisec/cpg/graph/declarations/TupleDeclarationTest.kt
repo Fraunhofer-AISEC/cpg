@@ -43,11 +43,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
-@Ignore
 class TupleDeclarationTest {
-    @Ignore(
-        "This test does not make sense because the DFGPass does not draw the edges between a reference to the Declaration any more. This affects global variables."
-    )
+    // Todo Konrad "This test does not make sense because the DFGPass does not draw the edges between a reference to the Declaration any more. This affects global variables."
     @Test
     fun testTopLevelTuple() {
         with(

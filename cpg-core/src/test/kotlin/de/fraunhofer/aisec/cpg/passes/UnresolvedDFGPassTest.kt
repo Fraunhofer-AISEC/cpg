@@ -42,8 +42,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class UnresolvedDFGPassTest {
-    @Ignore
-    // TODO Mathias
+
     @Test
     fun testUnresolvedCalls() {
         val result = getDfgUnresolvedCalls(true, false)
@@ -71,7 +70,6 @@ class UnresolvedDFGPassTest {
         assertTrue(knownCall.prevDFG.firstOrNull() is MethodDeclaration)
     }
 
-    @Ignore
     @Test
     fun testUnresolvedCallsNoInference() {
         val result = getDfgUnresolvedCalls(false, false)
@@ -92,7 +90,6 @@ class UnresolvedDFGPassTest {
         assertTrue(knownCall.prevDFG.firstOrNull() is MethodDeclaration)
     }
 
-    @Ignore
     @Test
     fun testUnresolvedCallsWithInference() {
         // For calls with an inferred function declaration, we connect the arguments with the

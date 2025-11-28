@@ -38,8 +38,6 @@ import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 
-@Ignore
-// TODO Mathias
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ShortcutsTest {
     @Test

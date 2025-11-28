@@ -1160,7 +1160,6 @@ class PythonFrontendTest : BaseTest() {
         )
     }
 
-    @Ignore
     @Test
     fun testForLoop() {
         val topLevel = Path.of("src", "test", "resources", "python")
@@ -1234,7 +1233,6 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(secondLoopVar, barCall.arguments.firstOrNull()?.prevDFG?.firstOrNull())
     }
 
-    @Ignore
     @Test
     fun testArithmetics() {
         val topLevel = Path.of("src", "test", "resources", "python")
