@@ -31,6 +31,14 @@ import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import kotlin.math.min
 
+/**
+ * This pass implements Tarjan's algorithm (the original
+ * [paper](https://epubs.siam.org/doi/10.1137/0201010)) to find strongly connected components (SCCs)
+ * in the Evaluation Order Graph (EOG) of a program. SCCs are subgraphs where every node is
+ * reachable from every other node within the same subgraph (i.e., loops). In addition, we remove
+ * the exit nodes of the SCC so that we can also detect nested loops. The pass labels the EOG edges
+ * that are part of an SCC with the same identifier.
+ */
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(BasicBlockCollectorPass::class, softDependency = true)
 class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
@@ -49,52 +57,54 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     fun tarjan(bb: Node, level: Int) {
-        tarjanInfoMap[level]?.blockIDs[bb] = tarjanInfoMap[level]!!.blockCounter
-        tarjanInfoMap[level]?.lowLinkValues[bb] = tarjanInfoMap[level]!!.blockCounter
-        tarjanInfoMap[level]?.blockCounter++
-        tarjanInfoMap[level]?.visited!!.add(bb)
-        tarjanInfoMap[level]?.stack!!.add(0, bb)
+        val currentInfo = tarjanInfoMap.computeIfAbsent(level) { TarjanInfo(emptyList()) }
+        currentInfo.blockIDs[bb] = currentInfo.blockCounter
+        currentInfo.lowLinkValues[bb] = currentInfo.blockCounter
+        currentInfo.blockCounter++
+        currentInfo.visited.add(bb)
+        currentInfo.stack.add(0, bb)
 
         for (next in bb.nextEOG) {
             // To detect inner loops, we put some nodes on a blacklist and see if we can still find
             // a loop
-            if (next in tarjanInfoMap[level]!!.blackList) {
+            if (next in currentInfo.blackList) {
                 break
             }
-            if (next !in tarjanInfoMap[level]?.visited!!) {
+            if (next !in currentInfo.visited) {
                 tarjan(next, level)
             }
             // If the node we came from is on the stack, we min its lowlinkValue with the one of bb
-            if (next in tarjanInfoMap[level]?.stack!!) {
-                tarjanInfoMap[level]?.lowLinkValues[bb] =
+            if (next in currentInfo.stack) {
+                currentInfo.lowLinkValues[bb] =
                     min(
-                        tarjanInfoMap[level]?.lowLinkValues[bb] as Int,
-                        tarjanInfoMap[level]?.lowLinkValues[next] as Int,
+                        currentInfo.lowLinkValues[bb] as Int,
+                        currentInfo.lowLinkValues[next] as Int,
                     )
             }
         }
 
-        if (tarjanInfoMap[level]?.blockIDs[bb] == tarjanInfoMap[level]?.lowLinkValues[bb]) {
+        if (currentInfo.blockIDs[bb] == currentInfo.lowLinkValues[bb]) {
             // Set the lowLinkValues of all nodes on the stack to the same, as they belong to the
             // same SCC
             // If bb is the first element on the stack, that's no SCC, so we simply remove it again
-            if (tarjanInfoMap[level]?.stack?.first() == bb) tarjanInfoMap[level]?.stack?.remove(bb)
-            // Otherwise, we found a loop, so we add the SCC edges
-            else {
-                println("Found a SCC (Level $level): ")
+            if (currentInfo.stack.first() == bb) {
+                currentInfo.stack.remove(bb)
+            } else {
+                // Otherwise, we found a loop, so we add the SCC edges
+                log.trace("Found a SCC (Level $level): ")
                 // Can't iterate over the stack and remove items from it, so we create a clone
-                val stackClone = tarjanInfoMap[level]?.stack!!.toList()
+                val stackClone = currentInfo.stack.toList()
                 val sccElements = mutableListOf<Node>()
 
                 for (it in stackClone) {
-                    tarjanInfoMap[level]?.lowLinkValues[it] = tarjanInfoMap[level]?.blockIDs[bb]!!
-                    print("${it.location} (${tarjanInfoMap[level]?.lowLinkValues[it]}); ")
+                    currentInfo.lowLinkValues[it] = currentInfo.blockIDs[bb]!!
+                    log.trace("{} ({}); ", it.location, currentInfo.lowLinkValues[it])
                     // pop the node from the real stack
-                    tarjanInfoMap[level]?.stack?.remove(it)
+                    currentInfo.stack.remove(it)
                     sccElements.add(it)
                     if (it == bb) break
                 }
-                println()
+                log.trace("Done with stack clone iteration.")
 
                 val loopEntryElements = sccElements.filter { it.prevEOG.any { it !in sccElements } }
                 loopEntryElements.forEach { loopEntryElement ->
@@ -130,20 +140,21 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                         }
                 }
 
-                //// find nested loops
+                // find nested loops
                 if (loopEntryElements.isNotEmpty() && loopExitElements.isNotEmpty()) {
                     // We should always first find the outer loop. Now let's see if the elements in
                     // the
                     // SCC again contain a loop if we remove the exit node
-                    val blackList = tarjanInfoMap[level]!!.blackList.toMutableList()
+                    val blackList = currentInfo.blackList.toMutableList()
                     val innerLevel = level + 1
                     // blacklist the exitElement and see if we still have a loop, that would be an
                     // inner loop
                     blackList.addAll(loopExitElements)
                     sccElements.removeAll(loopExitElements)
-                    tarjanInfoMap.computeIfAbsent(innerLevel) { TarjanInfo(blackList) }
+                    val innerInfo =
+                        tarjanInfoMap.computeIfAbsent(innerLevel) { TarjanInfo(blackList) }
                     sccElements.forEach { element ->
-                        if (element !in tarjanInfoMap[innerLevel]?.visited!!) {
+                        if (element !in innerInfo.visited) {
                             tarjan(element, innerLevel)
                         }
                     }
