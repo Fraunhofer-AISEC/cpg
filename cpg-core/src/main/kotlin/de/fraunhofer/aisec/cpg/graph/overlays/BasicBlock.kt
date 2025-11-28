@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.LoopStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ComprehensionExpression
+import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.passes.BasicBlockCollectorPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -43,6 +44,7 @@ import java.util.Objects
 import kotlin.reflect.KProperty
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.RelationshipEntity
+import org.neo4j.ogm.annotation.typeconversion.Convert
 
 @RelationshipEntity
 class BasicBlockEdge(start: Node, end: Node) : Edge<Node>(start, end) {
@@ -97,6 +99,7 @@ class BasicBlock(var startNode: Node) : OverlayNode() {
                 endNode as Node
             } else null
 
+    @Convert(LocationConverter::class)
     override var location: PhysicalLocation? = null
         get() {
             val startLine = nodes.mapNotNull { it.location?.region?.startLine }.minOrNull() ?: -1
