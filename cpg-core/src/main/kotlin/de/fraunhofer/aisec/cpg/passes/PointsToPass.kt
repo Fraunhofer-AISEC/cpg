@@ -54,29 +54,12 @@ import kotlin.collections.MutableSet
 import kotlin.collections.filter
 import kotlin.collections.map
 import kotlin.let
-import kotlin.system.measureNanoTime
-import kotlin.system.measureTimeMillis
 import kotlin.text.contains
-import kotlin.time.DurationUnit
-import kotlin.time.measureTimedValue
 import kotlinx.coroutines.*
 
 val nodesCreatingUnknownValues = ConcurrentHashMap<Pair<Node, Name>, MemoryAddress>()
 var totalFunctionDeclarationCount = 0
 var analyzedFunctionDeclarationCount = 0
-var timeInHandleCallExpression: Long = 0
-var timeInHandleExpression: Long = 0
-var timeInHandleAssignExpression: Long = 0
-var timeInHandleUnaryOperator: Long = 0
-var timeInHandleDeclaration: Long = 0
-var timeToPush: Long = 0
-var totalTimeinTransfer: Long = 0
-var timeInTransfer: Long = 0
-var timeTotalIterateEOG: Long = 0
-var totalTimeinAccept: Long = 0
-var transferActionCounter: Long = 0
-var PointsTotransferCounter: Long = 0
-var maxAnalysisTimeReachedOutputTriggered = false
 
 typealias GeneralStateEntry =
     TripleLattice<
@@ -354,20 +337,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     override fun accept(node: Node) {
         functionSummaryAnalysisChain.clear()
-        val (ret, time) = measureTimedValue { runBlocking { acceptInternal(node) } }
-        totalTimeinAccept += time.toLong(DurationUnit.MILLISECONDS)
-        timeInTransfer = 0
-        timeInHandleExpression = 0
-        timeInHandleAssignExpression = 0
-        timeInHandleCallExpression = 0
-        timeInHandleDeclaration = 0
-        timeInHandleUnaryOperator = 0
-        timeToPush = 0
-        log.info(
-            "Time spent in accept: ${time.toLong(DurationUnit.MILLISECONDS)}. Total: $totalTimeinAccept"
-        )
-        log.info("PointsToPass counter: $PointsTotransferCounter")
-        return ret
+        return runBlocking { acceptInternal(node) }
     }
 
     suspend fun acceptInternal(node: Node) {
@@ -413,9 +383,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         log.info(
             "Analyzing function ${node.name}. Complexity: ${NumberFormat.getNumberInstance(Locale.US).format(c)}. (Function $analyzedFunctionDeclarationCount / $totalFunctionDeclarationCount)"
         )
-        log.debug(
-            "Total time spent until now in handleCallExpression and transfer: $timeInHandleCallExpression and ${totalTimeinTransfer/1000000}"
-        )
 
         val lattice =
             PointsToState(
@@ -441,79 +408,68 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         startState = initializeParameters(lattice, node.parameters, startState)
 
-        val (finalState, iterateEOGTime) =
-            measureTimedValue {
-                if (node.body == null) {
-                    handleEmptyFunctionDeclaration(lattice, startState, node)
-                } else {
-                    lattice.iterateEOG(node.nextEOGEdges, startState, ::transfer)
-                        as PointsToState.Element
+        val finalState =
+            if (node.body == null) {
+                handleEmptyFunctionDeclaration(lattice, startState, node)
+            } else {
+                lattice.iterateEOG(node.nextEOGEdges, startState, ::transfer)
+                    as PointsToState.Element
+            }
+
+        for ((key, value) in finalState.generalState) {
+            // The generalState values have 3 items: The address, the value, and the
+            // prevDFG-Edges
+            // with a set of properties
+            // Let's start with fetching the addresses
+            if (key is HasMemoryAddress) {
+                key.memoryAddresses += value.first.filterIsInstance<MemoryAddress>()
+            }
+
+            // Then the memoryValues
+            if (key is HasMemoryValue && value.second.isNotEmpty()) {
+                value.second.forEach { (v, properties) ->
+                    var granularity = default()
+                    var shortFS = false
+                    properties.forEach { p ->
+                        when (p) {
+                            is String -> granularity = PartialDataflowGranularity(p)
+                            is Boolean -> shortFS = p
+                            else -> TODO()
+                        }
+                    }
+                    key.memoryValueEdges += Dataflow(v, key, granularity, shortFS)
                 }
             }
 
-        timeTotalIterateEOG += iterateEOGTime.toLong(DurationUnit.MILLISECONDS)
-        log.info(
-            "Time for EOG iteration: ${iterateEOGTime.toLong(DurationUnit.MILLISECONDS)}. Total: $timeTotalIterateEOG"
-        )
+            // And now the prevDFGs. These are pairs, where the second item is a with a set of
+            // properties for the edge
+            value.third.forEach { (prev, properties) ->
+                var context: CallingContext? = null
+                var granularity = default()
+                var functionSummary = false
 
-        val drawEdgesTime = measureTimeMillis {
-            for ((key, value) in finalState.generalState) {
-                // The generalState values have 3 items: The address, the value, and the
-                // prevDFG-Edges
-                // with a set of properties
-                // Let's start with fetching the addresses
-                if (key is HasMemoryAddress) {
-                    key.memoryAddresses += value.first.filterIsInstance<MemoryAddress>()
-                }
-
-                // Then the memoryValues
-                if (key is HasMemoryValue && value.second.isNotEmpty()) {
-                    value.second.forEach { (v, properties) ->
-                        var granularity = default()
-                        var shortFS = false
-                        properties.forEach { p ->
-                            when (p) {
-                                is String -> granularity = PartialDataflowGranularity(p)
-                                is Boolean -> shortFS = p
-                                else -> TODO()
-                            }
-                        }
-                        key.memoryValueEdges += Dataflow(v, key, granularity, shortFS)
+                // the properties can contain a lot of things. A granularity, a
+                // callingcontext, or a boolean indicating if this is a functionSummary edge or
+                // not
+                properties.forEach { property ->
+                    when (property) {
+                        is Granularity -> granularity = property
+                        is CallingContext -> context = property
+                        is Boolean -> functionSummary = property
                     }
                 }
 
-                // And now the prevDFGs. These are pairs, where the second item is a with a set of
-                // properties for the edge
-                value.third.forEach { (prev, properties) ->
-                    var context: CallingContext? = null
-                    var granularity = default()
-                    var functionSummary = false
-
-                    // the properties can contain a lot of things. A granularity, a
-                    // callingcontext, or a boolean indicating if this is a functionSummary edge or
-                    // not
-                    properties.forEach { property ->
-                        when (property) {
-                            is Granularity -> granularity = property
-                            is CallingContext -> context = property
-                            is Boolean -> functionSummary = property
-                        }
-                    }
-
-                    if (context == null) // TODO: add functionSummary flag for contextSensitive DFs
-                     key.prevDFGEdges += Dataflow(prev, key, granularity, functionSummary)
-                    else
-                        key.prevDFGEdges.addContextSensitive(
-                            prev,
-                            granularity,
-                            context,
-                            functionSummary,
-                        )
-                }
+                if (context == null) // TODO: add functionSummary flag for contextSensitive DFs
+                 key.prevDFGEdges += Dataflow(prev, key, granularity, functionSummary)
+                else
+                    key.prevDFGEdges.addContextSensitive(
+                        prev,
+                        granularity,
+                        context,
+                        functionSummary,
+                    )
             }
         }
-
-        log.info("Time to draw Edges: $drawEdgesTime")
 
         /* Store function summary for this FunctionDeclaration. */
         storeFunctionSummary(node, finalState)
@@ -655,264 +611,240 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val innerCoroutineCounter =
             if (outerCoroutineCounter == 0) CPU_CORES
             else if (outerCoroutineCounter > CPU_CORES) 1 else CPU_CORES / outerCoroutineCounter
-        val totalTime = measureTimeMillis {
-            coroutineScope {
-                node.parameters.forEach { param ->
-                    launch(Dispatchers.Default) {
-                        // Collect all addresses of the parameter that we can use as index to look
-                        // up possible new values
-                        val indexes: MutableSet<IndexKey> = ConcurrentHashMap.newKeySet()
-                        val values =
-                            doubleState.getValues(param, param).mapTo(ConcurrentIdentitySet()) {
+        coroutineScope {
+            node.parameters.forEach { param ->
+                launch(Dispatchers.Default) {
+                    // Collect all addresses of the parameter that we can use as index to look
+                    // up possible new values
+                    val indexes: MutableSet<IndexKey> = ConcurrentHashMap.newKeySet()
+                    val values =
+                        doubleState.getValues(param, param).mapTo(ConcurrentIdentitySet()) {
+                            it.first
+                        }
+
+                    // We look at the deref and the derefderef, hence for depth 2 and 3
+                    // We have to look up the index of the ParameterMemoryValue to check out
+                    // changes on the dereferences
+                    values
+                        .filterTo(concurrentIdentitySetOf()) {
+                            doubleState.hasDeclarationStateEntry(it)
+                        }
+                        .map { indexes.add(IndexKey(it, 2)) }
+                    // Additionally, we can check out the "dereference" itself to look for
+                    // "derefdereferences"
+                    values
+                        .filterTo(concurrentIdentitySetOf()) {
+                            doubleState.hasDeclarationStateEntry(it)
+                        }
+                        .flatMap {
+                            doubleState.getValues(it, it).mapTo(PowersetLattice.Element()) {
                                 it.first
                             }
-
-                        // We look at the deref and the derefderef, hence for depth 2 and 3
-                        // We have to look up the index of the ParameterMemoryValue to check out
-                        // changes on the dereferences
-                        values
-                            .filterTo(concurrentIdentitySetOf()) {
-                                doubleState.hasDeclarationStateEntry(it)
-                            }
-                            .map { indexes.add(IndexKey(it, 2)) }
-                        // Additionally, we can check out the "dereference" itself to look for
-                        // "derefdereferences"
-                        values
-                            .filterTo(concurrentIdentitySetOf()) {
-                                doubleState.hasDeclarationStateEntry(it)
-                            }
-                            .flatMap {
-                                doubleState.getValues(it, it).mapTo(PowersetLattice.Element()) {
-                                    it.first
+                        }
+                        // We are already inside $paramCount coroutines, so we have to divide
+                        // the CPU_CORES by these routines
+                        .splitInto(maxParts = innerCoroutineCounter)
+                        .map { chunk ->
+                            launch(Dispatchers.Default) {
+                                for (value in chunk) {
+                                    if (doubleState.hasDeclarationStateEntry(value))
+                                        indexes.add(IndexKey(value, 3))
                                 }
                             }
-                            // We are already inside $paramCount coroutines, so we have to divide
-                            // the CPU_CORES by these routines
-                            .splitInto(maxParts = innerCoroutineCounter)
+                        }
+                        .joinAll()
+
+                    indexes.forEach { (index, dstValueDepth) ->
+                        val stateEntries =
+                            doubleState.fetchValueFromDeclarationState(index, true, true).filterTo(
+                                PowersetLattice.Element()
+                            ) {
+                                it.value.name != param.name
+                            }
+                        stateEntries
+                            /* See if we can find something that is different from the initial value*/
+                            .filterTo(PowersetLattice.Element()) {
+                                /* Filter the PMVs from this parameter*/
+                                !(it.value is ParameterMemoryValue &&
+                                    it.value.name.localName.contains("derefvalue") &&
+                                    it.value.name.parent == param.name)
+                                /* Filter the unknownMemoryValues that weren't written to*/
+                                && !(it.value is UnknownMemoryValue && it.lastWrites.isEmpty())
+                            }
+                            // If so, store the information for the parameter in the
+                            // FunctionSummary
+                            // We are already inside $paramCount coroutines, so we have to
+                            // divide the CPU_CORES by these routines
+                            .splitInto(maxParts = innerCoroutineCounter, minPartSize = 1)
                             .map { chunk ->
                                 launch(Dispatchers.Default) {
-                                    for (value in chunk) {
-                                        if (doubleState.hasDeclarationStateEntry(value))
-                                            indexes.add(IndexKey(value, 3))
-                                    }
-                                }
-                            }
-                            .joinAll()
-
-                        indexes.forEach { (index, dstValueDepth) ->
-                            val stateEntries =
-                                doubleState
-                                    .fetchValueFromDeclarationState(index, true, true)
-                                    .filterTo(PowersetLattice.Element()) {
-                                        it.value.name != param.name
-                                    }
-                            stateEntries
-                                /* See if we can find something that is different from the initial value*/
-                                .filterTo(PowersetLattice.Element()) {
-                                    /* Filter the PMVs from this parameter*/
-                                    !(it.value is ParameterMemoryValue &&
-                                        it.value.name.localName.contains("derefvalue") &&
-                                        it.value.name.parent == param.name)
-                                    /* Filter the unknownMemoryValues that weren't written to*/
-                                    && !(it.value is UnknownMemoryValue && it.lastWrites.isEmpty())
-                                }
-                                // If so, store the information for the parameter in the
-                                // FunctionSummary
-                                // We are already inside $paramCount coroutines, so we have to
-                                // divide the CPU_CORES by these routines
-                                .splitInto(maxParts = innerCoroutineCounter, minPartSize = 1)
-                                .map { chunk ->
-                                    launch(Dispatchers.Default) {
-                                        chunk.forEach { (value, shortFS, subAccessName, lastWrites)
-                                            ->
-                                            // Extract the value depth from the value's localName
-                                            val srcValueDepth = stringToDepth(value.name.localName)
-                                            // Store the information in the functionSummary
-                                            val existingEntry =
-                                                node.functionSummary.computeIfAbsent(param) {
-                                                    ConcurrentHashMap.newKeySet<FSEntry>()
-                                                }
-                                            val filteredLastWrites =
-                                                lastWrites
-                                                    // for shortFS,only use these, and for !shortFS,
-                                                    // only those
-                                                    .filterTo(PowersetLattice.Element()) {
-                                                        shortFS in it.properties
-                                                    }
-                                            existingEntry.add(
-                                                FSEntry(
-                                                    dstValueDepth,
-                                                    value,
-                                                    srcValueDepth,
-                                                    subAccessName,
-                                                    filteredLastWrites,
-                                                    equalLinkedHashSetOf(shortFS),
-                                                )
-                                            )
-                                            // Additionally, we store this as a shortFunctionSummary
-                                            // were the function writes to the parameter
-                                            val shortFSEntry =
-                                                FSEntry(
-                                                    dstValueDepth,
-                                                    node,
-                                                    0,
-                                                    subAccessName,
-                                                    PowersetLattice.Element(
-                                                        NodeWithPropertiesKey(
-                                                            node,
-                                                            equalLinkedHashSetOf(),
-                                                        )
-                                                    ),
-                                                    equalLinkedHashSetOf(true),
-                                                )
-                                            // Add the new entry if it doesn't exist yet
-                                            synchronized(existingEntry) {
-                                                if (existingEntry.none { it == shortFSEntry })
-                                                    existingEntry.add(shortFSEntry)
+                                    chunk.forEach { (value, shortFS, subAccessName, lastWrites) ->
+                                        // Extract the value depth from the value's localName
+                                        val srcValueDepth = stringToDepth(value.name.localName)
+                                        // Store the information in the functionSummary
+                                        val existingEntry =
+                                            node.functionSummary.computeIfAbsent(param) {
+                                                ConcurrentHashMap.newKeySet<FSEntry>()
                                             }
-                                            val propertySet = concurrentIdentitySetOf<Any>(true)
-                                            if (subAccessName != "")
-                                                propertySet.add(
-                                                    FieldDeclaration().apply {
-                                                        name = Name(subAccessName)
-                                                    }
-                                                )
-
-                                            // Create the detailed shortFS. Like, which parameter
-                                            // influences
-                                            // what.
-                                            // This may take a lot of time, so this is optional
-                                            if (
-                                                (passConfig<Configuration>()?.detailedShortFS
-                                                    ?: true)
-                                            ) {
-                                                if (!shortFS) {
-                                                    // Check if the value is influenced by a
-                                                    // Parameter and
-                                                    // if so, add this information to the
-                                                    // functionSummary
-                                                    val (paths, searchTime) =
-                                                        measureTimedValue {
-                                                            value.followDFGEdgesUntilHit(
-                                                                collectFailedPaths = false,
-                                                                findAllPossiblePaths = false,
-                                                                direction =
-                                                                    Backward(GraphToFollow.DFG),
-                                                                sensitivities =
-                                                                    OnlyFullDFG +
-                                                                        FieldSensitive +
-                                                                        ContextSensitive,
-                                                                // We need to search interprocedural
-                                                                // here.
-                                                                // In order this acceptable also in
-                                                                // larger graphs,
-                                                                // we limit the maxCallDepth and hop
-                                                                // size
-                                                                scope =
-                                                                    Interprocedural(
-                                                                        maxCallDepth = 1,
-                                                                        maxSteps = 10,
-                                                                    ),
-                                                                predicate = {
-                                                                    it is ParameterMemoryValue &&
-                                                                        /* If it's a ParameterMemoryValue from the node's
-                                                                        parameters, it has to have a DFG Node to one
-                                                                        of the node's parameters. Either partial to a derefvalue or full to the parameterdeclaration */
-                                                                        it.memoryValueUsageEdges
-                                                                            .filter {
-                                                                                ((it.granularity is
-                                                                                    PartialDataflowGranularity<
-                                                                                        *
-                                                                                    > &&
-                                                                                    ((it.granularity
-                                                                                                as
-                                                                                                PartialDataflowGranularity<
-                                                                                                    *
-                                                                                                >)
-                                                                                            .partialTarget
-                                                                                            as?
-                                                                                            String)
-                                                                                        ?.endsWith(
-                                                                                            "derefvalue"
-                                                                                        ) ==
-                                                                                        true) ||
-                                                                                    (it
-                                                                                        .granularity is
-                                                                                        FullDataflowGranularity &&
-                                                                                        it.end is
-                                                                                            ParameterDeclaration)) &&
-                                                                                    it.end in
-                                                                                        node
-                                                                                            .parameters
-                                                                            }
-                                                                            .size == 1 &&
-                                                                        node.parameters.any { param
-                                                                            ->
-                                                                            param.name.localName ==
-                                                                                it.name.parent
-                                                                                    ?.localName
-                                                                        }
-                                                                },
-                                                            )
-                                                        }
-                                                    dfgSearchTime +=
-                                                        searchTime.toLong(DurationUnit.MILLISECONDS)
-                                                    paths.fulfilled
-                                                        .map { it.nodes.last() }
-                                                        .forEach { sourceParamValue ->
-                                                            val matchingDeclarations =
-                                                                node.parameters.singleOrNull {
-                                                                    it.name ==
-                                                                        sourceParamValue.name.parent
-                                                                }
-                                                            if (matchingDeclarations == null) TODO()
-                                                            node.functionSummary
-                                                                .computeIfAbsent(param) {
-                                                                    ConcurrentHashMap.newKeySet()
-                                                                }
-                                                                .add(
-                                                                    FSEntry(
-                                                                        dstValueDepth,
-                                                                        matchingDeclarations,
-                                                                        stringToDepth(
-                                                                            sourceParamValue.name
-                                                                                .localName
-                                                                        ),
-                                                                        subAccessName,
-                                                                        mutableSetOf(
-                                                                            NodeWithPropertiesKey(
-                                                                                matchingDeclarations,
-                                                                                equalLinkedHashSetOf(),
-                                                                            )
-                                                                        ),
-                                                                        equalLinkedHashSetOf(true),
-                                                                    )
-                                                                )
-                                                        }
+                                        val filteredLastWrites =
+                                            lastWrites
+                                                // for shortFS,only use these, and for !shortFS,
+                                                // only those
+                                                .filterTo(PowersetLattice.Element()) {
+                                                    shortFS in it.properties
                                                 }
+                                        existingEntry.add(
+                                            FSEntry(
+                                                dstValueDepth,
+                                                value,
+                                                srcValueDepth,
+                                                subAccessName,
+                                                filteredLastWrites,
+                                                equalLinkedHashSetOf(shortFS),
+                                            )
+                                        )
+                                        // Additionally, we store this as a shortFunctionSummary
+                                        // were the function writes to the parameter
+                                        val shortFSEntry =
+                                            FSEntry(
+                                                dstValueDepth,
+                                                node,
+                                                0,
+                                                subAccessName,
+                                                PowersetLattice.Element(
+                                                    NodeWithPropertiesKey(
+                                                        node,
+                                                        equalLinkedHashSetOf(),
+                                                    )
+                                                ),
+                                                equalLinkedHashSetOf(true),
+                                            )
+                                        // Add the new entry if it doesn't exist yet
+                                        synchronized(existingEntry) {
+                                            if (existingEntry.none { it == shortFSEntry })
+                                                existingEntry.add(shortFSEntry)
+                                        }
+                                        val propertySet = concurrentIdentitySetOf<Any>(true)
+                                        if (subAccessName != "")
+                                            propertySet.add(
+                                                FieldDeclaration().apply {
+                                                    name = Name(subAccessName)
+                                                }
+                                            )
+
+                                        // Create the detailed shortFS. Like, which parameter
+                                        // influences
+                                        // what.
+                                        // This may take a lot of time, so this is optional
+                                        if (
+                                            (passConfig<Configuration>()?.detailedShortFS ?: true)
+                                        ) {
+                                            if (!shortFS) {
+                                                // Check if the value is influenced by a
+                                                // Parameter and
+                                                // if so, add this information to the
+                                                // functionSummary
+                                                val paths =
+                                                    value.followDFGEdgesUntilHit(
+                                                        collectFailedPaths = false,
+                                                        findAllPossiblePaths = false,
+                                                        direction = Backward(GraphToFollow.DFG),
+                                                        sensitivities =
+                                                            OnlyFullDFG +
+                                                                FieldSensitive +
+                                                                ContextSensitive,
+                                                        // We need to search interprocedural
+                                                        // here.
+                                                        // In order this acceptable also in
+                                                        // larger graphs,
+                                                        // we limit the maxCallDepth and hop
+                                                        // size
+                                                        scope =
+                                                            Interprocedural(
+                                                                maxCallDepth = 1,
+                                                                maxSteps = 10,
+                                                            ),
+                                                        predicate = {
+                                                            it is ParameterMemoryValue &&
+                                                                /* If it's a ParameterMemoryValue from the node's
+                                                                parameters, it has to have a DFG Node to one
+                                                                of the node's parameters. Either partial to a derefvalue or full to the parameterdeclaration */
+                                                                it.memoryValueUsageEdges
+                                                                    .filter {
+                                                                        ((it.granularity is
+                                                                            PartialDataflowGranularity<
+                                                                                *
+                                                                            > &&
+                                                                            ((it.granularity
+                                                                                        as
+                                                                                        PartialDataflowGranularity<
+                                                                                            *
+                                                                                        >)
+                                                                                    .partialTarget
+                                                                                    as? String)
+                                                                                ?.endsWith(
+                                                                                    "derefvalue"
+                                                                                ) == true) ||
+                                                                            (it.granularity is
+                                                                                FullDataflowGranularity &&
+                                                                                it.end is
+                                                                                    ParameterDeclaration)) &&
+                                                                            it.end in
+                                                                                node.parameters
+                                                                    }
+                                                                    .size == 1 &&
+                                                                node.parameters.any { param ->
+                                                                    param.name.localName ==
+                                                                        it.name.parent?.localName
+                                                                }
+                                                        },
+                                                    )
+                                                paths.fulfilled
+                                                    .map { it.nodes.last() }
+                                                    .forEach { sourceParamValue ->
+                                                        val matchingDeclarations =
+                                                            node.parameters.singleOrNull {
+                                                                it.name ==
+                                                                    sourceParamValue.name.parent
+                                                            }
+                                                        if (matchingDeclarations == null) TODO()
+                                                        node.functionSummary
+                                                            .computeIfAbsent(param) {
+                                                                ConcurrentHashMap.newKeySet()
+                                                            }
+                                                            .add(
+                                                                FSEntry(
+                                                                    dstValueDepth,
+                                                                    matchingDeclarations,
+                                                                    stringToDepth(
+                                                                        sourceParamValue.name
+                                                                            .localName
+                                                                    ),
+                                                                    subAccessName,
+                                                                    mutableSetOf(
+                                                                        NodeWithPropertiesKey(
+                                                                            matchingDeclarations,
+                                                                            equalLinkedHashSetOf(),
+                                                                        )
+                                                                    ),
+                                                                    equalLinkedHashSetOf(true),
+                                                                )
+                                                            )
+                                                    }
                                             }
                                         }
                                     }
                                 }
-                        }
+                            }
                     }
                 }
             }
-
-            // If we don't have anything to summarize, we add a dummy entry to the functionSummary
-            if (node.functionSummary.isEmpty()) {
-                node.functionSummary[newLiteral("dummy")] = ConcurrentHashMap.newKeySet<FSEntry>()
-            }
         }
-        val percentage =
-            try {
-                dfgSearchTime * 100 / totalTime
-            } catch (_: java.lang.ArithmeticException) {
-                0
-            }
-        log.info(
-            "Finished storeFunctionSummary for ${node.name.localName}. Total time: $totalTime. DFG Search Time: $dfgSearchTime ($percentage %)"
-        )
+
+        // If we don't have anything to summarize, we add a dummy entry to the functionSummary
+        if (node.functionSummary.isEmpty()) {
+            node.functionSummary[newLiteral("dummy")] = ConcurrentHashMap.newKeySet<FSEntry>()
+        }
     }
 
     private fun MutableSet<NodeWithPropertiesKey>.parallelEquals(
@@ -932,93 +864,51 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 ?: throw java.lang.IllegalArgumentException(
                     "Expected the state to be of type PointsToState.Element"
                 )
-        transferActionCounter++
-        PointsTotransferCounter++
-        if (transferActionCounter == 10000L) {
-            log.info(
-                "Transferring. timeInTransfer: ${timeInTransfer/1000000}, timeInHandleAssignExpression: ${timeInHandleAssignExpression/1000000}, timeInHandleCallExpression: ${timeInHandleCallExpression/1000000}, timeInHandleExpression: ${timeInHandleExpression/1000000}, timeToPush: ${timeToPush/1000000}, timeInHandleDeclaration: ${timeInHandleDeclaration/1000000}, timeInHandleUnaryOperator: ${timeInHandleUnaryOperator/1000000}"
-            )
-            transferActionCounter = 0
-        }
-        timeInTransfer += measureNanoTime {
-            val lattice = lattice as? PointsToState ?: return state
-            val currentNode = currentEdge.end
 
-            coroutineScope {
-                // Used to keep iterating for steps which do not modify the alias-state otherwise
+        val lattice = lattice as? PointsToState ?: return state
+        val currentNode = currentEdge.end
 
-                val tmp = measureTimedValue {
-                    lattice.pushToDeclarationsState(
-                        doubleState,
-                        currentNode,
-                        doubleState.getFromDecl(currentEdge.end)
-                            ?: DeclarationStateEntryElement(
-                                PowersetLattice.Element(),
-                                PowersetLattice.Element(),
-                                PowersetLattice.Element(),
-                            ),
-                    )
-                }
-                doubleState = tmp.value
-                timeToPush += tmp.duration.toLong(DurationUnit.NANOSECONDS)
-                doubleState =
-                    when (currentNode) {
-                        is DeleteExpression ->
-                            handleDeleteExpression(lattice, currentNode, doubleState)
-                        is Declaration,
-                        is MemoryAddress -> {
-                            val (tmp, duration) =
-                                measureTimedValue {
-                                    handleDeclaration(lattice, currentNode, doubleState)
-                                }
-                            timeInHandleDeclaration += duration.toLong(DurationUnit.NANOSECONDS)
-                            tmp
-                        }
+        coroutineScope {
+            // Used to keep iterating for steps which do not modify the alias-state otherwise
 
-                        is AssignExpression -> {
-                            val (tmp, duration) =
-                                measureTimedValue {
-                                    handleAssignExpression(lattice, currentNode, doubleState)
-                                }
-                            timeInHandleAssignExpression +=
-                                duration.toLong(DurationUnit.NANOSECONDS)
-                            tmp
-                        }
-
-                        is UnaryOperator -> {
-                            val (tmp, duration) =
-                                measureTimedValue {
-                                    handleUnaryOperator(lattice, currentNode, doubleState)
-                                }
-                            timeInHandleUnaryOperator += duration.toLong(DurationUnit.NANOSECONDS)
-                            tmp
-                        }
-
-                        is CallExpression -> {
-                            val (tmp, duration) =
-                                measureTimedValue {
-                                    handleCallExpression(lattice, currentNode, doubleState)
-                                }
-                            timeInHandleCallExpression += duration.toLong(DurationUnit.NANOSECONDS)
-                            tmp
-                        }
-
-                        is Expression -> {
-                            val (tmp, duration) =
-                                measureTimedValue {
-                                    handleExpression(lattice, currentNode, doubleState)
-                                }
-                            timeInHandleExpression += duration.toLong(DurationUnit.NANOSECONDS)
-                            tmp
-                        }
-                        is ReturnStatement ->
-                            handleReturnStatement(lattice, currentNode, doubleState)
-                        else -> doubleState
+            doubleState =
+                lattice.pushToDeclarationsState(
+                    doubleState,
+                    currentNode,
+                    doubleState.getFromDecl(currentEdge.end)
+                        ?: DeclarationStateEntryElement(
+                            PowersetLattice.Element(),
+                            PowersetLattice.Element(),
+                            PowersetLattice.Element(),
+                        ),
+                )
+            doubleState =
+                when (currentNode) {
+                    is DeleteExpression -> handleDeleteExpression(lattice, currentNode, doubleState)
+                    is Declaration,
+                    is MemoryAddress -> {
+                        handleDeclaration(lattice, currentNode, doubleState)
                     }
-            }
+
+                    is AssignExpression -> {
+                        handleAssignExpression(lattice, currentNode, doubleState)
+                    }
+
+                    is UnaryOperator -> {
+                        handleUnaryOperator(lattice, currentNode, doubleState)
+                    }
+
+                    is CallExpression -> {
+                        handleCallExpression(lattice, currentNode, doubleState)
+                    }
+
+                    is Expression -> {
+                        handleExpression(lattice, currentNode, doubleState)
+                    }
+                    is ReturnStatement -> handleReturnStatement(lattice, currentNode, doubleState)
+                    else -> doubleState
+                }
         }
-        totalTimeinTransfer += timeInTransfer
-        //        log.info("Time in transfer: $timeinTransfer")
         return doubleState
     }
 
