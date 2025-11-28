@@ -35,6 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
+import uniffi.cpgrust.SomeStruct
+import uniffi.cpgrust.getSomeStruct
 import java.io.File
 import java.net.URI
 import uniffi.cpgrust.printString
@@ -66,6 +68,9 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
         lastColumnLength = fileAsLines.lastOrNull()?.length ?: -1
 
         printString("Print this rust string")
+        val someStruct: SomeStruct = getSomeStruct()
+
+        someStruct.get
         // Todo parsing
         val tud =
             newTranslationUnitDeclaration(file.path, rawNode = null).apply {
