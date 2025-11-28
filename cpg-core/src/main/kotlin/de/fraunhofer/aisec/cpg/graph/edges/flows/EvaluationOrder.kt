@@ -29,7 +29,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
-import de.fraunhofer.aisec.cpg.graph.overlays.StronglyConnectedComponent
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import kotlin.reflect.KProperty
 import org.neo4j.ogm.annotation.RelationshipEntity
@@ -56,11 +55,12 @@ class EvaluationOrder(
     var branch: Boolean? = null,
 ) : Edge<Node>(start, end) {
     /**
-     * The strongly connected component (SCC) this edge belongs to, if any. This is populated by the
+     * For nodes with multiple incoming our outcoming edges, we label the node leading to/from a
+     * possible strongly connected component (SCC). This is populated by the
      * [de.fraunhofer.aisec.cpg.passes.SccPass]. Remains `null` if the edge is not part of any
      * non-trivial SCC or if it enters/leaves an SCC.
      */
-    var scc: StronglyConnectedComponent? = null
+    var scc: Int? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

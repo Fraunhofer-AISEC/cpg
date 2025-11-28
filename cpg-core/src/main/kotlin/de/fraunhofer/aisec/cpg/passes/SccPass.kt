@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
-import de.fraunhofer.aisec.cpg.graph.overlays.StronglyConnectedComponent
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import kotlin.math.min
 
@@ -83,7 +82,6 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
             // Otherwise, we found a loop, so we add the SCC edges
             else {
                 println("Found a SCC (Level $level): ")
-                val scc = StronglyConnectedComponent(level)
                 // Can't iterate over the stack and remove items from it, so we create a clone
                 val stackClone = tarjanInfoMap[level]?.stack!!.toList()
                 val sccElements = mutableListOf<Node>()
@@ -103,11 +101,11 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                     loopEntryElement.prevEOGEdges
                         .filter { edge -> edge.start in sccElements }
                         .forEach { edge ->
-                            edge.scc = scc
+                            edge.scc = level
                             // also label the respective edges between node
                             (edge.start as? BasicBlock)?.endNode?.nextEOGEdges?.forEach { nodeEdge
                                 ->
-                                nodeEdge.scc = scc
+                                nodeEdge.scc = level
                             }
                         }
                 }
@@ -123,11 +121,11 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                     loopExitElement.nextEOGEdges
                         .filter { edge -> edge.end in sccElements }
                         .forEach { edge ->
-                            edge.scc = scc
+                            edge.scc = level
                             // also label the respective edges between node
                             (edge.end as? BasicBlock)?.startNode?.prevEOGEdges?.forEach { nodeEdge
                                 ->
-                                nodeEdge.scc = scc
+                                nodeEdge.scc = level
                             }
                         }
                 }

@@ -358,7 +358,7 @@ interface Lattice<T : Lattice.Element> {
                         // (outside the loop, or for a branch).
                         // We will process these after the current basic block has been processed
                         // (probably very soon).
-                        val sccPriority = it.scc?.priority
+                        val sccPriority = it.scc
                         if (sccPriority != null) sccEdgesQueue.add(Pair(sccPriority, it))
                         else nextBranchEdgesList.add(0, it)
                     } else {
