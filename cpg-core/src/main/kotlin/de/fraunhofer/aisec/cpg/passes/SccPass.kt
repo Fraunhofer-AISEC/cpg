@@ -42,7 +42,7 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         var lowLinkValues = mutableMapOf<Node, Int>()
     }
 
-    val tarjanInfoMap = mutableMapOf<Int, tarjanInfo>()
+    val tarjanInfoMap = mutableMapOf<Int, TarjanInfo>()
 
     override fun cleanup() {
         // Nothing to clean up
@@ -141,7 +141,7 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                     // inner loop
                     blackList.addAll(loopExitElements)
                     sccElements.removeAll(loopExitElements)
-                    tarjanInfoMap.computeIfAbsent(innerLevel) { tarjanInfo(blackList) }
+                    tarjanInfoMap.computeIfAbsent(innerLevel) { TarjanInfo(blackList) }
                     sccElements.forEach { element ->
                         if (element !in tarjanInfoMap[innerLevel]?.visited!!) {
                             tarjan(element, innerLevel)
@@ -155,7 +155,7 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     override fun accept(node: Node) {
         if (node.basicBlock.isEmpty()) return
         val bb = node.basicBlock.single() as BasicBlock
-        tarjanInfoMap.computeIfAbsent(0) { tarjanInfo(emptyList()) }
+        tarjanInfoMap.computeIfAbsent(0) { TarjanInfo(emptyList()) }
         if (bb !in tarjanInfoMap[0]?.visited!!) {
             tarjan(bb, 0)
         }
