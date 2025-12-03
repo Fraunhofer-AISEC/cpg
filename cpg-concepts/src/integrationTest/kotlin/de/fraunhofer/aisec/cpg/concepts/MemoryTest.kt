@@ -51,7 +51,6 @@ import de.fraunhofer.aisec.cpg.test.analyze
 import java.io.File
 import kotlin.test.*
 
-
 class MemoryTest {
     @Test
     fun testMemoryDeleteFunction() {

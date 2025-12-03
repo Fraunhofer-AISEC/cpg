@@ -56,7 +56,6 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Assertions.assertFalse
 
-
 class PolicyTest {
     @Test
     fun testPolicy() {
