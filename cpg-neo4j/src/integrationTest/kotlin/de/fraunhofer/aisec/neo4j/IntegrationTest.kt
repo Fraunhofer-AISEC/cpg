@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg_vis_neo4j.Application
 import java.nio.file.Paths
 import kotlin.io.path.createTempFile
 import kotlin.reflect.jvm.javaField
-import kotlin.test.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Test
