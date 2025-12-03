@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.frontends.python.Python.AST
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import jep.python.PyObject
@@ -75,43 +76,27 @@ interface Python {
          */
         interface WithLocation : AST { // TODO make the fields accessible `by lazy`
             /** Maps to the `lineno` filed from Python's ast. */
-            val lineno: Int
+            val lineno: Int?
                 get() {
-                    return try {
-                        (pyObject.getAttr("lineno") as? Long)?.toInt() ?: 0
-                    } catch (e: Exception) {
-                        0
-                    }
+                    return (pyObject.getAttr("lineno") as? Long)?.toInt()
                 }
 
             /** Maps to the `col_offset` filed from Python's ast. */
-            val col_offset: Int
+            val col_offset: Int?
                 get() {
-                    return try {
-                        (pyObject.getAttr("col_offset") as? Long)?.toInt() ?: 0
-                    } catch (e: Exception) {
-                        0
-                    }
+                    return (pyObject.getAttr("col_offset") as? Long)?.toInt()
                 }
 
             /** Maps to the `end_lineno` filed from Python's ast. */
-            val end_lineno: Int
+            val end_lineno: Int?
                 get() {
-                    return try {
-                        (pyObject.getAttr("end_lineno") as? Long)?.toInt() ?: 0
-                    } catch (e: Exception) {
-                        0
-                    }
+                    return (pyObject.getAttr("end_lineno") as? Long)?.toInt()
                 }
 
             /** Maps to the `end_col_offset` filed from Python's ast. */
-            val end_col_offset: Int
+            val end_col_offset: Int?
                 get() {
-                    return try {
-                        (pyObject.getAttr("end_col_offset") as? Long)?.toInt() ?: 0
-                    } catch (e: Exception) {
-                        0
-                    }
+                    return (pyObject.getAttr("end_col_offset") as? Long)?.toInt()
                 }
         }
 
