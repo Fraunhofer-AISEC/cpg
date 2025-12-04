@@ -44,6 +44,14 @@ data class CpgCallArgumentByNameOrIndexPayload(
 @Serializable data class CpgApplyConceptsPayload(val assignments: List<ConceptAssignment>)
 
 @Serializable
+data class CpgRunPassPayload(
+    /** The FQN of the pass to run. */
+    val passName: String,
+    /** The ID of the node which should be analyzed by the pass. */
+    val nodeId: String,
+)
+
+@Serializable
 data class ConceptAssignment(
     val nodeId: String,
     /* FQN of concept or operation class */
@@ -60,3 +68,11 @@ data class ConceptAssignment(
 @Serializable data class CpgDataflowPayload(val from: String, val to: String)
 
 @Serializable data class CpgLlmAnalyzePayload(val description: String? = null)
+
+@Serializable
+data class PassInfo(
+    val fqn: String,
+    val description: String,
+    val requiredNodeType: String,
+    val dependsOn: List<String>,
+)
