@@ -261,20 +261,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         node: FunctionDeclaration,
         functionSummaries: DFGFunctionSummaries,
     ) {
-        val summaryExists = with(functionSummaries) { addFlowsToFunctionDeclaration(node) }
-
-        if (!summaryExists) {
-            // If the function is inferred, we connect all parameters to the function
-            // declaration. The condition should make sure that we don't add edges multiple
-            // times, i.e., we only handle the declaration exactly once.
-            node.prevDFGEdges.addAll(node.parameters)
-            // If it's a method with a receiver, we connect that one too.
-            if (node is MethodDeclaration) {
-                node.receiver?.let { node.prevDFGEdges += it }
-            }
-        } else {
-            node.allChildren<ReturnStatement>().forEach { node.prevDFGEdges += it }
-        }
+        with(functionSummaries) { addFlowsToFunctionDeclaration(node) }
     }
 
     /**
