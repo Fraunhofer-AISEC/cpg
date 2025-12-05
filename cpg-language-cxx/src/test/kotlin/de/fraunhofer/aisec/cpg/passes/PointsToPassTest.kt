@@ -3584,4 +3584,28 @@ class PointsToPassTest {
         // One short FS for the parameter, one for the function itself
         assertEquals(2, outerSubShortFSEntries.size)
     }
+
+    @Test
+    fun testCompoundAssignment() {
+        val file = File("src/test/resources/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                // it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+        val fd = tu.functions["test_compound"]
+        assertNotNull(fd)
+
+        val compoundAssign = fd.assigns[2]
+        assertNotNull(compoundAssign)
+
+        val prevDFGs = compoundAssign.lhs.single().prevDFG
+        assertEquals(3, prevDFGs.size)
+        // One DFG edge to the assign, and two to the assignments in the branches
+        assertTrue(prevDFGs.contains(fd.assigns[0]))
+        assertTrue(prevDFGs.contains(fd.assigns[1]))
+        assertTrue(prevDFGs.contains(compoundAssign))
+    }
 }

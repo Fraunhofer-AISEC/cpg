@@ -608,3 +608,18 @@ int testShortFS2() {
   sub(p);
   printf("%d\n", *p);
 }
+
+int test_compound() {
+  int i = 0;
+
+  if ( 1 < 2 )
+    i = 3;
+  else
+    i = 4;
+
+  i += 5;
+
+  printf("%d", i);
+
+  i += (j=2);
+}

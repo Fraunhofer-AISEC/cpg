@@ -868,47 +868,44 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val lattice = lattice as? PointsToState ?: return state
         val currentNode = currentEdge.end
 
-        coroutineScope {
-            // Used to keep iterating for steps which do not modify the alias-state otherwise
-
-            doubleState =
-                lattice.pushToDeclarationsState(
-                    doubleState,
-                    currentNode,
-                    doubleState.getFromDecl(currentEdge.end)
-                        ?: DeclarationStateEntryElement(
-                            PowersetLattice.Element(),
-                            PowersetLattice.Element(),
-                            PowersetLattice.Element(),
-                        ),
-                )
-            doubleState =
-                when (currentNode) {
-                    is DeleteExpression -> handleDeleteExpression(lattice, currentNode, doubleState)
-                    is Declaration,
-                    is MemoryAddress -> {
-                        handleDeclaration(lattice, currentNode, doubleState)
-                    }
-
-                    is AssignExpression -> {
-                        handleAssignExpression(lattice, currentNode, doubleState)
-                    }
-
-                    is UnaryOperator -> {
-                        handleUnaryOperator(lattice, currentNode, doubleState)
-                    }
-
-                    is CallExpression -> {
-                        handleCallExpression(lattice, currentNode, doubleState)
-                    }
-
-                    is Expression -> {
-                        handleExpression(lattice, currentNode, doubleState)
-                    }
-                    is ReturnStatement -> handleReturnStatement(lattice, currentNode, doubleState)
-                    else -> doubleState
+        // Used to keep iterating for steps which do not modify the alias-state otherwise
+        doubleState =
+            lattice.pushToDeclarationsState(
+                doubleState,
+                currentNode,
+                doubleState.getFromDecl(currentEdge.end)
+                    ?: DeclarationStateEntryElement(
+                        PowersetLattice.Element(),
+                        PowersetLattice.Element(),
+                        PowersetLattice.Element(),
+                    ),
+            )
+        doubleState =
+            when (currentNode) {
+                is DeleteExpression -> handleDeleteExpression(lattice, currentNode, doubleState)
+                is Declaration,
+                is MemoryAddress -> {
+                    handleDeclaration(lattice, currentNode, doubleState)
                 }
-        }
+
+                is AssignExpression -> {
+                    handleAssignExpression(lattice, currentNode, doubleState)
+                }
+
+                is UnaryOperator -> {
+                    handleUnaryOperator(lattice, currentNode, doubleState)
+                }
+
+                is CallExpression -> {
+                    handleCallExpression(lattice, currentNode, doubleState)
+                }
+
+                is Expression -> {
+                    handleExpression(lattice, currentNode, doubleState)
+                }
+                is ReturnStatement -> handleReturnStatement(lattice, currentNode, doubleState)
+                else -> doubleState
+            }
         return doubleState
     }
 
@@ -1932,35 +1929,45 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         doubleState: PointsToState.Element,
     ): PointsToState.Element {
         var doubleState = doubleState
-        /* For AssignExpressions, we update the value of the lhs with the rhs
-         * In C(++), both the lhs and the rhs should only have one element
-         */
-        if (currentNode.lhs.size == 1 && currentNode.rhs.size == 1) {
-            val sources =
-                currentNode.rhs.flatMapTo(
-                    PowersetLattice.Element<Triple<Node?, Boolean, Boolean>>()
-                ) {
-                    doubleState.getValues(it, it).map { Triple(it.first, it.second, false) }
-                }
-            val destinations: ConcurrentIdentitySet<Node> =
-                currentNode.lhs.toConcurrentIdentitySet()
-            val destinationsAddresses =
-                destinations.flatMapTo(ConcurrentIdentitySet()) { doubleState.getAddresses(it, it) }
-            val lastWrites: MutableSet<NodeWithPropertiesKey> =
-                destinations.mapTo(ConcurrentHashMap.newKeySet()) {
-                    NodeWithPropertiesKey(it, equalLinkedHashSetOf<Any>(false))
-                }
+        /* For AssignExpressions, we update the value of the lhs with the rhs */
+        val sources =
+            currentNode.rhs.flatMapTo(PowersetLattice.Element<Triple<Node?, Boolean, Boolean>>()) {
+                doubleState.getValues(it, it).map { Triple(it.first, it.second, false) }
+            }
+        val destinations: ConcurrentIdentitySet<Node> = currentNode.lhs.toConcurrentIdentitySet()
+        val destinationsAddresses =
+            destinations.flatMapTo(ConcurrentIdentitySet()) { doubleState.getAddresses(it, it) }
+        val lastWrites: MutableSet<NodeWithPropertiesKey> =
+            destinations.mapTo(ConcurrentHashMap.newKeySet()) {
+                NodeWithPropertiesKey(it, equalLinkedHashSetOf<Any>(false))
+            }
+        /* For compound assigns, we need to a DFG Edge to the lhs, so we store that before overwriting the state */
+        val destinationLastWrites =
+            if (currentNode.isCompoundAssignment)
+                currentNode.lhs.map { Pair(it, doubleState.getLastWrites(it)) }
+            else null
+        doubleState =
+            doubleState.updateValues(
+                lattice,
+                doubleState,
+                sources,
+                destinations,
+                destinationsAddresses,
+                lastWrites,
+            )
+        /* If we have a compoundAssignment, we restore the DFG edge from the lhs' last write to the lhs */
+        destinationLastWrites?.forEach { (destination, destinationLastWrites) ->
             doubleState =
-                doubleState.updateValues(
-                    lattice,
+                lattice.push(
                     doubleState,
-                    sources,
-                    destinations,
-                    destinationsAddresses,
-                    lastWrites,
+                    destination,
+                    GeneralStateEntryElement(
+                        PowersetLattice.Element(),
+                        PowersetLattice.Element(),
+                        PowersetLattice.Element(destinationLastWrites),
+                    ),
                 )
         }
-
         return doubleState
     }
 
