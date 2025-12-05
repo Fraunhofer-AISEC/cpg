@@ -35,10 +35,11 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
-import uniffi.cpgrust.SomeStruct
-import uniffi.cpgrust.getSomeStruct
 import java.io.File
 import java.net.URI
+import uniffi.cpgrust.SomeStruct
+import uniffi.cpgrust.getSomeStruct
+import uniffi.cpgrust.parseRustCode
 import uniffi.cpgrust.printString
 
 /** The [LanguageFrontend] for Rust. It uses the TreeSitter project to generate a RUST AST. */
@@ -70,7 +71,8 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
         printString("Print this rust string")
         val someStruct: SomeStruct = getSomeStruct()
 
-        someStruct.get
+        parseRustCode(file.absolutePath)
+
         // Todo parsing
         val tud =
             newTranslationUnitDeclaration(file.path, rawNode = null).apply {
