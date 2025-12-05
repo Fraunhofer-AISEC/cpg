@@ -521,6 +521,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         prevDFGs.add(NodeWithPropertiesKey(it.first, equalLinkedHashSetOf<Any>()))
                     }
             }
+            // For MethodDeclarations, we also add an edge to the receiver
+            if (functionDeclaration is MethodDeclaration)
+                functionDeclaration.receiver?.let {
+                    prevDFGs.add(NodeWithPropertiesKey(it, equalLinkedHashSetOf<Any>()))
+                }
             val rets = mutableSetOf<Node>()
             if (functionDeclaration.returns.isNotEmpty()) rets.addAll(functionDeclaration.returns)
             else rets.add(functionDeclaration)
