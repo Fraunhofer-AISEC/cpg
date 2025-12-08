@@ -296,7 +296,7 @@ fun <NodeType : Node, EdgeType : Edge<out NodeType>> NodeType.printGraph(
         val start = edge.start
         val end = edge.end
         builder.append(
-            "${start.hashCode()}[\"${start.nodeLabel}\"]-->|${edge.label()}|${end.hashCode()}[\"${end.nodeLabel}\"]\n"
+            "${start.id}[\"${start.nodeLabel}\"]-->|${edge.label()}|${end.id}[\"${end.nodeLabel}\"]\n"
         )
         conns++
 
