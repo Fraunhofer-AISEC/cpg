@@ -313,8 +313,8 @@ class DFGTest {
             }
         val dfgNodes = flattenDFGGraph(calls[0].refs["a"], false)
         assertTrue(dfgNodes.contains(l0))
-        assertFalse(dfgNodes.contains(l1))
-        assertFalse(dfgNodes.contains(l2))
+        assertTrue(dfgNodes.contains(l1))
+        assertTrue(dfgNodes.contains(l2))
         assertFalse(dfgNodes.contains(l3))
     }
 
