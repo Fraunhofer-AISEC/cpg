@@ -262,7 +262,7 @@ interface Lattice<T : Lattice.Element> {
     }
 
     /** Allows storing all elements which are part of this lattice */
-    var elements: Set<T>
+    var elements: ConcurrentIdentitySet<T>
 
     /** The smallest possible element in the lattice */
     val bottom: T
@@ -491,7 +491,7 @@ interface Lattice<T : Lattice.Element> {
 
 /** Implements a [Lattice] whose elements are the powerset of a given set of values. */
 class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
-    override lateinit var elements: Set<Element<T>>
+    override lateinit var elements: ConcurrentIdentitySet<Element<T>>
 
     class Element<T>(expectedMaxSize: Int) :
         ConcurrentIdentitySet<T>(expectedMaxSize), Lattice.Element {
@@ -677,7 +677,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
  */
 open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     Lattice<ConcurrentMapLattice.Element<K, V>> {
-    override lateinit var elements: Set<Element<K, V>>
+    override lateinit var elements: ConcurrentIdentitySet<Element<K, V>>
 
     /**
      * Splits a MapLattice.Element<K,V> into at most [maxParts] smaller MapLattice.Element<K,V>
@@ -1012,7 +1012,7 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
  */
 open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
     Lattice<MapLattice.Element<K, V>> {
-    override lateinit var elements: Set<Element<K, V>>
+    override lateinit var elements: ConcurrentIdentitySet<Element<K, V>>
 
     /**
      * Splits a MapLattice.Element<K,V> into at most [maxParts] smaller MapLattice.Element<K,V>
@@ -1353,7 +1353,7 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
     val innerLattice1: Lattice<S>,
     val innerLattice2: Lattice<T>,
 ) : Lattice<TupleLattice.Element<S, T>> {
-    override lateinit var elements: Set<Element<S, T>>
+    override lateinit var elements: ConcurrentIdentitySet<Element<S, T>>
 
     open class Element<S : Lattice.Element, T : Lattice.Element>(val first: S, val second: T) :
         Serializable, Lattice.Element {
@@ -1468,7 +1468,7 @@ open class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.E
     val innerLattice2: Lattice<S>,
     val innerLattice3: Lattice<T>,
 ) : Lattice<TripleLattice.Element<R, S, T>> {
-    override lateinit var elements: Set<Element<R, S, T>>
+    override lateinit var elements: ConcurrentIdentitySet<Element<R, S, T>>
 
     open class Element<R : Lattice.Element, S : Lattice.Element, T : Lattice.Element>(
         val first: R,

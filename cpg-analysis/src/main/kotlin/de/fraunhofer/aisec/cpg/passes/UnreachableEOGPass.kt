@@ -294,7 +294,7 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
     }
 
     override var elements =
-        setOf(
+        concurrentIdentitySetOf(
             Element(Reachability.BOTTOM),
             Element(Reachability.UNREACHABLE),
             Element(Reachability.REACHABLE),

@@ -30,6 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
+import de.fraunhofer.aisec.cpg.helpers.ConcurrentIdentitySet
+import de.fraunhofer.aisec.cpg.helpers.concurrentIdentitySetOf
 import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.passes.objectIdentifier
 import kotlin.collections.component1
@@ -200,7 +202,7 @@ class NewIntervalLattice() :
     Lattice<NewIntervalLattice.Element>,
     HasWidening<NewIntervalLattice.Element>,
     HasNarrowing<NewIntervalLattice.Element> {
-    override var elements: Set<Element> = setOf()
+    override var elements: ConcurrentIdentitySet<Element> = concurrentIdentitySetOf()
     override val bottom: Element = Element(LatticeInterval.BOTTOM)
 
     override suspend fun lub(
