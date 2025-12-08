@@ -1216,7 +1216,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             return other is MapDstToSrcEntry &&
                 srcNode === other.srcNode &&
                 lastWrites.size == other.lastWrites.size &&
-                lastWrites.all { lw -> other.lastWrites.any { it == lw } } &&
+                lastWrites.all { lw -> other.lastWrites.any { it === lw } } &&
                 propertySet.size == other.propertySet.size &&
                 propertySet.all { p -> other.propertySet.any { it == p } } &&
                 dst == other.dst
@@ -1488,7 +1488,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // Since we are dealing with pairs, carefully check if we already have them
         override fun equals(other: Any?): Boolean =
             other is NodeWithPropertiesKey &&
-                node == other.node &&
+                node === other.node &&
                 properties.size == other.properties.size &&
                 properties.all { t -> other.properties.any { o -> o == t } }
 
@@ -1972,6 +1972,22 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         PowersetLattice.Element(destinationLastWrites),
                     ),
                 )
+        }
+        /* If the assignment is within a BinaryOperator, some languages treat this as DF from the rhs to the BinaryOperator, so we draw a DFG-Edge to the assignExpression to link the path */
+        val astParent = (currentNode.astParent as? BinaryOperator)
+        if (astParent != null) {
+            currentNode.rhs.forEach { rhs ->
+                doubleState =
+                    lattice.push(
+                        doubleState,
+                        currentNode,
+                        GeneralStateEntryElement(
+                            PowersetLattice.Element(),
+                            PowersetLattice.Element(),
+                            PowersetLattice.Element(NodeWithPropertiesKey(rhs)),
+                        ),
+                    )
+            }
         }
         return doubleState
     }

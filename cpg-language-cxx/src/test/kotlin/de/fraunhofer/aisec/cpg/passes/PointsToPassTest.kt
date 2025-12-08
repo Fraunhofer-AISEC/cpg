@@ -3591,7 +3591,7 @@ class PointsToPassTest {
         val tu =
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
-                // it.registerPass<PointsToPass>()
+                it.registerPass<PointsToPass>()
                 it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
             }
         assertNotNull(tu)
@@ -3604,8 +3604,39 @@ class PointsToPassTest {
         val prevDFGs = compoundAssign.lhs.single().prevDFG
         assertEquals(3, prevDFGs.size)
         // One DFG edge to the assign, and two to the assignments in the branches
-        assertTrue(prevDFGs.contains(fd.assigns[0]))
-        assertTrue(prevDFGs.contains(fd.assigns[1]))
+        assertTrue(prevDFGs.contains(fd.assigns[0].lhs.single()))
+        assertTrue(prevDFGs.contains(fd.assigns[1].lhs.single()))
         assertTrue(prevDFGs.contains(compoundAssign))
+    }
+
+    @Test
+    fun testBlockAssignment() {
+        val file = File("src/test/resources/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+        val fd = tu.functions["test_compound"]
+        assertNotNull(fd)
+
+        val blockAssignment = fd.assigns[3]
+        assertNotNull(blockAssignment)
+
+        val rhs = blockAssignment.rhs.single()
+        assertNotNull(rhs)
+        val prevDFGEndpoints = rhs.collectAllPrevDFGPaths().map { it.nodes.last() }
+        assertEquals(prevDFGEndpoints.size, 5)
+        // we should have a DFG to all literals assigned to i
+        fd.assigns
+            .map { it.rhs.single() }
+            .filterIsInstance<Literal<*>>()
+            .forEach { assertTrue(prevDFGEndpoints.contains(it)) }
+        // and to the i in the compound assign
+        assertTrue(
+            prevDFGEndpoints.contains(fd.assigns.single { it.isCompoundAssignment }.lhs.single())
+        )
     }
 }

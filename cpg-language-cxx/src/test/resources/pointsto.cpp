@@ -621,5 +621,5 @@ int test_compound() {
 
   printf("%d", i);
 
-  i += (j=2);
+  i = i+(j=2);
 }
