@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.helpers.functional
 
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.LoopStatement
 import de.fraunhofer.aisec.cpg.helpers.ConcurrentIdentitySet
@@ -403,82 +404,73 @@ interface Lattice<T : Lattice.Element> {
                     nextEdge,
                     if (isNotNearStartOrEndOfBasicBlock) nextGlobal else nextGlobal.duplicate() as T,
                 )
-            coroutineScope {
-                // If we have multiple edges, we handle them in parallel
-                nextEdge.end.nextEOGEdges.forEach {
-                    launch(Dispatchers.Default) {
-                        // We continue with the nextEOG edge if we haven't seen it before or if we
-                        // updated the state in comparison to the previous time we were there.
+            nextEdge.end.nextEOGEdges.forEach {
+                // We continue with the nextEOG edge if we haven't seen it before or if we
+                // updated the state in comparison to the previous time we were there.
 
-                        val oldGlobalIt = globalState[it]
+                val oldGlobalIt = globalState[it]
 
-                        // If we're on the loop head (some node is LoopStatement), and we use
-                        // WIDENING or WIDENING_NARROWING, we have to apply the widening/narrowing
-                        // here (if oldGlobalIt is not null).
-                        val newGlobalIt =
-                            if (
-                                nextEdge.end is LoopStatement &&
-                                    (strategy == Strategy.WIDENING ||
-                                        strategy == Strategy.WIDENING_NARROWING) &&
-                                    oldGlobalIt != null
-                            ) {
+                // If we're on the loop head (some node is LoopStatement), and we use
+                // WIDENING or WIDENING_NARROWING, we have to apply the widening/narrowing
+                // here (if oldGlobalIt is not null).
+                val newGlobalIt =
+                    if (
+                        nextEdge.end is LoopStatement &&
+                            (strategy == Strategy.WIDENING ||
+                                strategy == Strategy.WIDENING_NARROWING) &&
+                            oldGlobalIt != null
+                    ) {
+                        this@Lattice.lub(
+                            one = newState,
+                            two = oldGlobalIt,
+                            allowModify = isNotNearStartOrEndOfBasicBlock,
+                            widen = true,
+                        )
+                    } else if (strategy == Strategy.NARROWING) {
+                        TODO()
+                    } else {
+                        val result =
+                            (oldGlobalIt?.let {
                                 this@Lattice.lub(
                                     one = newState,
-                                    two = oldGlobalIt,
+                                    two = it,
                                     allowModify = isNotNearStartOrEndOfBasicBlock,
-                                    widen = true,
                                 )
-                            } else if (strategy == Strategy.NARROWING) {
-                                TODO()
-                            } else {
-                                val result =
-                                    (oldGlobalIt?.let {
-                                        this@Lattice.lub(
-                                            one = newState,
-                                            two = it,
-                                            allowModify = isNotNearStartOrEndOfBasicBlock,
-                                        )
-                                    } ?: newState)
-                                result
-                            }
+                            } ?: newState)
+                        result
+                    }
 
-                        globalState.put(it, newGlobalIt)
+                globalState.put(it, newGlobalIt)
 
-                        if (
-                            it !in currentBBEdgesList &&
-                                it !in nextBranchEdgesList &&
-                                it !in mergePointsEdgesList &&
-                                (isNoBranchingPoint ||
-                                    oldGlobalIt == null ||
-                                    // If we deal with PointsToState Elements, we use their special
-                                    // parallelCompare function, otherwise, we resort to the
-                                    // traditional compare
-                                    ((newGlobalIt as? PointsToState.Element)?.parallelCompare(
-                                        oldGlobalIt
-                                    )
-                                        ?: (newGlobalIt as? ConcurrentMapLattice.Element<*, *>)
-                                            ?.parallelCompare(oldGlobalIt)
-                                        ?: newGlobalIt.compare(oldGlobalIt)) in
-                                        setOf(Order.GREATER, Order.UNEQUAL))
-                        ) {
-                            if (it.start.prevEOGEdges.size > 1) {
-                                // This edge brings us to a merge point, so we add it to the list of
-                                // merge points.
-                                synchronized(mergePointsEdgesList) {
-                                    mergePointsEdgesList.add(0, it)
-                                }
-                            } else if (nextEdge.end.nextEOGEdges.size > 1) {
-                                // If we have multiple next edges, we add this edge to the list of
-                                // edges of a next basic block.
-                                // We will process these after the current basic block has been
-                                // processed (probably very soon).
-                                synchronized(nextBranchEdgesList) { nextBranchEdgesList.add(0, it) }
-                            } else {
-                                // If we have only one next edge, we add it to the current basic
-                                // block edges list.
-                                synchronized(currentBBEdgesList) { currentBBEdgesList.add(0, it) }
-                            }
-                        }
+                if (
+                    it !in currentBBEdgesList &&
+                        it !in nextBranchEdgesList &&
+                        it !in mergePointsEdgesList &&
+                        (isNoBranchingPoint ||
+                            oldGlobalIt == null ||
+                            // If we deal with PointsToState Elements, we use their special
+                            // parallelCompare function, otherwise, we resort to the
+                            // traditional compare
+                            ((newGlobalIt as? PointsToState.Element)?.parallelCompare(oldGlobalIt)
+                                ?: (newGlobalIt as? ConcurrentMapLattice.Element<*, *>)
+                                    ?.parallelCompare(oldGlobalIt)
+                                ?: newGlobalIt.compare(oldGlobalIt)) in
+                                setOf(Order.GREATER, Order.UNEQUAL))
+                ) {
+                    if (it.start.prevEOGEdges.size > 1) {
+                        // This edge brings us to a merge point, so we add it to the list of
+                        // merge points.
+                        mergePointsEdgesList.add(0, it)
+                    } else if (nextEdge.end.nextEOGEdges.size > 1) {
+                        // If we have multiple next edges, we add this edge to the list of
+                        // edges of a next basic block.
+                        // We will process these after the current basic block has been
+                        // processed (probably very soon).
+                        nextBranchEdgesList.add(0, it)
+                    } else {
+                        // If we have only one next edge, we add it to the current basic
+                        // block edges list.
+                        currentBBEdgesList.add(0, it)
                     }
                 }
             }
