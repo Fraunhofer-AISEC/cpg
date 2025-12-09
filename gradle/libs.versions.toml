@@ -78,7 +78,7 @@ publish-central = { module = "com.vanniktech:gradle-maven-publish-plugin", versi
 kotlin-gradle = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 dokka-gradle = { module = "org.jetbrains.dokka:dokka-gradle-plugin", version = "2.0.0" } # the dokka plugin is slightly behind the main Kotlin release cycle
 dokka-versioning = { module = "org.jetbrains.dokka:versioning-plugin", version = "2.0.0"}
-kover-gradle = { module = "org.jetbrains.kotlinx:kover-gradle-plugin", version = "0.9.0" }
+kover-gradle = { module = "org.jetbrains.kotlinx:kover-gradle-plugin", version = "0.9.3" }
 spotless-gradle = { module = "com.diffplug.spotless:spotless-plugin-gradle", version.ref = "spotless" }
 
 sootup-core = { module = "org.soot-oss:sootup.core", version.ref = "sootup" }
