@@ -27,10 +27,11 @@ package de.fraunhofer.aisec.cpg.frontends.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import uniffi.cpgrust.RsAst
 
 class ExpressionHandler(frontend: RustLanguageFrontend) :
-    RustHandler<Expression, Rust.AST>(::ProblemExpression, frontend) {
-    override fun handleNode(node: Rust.AST): Expression {
+    RustHandler<Expression, RsAst.RustExpr>(::ProblemExpression, frontend) {
+    override fun handleNode(node: RsAst.RustExpr): Expression {
         return when (node) {
             else -> handleNotSupported(node, node::class.simpleName ?: "")
         }

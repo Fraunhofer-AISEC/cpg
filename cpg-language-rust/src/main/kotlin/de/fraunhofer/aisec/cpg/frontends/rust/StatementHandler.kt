@@ -31,10 +31,11 @@ import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import kotlin.collections.plusAssign
+import uniffi.cpgrust.RsAst
 
 class StatementHandler(frontend: RustLanguageFrontend) :
-    RustHandler<Statement, Rust.AST>(::ProblemExpression, frontend) {
-    override fun handleNode(node: Rust.AST): Statement {
+    RustHandler<Statement, RsAst>(::ProblemExpression, frontend) {
+    override fun handleNode(node: RsAst): Statement {
         return when (node) {
             else -> handleNotSupported(node, node::class.simpleName ?: "")
         }

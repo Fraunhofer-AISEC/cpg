@@ -37,15 +37,15 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.net.URI
-import uniffi.cpgrust.SomeStruct
-import uniffi.cpgrust.getSomeStruct
+import kotlin.collections.plusAssign
+import uniffi.cpgrust.RsAst
+import uniffi.cpgrust.RsItem
 import uniffi.cpgrust.parseRustCode
-import uniffi.cpgrust.printString
 
 /** The [LanguageFrontend] for Rust. It uses the TreeSitter project to generate a RUST AST. */
-@SupportsParallelParsing(true)
+ @SupportsParallelParsing(true)
 class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLanguageFrontend>) :
-    LanguageFrontend<Rust.AST, Rust.Type>(ctx, language) {
+    LanguageFrontend<RsAst, Rust.Type>(ctx, language) {
     val lineSeparator = "\n"
     private val tokenTypeIndex = 0
 
@@ -68,12 +68,8 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
         lastLineNumber = fileAsLines.size
         lastColumnLength = fileAsLines.lastOrNull()?.length ?: -1
 
-        printString("Print this rust string")
-        val someStruct: SomeStruct = getSomeStruct()
-
-        parseRustCode(file.absolutePath)
-
-        // Todo parsing
+        val rsRustFile = parseRustCode(file.absolutePath)
+        println(rsRustFile?.astNode?.text)
         val tud =
             newTranslationUnitDeclaration(file.path, rawNode = null).apply {
                 this.location =
@@ -88,6 +84,22 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
                             ),
                     )
             }
+
+        for (rsItem in rsRustFile?.items ?: listOf()) {
+            when (rsItem) {
+                is RsAst.RustItem -> {
+                    val decl = declarationHandler.handle(rsItem)
+                    scopeManager.addDeclaration(decl)
+                    tud.addDeclaration(decl)
+                }
+                else -> log.warn("Not handling ${rsItem.javaClass.simpleName}.")
+            }
+        }
+
+        rsRustFile?.let {
+            it.items.forEach { it is RsItem }
+            it.items.forEach { item -> println("Item: $item type: ${item}") }
+        }
 
         return tud
     }
@@ -110,19 +122,25 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
         return objectType(name)
     }
 
-    override fun codeOf(astNode: Rust.AST): String? {
-        return astNode.toString() // Todo parse the code itself
+    override fun codeOf(astNode: RsAst): String? {
+        return astNode.astNode().text
     }
 
-    override fun locationOf(astNode: Rust.AST): PhysicalLocation? {
+    override fun locationOf(astNode: RsAst): PhysicalLocation? {
+        val metaAstNode = astNode.astNode()
+        val contentBefore = fileContent.substring(0, metaAstNode.startOffset.toInt())
+        val upTo = contentBefore.split(lineSeparator)
+        val contentBeforeAndIn = fileContent.substring(0, metaAstNode.endOffset.toInt())
+        val upToIncluding = contentBeforeAndIn.split(lineSeparator)
+        return PhysicalLocation(uri, Region(upTo.size, upTo.last().length, upToIncluding.size, upToIncluding.last().length))
+
+    }
+
+    override fun setComment(node: Node, astNode: RsAst) {
         TODO("Not yet implemented")
     }
 
-    override fun setComment(node: Node, astNode: Rust.AST) {
-        TODO("Not yet implemented")
-    }
-
-    fun operatorToString(op: Rust.AST) =
+    fun operatorToString(op: RsAst) =
         when (op) {
             /*is ... -> "+"
             is ... -> "-"
@@ -140,7 +158,7 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
             else -> ""
         }
 
-    fun operatorUnaryToString(op: Rust.AST) =
+    fun operatorUnaryToString(op: RsAst) =
         when (op) {
             else -> ""
         /*          is ... -> "~"
