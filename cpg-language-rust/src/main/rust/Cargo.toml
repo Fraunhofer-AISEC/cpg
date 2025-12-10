@@ -13,6 +13,7 @@ uniffi = { version = "0.30.0", features = [ "cli" ] }
 ra_ap_parser = {version = "0.0.307"}
 ra_ap_syntax = {version = "0.0.307"}
 rowan = {version = "0.16.1"}
+itertools = "0.14.0"
 
 
 [build-dependencies]

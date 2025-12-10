@@ -43,7 +43,7 @@ import uniffi.cpgrust.RsItem
 import uniffi.cpgrust.parseRustCode
 
 /** The [LanguageFrontend] for Rust. It uses the TreeSitter project to generate a RUST AST. */
- @SupportsParallelParsing(true)
+@SupportsParallelParsing(true)
 class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLanguageFrontend>) :
     LanguageFrontend<RsAst, Rust.Type>(ctx, language) {
     val lineSeparator = "\n"
@@ -132,12 +132,16 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
         val upTo = contentBefore.split(lineSeparator)
         val contentBeforeAndIn = fileContent.substring(0, metaAstNode.endOffset.toInt())
         val upToIncluding = contentBeforeAndIn.split(lineSeparator)
-        return PhysicalLocation(uri, Region(upTo.size, upTo.last().length, upToIncluding.size, upToIncluding.last().length))
-
+        return PhysicalLocation(
+            uri,
+            Region(upTo.size, upTo.last().length, upToIncluding.size, upToIncluding.last().length),
+        )
     }
 
     override fun setComment(node: Node, astNode: RsAst) {
-        TODO("Not yet implemented")
+        val metaAstNode = astNode.astNode()
+
+        node.comment = metaAstNode.comments
     }
 
     fun operatorToString(op: RsAst) =

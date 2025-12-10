@@ -28,13 +28,19 @@ package de.fraunhofer.aisec.cpg.frontends.rust
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import uniffi.cpgrust.RsAst
+import uniffi.cpgrust.RsItem
 
 class DeclarationHandler(frontend: RustLanguageFrontend) :
     RustHandler<Declaration, RsAst.RustItem>(::ProblemDeclaration, frontend) {
     override fun handleNode(node: RsAst.RustItem): Declaration {
-
-        return when (node) {
+        val item = node.v1
+        return when (item) {
+            is RsItem.Fn -> handleFunctionDeclaration(item)
             else -> handleNotSupported(node, node::class.simpleName ?: "")
         }
+    }
+
+    private fun handleFunctionDeclaration(rsFunction: RsItem.Fn): Declaration {
+        return ProblemDeclaration()
     }
 }
