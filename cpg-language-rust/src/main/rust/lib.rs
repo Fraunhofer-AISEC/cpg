@@ -162,8 +162,8 @@ impl From<Fn> for RSFn {
     fn from(node:  Fn) -> Self {
         RSFn{
             ast_node: node.syntax().into(),
-            param_list: node.param_list().map(|o|o.into()),
-            ret_type: node.ret_type().map(|o|o.ty().map(|p|p.into())).flatten()
+            param_list: node.param_list().map(Into::into),
+            ret_type: node.ret_type().map(|o|o.ty().map(Into::into)).flatten()
         }
     }
 }
@@ -1146,22 +1146,52 @@ impl From<Adt> for RSAdt {
 
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSParam {pub(crate) ast_node: RSNode}
+pub struct RSParam {
+    pub(crate) ast_node: RSNode,
+    pub pat: Option<RSPat>,
+    pub ty: Option<RSType>,
+}
 impl From<Param> for RSParam {
-    fn from(node: Param) -> Self {RSParam{ast_node: node.syntax().into()}}
+    fn from(node: Param) -> Self {
+        RSParam{
+            ast_node: node.syntax().into(),
+            pat: node.pat().map(Into::into),
+            ty: node.ty().map(Into::into)
+        }
+    }
 }
 
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSParamList {pub(crate) ast_node: RSNode}
+pub struct RSParamList {
+    pub(crate) ast_node: RSNode,
+    pub params: Vec<RSParam>,
+    pub self_param: Option<RSSelfParam>
+}
 impl From<ParamList> for RSParamList {
-    fn from(node: ParamList ) -> Self {RSParamList{ast_node: node.syntax().into()}}
+    fn from(node: ParamList ) -> Self {
+        RSParamList{
+            ast_node: node.syntax().into(),
+            params: node.params().map(Into::into).collect(),
+            self_param: node.self_param().map(Into::into)
+        }
+    }
 }
 
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSSelfParam {pub(crate) ast_node: RSNode}
+pub struct RSSelfParam {
+    pub(crate) ast_node: RSNode,
+    ty: Option<RSType>,
+    lifetime: Option<RSLifetime>
+}
 impl From<SelfParam> for RSSelfParam {
-    fn from(node: SelfParam) -> Self {RSSelfParam{ast_node: node.syntax().into()}}
+    fn from(node: SelfParam) -> Self {
+        RSSelfParam{
+            ast_node: node.syntax().into(),
+            lifetime: node.lifetime().map(Into::into),
+            ty: node.ty().map(Into::into)
+        }
+    }
 }
 
