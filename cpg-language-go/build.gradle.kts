@@ -42,7 +42,7 @@ dependencies {
     testImplementation(project(":cpg-analysis"))
 }
 
-tasks {
+/*tasks {
     val downloadLibGoAST by
         registering(Download::class) {
             val version = "v0.0.5"
@@ -63,4 +63,4 @@ tasks {
     processResources { dependsOn(downloadLibGoAST) }
 
     sourcesJar { dependsOn(downloadLibGoAST) }
-}
+}*/
