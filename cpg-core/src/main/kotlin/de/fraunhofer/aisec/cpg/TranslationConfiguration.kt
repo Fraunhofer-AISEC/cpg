@@ -572,6 +572,8 @@ private constructor(
             registerPass<PointsToPass>()
             registerPass<ResolveCallExpressionAmbiguityPass>()
             registerPass<ResolveMemberExpressionAmbiguityPass>()
+            registerPass<BasicBlockCollectorPass>()
+            registerPass<SccPass>()
             useDefaultPasses = true
             return this
         }

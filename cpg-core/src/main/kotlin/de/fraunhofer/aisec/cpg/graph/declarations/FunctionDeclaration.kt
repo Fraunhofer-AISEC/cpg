@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Invokes
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.edges.unwrappingIncoming
+import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -206,6 +207,8 @@ open class FunctionDeclaration :
     @DoNotPersist
     override val eogStarters: List<Node>
         get() = listOfNotNull(this)
+
+    override var firstBasicBlock: BasicBlock? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {
