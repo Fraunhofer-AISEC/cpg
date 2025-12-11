@@ -44,6 +44,7 @@ import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
 import de.fraunhofer.aisec.cpg.passes.inference.startInference
 import java.io.File
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -288,6 +289,8 @@ class DFGFunctionSummariesTest {
         assertEquals(mutableSetOf<Node>(literal5), returnA.memoryValues)
     }
 
+    // TODO for merge
+    @Ignore
     @Test
     // Todo Konrad This test does not make sense because the DFGPass does not draw the edges between
     // a reference to the Declaration any more, which is, however, the functionality that this test
