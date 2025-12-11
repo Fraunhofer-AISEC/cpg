@@ -126,7 +126,7 @@ val compileLinuxAarch64 =
 tasks.processResources {
     dependsOn(
         compileWindowsX8664,
-        compileMacOSX8664,
+        //        compileMacOSX8664,
         compileMacOSAarch64,
         compileLinuxX8664,
         compileLinuxAarch64,
