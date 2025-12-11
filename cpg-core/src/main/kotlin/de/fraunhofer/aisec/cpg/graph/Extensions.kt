@@ -1607,3 +1607,78 @@ val Expression.isImported: Boolean
     get() {
         return this.importedFrom.isNotEmpty()
     }
+
+/** Checks if a branchingNode contains checks for NULL (or 0). */
+fun Node.isNullCheck(refersTo: Declaration?): Boolean {
+    val checklist = mutableSetOf<BinaryOperator>()
+    if (this is BinaryOperator) {
+        checklist.add(this)
+    } else if ((this as? IfStatement)?.condition is BinaryOperator) {
+        checklist.add(this.condition as BinaryOperator)
+    } else
+    // Something we can't handle, so better return false
+    return false
+
+    while (checklist.isNotEmpty()) {
+        val operator = checklist.first()
+        var operatorPassedCheck = false
+        checklist.remove(operator)
+
+        // If we have multiple BinaryOperators in the if statement, we have to work
+        // through them separately
+        if (operator.lhs is BinaryOperator) {
+            checklist.add(operator.lhs as BinaryOperator)
+            operatorPassedCheck = true
+        } else if (
+            // It might also be an ExpressionList such as (var = foo(), foo == NULL).
+            // In this case we only take the last element of the ExpressionList
+            operator.lhs is ExpressionList &&
+                (operator.lhs as ExpressionList).expressionEdges.last().end is BinaryOperator
+        ) {
+            checklist.add(
+                (operator.lhs as ExpressionList).expressionEdges.last().end as BinaryOperator
+            )
+            operatorPassedCheck = true
+        }
+
+        // And the same for the rhs
+        if (operator.rhs is BinaryOperator) {
+            checklist.add(operator.rhs as BinaryOperator)
+            operatorPassedCheck = true
+        } else if (
+            operator.rhs is ExpressionList &&
+                (operator.rhs as ExpressionList).expressionEdges.last().end is BinaryOperator
+        ) {
+            checklist.add(
+                (operator.rhs as ExpressionList).expressionEdges.last().end as BinaryOperator
+            )
+            operatorPassedCheck = true
+        }
+
+        // If we already operate on the innermost BinaryOperator, let's see if it does a
+        // NULL check on our variable
+        if (
+            ((operator.rhs.name.localName == "NULL" ||
+                operator.rhs.evaluate() == 0 ||
+                // Hack for now until the CPG correctly parses '\0'
+                operator.rhs.evaluate() == '\\') &&
+                (operator.lhs as? Reference)?.refersTo == refersTo) ||
+                // the same for the other way round
+                ((operator.lhs.evaluate() == '\\' ||
+                    operator.lhs.name.localName == "NULL" ||
+                    operator.lhs.evaluate() == 0) &&
+                    (operator.lhs as? Reference)?.refersTo == refersTo)
+        ) {
+            operatorPassedCheck = true
+        }
+
+        // When we didn't find either a NULL-check for the operator or a further clause, it's a
+        // non-NULL check
+        if (!operatorPassedCheck) {
+            return false
+        }
+    }
+    // when we ran through the whole checklist and didn't find anything besides a NULL-check, we can
+    // return true
+    return true
+}
