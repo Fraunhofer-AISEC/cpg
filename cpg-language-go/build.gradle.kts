@@ -23,7 +23,6 @@
  *                    \______/ \__|       \______/
  *
  */
-import de.undercouch.gradle.tasks.download.Download
 
 plugins {
     id("cpg.frontend-conventions")
@@ -43,24 +42,24 @@ dependencies {
 }
 
 /*tasks {
-    val downloadLibGoAST by
-        registering(Download::class) {
-            val version = "v0.0.5"
+     val downloadLibGoAST by
+         registering(Download::class) {
+             val version = "v0.0.5"
 
-            src(
-                listOf(
-                    "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-arm64.dylib",
-                    "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.dylib",
-                    "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-arm64.so",
-                    "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.so",
-                    "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.dll",
-                )
-            )
-            dest(projectDir.resolve("src/main/resources"))
-            onlyIfModified(true)
-        }
+             src(
+                 listOf(
+                     "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-arm64.dylib",
+                     "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.dylib",
+                     "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-arm64.so",
+                     "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.so",
+                     "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.dll",
+                 )
+             )
+             dest(projectDir.resolve("src/main/resources"))
+             onlyIfModified(true)
+         }
 
-    processResources { dependsOn(downloadLibGoAST) }
+     processResources { dependsOn(downloadLibGoAST) }
 
-    sourcesJar { dependsOn(downloadLibGoAST) }
-}*/
+     sourcesJar { dependsOn(downloadLibGoAST) }
+ }*/
