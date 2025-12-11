@@ -28,3 +28,14 @@ int breakloop() {
   }
   printf("done");
 }
+
+int gotoloop() {
+  for (int i = 0; i< 5; i++) {
+    loop:
+    printf("a");
+    if ( 1 == 2) goto exit;
+  }
+  exit:
+  printf("done");
+  if ( 2 == 3 ) goto loop;
+}
