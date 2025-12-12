@@ -87,7 +87,12 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
             // Set the lowLinkValues of all nodes on the stack to the same, as they belong to the
             // same SCC
             // If bb is the first element on the stack, that's no SCC, so we simply remove it again
-            if (currentInfo.stack.first() == bb) {
+            if (
+                currentInfo.stack.first() == bb
+                // Also consider SCCs that consist of a single element, in those, the bb points to
+                // itself
+                && bb.nextEOG.none { it == bb }
+            ) {
                 currentInfo.stack.remove(bb)
             } else {
                 // Otherwise, we found a loop, so we add the SCC edges
@@ -113,10 +118,13 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                         .forEach { edge ->
                             edge.scc = level
                             // also label the respective edges between node
-                            (edge.start as? BasicBlock)?.endNode?.nextEOGEdges?.forEach { nodeEdge
-                                ->
-                                nodeEdge.scc = level
-                            }
+                            (edge.start as? BasicBlock)
+                                ?.endNode
+                                ?.nextEOGEdges
+                                // in case of multiple nextEOGEdges, make sure we take the one
+                                // pointing to a node that's part an sccElements-block
+                                ?.filter { it.end.basicBlock.single() in sccElements }
+                                ?.forEach { nodeEdge -> nodeEdge.scc = level }
                         }
                 }
 
