@@ -35,6 +35,8 @@ import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
 import java.util.*
+import kotlin.time.DurationUnit
+import kotlin.time.toDuration
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -179,6 +181,7 @@ constructor(
 ) : MeasurementHolder(c, message, debug, holder) {
 
     private val start: Instant
+    var duration: kotlin.time.Duration = kotlin.time.Duration.ZERO
 
     /** Stops this benchmark and adds its measurement to the its [StatisticsHolder]. */
     fun stop() {
@@ -187,13 +190,16 @@ constructor(
 
     /** Stops the time and computes the difference between */
     override fun addMeasurement(measurementKey: String?, measurementValue: String?): Any? {
-        val duration = Duration.between(start, Instant.now()).toMillis()
+        var duration = Duration.between(start, Instant.now()).toMillis()
         measurements["${caller}: $message"] = "$duration ms"
 
         logDebugMsg("$caller: $message done in $duration ms")
 
         // update our holder, if we have any
         holder?.addBenchmark(this)
+
+        // update our internal duration so that others can access it
+        this.duration = duration.toDuration(DurationUnit.MILLISECONDS)
 
         return duration
     }

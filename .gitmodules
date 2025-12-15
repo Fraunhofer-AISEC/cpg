@@ -1,0 +1,3 @@
+[submodule "external/security-metrics"]
+	path = external/security-metrics
+	url = https://github.com/Cybersecurity-Certification-Hub/security-metrics.git

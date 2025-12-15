@@ -461,7 +461,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val myStruct = p.records["MyStruct"]
         assertNotNull(myStruct)
 
-        val methods = myStruct.methods
+        val methods = myStruct.toType().methods
         val myFunc = methods.firstOrNull()
         assertNotNull(myFunc)
         assertLocalName("MyFunc", myFunc)
@@ -962,7 +962,7 @@ class GoLanguageFrontendTest : BaseTest() {
         assertIs<ObjectType>(type)
         assertLocalName("newType", type)
 
-        assertEquals(1, type.recordDeclaration?.methods?.size)
+        assertEquals(1, type.recordDeclaration?.toType()?.methods?.size)
     }
 
     @Test
@@ -1151,7 +1151,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         val funcy = result.calls["funcy"]
         assertNotNull(funcy)
-        funcy.invokeEdges.all { it.dynamicInvoke == true }
+        funcy.invokeEdges.all { it.dynamicInvoke }
 
         // We should be able to resolve the call from our stored "do" function to funcy
         assertInvokes(funcy, result.functions["do"])

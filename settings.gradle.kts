@@ -1,7 +1,7 @@
 rootProject.name = "cpg"
 
 plugins {
-    id("org.jetbrains.kotlinx.kover.aggregation") version "0.9.0"
+    id("org.jetbrains.kotlinx.kover.aggregation") version "0.9.3"
 }
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
@@ -9,7 +9,6 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 include(":cpg-core")
 include(":cpg-analysis")
 include(":cpg-neo4j")
-include(":cpg-mcp")
 include(":cpg-concepts")
 
 include(":codyze")
@@ -54,6 +53,10 @@ val enableINIFrontend: Boolean by extra {
     val enableINIFrontend: String? by settings
     enableINIFrontend.toBoolean()
 }
+val enableMCPModule: Boolean by extra {
+    val enableMCPModule: String? by settings
+    enableMCPModule.toBoolean()
+}
 
 if (enableJavaFrontend) include(":cpg-language-java")
 if (enableCXXFrontend) include(":cpg-language-cxx")
@@ -64,6 +67,8 @@ if (enableTypeScriptFrontend) include(":cpg-language-typescript")
 if (enableRubyFrontend) include(":cpg-language-ruby")
 if (enableJVMFrontend) include(":cpg-language-jvm")
 if (enableINIFrontend) include(":cpg-language-ini")
+if (enableMCPModule) include(":cpg-mcp")
+
 
 kover {
     enableCoverage()

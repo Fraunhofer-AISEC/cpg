@@ -168,7 +168,7 @@ class Schema {
         // node in neo4j
         entities.forEach { classInfo ->
             val key = meta.schema.findNode(classInfo.neo4jName())
-            allRels[classInfo.neo4jName() ?: classInfo.underlyingClass.name] =
+            allRels[classInfo.underlyingClass.name] =
                 key.relationships().entries.map { Pair(it.key, it.value.type()) }.toSet()
         }
 
@@ -182,7 +182,7 @@ class Schema {
                     it.field.declaringClass == entity.underlyingClass
                 }
             fields.forEach { relationshipFields.put(Pair(entity, it.name), it) }
-            val name = entity.neo4jName() ?: entity.underlyingClass.name
+            val name = entity.underlyingClass.name
             allRels[name]?.let { relationPair ->
                 inherentRels[name] =
                     relationPair.filter { rel -> fields.any { it.name == rel.first } }.toSet()
@@ -216,9 +216,7 @@ class Schema {
         // parent to child
         val entityRoots: MutableList<ClassInfo> =
             hierarchy.filter { it.value.first == null }.map { it.key }.toMutableList()
-        entityRoots.forEach {
-            inheritedRels[it.neo4jName() ?: it.underlyingClass.name] = mutableSetOf()
-        }
+        entityRoots.forEach { inheritedRels[it.underlyingClass.name] = mutableSetOf() }
         entityRoots.forEach { extractFieldInformationFromHierarchy(it) }
 
         allRels.forEach {
@@ -233,15 +231,11 @@ class Schema {
     /** Extracts the field information for every entity and relationship. */
     private fun extractFieldInformationFromHierarchy(classInfo: ClassInfo) {
         val fields: MutableSet<Pair<String, String>> = mutableSetOf()
-        inherentRels[classInfo.neo4jName() ?: classInfo.underlyingClass.name]?.let {
-            fields.addAll(it)
-        }
-        inheritedRels[classInfo.neo4jName() ?: classInfo.underlyingClass.name]?.let {
-            fields.addAll(it)
-        }
+        inherentRels[classInfo.underlyingClass.name]?.let { fields.addAll(it) }
+        inheritedRels[classInfo.underlyingClass.name]?.let { fields.addAll(it) }
 
         hierarchy[classInfo]?.second?.forEach {
-            inheritedRels[it.neo4jName() ?: it.underlyingClass.name] = fields
+            inheritedRels[it.underlyingClass.name] = fields
             extractFieldInformationFromHierarchy(it)
         }
     }
@@ -258,15 +252,14 @@ class Schema {
         hierarchy[root]?.second?.forEach { completeSchema(relCanHave, hierarchy, it) }
 
         hierarchy.keys
-            .filter { !relCanHave.contains(it.neo4jName() ?: it.underlyingClass.name) }
+            .filter { !relCanHave.contains(it.underlyingClass.name) }
             .forEach {
                 relCanHave.put(
-                    it.neo4jName() ?: it.underlyingClass.name,
+                    it.underlyingClass.name,
                     hierarchy[it]
                         ?.second
                         ?.flatMap { classInfo ->
-                            relCanHave[classInfo.neo4jName() ?: classInfo.underlyingClass.name]
-                                ?: setOf()
+                            relCanHave[classInfo.underlyingClass.name] ?: setOf()
                         }
                         ?.toSet() ?: setOf(),
                 )
@@ -306,6 +299,8 @@ class Schema {
      * Generates links between the boxes.
      */
     private fun printEntitiesToMarkdown(classInfo: ClassInfo, out: PrintWriter) {
+
+        val className = classInfo.underlyingClass.name
         val entityLabel = toLabel(classInfo)
 
         out.println("## $entityLabel<a id=\"${toAnchorLink("e${entityLabel}")}\"></a>")
@@ -349,7 +344,7 @@ class Schema {
         if (inherentRels.isNotEmpty() && inheritedRels.isNotEmpty()) {
             out.println("### Relationships")
 
-            removeLabelDuplicates(inherentRels[entityLabel])?.forEach {
+            removeLabelDuplicates(inherentRels[className])?.forEach {
                 out.print(
                     getBoxWithClass(
                         "relationship",
@@ -358,15 +353,15 @@ class Schema {
                 )
             }
 
-            if (inheritedRels[entityLabel]?.isNotEmpty() == true) {
+            if (inheritedRels[className]?.isNotEmpty() == true) {
                 out.println("<div class=\"papers\" markdown>")
                 out.println("??? info \"Inherited Relationships\"")
                 out.println()
-                removeLabelDuplicates(inheritedRels[entityLabel])?.forEach { inherited ->
+                removeLabelDuplicates(inheritedRels[className])?.forEach { inherited ->
                     var current = classInfo
                     var baseClass: ClassInfo? = null
                     while (baseClass == null) {
-                        inherentRels[toLabel(current)]?.let { rels ->
+                        inherentRels[current.underlyingClass.name]?.let { rels ->
                             if (rels.any { it.second == inherited.second }) {
                                 baseClass = current
                             }
@@ -385,7 +380,7 @@ class Schema {
                 out.println()
             }
 
-            removeLabelDuplicates(inherentRels[entityLabel])?.forEach {
+            removeLabelDuplicates(inherentRels[className])?.forEach {
                 printRelationshipsToMarkdown(classInfo, it, out)
             }
         }
@@ -393,14 +388,14 @@ class Schema {
         if (inherentProperties.isNotEmpty() && inheritedProperties.isNotEmpty()) {
             out.println("### Properties")
 
-            removeLabelDuplicates(inherentProperties[entityLabel])?.forEach {
+            removeLabelDuplicates(inherentProperties[className])?.forEach {
                 out.println("${it.second} : ${it.first}")
                 out.println()
             }
-            if (inheritedProperties[entityLabel]?.isNotEmpty() == true) {
+            if (inheritedProperties[className]?.isNotEmpty() == true) {
                 out.println("<div class=\"papers\" markdown>")
                 out.println("??? info \"Inherited Properties\"")
-                removeLabelDuplicates(inheritedProperties[entityLabel])?.forEach {
+                removeLabelDuplicates(inheritedProperties[className])?.forEach {
                     out.println("    ${it.second} : ${it.first}")
                     out.println()
                 }
@@ -420,6 +415,8 @@ class Schema {
      * Generates links between the boxes.
      */
     private fun entitiesToJson(classInfo: ClassInfo): MutableList<SchemaNode> {
+
+        val className = classInfo.underlyingClass.name
         val entityLabel = toLabel(classInfo)
 
         val labels: MutableSet<String> = mutableSetOf(entityLabel)
@@ -441,12 +438,12 @@ class Schema {
         val relationships: MutableSet<SchemaRelationship> = mutableSetOf<SchemaRelationship>()
         if (inherentRels.isNotEmpty() && inheritedRels.isNotEmpty()) {
 
-            if (inheritedRels[entityLabel]?.isNotEmpty() == true) {
-                removeLabelDuplicates(inheritedRels[entityLabel])?.forEach { inheritedRel ->
+            if (inheritedRels[className]?.isNotEmpty() == true) {
+                removeLabelDuplicates(inheritedRels[className])?.forEach { inheritedRel ->
                     var current = classInfo
                     var baseClass: ClassInfo? = null
                     while (baseClass == null) {
-                        inherentRels[toLabel(current)]?.let { rels ->
+                        inherentRels[current.underlyingClass.name]?.let { rels ->
                             if (rels.any { it.second == inheritedRel.second }) {
                                 baseClass = current
                             }
@@ -457,7 +454,7 @@ class Schema {
                 }
             }
 
-            removeLabelDuplicates(inherentRels[entityLabel])?.forEach {
+            removeLabelDuplicates(inherentRels[className])?.forEach {
                 relationships.add(relationshipToJson(classInfo, it, false))
             }
         }
@@ -465,11 +462,11 @@ class Schema {
         val properties: MutableSet<SchemaProperty> = mutableSetOf<SchemaProperty>()
         if (inherentProperties.isNotEmpty() && inheritedProperties.isNotEmpty()) {
 
-            removeLabelDuplicates(inherentProperties[entityLabel])?.forEach {
+            removeLabelDuplicates(inherentProperties[className])?.forEach {
                 properties.add(SchemaProperty(it.second, it.first, false))
             }
-            if (inheritedProperties[entityLabel]?.isNotEmpty() == true) {
-                removeLabelDuplicates(inheritedProperties[entityLabel])?.forEach {
+            if (inheritedProperties[className]?.isNotEmpty() == true) {
+                removeLabelDuplicates(inheritedProperties[className])?.forEach {
                     properties.add(SchemaProperty(it.second, it.first, true))
                 }
             }

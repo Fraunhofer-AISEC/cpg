@@ -65,6 +65,7 @@ mavenPublishing {
 
 dependencies {
     implementation(libs.mcp)
+    implementation(libs.ktor.server.cio)
     implementation(libs.ktor.serialization.kotlinx.json)
 
     // Test dependencies
@@ -75,6 +76,15 @@ dependencies {
     annotationProcessor(libs.picocli.codegen)
 
     integrationTestImplementation(libs.kotlin.reflect)
+    integrationTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0")
+    integrationTestImplementation(libs.mcp)
+    integrationTestImplementation(libs.ktor.serialization.kotlinx.json)
+    // We depend on the Python frontend for the integration tests, but the frontend is only
+    // available if enabled.
+    // If it's not available, the integration tests fail (which is ok). But if we would directly
+    // reference the project here, the build system would fail any task since it will not find a
+    // non-enabled project.
+    findProject(":cpg-language-python")?.also { integrationTestImplementation(it) }
 
     implementation(project(":cpg-concepts"))
     implementation(project(":cpg-analysis"))
