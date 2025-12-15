@@ -50,7 +50,7 @@ dependencies {
     integrationTestImplementation(projects.cpgAnalysis)
 
     // concept generator deps
-    implementation("com.squareup:kotlinpoet:1.16.0")
+    implementation("com.squareup:kotlinpoet:1.18.1")
     // owl-api
     implementation("net.sourceforge.owlapi:owlapi-distribution:4.5.4")
     implementation("net.sourceforge.owlapi:org.semanticweb.hermit:1.4.5.519")
@@ -58,7 +58,7 @@ dependencies {
     // roaster
     implementation("org.jboss.forge.roaster:roaster-api:2.22.2.Final")
     implementation("org.jboss.forge.roaster:roaster-jdt:2.22.2.Final")
-    implementation("org.apache.jena:jena-arq:3.4.0")
+    implementation("org.apache.jena:jena-arq:3.17.0")
     implementation(libs.reflections)
 }
 
