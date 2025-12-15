@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.passes.PointsToState
 import java.io.Serializable
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.function.Predicate
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.plusAssign
@@ -60,6 +61,18 @@ open class ConcurrentIdentityHashMap<K, V>(expectedMaxSize: Int = 32) : Map<K, V
     open fun put(key: K, value: V): V? = backing.put(PointsToPass.IdKey(key), value)
 
     fun remove(key: K): V? = backing.remove(PointsToPass.IdKey(key))
+
+    fun removeKeyIf(filter: Predicate<in K>): Boolean {
+        var removed = false
+        val each: MutableIterator<PointsToPass.IdKey<K>> = this.backing.keys.iterator()
+        while (each.hasNext()) {
+            if (filter.test(each.next().ref)) {
+                each.remove()
+                removed = true
+            }
+        }
+        return removed
+    }
 
     override fun containsKey(key: K): Boolean = backing.containsKey(PointsToPass.IdKey(key))
 

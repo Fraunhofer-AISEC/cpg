@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentIdentityHashMap
 import java.lang.UnsupportedOperationException
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.function.Predicate
 
 /**
  * This class implements the [MutableSet] interface with an underlying map and reference-equality
@@ -239,6 +240,10 @@ open class ConcurrentIdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
 
     override fun remove(element: T): Boolean {
         return map.remove(element) != null
+    }
+
+    override fun removeIf(filter: Predicate<in T>): Boolean {
+        return map.removeKeyIf(filter)
     }
 
     override fun removeAll(elements: Collection<T>): Boolean {
