@@ -1244,6 +1244,17 @@ operator fun Expression.minus(rhs: Expression): BinaryOperator {
     return node
 }
 
+context(frontend: LanguageFrontend<*, *>, holder: StatementHolder)
+infix fun Expression.logicAnd(rhs: Expression): BinaryOperator {
+    val node = frontend.newBinaryOperator("&&")
+    node.lhs = this
+    node.rhs = rhs
+
+    holder += node
+
+    return node
+}
+
 /**
  * Creates a new [UnaryOperator] with a `&` [UnaryOperator.operatorCode] in the Fluent Node DSL and
  * invokes [ArgumentHolder.addArgument] of the nearest enclosing [ArgumentHolder].

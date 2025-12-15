@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithShortCircuit
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
@@ -117,7 +118,46 @@ class ControlDependenceGraphPassTest {
         assertTrue { result.allChildren<Node>().flatMap { it.nextCDG }.isEmpty() }
     }
 
+    @Test
+    fun testShortCircuit() {
+        val result = getShortCircuitTest()
+        assertNotNull(result)
+    }
+
     companion object {
+
+        /**
+         * Test language with [HasShortCircuitOperators] to test short-circuit behavior in CDG.
+         *
+         * ```c
+         * int main() {
+         *   foo() && bar();
+         *   return 1;
+         * }
+         * ```
+         */
+        fun getShortCircuitTest() =
+            testFrontend(
+                    TranslationConfiguration.builder()
+                        .registerLanguage<TestLanguageWithShortCircuit>()
+                        .defaultPasses()
+                        .registerPass<ControlDependenceGraphPass>()
+                        .build()
+                )
+                .build {
+                    translationResult {
+                        translationUnit("if.cpp") {
+                            // The main method
+                            function("main", t("int")) {
+                                body {
+                                    call("foo") logicAnd call("bar")
+                                    returnStmt { literal(1, t("int")) }
+                                }
+                            }
+                        }
+                    }
+                }
+
         fun getIfTest() =
             testFrontend(
                     TranslationConfiguration.builder()

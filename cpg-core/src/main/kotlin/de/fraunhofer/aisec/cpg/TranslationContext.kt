@@ -102,7 +102,10 @@ open class TranslationContext(
     private fun createAvailableLanguages(): List<Language<*>> {
         // We need to initialize the available languages out of the context
         return config.languages.mapNotNull {
-            val language = it.constructors.firstOrNull()?.call()
+            val language =
+                it.constructors
+                    .firstOrNull()
+                    ?.callBy(emptyMap()) // use default values where possible
             if (language == null) {
                 log.error("Could not create language instance for {}", it.simpleName)
             }

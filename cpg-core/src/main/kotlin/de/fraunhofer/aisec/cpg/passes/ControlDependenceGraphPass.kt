@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.allChildren
@@ -43,8 +44,6 @@ import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import kotlin.collections.component1
-import kotlin.collections.component2
 
 /** This pass builds the Control Dependence Graph (CDG) by iterating through the EOG. */
 @DependsOn(EvaluationOrderGraphPass::class)
@@ -98,7 +97,8 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
 
         log.trace("Creating CDG for {} with complexity {}", startNode.name, c)
 
-        val (firstBasicBlock, basicBlocks, nodeToBBMap) = collectBasicBlocks(startNode, false)
+        val (firstBasicBlock, basicBlocks, nodeToBBMap) =
+            collectBasicBlocks(startNode, startNode.language is HasShortCircuitOperators)
 
         log.trace("Retrieved network of BBs for {}", startNode.name)
 
@@ -176,7 +176,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                             }
                     }
                     .flatten()
-            finalDominators = finalDominators.minus(transitiveDominators).toMutableList()
+            finalDominators = finalDominators.minus(transitiveDominators.toSet()).toMutableList()
 
             // After deleting a bunch of stuff, we have two options: 1) there are no dominators
             // left, and we assign the function declaration, or 2) there is one or multiple
