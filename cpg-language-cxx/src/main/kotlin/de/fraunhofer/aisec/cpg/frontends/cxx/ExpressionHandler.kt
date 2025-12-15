@@ -480,7 +480,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 // FunctionPointerCallResolver
                 callExpression = newMemberCallExpression(reference, rawNode = ctx)
             }
-            reference is UnaryOperator && reference.operatorCode == "*" -> {
+            reference is PointerDereference -> {
                 // Classic C-style function pointer call -> let's extract the target
                 callExpression = newCallExpression(reference, "", false, rawNode = ctx)
             }
