@@ -46,10 +46,6 @@ class InputValidation(
     underlyingNode: Node?,
 ) : Operation(concept, underlyingNode)
 
-// Deprecated? property already defined in [HttpClient]
-// val HttpClient.isTLS: Boolean
-//    get() = this.protocol is TLS
-
 class RateLimiting(val maxRequests: Int, val timeWindowSeconds: Int, underlyingNode: Node?) :
     Concept(underlyingNode)
 
