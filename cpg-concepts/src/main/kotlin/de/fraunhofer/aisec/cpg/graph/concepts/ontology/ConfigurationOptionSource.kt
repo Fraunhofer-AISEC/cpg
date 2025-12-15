@@ -44,12 +44,24 @@ public open class ConfigurationOptionSource(
     dataLocation: DataLocation?,
     creation_time: ZonedDateTime?,
     description: String?,
+    resourceId: String?,
     labels: MutableMap<String, String>?,
     name: String?,
     raw: String?,
     parent: Resource?,
     underlyingNode: Node? = null,
-) : Data(dataLocation, creation_time, description, labels, name, raw, parent, underlyingNode) {
+) :
+    Data(
+        dataLocation,
+        creation_time,
+        description,
+        resourceId,
+        labels,
+        name,
+        raw,
+        parent,
+        underlyingNode,
+    ) {
     init {
         name?.let { this.name = Name(localName = it) }
     }

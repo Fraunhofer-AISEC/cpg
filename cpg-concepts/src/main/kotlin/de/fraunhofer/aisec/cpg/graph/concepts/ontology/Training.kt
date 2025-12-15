@@ -40,12 +40,23 @@ public open class Training(
     public val successfullyCompletedPercentage: Boolean?,
     creation_time: ZonedDateTime?,
     description: String?,
+    resourceId: String?,
     labels: MutableMap<String, String>?,
     name: String?,
     raw: String?,
     parent: Resource?,
     underlyingNode: Node? = null,
-) : HumanResources(creation_time, description, labels, name, raw, parent, underlyingNode) {
+) :
+    HumanResources(
+        creation_time,
+        description,
+        resourceId,
+        labels,
+        name,
+        raw,
+        parent,
+        underlyingNode,
+    ) {
     init {
         name?.let { this.name = Name(localName = it) }
     }
