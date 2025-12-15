@@ -34,7 +34,7 @@ log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "lo
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j"}
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j"}
 
-apache-commons-lang3 = { module = "org.apache.commons:commons-lang3", version = "3.17.0"}
+apache-commons-lang3 = { module = "org.apache.commons:commons-lang3", version = "3.20.0"}
 neo4j-ogm-core = { module = "org.neo4j:neo4j-ogm-core", version.ref = "neo4j"}
 neo4j-ogm-bolt-driver = { module = "org.neo4j:neo4j-ogm-bolt-driver", version.ref = "neo4j"}
 neo4j-driver = { module = "org.neo4j.driver:neo4j-java-driver", version.ref = "neo4j5"}
