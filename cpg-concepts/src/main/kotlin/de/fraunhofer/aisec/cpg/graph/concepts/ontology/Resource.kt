@@ -39,6 +39,7 @@ import kotlin.collections.MutableMap
 public open class Resource(
     public val creation_time: ZonedDateTime?,
     public val description: String?,
+    public val resourceId: String?,
     public val labels: MutableMap<String, String>?,
     name: String?,
     public val raw: String?,
@@ -54,12 +55,21 @@ public open class Resource(
             super.equals(other) &&
             other.creation_time == this.creation_time &&
             other.description == this.description &&
-            other.id == this.id &&
+            other.resourceId == this.resourceId &&
             other.labels == this.labels &&
             other.name == this.name &&
             other.raw == this.raw &&
             other.parent == this.parent
 
     override fun hashCode(): Int =
-        Objects.hash(super.hashCode(), creation_time, description, id, labels, name, raw, parent)
+        Objects.hash(
+            super.hashCode(),
+            creation_time,
+            description,
+            resourceId,
+            labels,
+            name,
+            raw,
+            parent,
+        )
 }
