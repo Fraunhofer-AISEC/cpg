@@ -18,7 +18,7 @@ jobs:
     if: github.event.repository.fork == false
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Install python3
         uses: actions/setup-python@v5
         with:
