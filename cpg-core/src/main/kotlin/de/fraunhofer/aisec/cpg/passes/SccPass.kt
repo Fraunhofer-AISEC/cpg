@@ -126,7 +126,7 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                                 ?.nextEOGEdges
                                 // in case of multiple nextEOGEdges, make sure we take the one
                                 // pointing to a node that's part an sccElements-block
-                                ?.filter { it.end.basicBlock.single() in sccElements }
+                                ?.filter { it.end.basicBlock.all { it in sccElements } }
                                 ?.forEach { nodeEdge -> nodeEdge.scc = level }
                         }
                 }
@@ -149,7 +149,7 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                                 ?.prevEOGEdges
                                 // in case of multiple prevEOGEdges, make sure we take the one
                                 // coming from a node that's part an sccElements-block
-                                ?.filter { it.start.basicBlock.single() in sccElements }
+                                ?.filter { it.start.basicBlock.all { it in sccElements } }
                                 ?.forEach { nodeEdge -> nodeEdge.scc = level }
                         }
                 }
