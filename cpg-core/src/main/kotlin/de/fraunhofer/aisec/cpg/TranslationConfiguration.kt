@@ -762,8 +762,8 @@ val KClass<out Language<*>>.frontend: KClass<out LanguageFrontend<*, *>>
     get() {
         // Instantiate a temporary object of the language class
         val instance =
-            constructors.firstOrNull()?.callBy(emptyMap()) // use default values where possible
-            ?: throw IllegalArgumentException(
+            constructors.firstOrNull()?.call()
+                ?: throw IllegalArgumentException(
                     "Could not instantiate temporary object of language class ${this.simpleName}"
                 )
 

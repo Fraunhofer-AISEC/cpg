@@ -35,12 +35,11 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.assertNotNull
 
 class ControlDependenceGraphPassTest {
-
     @Test
     fun testIfStatements() {
         val result = getIfTest()
@@ -113,7 +112,7 @@ class ControlDependenceGraphPassTest {
     }
 
     @Test
-    fun testTimoutEffective() {
+    fun testTimeoutEffective() {
         val result = getTimeoutTest()
         assertTrue { result.allChildren<Node>().flatMap { it.nextCDG }.isEmpty() }
     }
@@ -122,6 +121,26 @@ class ControlDependenceGraphPassTest {
     fun testShortCircuit() {
         val result = getShortCircuitTest()
         assertNotNull(result)
+
+        val barCall = result.calls("bar").singleOrNull()
+        assertNotNull(barCall)
+        val fooCall = result.calls("foo").singleOrNull()
+        assertNotNull(fooCall)
+        val bazCall = result.calls("baz").singleOrNull()
+        assertNotNull(bazCall)
+        val quuxCall = result.calls("quux").singleOrNull()
+        assertNotNull(quuxCall)
+        assertTrue(
+            barCall.prevCDG.contains(fooCall),
+            "Expected 'bar()' to be control dependent on 'foo()'",
+        ) // TODO: Once we update the ShortCircuitOperator to a better EOG description, this should
+        // test against the operator instead of foo().
+
+        assertTrue(
+            quuxCall.prevCDG.contains(bazCall),
+            "Expected 'quux()' to be control dependent on 'baz()'",
+        ) // TODO: Once we update the ShortCircuitOperator to a better EOG description, this should
+        // test against the operator instead of baz().
     }
 
     companion object {
@@ -132,6 +151,7 @@ class ControlDependenceGraphPassTest {
          * ```c
          * int main() {
          *   foo() && bar();
+         *   baz() || quux();
          *   return 1;
          * }
          * ```
@@ -151,6 +171,7 @@ class ControlDependenceGraphPassTest {
                             function("main", t("int")) {
                                 body {
                                     call("foo") logicAnd call("bar")
+                                    call("baz") logicOr call("quux")
                                     returnStmt { literal(1, t("int")) }
                                 }
                             }

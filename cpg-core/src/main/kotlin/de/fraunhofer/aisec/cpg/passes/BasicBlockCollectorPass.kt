@@ -34,8 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
-import java.util.IdentityHashMap
-import kotlin.collections.set
+import java.util.*
 
 @DependsOn(EvaluationOrderGraphPass::class)
 class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
@@ -45,7 +44,7 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     override fun accept(t: Node) {
-        val (firstBasicBlock, _, _) = collectBasicBlocks(t, false)
+        val (firstBasicBlock, _, _) = collectBasicBlocks(t, t.language is HasShortCircuitOperators)
         (t as? EOGStarterHolder)?.firstBasicBlock = firstBasicBlock
     }
 

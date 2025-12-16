@@ -38,10 +38,10 @@ import kotlin.reflect.KClass
 import kotlin.test.assertNotNull
 
 /** This is a variant of the test language with [HasShortCircuitOperators]. */
-open class TestLanguageWithShortCircuit(
-    override val conjunctiveOperators: List<String> = listOf("&&"),
-    override val disjunctiveOperators: List<String> = listOf("||"),
-) : TestLanguage(), HasShortCircuitOperators {}
+open class TestLanguageWithShortCircuit() : TestLanguage(), HasShortCircuitOperators {
+    override val conjunctiveOperators: List<String> = listOf("&&")
+    override val disjunctiveOperators: List<String> = listOf("||")
+}
 
 /**
  * This is a variant of the test language with `::` as a [namespaceDelimiter] to simulate languages
