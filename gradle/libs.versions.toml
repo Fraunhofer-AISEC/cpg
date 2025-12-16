@@ -50,7 +50,7 @@ icu4j = { module = "com.ibm.icu:icu4j", version = "77.1"}
 eclipse-cdt-core = { module = "11.5/cdt-11.5.0/plugins/org.eclipse.cdt:core", version = "8.4.0.202402110645"}
 picocli = { module = "info.picocli:picocli", version = "4.7.0"}
 picocli-codegen = { module = "info.picocli:picocli-codegen", version = "4.7.0"}
-jep = { module = "black.ninia:jep", version = "4.3.1" }  # build.yml uses grep to extract the jep verison number for CI/CD purposes
+jep = { module = "org.ninia:jep", version = "4.3.1" }  # build.yml uses grep to extract the jep verison number for CI/CD purposes
 llvm = { module = "org.bytedeco:llvm-platform", version = "16.0.4-1.5.9"}
 jruby = { module = "org.jruby:jruby-core", version = "9.4.3.0" }
 ini4j = { module = "org.ini4j:ini4j", version = "0.5.4" }

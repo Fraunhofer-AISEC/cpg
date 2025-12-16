@@ -62,7 +62,7 @@ jobs:
         run: |
           python3 -m venv ~/.virtualenvs/cpg
           source ~/.virtualenvs/cpg/bin/activate
-          pip3 install jep==$(grep "black.ninia:jep" gradle/libs.versions.toml | grep -o -E "[0-9]\d*(\.[0-9]\d*)*")
+          pip3 install jep==$(grep "org.ninia:jep" gradle/libs.versions.toml | grep -o -E "[0-9]\d*(\.[0-9]\d*)*")
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
       - name: Build ${{ env.version }}
