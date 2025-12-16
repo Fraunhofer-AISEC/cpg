@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 15
     runs-on: [self-hosted, Linux, ARM64]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: |
           cp gradle.properties.example gradle.properties
       - uses: actions/setup-java@v4
