@@ -24,14 +24,14 @@ jobs:
     timeout-minutes: 15
     runs-on: [self-hosted, Linux, ARM64]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: |
           cp gradle.properties.example gradle.properties
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: "corretto"
           java-version: "21"
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
       - uses: actions/setup-node@v4
@@ -98,7 +98,7 @@ jobs:
           zip -r reports.zip **/build/reports/**/** || true
       - name: Archive test and coverage reports
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: reports
           path: reports.zip
