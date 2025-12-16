@@ -417,10 +417,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     as PointsToState.Element
             }
 
-        log.info(
-            "Finished EOGIteration. One of the most visited nodes ( ${nodeVisitedCounterMap.values.max()} visits): ${nodeVisitedCounterMap.filter { it.value == nodeVisitedCounterMap.values.max() }.entries.first().key} "
-        )
-        nodeVisitedCounterMap.clear()
+        if (nodeVisitedCounterMap.isNotEmpty()) {
+            log.info(
+                "Finished EOGIteration. One of the most visited nodes ( ${nodeVisitedCounterMap.values.max()} visits): ${nodeVisitedCounterMap.filter { it.value == nodeVisitedCounterMap.values.max() }.entries.first().key} "
+            )
+            nodeVisitedCounterMap.clear()
+        }
 
         for ((key, value) in finalState.generalState) {
             // The generalState values have 3 items: The address, the value, and the
@@ -2455,21 +2457,32 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
                 )
             }
         else {
-            val newName = getNodeName(node)
-            val newEntry =
-                nodesCreatingUnknownValues.computeIfAbsent(Pair(node, newName)) {
-                    UnknownMemoryValue(newName, true)
-                }
-            // TODO: Check if the boolean should be true sometimes
-            globalDerefs[node] = PowersetLattice.Element(Pair(newEntry, false))
-            ret.add(
-                FetchElementFromDeclarationStateEntry(
-                    newEntry,
-                    false,
-                    "",
-                    PowersetLattice.Element(),
+            if (node is UnknownMemoryValue) {
+                ret.add(
+                    FetchElementFromDeclarationStateEntry(
+                        node,
+                        false,
+                        "",
+                        PowersetLattice.Element(),
+                    )
                 )
-            )
+            } else {
+                val newName = getNodeName(node)
+                val newEntry =
+                    nodesCreatingUnknownValues.computeIfAbsent(Pair(node, newName)) {
+                        UnknownMemoryValue(newName, true)
+                    }
+                // TODO: Check if the boolean should be true sometimes
+                globalDerefs[node] = PowersetLattice.Element(Pair(newEntry, false))
+                ret.add(
+                    FetchElementFromDeclarationStateEntry(
+                        newEntry,
+                        false,
+                        "",
+                        PowersetLattice.Element(),
+                    )
+                )
+            }
         }
     } else {
         // Otherwise, we read the declarationState.
@@ -2477,35 +2490,49 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
         var elements = this.declarationsState[node]?.second?.toList()
         if (excludeShortFSValues) elements = elements?.filter { !it.second }
         if (elements.isNullOrEmpty()) {
-            val newName = getNodeName(node)
-            val newEntry =
-                nodesCreatingUnknownValues.computeIfAbsent(Pair(node, newName)) {
-                    UnknownMemoryValue(newName)
+            // If we are already dealing with an UnknownMemoryValue, we simply return that in order
+            // to avoid too much looping in the unknown
+            if (node is UnknownMemoryValue) {
+                ret.add(
+                    FetchElementFromDeclarationStateEntry(
+                        node,
+                        false,
+                        "",
+                        PowersetLattice.Element(),
+                    )
+                )
+            } else {
+                val newName = getNodeName(node)
+                val newEntry =
+                    nodesCreatingUnknownValues.computeIfAbsent(Pair(node, newName)) {
+                        UnknownMemoryValue(newName)
+                    }
+                val newPair = Pair(newEntry, false)
+                this.declarationsState.computeIfAbsent(node) {
+                    TripleLattice.Element(
+                        PowersetLattice.Element(node),
+                        PowersetLattice.Element(),
+                        PowersetLattice.Element(),
+                    )
                 }
-            val newPair = Pair(newEntry, false)
-            this.declarationsState.computeIfAbsent(node) {
-                TripleLattice.Element(
-                    PowersetLattice.Element(node),
-                    PowersetLattice.Element(),
-                    PowersetLattice.Element(),
-                )
-            }
 
-            val newElements = this.declarationsState[node]?.second
-            if (
-                newElements?.none { it.first === newPair.first && it.second == newPair.second } !=
-                    false
-            ) {
-                newElements?.add(newPair)
-            }
-            ret.add(
-                FetchElementFromDeclarationStateEntry(
-                    newEntry,
-                    false,
-                    "",
-                    PowersetLattice.Element(),
+                val newElements = this.declarationsState[node]?.second
+                if (
+                    newElements?.none {
+                        it.first === newPair.first && it.second == newPair.second
+                    } != false
+                ) {
+                    newElements?.add(newPair)
+                }
+                ret.add(
+                    FetchElementFromDeclarationStateEntry(
+                        newEntry,
+                        false,
+                        "",
+                        PowersetLattice.Element(),
+                    )
                 )
-            )
+            }
         } else
             elements.map {
                 ret.add(
@@ -3007,19 +3034,21 @@ fun PointsToState.Element.fetchFieldAddresses(
                     }
                 )
 
-            if (this.declarationsState[addr] == null) {
-                this.declarationsState.put(
-                    addr,
-                    TripleLattice.Element(
-                        PowersetLattice.Element(addr),
-                        PowersetLattice.Element(),
-                        PowersetLattice.Element(),
-                    ),
-                )
+            // No need to update the state for values we don't know anyway
+            if (addr !is UnknownMemoryValue) {
+                if (this.declarationsState[addr] == null) {
+                    this.declarationsState.put(
+                        addr,
+                        TripleLattice.Element(
+                            PowersetLattice.Element(addr),
+                            PowersetLattice.Element(),
+                            PowersetLattice.Element(),
+                        ),
+                    )
+                }
+                val newElements = this.declarationsState[addr]?.first
+                newElements?.addAll(newEntry)
             }
-
-            val newElements = this.declarationsState[addr]?.first
-            newElements?.addAll(newEntry)
             fieldAddresses.addAll(newEntry)
         } else {
             elements.let { fieldAddresses.addAll(it) }
