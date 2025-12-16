@@ -25,15 +25,23 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 
+import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.cpgDescription
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgLlmAnalyzePayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableConcepts
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableOperations
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
-import io.modelcontextprotocol.kotlin.sdk.CallToolResult
-import io.modelcontextprotocol.kotlin.sdk.TextContent
-import io.modelcontextprotocol.kotlin.sdk.Tool
+import de.fraunhofer.aisec.cpg.serialization.toJSON
 import io.modelcontextprotocol.kotlin.sdk.server.Server
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
+import io.modelcontextprotocol.kotlin.sdk.types.CreateMessageRequest
+import io.modelcontextprotocol.kotlin.sdk.types.CreateMessageRequestParams
+import io.modelcontextprotocol.kotlin.sdk.types.ModelPreferences
+import io.modelcontextprotocol.kotlin.sdk.types.Role
+import io.modelcontextprotocol.kotlin.sdk.types.SamplingMessage
+import io.modelcontextprotocol.kotlin.sdk.types.TextContent
+import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -52,7 +60,7 @@ fun Server.addCpgLlmAnalyzeTool() {
             .trimIndent()
 
     val inputSchema =
-        Tool.Input(
+        ToolSchema(
             properties =
                 buildJsonObject {
                     putJsonObject("description") {
@@ -71,10 +79,10 @@ fun Server.addCpgLlmAnalyzeTool() {
     ) { request ->
         try {
             val payload =
-                if (request.arguments.isEmpty()) {
+                if (request.arguments == null || request.arguments?.toString() == "{}") {
                     CpgLlmAnalyzePayload()
                 } else {
-                    request.arguments.toObject<CpgLlmAnalyzePayload>()
+                    request.arguments?.toObject<CpgLlmAnalyzePayload>() ?: CpgLlmAnalyzePayload()
                 }
 
             val hasAnalysisResult = globalAnalysisResult != null
@@ -151,9 +159,13 @@ fun Server.addCpgLlmAnalyzeTool() {
 
                 if (hasAnalysisResult) {
                     appendLine("## Nodes to Analyze")
-                    appendLine(
-                        "Use the nodes from the previous cpg_analyze tool response to make your suggestions."
-                    )
+                    appendLine("Here are all the nodes from the CPG analysis:")
+                    appendLine("```json")
+                    val nodes = globalAnalysisResult.nodes
+                    nodes.forEach { node ->
+                        appendLine(Json.encodeToString(node.toJSON(noEdges = true)))
+                    }
+                    appendLine("```")
                 } else {
                     appendLine("## No Analysis Available")
                     appendLine("No CPG analysis available. Analyze a file first using cpg_analyze.")
@@ -184,7 +196,46 @@ fun Server.addCpgLlmAnalyzeTool() {
                 )
             }
 
-            CallToolResult(content = listOf(TextContent(prompt)))
+            // Get the session ID (assuming single session setup)
+            val sessionId = this.sessions.values.firstOrNull()?.sessionId
+
+            if (sessionId == null) {
+                CallToolResult(
+                    content = listOf(TextContent("Error: No active client session found")),
+                    isError = true,
+                )
+            } else {
+                // Use sampling to send the prompt to the LLM via the client
+                val samplingRequest =
+                    CreateMessageRequest(
+                        params =
+                            CreateMessageRequestParams(
+                                messages =
+                                    listOf(
+                                        SamplingMessage(
+                                            role = Role.User,
+                                            content = TextContent(text = prompt),
+                                        )
+                                    ),
+                                systemPrompt =
+                                    "You are a software security expert analyzing code for security vulnerabilities.",
+                                maxTokens = 4000,
+                                modelPreferences =
+                                    ModelPreferences(
+                                        intelligencePriority = 0.9,
+                                        speedPriority = 0.5,
+                                    ),
+                            )
+                    )
+
+                // Send sampling request to client (which will forward to LLM)
+                val result = this.createMessage(sessionId, samplingRequest)
+
+                // Extract the text content from the result
+                val llmResponse = (result.content as? TextContent)?.text ?: "No response from LLM"
+
+                CallToolResult(content = listOf(TextContent(llmResponse)))
+            }
         } catch (e: Exception) {
             CallToolResult(
                 content =
@@ -199,7 +250,7 @@ fun Server.addCpgLlmAnalyzeTool() {
 // Note: The output schema is not supported by all LLMs yet.
 @Suppress("unused")
 val outputSchema =
-    Tool.Output(
+    ToolSchema(
         properties =
             buildJsonObject {
                 putJsonObject("prompt") {

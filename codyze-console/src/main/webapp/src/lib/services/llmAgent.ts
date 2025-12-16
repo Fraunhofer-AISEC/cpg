@@ -30,6 +30,38 @@ class LLMAgent {
       callbacks.onComplete
     );
   }
+
+  // Custom MCP client endpoint - prototype
+  async chatCustom(messages: LLMMessage[], callbacks: StreamingCallbacks): Promise<void> {
+    console.log('[LLMAgent] Using custom MCP client endpoint');
+    console.log('[LLMAgent] Messages:', messages);
+
+    const requestData = {
+      messages: messages.map((msg) => ({
+        role: msg.role,
+        content: msg.content
+      }))
+    };
+
+    console.log('[LLMAgent] Request data:', requestData);
+
+    await this.apiService.streamPost(
+      '/api/chat-custom',
+      requestData,
+      (chunk) => {
+        console.log('[LLMAgent] Received chunk:', chunk);
+        callbacks.onChunk(chunk);
+      },
+      (error) => {
+        console.error('[LLMAgent] Error:', error);
+        callbacks.onError?.(error);
+      },
+      () => {
+        console.log('[LLMAgent] Stream complete');
+        callbacks.onComplete?.();
+      }
+    );
+  }
 }
 
 export const llmAgent = new LLMAgent();

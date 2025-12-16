@@ -1,14 +1,70 @@
 <script lang="ts">
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import MessageInput from './MessageInput.svelte';
+  import ResultsList from './ResultsList.svelte';
+  import CodePreview from './CodePreview.svelte';
   import ApiService from '$lib/services/apiService';
+  import type { NodeJSON, AnalysisResultJSON, TranslationUnitJSON } from '$lib/types';
 
   const apiService = new ApiService();
 
-  interface ChatMessage {
+
+  // State for code preview split-view
+  let selectedNode = $state<NodeJSON | null>(null);
+  let showCodePreview = $derived(selectedNode !== null);
+
+  function handleNodeClick(node: NodeJSON) {
+    selectedNode = node;
+  }
+
+  function closeCodePreview() {
+    selectedNode = null;
+  }
+
+  // Helper to find the TranslationUnit for a node
+  function findTranslationUnit(node: NodeJSON): TranslationUnitJSON | null {
+    if (!analysisResult) return null;
+
+    // Try to find by translationUnitId
+    if (node.translationUnitId) {
+      for (const component of analysisResult.components) {
+        const tu = component.translationUnits.find((tu) => tu.id === node.translationUnitId);
+        if (tu) return tu;
+      }
+    }
+
+    // Fallback: Try to find by fileName
+    if (node.fileName) {
+      for (const component of analysisResult.components) {
+        const tu = component.translationUnits.find((tu) => tu.name.includes(node.fileName!));
+        if (tu) return tu;
+      }
+    }
+
+    return null;
+  }
+
+  // Helper to create a fallback TranslationUnit if not found
+  function getTranslationUnitForNode(node: NodeJSON): TranslationUnitJSON {
+    const found = findTranslationUnit(node);
+    if (found) return found;
+
+    // Fallback: Create minimal TranslationUnit with node's code
+    return {
+      id: node.translationUnitId || 'fallback-tu',
+      name: node.fileName || 'unknown',
+      path: `file:///${node.fileName || 'unknown'}`,
+      code: node.code || '// Code not available',
+      findings: []
+    };
+  }
+
+  export interface ChatMessage {
     id: string;
     role: 'user' | 'assistant';
     content: string;
+    contentType?: 'text' | 'tool-result';
+    toolResults?: NodeJSON[];
     timestamp: Date;
   }
 
@@ -17,6 +73,7 @@
     currentMessage: string;
     isLoading: boolean;
     streamingContent: string;
+    analysisResult?: AnalysisResultJSON | null;
     onSendMessage: () => void;
     onReset: () => void;
     onMessageChange: (message: string) => void;
@@ -27,6 +84,7 @@
     currentMessage,
     isLoading,
     streamingContent,
+    analysisResult,
     onSendMessage,
     onReset,
     onMessageChange
@@ -79,9 +137,15 @@
   });
 </script>
 
-<div class="flex h-full flex-col bg-gray-50">
-  <!-- New Chat button bar -->
-  <div class="flex-shrink-0 px-6 py-3">
+<div class="flex h-full bg-gray-50">
+  <!-- Chat Container - Dynamic Width with Transition -->
+  <div
+    class="chat-container"
+    class:chat-full={!showCodePreview}
+    class:chat-split={showCodePreview}
+  >
+    <!-- New Chat button bar -->
+    <div class="flex-shrink-0 px-6 py-3">
     <button
       class="flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-md transition-all hover:bg-gray-100 hover:shadow-lg active:scale-95"
       onclick={onReset}
@@ -108,11 +172,17 @@
             </div>
           </div>
         {:else}
-          <!-- AI Message - Text with max width for readability -->
+          <!-- AI Message -->
           <div class="px-6 py-6">
-            <div class="prose prose-sm max-w-4xl text-gray-800">
-              <MarkdownRenderer content={message.content} />
-            </div>
+            {#if message.contentType === 'tool-result' && message.toolResults && message.toolResults.length > 0}
+              <!-- Tool Result Widget -->
+              <ResultsList items={message.toolResults} onItemClick={handleNodeClick} />
+            {:else if message.content}
+              <!-- Regular Text or markdown table -->
+              <div class="prose prose-sm max-w-4xl text-gray-800">
+                <MarkdownRenderer content={message.content} />
+              </div>
+            {/if}
           </div>
         {/if}
       {/each}
@@ -122,9 +192,7 @@
         <div class="px-6 py-6">
           {#if displayContent}
             <div class="prose prose-sm max-w-4xl text-gray-800">
-              <div class="whitespace-pre-wrap text-[15px] leading-relaxed">
-                {displayContent}
-              </div>
+              <MarkdownRenderer content={displayContent} />
             </div>
           {:else}
             <!-- Typing indicator -->
@@ -159,4 +227,71 @@
       />
     </div>
   </div>
+  </div>
+
+  <!-- Code Preview Panel - Slides in from right -->
+  {#if showCodePreview && selectedNode}
+    <div class="code-preview-panel">
+      <CodePreview
+        node={selectedNode}
+        translationUnit={getTranslationUnitForNode(selectedNode)}
+        astNodes={[selectedNode]}
+        overlayNodes={[]}
+        onClose={closeCodePreview}
+      />
+    </div>
+  {/if}
 </div>
+
+<style>
+  .chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    transition: width 0.3s ease;
+  }
+
+  .chat-full {
+    width: 100%;
+  }
+
+  .chat-split {
+    width: 50%;
+  }
+
+  .code-preview-panel {
+    width: 50%;
+    height: 100%;
+    animation: slideIn 0.3s ease-out;
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  /* Responsive: Stack on mobile */
+  @media (max-width: 768px) {
+    .chat-split {
+      width: 0;
+      display: none;
+    }
+
+    .code-preview-panel {
+      width: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 50;
+      background: white;
+    }
+  }
+</style>

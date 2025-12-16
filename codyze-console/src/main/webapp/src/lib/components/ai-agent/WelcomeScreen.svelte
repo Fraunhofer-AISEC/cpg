@@ -33,7 +33,7 @@
       <h1 class="text-3xl font-bold text-gray-900 sm:text-4xl">
         Hi, I'm your <span
           class="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
-          >CodAIze Assistant</span
+          >CodAIze Agent</span
         >
         <div class="ml-3 inline-block align-middle">
           <div

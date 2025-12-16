@@ -25,6 +25,10 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
+import de.fraunhofer.aisec.codyze.console.ai.ChatRequestJSON
+import de.fraunhofer.aisec.codyze.console.ai.ChatService
+import de.fraunhofer.aisec.codyze.console.ai.CustomMcpClient
+import de.fraunhofer.aisec.codyze.console.ai.McpServerHelper
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import io.ktor.http.*
@@ -59,7 +63,11 @@ import kotlin.reflect.KClass
  * - POST `/api/concept`: Adds a concept node to the current
  *   [de.fraunhofer.aisec.codyze.AnalysisResult]
  */
-fun Routing.apiRoutes(service: ConsoleService, chatService: ChatService) {
+fun Routing.apiRoutes(
+    service: ConsoleService,
+    chatService: ChatService?,
+    customMcpClient: CustomMcpClient? = null,
+) {
     // The API routes are prefixed with /api
     route("/api") {
         // The endpoint to analyze a project
@@ -245,17 +253,64 @@ fun Routing.apiRoutes(service: ConsoleService, chatService: ChatService) {
             }
         }
 
-        post("/chat") {
-            val request = call.receive<ChatRequestJSON>()
-            call.respondTextWriter(contentType = ContentType.Text.EventStream) {
-                try {
-                    chatService.chat(request).collect { chunk ->
-                        chunk.split("\n").forEach { line -> write("data: $line\n") }
-                        write("\n") // Empty line marks end of event
-                        flush()
+        // Feature flags endpoint
+        get("/features") { call.respond(mapOf("mcpEnabled" to McpServerHelper.isEnabled)) }
+
+        // Chat endpoint - only available if MCP module is enabled
+        if (chatService != null) {
+            post("/chat") {
+                val request = call.receive<ChatRequestJSON>()
+                call.respondTextWriter(contentType = ContentType.Text.EventStream) {
+                    try {
+                        chatService.chat(request).collect { chunk ->
+                            chunk.split("\n").forEach { line -> write("data: $line\n") }
+                            write("\n") // Empty line marks end of event
+                            flush()
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
-                } catch (e: Exception) {
-                    e.printStackTrace()
+                }
+            }
+
+            // Custom MCP client endpoint - prototype with SSE
+            post("/chat-custom") {
+                if (customMcpClient == null) {
+                    call.respondText(
+                        "Custom MCP client not available",
+                        status = HttpStatusCode.ServiceUnavailable,
+                    )
+                    return@post
+                }
+
+                val request = call.receive<ChatRequestJSON>()
+                call.respondTextWriter(contentType = ContentType.Text.EventStream) {
+                    try {
+                        println("[Router] Starting custom MCP chat with reused client...")
+                        customMcpClient.chat(request).collect { chunk ->
+                            // Skip empty chunks to avoid client disconnection
+                            if (chunk.isNotBlank()) {
+                                // SSE format: each line must be prefixed with "data: "
+                                // Split chunk by newlines and send each line separately
+                                chunk.lines().forEach { line -> write("data: $line\n") }
+                                write("\n") // Empty line marks end of event
+                                flush()
+                            }
+                        }
+                        println("[Router] Custom MCP chat completed")
+                    } catch (e: Exception) {
+                        println("[Router] Error in custom chat: ${e.message}")
+                        e.printStackTrace()
+                        // Only write error if channel is still open
+                        try {
+                            write("data: Error: ${e.message}\n\n")
+                            flush()
+                        } catch (writeException: Exception) {
+                            println(
+                                "[Router] Could not write error (channel closed): ${writeException.message}"
+                            )
+                        }
+                    }
                 }
             }
         }

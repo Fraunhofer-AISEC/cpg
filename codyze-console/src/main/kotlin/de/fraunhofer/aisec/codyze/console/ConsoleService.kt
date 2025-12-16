@@ -30,17 +30,19 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import de.fraunhofer.aisec.codyze.AnalysisProject
 import de.fraunhofer.aisec.codyze.AnalysisResult
+import de.fraunhofer.aisec.codyze.console.ai.McpServerHelper
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.nodes
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConceptEntry
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.PersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.PythonStdLibConfigurationPass
 import de.fraunhofer.aisec.cpg.query.QueryTree
+import de.fraunhofer.aisec.cpg.serialization.NodeJSON
+import de.fraunhofer.aisec.cpg.serialization.toJSON
 import java.io.File
 import java.nio.file.Path
 import kotlin.uuid.Uuid
@@ -125,6 +127,9 @@ class ConsoleService {
         lastProject = project
 
         val result = project.analyze()
+
+        // Update the global analysis result in the MCP server
+        McpServerHelper.setGlobalAnalysisResult(result.translationResult)
 
         // Populate QueryTree cache for lazy loading
         populateQueryTreeCache(result.requirementsResults)
@@ -310,8 +315,6 @@ class ConsoleService {
     companion object {
         /** Creates a new [ConsoleService] instance from the given [AnalysisResult]. */
         fun fromAnalysisResult(result: AnalysisResult): ConsoleService {
-            // TODO: Might lead to an error when mcp module not enabled
-            globalAnalysisResult = result.translationResult
             val service = ConsoleService()
             service.analysisResult = result.toJSON()
             service.lastProject = result.project

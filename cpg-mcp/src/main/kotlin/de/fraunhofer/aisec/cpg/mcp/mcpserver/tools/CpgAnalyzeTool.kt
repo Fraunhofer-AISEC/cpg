@@ -34,13 +34,13 @@ import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.cpgDescription
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toNodeInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
 import de.fraunhofer.aisec.cpg.mcp.setupTranslationConfiguration
-import io.modelcontextprotocol.kotlin.sdk.CallToolResult
+import de.fraunhofer.aisec.cpg.serialization.toJSON
 import io.modelcontextprotocol.kotlin.sdk.TextContent
-import io.modelcontextprotocol.kotlin.sdk.Tool
 import io.modelcontextprotocol.kotlin.sdk.server.Server
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
+import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import java.io.File
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
@@ -65,7 +65,7 @@ val toolDescription =
         .trimIndent()
 
 val inputSchema =
-    Tool.Input(
+    ToolSchema(
         properties =
             buildJsonObject {
                 putJsonObject("content") {
@@ -87,7 +87,7 @@ fun Server.addCpgAnalyzeTool() {
     this.addTool(name = "cpg_analyze", description = toolDescription, inputSchema = inputSchema) {
         request ->
         try {
-            val payload = request.arguments.toObject<CpgAnalyzePayload>()
+            val payload = request.arguments?.toObject<CpgAnalyzePayload>() ?: CpgAnalyzePayload()
             val analysisResult = runCpgAnalyze(payload)
             val jsonResult = Json.encodeToString(analysisResult)
             CallToolResult(content = listOf(TextContent(jsonResult)))
@@ -140,7 +140,7 @@ fun runCpgAnalyze(payload: CpgAnalyzePayload): CpgAnalysisResult {
     val variables = result.variables
     val callExpressions = result.calls
 
-    val nodeInfos = allNodes.map { node: Node -> node.toNodeInfo() }
+    val nodeInfos = allNodes.map { node: Node -> node.toJSON(noEdges = true) }
 
     return CpgAnalysisResult(
         totalNodes = allNodes.size,

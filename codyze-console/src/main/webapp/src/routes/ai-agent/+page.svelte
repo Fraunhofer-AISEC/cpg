@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { PageProps } from './$types';
-  import { WelcomeScreen, ChatInterface } from '$lib/components/ai-assistant';
+  import type { NodeJSON } from '$lib/types';
+  import { WelcomeScreen, ChatInterface } from '$lib/components/ai-agent';
   import { PageHeader } from '$lib/components/navigation';
   import {
     llmAgent,
@@ -10,12 +11,13 @@
 
   let { data }: PageProps = $props();
   const hasError = $derived(!data);
+  const analysisResult = $derived(data?.result);
 
   // Load persisted state from sessionStorage
   function loadPersistedState() {
     if (typeof window === 'undefined') return { messages: [], showWelcome: true };
 
-    const stored = sessionStorage.getItem('ai-assistant-state');
+    const stored = sessionStorage.getItem('codyze-agent-state');
     if (!stored) return { messages: [], showWelcome: true };
 
     try {
@@ -32,19 +34,27 @@
 
   const persisted = loadPersistedState();
 
-  let chatMessages = $state<
-    Array<{ id: string; role: 'user' | 'assistant'; content: string; timestamp: Date }>
-  >(persisted.messages);
+  interface ChatMessage {
+    id: string;
+    role: 'user' | 'assistant';
+    content: string;
+    contentType?: 'text' | 'tool-result';
+    toolResults?: NodeJSON[];
+    timestamp: Date;
+  }
+
+  let chatMessages = $state<ChatMessage[]>(persisted.messages);
   let currentMessage = $state('');
   let isLoading = $state(false);
   let streamingContent = $state('');
   let visibleStreamingContent = $state('');
   let showWelcome = $state(persisted.showWelcome);
+  let pendingToolResults = $state<NodeJSON[]>([]);
 
   // Save state to sessionStorage whenever it changes
   $effect(() => {
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem('ai-assistant-state', JSON.stringify({
+      sessionStorage.setItem('codyze-agent-state', JSON.stringify({
         messages: chatMessages,
         showWelcome
       }));
@@ -88,13 +98,35 @@
 
       const callbacks: StreamingCallbacks = {
         onChunk: (chunk: string) => {
-          // Append incoming chunk to streaming content directly
-          streamingContent += chunk;
+          // Parse JSON event
+          try {
+            const event = JSON.parse(chunk);
 
-          // Only show visible content if we have non-whitespace characters
-          // This preserves the typing animation at the start
-          if (streamingContent.trim().length > 0) {
-            visibleStreamingContent = streamingContent;
+            if (event.type === 'text') {
+              // Normal text streaming
+              streamingContent += event.content;
+
+              // Only show visible content if we have non-whitespace characters
+              if (streamingContent.trim().length > 0) {
+                visibleStreamingContent = streamingContent;
+              }
+            } else if (event.type === 'tool_result') {
+              // Tool result - data is already parsed JSON
+              console.log(`[Page] Received tool result for tool: ${event.tool}`);
+              const toolData = event.data;
+
+              if (Array.isArray(toolData)) {
+                console.log(`[Page] Tool result has ${toolData.length} items`);
+                pendingToolResults = [...pendingToolResults, ...toolData];
+              } else {
+                console.warn('[Page] Tool result data is not an array, wrapping in array:', toolData);
+                pendingToolResults = [...pendingToolResults, toolData];
+              }
+            }
+          } catch (e) {
+            // If JSON parsing fails, treat as plain text (backwards compatibility)
+            console.warn('[Page] Failed to parse event as JSON, treating as text:', chunk);
+            streamingContent += chunk;
           }
         },
         onError: (error: string) => {
@@ -111,25 +143,47 @@
           visibleStreamingContent = '';
         },
         onComplete: () => {
-          const content = streamingContent;
-          if (content && content.trim().length > 0) {
-            const assistantMessage = {
-              id: (Date.now() + 1).toString(),
+          // If we have tool results, show only the widget (no text)
+          if (pendingToolResults.length > 0) {
+            const toolResultMessage: ChatMessage = {
+              id: Date.now().toString(),
               role: 'assistant' as const,
-              content,
+              content: '',
+              contentType: 'tool-result',
+              toolResults: pendingToolResults,
               timestamp: new Date()
             };
-            chatMessages = [...chatMessages, assistantMessage];
-          } else {
-            console.warn('Stream complete but no content to append');
+            chatMessages = [...chatMessages, toolResultMessage];
           }
+
+          // Show text response only if there are NO tool results and we have text
+          // This prevents text from being shown when we already showed the tool result widget
+          const content = streamingContent;
+          if (pendingToolResults.length === 0 && content && content.trim().length > 0) {
+            const textMessage: ChatMessage = {
+              id: (Date.now() + 1).toString(),
+              role: 'assistant' as const,
+              content: content,
+              contentType: 'text',
+              timestamp: new Date()
+            };
+            chatMessages = [...chatMessages, textMessage];
+          }
+
+          // Reset state
           isLoading = false;
           streamingContent = '';
           visibleStreamingContent = '';
+          pendingToolResults = [];
         }
       };
 
-      await llmAgent.chat(llmMessages, callbacks);
+      // Original endpoint (Koog)
+      // await llmAgent.chat(llmMessages, callbacks);
+
+      // Custom MCP client for testing
+      console.log('[Page] Sending message to custom MCP client...');
+      await llmAgent.chatCustom(llmMessages, callbacks);
     } catch (error) {
       const errorMessage = {
         id: (Date.now() + 1).toString(),
@@ -146,7 +200,7 @@
 
 <!-- Page header -->
 <PageHeader
-  title="AI Assistant"
+  title="CodAIze Agent"
   subtitle="Understand your code better through AI-powered graph analysis."
 />
 
@@ -182,6 +236,7 @@
     {currentMessage}
     {isLoading}
     {streamingContent}
+    {analysisResult}
     onSendMessage={sendMessage}
     onReset={resetChat}
     onMessageChange={(message) => (currentMessage = message)}

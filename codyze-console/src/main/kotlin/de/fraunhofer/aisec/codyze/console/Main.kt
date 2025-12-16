@@ -25,8 +25,9 @@
  */
 package de.fraunhofer.aisec.codyze.console
 
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.configureServer
-import de.fraunhofer.aisec.cpg.mcp.runSseMcpServerUsingKtorPlugin
+import de.fraunhofer.aisec.codyze.console.ai.ChatService
+import de.fraunhofer.aisec.codyze.console.ai.CustomMcpClient
+import de.fraunhofer.aisec.codyze.console.ai.McpServerHelper
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -46,22 +47,37 @@ import kotlinx.serialization.json.Json
 fun ConsoleService.startConsole(
     host: String = "localhost",
     port: Int = 8080,
-    chatService: ChatService = ChatService(),
+    chatService: ChatService? = if (McpServerHelper.isEnabled) ChatService() else null,
 ) {
-    // TODO(): MCP server should only run when cpg-mcp module enabled
-    runBlocking {
-        // Start MCP server in background (wait = false means it won't block)
-        println("Starting MCP server on port 8081...")
-        runSseMcpServerUsingKtorPlugin(8081, configureServer())
+    var customMcpClient: CustomMcpClient? = null
 
-        // Start main server (also with wait = false to avoid blocking)
-        println("Starting main server on port 8080...")
-        val mainServer =
-            embeddedServer(Netty, host = host, port = port) {
-                configureWebconsole(this@startConsole, chatService)
+    // Start MCP server in background if enabled
+    if (McpServerHelper.isEnabled) {
+        runBlocking {
+            McpServerHelper.startMcpServer(8081)
+
+            val translationResult =
+                this@startConsole.getTranslationResult()?.analysisResult?.translationResult
+            if (translationResult != null) {
+                McpServerHelper.setGlobalAnalysisResult(translationResult)
             }
-        mainServer.start(wait = true)
+
+            // Initialize and connect custom MCP client
+            println("Initializing custom MCP client...")
+            customMcpClient = CustomMcpClient()
+            customMcpClient.connect()
+            println("Custom MCP client connected!")
+        }
+    } else {
+        println("MCP module not enabled, AI chat features will be disabled")
     }
+
+    // Start main server on port 8080
+    println("Starting main server on port $port...")
+    embeddedServer(Netty, host = host, port = port) {
+            configureWebconsole(this@startConsole, chatService, customMcpClient)
+        }
+        .start(wait = true)
 }
 
 /**
@@ -73,7 +89,8 @@ fun ConsoleService.startConsole(
  */
 fun Application.configureWebconsole(
     service: ConsoleService = ConsoleService(),
-    chatService: ChatService = ChatService(),
+    chatService: ChatService? = null,
+    customMcpClient: CustomMcpClient? = null,
 ) {
     install(CORS) {
         anyHost()
@@ -89,7 +106,7 @@ fun Application.configureWebconsole(
         )
     }
 
-    configureRouting(service, chatService)
+    configureRouting(service, chatService, customMcpClient)
 }
 
 /**
@@ -98,11 +115,12 @@ fun Application.configureWebconsole(
  */
 fun Application.configureRouting(
     service: ConsoleService,
-    chatService: ChatService = ChatService(),
+    chatService: ChatService? = null,
+    customMcpClient: CustomMcpClient? = null,
 ) {
     routing {
         // We'll add routes here
-        apiRoutes(service, chatService)
+        apiRoutes(service, chatService, customMcpClient)
         frontendRoutes()
     }
 }

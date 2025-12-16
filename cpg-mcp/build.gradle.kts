@@ -64,7 +64,10 @@ mavenPublishing {
 }
 
 dependencies {
+    implementation(project(":cpg-serialization"))
     implementation(libs.mcp)
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.server.netty)
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.server.cors)
     implementation(libs.ktor.server.content.negotiation)
@@ -79,6 +82,7 @@ dependencies {
     integrationTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0")
     integrationTestImplementation(libs.mcp)
     integrationTestImplementation(libs.ktor.serialization.kotlinx.json)
+    integrationTestImplementation(project(":cpg-serialization"))
     // We depend on the Python frontend for the integration tests, but the frontend is only
     // available if enabled.
     // If it's not available, the integration tests fail (which is ok). But if we would directly

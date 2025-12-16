@@ -14,11 +14,21 @@ mavenPublishing {
     }
 }
 
+val mcpEnabled = findProject(":cpg-mcp") != null
+
 dependencies {
     // CPG modules
     implementation(projects.cpgConcepts)
-    implementation(projects.cpgMcp)
-    implementation(libs.mcp)
+    implementation(projects.cpgSerialization)
+
+    // MCP dependencies - only when enabled
+    if (mcpEnabled) {
+        implementation(project(":cpg-mcp"))
+        // MCP SDK - needed for McpServerHelper and custom MCP client
+        implementation(libs.mcp)
+        // MCP Client SDK - for custom MCP client implementation
+        implementation(libs.mcp.client)
+    }
 
     // Ktor server dependencies
     implementation(libs.bundles.ktor)

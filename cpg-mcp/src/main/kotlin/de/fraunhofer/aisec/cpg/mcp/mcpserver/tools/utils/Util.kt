@@ -30,44 +30,31 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.query.QueryTree
+import de.fraunhofer.aisec.cpg.serialization.NodeJSON
+import de.fraunhofer.aisec.cpg.serialization.toJSON
 import io.modelcontextprotocol.kotlin.sdk.CallToolRequest
-import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import java.util.function.BiFunction
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
-fun Node.toNodeInfo(): NodeInfo {
-    return NodeInfo(this)
-}
-
 fun <T> QueryTree<T>.toQueryTreeNode(): QueryTreeNode {
     return QueryTreeNode(
         id = this.id.toString(),
         value = this.value.toString(),
-        node = this.node?.toNodeInfo(),
+        node = this.node?.toJSON(noEdges = true),
         children = this.children.map { it.toQueryTreeNode() },
     )
 }
 
-fun Node.toJson() = Json.encodeToString(NodeInfo(this))
-
-fun FunctionDeclaration.toJson() = Json.encodeToString(FunctionInfo(this))
-
-fun FieldDeclaration.toJson() = Json.encodeToString(FieldInfo(this))
-
-fun RecordDeclaration.toJson() = Json.encodeToString(RecordInfo(this))
-
-fun CallExpression.toJson() = Json.encodeToString(CallInfo(this))
+/** Converts any [Node] to a JSON string using the [NodeJSON] format. */
+fun Node.toJson() = Json.encodeToString(this.toJSON())
 
 fun OverlayNode.toJson() = Json.encodeToString(OverlayInfo(this))
 
@@ -103,9 +90,13 @@ fun CallToolRequest.runOnCpg(
 
         if (result == null) {
             val content =
-                this.arguments["content"]?.let { if (it is JsonPrimitive) it.content else null }
+                this.arguments?.get("content")?.let {
+                    if (it is JsonPrimitive) it.content else null
+                }
             val extension =
-                this.arguments["extension"]?.let { if (it is JsonPrimitive) it.content else null }
+                this.arguments?.get("extension")?.let {
+                    if (it is JsonPrimitive) it.content else null
+                }
 
             if (content != null && extension != null) {
                 val payload = CpgAnalyzePayload(content = content, extension = extension)

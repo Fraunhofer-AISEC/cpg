@@ -14,7 +14,7 @@ sarif4k = "0.6.0"
 ktor = "3.3.0"
 node = "22.14.0"
 deno-plugin = "0.1.5"
-koog = "0.5.0"
+koog = "0.5.3"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin"}
@@ -72,7 +72,8 @@ ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx
 ktor-server-test-host = { module = "io.ktor:ktor-server-test-host", version.ref = "ktor" }
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
 
-mcp = {module = "io.modelcontextprotocol:kotlin-sdk", version = "0.6.0"}
+mcp = {module = "io.modelcontextprotocol:kotlin-sdk", version = "0.8.1"}
+mcp-client = {module = "io.modelcontextprotocol:kotlin-sdk-client", version = "0.8.1"}
 
 # test
 junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.13.1"}

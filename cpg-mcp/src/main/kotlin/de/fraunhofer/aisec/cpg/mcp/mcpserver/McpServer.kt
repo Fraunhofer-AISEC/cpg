@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.mcp.mcpserver
 
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.*
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.RegisteredTool
 import io.modelcontextprotocol.kotlin.sdk.Implementation
 import io.modelcontextprotocol.kotlin.sdk.ServerCapabilities
 import io.modelcontextprotocol.kotlin.sdk.server.Server
@@ -61,10 +60,6 @@ fun configureServer(): Server {
     server.listConceptsAndOperations()
 
     return server
-}
-
-fun Server.listTools(): List<RegisteredTool> {
-    return this.tools.map { (name, registeredTool) -> RegisteredTool(name, registeredTool.tool) }
 }
 
 const val cpgDescription =

@@ -36,11 +36,8 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listConceptsAndOperations
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listFunctions
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listRecords
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CallInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.FunctionInfo
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.NodeInfo
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.RecordInfo
+import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import io.modelcontextprotocol.kotlin.sdk.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.Implementation
 import io.modelcontextprotocol.kotlin.sdk.ServerCapabilities
@@ -99,7 +96,7 @@ class ListCommandsTest {
         val functionNames =
             result.content.map {
                 assertIs<TextContent>(it)
-                Json.decodeFromString<FunctionInfo>(it.text ?: "").name
+                Json.decodeFromString<NodeJSON>(it.text ?: "").name
             }
         assertNotNull(
             functionNames.singleOrNull { it == "print" },
@@ -123,7 +120,7 @@ class ListCommandsTest {
             "There is a record declaration \"Foo\" in the test code",
         )
         assertDoesNotThrow {
-            Json.decodeFromString<RecordInfo>(
+            Json.decodeFromString<NodeJSON>(
                 (result.content.singleOrNull() as? TextContent)?.text.orEmpty()
             )
         }
@@ -160,8 +157,9 @@ class ListCommandsTest {
         val callsRequest = CallToolRequest(name = "cpg_list_calls", arguments = buildJsonObject {})
         val callsResult = callsTool.handler(callsRequest)
         val callId =
-            Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text ?: "")
-                .nodeId
+            Json.decodeFromString<NodeJSON>((callsResult.content.first() as TextContent).text ?: "")
+                .id
+                .toString()
 
         server.getAllArgs()
         val argsTool = server.tools["cpg_list_call_args"] ?: error("Tool not registered")
@@ -174,7 +172,7 @@ class ListCommandsTest {
         assertNotNull(argsResult)
         assertTrue(argsResult.content.isNotEmpty(), "Should return arguments for the call")
         assertDoesNotThrow {
-            Json.decodeFromString<NodeInfo>(
+            Json.decodeFromString<NodeJSON>(
                 (argsResult.content.singleOrNull() as? TextContent)?.text.orEmpty()
             )
         }
@@ -187,7 +185,7 @@ class ListCommandsTest {
         assertNotNull(wrongArgsResult)
         assertTrue(wrongArgsResult.content.isNotEmpty(), "Should return arguments for the call")
         assertThrows<IllegalArgumentException> {
-            Json.decodeFromString<NodeInfo>(
+            Json.decodeFromString<NodeJSON>(
                 (wrongArgsResult.content.first() as TextContent).text.orEmpty()
             )
         }
@@ -200,8 +198,9 @@ class ListCommandsTest {
         val callsRequest = CallToolRequest(name = "cpg_list_calls", arguments = buildJsonObject {})
         val callsResult = callsTool.handler(callsRequest)
         val callId =
-            Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text ?: "")
-                .nodeId
+            Json.decodeFromString<NodeJSON>((callsResult.content.first() as TextContent).text ?: "")
+                .id
+                .toString()
 
         server.getArgByIndexOrName()
         val argTool =
@@ -220,7 +219,7 @@ class ListCommandsTest {
         assertNotNull(argResultByIndex)
         assertTrue(argResultByIndex.content.isNotEmpty(), "Should return the argument at index 0")
         assertDoesNotThrow {
-            Json.decodeFromString<NodeInfo>(
+            Json.decodeFromString<NodeJSON>(
                 (argResultByIndex.content.singleOrNull() as? TextContent)?.text.orEmpty()
             )
         }
@@ -234,7 +233,7 @@ class ListCommandsTest {
         assertNotNull(argResultByName)
         assertTrue(argResultByName.content.isNotEmpty(), "Should return the error message")
         assertThrows<IllegalArgumentException> {
-            Json.decodeFromString<NodeInfo>(
+            Json.decodeFromString<NodeJSON>(
                 (argResultByName.content.singleOrNull() as? TextContent)?.text.orEmpty()
             )
         }

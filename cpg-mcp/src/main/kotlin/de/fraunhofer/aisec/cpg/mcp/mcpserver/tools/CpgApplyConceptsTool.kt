@@ -36,10 +36,10 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableOperations
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.runOnCpg
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
 import io.modelcontextprotocol.kotlin.sdk.CallToolRequest
-import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
-import io.modelcontextprotocol.kotlin.sdk.Tool
 import io.modelcontextprotocol.kotlin.sdk.server.Server
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
+import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -116,7 +116,7 @@ fun Server.addCpgApplyConceptsTool() {
             .trimIndent()
 
     val inputSchema =
-        Tool.Input(
+        ToolSchema(
             properties =
                 buildJsonObject {
                     putJsonObject("assignments") {
@@ -172,7 +172,9 @@ fun Server.addCpgApplyConceptsTool() {
         inputSchema = inputSchema,
     ) { request ->
         request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
-            val payload = request.arguments.toObject<CpgApplyConceptsPayload>()
+            val payload =
+                request.arguments?.toObject<CpgApplyConceptsPayload>()
+                    ?: CpgApplyConceptsPayload(emptyList())
 
             val applied = mutableListOf<String>()
 

@@ -27,21 +27,14 @@ package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
-import de.fraunhofer.aisec.cpg.graph.invoke
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgCallArgumentByNameOrIndexPayload
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgIdPayload
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgNamePayload
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.runOnCpg
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toJson
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.*
 import io.modelcontextprotocol.kotlin.sdk.CallToolRequest
-import io.modelcontextprotocol.kotlin.sdk.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.TextContent
-import io.modelcontextprotocol.kotlin.sdk.Tool
 import io.modelcontextprotocol.kotlin.sdk.server.Server
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
+import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
@@ -131,7 +124,7 @@ fun Server.listCallsTo() {
             .trimIndent()
 
     val inputSchema =
-        Tool.Input(
+        ToolSchema(
             properties =
                 buildJsonObject {
                     putJsonObject("name") {
@@ -151,7 +144,7 @@ fun Server.listCallsTo() {
         inputSchema = inputSchema,
     ) { request ->
         request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
-            val payload = request.arguments.toObject<CpgNamePayload>()
+            val payload = request.arguments?.toObject<CpgNamePayload>() ?: CpgNamePayload("")
 
             CallToolResult(content = result.calls(payload.name).map { TextContent(it.toJson()) })
         }
@@ -168,7 +161,7 @@ fun Server.getAllArgs() {
             .trimIndent()
 
     val inputSchema =
-        Tool.Input(
+        ToolSchema(
             properties =
                 buildJsonObject {
                     putJsonObject("id") {
@@ -188,7 +181,7 @@ fun Server.getAllArgs() {
         inputSchema = inputSchema,
     ) { request ->
         request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
-            val payload = request.arguments.toObject<CpgIdPayload>()
+            val payload = request.arguments?.toObject<CpgIdPayload>() ?: CpgIdPayload("")
 
             CallToolResult(
                 content =
@@ -215,7 +208,7 @@ fun Server.getArgByIndexOrName() {
             .trimIndent()
 
     val inputSchema =
-        Tool.Input(
+        ToolSchema(
             properties =
                 buildJsonObject {
                     putJsonObject("id") {
@@ -249,7 +242,9 @@ fun Server.getArgByIndexOrName() {
         inputSchema = inputSchema,
     ) { request ->
         request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
-            val payload = request.arguments.toObject<CpgCallArgumentByNameOrIndexPayload>()
+            val payload =
+                request.arguments?.toObject<CpgCallArgumentByNameOrIndexPayload>()
+                    ?: CpgCallArgumentByNameOrIndexPayload("")
 
             CallToolResult(
                 content =
@@ -261,7 +256,7 @@ fun Server.getArgByIndexOrName() {
                                     name = payload.argumentName,
                                     position = payload.index,
                                 )
-                                ?.toJson()
+                                ?.toJson() ?: "null"
                         )
                     )
             )
