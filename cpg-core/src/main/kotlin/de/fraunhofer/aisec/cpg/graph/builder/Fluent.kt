@@ -1750,7 +1750,8 @@ fun Node.inferrPseudolocations(currentFile: URI? = null, line: Int = 1, column: 
             }
 
             if (inferLocation) {
-                // The end column and line are extracted from the last child according to the location
+                // The end column and line are extracted from the last child according to the
+                // location
                 this.location?.region?.endLine =
                     children.maxOfOrNull { it.location?.region?.endLine ?: -1 } ?: lineCtr
                 this.location?.region?.endColumn =
@@ -1758,7 +1759,6 @@ fun Node.inferrPseudolocations(currentFile: URI? = null, line: Int = 1, column: 
                         .filter { it.location?.region?.endLine == this.location?.region?.endLine }
                         .maxOfOrNull { it.location?.region?.endColumn ?: -1 } ?: columnCtr) + 1
             }
-
         }
         else -> {}
     }
