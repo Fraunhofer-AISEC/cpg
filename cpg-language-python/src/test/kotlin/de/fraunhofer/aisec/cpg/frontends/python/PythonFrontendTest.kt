@@ -49,6 +49,7 @@ import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.sarif.Region
 import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
+import kotlin.io.path.Path
 import kotlin.test.*
 
 class PythonFrontendTest : BaseTest() {
