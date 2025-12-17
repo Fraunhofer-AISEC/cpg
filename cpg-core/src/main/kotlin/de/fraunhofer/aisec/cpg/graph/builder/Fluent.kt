@@ -1696,6 +1696,12 @@ private fun <T : Node> LanguageFrontend<*, *>.scopeIfNecessary(
     }
 }
 
+/**
+ * This function uses the partial location with the start line from the fluentDSL node creation to
+ * further infer code start column, end line and end column. The inference will only be performed if
+ * the columns are still set to the invalid value of 0. Sign that they were not manually set in the
+ * fluentDSL.
+ */
 fun Node.inferrPseudolocations(currentFile: URI? = null, line: Int = 1, column: Int = 1) {
     var lineCtr = line
     var columnCtr = column
@@ -1709,6 +1715,8 @@ fun Node.inferrPseudolocations(currentFile: URI? = null, line: Int = 1, column: 
         }
 
         is AstNode -> {
+            val inferLocation =
+                this.location?.region?.startColumn == 0 && this.location?.region?.endColumn == 0
             val location =
                 this.location
                     ?: PhysicalLocation(currentFile, Region(lineCtr, columnCtr, lineCtr, columnCtr))
@@ -1721,7 +1729,10 @@ fun Node.inferrPseudolocations(currentFile: URI? = null, line: Int = 1, column: 
                 LOG.warn("Location of node {} is before current line counter {}", this, lineCtr)
             }
 
-            this.location?.region?.startColumn = columnCtr
+            if (inferLocation) {
+                this.location?.region?.startColumn = columnCtr
+            }
+
             lineCtr = location.region.startLine
 
             val children = this.astChildren
@@ -1737,8 +1748,10 @@ fun Node.inferrPseudolocations(currentFile: URI? = null, line: Int = 1, column: 
                 }
             }
 
-            this.location?.region?.endLine = lineCtr
-            this.location?.region?.endColumn = columnCtr + 1
+            if (inferLocation) {
+                this.location?.region?.endLine = lineCtr
+                this.location?.region?.endColumn = columnCtr + 1
+            }
         }
         else -> {}
     }
