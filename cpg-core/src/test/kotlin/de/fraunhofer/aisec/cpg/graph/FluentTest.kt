@@ -25,6 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.GraphExamples
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
 import de.fraunhofer.aisec.cpg.frontends.testFrontend
@@ -38,6 +40,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CollectionComprehension
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
@@ -351,5 +354,46 @@ class FluentTest {
         assertIs<Reference>(compExpr.iterable)
         assertLocalName("someIterable", compExpr.iterable)
         assertNotNull(compExpr.predicate)
+    }
+
+    @Test
+    fun testLocationIntegrity() {
+        val results =
+            listOf<TranslationResult>(
+                GraphExamples.getWhileWithElseAndBreak(),
+                GraphExamples.getDoWithElseAndBreak(),
+                GraphExamples.getForWithElseAndBreak(),
+                GraphExamples.getForEachWithElseAndBreak(),
+                GraphExamples.getBasicSlice(),
+            )
+        results.forEach { result ->
+            result.components
+                .flatMap { it.translationUnits }
+                .forEach { file ->
+                    SubgraphWalker.flattenAST(file).forEach { parent ->
+                        // Test that locations are correct with the end after the start
+                        parent.location?.region?.let { pLoc ->
+                            assertTrue(pLoc.startLine <= pLoc.endLine)
+                            assertTrue(
+                                pLoc.startLine != pLoc.endLine || pLoc.startColumn <= pLoc.endColumn
+                            )
+
+                            parent.astChildren.forEach { child ->
+                                child.location?.region?.let {
+                                    assertTrue(pLoc.startLine <= it.startLine)
+                                    assertTrue(pLoc.endLine >= it.endLine)
+                                    assertFalse(
+                                        pLoc.startLine == it.startLine &&
+                                            pLoc.startColumn > it.startColumn
+                                    )
+                                    assertFalse(
+                                        pLoc.endLine == it.endLine && pLoc.endColumn < it.endColumn
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+        }
     }
 }
