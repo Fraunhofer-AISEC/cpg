@@ -38,7 +38,7 @@ open class HttpRequestHandler(
 
 /** Base class for Http operations. */
 abstract class HttpRequestHandlerOperation(underlyingNode: Node?, concept: Concept) :
-    Operation(underlyingNode, concept) {}
+    Operation(concept, underlyingNode) {}
 
 /** Registers an [HttpEndpoint]. */
 class RegisterHttpEndpoint(

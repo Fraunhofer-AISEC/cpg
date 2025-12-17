@@ -65,6 +65,7 @@ mavenPublishing {
 
 dependencies {
     implementation(libs.mcp)
+    implementation(libs.ktor.server.cio)
     implementation(libs.ktor.serialization.kotlinx.json)
 
     // Test dependencies

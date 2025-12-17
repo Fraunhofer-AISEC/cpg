@@ -68,7 +68,7 @@ open class JwtAuth(underlyingNode: Node? = null, val jwt: Node, val payload: Nod
 
 /** Abstract base class for authentication operations. */
 abstract class AuthenticationOperation(underlyingNode: Node? = null, concept: Authentication) :
-    Operation(underlyingNode, concept)
+    Operation(concept, underlyingNode)
 
 /**
  * Represents an authentication operation.

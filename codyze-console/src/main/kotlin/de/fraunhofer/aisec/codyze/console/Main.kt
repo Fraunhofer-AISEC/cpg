@@ -37,13 +37,11 @@ import kotlinx.serialization.json.Json
 
 /**
  * This function starts the embedded server for the web console. It uses the Netty engine and
- * listens on localhost at port 8080. The server is configured using the [configureWebconsole]
- * function.
+ * listens on [host] (default: localhost) at [port] (default: 8080). The server is configured using
+ * the [configureWebconsole] function.
  */
-fun ConsoleService.startConsole() {
-    embeddedServer(Netty, host = "localhost", port = 8080) {
-            configureWebconsole(this@startConsole)
-        }
+fun ConsoleService.startConsole(host: String = "localhost", port: Int = 8080) {
+    embeddedServer(Netty, host = host, port = port) { configureWebconsole(this@startConsole) }
         .start(wait = true)
 }
 
