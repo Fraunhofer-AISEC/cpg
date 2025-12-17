@@ -1735,7 +1735,7 @@ fun Node.inferrPseudolocations(currentFile: URI? = null, line: Int = 1, column: 
 
             lineCtr = location.region.startLine
 
-            val children = this.astChildren
+            val children = this.astChildren.sortedBy { it.location?.region?.startLine ?: -1 }
             children.forEach {
                 it.inferrPseudolocations(currentFile, lineCtr, columnCtr)
                 val childLoc = it.location
@@ -1749,9 +1749,14 @@ fun Node.inferrPseudolocations(currentFile: URI? = null, line: Int = 1, column: 
             }
 
             if (inferLocation) {
-                this.location?.region?.endLine = lineCtr
-                this.location?.region?.endColumn = columnCtr + 1
+                this.location?.region?.endLine =
+                    children.maxOfOrNull { it.location?.region?.endLine ?: -1 } ?: lineCtr
+                this.location?.region?.endColumn =
+                    (children
+                        .filter { it.location?.region?.endLine == this.location?.region?.endLine }
+                        .maxOfOrNull { it.location?.region?.endColumn ?: -1 } ?: columnCtr) + 1
             }
+
         }
         else -> {}
     }
