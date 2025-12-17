@@ -1715,6 +1715,7 @@ fun Node.inferrPseudolocations(currentFile: URI? = null, line: Int = 1, column: 
         }
 
         is AstNode -> {
+            // We only infer the remaining location if columns are not set to valid SARIF value.
             val inferLocation =
                 this.location?.region?.startColumn == 0 && this.location?.region?.endColumn == 0
             val location =
@@ -1749,6 +1750,7 @@ fun Node.inferrPseudolocations(currentFile: URI? = null, line: Int = 1, column: 
             }
 
             if (inferLocation) {
+                // The end column and line are extracted from the last child according to the location
                 this.location?.region?.endLine =
                     children.maxOfOrNull { it.location?.region?.endLine ?: -1 } ?: lineCtr
                 this.location?.region?.endColumn =
