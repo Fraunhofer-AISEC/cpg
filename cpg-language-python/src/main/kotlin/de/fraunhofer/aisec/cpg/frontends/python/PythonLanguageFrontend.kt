@@ -288,15 +288,19 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
         return lines
     }
 
+    /**
+     * The [PhysicalLocation] of our [astNode] node. We default to `-1` for line/column numbers in
+     * case no location information is available.
+     */
     override fun locationOf(astNode: Python.AST.AST): PhysicalLocation? {
         return if (astNode is Python.AST.WithLocation) {
             PhysicalLocation(
                 uri,
                 Region(
-                    startLine = astNode.lineno,
-                    endLine = astNode.end_lineno,
-                    startColumn = astNode.col_offset + 1,
-                    endColumn = astNode.end_col_offset + 1,
+                    startLine = astNode.lineno ?: -1,
+                    endLine = astNode.end_lineno ?: -1,
+                    startColumn = astNode.col_offset?.plus(1) ?: -1,
+                    endColumn = astNode.end_col_offset?.plus(1) ?: -1,
                 ),
             )
         } else {
