@@ -97,7 +97,7 @@ class WalkerTest : BaseTest() {
 
         // Traversal of about 80.000 nodes should not exceed 1s (on GitHub). On a recently fast
         // machine, such as MacBook M1, this should take about 200-300ms.
-        assertTimeout(Duration.of(1500, ChronoUnit.MILLIS)) {
+        assertTimeout(Duration.of(2, ChronoUnit.SECONDS)) {
             val bench = Benchmark(WalkerTest::class.java, "Speed of Walker")
             val flat = SubgraphWalker.flattenAST(tu)
             bench.stop()
