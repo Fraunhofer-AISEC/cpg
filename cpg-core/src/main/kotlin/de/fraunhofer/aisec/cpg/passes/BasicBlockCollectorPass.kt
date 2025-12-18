@@ -55,9 +55,7 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
      * @param startNode The node to start the collection from, usually a [FunctionDeclaration].
      */
     fun collectBasicBlocks(startNode: Node): BasicBlock {
-        val allBasicBlocks = mutableSetOf<BasicBlock>()
         val firstBB = BasicBlock(startNode = startNode)
-        allBasicBlocks.add(firstBB)
         val worklist =
             mutableListOf<Triple<Node, EvaluationOrder?, BasicBlock>>(
                 Triple(startNode, null, firstBB)
@@ -82,16 +80,12 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 // Set the end node of the old basic block to the last node on the path
                 basicBlock =
                     BasicBlock(startNode = currentStartNode).apply {
-                        // ingoingEOGEdges.addAll(currentStartNode.prevEOGEdges)
                         // Save the relationships between the two basic blocks.
                         prevEOGEdges.add(basicBlock) {
                             this.branch = reachingEOGEdge?.branch
                             this.unreachable = reachingEOGEdge?.unreachable ?: false
                         }
                     }
-
-                // Add the newly created basic block to the allBasicBlocks set
-                allBasicBlocks.add(basicBlock)
             }
 
             basicBlock.nodes.add(currentStartNode)
@@ -121,9 +115,6 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                                         this.branch = it.branch
                                         this.unreachable = it.unreachable
                                     }
-                                    // Add the newly created basic block to the allBasicBlocks
-                                    // set
-                                    allBasicBlocks.add(this)
                                 },
                             )
                         }
