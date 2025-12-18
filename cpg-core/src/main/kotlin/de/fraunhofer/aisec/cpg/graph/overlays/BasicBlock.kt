@@ -26,19 +26,16 @@
 package de.fraunhofer.aisec.cpg.graph.overlays
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
-import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.BasicBlockEdges
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.statements.LoopStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ComprehensionExpression
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.passes.BasicBlockCollectorPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
-import java.util.Objects
+import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.typeconversion.Convert
 
@@ -74,15 +71,12 @@ class BasicBlock(
     val endNode: Node?
         get() = nodes.lastOrNull()
 
+    /**
+     * If this basic block ends in a branching point (i.e., has multiple outgoing EOG edges), this
+     * returns the [endNode] of this basic blocks EOG. Otherwise, null.
+     */
     val branchingNode: Node?
-        get() =
-            if (
-                endNode is BranchingNode ||
-                    endNode is LoopStatement ||
-                    endNode is ComprehensionExpression
-            ) {
-                endNode as Node
-            } else null
+        get() = if (this.nextEOG.size > 1) endNode else null
 
     @Convert(LocationConverter::class)
     override var location: PhysicalLocation? = null

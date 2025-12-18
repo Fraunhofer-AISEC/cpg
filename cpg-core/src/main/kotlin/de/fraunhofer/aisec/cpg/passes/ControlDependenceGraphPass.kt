@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -109,7 +110,9 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
 
         val firstBasicBlock =
             (startNode as? EOGStarterHolder)?.firstBasicBlock
-                ?: BasicBlockCollectorPass(ctx).collectBasicBlocks(startNode, false).first
+                ?: BasicBlockCollectorPass(ctx)
+                    .collectBasicBlocks(startNode, startNode.language is HasShortCircuitOperators)
+                    .first
 
         val prevEOGState =
             PrevEOGState(innerLattice = PrevEOGLattice(innerLattice = PowersetLattice()))
@@ -195,7 +198,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                             }
                     }
                     .flatten()
-            finalDominators = finalDominators.minus(transitiveDominators).toMutableList()
+            finalDominators = finalDominators.minus(transitiveDominators.toSet()).toMutableList()
 
             // After deleting a bunch of stuff, we have two options: 1) there are no dominators
             // left, and we assign the function declaration, or 2) there is one or multiple
@@ -369,8 +372,14 @@ private fun EvaluationOrder.isConditionalBranch(): Boolean {
             startNode is ComprehensionExpression ||
             (startNode.astParent is ComprehensionExpression &&
                 startNode == (startNode.astParent as ComprehensionExpression).iterable) ||
-            startNode is ConditionalExpression ||
-            startNode is ShortCircuitOperator) && branch == false ||
+            startNode is ConditionalExpression) && branch == false ||
+            /*
+             * Code like `foo() && bar()` requires us to look-ahead for a [ShortCircuitOperator].
+             * The execution of the rhs of the [ShortCircuitOperator] always depends on the lhs:
+             * `foo() && bar()` -> `bar()` will only be called if `foo()` evaluates to `true`
+             * `foo() || bar()` -> `bar()` will only be called if `foo() evaluates to `false`
+             */
+            startNode.nextEOG.filterIsInstance<ShortCircuitOperator>().isNotEmpty() ||
             (startNode is IfStatement &&
                 !startNode.allBranchesFromMyThenBranchGoThrough(startNode.nextUnconditionalNode))
 }
