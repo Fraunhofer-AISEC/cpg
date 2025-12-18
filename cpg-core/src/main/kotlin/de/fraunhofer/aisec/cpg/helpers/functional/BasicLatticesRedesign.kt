@@ -337,7 +337,6 @@ interface Lattice<T : Lattice.Element> {
                 if (
                     it !in currentBBEdgesList &&
                         it !in nextBranchEdgesList &&
-                        //                        it !in mergePointsEdgesMap.keys &&
                         (isNoBranchingPoint ||
                             oldGlobalIt == null ||
                             newGlobalIt.compare(oldGlobalIt) in setOf(Order.GREATER, Order.UNEQUAL))
