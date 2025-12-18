@@ -102,7 +102,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
 
         val firstBasicBlock =
             (startNode as? EOGStarterHolder)?.firstBasicBlock
-                ?: BasicBlockCollectorPass(ctx).collectBasicBlocks(startNode, false).first
+                ?: BasicBlockCollectorPass(ctx).collectBasicBlocks(startNode)
 
         log.trace("Retrieved network of BBs for {}", startNode.name)
 
