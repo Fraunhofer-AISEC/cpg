@@ -55,7 +55,7 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
      * @param startNode The node to start the collection from, usually a [FunctionDeclaration].
      */
     fun collectBasicBlocks(startNode: Node): BasicBlock {
-        val firstBB = BasicBlock(startNode = startNode)
+        val firstBB = BasicBlock()
         val worklist =
             mutableListOf<Triple<Node, EvaluationOrder?, BasicBlock>>(
                 Triple(startNode, null, firstBB)
@@ -79,7 +79,7 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 // if statement.
                 // Set the end node of the old basic block to the last node on the path
                 basicBlock =
-                    BasicBlock(startNode = currentStartNode).apply {
+                    BasicBlock().apply {
                         // Save the relationships between the two basic blocks.
                         prevEOGEdges.add(basicBlock) {
                             this.branch = reachingEOGEdge?.branch
@@ -96,7 +96,6 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 // If the currentStartNode splits up into multiple paths, the next nodes start a new
                 // basic block. We already generate this here. But currentStartNode is still part of
                 // the current basic block, so we add it before this if statement.
-                // basicBlock.outgoingEOGEdges.addAll(nextRelevantEOGEdges)
                 worklist.addAll(
                     nextRelevantEOGEdges.mapNotNull {
                         if (it.end.basicBlock.isNotEmpty()) {
@@ -109,7 +108,7 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                             Triple(
                                 it.end,
                                 it,
-                                BasicBlock(startNode = it.end).apply {
+                                BasicBlock().apply {
                                     // Save the relationships between the two basic blocks.
                                     prevEOGEdges.add(basicBlock) {
                                         this.branch = it.branch

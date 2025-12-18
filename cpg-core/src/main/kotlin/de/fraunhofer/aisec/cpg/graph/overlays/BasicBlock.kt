@@ -49,13 +49,13 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
  * Note that there is not a single [underlyingNode] because the basic block can span multiple nodes
  * which are kept in [nodes].
  */
-class BasicBlock(
+class BasicBlock() : OverlayNode() {
     /**
      * The starting node of this basic block. I.e., the first node in the BB's internal EOG. It's
      * either a merge point or the first node in a branch.
      */
-    var startNode: Node
-) : OverlayNode() {
+    val startNode: Node
+        get() = nodes.first()
 
     /** The edges connecting this basic block to its member nodes. */
     @Relationship(value = "BB", direction = Relationship.Direction.INCOMING)
