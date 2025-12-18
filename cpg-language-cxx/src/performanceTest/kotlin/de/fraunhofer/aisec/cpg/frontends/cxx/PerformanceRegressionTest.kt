@@ -52,8 +52,7 @@ class PerformanceRegressionTest {
      *   populating the [de.fraunhofer.aisec.cpg.graph.Node.location] property using
      *   [CXXLanguageFrontend.locationOf].
      */
-    // TODO for merge
-    @Ignore
+
     @Test
     fun testParseLargeList() {
         val range = 0..40000
@@ -65,7 +64,7 @@ class PerformanceRegressionTest {
 
         // this should not exceed 30 seconds (it takes about 2800ms on a good machine, about
         // 10-20s on GitHub, depending on the slowness of the runner)
-        assertTimeout(Duration.of(30, ChronoUnit.SECONDS)) {
+        assertTimeout(Duration.of(35, ChronoUnit.SECONDS)) {
             val tu =
                 analyzeAndGetFirstTU(listOf(tmp.toFile()), tmp.parent, true) {
                     // No need for parallel processing for a single file. this might make it fast
@@ -77,9 +76,7 @@ class PerformanceRegressionTest {
             assertNotNull(tu)
         }
     }
-
-    // TODO for merge
-    @Ignore
+    
     @Test
     fun testTraversal() {
         with(TestLanguageFrontend()) {

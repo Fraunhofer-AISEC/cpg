@@ -39,7 +39,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
-import de.fraunhofer.aisec.cpg.graph.edges.overlay.BasicBlockEdges
+import de.fraunhofer.aisec.cpg.graph.edges.overlay.BasicBlockEdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.Overlays
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
@@ -123,11 +123,11 @@ abstract class Node() :
         EvaluationOrders<Node>(this, mirrorProperty = Node::prevEOGEdges, outgoing = true)
         protected set
 
-    /** The [BasicBlockEdges] leading to the basic block this node belongs to. */
+    /** The [BasicBlockEdgeList] leading to the basic block this node belongs to. */
     @Relationship(value = "BB", direction = Relationship.Direction.OUTGOING)
     @PopulatedByPass(BasicBlockCollectorPass::class)
-    var basicBlockEdges: BasicBlockEdges<Node> =
-        BasicBlockEdges<Node>(this, mirrorProperty = BasicBlock::nodeEdges, outgoing = true)
+    var basicBlockEdges: BasicBlockEdgeList<Node> =
+        BasicBlockEdgeList<Node>(this, mirrorProperty = BasicBlock::nodeEdges, outgoing = true)
         protected set
 
     /** The basic block this node belongs to. */

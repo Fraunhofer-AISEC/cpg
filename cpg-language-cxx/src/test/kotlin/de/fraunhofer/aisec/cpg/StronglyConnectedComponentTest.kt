@@ -37,7 +37,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.assertNotNull
 
-internal class StronglyConnectedComponentTest : BaseTest() {
+class StronglyConnectedComponentTest : BaseTest() {
     @Test
     fun testNestedLoop() {
         val file = File("src/test/resources/sccTest.cpp")

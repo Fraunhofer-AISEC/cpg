@@ -227,9 +227,9 @@ class LoggingConceptTest : BaseTest() {
         testing.entries.forEach {
             val literalString = it.key
             val goodLogger = it.value
-            val badLoggers = allLoggers.filter { it !== goodLogger }
+            val badLoggers = allLoggers.filter { log -> log !== goodLogger }
 
-            val literals = result.literals.filter { it.value == literalString }
+            val literals = result.literals.filter { lit -> lit.value == literalString }
             literals.forEach { currentLit ->
                 assertTrue(
                     dataFlow(startNode = currentLit) { end -> end == goodLogger }.value,
@@ -246,5 +246,44 @@ class LoggingConceptTest : BaseTest() {
                 )
             }
         }
+    }
+
+    // See https://github.com/Fraunhofer-AISEC/cpg/issues/2479
+    // This test makes sure that the pass handles nodes in EOG order by verifying that a `getLogger`
+    // call on global scope is handled before the log usage in a function after `getLogger`.
+    @Test
+    fun testLogEOG() {
+        val topLevel = Path.of("src", "integrationTest", "resources", "python", "logging")
+
+        val result =
+            analyze(
+                files = listOf(topLevel.resolve("log_eog_check.py").toFile()),
+                topLevel = topLevel,
+                usePasses = true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+                it.registerPass<PythonLoggingConceptPass>()
+            }
+        assertNotNull(result)
+
+        val logger = result.conceptNodes.singleOrNull { it is Log && it.logName == "my_logger" }
+        assertNotNull(logger, "Expected to find a logger with name 'my_logger'")
+
+        val errorCall = result.calls { it.name.localName == "error" }.singleOrNull()
+        assertNotNull(errorCall, "Expected to find a call to logger.error(...)")
+
+        val logWrite = errorCall.operationNodes.singleOrNull { it is LogWrite }
+        assertNotNull(logWrite, "Expected to find a LogWrite operation for logger.error(...)")
+
+        assertTrue(
+            errorCall.overlays.contains<Node?>(logWrite),
+            "Expected the call to logger.error(...) to be overlaid with LogWrite concept.",
+        )
+
+        assertEquals(
+            logger,
+            logWrite.concept,
+            "Expected the LogWrite to be associated with the 'my_logger' logger.",
+        )
     }
 }

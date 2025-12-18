@@ -493,7 +493,6 @@ interface Lattice<T : Lattice.Element> {
                 if (
                     it !in currentBBEdgesList &&
                         it !in nextBranchEdgesList &&
-                        //                        it !in mergePointsEdgesMap.keys &&
                         (isNoBranchingPoint ||
                             oldGlobalIt == null ||
                             // If we deal with PointsToState Elements, we use their special

@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.overlays
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
-import de.fraunhofer.aisec.cpg.graph.edges.overlay.BasicBlockEdges
+import de.fraunhofer.aisec.cpg.graph.edges.overlay.BasicBlockEdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.passes.BasicBlockCollectorPass
@@ -57,8 +57,8 @@ class BasicBlock(
     /** The edges connecting this basic block to its member nodes. */
     @Relationship(value = "BB", direction = Relationship.Direction.INCOMING)
     @PopulatedByPass(BasicBlockCollectorPass::class)
-    var nodeEdges: BasicBlockEdges<Node> =
-        BasicBlockEdges(this, mirrorProperty = Node::basicBlockEdges, outgoing = false)
+    var nodeEdges: BasicBlockEdgeList<Node> =
+        BasicBlockEdgeList(this, mirrorProperty = Node::basicBlockEdges, outgoing = false)
         protected set
 
     /** The nodes contained in this basic block. */

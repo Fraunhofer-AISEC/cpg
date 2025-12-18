@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
@@ -110,9 +109,9 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
 
         val firstBasicBlock =
             (startNode as? EOGStarterHolder)?.firstBasicBlock
-                ?: BasicBlockCollectorPass(ctx)
-                    .collectBasicBlocks(startNode, startNode.language is HasShortCircuitOperators)
-                    .first
+                ?: BasicBlockCollectorPass(ctx).collectBasicBlocks(startNode)
+
+        log.trace("Retrieved network of BBs for {}", startNode.name)
 
         val prevEOGState =
             PrevEOGState(innerLattice = PrevEOGLattice(innerLattice = PowersetLattice()))
