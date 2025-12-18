@@ -24,20 +24,20 @@ jobs:
     timeout-minutes: 15
     runs-on: [self-hosted, Linux, ARM64]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: |
           cp gradle.properties.example gradle.properties
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: "corretto"
           java-version: "21"
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: cpg-language-go/src/test/resources/golang/integration/go.mod
       - name: Setup neo4j
@@ -62,9 +62,9 @@ jobs:
         run: |
           python3 -m venv ~/.virtualenvs/cpg
           source ~/.virtualenvs/cpg/bin/activate
-          pip3 install jep==$(grep "black.ninia:jep" gradle/libs.versions.toml | grep -o -E "[0-9]\d*(\.[0-9]\d*)*")
+          pip3 install jep==$(grep "org.ninia:jep" gradle/libs.versions.toml | grep -o -E "[0-9]\d*(\.[0-9]\d*)*")
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
       - name: Build ${{ env.version }}
         run: |
           ./gradlew --parallel spotlessCheck -x spotlessApply build -x distZip -x distTar koverXmlReport koverHtmlReport performanceTest integrationTest
@@ -98,7 +98,7 @@ jobs:
           zip -r reports.zip **/build/reports/**/** || true
       - name: Archive test and coverage reports
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: reports
           path: reports.zip
