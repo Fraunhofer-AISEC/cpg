@@ -86,7 +86,8 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         if (currentInfo.blockIDs[bb] == currentInfo.lowLinkValues[bb]) {
             // Set the lowLinkValues of all nodes on the stack to the same, as they belong to the
             // same SCC
-            // If bb is the first element on the stack, it's a trivial SCC (AKA an isolated node), so we simply remove it again without setting any properties
+            // If bb is the first element on the stack, it's a trivial SCC (AKA an isolated node),
+            // so we simply remove it again without setting any properties
             if (
                 currentInfo.stack.first() == bb
                 // Also consider SCCs that consist of a single element, in those, the bb points to
@@ -97,7 +98,8 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
             } else {
                 // Otherwise, we found a loop, so we set the scc-property of the respective edges
                 // First, let's collect all the nodes that are part of the SCC from the stack
-                // Note: This is not necessarily equal to all nodes on the stack, we only pop from the stack until we are back at our initial node [bb]
+                // Note: This is not necessarily equal to all nodes on the stack, we only pop from
+                // the stack until we are back at our initial node [bb]
                 log.trace("Found a SCC (Level $level): ")
                 // Can't iterate over the stack and remove items from it, so we iterate over a clone
                 val stackClone = currentInfo.stack.toList()
