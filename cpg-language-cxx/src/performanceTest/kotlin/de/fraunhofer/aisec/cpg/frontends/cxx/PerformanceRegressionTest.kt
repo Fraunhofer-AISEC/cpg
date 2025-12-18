@@ -52,7 +52,6 @@ class PerformanceRegressionTest {
      *   populating the [de.fraunhofer.aisec.cpg.graph.Node.location] property using
      *   [CXXLanguageFrontend.locationOf].
      */
-
     @Test
     fun testParseLargeList() {
         val range = 0..40000
@@ -76,7 +75,7 @@ class PerformanceRegressionTest {
             assertNotNull(tu)
         }
     }
-    
+
     @Test
     fun testTraversal() {
         with(TestLanguageFrontend()) {
