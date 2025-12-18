@@ -57,7 +57,7 @@ dependencies {
 
     // roaster
     implementation("org.jboss.forge.roaster:roaster-api:2.22.2.Final")
-    implementation("org.jboss.forge.roaster:roaster-jdt:2.22.2.Final")
+    implementation("org.jboss.forge.roaster:roaster-jdt:2.30.3.Final")
     implementation("org.apache.jena:jena-arq:5.6.0")
     implementation(libs.reflections)
 }
