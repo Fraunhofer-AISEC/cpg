@@ -31,7 +31,6 @@ import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.sse.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -41,19 +40,17 @@ import io.modelcontextprotocol.kotlin.sdk.client.Client
 import io.modelcontextprotocol.kotlin.sdk.client.ClientOptions
 import io.modelcontextprotocol.kotlin.sdk.client.SseClientTransport
 import io.modelcontextprotocol.kotlin.sdk.types.*
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.serialization.json.*
 
-/**
- * Custom MCP client that connects to the local MCP server and uses Ollama for LLM interactions.
- * This is a prototype implementation for testing.
- */
-class CustomMcpClient : AutoCloseable {
+/** MCP client that connects to the local MCP server and uses a LLM for interactions. */
+class McpClient : AutoCloseable {
     private val config = ConfigFactory.load()
     private val mcpServerUrl: String = config.getString("mcp.serverUrl")
-    private val ollamaBaseUrl: String = config.getString("llm.ollama.baseUrl")
-    private val ollamaModel: String = config.getString("llm.ollama.model")
+    private val llmBaseUrl: String = config.getString("llm.ollama.baseUrl")
+    private val llmModel: String = config.getString("llm.ollama.model")
 
     private val httpClient =
         HttpClient(CIO) {
@@ -68,22 +65,11 @@ class CustomMcpClient : AutoCloseable {
             // Install SSE plugin for MCP client transport
             install(SSE)
 
-            // Configure timeouts - critical for long-running operations!
+            // Configure timeouts
             install(HttpTimeout) {
                 requestTimeoutMillis = 600_000 // 10 minutes for long tool executions
                 connectTimeoutMillis = 30_000 // 30 seconds for connection
                 socketTimeoutMillis = 600_000 // 10 minutes for socket operations
-            }
-
-            // Optional: Enable logging for debugging
-            install(Logging) {
-                level = LogLevel.INFO
-                logger =
-                    object : Logger {
-                        override fun log(message: String) {
-                            println("[HTTP] $message")
-                        }
-                    }
             }
         }
 
@@ -98,72 +84,52 @@ class CustomMcpClient : AutoCloseable {
 
     /** Connect to the MCP server via SSE */
     suspend fun connect() {
-        println("[CustomMCP] Connecting to MCP server at $mcpServerUrl...")
-
-        // Create SSE transport - requires HttpClient
         val transport = SseClientTransport(urlString = mcpServerUrl, client = httpClient)
-
-        // Register sampling request handler BEFORE connecting
         registerSamplingHandler()
-
         mcp.connect(transport)
-
-        // List available tools
         val toolsResult = mcp.listTools()
         tools = toolsResult.tools
-
-        println("[CustomMCP] Connected! Available tools: ${tools.map { it.name }}")
     }
 
     /** Register handler for incoming sampling requests from the server */
     private fun registerSamplingHandler() {
-        println("[CustomMCP] Registering sampling request handler...")
-
         mcp.setRequestHandler<CreateMessageRequest>(Method.Defined.SamplingCreateMessage) {
             request,
             _ ->
             try {
-                // Send to Ollama (non-streaming)
                 val llmResponse =
-                    sendToOllamaNonStreaming(
+                    queryLlm(
                         messages = request.messages,
                         systemPrompt = request.systemPrompt,
                         maxTokens = request.maxTokens,
                     )
 
-                println("[CustomMCP] LLM response received: ${llmResponse.take(100)}...")
-
                 // Return result to server
                 CreateMessageResult(
                     role = Role.Assistant,
                     content = TextContent(text = llmResponse),
-                    model = ollamaModel,
+                    model = llmModel,
                     stopReason = StopReason.EndTurn,
                 )
             } catch (e: Exception) {
-                println("[CustomMCP] Error in sampling handler: ${e.message}")
-                e.printStackTrace()
-
                 CreateMessageResult(
                     role = Role.Assistant,
                     content = TextContent(text = "Error: ${e.message}"),
-                    model = ollamaModel,
+                    model = llmModel,
                     stopReason = StopReason.EndTurn,
                 )
             }
         }
     }
 
-    /** Send messages to Ollama without streaming (for sampling) */
-    private suspend fun sendToOllamaNonStreaming(
+    /** Query the LLM for sampling (non-streaming) */
+    private suspend fun queryLlm(
         messages: List<SamplingMessage>,
         systemPrompt: String?,
         maxTokens: Int,
     ): String {
-        println("[CustomMCP] Sending to Ollama (non-streaming)...")
-
-        // Convert MCP messages to Ollama format
-        val ollamaMessages = buildJsonArray {
+        // Convert MCP messages to LLM format
+        val llmMessages = buildJsonArray {
             // Add system prompt if provided
             if (systemPrompt != null) {
                 add(
@@ -186,16 +152,15 @@ class CustomMcpClient : AutoCloseable {
             }
         }
 
-        // Call Ollama API
         val response =
-            httpClient.post("$ollamaBaseUrl/v1/chat/completions") {
+            httpClient.post("$llmBaseUrl/v1/chat/completions") {
                 contentType(ContentType.Application.Json)
                 setBody(
                     buildJsonObject {
-                        put("model", ollamaModel)
-                        put("messages", ollamaMessages)
+                        put("model", llmModel)
+                        put("messages", llmMessages)
                         put("max_tokens", maxTokens)
-                        put("stream", false) // Important: NO streaming for sampling
+                        put("stream", false)
                     }
                 )
             }
@@ -208,18 +173,17 @@ class CustomMcpClient : AutoCloseable {
         val message = firstChoice?.get("message")?.jsonObject
         val content = message?.get("content")?.jsonPrimitive?.content
 
-        return content ?: "No response from Ollama"
+        return content ?: "No response"
     }
 
-    /** Process a chat query using Ollama with MCP tool support */
+    /** Process a chat query using the LLM with MCP tool support */
     fun chat(request: ChatRequestJSON): Flow<String> = channelFlow {
-        println("[CustomMCP] Processing query...")
-
+        // Check for cancellation before starting
+        ensureActive()
         val userMessage = request.messages.lastOrNull()?.content ?: ""
-        println("[CustomMCP] User message: $userMessage")
 
-        // Convert MCP tools to Ollama format
-        val ollamaTools =
+        // Convert MCP tools to LLM format
+        val llmTools =
             tools.map { tool ->
                 buildJsonObject {
                     put("type", "function")
@@ -234,9 +198,7 @@ class CustomMcpClient : AutoCloseable {
                 }
             }
 
-        println("[CustomMCP] Converted ${ollamaTools.size} tools for Ollama")
-
-        // Build messages for Ollama
+        // Build messages for LLM
         val messages = buildJsonArray {
             add(
                 buildJsonObject {
@@ -252,22 +214,17 @@ class CustomMcpClient : AutoCloseable {
             )
         }
 
-        // Call Ollama with streaming
-        println(
-            "[CustomMCP] Calling Ollama at $ollamaBaseUrl with model $ollamaModel (streaming)..."
-        )
-
         try {
             val accumulatedToolCalls = mutableListOf<JsonObject>()
 
             httpClient
-                .preparePost("$ollamaBaseUrl/v1/chat/completions") {
+                .preparePost("$llmBaseUrl/v1/chat/completions") {
                     contentType(ContentType.Application.Json)
                     setBody(
                         buildJsonObject {
-                            put("model", ollamaModel)
+                            put("model", llmModel)
                             put("messages", messages)
-                            put("tools", JsonArray(ollamaTools))
+                            put("tools", JsonArray(llmTools))
                             put("stream", true)
                         }
                     )
@@ -275,25 +232,20 @@ class CustomMcpClient : AutoCloseable {
                 .execute { response ->
                     val channel = response.body<ByteReadChannel>()
 
-                    println("[CustomMCP] Receiving streaming response...")
-
                     try {
                         while (!channel.isClosedForRead) {
                             val line =
                                 try {
                                     channel.readUTF8Line()
                                 } catch (e: Exception) {
-                                    println("[CustomMCP] Error reading line: ${e.message}")
                                     break
                                 }
 
                             // If line is null, check if channel is closed
                             if (line == null) {
                                 if (channel.isClosedForRead) {
-                                    println("[CustomMCP] Channel closed, ending stream")
                                     break
                                 }
-                                // Otherwise, continue reading (might be temporary buffer issue)
                                 continue
                             }
 
@@ -301,7 +253,6 @@ class CustomMcpClient : AutoCloseable {
                             if (line.startsWith("data: ")) {
                                 val jsonStr = line.substringAfter("data: ").trim()
                                 if (jsonStr == "[DONE]") {
-                                    println("[CustomMCP] Stream completed")
                                     break
                                 }
 
@@ -311,117 +262,88 @@ class CustomMcpClient : AutoCloseable {
                                     val firstChoice = choices?.firstOrNull()?.jsonObject
                                     val delta = firstChoice?.get("delta")?.jsonObject
 
-                                    // Stream content tokens
                                     val content =
                                         delta?.get("content")?.jsonPrimitive?.contentOrNull
-                                    if (content != null) {
-                                        // Send as JSON-wrapped event
+                                    if (!content.isNullOrEmpty()) {
                                         val jsonEvent = buildJsonObject {
                                             put("type", "text")
                                             put("content", content)
                                         }
-                                        send(Json.encodeToString(jsonEvent))
+                                        try {
+                                            send(Json.encodeToString(jsonEvent))
+                                        } catch (e: Exception) {
+                                            throw e
+                                        }
                                     }
 
-                                    // Collect tool calls from delta
                                     val toolCalls = delta?.get("tool_calls")?.jsonArray
-                                    if (toolCalls != null && toolCalls.isNotEmpty()) {
-                                        println(
-                                            "[CustomMCP] ========== TOOL CALL DETECTED =========="
-                                        )
-                                        println("[CustomMCP] Full chunk: $chunk")
-                                        println("[CustomMCP] Tool calls: $toolCalls")
-                                        println(
-                                            "[CustomMCP] ========================================"
-                                        )
+                                    if (!toolCalls.isNullOrEmpty()) {
                                         toolCalls.forEach {
                                             accumulatedToolCalls.add(it.jsonObject)
                                         }
                                     }
                                 } catch (e: Exception) {
-                                    println("[CustomMCP] Error parsing chunk: ${e.message}")
+                                    // Continue on parsing errors
                                 }
                             }
                         }
                     } catch (e: Exception) {
-                        println("[CustomMCP] Stream reading error: ${e.message}")
-                        e.printStackTrace()
-                        // Don't throw - just break the loop and continue with tool calls
+                        // Continue with tool calls
                     }
                 }
 
-            // Now handle the accumulated tool calls
-            if (accumulatedToolCalls.isNotEmpty()) {
-                println(
-                    "[CustomMCP] Processing ${accumulatedToolCalls.size} accumulated tool calls..."
-                )
+            // Handle accumulated tool calls
+            for (toolCallObj in accumulatedToolCalls) {
+                // Check if the flow is still active before processing tool calls
+                ensureActive()
 
-                for (toolCallObj in accumulatedToolCalls) {
-                    val function = toolCallObj["function"]?.jsonObject
-                    val toolName = function?.get("name")?.jsonPrimitive?.contentOrNull
-                    val argumentsStr =
-                        function?.get("arguments")?.jsonPrimitive?.contentOrNull ?: "{}"
+                val function = toolCallObj["function"]?.jsonObject
+                val toolName = function?.get("name")?.jsonPrimitive?.contentOrNull
+                val argumentsStr = function?.get("arguments")?.jsonPrimitive?.contentOrNull ?: "{}"
 
-                    if (toolName != null) {
-                        println("[CustomMCP] Calling MCP tool: $toolName")
+                if (toolName != null) {
+                    try {
+                        val jsonArgs = Json.parseToJsonElement(argumentsStr).jsonObject
+                        val arguments: Map<String, Any?> = jsonArgs.toMap()
 
-                        try {
-                            // Parse arguments as JsonObject and convert to Map
-                            val jsonArgs = Json.parseToJsonElement(argumentsStr).jsonObject
-                            val arguments: Map<String, Any?> = jsonArgs.toMap()
+                        val result = mcp.callTool(name = toolName, arguments = arguments)
 
-                            // Call MCP tool
-                            val result = mcp.callTool(name = toolName, arguments = arguments)
+                        val resultText =
+                            result.content.joinToString("\n") { (it as? TextContent)?.text ?: "" }
 
-                            // Extract and send result
-                            val resultText =
-                                result?.content?.joinToString("\n") {
-                                    (it as? TextContent)?.text ?: ""
-                                } ?: "No result"
-
-                            println("[CustomMCP] Tool result length: ${resultText.length} chars")
-                            println("[CustomMCP] Tool result preview: ${resultText.take(500)}...")
-
-                            // Parse newline-separated JSON objects into an array
-                            val resultArray =
-                                try {
-                                    val items =
-                                        resultText
-                                            .trim()
-                                            .split("\n")
-                                            .filter { it.isNotBlank() }
-                                            .map { Json.parseToJsonElement(it) }
-                                    JsonArray(items)
-                                } catch (e: Exception) {
-                                    println(
-                                        "[CustomMCP] Warning: Could not parse as newline-separated JSON, treating as single item"
-                                    )
-                                    // Fallback: try to parse as single JSON
-                                    JsonArray(listOf(Json.parseToJsonElement(resultText)))
-                                }
-
-                            // Send tool result with parsed array
-                            val jsonEvent = buildJsonObject {
-                                put("type", "tool_result")
-                                put("tool", toolName)
-                                put("data", resultArray)
+                        val resultArray =
+                            try {
+                                val items =
+                                    resultText
+                                        .trim()
+                                        .split("\n")
+                                        .filter { it.isNotBlank() }
+                                        .map { Json.parseToJsonElement(it) }
+                                JsonArray(items)
+                            } catch (e: Exception) {
+                                JsonArray(listOf(Json.parseToJsonElement(resultText)))
                             }
+
+                        val jsonEvent = buildJsonObject {
+                            put("type", "tool_result")
+                            put("toolName", toolName)
+                            put("content", resultArray)
+                        }
+                        try {
                             send(Json.encodeToString(jsonEvent))
                         } catch (e: Exception) {
-                            println("[CustomMCP] Tool call failed: ${e.message}")
-                            e.printStackTrace()
-                            val errorEvent = buildJsonObject {
-                                put("type", "text")
-                                put("content", "❌ **Tool failed:** ${e.message}\n\n")
-                            }
-                            send(Json.encodeToString(errorEvent))
+                            // Continue with next tool call
                         }
+                    } catch (e: Exception) {
+                        val errorEvent = buildJsonObject {
+                            put("type", "text")
+                            put("content", "Tool failed: ${e.message}")
+                        }
+                        send(Json.encodeToString(errorEvent))
                     }
                 }
             }
         } catch (e: Exception) {
-            println("[CustomMCP] Error: ${e.message}")
-            e.printStackTrace()
             val errorEvent = buildJsonObject {
                 put("type", "text")
                 put("content", "Error: ${e.message}")

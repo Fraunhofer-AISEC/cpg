@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.codyze.console
 
 import de.fraunhofer.aisec.codyze.console.ai.ChatService
-import de.fraunhofer.aisec.codyze.console.ai.CustomMcpClient
+import de.fraunhofer.aisec.codyze.console.ai.McpClient
 import de.fraunhofer.aisec.codyze.console.ai.McpServerHelper
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
@@ -44,12 +44,9 @@ import kotlinx.serialization.json.Json
  * listens on [host] (default: localhost) at [port] (default: 8080). The server is configured using
  * the [configureWebconsole] function.
  */
-fun ConsoleService.startConsole(
-    host: String = "localhost",
-    port: Int = 8080,
-    chatService: ChatService? = if (McpServerHelper.isEnabled) ChatService() else null,
-) {
-    var customMcpClient: CustomMcpClient? = null
+fun ConsoleService.startConsole(host: String = "localhost", port: Int = 8080) {
+    var mcpClient: McpClient?
+    var chatService: ChatService? = null
 
     // Start MCP server in background if enabled
     if (McpServerHelper.isEnabled) {
@@ -62,11 +59,14 @@ fun ConsoleService.startConsole(
                 McpServerHelper.setGlobalAnalysisResult(translationResult)
             }
 
-            // Initialize and connect custom MCP client
-            println("Initializing custom MCP client...")
-            customMcpClient = CustomMcpClient()
-            customMcpClient.connect()
-            println("Custom MCP client connected!")
+            // Initialize and connect MCP client
+            println("Initializing MCP client...")
+            mcpClient = McpClient()
+            mcpClient.connect()
+            println("MCP client connected!")
+
+            // Create ChatService with the initialized MCP client
+            chatService = ChatService(mcpClient)
         }
     } else {
         println("MCP module not enabled, AI chat features will be disabled")
@@ -75,7 +75,7 @@ fun ConsoleService.startConsole(
     // Start main server on port 8080
     println("Starting main server on port $port...")
     embeddedServer(Netty, host = host, port = port) {
-            configureWebconsole(this@startConsole, chatService, customMcpClient)
+            configureWebconsole(this@startConsole, chatService)
         }
         .start(wait = true)
 }
@@ -90,7 +90,6 @@ fun ConsoleService.startConsole(
 fun Application.configureWebconsole(
     service: ConsoleService = ConsoleService(),
     chatService: ChatService? = null,
-    customMcpClient: CustomMcpClient? = null,
 ) {
     install(CORS) {
         anyHost()
@@ -106,21 +105,17 @@ fun Application.configureWebconsole(
         )
     }
 
-    configureRouting(service, chatService, customMcpClient)
+    configureRouting(service, chatService)
 }
 
 /**
  * This function sets up the routing for the web console. It defines the API routes and static
  * resources (for serving the single-page application frontend).
  */
-fun Application.configureRouting(
-    service: ConsoleService,
-    chatService: ChatService? = null,
-    customMcpClient: CustomMcpClient? = null,
-) {
+fun Application.configureRouting(service: ConsoleService, chatService: ChatService? = null) {
     routing {
         // We'll add routes here
-        apiRoutes(service, chatService, customMcpClient)
+        apiRoutes(service, chatService)
         frontendRoutes()
     }
 }
