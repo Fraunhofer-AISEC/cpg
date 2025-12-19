@@ -153,6 +153,23 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                         }
                 }
 
+                // Additionally label edges when a block has 2 outgoing edges, both going to other
+                // sccElements
+                // This ensures that don't end up in the nextBranchEdgesList during EOG iteration
+                // but have a higher priority
+                // Note: If sccElements have only one nextEOG edge, this is not necessary, as these
+                // edges will end up in the currentBBEdgesList list, which has the highes priority
+                // anyway
+                sccElements.forEach { sccElement ->
+                    val nextSCCEdges =
+                        sccElement.nextEOGEdges.filter { nextEOGEdge ->
+                            nextEOGEdge.end in sccElements
+                        }
+                    if (nextSCCEdges.size > 1) {
+                        nextSCCEdges.forEach { nextSCCEdge -> nextSCCEdge.scc = level }
+                    }
+                }
+
                 // find nested loops
                 if (loopEntryElements.isNotEmpty() && loopExitElements.isNotEmpty()) {
                     // We should always first find the outer loop. Now let's see if the elements in
@@ -184,7 +201,7 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         val bb = node.basicBlock.single() as BasicBlock
         val entry = tarjanInfoMap.computeIfAbsent(0) { TarjanInfo(emptyList()) }
         if (bb !in entry.visited) {
-            tarjan(bb, 0)
+            tarjan(bb, 1)
         }
     }
 }
