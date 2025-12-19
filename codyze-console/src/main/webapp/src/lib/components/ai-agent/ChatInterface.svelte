@@ -1,10 +1,10 @@
 <script lang="ts">
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import MessageInput from './MessageInput.svelte';
-  import ResultsList from './ResultsList.svelte';
+  import ToolResultWidget from './widgets/ToolResultWidget.svelte';
   import CodePreview from './CodePreview.svelte';
   import ApiService from '$lib/services/apiService';
-  import type { NodeJSON, AnalysisResultJSON, TranslationUnitJSON } from '$lib/types';
+  import type { NodeJSON, AnalysisResultJSON, TranslationUnitJSON, ChatMessage } from '$lib/types';
 
   const apiService = new ApiService();
 
@@ -57,15 +57,6 @@
       code: node.code || '// Code not available',
       findings: []
     };
-  }
-
-  export interface ChatMessage {
-    id: string;
-    role: 'user' | 'assistant';
-    content: string;
-    contentType?: 'text' | 'tool-result';
-    toolResults?: NodeJSON[];
-    timestamp: Date;
   }
 
   interface Props {
@@ -174,9 +165,9 @@
         {:else}
           <!-- AI Message -->
           <div class="px-6 py-6">
-            {#if message.contentType === 'tool-result' && message.toolResults && message.toolResults.length > 0}
+            {#if message.contentType === 'tool-result' && message.toolResult}
               <!-- Tool Result Widget -->
-              <ResultsList items={message.toolResults} onItemClick={handleNodeClick} />
+              <ToolResultWidget data={message.toolResult} onItemClick={handleNodeClick} />
             {:else if message.content}
               <!-- Regular Text or markdown table -->
               <div class="prose prose-sm max-w-4xl text-gray-800">

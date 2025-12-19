@@ -1,11 +1,10 @@
 <script lang="ts">
   import type { PageProps } from './$types';
-  import type { NodeJSON } from '$lib/types';
+  import type { NodeJSON, ChatMessage, LLMMessage } from '$lib/types';
   import { WelcomeScreen, ChatInterface } from '$lib/components/ai-agent';
   import { PageHeader } from '$lib/components/navigation';
   import {
     llmAgent,
-    type LLMMessage,
     type StreamingCallbacks,
   } from '$lib/services/llmAgent';
 
@@ -34,22 +33,13 @@
 
   const persisted = loadPersistedState();
 
-  interface ChatMessage {
-    id: string;
-    role: 'user' | 'assistant';
-    content: string;
-    contentType?: 'text' | 'tool-result';
-    toolResults?: NodeJSON[];
-    timestamp: Date;
-  }
-
   let chatMessages = $state<ChatMessage[]>(persisted.messages);
   let currentMessage = $state('');
   let isLoading = $state(false);
   let streamingContent = $state('');
   let visibleStreamingContent = $state('');
   let showWelcome = $state(persisted.showWelcome);
-  let pendingToolResults = $state<NodeJSON[]>([]);
+  let pendingToolResult = $state<{ toolName: string; content: any } | null>(null);
 
   // Save state to sessionStorage whenever it changes
   $effect(() => {
@@ -111,21 +101,16 @@
                 visibleStreamingContent = streamingContent;
               }
             } else if (event.type === 'tool_result') {
-              // Tool result - data is already parsed JSON
-              console.log(`[Page] Received tool result for tool: ${event.tool}`);
-              const toolData = event.data;
-
-              if (Array.isArray(toolData)) {
-                console.log(`[Page] Tool result has ${toolData.length} items`);
-                pendingToolResults = [...pendingToolResults, ...toolData];
-              } else {
-                console.warn('[Page] Tool result data is not an array, wrapping in array:', toolData);
-                pendingToolResults = [...pendingToolResults, toolData];
-              }
+              // Tool result with toolName and content
+              console.log('Received tool_result event:', event);
+              pendingToolResult = {
+                toolName: event.toolName,
+                content: event.content
+              };
             }
           } catch (e) {
-            // If JSON parsing fails, treat as plain text (backwards compatibility)
-            console.warn('[Page] Failed to parse event as JSON, treating as text:', chunk);
+            // If JSON parsing fails, treat as plain text
+            console.log('Failed to parse chunk:', chunk);
             streamingContent += chunk;
           }
         },
@@ -143,23 +128,22 @@
           visibleStreamingContent = '';
         },
         onComplete: () => {
-          // If we have tool results, show only the widget (no text)
-          if (pendingToolResults.length > 0) {
+          // If we have a tool result, show the widget
+          if (pendingToolResult) {
             const toolResultMessage: ChatMessage = {
               id: Date.now().toString(),
               role: 'assistant' as const,
               content: '',
               contentType: 'tool-result',
-              toolResults: pendingToolResults,
+              toolResult: pendingToolResult,
               timestamp: new Date()
             };
             chatMessages = [...chatMessages, toolResultMessage];
           }
 
           // Show text response only if there are NO tool results and we have text
-          // This prevents text from being shown when we already showed the tool result widget
           const content = streamingContent;
-          if (pendingToolResults.length === 0 && content && content.trim().length > 0) {
+          if (!pendingToolResult && content && content.trim().length > 0) {
             const textMessage: ChatMessage = {
               id: (Date.now() + 1).toString(),
               role: 'assistant' as const,
@@ -174,16 +158,11 @@
           isLoading = false;
           streamingContent = '';
           visibleStreamingContent = '';
-          pendingToolResults = [];
+          pendingToolResult = null;
         }
       };
 
-      // Original endpoint (Koog)
-      // await llmAgent.chat(llmMessages, callbacks);
-
-      // Custom MCP client for testing
-      console.log('[Page] Sending message to custom MCP client...');
-      await llmAgent.chatCustom(llmMessages, callbacks);
+      await llmAgent.chat(llmMessages, callbacks);
     } catch (error) {
       const errorMessage = {
         id: (Date.now() + 1).toString(),

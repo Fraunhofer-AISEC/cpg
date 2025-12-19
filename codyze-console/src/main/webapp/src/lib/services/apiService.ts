@@ -1,55 +1,5 @@
-interface ApiResponse<T = any> {
-  ok: boolean;
-  status: number;
-  statusText: string;
-  data?: T;
-  error?: string;
-}
-
 class ApiService {
   constructor(private readonly baseUrl: string = '') {}
-
-  private async request<T>(url: string, options: RequestInit): Promise<ApiResponse<T>> {
-    try {
-      const response = await fetch(`${this.baseUrl}${url}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          ...(options.headers ?? {})
-        },
-        ...options
-      });
-
-      const data = response.ok ? await response.json() : undefined;
-
-      return {
-        ok: response.ok,
-        status: response.status,
-        statusText: response.statusText,
-        data,
-        error: response.ok ? undefined : `HTTP ${response.status}: ${response.statusText}`
-      };
-    } catch (err) {
-      return {
-        ok: false,
-        status: 0,
-        statusText: 'Network Error',
-        error: err instanceof Error ? err.message : String(err)
-      };
-    }
-  }
-
-  get<T = any>(url: string, headers: Record<string, string> = {}) {
-    return this.request<T>(url, { method: 'GET', headers });
-  }
-
-  post<T = any>(url: string, body: any, headers: Record<string, string> = {}) {
-    return this.request<T>(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body)
-    });
-  }
 
   async streamPost(
     url: string,
