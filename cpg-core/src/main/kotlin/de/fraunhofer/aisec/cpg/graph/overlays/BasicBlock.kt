@@ -54,8 +54,8 @@ class BasicBlock() : OverlayNode() {
      * The starting node of this basic block. I.e., the first node in the BB's internal EOG. It's
      * either a merge point or the first node in a branch.
      */
-    val startNode: Node
-        get() = nodes.first()
+    val startNode: Node?
+        get() = nodes.firstOrNull()
 
     /** The edges connecting this basic block to its member nodes. */
     @Relationship(value = "BB", direction = Relationship.Direction.INCOMING)
@@ -100,7 +100,7 @@ class BasicBlock() : OverlayNode() {
                     .mapNotNull { it.location?.region?.endColumn }
                     .maxOrNull() ?: -1
             return PhysicalLocation(
-                uri = startNode.location?.artifactLocation?.uri ?: URI(""),
+                uri = startNode?.location?.artifactLocation?.uri ?: URI(""),
                 region =
                     Region(
                         startLine = startLine,
@@ -124,6 +124,9 @@ class BasicBlock() : OverlayNode() {
     }
 
     override fun toString(): String {
-        return "BasicBlock from ${startNode::class.simpleName} ${startNode.name} to ${(endNode ?: startNode)::class.simpleName} ${endNode?.name} in $location"
+        if (startNode == null) {
+            return "Empty BasicBlock in $location"
+        }
+        return "BasicBlock from ${startNode!!::class.simpleName} ${startNode?.name} to ${(endNode ?: startNode!!)::class.simpleName} ${endNode?.name} in $location"
     }
 }

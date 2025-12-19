@@ -73,7 +73,15 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
             }
             // We have not seen this node yet, so we can continue.
 
-            if (currentStartNode.prevEOG.size > 1 && currentStartNode != basicBlock.startNode) {
+            if (
+                currentStartNode.prevEOG.size > 1 &&
+                    basicBlock.nodes.isNotEmpty() &&
+                    currentStartNode != basicBlock.startNode
+            ) {
+                // The check for basicBlock.nodes.isNotEmpty() is necessary to avoid that the first
+                // basic block starting at startNode is split. This can happen if startNode is
+                // reachable from multiple paths (e.g., recursive functions) where one of them also
+                // comes from a branching node.
                 // If the currentStartNode is reachable from multiple paths, it starts a new basic
                 // block. currentStartNode is part of the new basic block, so we add it after this
                 // if statement.
@@ -87,7 +95,6 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                         }
                     }
             }
-
             basicBlock.nodes.add(currentStartNode)
 
             val nextRelevantEOGEdges = currentStartNode.nextEOGEdges
