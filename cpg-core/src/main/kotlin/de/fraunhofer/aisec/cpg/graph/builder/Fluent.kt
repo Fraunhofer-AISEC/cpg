@@ -157,7 +157,7 @@ fun LanguageFrontend<*, *>.field(
  */
 context(tu: TranslationUnitDeclaration)
 fun LanguageFrontend<*, *>.import(name: CharSequence): IncludeDeclaration {
-    val node = newIncludeDeclaration(name)
+    val node = this.newIncludeDeclaration(name)
     (tu).addDeclaration(node)
     return node
 }
@@ -203,10 +203,10 @@ fun LanguageFrontend<*, *>.function(
 context(record: RecordDeclaration)
 fun LanguageFrontend<*, *>.method(
     name: CharSequence,
-    returnType: Type = unknownType(),
+    returnType: Type = this.unknownType(),
     init: (MethodDeclaration.() -> Unit)? = null,
 ): MethodDeclaration {
-    val node = newMethodDeclaration(name)
+    val node = this.newMethodDeclaration(name)
     node.returnTypes = listOf(returnType)
     node.type = with(node) { computeType(node) }
 
@@ -232,7 +232,10 @@ fun LanguageFrontend<*, *>.constructor(
     init: ConstructorDeclaration.() -> Unit
 ): ConstructorDeclaration {
     val node =
-        newConstructorDeclaration(recordDeclaration.name, recordDeclaration = recordDeclaration)
+        this.newConstructorDeclaration(
+            recordDeclaration.name,
+            recordDeclaration = recordDeclaration,
+        )
 
     scopeManager.enterScope(node)
     init(node)
@@ -251,7 +254,7 @@ fun LanguageFrontend<*, *>.constructor(
  */
 context(func: FunctionDeclaration)
 fun LanguageFrontend<*, *>.body(needsScope: Boolean = true, init: Block.() -> Unit): Block {
-    val node = newBlock()
+    val node = this.newBlock()
 
     scopeIfNecessary(needsScope, node, init)
     func.body = node
@@ -282,10 +285,10 @@ fun LanguageFrontend<*, *>.block(needsScope: Boolean = true, init: Block.() -> U
 context(func: FunctionDeclaration)
 fun LanguageFrontend<*, *>.param(
     name: CharSequence,
-    type: Type = unknownType(),
+    type: Type = this.unknownType(),
     init: (ParameterDeclaration.() -> Unit)? = null,
 ): ParameterDeclaration {
-    val node = newParameterDeclaration(name, type)
+    val node = this.newParameterDeclaration(name, type)
     init?.let { it(node) }
 
     scopeManager.addDeclaration(node)
@@ -409,10 +412,10 @@ fun LanguageFrontend<*, *>.declareVar(
 context(stmt: DeclarationStatement)
 fun LanguageFrontend<*, *>.variable(
     name: String,
-    type: Type = unknownType(),
+    type: Type = this.unknownType(),
     init: (VariableDeclaration.() -> Unit)? = null,
 ): VariableDeclaration {
-    val node = newVariableDeclaration(name, type)
+    val node = this.newVariableDeclaration(name, type)
     if (init != null) init(node)
 
     stmt.declarations += node
@@ -432,7 +435,7 @@ fun LanguageFrontend<*, *>.problemDecl(
     type: ProblemNode.ProblemType = ProblemNode.ProblemType.TRANSLATION,
     init: (ProblemDeclaration.() -> Unit)? = null,
 ): ProblemDeclaration {
-    val node = newProblemDeclaration(problem = description, problemType = type)
+    val node = this.newProblemDeclaration(problem = description, problemType = type)
     if (init != null) init(node)
 
     stmt.declarations += node
@@ -791,7 +794,7 @@ fun LanguageFrontend<*, *>.doCondition(init: DoStatement.() -> Expression): Expr
  */
 context(stmt: IfStatement)
 fun LanguageFrontend<*, *>.thenStmt(needsScope: Boolean = true, init: Block.() -> Unit): Block {
-    val node = newBlock()
+    val node = this.newBlock()
     scopeIfNecessary(needsScope, node, init)
 
     stmt.thenStatement = node
@@ -806,7 +809,7 @@ fun LanguageFrontend<*, *>.thenStmt(needsScope: Boolean = true, init: Block.() -
  */
 context(stmt: IfStatement)
 fun LanguageFrontend<*, *>.elseIf(init: IfStatement.() -> Unit): IfStatement {
-    val node = newIfStatement()
+    val node = this.newIfStatement()
     init(node)
 
     stmt.elseStatement = node
@@ -821,7 +824,7 @@ fun LanguageFrontend<*, *>.elseIf(init: IfStatement.() -> Unit): IfStatement {
  */
 context(stmt: LoopStatement)
 fun LanguageFrontend<*, *>.loopBody(init: Block.() -> Unit): Block {
-    val node = newBlock()
+    val node = this.newBlock()
     init(node)
     stmt.statement = node
 
@@ -869,7 +872,7 @@ fun LanguageFrontend<*, *>.initializer(init: ForStatement.() -> Expression): Exp
  */
 context(stmt: SwitchStatement)
 fun LanguageFrontend<*, *>.switchBody(init: Block.() -> Unit): Block {
-    val node = newBlock()
+    val node = this.newBlock()
     init(node)
     stmt.statement = node
 
@@ -883,7 +886,7 @@ fun LanguageFrontend<*, *>.switchBody(init: Block.() -> Unit): Block {
  */
 context(stmt: IfStatement)
 fun LanguageFrontend<*, *>.elseStmt(needsScope: Boolean = true, init: Block.() -> Unit): Block {
-    val node = newBlock()
+    val node = this.newBlock()
     scopeIfNecessary(needsScope, node, init)
 
     stmt.elseStatement = node
@@ -898,7 +901,7 @@ fun LanguageFrontend<*, *>.elseStmt(needsScope: Boolean = true, init: Block.() -
  */
 context(stmt: LoopStatement)
 fun LanguageFrontend<*, *>.loopElseStmt(needsScope: Boolean = true, init: Block.() -> Unit): Block {
-    val node = newBlock()
+    val node = this.newBlock()
     scopeIfNecessary(needsScope, node, init)
 
     stmt.elseStatement = node
@@ -1587,7 +1590,7 @@ fun LanguageFrontend<*, *>.void() = incompleteType()
 
 /**
  * Internally used to enter a new scope if [needsScope] is true before invoking [init] and leaving
- * it afterwards.
+ * it afterward.
  */
 private fun <T : Node> LanguageFrontend<*, *>.scopeIfNecessary(
     needsScope: Boolean,
@@ -1605,7 +1608,7 @@ private fun <T : Node> LanguageFrontend<*, *>.scopeIfNecessary(
 
 context(method: MethodDeclaration)
 fun LanguageFrontend<*, *>.receiver(name: String, type: Type): VariableDeclaration {
-    val node = newVariableDeclaration(name, type)
+    val node = this.newVariableDeclaration(name, type)
 
     method.receiver = node
     scopeManager.addDeclaration(node)

@@ -154,7 +154,7 @@ fun MetadataProvider.newConstructorDeclaration(
     node.applyMetadata(this, name, rawNode, defaultNamespace = recordDeclaration?.name)
 
     node.recordDeclaration = recordDeclaration
-    node.type = recordDeclaration?.toType() ?: unknownType()
+    node.type = recordDeclaration?.toType() ?: provider.unknownType()
 
     log(node)
     return node
