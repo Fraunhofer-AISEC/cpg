@@ -166,7 +166,18 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                             nextEOGEdge.end in sccElements
                         }
                     if (nextSCCEdges.size > 1) {
-                        nextSCCEdges.forEach { nextSCCEdge -> nextSCCEdge.scc = level }
+                        nextSCCEdges.forEach { nextSCCEdge ->
+                            nextSCCEdge.scc = level
+                            // Do the same for the underlying edges
+                            // There should be exacltly one edge from the endNode of the BB-Edge's
+                            // start to a node that's in the BB of the BB-Edge's end
+                            // Let's find this one and also label it
+                            (nextSCCEdge.start as? BasicBlock)
+                                ?.endNode
+                                ?.nextEOGEdges
+                                ?.single { it.end.basicBlock.single() == nextSCCEdge.end }
+                                ?.scc = level
+                        }
                     }
                 }
 
