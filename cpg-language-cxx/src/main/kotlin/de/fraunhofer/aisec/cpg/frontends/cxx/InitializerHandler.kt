@@ -49,7 +49,7 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
             is IASTInitializerList -> handleInitializerList(node)
             is CPPASTConstructorInitializer -> handleConstructorInitializer(node)
             else -> {
-                return handleNotSupported(node, node.javaClass.name)
+                handleNotSupported(node, node.javaClass.name)
             }
         }
     }
