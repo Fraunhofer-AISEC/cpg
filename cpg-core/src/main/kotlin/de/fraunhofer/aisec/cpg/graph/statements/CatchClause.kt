@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.Objects
@@ -51,6 +52,8 @@ class CatchClause : Statement(), BranchingNode, EOGStarterHolder {
     @DoNotPersist
     override val eogStarters: List<Node>
         get() = listOf(this)
+
+    override var firstBasicBlock: BasicBlock? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
