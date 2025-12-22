@@ -70,7 +70,7 @@ ktor-server-cio = { module = "io.ktor:ktor-server-cio", version.ref = "ktor" }
 mcp = {module = "io.modelcontextprotocol:kotlin-sdk", version = "0.8.0"}
 
 # test
-junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.13.1"}
+junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.14.1"}
 mockito = { module = "org.mockito:mockito-core", version = "5.17.0"}
 
 # plugins needed for build.gradle.kts in buildSrc
