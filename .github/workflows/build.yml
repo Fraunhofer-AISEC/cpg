@@ -22,7 +22,7 @@ permissions:
 jobs:
   build:
     timeout-minutes: 15
-    runs-on: [self-hosted, Linux, ARM64]
+    runs-on: [self-hosted, Linux, ARM64, cpg]
     steps:
       - uses: actions/checkout@v6
       - run: |
