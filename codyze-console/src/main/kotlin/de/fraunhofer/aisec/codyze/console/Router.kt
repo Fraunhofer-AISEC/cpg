@@ -261,6 +261,20 @@ fun Routing.apiRoutes(service: ConsoleService) {
                 call.respond(HttpStatusCode.NotFound, mapOf("error" to "QueryTree not found"))
             }
         }
+
+        // The endpoint to execute a Kotlin query script
+        post("/execute-query") {
+            try {
+                val request = call.receive<ExecuteQueryRequestJSON>()
+                val result = service.executeQuery(request.scriptCode)
+                call.respond(mapOf("result" to result))
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    mapOf("error" to "Failed to execute query: ${e.message}"),
+                )
+            }
+        }
     }
 }
 
