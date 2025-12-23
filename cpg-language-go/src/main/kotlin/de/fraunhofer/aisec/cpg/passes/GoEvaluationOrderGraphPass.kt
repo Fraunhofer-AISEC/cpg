@@ -69,7 +69,7 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
             attachToEOG(node)
 
             // Evaluate the callee
-            input.callee?.let { handleEOG(it) }
+            handleEOG(input.callee)
 
             // Then the arguments
             for (arg in input.arguments) {
@@ -114,7 +114,7 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
                 // It is a bit philosophical whether the deferred call happens before or after the
                 // return statement in the EOG. For now, it is easier to have it as the last node
                 // AFTER the return statement
-                val eogEdge = addEOGEdge(path.nodes.last(), defer.input)
+                addEOGEdge(path.nodes.last(), defer.input)
             }
         }
     }
