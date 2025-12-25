@@ -49,7 +49,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
             is GoStandardLibrary.Ast.CallExpr -> handleCallExpr(node)
             is GoStandardLibrary.Ast.KeyValueExpr -> handleKeyValueExpr(node)
             is GoStandardLibrary.Ast.ParenExpr -> {
-                return handle(node.x)
+                handle(node.x)
             }
             is GoStandardLibrary.Ast.SelectorExpr -> handleSelectorExpr(node)
             is GoStandardLibrary.Ast.SliceExpr -> handleSliceExpr(node)
@@ -57,7 +57,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
             is GoStandardLibrary.Ast.TypeAssertExpr -> handleTypeAssertExpr(node)
             is GoStandardLibrary.Ast.UnaryExpr -> handleUnaryExpr(node)
             else -> {
-                return handleNotSupported(node, node.goType)
+                handleNotSupported(node, node.goType)
             }
         }
     }
@@ -157,7 +157,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
             when {
                 name in builtins -> name
                 isPackageName(name) -> name
-                language?.namespaceDelimiter.toString() in name -> name
+                language.namespaceDelimiter in name -> name
                 else -> parseName((scope as? NameScope)?.name?.fqn(ident.name) ?: ident.name)
             }
 
@@ -173,7 +173,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
     }
 
     private fun handleCallExpr(callExpr: GoStandardLibrary.Ast.CallExpr): Expression {
-        // In Go, regular cast expressions (not type asserts are modelled as calls).
+        // In Go, regular cast expressions (not type asserts are modeled as calls).
         // In this case, the Fun contains a type expression.
         when (val unwrapped = unwrap(callExpr.`fun`)) {
             is GoStandardLibrary.Ast.ArrayType,
@@ -363,8 +363,8 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
     }
 
     /**
-     * This function handles a ast.SliceExpr, which is an extended version of ast.IndexExpr. We are
-     * modelling this as a combination of a [SubscriptExpression] that contains a [RangeExpression]
+     * This function handles an ast.SliceExpr, which is an extended version of ast.IndexExpr. We are
+     * modeling this as a combination of a [SubscriptExpression] that contains a [RangeExpression]
      * as its subscriptExpression to share some code between this and an index expression.
      */
     private fun handleSliceExpr(sliceExpr: GoStandardLibrary.Ast.SliceExpr): SubscriptExpression {
