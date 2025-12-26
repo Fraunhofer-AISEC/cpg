@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.*
@@ -76,6 +77,8 @@ class TranslationUnitDeclaration :
 
             return list
         }
+
+    override var firstBasicBlock: BasicBlock? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

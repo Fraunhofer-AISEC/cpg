@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.declarations
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.Objects
@@ -87,6 +88,8 @@ class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder, 
 
             return list
         }
+
+    override var firstBasicBlock: BasicBlock? = null
 
     override fun getStartingPrevEOG(): Collection<Node> {
         return setOf()
