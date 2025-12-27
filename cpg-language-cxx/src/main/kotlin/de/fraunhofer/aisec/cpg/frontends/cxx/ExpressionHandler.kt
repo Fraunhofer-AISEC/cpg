@@ -87,7 +87,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             is CPPASTLambdaExpression -> handleLambdaExpression(node)
             is CPPASTSimpleTypeConstructorExpression -> handleSimpleTypeConstructorExpression(node)
             else -> {
-                return handleNotSupported(node, node.javaClass.name)
+                handleNotSupported(node, node.javaClass.name)
             }
         }
     }
@@ -266,7 +266,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
             // we also need to "forward" our template parameters (if we have any) to the construct
             // expression since the construct expression will do the actual template instantiation
-            if (newExpression.templateParameters.isNotEmpty() == true) {
+            if (newExpression.templateParameters.isNotEmpty()) {
                 addImplicitTemplateParametersToCall(
                     newExpression.templateParameters,
                     initializer as ConstructExpression,
@@ -615,7 +615,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     var escapeMap =
-        mapOf<Char, Char>(
+        mapOf(
             'a' to Char(0x07),
             'b' to Char(0x08),
             'f' to Char(0x0c),
@@ -961,14 +961,14 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             // retrieve type based on stored Java number
             val type =
                 primitiveType(
-                    when {
+                    when (numberValue) {
                         // we follow the way clang/llvm handles this and this seems to always
                         // be an unsigned long long, except if it is explicitly specified as ul
                         // differentiate between long and long long
-                        numberValue is BigInteger && "ul" == suffix -> "unsigned long int"
-                        numberValue is BigInteger -> "unsigned long long int"
-                        numberValue is Long && "ll" == suffix -> "long long int"
-                        numberValue is Long -> "long int"
+                        is BigInteger if "ul" == suffix -> "unsigned long int"
+                        is BigInteger -> "unsigned long long int"
+                        is Long if "ll" == suffix -> "long long int"
+                        is Long -> "long int"
                         else -> "int"
                     }
                 )
@@ -1001,7 +1001,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     /**
-     * In C++, the "this" expression is also modelled as a literal. In our case however, we want to
+     * In C++, the "this" expression is also modeled as a literal. In our case however, we want to
      * return a [Reference], which is then later connected to the current method's
      * [MethodDeclaration.receiver].
      */

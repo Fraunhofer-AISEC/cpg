@@ -49,7 +49,7 @@ import org.neo4j.ogm.annotation.Transient
 
 /** The C++ language. */
 @Suppress("CONTEXT_RECEIVERS_DEPRECATED")
-open class CPPLanguage() :
+open class CPPLanguage :
     CLanguage(),
     HasDefaultArguments,
     HasTemplates,
