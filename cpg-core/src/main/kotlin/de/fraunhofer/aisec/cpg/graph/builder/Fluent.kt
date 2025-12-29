@@ -69,6 +69,8 @@ fun LanguageFrontend<*, *>.translationResult(
         executePassesSequentially(ctx, node, mutableSetOf())
     }
 
+    // Start pseudo location inference for the root node of translation, propagating to its
+    // descendents.
     node.inferrPseudolocations()
 
     return node
@@ -1698,9 +1700,13 @@ private fun <T : Node> LanguageFrontend<*, *>.scopeIfNecessary(
 
 /**
  * This function uses the partial location with the start line from the fluentDSL node creation to
- * further infer code start column, end line and end column. The inference will only be performed if
+ * further infer code start column, end-line and end-column. The inference will only be performed if
  * the columns are still set to the invalid value of 0. Sign that they were not manually set in the
  * fluentDSL.
+ *
+ * The inference of a pseudo location propagates down to the descendents. This if for two reasons:
+ * to discover descendent nodes that also need a pseudo location, and to have children with
+ * locations that the parent node can infer his end-line and column.
  */
 fun Node.inferrPseudolocations(currentFile: URI? = null, line: Int = 1, column: Int = 1) {
     var lineCtr = line
