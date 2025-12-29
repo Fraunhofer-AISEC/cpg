@@ -71,7 +71,7 @@ fun LanguageFrontend<*, *>.translationResult(
 
     // Start pseudo location inference for the root node of translation, propagating to its
     // descendents.
-    node.inferPseudolocations()
+    node.inferPseudoLocations()
 
     return node
 }
@@ -1714,14 +1714,14 @@ private fun <T : Node> LanguageFrontend<*, *>.scopeIfNecessary(
  * to discover descendent nodes that also need a pseudo location, and to have children with
  * locations that the parent node can infer his end-line and column.
  */
-fun Node.inferrPseudolocations(currentFile: URI? = null, line: Int = 1, column: Int = 1) {
+fun Node.inferPseudoLocations(currentFile: URI? = null, line: Int = 1, column: Int = 1) {
     var lineCtr = line
     var columnCtr = column
     when (this) {
         is TranslationResult -> {
             this.components.forEach {
                 it.translationUnits.forEach {
-                    it.inferrPseudolocations(URI.create(it.name.toString()))
+                    it.inferPseudoLocations(URI.create(it.name.toString()))
                 }
             }
         }
@@ -1750,7 +1750,7 @@ fun Node.inferrPseudolocations(currentFile: URI? = null, line: Int = 1, column: 
 
             val children = this.astChildren.sortedBy { it.location?.region?.startLine ?: -1 }
             children.forEach {
-                it.inferrPseudolocations(currentFile, lineCtr, columnCtr)
+                it.inferPseudoLocations(currentFile, lineCtr, columnCtr)
                 val childLoc = it.location
                 // This part, only works if the children are sorted according to their creation in a
                 // file and therefore
