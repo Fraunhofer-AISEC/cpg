@@ -71,7 +71,7 @@ fun LanguageFrontend<*, *>.translationResult(
 
     // Start pseudo location inference for the root node of translation, propagating to its
     // descendents.
-    node.inferrPseudolocations()
+    node.inferPseudolocations()
 
     return node
 }
