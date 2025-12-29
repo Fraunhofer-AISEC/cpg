@@ -1,0 +1,146 @@
+/*
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
+package de.fraunhofer.aisec.cpg.passes
+
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import java.util.*
+
+@DependsOn(EvaluationOrderGraphPass::class)
+class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
+
+    override fun cleanup() {
+        // Nothing to clean up
+    }
+
+    override fun accept(t: Node) {
+        val firstBasicBlock = collectBasicBlocks(t)
+        (t as? EOGStarterHolder)?.firstBasicBlock = firstBasicBlock
+    }
+
+    /**
+     * Collects all basic blocks starting at the given [startNode]. We identify basic blocks by
+     * iterating through the EOG in O(n) and collecting all nodes which are reachable from the
+     * [startNode].
+     *
+     * It returns the first basic block, which is the one starting at the [startNode].
+     *
+     * @param startNode The node to start the collection from, usually a [FunctionDeclaration].
+     */
+    fun collectBasicBlocks(startNode: Node): BasicBlock {
+        val allBasicBlocks = mutableSetOf<BasicBlock>()
+        val firstBB = BasicBlock(startNode = startNode)
+        allBasicBlocks.add(firstBB)
+        val worklist =
+            mutableListOf<Triple<Node, EvaluationOrder?, BasicBlock>>(
+                Triple(startNode, null, firstBB)
+            )
+
+        while (worklist.isNotEmpty()) {
+            var (currentStartNode, reachingEOGEdge, basicBlock) = worklist.removeFirst()
+            // If we have already seen this node, we can skip it.
+            if (currentStartNode.basicBlockEdges.isNotEmpty()) {
+                val oldBB = currentStartNode.basicBlock.single()
+                // There must be some sort of merge point to arrive here twice, so we add the
+                // reaching basic block to the BB this node belongs to.
+                oldBB.prevEOG += basicBlock
+                continue
+            }
+            // We have not seen this node yet, so we can continue.
+
+            if (currentStartNode.prevEOG.size > 1 && currentStartNode != basicBlock.startNode) {
+                // If the currentStartNode is reachable from multiple paths, it starts a new basic
+                // block. currentStartNode is part of the new basic block, so we add it after this
+                // if statement.
+                // Set the end node of the old basic block to the last node on the path
+                basicBlock =
+                    BasicBlock(startNode = currentStartNode).apply {
+                        // ingoingEOGEdges.addAll(currentStartNode.prevEOGEdges)
+                        // Save the relationships between the two basic blocks.
+                        prevEOGEdges.add(basicBlock) {
+                            this.branch = reachingEOGEdge?.branch
+                            this.unreachable = reachingEOGEdge?.unreachable ?: false
+                        }
+                    }
+
+                // Add the newly created basic block to the allBasicBlocks set
+                allBasicBlocks.add(basicBlock)
+            }
+
+            basicBlock.nodes.add(currentStartNode)
+
+            val nextRelevantEOGEdges = currentStartNode.nextEOGEdges
+
+            if (nextRelevantEOGEdges.size > 1) {
+                // If the currentStartNode splits up into multiple paths, the next nodes start a new
+                // basic block. We already generate this here. But currentStartNode is still part of
+                // the current basic block, so we add it before this if statement.
+                // basicBlock.outgoingEOGEdges.addAll(nextRelevantEOGEdges)
+                worklist.addAll(
+                    nextRelevantEOGEdges.mapNotNull {
+                        if (it.end.basicBlock.isNotEmpty()) {
+                            it.end.basicBlock.single().prevEOGEdges.add(basicBlock) {
+                                this.branch = it.branch
+                                this.unreachable = it.unreachable
+                            }
+                            null
+                        } else {
+                            Triple(
+                                it.end,
+                                it,
+                                BasicBlock(startNode = it.end).apply {
+                                    // Save the relationships between the two basic blocks.
+                                    prevEOGEdges.add(basicBlock) {
+                                        this.branch = it.branch
+                                        this.unreachable = it.unreachable
+                                    }
+                                    // Add the newly created basic block to the allBasicBlocks
+                                    // set
+                                    allBasicBlocks.add(this)
+                                },
+                            )
+                        }
+                    }
+                )
+            } else if (nextRelevantEOGEdges.size == 1) {
+                // If there's max. 1 incoming and max. 1 outgoing path, we can add the
+                // currentStartNode to the current basic block.
+                // If the currentStartNode has only one outgoing path, we can continue with this
+                // path.
+                val nextEdge = nextRelevantEOGEdges.single()
+                worklist.add(Triple(nextEdge.end, nextEdge, basicBlock))
+            } else {
+                // List is empty, nothing to do.
+            }
+        }
+        return firstBB
+    }
+}

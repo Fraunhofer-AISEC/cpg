@@ -39,8 +39,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
+import de.fraunhofer.aisec.cpg.graph.edges.overlay.BasicBlockEdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.Overlays
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -121,6 +123,16 @@ abstract class Node() :
         EvaluationOrders<Node>(this, mirrorProperty = Node::prevEOGEdges, outgoing = true)
         protected set
 
+    /** The [BasicBlockEdgeList] leading to the basic block this node belongs to. */
+    @Relationship(value = "BB", direction = Relationship.Direction.OUTGOING)
+    @PopulatedByPass(BasicBlockCollectorPass::class)
+    var basicBlockEdges: BasicBlockEdgeList<Node> =
+        BasicBlockEdgeList<Node>(this, mirrorProperty = BasicBlock::nodeEdges, outgoing = true)
+        protected set
+
+    /** The basic block this node belongs to. */
+    var basicBlock by unwrapping(Node::basicBlockEdges)
+
     /**
      * The nodes which are control-flow dominated, i.e., the children of the Control Dependence
      * Graph (CDG).
@@ -155,13 +167,13 @@ abstract class Node() :
 
     /** Incoming data flow edges */
     @Relationship(value = "DFG", direction = Relationship.Direction.INCOMING)
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     var prevDFGEdges: Dataflows<Node> =
         Dataflows<Node>(this, mirrorProperty = Node::nextDFGEdges, outgoing = false)
         protected set
 
     /** Virtual property for accessing [prevDFGEdges] without property edges. */
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     var prevDFG by unwrapping(Node::prevDFGEdges)
 
     /**
@@ -169,23 +181,42 @@ abstract class Node() :
      * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
      */
     @DoNotPersist
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     val prevFullDFG: List<Node>
         get() {
             return prevDFGEdges
-                .filter { it.granularity is FullDataflowGranularity }
+                .filter { it.granularity is FullDataflowGranularity && !it.functionSummary }
+                .map { it.start }
+        }
+
+    /** Virtual property for accessing [prevDFGEdges] that are [functionSummary]-edges. */
+    @DoNotPersist
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
+    val prevFunctionSummaryDFG: List<Node>
+        get() {
+            return prevDFGEdges.filter { it.functionSummary }.map { it.start }
+        }
+
+    /** Virtual property for accessing [prevDFGEdges] that are [currentDerefValue]-edges. */
+    val currentDerefValues: List<Node>
+        get() {
+            return prevDFGEdges
+                .filter {
+                    (it.granularity as? PointerDataflowGranularity)?.pointerTarget?.name ==
+                        "currentDerefValue"
+                }
                 .map { it.start }
         }
 
     /** Outgoing data flow edges */
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     @Relationship(value = "DFG", direction = Relationship.Direction.OUTGOING)
     var nextDFGEdges: Dataflows<Node> =
         Dataflows<Node>(this, mirrorProperty = Node::prevDFGEdges, outgoing = true)
         protected set
 
     /** Virtual property for accessing [nextDFGEdges] without property edges. */
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     var nextDFG by unwrapping(Node::nextDFGEdges)
 
     /**
@@ -193,10 +224,20 @@ abstract class Node() :
      * [de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity].
      */
     @DoNotPersist
-    @PopulatedByPass(DFGPass::class, ControlFlowSensitiveDFGPass::class)
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
     val nextFullDFG: List<Node>
         get() {
-            return nextDFGEdges.filter { it.granularity is FullDataflowGranularity }.map { it.end }
+            return nextDFGEdges
+                .filter { it.granularity is FullDataflowGranularity && !it.functionSummary }
+                .map { it.end }
+        }
+
+    /** Virtual property for accessing [nextDFGEdges] that are [functionSummary]-edges. */
+    @DoNotPersist
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
+    val nextFunctionSummaryDFG: List<Node>
+        get() {
+            return nextDFGEdges.filter { it.functionSummary }.map { it.end }
         }
 
     /** Outgoing Program Dependence Edges. */

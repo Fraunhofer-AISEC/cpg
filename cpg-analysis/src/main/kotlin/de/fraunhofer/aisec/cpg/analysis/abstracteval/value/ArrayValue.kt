@@ -44,16 +44,26 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.query.size
 import de.fraunhofer.aisec.cpg.query.value
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A [ValueEvaluator] which evaluates the size of arrays. It uses the [ArrayValue] class to track
  * the size of the collection.
  */
 class ArraySizeEvaluator : ValueEvaluator() {
-    override fun evaluate(node: Any?): Any? {
+    /** Cache calculated values so that we don't have to calculate them each time */
+    companion object {
+        private val valuesCache = ConcurrentHashMap<Int, Any>()
+    }
+
+    override fun evaluate(node: Any?, useCache: Boolean): Any? {
         if (node !is Node) return cannotEvaluate(null, this)
 
-        return AbstractIntervalEvaluator().evaluate(node, ArrayValue::class)
+        return if (useCache)
+            valuesCache.getOrPut(node.hashCode()) {
+                AbstractIntervalEvaluator().evaluate(node, ArrayValue::class)
+            }
+        else AbstractIntervalEvaluator().evaluate(node, ArrayValue::class)
     }
 }
 
