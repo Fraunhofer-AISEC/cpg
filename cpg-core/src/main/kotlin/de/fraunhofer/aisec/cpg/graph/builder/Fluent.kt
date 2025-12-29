@@ -246,9 +246,10 @@ fun LanguageFrontend<*, *>.constructor(
 ): ConstructorDeclaration {
     val node =
         this.newConstructorDeclaration(
-            recordDeclaration.name,
-            recordDeclaration = recordDeclaration,
-        ).apply { this.location = getCallerFileAndLine() }
+                recordDeclaration.name,
+                recordDeclaration = recordDeclaration,
+            )
+            .apply { this.location = getCallerFileAndLine() }
 
     scopeManager.enterScope(node)
     init(node)
@@ -301,7 +302,8 @@ fun LanguageFrontend<*, *>.param(
     type: Type = this.unknownType(),
     init: (ParameterDeclaration.() -> Unit)? = null,
 ): ParameterDeclaration {
-    val node = this.newParameterDeclaration(name, type).apply { this.location = getCallerFileAndLine() }
+    val node =
+        this.newParameterDeclaration(name, type).apply { this.location = getCallerFileAndLine() }
     init?.let { it(node) }
 
     scopeManager.addDeclaration(node)
@@ -429,7 +431,8 @@ fun LanguageFrontend<*, *>.variable(
     type: Type = this.unknownType(),
     init: (VariableDeclaration.() -> Unit)? = null,
 ): VariableDeclaration {
-    val node = this.newVariableDeclaration(name, type).apply { this.location = getCallerFileAndLine() }
+    val node =
+        this.newVariableDeclaration(name, type).apply { this.location = getCallerFileAndLine() }
     if (init != null) init(node)
 
     stmt.declarations += node
@@ -449,7 +452,8 @@ fun LanguageFrontend<*, *>.problemDecl(
     type: ProblemNode.ProblemType = ProblemNode.ProblemType.TRANSLATION,
     init: (ProblemDeclaration.() -> Unit)? = null,
 ): ProblemDeclaration {
-    val node = this.newProblemDeclaration(problem = description, problemType = type).apply {
+    val node =
+        this.newProblemDeclaration(problem = description, problemType = type).apply {
             this.location = getCallerFileAndLine()
         }
     if (init != null) init(node)
@@ -1774,7 +1778,8 @@ fun Node.inferrPseudolocations(currentFile: URI? = null, line: Int = 1, column: 
 
 context(method: MethodDeclaration)
 fun LanguageFrontend<*, *>.receiver(name: String, type: Type): VariableDeclaration {
-    val node = this.newVariableDeclaration(name, type).apply { this.location = getCallerFileAndLine() }
+    val node =
+        this.newVariableDeclaration(name, type).apply { this.location = getCallerFileAndLine() }
 
     method.receiver = node
     scopeManager.addDeclaration(node)
