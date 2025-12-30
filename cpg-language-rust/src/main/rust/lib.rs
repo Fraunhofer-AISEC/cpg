@@ -74,7 +74,7 @@ pub enum RSAst {
     RustExpr(RSExpr),
     RustStmt(RSStmt),
     RustAbi(RSAbi), // Needed for now to have Abi nodes in the hierarchy
-    RustProblem(String) // Used to represent nodes that we are currently not making an interface for
+    RustProblem(RSProblem) // Used to represent nodes that we are currently not making an interface for
 }
 
 impl From<SyntaxNode> for RSAst {
@@ -83,88 +83,57 @@ impl From<SyntaxNode> for RSAst {
         if let Some(rnode) = Abi::cast(syntax.clone_subtree()) {
             return RSAst::RustAbi(rnode.into())
         }
-
         if let Some(rnode) = AsmExpr::cast(syntax.clone_subtree()) {
             return RSAst::RustItem(Item::AsmExpr(rnode).into())
         }
-
-
         if let Some(rnode) = Const::cast(syntax.clone_subtree()) {
             return RSAst::RustItem(Item::Const(rnode).into())
         }
-
-
         if let Some(rnode) = Enum::cast(syntax.clone_subtree()) {
             return RSAst::RustItem(Item::Enum(rnode).into())
         }
-
-
         if let Some(rnode) = ExternBlock::cast(syntax.clone_subtree()) {
             return RSAst::RustItem(Item::ExternBlock(rnode).into())
         }
-
-
         if let Some(rnode) = ExternCrate::cast(syntax.clone_subtree()) {
             return RSAst::RustItem(Item::ExternCrate(rnode).into())
         }
-
-
         if let Some(rnode) = Fn::cast(syntax.clone_subtree()) {
             return RSAst::RustItem(Item::Fn(rnode).into())
         }
-
-
         if let Some(rnode) = Impl::cast(syntax.clone_subtree()) {
             return RSAst::RustItem(Item::Impl(rnode).into())
         }
-
-
         if let Some(rnode) = MacroCall::cast(syntax.clone_subtree()) {
             return RSAst::RustItem(Item::MacroCall(rnode).into())
         }
-
-
         if let Some(rnode) = MacroDef::cast(syntax.clone_subtree()) {
             return RSAst::RustItem(Item::MacroDef(rnode).into())
         }
-
-
         if let Some(rnode) = MacroRules::cast(syntax.clone_subtree()) {
             return RSAst::RustItem(Item::MacroRules(rnode).into())
         }
-
-
         if let Some(rnode) = Module::cast(syntax.clone_subtree()) {
             return RSAst::RustItem(Item::Module(rnode).into())
         }
-
-
         if let Some(rnode) = Static::cast(syntax.clone_subtree()) {
             return RSAst::RustItem(Item::Static(rnode).into())
         }
-
-
         if let Some(rnode) = Struct::cast(syntax.clone_subtree()) {
             return RSAst::RustItem(Item::Struct(rnode).into())
         }
-
-
         if let Some(rnode) = Trait::cast(syntax.clone_subtree()) {
             return RSAst::RustItem(Item::Trait(rnode).into())
         }
-
         if let Some(rnode) = TypeAlias::cast(syntax.clone_subtree()) {
             return RSAst::RustItem(Item::TypeAlias(rnode).into())
         }
-
         if let Some(rnode) = Union::cast(syntax.clone_subtree()) {
             return RSAst::RustItem(Item::Union(rnode).into())
         }
-
         if let Some(rnode) = Use::cast(syntax.clone_subtree()) {
             return RSAst::RustItem(Item::Use(rnode).into())
         }
-
         if let Some(rnode) = ArrayExpr::cast(syntax.clone_subtree()) {
             return RSAst::RustExpr(Expr::ArrayExpr(rnode).into())
         }
@@ -204,7 +173,6 @@ impl From<SyntaxNode> for RSAst {
         if let Some(rnode) = FormatArgsExpr::cast(syntax.clone_subtree()) {
             return RSAst::RustExpr(Expr::FormatArgsExpr(rnode).into())
         }
-
         if let Some(rnode) = IfExpr::cast(syntax.clone_subtree()) {
             return RSAst::RustExpr(Expr::IfExpr(rnode).into())
         }
@@ -223,7 +191,6 @@ impl From<SyntaxNode> for RSAst {
         if let Some(rnode) = MacroExpr::cast(syntax.clone_subtree()) {
             return RSAst::RustExpr(Expr::MacroExpr(rnode).into())
         }
-
         if let Some(rnode) = MatchExpr::cast(syntax.clone_subtree()) {
             return RSAst::RustExpr(Expr::MatchExpr(rnode).into())
         }
@@ -260,7 +227,6 @@ impl From<SyntaxNode> for RSAst {
         if let Some(rnode) = TupleExpr::cast(syntax.clone_subtree()) {
             return RSAst::RustExpr(Expr::TupleExpr(rnode).into())
         }
-
         if let Some(rnode) = UnderscoreExpr::cast(syntax.clone_subtree()) {
             return RSAst::RustExpr(Expr::UnderscoreExpr(rnode).into())
         }
@@ -274,8 +240,16 @@ impl From<SyntaxNode> for RSAst {
             return RSAst::RustExpr(Expr::YieldExpr(rnode).into())
         }
 
-        RustProblem(kind.text().to_string())
+        println!("Not correctly translating node of type: {}", kind.text().to_string());
+        RustProblem(syntax.into())
     }
+}
+
+#[derive(uniffi::Record)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RSProblem {pub(crate) ast_node: RSNode}
+impl From<SyntaxNode> for RSProblem {
+    fn from(syntax:  SyntaxNode) -> Self {RSProblem{ast_node: (&syntax).into()}}
 }
 
 #[derive(uniffi::Enum)]
@@ -366,6 +340,7 @@ pub struct RSFn {
 }
 impl From<Fn> for RSFn {
     fn from(node:  Fn) -> Self {
+        println!("{}", node);
         RSFn{
             ast_node: node.syntax().into(),
             param_list: node.param_list().map(Into::into),
