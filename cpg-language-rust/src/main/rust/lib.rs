@@ -4,7 +4,8 @@ use std::fs;
 use ra_ap_syntax::{ast, SourceFile, SyntaxNode};
 use ra_ap_syntax::{AstNode, Edition};
 use itertools::Itertools;
-use ra_ap_syntax::ast::{Adt, ArrayExpr, ArrayType, AsmClobberAbi, AsmConst, AsmExpr, AsmLabel, AsmOperand, AsmOperandNamed, AsmOptions, AsmPiece, AsmRegOperand, AsmSym, AssocItem, AssocTypeArg, AwaitExpr, BecomeExpr, BinExpr, BlockExpr, BoxPat, BreakExpr, CallExpr, CastExpr, ClosureExpr, Const, ConstArg, ConstBlockPat, ConstParam, ContinueExpr, DocCommentIter, DynTraitType, Enum, Expr, ExprStmt, ExternBlock, ExternCrate, ExternItem, FieldExpr, FieldList, Fn, FnPtrType, ForExpr, ForType, FormatArgsExpr, GenericArg, GenericParam, IdentPat, IfExpr, Impl, ImplTraitType, IndexExpr, InferType, Item, LetExpr, LetStmt, Lifetime, LifetimeArg, LifetimeParam, Literal, LiteralPat, LoopExpr, MacroCall, MacroDef, MacroExpr, MacroPat, MacroRules, MacroType, MatchExpr, MethodCallExpr, Module, NameRef, NeverType, OffsetOfExpr, OrPat, Param, ParamList, ParenExpr, ParenPat, ParenType, Pat, PathExpr, PathPat, PathType, PrefixExpr, PtrType, RangeExpr, RangePat, RecordExpr, RecordFieldList, RecordPat, RefExpr, RefPat, RefType, RestPat, ReturnExpr, SelfParam, SlicePat, SliceType, Static, Stmt, Struct, Trait, TryExpr, TupleExpr, TupleFieldList, TuplePat, TupleStructPat, TupleType, Type, TypeAlias, TypeArg, TypeParam, UnderscoreExpr, Union, Use, UseBoundGenericArg, Variant, VariantDef, WhileExpr, WildcardPat, YeetExpr, YieldExpr};
+use ra_ap_syntax::ast::{Abi, Adt, ArrayExpr, ArrayType, AsmClobberAbi, AsmConst, AsmExpr, AsmLabel, AsmOperand, AsmOperandNamed, AsmOptions, AsmPiece, AsmRegOperand, AsmSym, AssocItem, AssocTypeArg, AwaitExpr, BecomeExpr, BinExpr, BlockExpr, BoxPat, BreakExpr, CallExpr, CastExpr, ClosureExpr, Const, ConstArg, ConstBlockPat, ConstParam, ContinueExpr, DocCommentIter, DynTraitType, Enum, Expr, ExprStmt, ExternBlock, ExternCrate, ExternItem, FieldExpr, FieldList, Fn, FnPtrType, ForExpr, ForType, FormatArgsExpr, GenericArg, GenericParam, IdentPat, IfExpr, Impl, ImplTraitType, IndexExpr, InferType, Item, LetExpr, LetStmt, Lifetime, LifetimeArg, LifetimeParam, Literal, LiteralPat, LoopExpr, MacroCall, MacroDef, MacroExpr, MacroPat, MacroRules, MacroType, MatchExpr, MethodCallExpr, Module, NameRef, NeverType, OffsetOfExpr, OrPat, Param, ParamList, ParenExpr, ParenPat, ParenType, Pat, PathExpr, PathPat, PathType, PrefixExpr, PtrType, RangeExpr, RangePat, RecordExpr, RecordFieldList, RecordPat, RefExpr, RefPat, RefType, RestPat, ReturnExpr, SelfParam, SlicePat, SliceType, Static, Stmt, Struct, Trait, TryExpr, TupleExpr, TupleFieldList, TuplePat, TupleStructPat, TupleType, Type, TypeAlias, TypeArg, TypeParam, UnderscoreExpr, Union, Use, UseBoundGenericArg, Variant, VariantDef, WhileExpr, WildcardPat, YeetExpr, YieldExpr};
+use crate::RSAst::RustProblem;
 
 #[derive(uniffi::Record)]
 pub struct RSSourceFile {
@@ -48,7 +49,7 @@ pub struct RSNode {
     text: String,
     start_offset: u32,
     end_offset:u32,
-    comments: Option<String>
+    comments: Option<String>,
 }
 
 impl From<&SyntaxNode> for RSNode {
@@ -65,6 +66,217 @@ impl From<&SyntaxNode> for RSNode {
     }
 }
 
+/// Creating a common root node for all AST nodes
+#[derive(uniffi::Enum)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum RSAst {
+    RustItem(RSItem),
+    RustExpr(RSExpr),
+    RustStmt(RSStmt),
+    RustAbi(RSAbi), // Needed for now to have Abi nodes in the hierarchy
+    RustProblem(String) // Used to represent nodes that we are currently not making an interface for
+}
+
+impl From<SyntaxNode> for RSAst {
+    fn from(syntax: SyntaxNode) -> Self {
+        let kind = syntax.kind();
+        if let Some(rnode) = Abi::cast(syntax.clone_subtree()) {
+            return RSAst::RustAbi(rnode.into())
+        }
+
+        if let Some(rnode) = AsmExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustItem(Item::AsmExpr(rnode).into())
+        }
+
+
+        if let Some(rnode) = Const::cast(syntax.clone_subtree()) {
+            return RSAst::RustItem(Item::Const(rnode).into())
+        }
+
+
+        if let Some(rnode) = Enum::cast(syntax.clone_subtree()) {
+            return RSAst::RustItem(Item::Enum(rnode).into())
+        }
+
+
+        if let Some(rnode) = ExternBlock::cast(syntax.clone_subtree()) {
+            return RSAst::RustItem(Item::ExternBlock(rnode).into())
+        }
+
+
+        if let Some(rnode) = ExternCrate::cast(syntax.clone_subtree()) {
+            return RSAst::RustItem(Item::ExternCrate(rnode).into())
+        }
+
+
+        if let Some(rnode) = Fn::cast(syntax.clone_subtree()) {
+            return RSAst::RustItem(Item::Fn(rnode).into())
+        }
+
+
+        if let Some(rnode) = Impl::cast(syntax.clone_subtree()) {
+            return RSAst::RustItem(Item::Impl(rnode).into())
+        }
+
+
+        if let Some(rnode) = MacroCall::cast(syntax.clone_subtree()) {
+            return RSAst::RustItem(Item::MacroCall(rnode).into())
+        }
+
+
+        if let Some(rnode) = MacroDef::cast(syntax.clone_subtree()) {
+            return RSAst::RustItem(Item::MacroDef(rnode).into())
+        }
+
+
+        if let Some(rnode) = MacroRules::cast(syntax.clone_subtree()) {
+            return RSAst::RustItem(Item::MacroRules(rnode).into())
+        }
+
+
+        if let Some(rnode) = Module::cast(syntax.clone_subtree()) {
+            return RSAst::RustItem(Item::Module(rnode).into())
+        }
+
+
+        if let Some(rnode) = Static::cast(syntax.clone_subtree()) {
+            return RSAst::RustItem(Item::Static(rnode).into())
+        }
+
+
+        if let Some(rnode) = Struct::cast(syntax.clone_subtree()) {
+            return RSAst::RustItem(Item::Struct(rnode).into())
+        }
+
+
+        if let Some(rnode) = Trait::cast(syntax.clone_subtree()) {
+            return RSAst::RustItem(Item::Trait(rnode).into())
+        }
+
+        if let Some(rnode) = TypeAlias::cast(syntax.clone_subtree()) {
+            return RSAst::RustItem(Item::TypeAlias(rnode).into())
+        }
+
+        if let Some(rnode) = Union::cast(syntax.clone_subtree()) {
+            return RSAst::RustItem(Item::Union(rnode).into())
+        }
+
+        if let Some(rnode) = Use::cast(syntax.clone_subtree()) {
+            return RSAst::RustItem(Item::Use(rnode).into())
+        }
+
+        if let Some(rnode) = ArrayExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::ArrayExpr(rnode).into())
+        }
+        if let Some(rnode) = AsmExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::AsmExpr(rnode).into())
+        }
+        if let Some(rnode) = AwaitExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::AwaitExpr(rnode).into())
+        }
+        if let Some(rnode) = BecomeExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::BecomeExpr(rnode).into())
+        }
+        if let Some(rnode) = BinExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::BinExpr(rnode).into())
+        }
+        if let Some(rnode) = BlockExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::BlockExpr(rnode).into())
+        }
+        if let Some(rnode) = BreakExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::BreakExpr(rnode).into())
+        }
+        if let Some(rnode) = CastExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::CastExpr(rnode).into())
+        }
+        if let Some(rnode) = ClosureExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::ClosureExpr(rnode).into())
+        }
+        if let Some(rnode) = ContinueExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::ContinueExpr(rnode).into())
+        }
+        if let Some(rnode) = FieldExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::FieldExpr(rnode).into())
+        }
+        if let Some(rnode) = ForExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::ForExpr(rnode).into())
+        }
+        if let Some(rnode) = FormatArgsExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::FormatArgsExpr(rnode).into())
+        }
+
+        if let Some(rnode) = IfExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::IfExpr(rnode).into())
+        }
+        if let Some(rnode) = IndexExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::IndexExpr(rnode).into())
+        }
+        if let Some(rnode) = LetExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::LetExpr(rnode).into())
+        }
+        if let Some(rnode) = Literal::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::Literal(rnode).into())
+        }
+        if let Some(rnode) = LoopExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::LoopExpr(rnode).into())
+        }
+        if let Some(rnode) = MacroExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::MacroExpr(rnode).into())
+        }
+
+        if let Some(rnode) = MatchExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::MatchExpr(rnode).into())
+        }
+        if let Some(rnode) = MethodCallExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::MethodCallExpr(rnode).into())
+        }
+        if let Some(rnode) = OffsetOfExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::OffsetOfExpr(rnode).into())
+        }
+        if let Some(rnode) = ParenExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::ParenExpr(rnode).into())
+        }
+        if let Some(rnode) = PathExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::PathExpr(rnode).into())
+        }
+        if let Some(rnode) = PrefixExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::PrefixExpr(rnode).into())
+        }
+        if let Some(rnode) = RangeExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::RangeExpr(rnode).into())
+        }
+        if let Some(rnode) = RecordExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::RecordExpr(rnode).into())
+        }
+        if let Some(rnode) = RefExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::RefExpr(rnode).into())
+        }
+        if let Some(rnode) = ReturnExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::ReturnExpr(rnode).into())
+        }
+        if let Some(rnode) = TryExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::TryExpr(rnode).into())
+        }
+        if let Some(rnode) = TupleExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::TupleExpr(rnode).into())
+        }
+
+        if let Some(rnode) = UnderscoreExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::UnderscoreExpr(rnode).into())
+        }
+        if let Some(rnode) = WhileExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::WhileExpr(rnode).into())
+        }
+        if let Some(rnode) = YeetExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::YeetExpr(rnode).into())
+        }
+        if let Some(rnode) = YieldExpr::cast(syntax.clone_subtree()) {
+            return RSAst::RustExpr(Expr::YieldExpr(rnode).into())
+        }
+
+        RustProblem(kind.text().to_string())
+    }
+}
 
 #[derive(uniffi::Enum)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -88,13 +300,7 @@ pub enum RSItem {
     Use(RSUse),
 }
 
-#[derive(uniffi::Enum)]
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum RSAst {
-    RustItem(RSItem),
-    RustExpr(RSExpr),
-    RustStmt(RSStmt)
-}
+
 
 impl From<Item> for RSItem {
     fn from(item: Item) -> Self {
@@ -167,6 +373,16 @@ impl From<Fn> for RSFn {
         }
     }
 }
+
+#[derive(uniffi::Record)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RSAbi {pub(crate) ast_node: RSNode, }
+impl From<Abi> for RSAbi {
+    fn from(node:  Abi) -> Self {
+        RSAbi{ast_node: node.syntax().into(),}
+    }
+}
+
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RSImpl {pub(crate) ast_node: RSNode}
