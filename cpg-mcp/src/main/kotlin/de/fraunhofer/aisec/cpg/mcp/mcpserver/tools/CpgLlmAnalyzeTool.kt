@@ -34,13 +34,13 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
 import de.fraunhofer.aisec.cpg.serialization.toJSON
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
+import io.modelcontextprotocol.kotlin.sdk.types.TextContent
+import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import io.modelcontextprotocol.kotlin.sdk.types.CreateMessageRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CreateMessageRequestParams
 import io.modelcontextprotocol.kotlin.sdk.types.ModelPreferences
 import io.modelcontextprotocol.kotlin.sdk.types.Role
 import io.modelcontextprotocol.kotlin.sdk.types.SamplingMessage
-import io.modelcontextprotocol.kotlin.sdk.types.TextContent
-import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -79,7 +79,7 @@ fun Server.addCpgLlmAnalyzeTool() {
     ) { request ->
         try {
             val payload =
-                if (request.arguments == null || request.arguments?.toString() == "{}") {
+                if (request.arguments.isNullOrEmpty()) {
                     CpgLlmAnalyzePayload()
                 } else {
                     request.arguments?.toObject<CpgLlmAnalyzePayload>() ?: CpgLlmAnalyzePayload()
@@ -246,76 +246,3 @@ fun Server.addCpgLlmAnalyzeTool() {
         }
     }
 }
-
-// Note: The output schema is not supported by all LLMs yet.
-@Suppress("unused")
-val outputSchema =
-    ToolSchema(
-        properties =
-            buildJsonObject {
-                putJsonObject("prompt") {
-                    put("type", "string")
-                    put("description", "Generated prompt for LLM analysis")
-                }
-                putJsonObject("expectedResponseFormat") {
-                    put("type", "object")
-                    put("description", "Expected JSON structure for LLM response")
-                    putJsonObject("properties") {
-                        putJsonObject("overlaySuggestions") {
-                            put("type", "array")
-                            put("description", "List of concept/operation suggestions")
-                            putJsonObject("items") {
-                                put("type", "object")
-                                putJsonObject("properties") {
-                                    putJsonObject("nodeId") {
-                                        put("type", "string")
-                                        put("description", "NodeId of the CPG node")
-                                    }
-                                    putJsonObject("overlay") {
-                                        put("type", "string")
-                                        put(
-                                            "description",
-                                            "Fully qualified name of concept or operation class",
-                                        )
-                                    }
-                                    putJsonObject("overlayType") {
-                                        put("type", "string")
-                                        put(
-                                            "description",
-                                            "Type of overlay: 'Concept' or 'Operation'",
-                                        )
-                                    }
-                                    putJsonObject("conceptNodeId") {
-                                        put("type", "string")
-                                        put(
-                                            "description",
-                                            "NodeId of concept this operation references (REQUIRED for ALL operations)",
-                                        )
-                                    }
-                                    putJsonObject("arguments") {
-                                        put("type", "object")
-                                        put("description", "Additional constructor arguments")
-                                    }
-                                    putJsonObject("reasoning") {
-                                        put("type", "string")
-                                        put(
-                                            "description",
-                                            "Security reasoning for this classification",
-                                        )
-                                    }
-                                    putJsonObject("securityImpact") {
-                                        put("type", "string")
-                                        put("description", "Potential security implications")
-                                    }
-                                }
-                                putJsonArray("required") {
-                                    add(JsonPrimitive("nodeId"))
-                                    add(JsonPrimitive("overlay"))
-                                    add(JsonPrimitive("overlayType"))
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-    )

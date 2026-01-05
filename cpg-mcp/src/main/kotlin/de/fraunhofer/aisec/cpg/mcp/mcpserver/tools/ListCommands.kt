@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.*
+import de.fraunhofer.aisec.cpg.graph.invoke
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
@@ -144,7 +145,16 @@ fun Server.listCallsTo() {
         inputSchema = inputSchema,
     ) { request ->
         request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
-            val payload = request.arguments?.toObject<CpgNamePayload>() ?: CpgNamePayload("")
+            val payload =
+                request.arguments?.toObject<CpgNamePayload>()
+                    ?: return@runOnCpg CallToolResult(
+                        content =
+                            listOf(
+                                TextContent(
+                                    "Invalid or missing payload for cpg_list_calls_to tool."
+                                )
+                            )
+                    )
 
             CallToolResult(content = result.calls(payload.name).map { TextContent(it.toJson()) })
         }
@@ -181,7 +191,16 @@ fun Server.getAllArgs() {
         inputSchema = inputSchema,
     ) { request ->
         request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
-            val payload = request.arguments?.toObject<CpgIdPayload>() ?: CpgIdPayload("")
+            val payload =
+                request.arguments?.toObject<CpgIdPayload>()
+                    ?: return@runOnCpg CallToolResult(
+                        content =
+                            listOf(
+                                TextContent(
+                                    "Invalid or missing payload for cpg_list_call_args tool."
+                                )
+                            )
+                    )
 
             CallToolResult(
                 content =
@@ -244,7 +263,14 @@ fun Server.getArgByIndexOrName() {
         request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
             val payload =
                 request.arguments?.toObject<CpgCallArgumentByNameOrIndexPayload>()
-                    ?: CpgCallArgumentByNameOrIndexPayload("")
+                    ?: return@runOnCpg CallToolResult(
+                        content =
+                            listOf(
+                                TextContent(
+                                    "Invalid or missing payload for cpg_list_call_arg_by_name_or_index tool."
+                                )
+                            )
+                    )
 
             CallToolResult(
                 content =
@@ -256,7 +282,7 @@ fun Server.getArgByIndexOrName() {
                                     name = payload.argumentName,
                                     position = payload.index,
                                 )
-                                ?.toJson() ?: "null"
+                                ?.toJson() ?: "No argument found with the given name or index."
                         )
                     )
             )

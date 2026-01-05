@@ -87,7 +87,7 @@ fun Server.addCpgAnalyzeTool() {
     this.addTool(name = "cpg_analyze", description = toolDescription, inputSchema = inputSchema) {
         request ->
         try {
-            val payload = request.arguments?.toObject<CpgAnalyzePayload>() ?: CpgAnalyzePayload()
+            val payload = request.arguments?.toObject<CpgAnalyzePayload>()
             val analysisResult = runCpgAnalyze(payload)
             val jsonResult = Json.encodeToString(analysisResult)
             CallToolResult(content = listOf(TextContent(jsonResult)))
@@ -99,10 +99,10 @@ fun Server.addCpgAnalyzeTool() {
     }
 }
 
-fun runCpgAnalyze(payload: CpgAnalyzePayload): CpgAnalysisResult {
+fun runCpgAnalyze(payload: CpgAnalyzePayload?): CpgAnalysisResult {
     val file =
         when {
-            payload.content != null -> {
+            payload?.content != null -> {
                 val extension =
                     if (payload.extension != null) {
                         if (payload.extension.startsWith(".")) payload.extension

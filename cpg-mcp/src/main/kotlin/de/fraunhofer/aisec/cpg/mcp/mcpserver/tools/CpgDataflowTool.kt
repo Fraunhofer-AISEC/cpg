@@ -96,7 +96,11 @@ fun Server.addCpgDataflowTool() {
         request ->
         request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
             val payload =
-                request.arguments?.toObject<CpgDataflowPayload>() ?: CpgDataflowPayload("", "")
+                request.arguments?.toObject<CpgDataflowPayload>()
+                    ?: return@runOnCpg CallToolResult(
+                        content =
+                            listOf(TextContent("Invalid or missing payload for cpg_dataflow tool."))
+                    )
 
             val allOverlayNodes = result.allChildrenWithOverlays<OverlayNode>()
             val sourceNodes = allOverlayNodes.filter { it.name.localName == payload.from }

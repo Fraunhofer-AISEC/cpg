@@ -32,11 +32,12 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listConceptsAndOperations
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import io.modelcontextprotocol.kotlin.sdk.Implementation
-import io.modelcontextprotocol.kotlin.sdk.ServerCapabilities
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequestParams
+import io.modelcontextprotocol.kotlin.sdk.types.Implementation
+import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -84,22 +85,24 @@ class ApplyConceptsTest {
 
         val applyRequest =
             CallToolRequest(
-                name = "cpg_apply_concepts",
-                arguments =
-                    buildJsonObject {
-                        putJsonArray("assignments") {
-                            add(
-                                buildJsonObject {
-                                    put("nodeId", secretInitializer.id.toString())
-                                    put(
-                                        "overlay",
-                                        "de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret",
-                                    )
-                                    put("overlayType", "Concept")
-                                }
-                            )
-                        }
-                    },
+                CallToolRequestParams(
+                    name = "cpg_apply_concepts",
+                    arguments =
+                        buildJsonObject {
+                            putJsonArray("assignments") {
+                                add(
+                                    buildJsonObject {
+                                        put("nodeId", secretInitializer.id.toString())
+                                        put(
+                                            "overlay",
+                                            "de.fraunhofer.aisec.cpg.graph.concepts.crypto.encryption.Secret",
+                                        )
+                                        put("overlayType", "Concept")
+                                    }
+                                )
+                            }
+                        },
+                )
             )
         val applyResult = applyTool.handler(applyRequest)
         assertNotNull(applyResult)
@@ -112,8 +115,10 @@ class ApplyConceptsTest {
         val tool = server.tools["cpg_list_concepts_and_operations"] ?: error("Tool not registered")
         val request =
             CallToolRequest(
-                name = "cpg_list_concepts_and_operations",
-                arguments = buildJsonObject {},
+                CallToolRequestParams(
+                    name = "cpg_list_concepts_and_operations",
+                    arguments = buildJsonObject {},
+                )
             )
         val result = tool.handler(request)
         assertNotNull(result)

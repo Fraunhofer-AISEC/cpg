@@ -174,7 +174,14 @@ fun Server.addCpgApplyConceptsTool() {
         request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
             val payload =
                 request.arguments?.toObject<CpgApplyConceptsPayload>()
-                    ?: CpgApplyConceptsPayload(emptyList())
+                    ?: return@runOnCpg CallToolResult(
+                        content =
+                            listOf(
+                                TextContent(
+                                    "Invalid or missing payload for cpg_apply_concepts tool."
+                                )
+                            )
+                    )
 
             val applied = mutableListOf<String>()
 

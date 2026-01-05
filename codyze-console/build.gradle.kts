@@ -41,11 +41,6 @@ dependencies {
     // Ktor SSE plugin
     implementation("io.ktor:ktor-server-sse:${libs.versions.ktor.get()}")
 
-    implementation(libs.koog.agents)
-    implementation(libs.koog.tools)
-    implementation(libs.koog.executor.ollama.client)
-    implementation(libs.koog.executor.google.client)
-
     // Serialization
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.jacksonyml)
@@ -90,3 +85,5 @@ tasks.processResources { dependsOn(pnpmBuild) }
 var jarTasks = tasks.withType<Jar>()
 
 jarTasks.forEach { it.dependsOn(pnpmBuild) }
+
+tasks.shadowJar { setProperty("zip64", true) }
