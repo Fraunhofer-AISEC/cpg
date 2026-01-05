@@ -40,7 +40,7 @@ object McpServerHelper {
         }
     }
 
-    suspend fun startMcpServer(port: Int) {
+    fun startMcpServer(port: Int) {
         if (!isEnabled) {
             return
         }

@@ -37,9 +37,9 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
 import de.fraunhofer.aisec.cpg.mcp.setupTranslationConfiguration
 import de.fraunhofer.aisec.cpg.serialization.toJSON
-import io.modelcontextprotocol.kotlin.sdk.TextContent
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
+import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import java.io.File
 import kotlinx.serialization.json.Json

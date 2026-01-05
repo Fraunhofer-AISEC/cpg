@@ -75,7 +75,7 @@ class McpClient : AutoCloseable {
 
     private val mcp: Client =
         Client(
-            clientInfo = Implementation(name = "codyze-custom-client", version = "1.0.0"),
+            clientInfo = Implementation(name = "codyze-client", version = "1.0.0"),
             options =
                 ClientOptions(capabilities = ClientCapabilities(sampling = buildJsonObject {})),
         )

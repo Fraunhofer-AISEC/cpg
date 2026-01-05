@@ -39,10 +39,10 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toQueryTreeNode
 import de.fraunhofer.aisec.cpg.query.May
 import de.fraunhofer.aisec.cpg.query.dataFlow
-import io.modelcontextprotocol.kotlin.sdk.CallToolRequest
-import io.modelcontextprotocol.kotlin.sdk.TextContent
 import io.modelcontextprotocol.kotlin.sdk.server.Server
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
+import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject

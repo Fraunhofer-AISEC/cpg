@@ -38,12 +38,12 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listRecords
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
-import io.modelcontextprotocol.kotlin.sdk.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.Implementation
 import io.modelcontextprotocol.kotlin.sdk.ServerCapabilities
-import io.modelcontextprotocol.kotlin.sdk.TextContent
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
+import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
+import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs

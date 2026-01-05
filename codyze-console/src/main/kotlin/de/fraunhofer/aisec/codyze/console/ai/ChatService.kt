@@ -39,10 +39,6 @@ import kotlinx.serialization.Serializable
 class ChatService(private val mcpClient: McpClient? = null) {
 
     fun chat(request: ChatRequestJSON): Flow<String> {
-        return if (mcpClient != null) {
-            mcpClient.chat(request)
-        } else {
-            throw IllegalStateException("McpClient not initialized")
-        }
+        return mcpClient?.chat(request) ?: throw IllegalStateException("McpClient not initialized")
     }
 }

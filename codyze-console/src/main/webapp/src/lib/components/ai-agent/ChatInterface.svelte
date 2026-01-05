@@ -6,9 +6,6 @@
   import ApiService from '$lib/services/apiService';
   import type { NodeJSON, AnalysisResultJSON, TranslationUnitJSON, ChatMessage } from '$lib/types';
 
-  const apiService = new ApiService();
-
-
   // State for code preview split-view
   let selectedNode = $state<NodeJSON | null>(null);
   let showCodePreview = $derived(selectedNode !== null);
