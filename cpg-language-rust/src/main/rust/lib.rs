@@ -5,6 +5,7 @@ use ra_ap_syntax::{ast, SourceFile, SyntaxNode};
 use ra_ap_syntax::{AstNode, Edition};
 use itertools::Itertools;
 use ra_ap_syntax::ast::{Abi, Adt, ArrayExpr, ArrayType, AsmClobberAbi, AsmConst, AsmExpr, AsmLabel, AsmOperand, AsmOperandNamed, AsmOptions, AsmPiece, AsmRegOperand, AsmSym, AssocItem, AssocTypeArg, AwaitExpr, BecomeExpr, BinExpr, BlockExpr, BoxPat, BreakExpr, CallExpr, CastExpr, ClosureExpr, Const, ConstArg, ConstBlockPat, ConstParam, ContinueExpr, DocCommentIter, DynTraitType, Enum, Expr, ExprStmt, ExternBlock, ExternCrate, ExternItem, FieldExpr, FieldList, Fn, FnPtrType, ForExpr, ForType, FormatArgsExpr, GenericArg, GenericParam, IdentPat, IfExpr, Impl, ImplTraitType, IndexExpr, InferType, Item, LetExpr, LetStmt, Lifetime, LifetimeArg, LifetimeParam, Literal, LiteralPat, LoopExpr, MacroCall, MacroDef, MacroExpr, MacroPat, MacroRules, MacroType, MatchExpr, MethodCallExpr, Module, NameRef, NeverType, OffsetOfExpr, OrPat, Param, ParamList, ParenExpr, ParenPat, ParenType, Pat, PathExpr, PathPat, PathType, PrefixExpr, PtrType, RangeExpr, RangePat, RecordExpr, RecordFieldList, RecordPat, RefExpr, RefPat, RefType, RestPat, ReturnExpr, SelfParam, SlicePat, SliceType, Static, Stmt, Struct, Trait, TryExpr, TupleExpr, TupleFieldList, TuplePat, TupleStructPat, TupleType, Type, TypeAlias, TypeArg, TypeParam, UnderscoreExpr, Union, Use, UseBoundGenericArg, Variant, VariantDef, WhileExpr, WildcardPat, YeetExpr, YieldExpr};
+use rowan::ast::support;
 use crate::RSAst::RustProblem;
 
 #[derive(uniffi::Record)]
@@ -60,6 +61,8 @@ impl From<&SyntaxNode> for RSNode {
             "\n",
         );
         let comments = if docs.is_empty() { None } else { Some(docs) };
+        println!("Parent node: {:?}", syntax.kind());
+        syntax.children().for_each(| n | println!(" Syntactic Children {:?}", n.kind()));
 
         RSNode {text : syntax.text().to_string(), start_offset: syntax.text_range().start().into(), end_offset: syntax.text_range().end().into(), comments}
 
@@ -80,6 +83,7 @@ pub enum RSAst {
 impl From<SyntaxNode> for RSAst {
     fn from(syntax: SyntaxNode) -> Self {
         let kind = syntax.kind();
+        println!("SN kind: {:?}", kind);
         if let Some(rnode) = Abi::cast(syntax.clone_subtree()) {
             return RSAst::RustAbi(rnode.into())
         }
@@ -335,16 +339,19 @@ impl From<ExternCrate> for RSExternCrate {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RSFn {
     pub(crate) ast_node: RSNode,
-    param_list: Option<RSParamList>,
-    ret_type: Option<RSType>,
+    pub param_list: Option<RSParamList>,
+    pub ret_type: Option<RSType>,
+    pub body: Option<RSBlockExpr>,
 }
 impl From<Fn> for RSFn {
     fn from(node:  Fn) -> Self {
-        println!("{}", node);
+        println!("Function node {}", node);
+        println!("{:#?}", node.syntax().children().find_map(BlockExpr::cast));
         RSFn{
             ast_node: node.syntax().into(),
             param_list: node.param_list().map(Into::into),
-            ret_type: node.ret_type().map(|o|o.ty().map(Into::into)).flatten()
+            ret_type: node.ret_type().map(|o|o.ty().map(Into::into)).flatten(),
+            body: node.syntax().children().find_map(BlockExpr::cast).map(Into::into)
         }
     }
 }
@@ -540,7 +547,9 @@ impl From<BinExpr> for RSBinExpr {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RSBlockExpr {pub(crate) ast_node: RSNode}
 impl From<BlockExpr> for RSBlockExpr {
-    fn from(node:  BlockExpr) -> Self {RSBlockExpr{ast_node: node.syntax().into()}}
+    fn from(node:  BlockExpr) -> Self {
+        println!("BlockExpr conversion");
+        RSBlockExpr{ast_node: node.syntax().into()}}
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
