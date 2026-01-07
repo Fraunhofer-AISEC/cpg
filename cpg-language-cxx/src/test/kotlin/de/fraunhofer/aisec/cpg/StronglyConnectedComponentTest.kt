@@ -56,28 +56,30 @@ class StronglyConnectedComponentTest : BaseTest() {
             assertNotNull(forStmt)
             ///////// First, check on node-level
             // All 3 ForStatements should have one edge with an SCC of priority respective to their
-            // level, and one without SCC (exiting the loop)
-            assertEquals(1, forStmt.nextEOGEdges.filter { it.scc == level }.size)
-            assertEquals(1, forStmt.nextEOGEdges.filter { it.scc == null }.size)
+            // level ( +1 b/c we start counting at 1), and one without or with different SCC
+            // (exiting the loop)
+            assertEquals(1, forStmt.nextEOGEdges.filter { it.scc == (level + 1) }.size)
+            assertEquals(1, forStmt.nextEOGEdges.filter { it.scc != (level + 1) }.size)
 
             // The respective merge points are the conditions. Those should have one incoming edge
-            // with SCC-Label, and one without
+            // with SCC-Label, and one without/different SCC-Label
             val mergeNode = (forStmt.condition as BinaryOperator).lhs
             assertNotNull(mergeNode)
-            assertEquals(1, mergeNode.prevEOGEdges.filter { it.scc == level }.size)
-            assertEquals(1, mergeNode.prevEOGEdges.filter { it.scc == null }.size)
+            assertEquals(1, mergeNode.prevEOGEdges.filter { it.scc == (level + 1) }.size)
+            assertEquals(1, mergeNode.prevEOGEdges.filter { it.scc != (level + 1) }.size)
 
             // The same applies on BB-Level
             val forLoopBlock = forStmt.basicBlock.singleOrNull()
             assertNotNull(forLoopBlock)
             // The forLoop BB has 2 next Edges. On into the loop (with SCC), and one to the outside
-            assertEquals(1, forLoopBlock.nextEOGEdges.filter { it.scc == level }.size)
-            assertEquals(1, forLoopBlock.nextEOGEdges.filter { it.scc == null }.size)
+            // without or with different SCC
+            assertEquals(1, forLoopBlock.nextEOGEdges.filter { it.scc == (level + 1) }.size)
+            assertEquals(1, forLoopBlock.nextEOGEdges.filter { it.scc != (level + 1) }.size)
 
             val mergeBlock = mergeNode.basicBlock.singleOrNull()
             assertNotNull(mergeBlock)
-            assertEquals(1, mergeBlock.prevEOGEdges.filter { it.scc == level }.size)
-            assertEquals(1, mergeBlock.prevEOGEdges.filter { it.scc == null }.size)
+            assertEquals(1, mergeBlock.prevEOGEdges.filter { it.scc == (level + 1) }.size)
+            assertEquals(1, mergeBlock.prevEOGEdges.filter { it.scc != (level + 1) }.size)
         }
     }
 }
