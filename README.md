@@ -158,8 +158,7 @@ In the case of Golang, additional native code, [libgoast](https://github.com/Fra
 #### Python
 
 You need to install [jep](https://github.com/ninia/jep/). This can either be system-wide or in a virtual environment. Your jep version has to match the version used by the CPG (see [version catalog](./gradle/libs.versions.toml)).
-
-Currently, only Python 3.{9,10,11,12,13} is supported.
+Currently, only Python 3.{10,11,12,13,14,15} is supported.
 
 ##### System Wide
 
@@ -176,6 +175,10 @@ Through the `JepSingleton`, the CPG library will look for well known paths on Li
 #### TypeScript
 
 For parsing TypeScript, the necessary TypeScript-based code can be found in the `src/main/nodejs` directory of the `cpg-language-typescript` submodule. Gradle should build the script automatically. The bundles script will be placed inside the jar's resources and should work out of the box.
+
+#### MCP
+
+[Model Context Protocol](https://modelcontextprotocol.io/docs/getting-started/intro) functionality is provided via the optional `cpg-mcp` module. It can be enabled/disabled via the `gradle.properties` setting `enableMCPModule`.
 
 ### Code Style
 
