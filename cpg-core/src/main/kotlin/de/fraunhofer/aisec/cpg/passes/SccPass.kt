@@ -172,11 +172,14 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                             // There should be exactly one edge from the endNode of the BB-Edge's
                             // start to a node that's in the BB of the BB-Edge's end
                             // Let's find this one and also label it
-                            (nextSCCEdge.start as? BasicBlock)
-                                ?.endNode
-                                ?.nextEOGEdges
-                                ?.single { it.end.basicBlock.single() == nextSCCEdge.end }
-                                ?.scc = level
+                            val bbNextEdges =
+                                (nextSCCEdge.start as? BasicBlock)?.endNode?.nextEOGEdges?.filter {
+                                    it.end.basicBlock.single() == nextSCCEdge.end
+                                }
+                            if ((bbNextEdges?.size ?: 0) > 1) {
+                                log.error("Found more than one EOG Edge matching criteria")
+                            }
+                            bbNextEdges?.forEach { bbNextEdge -> bbNextEdge.scc = level }
                         }
                     }
                 }
