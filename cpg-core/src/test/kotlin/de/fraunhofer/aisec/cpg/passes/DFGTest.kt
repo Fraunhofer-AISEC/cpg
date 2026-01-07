@@ -288,7 +288,7 @@ class DFGTest {
 
         assertEquals(2, returnFunction.prevDFG.size)
 
-        val allRealReturns = returnFunction.allChildren<ReturnStatement> { it.location != null }
+        val allRealReturns = returnFunction.allChildren<ReturnStatement> { !it.isImplicit }
         assertEquals(allRealReturns.toSet() as Set<Node>, returnFunction.prevDFG)
 
         assertEquals(1, allRealReturns[0].prevDFG.size)
