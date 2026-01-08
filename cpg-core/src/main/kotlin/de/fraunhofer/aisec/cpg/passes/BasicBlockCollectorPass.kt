@@ -96,7 +96,6 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 // Set the end node of the old basic block to the last node on the path
                 basicBlock =
                     BasicBlock().apply {
-                        // ingoingEOGEdges.addAll(currentStartNode.prevEOGEdges)
                         // Save the relationships between the two basic blocks.
                         prevEOGEdges.add(basicBlock) {
                             this.branch = reachingEOGEdge?.branch
@@ -107,6 +106,8 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
             basicBlock.nodes.add(currentStartNode)
 
+            // Note: This may not identify all cases correctly, e.g., if a ShortCircuitOperator is
+            // not the direct astParent.
             val shortCircuit = currentStartNode.astParent as? ShortCircuitOperator
             val language = shortCircuit?.language
             val nextRelevantEOGEdges =
@@ -131,7 +132,6 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 // If the currentStartNode splits up into multiple paths, the next nodes start a new
                 // basic block. We already generate this here. But currentStartNode is still part of
                 // the current basic block, so we add it before this if statement.
-                // basicBlock.outgoingEOGEdges.addAll(nextRelevantEOGEdges)
                 worklist.addAll(
                     nextRelevantEOGEdges.mapNotNull {
                         if (it.end.basicBlock.isNotEmpty()) {

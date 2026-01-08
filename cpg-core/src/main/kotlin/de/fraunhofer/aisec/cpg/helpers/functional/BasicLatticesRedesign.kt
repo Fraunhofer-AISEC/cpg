@@ -257,9 +257,7 @@ interface Lattice<T : Lattice.Element> {
                 mergePointsEdgesMap.isNotEmpty()
         ) {
             val nextEdge =
-                if (mergePointsEdgesMap.hasCandidate()) {
-                    mergePointsEdgesMap.removeCandidate()
-                } else if (currentBBEdgesList.isNotEmpty()) {
+                if (currentBBEdgesList.isNotEmpty()) {
                     // If we have edges in the current basic block, we take these. We prefer to
                     // finish with the whole Basic Block before moving somewhere else.
                     currentBBEdgesList.removeFirst()
