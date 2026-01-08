@@ -73,12 +73,12 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
             if (next !in currentInfo.visited) {
                 tarjan(next, level)
             }
-            // If the node we came from is on the stack, we min its lowlinkValue with the one of bb
+            // If the node we came from is on the stack, we min its lowLinkValue with the one of bb
             if (next in currentInfo.stack) {
                 currentInfo.lowLinkValues[bb] =
                     min(
-                        currentInfo.lowLinkValues[bb] as Int,
-                        currentInfo.lowLinkValues[next] as Int,
+                        currentInfo.lowLinkValues.getValue(bb),
+                        currentInfo.lowLinkValues.getValue(next),
                     )
             }
         }
@@ -86,7 +86,8 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         if (currentInfo.blockIDs[bb] == currentInfo.lowLinkValues[bb]) {
             // Set the lowLinkValues of all nodes on the stack to the same, as they belong to the
             // same SCC
-            // If bb is the first element on the stack, that's no SCC, so we simply remove it again
+            // If bb is the first element on the stack, it's a trivial SCC (AKA an isolated node),
+            // so we simply remove it again without setting any properties
             if (
                 currentInfo.stack.first() == bb
                 // Also consider SCCs that consist of a single element, in those, the bb points to
@@ -95,9 +96,12 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
             ) {
                 currentInfo.stack.remove(bb)
             } else {
-                // Otherwise, we found a loop, so we add the SCC edges
+                // Otherwise, we found a loop, so we set the scc-property of the respective edges
+                // First, let's collect all the nodes that are part of the SCC from the stack
+                // Note: This is not necessarily equal to all nodes on the stack, we only pop from
+                // the stack until we are back at our initial node [bb]
                 log.trace("Found a SCC (Level $level): ")
-                // Can't iterate over the stack and remove items from it, so we create a clone
+                // Can't iterate over the stack and remove items from it, so we iterate over a clone
                 val stackClone = currentInfo.stack.toList()
                 val sccElements = mutableListOf<Node>()
 
@@ -107,6 +111,7 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                     // pop the node from the real stack
                     currentInfo.stack.remove(it)
                     sccElements.add(it)
+                    // once we are back at our starting node [bb], we stop
                     if (it == bb) break
                 }
                 log.trace("Done with stack clone iteration.")
@@ -148,6 +153,37 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                         }
                 }
 
+                // Additionally label edges when a block has 2 outgoing edges, both going to other
+                // sccElements
+                // This ensures that don't end up in the nextBranchEdgesList during EOG iteration
+                // but have a higher priority
+                // Note: If sccElements have only one nextEOG edge, this is not necessary, as these
+                // edges will end up in the currentBBEdgesList list, which has the highes priority
+                // anyway
+                sccElements.forEach { sccElement ->
+                    val nextSCCEdges =
+                        sccElement.nextEOGEdges.filter { nextEOGEdge ->
+                            nextEOGEdge.end in sccElements
+                        }
+                    if (nextSCCEdges.size > 1) {
+                        nextSCCEdges.forEach { nextSCCEdge ->
+                            nextSCCEdge.scc = level
+                            // Do the same for the underlying edges
+                            // There should be exactly one edge from the endNode of the BB-Edge's
+                            // start to a node that's in the BB of the BB-Edge's end
+                            // Let's find this one and also label it
+                            val bbNextEdges =
+                                (nextSCCEdge.start as? BasicBlock)?.endNode?.nextEOGEdges?.filter {
+                                    it.end.basicBlock.single() == nextSCCEdge.end
+                                }
+                            if ((bbNextEdges?.size ?: 0) > 1) {
+                                log.error("Found more than one EOG Edge matching criteria")
+                            }
+                            bbNextEdges?.forEach { bbNextEdge -> bbNextEdge.scc = level }
+                        }
+                    }
+                }
+
                 // find nested loops
                 if (loopEntryElements.isNotEmpty() && loopExitElements.isNotEmpty()) {
                     // We should always first find the outer loop. Now let's see if the elements in
@@ -155,10 +191,13 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                     // SCC again contain a loop if we remove the exit node
                     val blackList = currentInfo.blackList.toMutableList()
                     val innerLevel = level + 1
-                    // blacklist the exitElement and see if we still have a loop, that would be an
+                    // blacklist the exitElement that comes last in the code (hoping that this is
+                    // the very end) and see if we still have a loop, that would be an
                     // inner loop
-                    blackList.addAll(loopExitElements)
-                    sccElements.removeAll(loopExitElements)
+                    val eliminatedElement =
+                        loopEntryElements.sortedBy { it.location?.region?.startLine }.last()
+                    blackList.add(eliminatedElement)
+                    sccElements.remove(eliminatedElement)
                     val innerInfo =
                         tarjanInfoMap.computeIfAbsent(innerLevel) { TarjanInfo(blackList) }
                     sccElements.forEach { element ->
@@ -174,9 +213,9 @@ class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     override fun accept(node: Node) {
         if (node.basicBlock.isEmpty()) return
         val bb = node.basicBlock.single() as BasicBlock
-        tarjanInfoMap.computeIfAbsent(0) { TarjanInfo(emptyList()) }
-        if (bb !in tarjanInfoMap[0]?.visited!!) {
-            tarjan(bb, 0)
+        val entry = tarjanInfoMap.computeIfAbsent(0) { TarjanInfo(emptyList()) }
+        if (bb !in entry.visited) {
+            tarjan(bb, 1)
         }
     }
 }

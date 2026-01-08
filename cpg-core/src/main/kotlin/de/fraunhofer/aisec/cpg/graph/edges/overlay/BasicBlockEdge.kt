@@ -55,7 +55,7 @@ class BasicBlockEdge(start: Node, end: Node) : Edge<Node>(start, end) {
  * A collection of [BasicBlockEdge]s representing the relationship between a
  * [de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock] and its member [Node]s.
  */
-class BasicBlockEdges<NodeType : Node>(
+class BasicBlockEdgeList<NodeType : Node>(
     thisRef: Node,
     override var mirrorProperty: KProperty<MutableCollection<BasicBlockEdge>>,
     outgoing: Boolean = true,

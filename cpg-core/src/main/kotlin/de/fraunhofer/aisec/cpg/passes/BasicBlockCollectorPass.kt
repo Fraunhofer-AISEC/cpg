@@ -44,7 +44,7 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     override fun accept(t: Node) {
-        val (firstBasicBlock, _, _) = collectBasicBlocks(t, t.language is HasShortCircuitOperators)
+        val firstBasicBlock = collectBasicBlocks(t, t.language is HasShortCircuitOperators)
         (t as? EOGStarterHolder)?.firstBasicBlock = firstBasicBlock
     }
 
@@ -53,13 +53,9 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
      * iterating through the EOG in O(n) and collecting all nodes which are reachable from the
      * [startNode]. We identify basic blocks by merges and branches in the EOG but may not consider
      * [ShortCircuitOperator]s as EOG-splitting nodes if we set [splitOnShortCircuitOperator] to
-     * `false`..
+     * `false`.
      *
-     * It returns a triple containing:
-     * 1) The first basic block, which is the one starting at the [startNode].
-     * 2) A collection of all basic blocks which were collected.
-     * 3) A map from [Node] to the [BasicBlock] it belongs to. This is used to find out which basic
-     *    block a node belongs to, which is important when constructing the CDG.
+     * It returns the first basic block, which is the one starting at the [startNode].
      *
      * @param startNode The node to start the collection from, usually a [FunctionDeclaration].
      * @param splitOnShortCircuitOperator If true, the basic blocks will be split on short-circuit
@@ -70,7 +66,7 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     fun collectBasicBlocks(
         startNode: Node,
         splitOnShortCircuitOperator: Boolean,
-    ): Triple<BasicBlock, Collection<BasicBlock>, Map<Node, BasicBlock>> {
+    ): BasicBlock {
         val allBasicBlocks = mutableSetOf<BasicBlock>()
         val firstBB = BasicBlock(startNode = startNode)
         allBasicBlocks.add(firstBB)
@@ -175,7 +171,7 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
             } else {
                 // List is empty, nothing to do.
             }
-        }
-        return Triple(firstBB, allBasicBlocks, alreadySeen)
+
+        return firstBB
     }
 }

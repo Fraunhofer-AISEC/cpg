@@ -1,7 +1,7 @@
 rootProject.name = "cpg"
 
 plugins {
-    id("org.jetbrains.kotlinx.kover.aggregation") version "0.9.0"
+    id("org.jetbrains.kotlinx.kover.aggregation") version "0.9.3"
 }
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")

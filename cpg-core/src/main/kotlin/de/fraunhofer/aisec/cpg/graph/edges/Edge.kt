@@ -94,8 +94,8 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable, HasAssumptions {
         if (this === other) return true
         if (other !is Edge<*>) return false
 
-        return start == other.start &&
-            end == other.end &&
+        return start === other.start &&
+            end === other.end &&
             index == other.index &&
             name == other.name
     }

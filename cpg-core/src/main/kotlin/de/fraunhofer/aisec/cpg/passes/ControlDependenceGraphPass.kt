@@ -103,7 +103,6 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
             (startNode as? EOGStarterHolder)?.firstBasicBlock
                 ?: BasicBlockCollectorPass(ctx)
                     .collectBasicBlocks(startNode, startNode.language is HasShortCircuitOperators)
-                    .first
 
         log.trace("Retrieved network of BBs for {}", startNode.name)
 

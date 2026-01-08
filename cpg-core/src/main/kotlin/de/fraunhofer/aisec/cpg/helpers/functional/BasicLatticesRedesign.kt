@@ -238,7 +238,13 @@ interface Lattice<T : Lattice.Element> {
 
         fun IdentityHashMap<EvaluationOrder, MutableSet<Pair<Node, Node>>>.removeCandidate():
             EvaluationOrder {
-            val key = this.entries.firstOrNull { (_, v) -> v.isEmpty() }?.key ?: this.keys.first()
+            // We want an element that were we erased all values
+            // If there are multiple, we take the one with the highest scc
+            val key =
+                this.entries
+                    .filter { (_, v) -> v.isEmpty() }
+                    .maxByOrNull { (k, _) -> k.scc ?: 0 }
+                    ?.key ?: this.keys.first()
             this.remove(key)
             return key
         }
@@ -260,6 +266,8 @@ interface Lattice<T : Lattice.Element> {
                 } else if (sccEdgesQueue.isNotEmpty()) {
                     // if we have edges pointing into the same SCC, that's our next priority
                     sccEdgesQueue.poll().second
+                } else if (mergePointsEdgesMap.hasCandidate()) {
+                    mergePointsEdgesMap.removeCandidate()
                 } else if (nextBranchEdgesList.isNotEmpty()) {
                     // If we have points splitting up the EOG, we prefer to process these before
                     // merging the EOG again. This is to hopefully reduce the number of merges that
@@ -337,16 +345,16 @@ interface Lattice<T : Lattice.Element> {
                 if (
                     it !in currentBBEdgesList &&
                         it !in nextBranchEdgesList &&
-                        //                        it !in mergePointsEdgesMap.keys &&
                         (isNoBranchingPoint ||
                             oldGlobalIt == null ||
                             newGlobalIt.compare(oldGlobalIt) in setOf(Order.GREATER, Order.UNEQUAL))
                 ) {
                     if (
-                        it.start.prevEOGEdges.size > 1
-                        // Check also if we are at the beginning of a loop. In this case, we don't
-                        // add the merge point
-                        && it.start.prevEOGEdges.none { it.scc != null }
+                        // We might be at the merge point.
+                        // In comparison to a loop entry, a merge point has multiple prevEOGEdges
+                        // without SCC-Label and at least one nextEOGEdge without
+                        it.start.prevEOGEdges.filter { it.scc == null }.size > 1 &&
+                            it.start.nextEOGEdges.any { it.scc == null }
                     ) {
                         // This edge brings us to a merge point, so we add it to the list of merge
                         // points.
