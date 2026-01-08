@@ -54,6 +54,15 @@ class EvaluationOrder(
      */
     var branch: Boolean? = null,
 ) : Edge<Node>(start, end) {
+    /**
+     * For nodes with multiple incoming our outcoming edges, we label the node leading to/from a
+     * possible strongly connected component (SCC). This is populated by the
+     * [de.fraunhofer.aisec.cpg.passes.SccPass]. Remains `null` if the edge is not part of any
+     * non-trivial SCC, and otherwise indicates the priority (AKA the nesting level) with which the
+     * edge should be taken when iterating the EOG
+     */
+    var scc: Int? = null
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is EvaluationOrder) return false
