@@ -64,23 +64,20 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
      *   EOG.
      */
     fun collectBasicBlocks(startNode: Node, splitOnShortCircuitOperator: Boolean): BasicBlock {
-        val allBasicBlocks = mutableSetOf<BasicBlock>()
         val firstBB = BasicBlock()
-        allBasicBlocks.add(firstBB)
         val worklist =
             mutableListOf<Triple<Node, EvaluationOrder?, BasicBlock>>(
                 Triple(startNode, null, firstBB)
             )
-        val alreadySeen = IdentityHashMap<Node, BasicBlock>()
 
         while (worklist.isNotEmpty()) {
             var (currentStartNode, reachingEOGEdge, basicBlock) = worklist.removeFirst()
             // If we have already seen this node, we can skip it.
-            if (currentStartNode in alreadySeen) {
-                val oldBB = alreadySeen[currentStartNode]
+            if (currentStartNode.basicBlockEdges.isNotEmpty()) {
+                val oldBB = currentStartNode.basicBlock.single()
                 // There must be some sort of merge point to arrive here twice, so we add the
                 // reaching basic block to the BB this node belongs to.
-                oldBB?.prevEOG += basicBlock
+                oldBB.prevEOG += basicBlock
                 continue
             }
 
@@ -89,6 +86,10 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                     basicBlock.nodes.isNotEmpty() &&
                     currentStartNode != basicBlock.startNode
             ) {
+                // The check for basicBlock.nodes.isNotEmpty() is necessary to avoid that the first
+                // basic block starting at startNode is split. This can happen if startNode is
+                // reachable from multiple paths (e.g., recursive functions) where one of them also
+                // comes from a branching node.
                 // If the currentStartNode is reachable from multiple paths, it starts a new basic
                 // block. currentStartNode is part of the new basic block, so we add it after this
                 // if statement.
@@ -102,12 +103,7 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                             this.unreachable = reachingEOGEdge?.unreachable ?: false
                         }
                     }
-
-                // Add the newly created basic block to the allBasicBlocks set
-                allBasicBlocks.add(basicBlock)
             }
-            // Add the basic block to the already seen map for this node
-            alreadySeen[currentStartNode] = basicBlock
 
             basicBlock.nodes.add(currentStartNode)
 
@@ -138,8 +134,8 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 // basicBlock.outgoingEOGEdges.addAll(nextRelevantEOGEdges)
                 worklist.addAll(
                     nextRelevantEOGEdges.mapNotNull {
-                        if (it.end in alreadySeen) {
-                            alreadySeen[it.end]?.prevEOGEdges?.add(basicBlock) {
+                        if (it.end.basicBlock.isNotEmpty()) {
+                            it.end.basicBlock.single().prevEOGEdges.add(basicBlock) {
                                 this.branch = it.branch
                                 this.unreachable = it.unreachable
                             }
@@ -149,14 +145,11 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                                 it.end,
                                 it,
                                 BasicBlock().apply {
-                                    // ingoingEOGEdges.add(it)
                                     // Save the relationships between the two basic blocks.
                                     prevEOGEdges.add(basicBlock) {
                                         this.branch = it.branch
                                         this.unreachable = it.unreachable
                                     }
-                                    // Add the newly created basic block to the allBasicBlocks set
-                                    allBasicBlocks.add(this)
                                 },
                             )
                         }
