@@ -318,7 +318,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         /**
          * The timeout after which we stop analyzing a function. Default one hour AKA 3,600,000ms
          */
-        var analyzeTimeout: Long = 3600000,
+        var timeout: Long = 3600000,
 
         /** This specifies if we are running after DFG edges to create the detailed shortFS * */
         var detailedShortFS: Boolean = true,
@@ -420,7 +420,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         node.nextEOGEdges,
                         startState,
                         ::transfer,
-                        timeout = passConfig<Configuration>()?.analyzeTimeout,
+                        timeout = passConfig<Configuration>()?.timeout,
                     )
                 if (result == null) {
                     log.info("Timeout exceeded when analyzing ${node.name.localName}.")
