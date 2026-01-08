@@ -3639,4 +3639,33 @@ class PointsToPassTest {
             prevDFGEndpoints.contains(fd.assigns.single { it.isCompoundAssignment }.lhs.single())
         )
     }
+
+    @Test
+    fun testLoopSensitivity() {
+        val file = File("src/test/resources/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+
+        val fd = tu.functions["loop_sensitivity"]
+        assertNotNull(fd)
+
+        val printedA = fd.calls[0].arguments[1]
+        assertNotNull(printedA)
+
+        val aDecl = fd.variables[0]
+        assertNotNull(aDecl)
+
+        val aRefIf = fd.refs.filter { it.name.localName == "a" }[0]
+        assertNotNull(aRefIf)
+
+        val aRefElse = fd.refs.filter { it.name.localName == "a" }[2]
+        assertNotNull(aRefElse)
+
+        assertEquals(printedA.prevDFG.toSet(), setOf(aDecl, aRefIf, aRefElse))
+    }
 }

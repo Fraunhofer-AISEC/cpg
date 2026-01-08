@@ -299,8 +299,6 @@ class DFGTest {
         )
     }
 
-    // TODO for merge
-    @Ignore
     @Test
     @Throws(Exception::class)
     fun testSensitivityThroughLoop() {

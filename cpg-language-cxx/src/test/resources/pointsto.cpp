@@ -623,3 +623,17 @@ int test_compound() {
 
   i = i+(j=2);
 }
+
+int loop_sensitivity() {
+  int a = 0;
+  int param = 0;
+  while ( param < 7 ) {
+    if (param > 7 ) {
+      a = 1;
+    } else {
+      println("%d", a);
+      a = 2;
+    }
+  }
+  a = 3;
+}

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.helpers.functional
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.LoopStatement
 import de.fraunhofer.aisec.cpg.helpers.ConcurrentIdentitySet
@@ -360,7 +361,8 @@ interface Lattice<T : Lattice.Element> {
         // A high priority in the SCC-Label indicates a high priority in the queue
         val sccEdgesQueue =
             PriorityQueue<Pair<Int, EvaluationOrder>>(compareByDescending { it.first })
-        // This list contains the edge(s) that are the next branch(es) to process. We process these
+        // This list contains theiterateEogIn edge(s) that are the next branch(es) to process. We
+        // process these
         // after the current basic block has been processed.
         val nextBranchEdgesList = mutableListOf<EvaluationOrder>()
         // This list contains the merge points that we have to process. We process these after the
@@ -415,9 +417,25 @@ interface Lattice<T : Lattice.Element> {
                     currentBBEdgesList.removeFirst()
                 } else if (sccEdgesQueue.isNotEmpty()) {
                     // if we have edges pointing into the same SCC, that's our next priority
-                    sccEdgesQueue.poll().second
+                    val tmp = sccEdgesQueue.poll().second
+                    if (
+                        startEdges.any {
+                            (it.start as? FunctionDeclaration)?.name?.localName == "__gmpf_sub"
+                        }
+                    )
+                        println("+++ Extracting sccEdge: ${tmp.start} ++ ${tmp.end}")
+                    tmp
                 } else if (mergePointsEdgesMap.hasCandidate()) {
-                    mergePointsEdgesMap.removeCandidate()
+                    val tmp = mergePointsEdgesMap.removeCandidate()
+                    if (
+                        startEdges.any {
+                            (it.start as? FunctionDeclaration)?.name?.localName == "__gmpf_sub"
+                        }
+                    )
+                        println(
+                            "+++ Extracting mergePointEdgesCandidate: ${tmp.start} ++ ${tmp.end}"
+                        )
+                    tmp
                 } else if (nextBranchEdgesList.isNotEmpty()) {
                     // If we have points splitting up the EOG, we prefer to process these before
                     // merging the EOG again. This is to hopefully reduce the number of merges
@@ -425,10 +443,19 @@ interface Lattice<T : Lattice.Element> {
                     // re-processing the same basic blocks.
                     nextBranchEdgesList.removeFirst()
                 } else {
-                    mergePointsEdgesMap.removeCandidate()
+                    val tmp = mergePointsEdgesMap.removeCandidate()
+                    if (
+                        startEdges.any {
+                            (it.start as? FunctionDeclaration)?.name?.localName == "__gmpf_sub"
+                        }
+                    )
+                        println(
+                            "+++ Extracting incomplete mergePointEdgesCandidate: ${tmp.start} ++ ${tmp.end}"
+                        )
+                    tmp
                 }
 
-            //            println("+++ ${nextEdge.start} ++ ${nextEdge.end}")
+            //                println("+++ ${nextEdge.start} ++ ${nextEdge.end}")
             // Compute the effects of "nextEdge" on the state by applying the transformation to
             // its state.
             val nextGlobal = globalState[nextEdge] ?: continue
