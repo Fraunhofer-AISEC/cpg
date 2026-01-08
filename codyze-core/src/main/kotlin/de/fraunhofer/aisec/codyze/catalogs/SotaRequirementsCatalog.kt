@@ -23,18 +23,11 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.ontology
+package de.fraunhofer.aisec.codyze.catalogs
 
-import de.fraunhofer.aisec.cpg.graph.Node
-import java.util.Objects
-import kotlin.Any
-import kotlin.Boolean
-import kotlin.Int
-
-/** Represents an Initialization Vector of a cipher. */
-public open class InitializationVector(var size: Int? = null, underlyingNode: Node? = null) :
-    Functionality(underlyingNode) {
-    override fun equals(other: Any?): Boolean = other is InitializationVector && super.equals(other)
-
-    override fun hashCode(): Int = Objects.hash(super.hashCode())
-}
+/**
+ * This is a placeholder class for existing requirements catalogs. These could be based on national
+ * agencies' recommendations or other entities defining their interpretation of the
+ * state-of-the-art. These catalogs can be used to bundle queries for a specific evaluation project.
+ */
+abstract class SotaRequirementsCatalog

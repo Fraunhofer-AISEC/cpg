@@ -1,0 +1,211 @@
+/*
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
+package de.fraunhofer.aisec.codyze.catalogs.helpers
+
+import de.fraunhofer.aisec.cpg.graph.concepts.manualExtensions.*
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.TransportEncryption
+import de.fraunhofer.aisec.cpg.query.GenericQueryOperators
+import de.fraunhofer.aisec.cpg.query.QueryTree
+import de.fraunhofer.aisec.cpg.query.and
+import de.fraunhofer.aisec.cpg.query.mergeWithAll
+
+fun TransportEncryption.isProtocol(name: String, version: Float): QueryTree<Boolean> {
+    val correct = this.protocol == name && this.protocolVersion == version
+    return QueryTree(
+        value = correct,
+        stringRepresentation =
+            if (correct) "Protocol is $name version $version"
+            else "Protocol is $protocol version $protocolVersion, expected $name version $version",
+        node = this,
+        operator = GenericQueryOperators.EVALUATE,
+    )
+}
+
+fun TLS1_2_CipherSuite.checkSupportedGroups(
+    acceptedSupportedGroups: Collection<String>
+): QueryTree<Boolean> {
+    return this.supportedGroups
+        .map {
+            val groupOk = it in acceptedSupportedGroups
+            QueryTree(
+                value = groupOk,
+                stringRepresentation =
+                    if (groupOk) {
+                        "TLS 1.2 cipher suite ${this.ciphersuiteName} uses a recommended supported group: $it"
+                    } else {
+                        "TLS 1.2 cipher suite ${this.ciphersuiteName} uses a NOT recommended supported group: $it"
+                    },
+                node = this,
+                operator = GenericQueryOperators.EVALUATE,
+            )
+        }
+        .mergeWithAll()
+}
+
+fun TLS1_2_CipherSuite.isCipherSuiteAccepted(
+    acceptedCipherSuites: Collection<String>
+): QueryTree<Boolean> {
+    val isOk = this.ciphersuiteName in acceptedCipherSuites
+    return QueryTree(
+        value = isOk,
+        stringRepresentation =
+            if (isOk) {
+                "TLS 1.2 cipher suite ${this.ciphersuiteName} is allowed"
+            } else {
+                "TLS 1.2 cipher suite ${this.ciphersuiteName} is NOT allowed"
+            },
+        node = this,
+        operator = GenericQueryOperators.EVALUATE,
+    )
+}
+
+fun TLS1_2.checkTLS12Configuration(
+    acceptedCipherSuites: Collection<String>,
+    acceptedSupportedGroups: Collection<String>,
+): QueryTree<Boolean> {
+    return this.cipherSuites12
+        ?.map { cipherSuite ->
+            val ciphersuiteAllowed = cipherSuite.isCipherSuiteAccepted(acceptedCipherSuites)
+
+            if (
+                cipherSuite.ciphersuiteName?.startsWith("TLS_ECDHE") == true ||
+                    cipherSuite.ciphersuiteName?.startsWith("TLS_DHE") == true
+            ) {
+                val supportedGroupsOk = cipherSuite.checkSupportedGroups(acceptedSupportedGroups)
+                ciphersuiteAllowed and supportedGroupsOk
+            } else ciphersuiteAllowed
+        }
+        ?.mergeWithAll()
+        ?: QueryTree(
+            value = false,
+            stringRepresentation = "No cipher suites found for TLS 1.2",
+            node = this,
+            operator = GenericQueryOperators.EVALUATE,
+        )
+}
+
+fun TLS1_3.usesOnlyRecommendedCipherSuites(
+    recommendedCipherSuites: Collection<String>
+): QueryTree<Boolean> =
+    this.cipherSuites
+        ?.map { suite ->
+            val isRecommendedSuite =
+                suite != null && suite.name.toString() in recommendedCipherSuites
+            QueryTree(
+                value = isRecommendedSuite,
+                stringRepresentation =
+                    if (isRecommendedSuite) {
+                        "TLS 1.3 cipher suite ${suite.name} is recommended"
+                    } else {
+                        "TLS 1.3 cipher suite ${suite?.name} is NOT recommended. Should be one of $recommendedCipherSuites"
+                    },
+                node = suite,
+                operator = GenericQueryOperators.EVALUATE,
+            )
+        }
+        ?.mergeWithAll()
+        ?: QueryTree(
+            value = false,
+            stringRepresentation = "No cipher suites found for TLS 1.3",
+            node = this,
+            operator = GenericQueryOperators.EVALUATE,
+        )
+
+fun TLS1_3.usesOnlyRecommendedCertSignatureAlgorithms(
+    recommendedCertSignatureAlgorithms: Collection<String>
+) =
+    this.certificateSignatureAlgorithms
+        ?.map { algorithm ->
+            val isRecommendedAlg = algorithm in recommendedCertSignatureAlgorithms
+            QueryTree(
+                value = isRecommendedAlg,
+                stringRepresentation =
+                    if (isRecommendedAlg) {
+                        "TLS 1.3 certificate signature algorithm $algorithm is recommended"
+                    } else {
+                        "TLS 1.3 certificate signature algorithm $algorithm is NOT recommended. Should be one of $recommendedCertSignatureAlgorithms"
+                    },
+                node = this,
+                operator = GenericQueryOperators.EVALUATE,
+            )
+        }
+        ?.mergeWithAll()
+
+fun TLS1_3.usesOnlyRecommendedSignatureAlgorithms(
+    recommendedSignatureAlgorithms: Collection<String>
+) =
+    this.signatureAlgorithms
+        .map { algorithm ->
+            val isRecommendedAlg = algorithm in recommendedSignatureAlgorithms
+            QueryTree(
+                value = isRecommendedAlg,
+                stringRepresentation =
+                    if (isRecommendedAlg) {
+                        "TLS 1.3 signature algorithm $algorithm is recommended"
+                    } else {
+                        "TLS 1.3 signature algorithm $algorithm is NOT recommended. Should be one of $recommendedSignatureAlgorithms"
+                    },
+                node = this,
+                operator = GenericQueryOperators.EVALUATE,
+            )
+        }
+        .mergeWithAll()
+
+fun TLS1_3.usesOnlyRecommendedSupportedGroups(recommendedSupportedGroups: Collection<String>) =
+    this.supportedGroups
+        .map { group ->
+            val isRecommendedGroup = group in recommendedSupportedGroups
+            QueryTree(
+                value = isRecommendedGroup,
+                stringRepresentation =
+                    if (isRecommendedGroup) {
+                        "TLS 1.3 supported group $group is recommended"
+                    } else {
+                        "TLS 1.3 supported group $group is NOT recommended. Should be one of $recommendedSupportedGroups"
+                    },
+                node = this,
+                operator = GenericQueryOperators.EVALUATE,
+            )
+        }
+        .mergeWithAll()
+
+fun TLS1_3.usesOnlyRecommendedPSKHandshakeModes(recommendedHandshakeWithPSK: Collection<String>) =
+    this.pskHandshakeModes
+        .map { mode ->
+            val isRecommendedMode = mode in recommendedHandshakeWithPSK
+            QueryTree(
+                value = isRecommendedMode,
+                stringRepresentation =
+                    if (isRecommendedMode) {
+                        "TLS 1.3 PSK handshake mode $mode is recommended"
+                    } else {
+                        "TLS 1.3 PSK handshake mode $mode is NOT recommended. Should be one of $recommendedHandshakeWithPSK"
+                    },
+                node = this,
+                operator = GenericQueryOperators.EVALUATE,
+            )
+        }
+        .mergeWithAll()

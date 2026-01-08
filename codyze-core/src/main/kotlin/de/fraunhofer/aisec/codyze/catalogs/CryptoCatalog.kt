@@ -1,0 +1,64 @@
+/*
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
+package de.fraunhofer.aisec.codyze.catalogs
+
+import de.fraunhofer.aisec.cpg.graph.concepts.manualExtensions.HashFunction
+import de.fraunhofer.aisec.cpg.graph.concepts.manualExtensions.Signature
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.Cipher
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.KeyDerivationFunction
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.MessageAuthenticationCode
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.SymmetricCipher
+import de.fraunhofer.aisec.cpg.query.QueryTree
+
+/**
+ * If an instance of a [SotaRequirementsCatalog] provides an interpretation of the state-of-the-art
+ * regarding cryptographic aspects, it should implement this interface to signal that it provides
+ * such an interpretation.
+ */
+interface CryptoCatalog {
+    val requirePQC: Boolean
+
+    context(signature: Signature)
+    fun checkSignature(): QueryTree<Boolean>
+
+    context(cipher: SymmetricCipher)
+    fun checkSymmetricEncryption(): QueryTree<Boolean>
+
+    context(cipher: Cipher)
+    fun checkAsymmetricEncryption(): QueryTree<Boolean>
+
+    context(cipher: Cipher)
+    fun checkKeyExchange(): QueryTree<Boolean>
+
+    context(hashFunction: HashFunction)
+    fun checkHashFunction(): QueryTree<Boolean>
+
+    context(kdf: KeyDerivationFunction)
+    fun checkKDF(): QueryTree<Boolean>
+
+    context(mac: MessageAuthenticationCode)
+    fun checkMAC(): QueryTree<Boolean>
+}
