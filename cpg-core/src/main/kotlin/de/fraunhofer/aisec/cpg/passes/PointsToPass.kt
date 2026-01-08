@@ -207,7 +207,11 @@ class PointsToState(
                     "$other should be of type Element but is of type ${other.javaClass}"
                 )
 
-            return this@Element.second.compare(other.second)
+            // There are some occasions were we need to compare both the generalState and the
+            // DeclarationState (instead of only the DeclarationState), so let's do that
+            val firstResult = this@Element.first.compare(other.first)
+            val secondResult = this@Element.second.compare(other.second)
+            return compareMultiple(firstResult, secondResult)
         }
 
         suspend fun parallelCompare(other: Lattice.Element): Order {
@@ -218,7 +222,11 @@ class PointsToState(
                     "$other should be of type Element but is of type ${other.javaClass}"
                 )
 
-            return this@Element.second.parallelCompare(other.second)
+            // There are some occasions were we need to compare both the generalState and the
+            // DeclarationState (instead of only the DeclarationState), so let's do that
+            val firstResult = this@Element.first.parallelCompare(other.first)
+            val secondResult = this@Element.second.parallelCompare(other.second)
+            return compareMultiple(firstResult, secondResult)
         }
 
         override fun duplicate():
