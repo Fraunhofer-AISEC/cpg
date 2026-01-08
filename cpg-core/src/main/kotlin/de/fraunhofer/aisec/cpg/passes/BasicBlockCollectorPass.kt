@@ -63,12 +63,9 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
      *   considered, and the basic blocks will be collected as if they were not splitting up the
      *   EOG.
      */
-    fun collectBasicBlocks(
-        startNode: Node,
-        splitOnShortCircuitOperator: Boolean,
-    ): BasicBlock {
+    fun collectBasicBlocks(startNode: Node, splitOnShortCircuitOperator: Boolean): BasicBlock {
         val allBasicBlocks = mutableSetOf<BasicBlock>()
-        val firstBB = BasicBlock(startNode = startNode)
+        val firstBB = BasicBlock()
         allBasicBlocks.add(firstBB)
         val worklist =
             mutableListOf<Triple<Node, EvaluationOrder?, BasicBlock>>(
@@ -87,13 +84,17 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 continue
             }
 
-            if (currentStartNode.prevEOG.size > 1 && currentStartNode != basicBlock.startNode) {
+            if (
+                currentStartNode.prevEOG.size > 1 &&
+                    basicBlock.nodes.isNotEmpty() &&
+                    currentStartNode != basicBlock.startNode
+            ) {
                 // If the currentStartNode is reachable from multiple paths, it starts a new basic
                 // block. currentStartNode is part of the new basic block, so we add it after this
                 // if statement.
                 // Set the end node of the old basic block to the last node on the path
                 basicBlock =
-                    BasicBlock(startNode = currentStartNode).apply {
+                    BasicBlock().apply {
                         // ingoingEOGEdges.addAll(currentStartNode.prevEOGEdges)
                         // Save the relationships between the two basic blocks.
                         prevEOGEdges.add(basicBlock) {
@@ -147,7 +148,7 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                             Triple(
                                 it.end,
                                 it,
-                                BasicBlock(startNode = it.end).apply {
+                                BasicBlock().apply {
                                     // ingoingEOGEdges.add(it)
                                     // Save the relationships between the two basic blocks.
                                     prevEOGEdges.add(basicBlock) {
@@ -171,6 +172,7 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
             } else {
                 // List is empty, nothing to do.
             }
+        }
 
         return firstBB
     }

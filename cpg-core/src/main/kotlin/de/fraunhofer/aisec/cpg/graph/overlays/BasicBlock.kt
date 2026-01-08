@@ -26,13 +26,10 @@
 package de.fraunhofer.aisec.cpg.graph.overlays
 
 import de.fraunhofer.aisec.cpg.PopulatedByPass
-import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.BasicBlockEdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
-import de.fraunhofer.aisec.cpg.graph.statements.LoopStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ComprehensionExpression
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.passes.BasicBlockCollectorPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
