@@ -315,11 +315,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         /** This specifies the address length (usually 64bit) */
         var addressLength: Int = 64,
 
+        /**
+         * The timeout after which we stop analyzing a function. Default one hour AKA 3,600,000ms
+         */
+        var analyzeTimeout: Long = 3600000,
+
         /** This specifies if we are running after DFG edges to create the detailed shortFS * */
         var detailedShortFS: Boolean = true,
-
-        /** specifies the time (in s) after which we stop the analysis */
-        var maxAnalysisTime: Long = 0,
 
         /**
          * specifies if we draw the current(deref)derefvalue-DFG Edges. Not sure if we want/need
@@ -413,8 +415,17 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             if (node.body == null) {
                 handleEmptyFunctionDeclaration(lattice, startState, node)
             } else {
-                lattice.iterateEOG(node.nextEOGEdges, startState, ::transfer)
-                    as PointsToState.Element
+                val result =
+                    lattice.iterateEOG(
+                        node.nextEOGEdges,
+                        startState,
+                        ::transfer,
+                        timeout = passConfig<Configuration>()?.analyzeTimeout,
+                    )
+                if (result == null) {
+                    log.info("Timeout exceeded when analyzing ${node.name.localName}.")
+                    handleEmptyFunctionDeclaration(lattice, startState, node)
+                } else result as PointsToState.Element
             }
 
         if (nodeVisitedCounterMap.isNotEmpty()) {
@@ -1258,9 +1269,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         // The toIdentitySet avoids having the same elements multiple times
         val invokes = currentNode.invokes.toConcurrentIdentitySet()
         invokes.forEach { invoke ->
-            log.info("Executing calculateFunctionSummary")
             val inv = calculateFunctionSummaries(invoke)
-            log.info("Finished with calculateFunctionSummary")
             if (inv != null) {
                 doubleState =
                     calculateIncomingCallingContexts(lattice, inv, currentNode, doubleState)
