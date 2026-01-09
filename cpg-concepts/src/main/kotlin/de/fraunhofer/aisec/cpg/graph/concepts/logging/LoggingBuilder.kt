@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.logging
 
 import de.fraunhofer.aisec.cpg.graph.MetadataProvider
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
@@ -65,21 +66,22 @@ fun MetadataProvider.newLogging(
     connect: Boolean,
 ) =
     newConcept(
-        {
-            Logging(
-                logLevelThreshold = logLevelThreshold,
-                enabled = enabled,
-                monitoringEnabled = monitoringEnabled,
-                name = name,
-                retentionPeriod = retentionPeriod,
-                securityAlertsEnabled = securityAlertsEnabled,
-                loggingService = loggingService,
-                underlyingNode = underlyingNode,
-            )
-        },
-        underlyingNode = underlyingNode,
-        connect = connect,
-    )
+            {
+                Logging(
+                    logLevelThreshold = logLevelThreshold,
+                    enabled = enabled,
+                    monitoringEnabled = monitoringEnabled,
+                    name = name,
+                    retentionPeriod = retentionPeriod,
+                    securityAlertsEnabled = securityAlertsEnabled,
+                    loggingService = loggingService,
+                    underlyingNode = underlyingNode,
+                )
+            },
+            underlyingNode = underlyingNode,
+            connect = connect,
+        )
+        .apply { this.name = Name(localName = name) }
 
 /**
  * Creates a [LogWrite] node with the same metadata as the [underlyingNode].

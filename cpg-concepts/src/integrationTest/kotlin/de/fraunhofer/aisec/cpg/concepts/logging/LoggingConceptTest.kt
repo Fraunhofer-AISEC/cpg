@@ -186,9 +186,6 @@ class LoggingConceptTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val loggingNodes = result.conceptNodes { it is Logging }
-        assertTrue(loggingNodes.isNotEmpty())
-
         val allLoggers = result.conceptNodes { it is Logging }
         assertEquals(
             3,

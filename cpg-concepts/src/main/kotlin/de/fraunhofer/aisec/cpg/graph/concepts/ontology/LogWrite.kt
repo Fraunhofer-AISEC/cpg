@@ -56,4 +56,9 @@ public open class LogWrite(
             other.logArguments == this.logArguments
 
     override fun hashCode(): Int = Objects.hash(super.hashCode(), logLevel, logArguments)
+
+    override fun setDFG() {
+        this.nextDFG += linkedConcept
+        this.prevDFG += logArguments.filterNotNull()
+    }
 }

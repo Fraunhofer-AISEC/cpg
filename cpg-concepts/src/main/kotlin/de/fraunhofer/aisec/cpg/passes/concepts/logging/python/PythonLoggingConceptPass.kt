@@ -154,9 +154,10 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
         val callee = callExpression.callee
 
         if (callee.name.toString() == "logging.getLogger") {
-            val loggerName = callExpression.arguments.firstOrNull()?.evaluate().toString()
             val normalizedLoggerName =
-                when (loggerName) {
+                when (
+                    val loggerName = callExpression.arguments.firstOrNull()?.evaluate().toString()
+                ) {
                     "",
                     "null" // Pythons `None` is translated to a Kotlin `null`
                     -> defaultLoggerName
