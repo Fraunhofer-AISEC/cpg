@@ -69,6 +69,7 @@ import de.fraunhofer.aisec.cpg.passes.TranslationUnitPass
 import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
+import de.fraunhofer.aisec.cpg.passes.configuration.PassOrderingHelper
 import de.fraunhofer.aisec.cpg.passes.consumeTargets
 import de.fraunhofer.aisec.cpg.passes.hardDependencies
 import io.modelcontextprotocol.kotlin.sdk.server.Server
@@ -77,6 +78,7 @@ import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import java.io.File
+import java.util.IdentityHashMap
 import kotlin.String
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
@@ -395,6 +397,8 @@ fun Server.addListPasses() {
     }
 }
 
+val nodeToPass = IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>>()
+
 /** Runs a specified [de.fraunhofer.aisec.cpg.passes.Pass] on a specified [Node]. */
 fun Server.addRunPass() {
     this.addTool(
@@ -432,101 +436,142 @@ fun Server.addRunPass() {
                             listOf(TextContent("Could not find the pass ${payload.passName}."))
                     )
 
-            // TODO: Check if all required passes have been run before executing this pass.
+            val node =
+                result.nodes.find { it.id.toString() == payload.nodeId }
+                    ?: return@runOnCpg CallToolResult(
+                        content =
+                            listOf(
+                                TextContent(
+                                    "Could not find any node with the ID ${payload.nodeId}."
+                                )
+                            )
+                    )
 
-            ctx?.let { ctx ->
-                val prototype =
-                    passClass.primaryConstructor?.call(ctx)
+            // Check if all required passes have been run before executing this pass.
+            val orderingHelper = PassOrderingHelper(listOf(passClass))
+            val orderedPassesToExecute = orderingHelper.order().flatten()
+            for (passToExecute in orderedPassesToExecute) {
+                // TODO: Identify the correct node(s). This may require moving up or down the AST
+                // depending on the type of the pass.
+
+                // Check if pass has already been executed for the respective node
+                if (passToExecute !in nodeToPass.computeIfAbsent(node) { mutableSetOf() }) {
+                    // Execute the pass for the node
+                    ctx?.let { ctx ->
+                        val passResult = runPassForNode(node, passToExecute, ctx)
+                        passResult?.let {
+                            // Return if there was an error during pass execution
+                            return@runOnCpg it
+                        }
+                        // Mark pass as executed
+                        nodeToPass[node]?.add(passToExecute)
+                    }
                         ?: return@runOnCpg CallToolResult(
                             content =
                                 listOf(
-                                    TextContent("Could not create the pass ${payload.passName}.")
+                                    TextContent("Cannot run run_pass without translation context.")
                                 )
                         )
-
-                val node = result.nodes.find { it.id.toString() == payload.nodeId }
-                when (prototype) {
-                    is TranslationResultPass ->
-                        if (node is TranslationResult) {
-                            consumeTargets(
-                                cls = prototype::class,
-                                ctx = ctx,
-                                targets = listOf(node),
-                                executedFrontends = ctx.executedFrontends,
-                            )
-                        } else {
-                            CallToolResult(
-                                content =
-                                    listOf(
-                                        TextContent(
-                                            "Expected node of type TranslationResult for pass ${payload.passName}, but got ${node?.javaClass?.simpleName}"
-                                        )
-                                    )
-                            )
-                        }
-                    is ComponentPass ->
-                        if (node is Component) {
-                            consumeTargets(
-                                cls = prototype::class,
-                                ctx = ctx,
-                                targets = listOf(node),
-                                executedFrontends = ctx.executedFrontends,
-                            )
-                        } else {
-                            CallToolResult(
-                                content =
-                                    listOf(
-                                        TextContent(
-                                            "Expected node of type Component for pass ${payload.passName}, but got ${node?.javaClass?.simpleName}"
-                                        )
-                                    )
-                            )
-                        }
-                    is TranslationUnitPass ->
-                        if (node is TranslationUnitDeclaration) {
-                            consumeTargets(
-                                cls = prototype::class,
-                                ctx = ctx,
-                                targets = listOf(node),
-                                executedFrontends = ctx.executedFrontends,
-                            )
-                        } else {
-                            CallToolResult(
-                                content =
-                                    listOf(
-                                        TextContent(
-                                            "Expected node of type TranslationUnitDeclaration for pass ${payload.passName}, but got ${node?.javaClass?.simpleName}"
-                                        )
-                                    )
-                            )
-                        }
-                    is EOGStarterPass -> {
-                        if (node is EOGStarterHolder) {
-                            consumeTargets(
-                                cls = prototype::class,
-                                ctx = ctx,
-                                targets = listOf(node),
-                                executedFrontends = ctx.executedFrontends,
-                            )
-                        } else {
-                            CallToolResult(
-                                content =
-                                    listOf(
-                                        TextContent(
-                                            "Expected node of type EOGStarterHolder for pass ${payload.passName}, but got ${node?.javaClass?.simpleName}"
-                                        )
-                                    )
-                            )
-                        }
-                    }
                 }
-
-                CallToolResult(content = listOf(TextContent("Not implemented yet")))
             }
-                ?: return@runOnCpg CallToolResult(
-                    content =
-                        listOf(TextContent("Cannot run run_pass without translation context."))
-                )
+
+            CallToolResult(
+                content =
+                    listOf(
+                        TextContent(
+                            "Successfully ran ${payload.passName} on node ${payload.nodeId}."
+                        )
+                    )
+            )
         }
     }
+}
+
+fun runPassForNode(
+    node: Node,
+    passClass: KClass<out Pass<*>>,
+    ctx: TranslationContext,
+): CallToolResult? {
+    val prototype =
+        passClass.primaryConstructor?.call(ctx)
+            ?: return CallToolResult(
+                content = listOf(TextContent("Could not create the pass ${passClass.simpleName}."))
+            )
+
+    when (prototype) {
+        is TranslationResultPass ->
+            if (node is TranslationResult) {
+                consumeTargets(
+                    cls = prototype::class,
+                    ctx = ctx,
+                    targets = listOf(node),
+                    executedFrontends = ctx.executedFrontends,
+                )
+            } else {
+                CallToolResult(
+                    content =
+                        listOf(
+                            TextContent(
+                                "Expected node of type TranslationResult for pass ${passClass.simpleName}, but got ${node.javaClass.simpleName}"
+                            )
+                        )
+                )
+            }
+        is ComponentPass ->
+            if (node is Component) {
+                consumeTargets(
+                    cls = prototype::class,
+                    ctx = ctx,
+                    targets = listOf(node),
+                    executedFrontends = ctx.executedFrontends,
+                )
+            } else {
+                CallToolResult(
+                    content =
+                        listOf(
+                            TextContent(
+                                "Expected node of type Component for pass ${passClass.simpleName}, but got ${node.javaClass.simpleName}"
+                            )
+                        )
+                )
+            }
+        is TranslationUnitPass ->
+            if (node is TranslationUnitDeclaration) {
+                consumeTargets(
+                    cls = prototype::class,
+                    ctx = ctx,
+                    targets = listOf(node),
+                    executedFrontends = ctx.executedFrontends,
+                )
+            } else {
+                CallToolResult(
+                    content =
+                        listOf(
+                            TextContent(
+                                "Expected node of type TranslationUnitDeclaration for pass ${passClass.simpleName}, but got ${node.javaClass.simpleName}"
+                            )
+                        )
+                )
+            }
+        is EOGStarterPass -> {
+            if (node is EOGStarterHolder) {
+                consumeTargets(
+                    cls = prototype::class,
+                    ctx = ctx,
+                    targets = listOf(node),
+                    executedFrontends = ctx.executedFrontends,
+                )
+            } else {
+                CallToolResult(
+                    content =
+                        listOf(
+                            TextContent(
+                                "Expected node of type EOGStarterHolder for pass ${passClass.simpleName}, but got ${node.javaClass.simpleName}"
+                            )
+                        )
+                )
+            }
+        }
+    }
+    return null
 }
