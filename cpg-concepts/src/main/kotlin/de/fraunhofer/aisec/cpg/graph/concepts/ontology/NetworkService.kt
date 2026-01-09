@@ -85,8 +85,8 @@ public open class NetworkService(
     override fun equals(other: Any?): Boolean =
         other is NetworkService &&
             super.equals(other) &&
-            other.ips == this.ips &&
-            other.ports == this.ports &&
+            other.ips.contentEquals(this.ips) &&
+            other.ports.contentEquals(this.ports) &&
             other.authenticity == this.authenticity &&
             other.computes == this.computes &&
             other.serviceMetadataDocument == this.serviceMetadataDocument &&
