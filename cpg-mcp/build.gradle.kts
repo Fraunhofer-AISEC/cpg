@@ -76,6 +76,7 @@ dependencies {
     annotationProcessor(libs.picocli.codegen)
 
     integrationTestImplementation(libs.kotlin.reflect)
+    implementation(libs.reflections)
     integrationTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
     integrationTestImplementation(libs.mcp)
     integrationTestImplementation(libs.ktor.serialization.kotlinx.json)

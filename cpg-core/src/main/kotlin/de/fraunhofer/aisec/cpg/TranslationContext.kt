@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.TranslationManager.AdditionalSource
 import de.fraunhofer.aisec.cpg.TranslationManager.Companion.log
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
@@ -140,4 +141,6 @@ open class TranslationContext(
      * used after the config is built.
      */
     internal object EmptyTranslationContext : TranslationContext()
+
+    val executedFrontends = mutableSetOf<LanguageFrontend<*, *>>()
 }

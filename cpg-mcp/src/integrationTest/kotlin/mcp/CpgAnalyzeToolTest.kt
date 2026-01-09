@@ -91,7 +91,7 @@ class CpgAnalyzeToolTest {
     fun cpgAnalyzeToolUnitTest() {
         val payload =
             CpgAnalyzePayload(content = "def hello():\n    print('Hello World')", extension = "py")
-        val analysisResult = runCpgAnalyze(payload)
+        val analysisResult = runCpgAnalyze(payload, runPasses = true, cleanup = true)
         assertNotNull(globalAnalysisResult, "Result should be set after tool execution")
 
         assertEquals(2, analysisResult.functions)
