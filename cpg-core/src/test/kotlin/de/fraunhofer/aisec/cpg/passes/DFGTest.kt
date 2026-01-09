@@ -318,8 +318,6 @@ class DFGTest {
         assertFalse(dfgNodes.contains(l3))
     }
 
-    // TODO for merge
-    @Ignore
     @Test
     @Throws(Exception::class)
     fun testSensitivityWithLabels() {

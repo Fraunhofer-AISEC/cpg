@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.test.assertLocalName
 import de.fraunhofer.aisec.cpg.testcases.FlowQueriesTest
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -738,8 +737,6 @@ class DataflowQueriesTest {
         )
     }
 
-    // TODO for merge
-    @Ignore
     @Test
     fun testValidatorDFGLinearInterprocedural() {
         val resultLinearWithBInterProc = FlowQueriesTest.validatorDataflowLinearWithCall()
