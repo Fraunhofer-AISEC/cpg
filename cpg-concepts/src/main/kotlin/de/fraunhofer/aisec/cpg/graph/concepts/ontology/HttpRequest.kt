@@ -34,6 +34,7 @@ import kotlin.String
 
 public open class HttpRequest(
     val arguments: List<Node>,
+    val method: HttpMethod,
     public val call: String?,
     public val reqBody: String?,
     public val httpEndpoint: HttpEndpoint?,
@@ -46,8 +47,9 @@ public open class HttpRequest(
             other.call == this.call &&
             other.reqBody == this.reqBody &&
             other.httpEndpoint == this.httpEndpoint &&
-            other.arguments == this.arguments
+            other.arguments == this.arguments &&
+            other.method == this.method
 
     override fun hashCode(): Int =
-        Objects.hash(super.hashCode(), call, reqBody, httpEndpoint, arguments)
+        Objects.hash(super.hashCode(), call, reqBody, httpEndpoint, arguments, method)
 }

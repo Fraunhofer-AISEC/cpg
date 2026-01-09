@@ -41,7 +41,7 @@ public open class HttpEndpoint(
     val maxInputSize: Int?,
     val userInput: MutableList<Node>,
     public val handler: String?,
-    public val method: String?,
+    public val method: HttpMethod,
     public val path: String?,
     public val url: String?,
     public val authenticity: Authenticity?,
@@ -83,4 +83,17 @@ public open class HttpEndpoint(
             maxInputSize,
             userInput,
         )
+}
+
+enum class HttpMethod {
+    GET,
+    POST,
+    PUT,
+    HEAD,
+    PATCH,
+    OPTIONS,
+    CONNECT,
+    TRACE,
+    DELETE,
+    UNKNOWN,
 }
