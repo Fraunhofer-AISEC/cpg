@@ -26,23 +26,25 @@
 package de.fraunhofer.aisec.cpg.graph.concepts.ontology
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import java.util.List
 import java.util.Objects
 import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
-import kotlin.String
 
 public open class DatabaseQuery(
+    val parameters: List<Node>,
     public val modify: Boolean?,
-    calls: List<String>?,
+    calls: List<Node>?,
     databaseService: DatabaseService?,
     storage: DatabaseStorage?,
     linkedConcept: DatabaseStorage,
     underlyingNode: Node? = null,
 ) : DatabaseOperation(calls, databaseService, storage, linkedConcept, underlyingNode) {
     override fun equals(other: Any?): Boolean =
-        other is DatabaseQuery && super.equals(other) && other.modify == this.modify
+        other is DatabaseQuery &&
+            super.equals(other) &&
+            other.modify == this.modify &&
+            other.parameters == this.parameters
 
-    override fun hashCode(): Int = Objects.hash(super.hashCode(), modify)
+    override fun hashCode(): Int = Objects.hash(super.hashCode(), modify, parameters)
 }

@@ -37,6 +37,9 @@ import kotlin.String
  * proxy, e.g. a load balancer.
  */
 public open class HttpEndpoint(
+    val rateLimiting: RateLimiting?,
+    val maxInputSize: Int?,
+    val userInput: MutableList<Node>,
     public val handler: String?,
     public val method: String?,
     public val path: String?,
@@ -59,7 +62,10 @@ public open class HttpEndpoint(
             other.authorization == this.authorization &&
             other.httpRequestContext == this.httpRequestContext &&
             other.proxyTarget == this.proxyTarget &&
-            other.transportEncryption == this.transportEncryption
+            other.transportEncryption == this.transportEncryption &&
+            other.rateLimiting == this.rateLimiting &&
+            other.maxInputSize == this.maxInputSize &&
+            other.userInput == this.userInput
 
     override fun hashCode(): Int =
         Objects.hash(
@@ -73,5 +79,8 @@ public open class HttpEndpoint(
             httpRequestContext,
             proxyTarget,
             transportEncryption,
+            rateLimiting,
+            maxInputSize,
+            userInput,
         )
 }
