@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.models.Properties
 import java.io.File
 import java.util.Locale
 import java.util.stream.Collectors
+import kotlin.jvm.optionals.getOrNull
 import org.apache.commons.lang3.StringUtils
 import org.jboss.forge.roaster.Roaster
 import org.jboss.forge.roaster.model.source.Import
@@ -108,7 +109,7 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
     fun getAbstractRepresentationOfOWL(
         packageName: String?
     ): LinkedHashSet<ClassAbstractRepresentation> {
-        val classes = ontology!!.classesInSignature
+        val classes = ontology!!.classesInSignature().toList().toSet()
         val abstractRepresentationList: LinkedHashSet<ClassAbstractRepresentation> = linkedSetOf()
         for (clazz in classes) {
             // skip owl:Thing
@@ -124,7 +125,7 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
 
     // Get all java classes from OWL file
     fun getJavaClassSources(packageName: String?): List<JavaClassSource> {
-        val classes = ontology!!.classesInSignature
+        val classes = ontology!!.classesInSignature()
         var jcsList: MutableList<JavaClassSource> = ArrayList()
         for (clazz in classes) {
             // skip owl:Thing
@@ -446,7 +447,7 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
         val propertiesList: LinkedHashSet<Properties> = linkedSetOf()
 
         // Get Set of OWLClassAxioms
-        val tempAx = ontology!!.getAxioms(clazz, Imports.EXCLUDED)
+        val tempAx = ontology!!.axioms(clazz, Imports.EXCLUDED)
         var classRelationshipPropertyName: String
         var classDataPropertyValue: String
 
@@ -472,7 +473,10 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
                 // Set data properties description, e.g., for the property mixedDuties from the RBAC
                 // class
                 val description =
-                    getDataPropertyDescription(ontology, classAxiom.dataPropertiesInSignature)
+                    getDataPropertyDescription(
+                        ontology,
+                        classAxiom.dataPropertiesInSignature().toList().toMutableSet(),
+                    )
                 property.propertyDescription = description
                 applyEnumDirective(property, description)
             } else if (superClass.classExpressionType == ClassExpressionType.DATA_HAS_VALUE) {
@@ -484,7 +488,10 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
                 property.propertyType = classDataPropertyValue
                 property.propertyName = classRelationshipPropertyName
                 val description =
-                    getDataPropertyDescription(ontology, classAxiom.dataPropertiesInSignature)
+                    getDataPropertyDescription(
+                        ontology,
+                        classAxiom.dataPropertiesInSignature().toList().toMutableSet(),
+                    )
                 property.propertyDescription = description
                 applyEnumDirective(property, description)
                 //                // check, if the type is a Map, then we need to ignore it in neo4j
@@ -508,7 +515,7 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
     ): JavaClassSource {
 
         // Get Set of OWLClassAxioms
-        val tempAx = ontology!!.getAxioms(clazz, Imports.EXCLUDED)
+        val tempAx = ontology!!.axioms(clazz, Imports.EXCLUDED)
         var classRelationshipPropertyName: String
         var classDataPropertyValue: String
 
@@ -533,14 +540,17 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
                 // Set data properties description, e.g., for the property mixedDuties from the RBAC
                 // class
                 val dataPropertiesDescription =
-                    getDataPropertyDescription(ontology, classAxiom.dataPropertiesInSignature)
+                    getDataPropertyDescription(
+                        ontology,
+                        classAxiom.dataPropertiesInSignature().toList().toMutableSet(),
+                    )
                 if (dataPropertiesDescription != "")
                     javaClass
                         .addProperty(classDataPropertyValue, classRelationshipPropertyName)
                         .field
                         .setProtected()
                         .javaDoc
-                        .setText(dataPropertiesDescription)
+                        .text = dataPropertiesDescription
                 else
                     javaClass
                         .addProperty(classDataPropertyValue, classRelationshipPropertyName)
@@ -566,7 +576,10 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
                 // Set data properties description, e.g., for the property interval from the
                 // AutomaticUpdates class
                 val dataPropertiesDescription =
-                    getDataPropertyDescription(ontology, classAxiom.dataPropertiesInSignature)
+                    getDataPropertyDescription(
+                        ontology,
+                        classAxiom.dataPropertiesInSignature().toList().toMutableSet(),
+                    )
                 if (dataPropertiesDescription != "")
                     property.javaDoc.text = dataPropertiesDescription
             }
@@ -591,9 +604,12 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
         // Get sorted List of OWLClassAxioms
         val tempAx =
             ontology!!
-                .getAxioms(clazz, Imports.EXCLUDED)
-                .stream()
-                .sorted(Comparator.comparing { e: OWLClassAxiom -> e.axiomWithoutAnnotations })
+                .axioms(clazz, Imports.EXCLUDED)
+                .sorted(
+                    Comparator.comparing { e: OWLClassAxiom ->
+                        e.getAxiomWithoutAnnotations<OWLClassAxiom>()
+                    }
+                )
                 .collect(Collectors.toList())
         var classRelationshipPropertyName: String
 
@@ -681,9 +697,12 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
         // Get sorted List of OWLClassAxioms
         val tempAx =
             ontology!!
-                .getAxioms(clazz, Imports.EXCLUDED)
-                .stream()
-                .sorted(Comparator.comparing { e: OWLClassAxiom -> e.axiomWithoutAnnotations })
+                .axioms(clazz, Imports.EXCLUDED)
+                .sorted(
+                    Comparator.comparing { e: OWLClassAxiom ->
+                        e.getAxiomWithoutAnnotations<OWLClassAxiom>()
+                    }
+                )
                 .collect(Collectors.toList())
         var classRelationshipPropertyName: String
 
@@ -742,7 +761,7 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
     // insensitive).
     private fun getPlural(s: String): String {
         return if (s.contains("storage", true)) {
-            return s
+            s
         } else if (s[s.length - 1] == 'y') {
             s.substring(0, s.length - 1) + "ies"
         } else s + "s"
@@ -790,7 +809,7 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
     // returns the OWLClass Compute
     private fun getParentClass(clazz: OWLClass): OWLClass? {
         // Get Set of OWLClassAxioms
-        val tempAx = ontology!!.getAxioms(clazz, Imports.EXCLUDED)
+        val tempAx = ontology!!.axioms(clazz, Imports.EXCLUDED)
         var superClassEntity: OWLClass? = null
 
         // Currently, it is assumed that there is only one 'OWL parent', but there can be several
@@ -854,7 +873,7 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
 
     // Get class name from OWLClassExpression
     private fun getClassName(nce: OWLClassExpression, ontology: OWLOntology?): String {
-        for (elem in nce.classesInSignature) {
+        for (elem in nce.classesInSignature()) {
             for (item in EntitySearcher.getAnnotationObjects(elem, ontology!!)) {
                 if (item != null) {
                     if (item.property.iri.remainder.get() == "label") {
@@ -875,7 +894,9 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
         }
 
         val annotations =
-            nce.classesInSignature
+            nce.classesInSignature()
+                .toList()
+                .toSet()
                 .sortedBy { it.iri.toString() }
                 .flatMap { EntitySearcher.getAnnotationObjects(it, ontology).toList() }
 
@@ -929,15 +950,16 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
         }
 
     private fun OWLAnnotation.languagePriority(): Int =
-        when (val lang = languageTagSafe().lowercase(Locale.ROOT)) {
+        when (languageTagSafe().lowercase(Locale.ROOT)) {
             "en" -> 0
             "" -> 1
             else -> 2
         }
 
-    private fun OWLAnnotation.languageTagSafe(): String = value.asLiteral().orNull()?.lang ?: ""
+    private fun OWLAnnotation.languageTagSafe(): String = value.asLiteral().getOrNull()?.lang ?: ""
 
-    private fun OWLAnnotation.literalOrNull(): String? = value.asLiteral().orNull()?.literal?.trim()
+    private fun OWLAnnotation.literalOrNull(): String? =
+        value.asLiteral().getOrNull()?.literal?.trim()
 
     private fun OWLAnnotation.isDescriptionAnnotation(): Boolean {
         val key = annotationKey()
@@ -945,7 +967,7 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
     }
 
     private fun OWLAnnotation.annotationKey(): String =
-        property.iri.remainder.orNull()?.lowercase(Locale.ROOT) ?: ""
+        property.iri.remainder.getOrNull()?.lowercase(Locale.ROOT) ?: ""
 
     private fun OWLAnnotation.asPlainText(): String {
         val literal = literalOrNull()
@@ -1033,7 +1055,7 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
 
     // Get class data property name (realtionship in OWL)
     private fun getClassDataPropertyName(nce: OWLClassExpression): String {
-        for (elem in nce.dataPropertiesInSignature) {
+        for (elem in nce.dataPropertiesInSignature()) {
             return elem.iri.fragment
         }
         return ""
@@ -1041,7 +1063,7 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
 
     // Get class object property name (realtionship in owl)
     private fun getClassObjectPropertyName(nce: OWLClassExpression): String {
-        for (elem in nce.objectPropertiesInSignature) {
+        for (elem in nce.objectPropertiesInSignature()) {
             for (item in EntitySearcher.getAnnotationObjects(elem, ontology!!)) {
                 if (item != null && item.property.iri.remainder.get() != "comment") {
                     return item.value.toString().split("\"").toTypedArray()[1]
