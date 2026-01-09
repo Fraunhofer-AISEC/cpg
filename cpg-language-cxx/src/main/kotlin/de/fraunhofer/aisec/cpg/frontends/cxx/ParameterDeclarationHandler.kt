@@ -44,14 +44,14 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
             is CPPASTParameterDeclaration -> handleParameterDeclaration(node)
             is CASTParameterDeclaration -> handleParameterDeclaration(node)
             else -> {
-                return handleNotSupported(node, node.javaClass.name)
+                handleNotSupported(node, node.javaClass.name)
             }
         }
     }
 
     private fun handleParameterDeclaration(ctx: IASTParameterDeclaration): ParameterDeclaration {
         var name = ctx.declarator.name.toString()
-        var specifier = ctx.declSpecifier
+        val specifier = ctx.declSpecifier
 
         // Parse the type. If we are running into the situation where the declSpecifier is
         // "unspecified" and the name is not, then this is an unnamed parameter of an unknown type
