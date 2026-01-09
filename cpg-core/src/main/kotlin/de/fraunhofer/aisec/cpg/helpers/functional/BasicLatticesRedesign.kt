@@ -407,7 +407,8 @@ interface Lattice<T : Lattice.Element> {
         while (
             currentBBEdgesList.isNotEmpty() ||
                 nextBranchEdgesList.isNotEmpty() ||
-                mergePointsEdgesMap.isNotEmpty()
+                mergePointsEdgesMap.isNotEmpty() ||
+                sccEdgesQueue.isNotEmpty()
         ) {
             val nextEdge =
                 if (currentBBEdgesList.isNotEmpty()) {
@@ -544,7 +545,8 @@ interface Lattice<T : Lattice.Element> {
                 nextEdge.end.nextEOGEdges.isEmpty() ||
                     (currentBBEdgesList.isEmpty() &&
                         nextBranchEdgesList.isEmpty() &&
-                        mergePointsEdgesMap.isEmpty())
+                        mergePointsEdgesMap.isEmpty() &&
+                        sccEdgesQueue.isEmpty())
             ) {
                 finalState = this@Lattice.lub(finalState, newState, false)
             }
