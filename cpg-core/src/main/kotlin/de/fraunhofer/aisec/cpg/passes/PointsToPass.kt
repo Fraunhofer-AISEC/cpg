@@ -2690,6 +2690,25 @@ fun PointsToState.Element.getLastWrites(
                     } ?: PowersetLattice.Element()
                 }
         }
+        is MemberExpression -> {
+            // For MemberExpression, the lastWrite is the FieldDeclaration if we don't have anything
+            // else
+            val lastWrites =
+                this.getAddresses(node, node).flatMapTo(PowersetLattice.Element()) {
+                    this.declarationsState[it]?.third?.map {
+                        val newProps = equalLinkedHashSetOf<Any>().apply { addAll(it.properties) }
+                        NodeWithPropertiesKey(it.node, newProps)
+                    } ?: setOf()
+                }
+            if (lastWrites.isEmpty()) {
+                val ref = node.refersTo
+                if (ref != null)
+                    PowersetLattice.Element(NodeWithPropertiesKey(ref, equalLinkedHashSetOf()))
+                else
+                // If we don't have a referring declaration, we return the empty set
+                lastWrites
+            } else lastWrites
+        }
         is ParameterMemoryValue -> {
             // For parameterMemoryValues, we have to check if there was a write within the function.
             // If not, it's the deref value itself.
