@@ -147,20 +147,20 @@ fun MetadataProvider.newHttpEndpoint(
  * Creates a new [HttpRequest] operation for the given [HttpClient].
  *
  * @param underlyingNode The underlying [Node] representing the request.
- * @param linkedConcept The [HttpClient] concept this operation belongs to.
+ * @param concept The [HttpClient] concept this operation belongs to.
  * @param arguments A list of [Node]s representing the arguments passed to the request.
  * @param method The [HttpMethod] of the request.
  * @param call The call identifier for the request.
  * @param reqBody The request body content.
  * @param httpEndpoint The [HttpEndpoint] being requested.
  * @param connect If `true`, the created [Operation] will be connected to the underlying node by
- *   setting its `underlyingNode` and inserting it in the EOG , to [linkedConcept] by its edge
+ *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
  *   [Concept.ops].
  * @return The created [HttpRequest] operation.
  */
 fun MetadataProvider.newHttpRequest(
     underlyingNode: Node,
-    linkedConcept: HttpClient,
+    concept: HttpClient,
     arguments: List<Node>,
     method: HttpMethod,
     call: String?,
@@ -169,18 +169,18 @@ fun MetadataProvider.newHttpRequest(
     connect: Boolean,
 ) =
     newOperation(
-        { concept ->
+        {
             HttpRequest(
                 arguments = arguments,
                 method = method,
                 call = call,
                 reqBody = reqBody,
                 httpEndpoint = httpEndpoint,
-                linkedConcept = concept,
+                linkedConcept = it,
             )
         },
         underlyingNode = underlyingNode,
-        concept = linkedConcept,
+        concept = concept,
         connect = connect,
     )
 
@@ -188,22 +188,22 @@ fun MetadataProvider.newHttpRequest(
  * Creates a new [RegisterHttpEndpoint] operation for the given [HttpEndpoint].
  *
  * @param underlyingNode The underlying [Node] registering the endpoint method.
- * @param linkedConcept The [HttpRequestHandler] concept to which this operation belongs.
+ * @param concept The [HttpRequestHandler] concept to which this operation belongs.
  * @param httpEndpoint The [HttpEndpoint] which is registered by this operation.
  * @param connect If `true`, the created [Operation] will be connected to the underlying node by
- *   setting its `underlyingNode` and inserting it in the EOG , to [linkedConcept] by its edge
+ *   setting its `underlyingNode` and inserting it in the EOG , to [concept] by its edge
  *   [Concept.ops].
  * @return The created [RegisterHttpEndpoint] operation.
  */
 fun MetadataProvider.newRegisterHttpEndpoint(
     underlyingNode: Node,
-    linkedConcept: HttpRequestHandler,
+    concept: HttpRequestHandler,
     httpEndpoint: HttpEndpoint?,
     connect: Boolean,
 ) =
     newOperation(
-        { concept -> RegisterHttpEndpoint(httpEndpoint = httpEndpoint, linkedConcept = concept) },
+        { RegisterHttpEndpoint(httpEndpoint = httpEndpoint, linkedConcept = it) },
         underlyingNode = underlyingNode,
-        concept = linkedConcept,
+        concept = concept,
         connect = connect,
     )
