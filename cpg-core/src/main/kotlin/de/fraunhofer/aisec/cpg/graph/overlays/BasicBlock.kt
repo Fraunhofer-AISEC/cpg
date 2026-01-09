@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
 import java.util.*
+import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.typeconversion.Convert
 
@@ -46,13 +47,13 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
  * Note that there is not a single [underlyingNode] because the basic block can span multiple nodes
  * which are kept in [nodes].
  */
-class BasicBlock(
+class BasicBlock() : OverlayNode() {
     /**
      * The starting node of this basic block. I.e., the first node in the BB's internal EOG. It's
      * either a merge point or the first node in a branch.
      */
-    var startNode: Node
-) : OverlayNode() {
+    val startNode: Node?
+        get() = nodes.firstOrNull()
 
     /** The edges connecting this basic block to its member nodes. */
     @Relationship(value = "BB", direction = Relationship.Direction.INCOMING)
@@ -94,7 +95,7 @@ class BasicBlock(
                     .mapNotNull { it.location?.region?.endColumn }
                     .maxOrNull() ?: -1
             return PhysicalLocation(
-                uri = startNode.location?.artifactLocation?.uri ?: URI(""),
+                uri = startNode?.location?.artifactLocation?.uri ?: URI(""),
                 region =
                     Region(
                         startLine = startLine,
@@ -118,6 +119,9 @@ class BasicBlock(
     }
 
     override fun toString(): String {
-        return "BasicBlock from ${startNode::class.simpleName} ${startNode.name} to ${(endNode ?: startNode)::class.simpleName} ${endNode?.name} in $location"
+        if (startNode == null) {
+            return "Empty BasicBlock in $location"
+        }
+        return "BasicBlock from ${startNode!!::class.simpleName} ${startNode?.name} to ${(endNode ?: startNode!!)::class.simpleName} ${endNode?.name} in $location"
     }
 }

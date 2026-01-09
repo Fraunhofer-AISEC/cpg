@@ -23,18 +23,12 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.graph.concepts.ontology
+package de.fraunhofer.aisec.codyze.catalogs
 
-import de.fraunhofer.aisec.cpg.graph.Node
-import java.util.Objects
-import kotlin.Any
-import kotlin.Boolean
-import kotlin.Int
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.TransportEncryption
+import de.fraunhofer.aisec.cpg.query.QueryTree
 
-/** Represents an Initialization Vector of a cipher. */
-public open class InitializationVector(var size: Int? = null, underlyingNode: Node? = null) :
-    Functionality(underlyingNode) {
-    override fun equals(other: Any?): Boolean = other is InitializationVector && super.equals(other)
-
-    override fun hashCode(): Int = Objects.hash(super.hashCode())
+interface TLSCatalog {
+    context(protocol: TransportEncryption)
+    fun checkTLS(): QueryTree<Boolean>
 }
