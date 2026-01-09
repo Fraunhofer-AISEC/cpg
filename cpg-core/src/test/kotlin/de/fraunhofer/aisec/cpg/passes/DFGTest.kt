@@ -277,8 +277,6 @@ class DFGTest {
      * Tests if the last artificial (implicit) return statement is removed by the
      * [ControlFlowSensitiveDFGPass].
      */
-    // TODO for merge
-    @Ignore
     @Test
     fun testReturnStatement() {
         val result = GraphExamples.getReturnTest()

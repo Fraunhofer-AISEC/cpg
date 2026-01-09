@@ -975,13 +975,14 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         return doubleState
     }
 
-    private fun handleReturnStatement(
+    private suspend fun handleReturnStatement(
         lattice: PointsToState,
         currentNode: ReturnStatement,
         doubleState: PointsToState.Element,
     ): PointsToState.Element {
         /* For Return Statements, all we really want to do is to collect their return values
-        to add them to the FunctionSummary */
+        to add them to the FunctionSummary
+        Additionally, we need a DFG-Edge to the functionSummary as required by the spec */
         var doubleState = doubleState
         if (currentNode.returnValues.isNotEmpty()) {
             val parentFD = currentNode.firstParentOrNull<FunctionDeclaration>()
@@ -1005,6 +1006,22 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         )
                 }
             }
+        }
+
+        // Get the FD we are returning to
+        currentNode.firstParentOrNull<FunctionDeclaration>()?.let { fd ->
+            doubleState =
+                lattice.push(
+                    doubleState,
+                    fd,
+                    GeneralStateEntryElement(
+                        PowersetLattice.Element(),
+                        PowersetLattice.Element(),
+                        PowersetLattice.Element(
+                            NodeWithPropertiesKey(currentNode, equalLinkedHashSetOf())
+                        ),
+                    ),
+                )
         }
         return doubleState
     }
