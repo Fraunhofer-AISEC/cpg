@@ -27,10 +27,9 @@ package de.fraunhofer.aisec.cpg.concepts.logging
 
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.concepts.logging.IsLogging
-import de.fraunhofer.aisec.cpg.graph.concepts.logging.Log
-import de.fraunhofer.aisec.cpg.graph.concepts.logging.LogLevel
-import de.fraunhofer.aisec.cpg.graph.concepts.logging.LogWrite
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogLevel
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogWrite
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.Logging
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.passes.concepts.logging.python.PythonLoggingConceptPass
@@ -112,7 +111,7 @@ class LoggingConceptTest : BaseTest() {
 
         assertEquals(
             2,
-            result.conceptNodes { it is Log }.size,
+            result.conceptNodes { it is Logging }.size,
             "Expected to find 2 logging nodes. One from the `import logging` declaration (not used directly for logging) and one from the `logging.getLogger()` call (used with `logger.error(...)`).",
         )
 
@@ -120,7 +119,7 @@ class LoggingConceptTest : BaseTest() {
         assertNotNull(literalERROR)
 
         assertTrue(
-            dataFlow(startNode = literalERROR) { it is Log }.value,
+            dataFlow(startNode = literalERROR) { it is Logging }.value,
             "Expected to find a dataflow from the literal \"ERROR\" to a logging node.",
         )
     }
@@ -145,7 +144,7 @@ class LoggingConceptTest : BaseTest() {
 
         assertEquals(
             2,
-            result.conceptNodes { it is Log }.size,
+            result.conceptNodes { it is Logging }.size,
             "Expected to find 2 logging nodes. One from the `import logging as log` declaration (used with `log.info()`) and one from the `log.getLogger()` call (used with `logger.error(...)`).",
         )
 
@@ -154,7 +153,7 @@ class LoggingConceptTest : BaseTest() {
 
         assertTrue(
             dataFlow(startNode = literalINFO) {
-                    it is Log && it.underlyingNode is ImportDeclaration
+                    it is Logging && it.underlyingNode is ImportDeclaration
                 }
                 .value,
             "Expected to find a dataflow from the literal \"INFO\" to the logging node based on the import declaration.",
@@ -165,7 +164,7 @@ class LoggingConceptTest : BaseTest() {
 
         assertTrue(
             dataFlow(startNode = literalERROR) {
-                    it is Log && it.underlyingNode?.code == "log.getLogger(__name__)"
+                    it is Logging && it.underlyingNode?.code == "log.getLogger(__name__)"
                 }
                 .value,
             "Expected to find a dataflow from the literal \"ERROR\" to the logging node based on the `getLogger(__name__)` call.",
@@ -187,10 +186,10 @@ class LoggingConceptTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val loggingNodes = result.conceptNodes { it is IsLogging }
+        val loggingNodes = result.conceptNodes { it is Logging }
         assertTrue(loggingNodes.isNotEmpty())
 
-        val allLoggers = result.conceptNodes { it is Log }
+        val allLoggers = result.conceptNodes { it is Logging }
         assertEquals(
             3,
             allLoggers.size,
@@ -258,7 +257,8 @@ class LoggingConceptTest : BaseTest() {
             }
         assertNotNull(result)
 
-        val logger = result.conceptNodes.singleOrNull { it is Log && it.logName == "my_logger" }
+        val logger =
+            result.conceptNodes.singleOrNull { it is Logging && it.name.localName == "my_logger" }
         assertNotNull(logger, "Expected to find a logger with name 'my_logger'")
 
         val errorCall = result.calls { it.name.localName == "error" }.singleOrNull()
