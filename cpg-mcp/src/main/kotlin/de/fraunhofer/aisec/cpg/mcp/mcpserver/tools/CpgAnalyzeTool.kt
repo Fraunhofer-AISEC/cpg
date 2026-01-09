@@ -29,8 +29,10 @@ import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
 import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.graph.variables
@@ -451,9 +453,6 @@ fun Server.addRunPass() {
             val orderingHelper = PassOrderingHelper(listOf(passClass))
             val orderedPassesToExecute = orderingHelper.order().flatten()
             for (passToExecute in orderedPassesToExecute) {
-                // TODO: Identify the correct node(s). This may require moving up or down the AST
-                // depending on the type of the pass.
-
                 // Check if pass has already been executed for the respective node
                 if (passToExecute !in nodeToPass.computeIfAbsent(node) { mutableSetOf() }) {
                     // Execute the pass for the node
@@ -487,6 +486,23 @@ fun Server.addRunPass() {
     }
 }
 
+/**
+ * Runs the specified [passClass] on the given [node] within the provided [ctx]
+ * (TranslationContext). To determine the appropriate targets for the pass, it checks the type of
+ * the pass and collects nodes accordingly:
+ * - For [TranslationResultPass], it looks for the nearest [TranslationResult] parent or the node
+ *   itself if it is a [TranslationResult].
+ * - For [ComponentPass], it checks if the node is a [Component] or searches for the nearest
+ *   [Component] parent or all children that are [Component]s.
+ * - For [TranslationUnitPass], it checks if the node is a [TranslationUnitDeclaration] or searches
+ *   for the nearest [TranslationUnitDeclaration] parent or all children that are
+ *   [TranslationUnitDeclaration]s.
+ * - For [EOGStarterPass], it checks if the node is an [EOGStarterHolder] or searches for the
+ *   nearest [EOGStarterHolder] parent with no previous EOG or all children that are
+ *   [EOGStarterHolder]s with no previous EOG.
+ *
+ * Returns a [CallToolResult] if there was an error during execution, otherwise returns null.
+ */
 fun runPassForNode(
     node: Node,
     passClass: KClass<out Pass<*>>,
@@ -499,12 +515,17 @@ fun runPassForNode(
             )
 
     when (prototype) {
-        is TranslationResultPass ->
-            if (node is TranslationResult) {
+        is TranslationResultPass -> {
+            val list =
+                listOfNotNull(
+                    node.firstParentOrNull<TranslationResult>(),
+                    node as? TranslationResult,
+                )
+            if (list.isNotEmpty()) {
                 consumeTargets(
                     cls = prototype::class,
                     ctx = ctx,
-                    targets = listOf(node),
+                    targets = list,
                     executedFrontends = ctx.executedFrontends,
                 )
             } else {
@@ -517,12 +538,19 @@ fun runPassForNode(
                         )
                 )
             }
-        is ComponentPass ->
-            if (node is Component) {
+        }
+        is ComponentPass -> {
+            val list = listOfNotNull(node as? Component).toMutableList()
+            if (list.isEmpty())
+                list.addAll(
+                    node.firstParentOrNull<Component>()?.let { listOf(it) }
+                        ?: node.allChildrenWithOverlays<Component>()
+                )
+            if (list.isNotEmpty()) {
                 consumeTargets(
                     cls = prototype::class,
                     ctx = ctx,
-                    targets = listOf(node),
+                    targets = list,
                     executedFrontends = ctx.executedFrontends,
                 )
             } else {
@@ -535,12 +563,19 @@ fun runPassForNode(
                         )
                 )
             }
-        is TranslationUnitPass ->
-            if (node is TranslationUnitDeclaration) {
+        }
+        is TranslationUnitPass -> {
+            val list = listOfNotNull(node as? TranslationUnitDeclaration).toMutableList()
+            if (list.isEmpty())
+                list.addAll(
+                    node.firstParentOrNull<TranslationUnitDeclaration>()?.let { listOf(it) }
+                        ?: node.allChildrenWithOverlays<TranslationUnitDeclaration>()
+                )
+            if (list.isNotEmpty()) {
                 consumeTargets(
                     cls = prototype::class,
                     ctx = ctx,
-                    targets = listOf(node),
+                    targets = list,
                     executedFrontends = ctx.executedFrontends,
                 )
             } else {
@@ -553,12 +588,23 @@ fun runPassForNode(
                         )
                 )
             }
+        }
         is EOGStarterPass -> {
-            if (node is EOGStarterHolder) {
+            val list = listOfNotNull<Node>((node as? EOGStarterHolder) as? Node).toMutableList()
+            if (list.isEmpty())
+                list.addAll(
+                    node
+                        .firstParentOrNull<Node>({ it is EOGStarterHolder && it.prevEOG.isEmpty() })
+                        ?.let { listOf(it) }
+                        ?: node.allChildrenWithOverlays<Node> {
+                            it is EOGStarterHolder && it.prevEOG.isEmpty()
+                        }
+                )
+            if (list.isNotEmpty()) {
                 consumeTargets(
                     cls = prototype::class,
                     ctx = ctx,
-                    targets = listOf(node),
+                    targets = list,
                     executedFrontends = ctx.executedFrontends,
                 )
             } else {
