@@ -104,17 +104,21 @@ fun MetadataProvider.newLogWrite(
     underlyingNode: Node,
     concept: Logging,
     level: LogLevel,
-    logArguments: List<Node>,
+    logArguments: List<Node?>,
     connect: Boolean,
 ) =
     newOperation(
-        { concept ->
-            LogWrite(linkedConcept = concept, logArguments = logArguments, logLevel = level)
-        },
-        underlyingNode = underlyingNode,
-        concept = concept,
-        connect = connect,
-    )
+            { concept ->
+                LogWrite(linkedConcept = concept, logArguments = logArguments, logLevel = level)
+            },
+            underlyingNode = underlyingNode,
+            concept = concept,
+            connect = connect,
+        )
+        .apply {
+            this.nextDFG += concept
+            this.prevDFG += logArguments.filterNotNull()
+        }
 
 /**
  * Creates a [LogGet] node with the same metadata as the [underlyingNode].
