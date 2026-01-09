@@ -92,7 +92,7 @@ class PythonValueEvaluator : ValueEvaluator() {
         return when (call.reconstructedImportName.toString()) {
             "os.path.join" -> {
                 call.arguments.joinToString(separator = "/") { arg ->
-                    super.evaluate(arg).toString()
+                    super.evaluate(arg, useCache = false).toString()
                 }
             }
             else -> super.handleCallExpression(call, depth)

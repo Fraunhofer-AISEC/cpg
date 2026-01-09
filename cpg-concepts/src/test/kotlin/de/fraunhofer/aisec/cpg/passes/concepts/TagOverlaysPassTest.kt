@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import java.util.Objects
 import kotlin.test.Test
 import kotlin.test.assertIs
@@ -72,6 +73,7 @@ class TagOverlaysPassTest {
                             config =
                                 TranslationConfiguration.builder()
                                     .registerPass<TagOverlaysPass>()
+                                    .registerPass<PointsToPass>()
                                     .configurePass<TagOverlaysPass>(
                                         TagOverlaysPass.Configuration(
                                             tag =

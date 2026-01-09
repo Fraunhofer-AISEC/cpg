@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import java.util.*
 
 @DependsOn(EvaluationOrderGraphPass::class)
 class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
@@ -95,6 +96,7 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                         }
                     }
             }
+
             basicBlock.nodes.add(currentStartNode)
 
             val nextRelevantEOGEdges = currentStartNode.nextEOGEdges
@@ -103,6 +105,7 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 // If the currentStartNode splits up into multiple paths, the next nodes start a new
                 // basic block. We already generate this here. But currentStartNode is still part of
                 // the current basic block, so we add it before this if statement.
+                // basicBlock.outgoingEOGEdges.addAll(nextRelevantEOGEdges)
                 worklist.addAll(
                     nextRelevantEOGEdges.mapNotNull {
                         if (it.end.basicBlock.isNotEmpty()) {
