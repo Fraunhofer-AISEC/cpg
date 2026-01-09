@@ -69,7 +69,7 @@ dependencies {
     implementation(libs.ktor.serialization.kotlinx.json)
 
     // Test dependencies
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
 
     // Command line interface support
     api(libs.picocli)
@@ -77,7 +77,7 @@ dependencies {
 
     integrationTestImplementation(libs.kotlin.reflect)
     implementation(libs.reflections)
-    integrationTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0")
+    integrationTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
     integrationTestImplementation(libs.mcp)
     integrationTestImplementation(libs.ktor.serialization.kotlinx.json)
     // We depend on the Python frontend for the integration tests, but the frontend is only

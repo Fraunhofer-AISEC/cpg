@@ -83,4 +83,4 @@ enum class HttpMethod {
 
 /** Base class for operations on an [HttpEndpoint]. */
 abstract class HttpEndpointOperation(underlyingNode: Node, concept: Concept) :
-    Operation(underlyingNode, concept)
+    Operation(concept, underlyingNode)

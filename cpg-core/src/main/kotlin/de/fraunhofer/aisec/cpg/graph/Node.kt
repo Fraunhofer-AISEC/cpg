@@ -39,8 +39,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
+import de.fraunhofer.aisec.cpg.graph.edges.overlay.BasicBlockEdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.overlay.Overlays
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -120,6 +122,16 @@ abstract class Node() :
     var nextEOGEdges: EvaluationOrders<Node> =
         EvaluationOrders<Node>(this, mirrorProperty = Node::prevEOGEdges, outgoing = true)
         protected set
+
+    /** The [BasicBlockEdgeList] leading to the basic block this node belongs to. */
+    @Relationship(value = "BB", direction = Relationship.Direction.OUTGOING)
+    @PopulatedByPass(BasicBlockCollectorPass::class)
+    var basicBlockEdges: BasicBlockEdgeList<Node> =
+        BasicBlockEdgeList<Node>(this, mirrorProperty = BasicBlock::nodeEdges, outgoing = true)
+        protected set
+
+    /** The basic block this node belongs to. */
+    var basicBlock by unwrapping(Node::basicBlockEdges)
 
     /**
      * The nodes which are control-flow dominated, i.e., the children of the Control Dependence

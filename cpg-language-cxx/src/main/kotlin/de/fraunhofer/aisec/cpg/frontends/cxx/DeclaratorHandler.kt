@@ -60,7 +60,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             is IASTCompositeTypeSpecifier -> handleCompositeTypeSpecifier(node)
             is CPPASTSimpleTypeTemplateParameter -> handleTemplateTypeParameter(node)
             else -> {
-                return handleNotSupported(node, node.javaClass.name)
+                handleNotSupported(node, node.javaClass.name)
             }
         }
     }
@@ -103,7 +103,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // Check, if the name is qualified or if we are within a record scope
         return if (
             frontend.scopeManager.currentScope is RecordScope ||
-                language.namespaceDelimiter.let { name.contains(it) } == true
+                language.namespaceDelimiter.let { name.contains(it) }
         ) {
             // If yes, treat this like a field declaration
             this.handleFieldDeclarator(ctx)
