@@ -499,11 +499,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         }
 
         /* Store function summary for this FunctionDeclaration. */
-        storeFunctionSummary(node, finalState)
+        if (node.body != null) storeFunctionSummary(node, finalState)
         if (functionSummaryAnalysisChain.last() == node) functionSummaryAnalysisChain.remove(node)
         else
             log.error(
-                "finished analyzing $node, which is not at the end of the functionSummaryAnalsysis chain, which is surprising"
+                "finished analyzing $node, which is not at the end of the functionSummaryAnalysis chain, which is surprising"
             )
     }
 
@@ -525,7 +525,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             val prevDFGs = PowersetLattice.Element<NodeWithPropertiesKey>()
             val newEntries =
                 ConcurrentHashMap.newKeySet<FSEntry>().apply {
-                    add(FSEntry(0, functionDeclaration, 1, ""))
+                    add(FSEntry(0, functionDeclaration, 1, "", isDummy = true))
                 }
             functionDeclaration.parameters.forEach { param ->
                 // The short FS
