@@ -4,7 +4,7 @@ use std::fs;
 use ra_ap_syntax::{ast, SourceFile, SyntaxNode};
 use ra_ap_syntax::{AstNode, Edition};
 use itertools::Itertools;
-use ra_ap_syntax::ast::{Abi, Adt, ArrayExpr, ArrayType, AsmClobberAbi, AsmConst, AsmExpr, AsmLabel, AsmOperand, AsmOperandNamed, AsmOptions, AsmPiece, AsmRegOperand, AsmSym, AssocItem, AssocTypeArg, AwaitExpr, BecomeExpr, BinExpr, BlockExpr, BoxPat, BreakExpr, CallExpr, CastExpr, ClosureExpr, Const, ConstArg, ConstBlockPat, ConstParam, ContinueExpr, DocCommentIter, DynTraitType, Enum, Expr, ExprStmt, ExternBlock, ExternCrate, ExternItem, FieldExpr, FieldList, Fn, FnPtrType, ForExpr, ForType, FormatArgsExpr, GenericArg, GenericParam, IdentPat, IfExpr, Impl, ImplTraitType, IndexExpr, InferType, Item, LetExpr, LetStmt, Lifetime, LifetimeArg, LifetimeParam, Literal, LiteralPat, LoopExpr, MacroCall, MacroDef, MacroExpr, MacroPat, MacroRules, MacroType, MatchExpr, MethodCallExpr, Module, NameRef, NeverType, OffsetOfExpr, OrPat, Param, ParamList, ParenExpr, ParenPat, ParenType, Pat, PathExpr, PathPat, PathType, PrefixExpr, PtrType, RangeExpr, RangePat, RecordExpr, RecordFieldList, RecordPat, RefExpr, RefPat, RefType, RestPat, ReturnExpr, SelfParam, SlicePat, SliceType, Static, Stmt, Struct, Trait, TryExpr, TupleExpr, TupleFieldList, TuplePat, TupleStructPat, TupleType, Type, TypeAlias, TypeArg, TypeParam, UnderscoreExpr, Union, Use, UseBoundGenericArg, Variant, VariantDef, WhileExpr, WildcardPat, YeetExpr, YieldExpr};
+use ra_ap_syntax::ast::{Abi, Adt, ArrayExpr, ArrayType, AsmClobberAbi, AsmConst, AsmExpr, AsmLabel, AsmOperand, AsmOperandNamed, AsmOptions, AsmPiece, AsmRegOperand, AsmSym, AssocItem, AssocTypeArg, AwaitExpr, BecomeExpr, BinExpr, BlockExpr, BoxPat, BreakExpr, CallExpr, CastExpr, ClosureExpr, Const, ConstArg, ConstBlockPat, ConstParam, ContinueExpr, DocCommentIter, DynTraitType, Enum, Expr, ExprStmt, ExternBlock, ExternCrate, ExternItem, FieldExpr, FieldList, Fn, FnPtrType, ForExpr, ForType, FormatArgsExpr, GenericArg, GenericParam, IdentPat, IfExpr, Impl, ImplTraitType, IndexExpr, InferType, Item, LetElse, LetExpr, LetStmt, Lifetime, LifetimeArg, LifetimeParam, Literal, LiteralPat, LoopExpr, MacroCall, MacroDef, MacroExpr, MacroPat, MacroRules, MacroType, MatchExpr, MethodCallExpr, Module, NameRef, NeverType, OffsetOfExpr, OrPat, Param, ParamList, ParenExpr, ParenPat, ParenType, Pat, PathExpr, PathPat, PathType, PrefixExpr, PtrType, RangeExpr, RangePat, RecordExpr, RecordFieldList, RecordPat, RefExpr, RefPat, RefType, RestPat, ReturnExpr, SelfParam, SlicePat, SliceType, Static, Stmt, Struct, Trait, TryExpr, TupleExpr, TupleFieldList, TuplePat, TupleStructPat, TupleType, Type, TypeAlias, TypeArg, TypeParam, UnderscoreExpr, Union, Use, UseBoundGenericArg, Variant, VariantDef, WhileExpr, WildcardPat, YeetExpr, YieldExpr};
 use rowan::ast::support;
 use crate::RSAst::RustProblem;
 
@@ -545,11 +545,17 @@ impl From<BinExpr> for RSBinExpr {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSBlockExpr {pub(crate) ast_node: RSNode}
+pub struct RSBlockExpr {
+    pub(crate) ast_node: RSNode,
+    pub stmts: Vec<RSStmt>
+}
 impl From<BlockExpr> for RSBlockExpr {
     fn from(node:  BlockExpr) -> Self {
-        println!("BlockExpr conversion");
-        RSBlockExpr{ast_node: node.syntax().into()}}
+        RSBlockExpr{
+            ast_node: node.syntax().into(),
+            stmts: node.stmt_list().map(|sl| sl.statements().map(Into::into).collect::<Vec<_>>()).unwrap_or_default()
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -615,7 +621,10 @@ impl From<IndexExpr> for RSIndexExpr {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RSLetExpr {pub(crate) ast_node: RSNode}
 impl From<LetExpr> for RSLetExpr {
-    fn from(node:  LetExpr) -> Self {RSLetExpr{ast_node: node.syntax().into()}}
+    fn from(node:  LetExpr) -> Self {
+        // Todo
+        RSLetExpr{ast_node: node.syntax().into()}
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -757,14 +766,31 @@ impl From<Stmt> for RSStmt {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RSExprStmt {pub(crate) ast_node: RSNode}
 impl From<ExprStmt> for RSExprStmt {
-    fn from(node: ExprStmt ) -> Self {RSExprStmt{ast_node: node.syntax().into()}}
+    fn from(node: ExprStmt ) -> Self {
+        // Todo
+        RSExprStmt{ast_node: node.syntax().into()}
+    }
 }
 
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSLetStmt {pub(crate) ast_node: RSNode}
+pub struct RSLetStmt {
+    pub(crate) ast_node: RSNode,
+    pub initializer: Option<RSExpr>,
+    pub let_else: Option<RSBlockExpr>,
+    pub pat: Option<RSPat>,
+    pub ty: Option<RSType>
+}
 impl From<LetStmt> for RSLetStmt {
-    fn from(node: LetStmt ) -> Self {RSLetStmt{ast_node: node.syntax().into()}}
+    fn from(node: LetStmt ) -> Self {
+        RSLetStmt{
+            ast_node: node.syntax().into(),
+            initializer: node.initializer().map(Into::into),
+            let_else: node.let_else().map(|l|l.block_expr().map(Into::into)).flatten(),
+            pat: node.pat().map(Into::into),
+            ty: node.ty().map(Into::into)
+        }
+    }
 }
 
 
