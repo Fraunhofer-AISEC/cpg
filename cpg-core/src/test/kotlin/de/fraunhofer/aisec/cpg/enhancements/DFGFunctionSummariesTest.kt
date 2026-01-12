@@ -214,15 +214,15 @@ class DFGFunctionSummariesTest {
             verySpecialListAddAllSpecializedArgs.parameters[1].nextDFG,
         )
 
-        // Not specified => Default behavior (param0 PMV and param1 PMV and receiver to method
+        // Not specified => Default behavior (param0 and param1 and receiver to method
         // declaration).
         val randomTypeAddAllTwoArgs = code.methods["random.Type.addAll"]
         assertNotNull(randomTypeAddAllTwoArgs)
         assertEquals(2, randomTypeAddAllTwoArgs.parameters.size)
         assertEquals(
             setOf<Node>(
-                randomTypeAddAllTwoArgs.parameters[1].memoryValues.single(),
-                randomTypeAddAllTwoArgs.parameters[0].memoryValues.single(),
+                randomTypeAddAllTwoArgs.parameters[1],
+                randomTypeAddAllTwoArgs.parameters[0],
                 randomTypeAddAllTwoArgs.receiver!!,
             ),
             randomTypeAddAllTwoArgs.prevDFG,
