@@ -2295,7 +2295,8 @@ class PointsToPassTest {
         assertEquals(1, ceLine242.arguments[0].prevFullDFG.size)
         assertEquals(1, ceLine242.arguments[1].prevFullDFG.size)
 
-        // Both arguments have a nextDFG to the PMV and from there to the functionDeclaration
+        // Both arguments have a nextDFG to the ParameterDeclaration and from there to the
+        // functionDeclaration
         assertEquals(
             unknownFuncFD,
             ceLine242.arguments[0].nextFullDFG.singleOrNull()?.nextDFG?.singleOrNull(),

@@ -544,13 +544,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         true,
                     )
                 )
-                // The prevDFG edges for the function Declaration
-                doubleState
-                    .getValues(param, param)
-                    .filter { it.first is ParameterMemoryValue }
-                    .forEach {
-                        prevDFGs.add(NodeWithPropertiesKey(it.first, equalLinkedHashSetOf<Any>()))
-                    }
+                // Since we can't determine the DFs, we draw a DFG-Edge from every parameter
+                prevDFGs.add(NodeWithPropertiesKey(param, equalLinkedHashSetOf<Any>()))
             }
             // For MethodDeclarations, we also add an edge to the receiver
             if (functionDeclaration is MethodDeclaration)
@@ -867,7 +862,17 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                                     mutableSetOf(
                                                                         NodeWithPropertiesKey(
                                                                             matchingDeclarations,
-                                                                            equalLinkedHashSetOf(),
+                                                                            // Add the parameter
+                                                                            // index to indicate to
+                                                                            // the calculatePrevDFGs
+                                                                            // function that we
+                                                                            // need to replace the
+                                                                            // value of the call
+                                                                            // argument
+                                                                            equalLinkedHashSetOf(
+                                                                                matchingDeclarations
+                                                                                    .argumentIndex
+                                                                            ),
                                                                         )
                                                                     ),
                                                                     equalLinkedHashSetOf(true),
@@ -2317,7 +2322,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 PowersetLattice.Element(prevAddresses),
                                 PowersetLattice.Element(Pair(pmv, false)),
                                 PowersetLattice.Element(
-                                //TODO: pmv?
                                     NodeWithPropertiesKey(src, equalLinkedHashSetOf())
                                 ),
                             )
