@@ -300,9 +300,12 @@ class DFGFunctionSummaries {
                         val e = entry.from.split(".")
                         val paramIndex = e.getOrNull(0)?.removePrefix("param")?.toInt()
                         if (paramIndex != null) {
-                            val foo = functionDeclaration.parameters.getOrNull(paramIndex)
+                            val tmp = functionDeclaration.parameters.getOrNull(paramIndex)
                             if (e.getOrNull(1) == "deref") srcValueDepth = 2
-                            foo
+                            if (tmp != null)
+                            // set from to the index from which we later need to fetch the argument
+                            paramIndex
+                            else tmp
                         } else null
                     } catch (_: NumberFormatException) {
                         null

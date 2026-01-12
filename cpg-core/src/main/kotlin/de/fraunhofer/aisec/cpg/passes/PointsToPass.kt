@@ -828,17 +828,24 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                                 node.parameters.any { param ->
                                                                     param.name.localName ==
                                                                         it.name.parent?.localName
-                                                                }
+                                                                } || it in node.parameters
                                                         },
                                                     )
                                                 paths.fulfilled
                                                     .map { it.nodes.last() }
                                                     .forEach { sourceParamValue ->
                                                         val matchingDeclarations =
-                                                            node.parameters.singleOrNull {
-                                                                it.name ==
-                                                                    sourceParamValue.name.parent
-                                                            }
+                                                            if (
+                                                                sourceParamValue
+                                                                    is ParameterMemoryValue
+                                                            )
+                                                                node.parameters.singleOrNull {
+                                                                    it.name ==
+                                                                        sourceParamValue.name.parent
+                                                                }
+                                                            else
+                                                                sourceParamValue
+                                                                    as? ParameterDeclaration
                                                         if (matchingDeclarations == null) TODO()
                                                         node.functionSummary
                                                             .computeIfAbsent(param) {
@@ -2332,13 +2339,22 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
                     // Update the states
                     val declStateElement =
-                        DeclarationStateEntryElement(
-                            PowersetLattice.Element(prevAddresses),
-                            PowersetLattice.Element(Pair(pmv, false)),
-                            PowersetLattice.Element(
-                                NodeWithPropertiesKey(pmv, equalLinkedHashSetOf())
-                            ),
-                        )
+                        if (src is ParameterDeclaration)
+                            DeclarationStateEntryElement(
+                                PowersetLattice.Element(prevAddresses),
+                                PowersetLattice.Element(Pair(pmv, false)),
+                                PowersetLattice.Element(
+                                    NodeWithPropertiesKey(src, equalLinkedHashSetOf())
+                                ),
+                            )
+                        else
+                            DeclarationStateEntryElement(
+                                PowersetLattice.Element(prevAddresses),
+                                PowersetLattice.Element(Pair(pmv, false)),
+                                PowersetLattice.Element(
+                                    NodeWithPropertiesKey(pmv, equalLinkedHashSetOf())
+                                ),
+                            )
                     addresses.forEach { addr ->
                         doubleState =
                             lattice.pushToDeclarationsState(doubleState, addr, declStateElement)
