@@ -530,7 +530,8 @@ inline fun <reified T : Node> runPassForNode(
         consumeTargets(
             cls = prototype::class,
             ctx = ctx,
-            targets = list,
+            targets =
+                list.filter { nodeToPass.computeIfAbsent(it) { mutableSetOf() }.add(passClass) },
             executedFrontends = ctx.executedFrontends,
         )
         PassExecutionResult(
