@@ -41,6 +41,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleFunctionDeclaration(rsFunction: RsItem.Fn): Declaration {
+
         return ProblemDeclaration()
     }
 }

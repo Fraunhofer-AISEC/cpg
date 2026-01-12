@@ -1,6 +1,7 @@
 uniffi::setup_scaffolding!();
 
 use std::fs;
+use std::sync::Arc;
 use ra_ap_syntax::{ast, SourceFile, SyntaxNode};
 use ra_ap_syntax::{AstNode, Edition};
 use itertools::Itertools;
@@ -619,12 +620,13 @@ impl From<IndexExpr> for RSIndexExpr {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSLetExpr {pub(crate) ast_node: RSNode, pub expr: Option<RSExpr>, pub pat: Option<RSPat>}
+pub struct RSLetExpr {pub(crate) ast_node: RSNode, pub expr: Vec<RSExpr>, pub pat: Vec<RSPat>}
 impl From<LetExpr> for RSLetExpr {
     fn from(node:  LetExpr) -> Self {
-        RSLetExpr{ast_node: node.syntax().into(), expr: node.expr().map(Into::into), pat: node.pat().map(Into::into)}
+        RSLetExpr{ast_node: node.syntax().into(), expr: node.expr().map(Into::into).into_iter().collect(), pat: node.pat().map(Into::into).into_iter().collect()}
     }
 }
+
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RSLiteral {pub(crate) ast_node: RSNode}
