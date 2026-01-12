@@ -55,7 +55,7 @@ fun setupTranslationConfiguration(
     loadIncludes: Boolean = true,
     exclusionPatterns: Collection<String> = listOf(),
     useUnityBuild: Boolean = false,
-    runPasses: Boolean = true,
+    runPasses: Boolean,
 ): TranslationConfiguration {
     val translationConfiguration =
         TranslationConfiguration.builder()

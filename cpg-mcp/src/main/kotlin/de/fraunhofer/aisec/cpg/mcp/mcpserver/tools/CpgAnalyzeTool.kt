@@ -143,6 +143,11 @@ fun Server.addCpgAnalyzeTool() {
     }
 }
 
+/**
+ * Translate the given [payload] to the CPG. If [runPasses] is true, all default passes will be run,
+ * otherwise no pass will be run. If [cleanup] is true, we clean up the [TypeManager] memory after
+ * analysis.
+ */
 fun runCpgAnalyze(
     payload: CpgAnalyzePayload?,
     runPasses: Boolean,
@@ -432,7 +437,11 @@ fun Server.addRunPass() {
                             listOf(TextContent("Invalid or missing payload for run_pass tool."))
                     )
             val passClass =
-                (Class.forName(payload.passName).kotlin as? KClass<out Pass<*>>)
+                try {
+                    (Class.forName(payload.passName).kotlin as? KClass<out Pass<*>>)
+                } catch (_: ClassNotFoundException) {
+                    null
+                }
                     ?: return@runOnCpg CallToolResult(
                         content =
                             listOf(TextContent("Could not find the pass ${payload.passName}."))
@@ -448,6 +457,7 @@ fun Server.addRunPass() {
                                 )
                             )
                     )
+            val executedPasses = mutableListOf<TextContent>()
 
             // Check if all required passes have been run before executing this pass.
             val orderingHelper = PassOrderingHelper(listOf(passClass))
@@ -458,9 +468,17 @@ fun Server.addRunPass() {
                     // Execute the pass for the node
                     ctx?.let { ctx ->
                         val passResult = runPassForNode(node, passToExecute, ctx)
-                        passResult?.let {
+                        if (passResult.success) {
+                            executedPasses.add(TextContent(passResult.message))
+                        } else {
                             // Return if there was an error during pass execution
-                            return@runOnCpg it
+                            return@runOnCpg CallToolResult(
+                                content =
+                                    listOf(
+                                        TextContent(passResult.message),
+                                        *executedPasses.toTypedArray(),
+                                    )
+                            )
                         }
                         // Mark pass as executed
                         nodeToPass[node]?.add(passToExecute)
@@ -479,12 +497,15 @@ fun Server.addRunPass() {
                     listOf(
                         TextContent(
                             "Successfully ran ${payload.passName} on node ${payload.nodeId}."
-                        )
+                        ),
+                        *executedPasses.toTypedArray(),
                     )
             )
         }
     }
 }
+
+data class PassExecutionResult(val success: Boolean, val message: String)
 
 /**
  * Runs the specified [passClass] on the given [node] within the provided [ctx]
@@ -507,14 +528,15 @@ fun runPassForNode(
     node: Node,
     passClass: KClass<out Pass<*>>,
     ctx: TranslationContext,
-): CallToolResult? {
+): PassExecutionResult {
     val prototype =
         passClass.primaryConstructor?.call(ctx)
-            ?: return CallToolResult(
-                content = listOf(TextContent("Could not create the pass ${passClass.simpleName}."))
+            ?: return PassExecutionResult(
+                false,
+                "Could not create the pass ${passClass.simpleName}.",
             )
 
-    when (prototype) {
+    return when (prototype) {
         is TranslationResultPass -> {
             val list =
                 listOfNotNull(
@@ -528,14 +550,14 @@ fun runPassForNode(
                     targets = list,
                     executedFrontends = ctx.executedFrontends,
                 )
+                PassExecutionResult(
+                    true,
+                    "Ran pass ${passClass.simpleName} on nodes ${list.map { it.id.toString() }}.",
+                )
             } else {
-                CallToolResult(
-                    content =
-                        listOf(
-                            TextContent(
-                                "Expected node of type TranslationResult for pass ${passClass.simpleName}, but got ${node.javaClass.simpleName}"
-                            )
-                        )
+                PassExecutionResult(
+                    false,
+                    "Expected node of type TranslationResult for pass ${passClass.simpleName}, but got ${node.javaClass.simpleName}",
                 )
             }
         }
@@ -553,14 +575,14 @@ fun runPassForNode(
                     targets = list,
                     executedFrontends = ctx.executedFrontends,
                 )
+                PassExecutionResult(
+                    true,
+                    "Ran pass ${passClass.simpleName} on nodes ${list.map { it.id.toString() }}.",
+                )
             } else {
-                CallToolResult(
-                    content =
-                        listOf(
-                            TextContent(
-                                "Expected node of type Component for pass ${passClass.simpleName}, but got ${node.javaClass.simpleName}"
-                            )
-                        )
+                PassExecutionResult(
+                    false,
+                    "Expected node of type Component for pass ${passClass.simpleName}, but got ${node.javaClass.simpleName}",
                 )
             }
         }
@@ -578,14 +600,14 @@ fun runPassForNode(
                     targets = list,
                     executedFrontends = ctx.executedFrontends,
                 )
+                PassExecutionResult(
+                    true,
+                    "Ran pass ${passClass.simpleName} on nodes ${list.map { it.id.toString() }}.",
+                )
             } else {
-                CallToolResult(
-                    content =
-                        listOf(
-                            TextContent(
-                                "Expected node of type TranslationUnitDeclaration for pass ${passClass.simpleName}, but got ${node.javaClass.simpleName}"
-                            )
-                        )
+                PassExecutionResult(
+                    false,
+                    "Expected node of type TranslationUnitDeclaration for pass ${passClass.simpleName}, but got ${node.javaClass.simpleName}",
                 )
             }
         }
@@ -607,17 +629,16 @@ fun runPassForNode(
                     targets = list,
                     executedFrontends = ctx.executedFrontends,
                 )
+                PassExecutionResult(
+                    true,
+                    "Ran pass ${passClass.simpleName} on nodes ${list.map { it.id.toString() }}.",
+                )
             } else {
-                CallToolResult(
-                    content =
-                        listOf(
-                            TextContent(
-                                "Expected node of type EOGStarterHolder for pass ${passClass.simpleName}, but got ${node.javaClass.simpleName}"
-                            )
-                        )
+                PassExecutionResult(
+                    false,
+                    "Expected node of type EOGStarterHolder for pass ${passClass.simpleName}, but got ${node.javaClass.simpleName}",
                 )
             }
         }
     }
-    return null
 }

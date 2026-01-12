@@ -38,7 +38,7 @@ import de.fraunhofer.aisec.cpg.passes.TranslationUnitPass
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class RunPassForNodeUnitTest {
 
@@ -62,7 +62,7 @@ class RunPassForNodeUnitTest {
         // Use a concrete TU-related pass on the child
         val result = runPassForNode(functionDecl, ResolveMemberExpressionAmbiguityPass::class, ctx)
         // No error expected
-        assertNull(result)
+        assertTrue(result.success)
     }
 
     @Test
@@ -82,7 +82,7 @@ class RunPassForNodeUnitTest {
         val result =
             runPassForNode(globalAnalysisResult, ResolveMemberExpressionAmbiguityPass::class, ctx)
         // No error expected
-        assertNull(result)
+        assertTrue(result.success)
     }
 
     @Test
@@ -102,7 +102,7 @@ class RunPassForNodeUnitTest {
         val result =
             runPassForNode(globalAnalysisResult, ResolveMemberExpressionAmbiguityPass::class, ctx)
         // No error expected
-        assertNull(result)
+        assertTrue(result.success)
     }
 
     @Test
