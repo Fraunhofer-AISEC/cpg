@@ -40,8 +40,7 @@ import org.junit.jupiter.api.TestInstance
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ShortcutsTest {
-    // TODO for merge
-    @Ignore
+
     @Test
     fun followDFGUntilHitTest() {
         val result = GraphExamples.getDataflowClass()

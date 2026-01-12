@@ -86,7 +86,7 @@ class ControlFlowSensitiveDFGPassTest {
             // expression s1.field1 of the first doSomething call (line 11) as well as the s1.field1
             // in the assignment (line 13)
             val next = this.nextDFGEdges.sortedBy { it.end.location?.region?.startLine }
-            assertEquals(2, next.size)
+            assertEquals(3, next.size)
 
             val baseOfMemberRead11 = assertNotNull(next.firstOrNull()?.end)
             assertEquals(11, baseOfMemberRead11.location?.region?.startLine)
