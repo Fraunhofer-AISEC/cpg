@@ -84,6 +84,7 @@ import java.util.IdentityHashMap
 import kotlin.String
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
+import kotlin.reflect.typeOf
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -508,6 +509,43 @@ fun Server.addRunPass() {
 data class PassExecutionResult(val success: Boolean, val message: String)
 
 /**
+ * Internal helper function that runs the specified [prototype] pass on the given [node] within the
+ * provided [ctx] (TranslationContext). It uses the [preList] if provided, otherwise it collects
+ * nodes of type [T] starting from the given [node] (either the node itself, its first parent of
+ * type [T], or all children of type [T]).
+ */
+inline fun <reified T : Node> runPassForNode(
+    node: Node,
+    prototype: Pass<T>,
+    passClass: KClass<out Pass<*>>,
+    ctx: TranslationContext,
+    preList: List<T>? = null,
+): PassExecutionResult {
+    val list = preList?.toMutableList() ?: listOfNotNull(node as? T).toMutableList()
+    if (list.isEmpty())
+        list.addAll(
+            node.firstParentOrNull<T>()?.let { listOf(it) } ?: node.allChildrenWithOverlays<T>()
+        )
+    return if (list.isNotEmpty()) {
+        consumeTargets(
+            cls = prototype::class,
+            ctx = ctx,
+            targets = list,
+            executedFrontends = ctx.executedFrontends,
+        )
+        PassExecutionResult(
+            true,
+            "Ran pass ${passClass.simpleName} on nodes ${list.map { it.id.toString() }}.",
+        )
+    } else {
+        PassExecutionResult(
+            false,
+            "Expected node of type ${typeOf<T>()} for pass ${passClass.simpleName}, but got ${node.javaClass.simpleName}",
+        )
+    }
+}
+
+/**
  * Runs the specified [passClass] on the given [node] within the provided [ctx]
  * (TranslationContext). To determine the appropriate targets for the pass, it checks the type of
  * the pass and collects nodes accordingly:
@@ -538,80 +576,16 @@ fun runPassForNode(
 
     return when (prototype) {
         is TranslationResultPass -> {
-            val list =
-                listOfNotNull(
-                    node.firstParentOrNull<TranslationResult>(),
-                    node as? TranslationResult,
-                )
-            if (list.isNotEmpty()) {
-                consumeTargets(
-                    cls = prototype::class,
-                    ctx = ctx,
-                    targets = list,
-                    executedFrontends = ctx.executedFrontends,
-                )
-                PassExecutionResult(
-                    true,
-                    "Ran pass ${passClass.simpleName} on nodes ${list.map { it.id.toString() }}.",
-                )
-            } else {
-                PassExecutionResult(
-                    false,
-                    "Expected node of type TranslationResult for pass ${passClass.simpleName}, but got ${node.javaClass.simpleName}",
-                )
-            }
+            runPassForNode<TranslationResult>(node, prototype, passClass, ctx)
         }
         is ComponentPass -> {
-            val list = listOfNotNull(node as? Component).toMutableList()
-            if (list.isEmpty())
-                list.addAll(
-                    node.firstParentOrNull<Component>()?.let { listOf(it) }
-                        ?: node.allChildrenWithOverlays<Component>()
-                )
-            if (list.isNotEmpty()) {
-                consumeTargets(
-                    cls = prototype::class,
-                    ctx = ctx,
-                    targets = list,
-                    executedFrontends = ctx.executedFrontends,
-                )
-                PassExecutionResult(
-                    true,
-                    "Ran pass ${passClass.simpleName} on nodes ${list.map { it.id.toString() }}.",
-                )
-            } else {
-                PassExecutionResult(
-                    false,
-                    "Expected node of type Component for pass ${passClass.simpleName}, but got ${node.javaClass.simpleName}",
-                )
-            }
+            runPassForNode<Component>(node, prototype, passClass, ctx)
         }
         is TranslationUnitPass -> {
-            val list = listOfNotNull(node as? TranslationUnitDeclaration).toMutableList()
-            if (list.isEmpty())
-                list.addAll(
-                    node.firstParentOrNull<TranslationUnitDeclaration>()?.let { listOf(it) }
-                        ?: node.allChildrenWithOverlays<TranslationUnitDeclaration>()
-                )
-            if (list.isNotEmpty()) {
-                consumeTargets(
-                    cls = prototype::class,
-                    ctx = ctx,
-                    targets = list,
-                    executedFrontends = ctx.executedFrontends,
-                )
-                PassExecutionResult(
-                    true,
-                    "Ran pass ${passClass.simpleName} on nodes ${list.map { it.id.toString() }}.",
-                )
-            } else {
-                PassExecutionResult(
-                    false,
-                    "Expected node of type TranslationUnitDeclaration for pass ${passClass.simpleName}, but got ${node.javaClass.simpleName}",
-                )
-            }
+            runPassForNode<TranslationUnitDeclaration>(node, prototype, passClass, ctx)
         }
         is EOGStarterPass -> {
+
             val list = listOfNotNull<Node>((node as? EOGStarterHolder) as? Node).toMutableList()
             if (list.isEmpty())
                 list.addAll(
@@ -622,23 +596,7 @@ fun runPassForNode(
                             it is EOGStarterHolder && it.prevEOG.isEmpty()
                         }
                 )
-            if (list.isNotEmpty()) {
-                consumeTargets(
-                    cls = prototype::class,
-                    ctx = ctx,
-                    targets = list,
-                    executedFrontends = ctx.executedFrontends,
-                )
-                PassExecutionResult(
-                    true,
-                    "Ran pass ${passClass.simpleName} on nodes ${list.map { it.id.toString() }}.",
-                )
-            } else {
-                PassExecutionResult(
-                    false,
-                    "Expected node of type EOGStarterHolder for pass ${passClass.simpleName}, but got ${node.javaClass.simpleName}",
-                )
-            }
+            runPassForNode<Node>(node, prototype, passClass, ctx, preList = list)
         }
     }
 }
