@@ -412,16 +412,16 @@ fun Server.addRunPass() {
             ToolSchema(
                 properties =
                     buildJsonObject {
-                        putJsonObject("pass_name") {
+                        putJsonObject("passName") {
                             put("type", "string")
                             put("description", "The FQN of the pass to run")
                         }
-                        putJsonObject("node_id") {
+                        putJsonObject("nodeId") {
                             put("type", "string")
                             put("description", "The ID of the node on which the pass should be ran")
                         }
                     },
-                required = listOf("pass_name", "node_id"),
+                required = listOf("pass_name", "nodeId"),
             ),
     ) { request ->
         request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
