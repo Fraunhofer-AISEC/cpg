@@ -459,7 +459,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     var shortFS = false
                     properties.forEach { p ->
                         when (p) {
+                            // String indicated a partial target
                             is String -> granularity = PartialDataflowGranularity(p)
+                            // Boolean says if this is a shortFS or not
                             is Boolean -> shortFS = p
                             else -> TODO()
                         }
@@ -535,7 +537,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         null,
                         1,
                         "",
-                        mutableSetOf(NodeWithPropertiesKey(param, equalLinkedHashSetOf())),
+                        mutableSetOf(
+                            NodeWithPropertiesKey(param, equalLinkedHashSetOf(param.argumentIndex))
+                        ),
                         equalLinkedHashSetOf(true),
                         true,
                     )
@@ -1079,7 +1083,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             PowersetLattice.Element(Pair(arg, true))
                         else doubleState.getCachedNestedValues(getNestedValuesCache, arg, 1, false)
                     }
-                    // Create a DFG-Edge from the argument to the parameter's memoryValue
+                    // Create a DFG-Edge from the argument to the ParameterDeclaration or its
+                    // ParameterMemoryValue
                     val p = functionDeclaration.parameters[arg.argumentIndex]
                     val memVals = async {
                         // First, check if we already assigned the PMV values in another function
@@ -1476,10 +1481,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     is FunctionDeclaration ->
                         ret.add(NodeWithPropertiesKey(currentNode, filteredProperties))
                     is ParameterDeclaration -> {
-                        if (lw.argumentIndex < currentNode.arguments.size)
+                        // For dummy functionSummary entries, we have an Integer indicating the
+                        // parameter's index for which we should use the CalLExpression's argument
+                        // here
+                        // Otherwise, the lastWrite was the ParameterDeclaration itself, so we leave
+                        // it as is
+                        val index = properties.filterIsInstance<Int>().singleOrNull()
+                        if (index != null && index < currentNode.arguments.size)
                             ret.add(
                                 NodeWithPropertiesKey(
-                                    currentNode.arguments[lw.argumentIndex],
+                                    currentNode.arguments[index],
                                     filteredProperties,
                                 )
                             )
