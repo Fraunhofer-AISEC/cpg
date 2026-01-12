@@ -921,15 +921,9 @@ class PointsToPassTest {
         assertNotNull(memcpyDstDeref)
 
         // DFGs for the memcpys
-        // We need incoming DFGs from the arguments to the parametermemoryvalues
+        // We need incoming DFGs from the arguments to the parameterDeclarations
         for (i in 0..2) {
-            assertEquals(
-                memcpyFD.parameters[i]
-                    .fullMemoryValues
-                    .filterIsInstance<ParameterMemoryValue>()
-                    .singleOrNull(),
-                ceLine112.arguments[i].nextDFG.singleOrNull(),
-            )
+            assertEquals(memcpyFD.parameters[i], ceLine112.arguments[i].nextDFG.singleOrNull())
         }
         // And from the argument's derefvalues to the parameterMemoryValue's derefvalues
         assertEquals(
@@ -1618,10 +1612,7 @@ class PointsToPassTest {
 
         // Line 177
         assertEquals(
-            memsetFD.parameters[1]
-                .memoryValues
-                .filterIsInstance<ParameterMemoryValue>()
-                .singleOrNull(),
+            memsetFD.parameters[1],
             ceLine177.arguments[1]
                 .nextDFGEdges
                 .singleOrNull {
@@ -2217,18 +2208,7 @@ class PointsToPassTest {
         assertEquals(ceLine230, iRefLine230Left.prevFullDFG.singleOrNull())
         assertEquals(binOpLine207, iRefLine230Left.fullMemoryValues.singleOrNull())
         assertEquals(1, iRefLine230Right.nextDFG.size)
-        assertLocalName(
-            "value",
-            iRefLine230Right.nextDFG.singleOrNull { it is ParameterMemoryValue },
-        )
-        assertEquals(
-            "i",
-            iRefLine230Right.nextDFG
-                .singleOrNull { it is ParameterMemoryValue }
-                ?.name
-                ?.parent
-                ?.localName,
-        )
+        assertLocalName("i", iRefLine230Right.nextDFG.singleOrNull { it is ParameterDeclaration })
 
         // Line 231
         assertEquals(binOpLine207, iRefLine231.fullMemoryValues.singleOrNull())
@@ -2858,14 +2838,7 @@ class PointsToPassTest {
         // CallExpression in Line 380
         assertEquals(1, iArgLine380.nextDFGEdges.size)
         // Argument's nextDFG should point to the ParameterMemoryValue of the Function
-        assertEquals(
-            incFD.parameters
-                .first()
-                .fullMemoryValues
-                .filterIsInstance<ParameterMemoryValue>()
-                .singleOrNull(),
-            iArgLine380.nextDFGEdges.first().end as? ParameterMemoryValue,
-        )
+        assertEquals(incFD.parameters.first(), iArgLine380.nextDFGEdges.first().end)
         assertEquals(
             mutableListOf(ceLine380),
             ((iArgLine380.nextDFGEdges.first() as ContextSensitiveDataflow).callingContext
@@ -2890,14 +2863,7 @@ class PointsToPassTest {
 
         // CallExpression in Line 384
         // Argument's nextDFG should point to the ParameterMemoryValue of the Function
-        assertEquals(
-            incFD.parameters
-                .first()
-                .fullMemoryValues
-                .filterIsInstance<ParameterMemoryValue>()
-                .singleOrNull(),
-            iArgLine384.nextDFGEdges.first().end as? ParameterMemoryValue,
-        )
+        assertEquals(incFD.parameters.first(), iArgLine384.nextDFGEdges.first().end)
         assertEquals(
             mutableListOf(ceLine384),
             ((iArgLine384.nextDFGEdges.first() as ContextSensitiveDataflow).callingContext
@@ -2931,12 +2897,8 @@ class PointsToPassTest {
                 .calls,
         )
         assertEquals(
-            incpFD.parameters[0]
-                .fullMemoryValues
-                .filterIsInstance<ParameterMemoryValue>()
-                .singleOrNull(),
-            pArgLine386.nextDFGEdges.singleOrNull { !it.functionSummary }?.end
-                as? ParameterMemoryValue,
+            incpFD.parameters[0],
+            pArgLine386.nextDFGEdges.singleOrNull { !it.functionSummary }?.end,
         )
 
         assertEquals(

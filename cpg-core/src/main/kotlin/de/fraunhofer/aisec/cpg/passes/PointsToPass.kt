@@ -1086,28 +1086,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     // Create a DFG-Edge from the argument to the ParameterDeclaration or its
                     // ParameterMemoryValue
                     val p = functionDeclaration.parameters[arg.argumentIndex]
-                    val memVals = async {
-                        // First, check if we already assigned the PMV values in another function
-                        var tmp = p.fullMemoryValues
-                        // If this is not the case, they are still in the state
-                        if (tmp.isEmpty()) {
-                            tmp =
-                                doubleState.getCachedValues(getValuesCache, p).mapTo(HashSet()) {
-                                    it.first
-                                }
-                            // If they are also not yet in the state, we have to calculate them
-                            if (tmp.isEmpty()) {
-                                initializeParameters(lattice, mutableListOf(p), doubleState, 2)
-                                tmp =
-                                    doubleState.getCachedValues(getValuesCache, p).mapTo(
-                                        HashSet()
-                                    ) {
-                                        it.first
-                                    }
-                            }
-                        }
-                        tmp
-                    }
                     val derefPMVs = async {
                         p.memoryValueEdges
                             .filter {
@@ -1232,36 +1210,20 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             }
                         }
                     }
-                    memVals
-                        .await()
-                        .filterIsInstance<ParameterMemoryValue>()
-                        .splitInto(maxParts = innerConcurrencyCounter)
-                        .forEach { chunk ->
-                            launch(Dispatchers.Default) {
-                                chunk.forEach { paramVal ->
-                                    doubleState =
-                                        lattice.push(
-                                            doubleState,
-                                            paramVal,
-                                            GeneralStateEntryElement(
-                                                PowersetLattice.Element(),
-                                                PowersetLattice.Element(
-                                                    NodeWithPropertiesKey(
-                                                        arg,
-                                                        equalLinkedHashSetOf(),
-                                                    )
-                                                ),
-                                                PowersetLattice.Element(
-                                                    NodeWithPropertiesKey(
-                                                        arg,
-                                                        equalLinkedHashSetOf(callingContext),
-                                                    )
-                                                ),
-                                            ),
-                                        )
-                                }
-                            }
-                        }
+                    doubleState =
+                        lattice.push(
+                            doubleState,
+                            p,
+                            GeneralStateEntryElement(
+                                PowersetLattice.Element(),
+                                PowersetLattice.Element(
+                                    NodeWithPropertiesKey(arg, equalLinkedHashSetOf())
+                                ),
+                                PowersetLattice.Element(
+                                    NodeWithPropertiesKey(arg, equalLinkedHashSetOf(callingContext))
+                                ),
+                            ),
+                        )
                 }
             }
         }
@@ -2355,6 +2317,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 PowersetLattice.Element(prevAddresses),
                                 PowersetLattice.Element(Pair(pmv, false)),
                                 PowersetLattice.Element(
+                                //TODO: pmv?
                                     NodeWithPropertiesKey(src, equalLinkedHashSetOf())
                                 ),
                             )
