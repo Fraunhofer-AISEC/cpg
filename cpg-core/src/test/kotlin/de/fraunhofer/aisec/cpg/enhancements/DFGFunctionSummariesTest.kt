@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.ContextSensitiveDataflow
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PointerDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ParameterMemoryValue
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
 import de.fraunhofer.aisec.cpg.passes.*
@@ -240,7 +241,8 @@ class DFGFunctionSummariesTest {
         val memcpy = dfgTest.functions["memcpy"]
         assertNotNull(memcpy)
         val param0 = memcpy.parameters[0]
-        val param0PMV = param0.fullMemoryValues.singleOrNull()
+        val param0PMV =
+            param0.fullMemoryValues.filterIsInstance<ParameterMemoryValue>().singleOrNull()
         assertNotNull(param0PMV)
         val param1 = memcpy.parameters[1]
 
@@ -266,7 +268,7 @@ class DFGFunctionSummariesTest {
             mutableListOf(call),
             ((nextDfg as? ContextSensitiveDataflow)?.callingContext as? CallingContextIn)?.calls,
         )
-        assertEquals(param0.fullMemoryValues.singleOrNull(), nextDfg.end)
+        assertEquals(param0, nextDfg.end)
 
         val variableA = main.variables["a"]
         assertNotNull(variableA)
