@@ -412,7 +412,7 @@ fun Server.addRunPass() {
     this.addTool(
         name = "cpg_run_pass",
         description =
-            """Runs a given Pass on a specified Node. The given node must meet the type of node the pass operates on."""
+            """Runs a given Pass on a specified Node. If the given node does not meet the type of node the pass operates on, the tool looks for the next matching node. It also triggers passes that the specified pass depends on, if they have not been run yet on the given node."""
                 .trimIndent(),
         inputSchema =
             ToolSchema(
