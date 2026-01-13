@@ -2157,9 +2157,27 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     ): PointsToState.Element {
         var doubleState = doubleState
         /* No need to set the address, this already happens in the constructor */
-        val addresses = doubleState.getAddresses(currentNode, currentNode)
+        val addresses =
+            if (currentNode is TupleDeclaration) {
+                currentNode.elements.flatMapTo(ConcurrentIdentitySet<Node>()) {
+                    doubleState.getAddresses(it, it)
+                }
+            } else {
+                doubleState.getAddresses(currentNode, currentNode)
+            }
 
         val values = PowersetLattice.Element<NodeWithPropertiesKey>()
+
+        val lastWrites =
+            if (currentNode is TupleDeclaration) {
+                currentNode.elements.mapTo(PowersetLattice.Element()) {
+                    NodeWithPropertiesKey(it, equalLinkedHashSetOf<Any>(false))
+                }
+            } else {
+                PowersetLattice.Element(
+                    NodeWithPropertiesKey(currentNode, equalLinkedHashSetOf<Any>(false))
+                )
+            }
 
         (currentNode as? HasInitializer)?.initializer?.let { initializer ->
             if (initializer is Literal<*>)
@@ -2206,9 +2224,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         PowersetLattice.Element(
                             values.mapTo(PowersetLattice.Element()) { Pair(it.node, false) }
                         ),
-                        PowersetLattice.Element(
-                            NodeWithPropertiesKey(currentNode, equalLinkedHashSetOf<Any>(false))
-                        ),
+                        lastWrites,
                     ),
                 )
         }
