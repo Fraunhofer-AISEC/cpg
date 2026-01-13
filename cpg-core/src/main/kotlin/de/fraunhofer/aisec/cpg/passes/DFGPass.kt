@@ -114,7 +114,8 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // Expressions
             is CollectionComprehension -> handleCollectionComprehension(node)
             is ComprehensionExpression -> handleComprehensionExpression(node)
-            // is CallExpression -> handleCallExpression(node, inferDfgForUnresolvedSymbols)
+            // Only for handling callExpressions w/o invokes edges
+            is CallExpression -> handleCallExpression(node, inferDfgForUnresolvedSymbols)
             is CastExpression -> handleCastExpression(node)
             is BinaryOperator -> handleBinaryOp(node, parent)
             // The PointsToPass will draw the DFG Edges for these
@@ -559,18 +560,18 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (call.invokes.isEmpty() && inferDfgForUnresolvedSymbols) {
             // Unresolved call expression
             handleUnresolvedCalls(call, call)
-        } else if (call.invokes.isNotEmpty()) {
-            call.invokes.forEach {
-                Util.attachCallParameters(it, call)
-                call.prevDFGEdges.addContextSensitive(
-                    it,
-                    callingContext = CallingContextOut(mutableListOf(call)),
-                )
-                if (it.isInferred) {
-                    callsInferredFunctions.add(call)
-                }
-            }
-        }
+        } /*else if (call.invokes.isNotEmpty()) {
+              call.invokes.forEach {
+                  Util.attachCallParameters(it, call)
+                  call.prevDFGEdges.addContextSensitive(
+                      it,
+                      callingContext = CallingContextOut(mutableListOf(call)),
+                  )
+                  if (it.isInferred) {
+                      callsInferredFunctions.add(call)
+                  }
+              }
+          }*/
     }
 
     /**

@@ -43,8 +43,6 @@ import kotlin.test.assertTrue
 
 class UnresolvedDFGPassTest {
 
-    // TODO for merge
-    @Ignore
     @Test
     fun testUnresolvedCalls() {
         val result = getDfgUnresolvedCalls(true, false)
