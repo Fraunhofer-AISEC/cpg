@@ -1,3 +1,5 @@
+import de.undercouch.gradle.tasks.download.Download
+
 /*
  * Copyright (c) 2021, Fraunhofer AISEC. All rights reserved.
  *
@@ -41,7 +43,7 @@ dependencies {
     testImplementation(project(":cpg-analysis"))
 }
 
-/*tasks {
+tasks {
      val downloadLibGoAST by
          registering(Download::class) {
              val version = "v0.0.5"
@@ -62,4 +64,4 @@ dependencies {
      processResources { dependsOn(downloadLibGoAST) }
 
      sourcesJar { dependsOn(downloadLibGoAST) }
- }*/
+ }
