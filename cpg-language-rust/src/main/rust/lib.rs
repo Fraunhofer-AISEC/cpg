@@ -6,7 +6,7 @@ use ra_ap_syntax::{ast, SourceFile, SyntaxNode};
 use ra_ap_syntax::{AstNode, Edition};
 use itertools::Itertools;
 use ra_ap_parser::SyntaxKind;
-use ra_ap_syntax::ast::{Abi, Adt, ArgList, ArrayExpr, ArrayType, AsmClobberAbi, AsmConst, AsmExpr, AsmLabel, AsmOperand, AsmOperandNamed, AsmOptions, AsmPiece, AsmRegOperand, AsmSym, AssocItem, AssocTypeArg, AwaitExpr, BecomeExpr, BinExpr, BlockExpr, BoxPat, BreakExpr, CallExpr, CastExpr, ClosureExpr, Const, ConstArg, ConstBlockPat, ConstParam, ContinueExpr, DocCommentIter, DynTraitType, Enum, Expr, ExprStmt, ExternBlock, ExternCrate, ExternItem, FieldExpr, FieldList, Fn, FnPtrType, ForExpr, ForType, FormatArgsExpr, GenericArg, GenericParam, HasArgList, HasName, IdentPat, IfExpr, Impl, ImplTraitType, IndexExpr, InferType, Item, LetElse, LetExpr, LetStmt, Lifetime, LifetimeArg, LifetimeParam, Literal, LiteralPat, LoopExpr, MacroCall, MacroDef, MacroExpr, MacroPat, MacroRules, MacroType, MatchExpr, MethodCallExpr, Module, NameRef, NeverType, OffsetOfExpr, OrPat, Param, ParamList, ParenExpr, ParenPat, ParenType, Pat, Path, PathExpr, PathPat, PathSegment, PathType, PrefixExpr, PtrType, RangeExpr, RangePat, RecordExpr, RecordFieldList, RecordPat, RefExpr, RefPat, RefType, RestPat, ReturnExpr, SelfParam, SlicePat, SliceType, Static, Stmt, Struct, Trait, TryExpr, TupleExpr, TupleFieldList, TuplePat, TupleStructPat, TupleType, Type, TypeAlias, TypeArg, TypeParam, UnderscoreExpr, Union, Use, UseBoundGenericArg, Variant, VariantDef, WhileExpr, WildcardPat, YeetExpr, YieldExpr};
+use ra_ap_syntax::ast::{Abi, Adt, ArgList, ArrayExpr, ArrayType, AsmClobberAbi, AsmConst, AsmExpr, AsmLabel, AsmOperand, AsmOperandNamed, AsmOptions, AsmPiece, AsmRegOperand, AsmSym, AssocItem, AssocTypeArg, AwaitExpr, BecomeExpr, BinExpr, BlockExpr, BoxPat, BreakExpr, CallExpr, CastExpr, ClosureExpr, Const, ConstArg, ConstBlockPat, ConstParam, ContinueExpr, DocCommentIter, DynTraitType, Enum, Expr, ExprStmt, ExternBlock, ExternCrate, ExternItem, FieldExpr, FieldList, Fn, FnPtrType, ForExpr, ForType, FormatArgsExpr, GenericArg, GenericParam, HasArgList, HasName, IdentPat, IfExpr, Impl, ImplTraitType, IndexExpr, InferType, Item, LetElse, LetExpr, LetStmt, Lifetime, LifetimeArg, LifetimeParam, Literal, LiteralPat, LoopExpr, MacroCall, MacroDef, MacroExpr, MacroPat, MacroRules, MacroType, MatchExpr, MethodCallExpr, Module, NameRef, NeverType, OffsetOfExpr, OrPat, Param, ParamList, ParenExpr, ParenPat, ParenType, Pat, Path, PathExpr, PathPat, PathSegment, PathType, PrefixExpr, PtrType, RangeExpr, RangePat, RecordExpr, RecordFieldList, RecordPat, RefExpr, RefPat, RefType, RestPat, ReturnExpr, SelfParam, SlicePat, SliceType, Static, Stmt, Struct, TokenTree, Trait, TryExpr, TupleExpr, TupleFieldList, TuplePat, TupleStructPat, TupleType, Type, TypeAlias, TypeArg, TypeParam, UnderscoreExpr, Union, Use, UseBoundGenericArg, Variant, VariantDef, WhileExpr, WildcardPat, YeetExpr, YieldExpr};
 use crate::RSAst::RustProblem;
 
 #[derive(uniffi::Record)]
@@ -374,9 +374,13 @@ impl From<Impl> for RSImpl {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSMacroCall {pub(crate) ast_node: RSNode}
+pub struct RSMacroCall {pub(crate) ast_node: RSNode, path: Option<RSPath>, macro_string: String}
 impl From<MacroCall> for RSMacroCall {
-    fn from(node:  MacroCall) -> Self {RSMacroCall{ast_node: node.syntax().into()}}
+    fn from(node:  MacroCall) -> Self {RSMacroCall{
+        ast_node: node.syntax().into(),
+        path: node.path().map(Into::into),
+        macro_string: node.token_tree().map(|s|s.to_string()).unwrap_or_default()
+    }}
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -702,9 +706,14 @@ impl From<LoopExpr> for RSLoopExpr {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSMacroExpr {pub(crate) ast_node: RSNode}
+pub struct RSMacroExpr {pub(crate) ast_node: RSNode, macro_call: Option<RSMacroCall>}
 impl From<MacroExpr> for RSMacroExpr {
-    fn from(node:  MacroExpr) -> Self {RSMacroExpr{ast_node: node.syntax().into()}}
+    fn from(node:  MacroExpr) -> Self {
+        RSMacroExpr{
+            ast_node: node.syntax().into(),
+            macro_call: node.macro_call().map(Into::into)
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -833,11 +842,11 @@ impl From<Stmt> for RSStmt {
 
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSExprStmt {pub(crate) ast_node: RSNode}
+pub struct RSExprStmt {pub(crate) ast_node: RSNode, expr: Vec<RSExpr>}
 impl From<ExprStmt> for RSExprStmt {
     fn from(node: ExprStmt ) -> Self {
         // Todo
-        RSExprStmt{ast_node: node.syntax().into()}
+        RSExprStmt{ast_node: node.syntax().into(), expr: node.expr().map(Into::into).into_iter().collect()}
     }
 }
 
