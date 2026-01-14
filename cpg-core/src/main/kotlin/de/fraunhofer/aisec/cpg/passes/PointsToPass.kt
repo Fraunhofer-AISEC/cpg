@@ -42,6 +42,7 @@ import de.fraunhofer.aisec.cpg.helpers.ConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.helpers.concurrentIdentitySetOf
 import de.fraunhofer.aisec.cpg.helpers.functional.*
+import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice.Element
 import de.fraunhofer.aisec.cpg.helpers.toConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.passes.PointsToPass.NodeWithPropertiesKey
@@ -1984,6 +1985,22 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             if (currentNode.isCompoundAssignment)
                 currentNode.lhs.map { Pair(it, doubleState.getLastWrites(it)) }
             else null
+        /* If the lhs is a MemberExpression, we additionally set the last write to the base here */
+        destinations.filterIsInstance<MemberExpression>().forEach { me ->
+            doubleState.getAddresses(me.base, me.base).forEach { baseAddress ->
+                val entry =
+                    doubleState.declarationsState.computeIfAbsent(baseAddress) {
+                        TripleLattice.Element(
+                            PowersetLattice.Element(baseAddress),
+                            PowersetLattice.Element(),
+                            PowersetLattice.Element(),
+                        )
+                    }
+                entry.third.clear()
+                entry.third.add(NodeWithPropertiesKey(me.base, equalLinkedHashSetOf(false)))
+            }
+        }
+
         doubleState =
             doubleState.updateValues(
                 lattice,
