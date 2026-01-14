@@ -53,8 +53,6 @@ class ControlFlowSensitiveDFGPassTest {
      * This test asserts the dataflow that occurs with a simple field access using a
      * [MemberExpression].
      */
-    // TODO for merge
-    @Ignore
     @Test
     fun testSimpleFieldDataflow() {
         val test = GraphExamples.getSimpleFieldDataflow()
@@ -86,7 +84,7 @@ class ControlFlowSensitiveDFGPassTest {
             // expression s1.field1 of the first doSomething call (line 11) as well as the s1.field1
             // in the assignment (line 13)
             val next = this.nextDFGEdges.sortedBy { it.end.location?.region?.startLine }
-            assertEquals(3, next.size)
+            assertEquals(2, next.size)
 
             val baseOfMemberRead11 = assertNotNull(next.firstOrNull()?.end)
             assertEquals(11, baseOfMemberRead11.location?.region?.startLine)
@@ -124,8 +122,10 @@ class ControlFlowSensitiveDFGPassTest {
                         .filter { it.granularity is FullDataflowGranularity }
                         .map(Dataflow::start),
                 )
-                // ... and only have one outgoing DFG edge to the "i" parameter of doSomething
-                assertEquals(mutableSetOf<Node>(i), me.nextDFG)
+                // ... and only have one outgoing Full DFG edge to the "i" parameter of doSomething
+                assertEquals(listOf<Node>(i), me.nextFullDFG)
+                // ... plus the shortFSEdge back to the call
+                assertEquals(listOf<Node>(calls[0]), me.nextFunctionSummaryDFG)
             }
 
             // Back to the second case (the member write).
@@ -164,7 +164,9 @@ class ControlFlowSensitiveDFGPassTest {
                 assertEquals(15, memberRead15.location?.region?.startLine)
 
                 // This finally flows to "i"
-                assertEquals(mutableSetOf<Node>(i), memberRead15.nextDFG)
+                assertEquals(listOf<Node>(i), memberRead15.nextFullDFG)
+                // And the shortFS directly to the CallExpression
+                assertEquals(calls[1], memberRead15.nextFunctionSummaryDFG.singleOrNull())
 
                 // We should also have a full flow between the member write and the member read.
                 // This is a FULL flow because both occasions are only referring to the field.
