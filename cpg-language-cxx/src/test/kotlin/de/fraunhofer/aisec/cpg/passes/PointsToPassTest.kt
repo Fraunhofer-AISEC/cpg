@@ -2268,11 +2268,11 @@ class PointsToPassTest {
 
         // Line 242
         // Make sure that we created a dummy function summary for the unknownFunc
-        assertEquals(3, unknownFuncFD.functionSummary?.entries?.singleOrNull()?.value?.size)
+        assertEquals(3, unknownFuncFD.functionSummary.entries?.singleOrNull()?.value?.size)
         assertEquals(
             2,
             unknownFuncFD.functionSummary.entries
-                ?.singleOrNull()
+                .singleOrNull()
                 ?.value
                 ?.filter { it.properties.any { it == true } }
                 ?.size,
@@ -2280,7 +2280,7 @@ class PointsToPassTest {
         assertEquals(
             1,
             unknownFuncFD.functionSummary.entries
-                ?.singleOrNull()
+                .singleOrNull()
                 ?.value
                 ?.filter { it.properties.none { it == true } }
                 ?.size,
