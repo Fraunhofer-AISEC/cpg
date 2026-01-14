@@ -28,20 +28,49 @@ package de.fraunhofer.aisec.cpg.frontends.rust
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import uniffi.cpgrust.RsAst
+import uniffi.cpgrust.RsFn
 import uniffi.cpgrust.RsItem
+import uniffi.cpgrust.RsParam
+import uniffi.cpgrust.RsPat
 
 class DeclarationHandler(frontend: RustLanguageFrontend) :
     RustHandler<Declaration, RsAst.RustItem>(::ProblemDeclaration, frontend) {
     override fun handleNode(node: RsAst.RustItem): Declaration {
         val item = node.v1
         return when (item) {
-            is RsItem.Fn -> handleFunctionDeclaration(item)
+            is RsItem.Fn -> handleFunctionDeclaration(item.v1)
+            is RsItem.Param -> handleParameterDeclaration(item.v1)
             else -> handleNotSupported(node, node::class.simpleName ?: "")
         }
     }
 
-    private fun handleFunctionDeclaration(rsFunction: RsItem.Fn): Declaration {
+    private fun handleFunctionDeclaration(fn: RsFn): FunctionDeclaration {
+        val function =
+            newFunctionDeclaration(fn.name ?: "", rawNode = RsAst.RustItem(RsItem.Fn(fn)))
+        frontend.scopeManager.enterScope(function)
+        for (param in fn.paramList?.params ?: listOf()) {
+            function.parameters += handleParameterDeclaration(param) as ParameterDeclaration
+        }
 
-        return ProblemDeclaration()
+        fn.body?.let { function.body = frontend.expressionHandler.handleBlockExpr(it) }
+
+        frontend.scopeManager.leaveScope(function)
+        return function
+    }
+
+    private fun handleParameterDeclaration(param: RsParam): Declaration {
+
+        val type = param.ty?.let { frontend.typeOf(it) }
+
+        val name = (param.pat as? RsPat.IdentPat)?.v1?.name ?: ""
+
+        val parameter =
+            newParameterDeclaration(
+                name,
+                type = type ?: unknownType(),
+                rawNode = RsAst.RustItem(RsItem.Param(param)),
+            )
+
+        return parameter
     }
 }

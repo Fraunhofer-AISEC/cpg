@@ -32,13 +32,50 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import kotlin.collections.plusAssign
 import uniffi.cpgrust.RsAst
+import uniffi.cpgrust.RsLetStmt
+import uniffi.cpgrust.RsPat
+import uniffi.cpgrust.RsStmt
 
 class StatementHandler(frontend: RustLanguageFrontend) :
-    RustHandler<Statement, RsAst>(::ProblemExpression, frontend) {
-    override fun handleNode(node: RsAst): Statement {
+    RustHandler<Statement, RsAst.RustStmt>(::ProblemExpression, frontend) {
+
+    override fun handleNode(node: RsAst.RustStmt): Statement {
+        val unwrapped = node.v1
+        return handleNode(unwrapped)
+    }
+
+    fun handleNode(node: RsStmt): Statement {
         return when (node) {
-            else -> handleNotSupported(node, node::class.simpleName ?: "")
+            is RsStmt.LetStmt -> handleLetStmt(node.v1)
+            else ->
+                newProblemExpression(
+                    problem = "The statement of class ${node.javaClass} is not supported yet",
+                    rawNode = RsAst.RustStmt(node),
+                )
         }
+    }
+
+    fun handleLetStmt(letStmt: RsLetStmt): Statement {
+        val raw = RsAst.RustStmt(RsStmt.LetStmt(letStmt))
+
+        val declarationStatement = newDeclarationStatement(rawNode = raw)
+
+        val variable =
+            newVariableDeclaration(
+                name = (letStmt.pat as? RsPat.IdentPat)?.v1?.name ?: "",
+                type = letStmt.ty?.let { frontend.typeOf(it) } ?: unknownType(),
+                rawNode = raw,
+            )
+
+        letStmt.initializer?.let {
+            variable.initializer = frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
+
+        declarationStatement.declarations += variable
+
+        frontend.scopeManager.addDeclaration(variable)
+
+        return declarationStatement
     }
 
     /*private fun handle...(node: ..., ...): ... {

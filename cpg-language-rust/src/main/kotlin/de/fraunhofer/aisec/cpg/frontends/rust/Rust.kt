@@ -31,10 +31,6 @@ import uniffi.cpgrust.RsItem
 import uniffi.cpgrust.RsNode
 import uniffi.cpgrust.RsStmt
 
-interface Rust {
-    interface Type {}
-}
-
 /**
  * I dislike accessing a field by continuous extending of an access function, but Rust does not
  * support inheritance, and therefore the generated bindings don't either. We cannot specify that a
@@ -110,6 +106,7 @@ fun RsItem.astNode(): RsNode {
         is RsItem.Trait -> this.v1.astNode
         is RsItem.TypeAlias -> this.v1.astNode
         is RsItem.Union -> this.v1.astNode
+        is RsItem.Param -> this.v1.astNode
     }
 }
 

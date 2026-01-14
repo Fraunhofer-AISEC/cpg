@@ -28,12 +28,127 @@ package de.fraunhofer.aisec.cpg.frontends.rust
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import uniffi.cpgrust.RsAst
+import uniffi.cpgrust.RsBlockExpr
+import uniffi.cpgrust.RsCallExpr
+import uniffi.cpgrust.RsExpr
+import uniffi.cpgrust.RsLiteral
+import uniffi.cpgrust.RsLiteralType
+import uniffi.cpgrust.RsMacroExpr
+import uniffi.cpgrust.RsPathExpr
 
 class ExpressionHandler(frontend: RustLanguageFrontend) :
     RustHandler<Expression, RsAst.RustExpr>(::ProblemExpression, frontend) {
+
     override fun handleNode(node: RsAst.RustExpr): Expression {
+        val unwrapped = node.v1
+        return handleNode(unwrapped)
+    }
+
+    fun handleNode(node: RsExpr): Expression {
         return when (node) {
-            else -> handleNotSupported(node, node::class.simpleName ?: "")
+            is RsExpr.BlockExpr -> handleBlockExpr(node.v1)
+            is RsExpr.Literal -> handleLiteral(node.v1)
+            is RsExpr.CallExpr -> handleCallExpr(node.v1)
+            is RsExpr.MacroExpr -> handleMacroExpr(node.v1)
+            is RsExpr.PathExpr -> handlePathExpr(node.v1)
+            else -> handleNotSupported(RsAst.RustExpr(node), node::class.simpleName ?: "")
         }
+    }
+
+    fun handleBlockExpr(blockExpr: RsBlockExpr): Expression {
+
+        val block = newBlock(RsAst.RustExpr(RsExpr.BlockExpr(blockExpr)))
+
+        frontend.scopeManager.enterScope(block)
+
+        for (stmt in blockExpr.stmts) {
+            block.statements += frontend.statementHandler.handle(RsAst.RustStmt(stmt))
+        }
+
+        blockExpr.stmts
+
+        frontend.scopeManager.leaveScope(block)
+        return block
+    }
+
+    fun handleLiteral(literal: RsLiteral): Expression {
+        val stringValue = literal.astNode.text
+        val raw = RsAst.RustExpr(RsExpr.Literal(literal))
+
+        return when (literal.literalType) {
+            RsLiteralType.CHAR_L ->
+                newLiteral(stringValue[0], language.builtInTypes["char"] ?: unknownType(), raw)
+            RsLiteralType.STRING_L ->
+                newLiteral(stringValue, language.builtInTypes["str"] ?: unknownType(), raw)
+            RsLiteralType.BYTE_L ->
+                newLiteral(
+                    stringValue.removePrefix("b'").removeSuffix("'").let {
+                        if (it.startsWith("\\x")) it.removePrefix("\\x").toInt(16)
+                        else it.toInt(256)
+                    },
+                    language.builtInTypes["u8"] ?: unknownType(),
+                    raw,
+                )
+            RsLiteralType.C_STRING_L ->
+                newLiteral(
+                    stringValue.removePrefix("c").removeSuffix("'"),
+                    objectType("CString"),
+                    raw,
+                )
+            RsLiteralType.INT_NUMBER_L ->
+                newLiteral(stringValue.toInt(), language.builtInTypes["str"] ?: unknownType(), raw)
+            RsLiteralType.BYTE_STRING_L ->
+                newLiteral(
+                    stringValue.removePrefix("b").removeSuffix("'"),
+                    language.builtInTypes["u8"] ?: unknownType().array(),
+                    raw,
+                )
+            RsLiteralType.FLOAT_NUMBER_L ->
+                newLiteral(
+                    stringValue.substringBefore("f").toFloat(),
+                    (if (stringValue.endsWith("f32")) language.builtInTypes["f32"]
+                    else language.builtInTypes["f32"]) ?: unknownType(),
+                    raw,
+                )
+            RsLiteralType.UNKNOWN_L ->
+                newLiteral(stringValue, language.builtInTypes["str"] ?: unknownType(), raw)
+        }
+    }
+
+    fun handleCallExpr(callExpr: RsCallExpr): CallExpression {
+
+        val callee: Expression? = callExpr.expr.getOrNull(0)?.let { handleNode(it) }
+
+        val call =
+            newCallExpression(callee = callee, rawNode = RsAst.RustExpr(RsExpr.CallExpr(callExpr)))
+
+        for (arg in callExpr.arguments) {
+            call.arguments += handleNode(arg)
+        }
+
+        return call
+    }
+
+    fun handleMacroExpr(macroExpr: RsMacroExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.MacroExpr(macroExpr))
+        macroExpr.macroCall?.let {
+            val call = newCallExpression(rawNode = raw)
+            call.arguments += newLiteral(it.macroString)
+            return call
+        }
+
+        return newProblemExpression(
+            problem = "MacroExpression does not contain Macro Call",
+            rawNode = raw,
+        )
+    }
+
+    fun handlePathExpr(pathExpr: RsPathExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.PathExpr(pathExpr))
+
+        return newProblemExpression(
+            problem = "MacroExpression does not contain Macro Call",
+            rawNode = raw,
+        )
     }
 }

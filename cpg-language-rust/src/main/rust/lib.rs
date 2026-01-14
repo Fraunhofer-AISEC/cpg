@@ -277,6 +277,8 @@ pub enum RSItem {
     TypeAlias(RSTypeAlias),
     Union(RSUnion),
     Use(RSUse),
+    // Defined by us
+    Param(RSParam)
 }
 
 
@@ -343,16 +345,19 @@ pub struct RSFn {
     pub param_list: Option<RSParamList>,
     pub ret_type: Option<RSType>,
     pub body: Option<RSBlockExpr>,
+    name: Option<String>
 }
 impl From<Fn> for RSFn {
     fn from(node:  Fn) -> Self {
         println!("Function node {}", node);
         println!("{:#?}", node.syntax().children().find_map(BlockExpr::cast));
+
         RSFn{
             ast_node: node.syntax().into(),
             param_list: node.param_list().map(Into::into),
             ret_type: node.ret_type().map(|o|o.ty().map(Into::into)).flatten(),
-            body: node.syntax().children().find_map(BlockExpr::cast).map(Into::into)
+            body: node.syntax().children().find_map(BlockExpr::cast).map(Into::into),
+            name: node.name().map(|n|n.to_string())
         }
     }
 }

@@ -40,12 +40,13 @@ import java.net.URI
 import kotlin.collections.plusAssign
 import uniffi.cpgrust.RsAst
 import uniffi.cpgrust.RsItem
+import uniffi.cpgrust.RsType
 import uniffi.cpgrust.parseRustCode
 
 /** The [LanguageFrontend] for Rust. It uses the TreeSitter project to generate a RUST AST. */
 @SupportsParallelParsing(true)
 class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLanguageFrontend>) :
-    LanguageFrontend<RsAst, Rust.Type>(ctx, language) {
+    LanguageFrontend<RsAst, RsType>(ctx, language) {
     val lineSeparator = "\n"
     private val tokenTypeIndex = 0
 
@@ -104,8 +105,23 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
         return tud
     }
 
-    override fun typeOf(type: Rust.Type): Type {
-        return unknownType()
+    override fun typeOf(type: RsType): Type {
+        return when (type) {
+            is RsType.ArrayType -> unknownType()
+            is RsType.TupleType -> unknownType()
+            is RsType.FnPtrType -> unknownType()
+            is RsType.InferType -> unknownType()
+            is RsType.MacroType -> unknownType()
+            is RsType.DynTraitType -> unknownType()
+            is RsType.ForType -> unknownType()
+            is RsType.ImplTraitType -> unknownType()
+            is RsType.NeverType -> unknownType()
+            is RsType.ParenType -> unknownType()
+            is RsType.PathType -> unknownType()
+            is RsType.PtrType -> unknownType()
+            is RsType.RefType -> unknownType()
+            is RsType.SliceType -> unknownType()
+        }
     }
 
     /** Resolves a [Type] based on its string identifier. */
@@ -134,7 +150,12 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
         val upToIncluding = contentBeforeAndIn.split(lineSeparator)
         return PhysicalLocation(
             uri,
-            Region(upTo.size, upTo.last().length, upToIncluding.size, upToIncluding.last().length),
+            Region(
+                upTo.size,
+                upTo.last().length + 1,
+                upToIncluding.size,
+                upToIncluding.last().length + 1,
+            ),
         )
     }
 
