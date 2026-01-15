@@ -34,11 +34,11 @@ import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.query.QueryTree
+import de.fraunhofer.aisec.cpg.serialization.NodeJSON
+import de.fraunhofer.aisec.cpg.serialization.toJSON
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
-import de.fraunhofer.aisec.cpg.serialization.NodeJSON
-import de.fraunhofer.aisec.cpg.serialization.toJSON
 import java.util.function.BiFunction
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject

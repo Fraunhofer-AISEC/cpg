@@ -30,8 +30,8 @@ import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.configureServer
+import io.ktor.server.cio.*
 import io.ktor.server.engine.*
-import io.ktor.server.netty.*
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.StdioServerTransport
 import io.modelcontextprotocol.kotlin.sdk.server.mcp
@@ -86,5 +86,5 @@ fun runMcpServerUsingStdio() {
  * @param port The port number on which the SSE MCP server will listen for client connections.
  */
 fun runSseMcpServerUsingKtorPlugin(port: Int, server: Server) {
-    embeddedServer(Netty, host = "0.0.0.0", port = port) { mcp { server } }.start(wait = false)
+    embeddedServer(CIO, host = "0.0.0.0", port = port) { mcp { server } }.start(wait = false)
 }
