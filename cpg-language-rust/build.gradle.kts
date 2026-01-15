@@ -36,6 +36,39 @@ sourceSets { main { kotlin { srcDir("src/main/rust") } } }
 
 dependencies { implementation(libs.jna) }
 
+// Register a task that runs “cargo build”
+val cargoBuild by
+    tasks.registering(Exec::class) {
+        group = "build"
+        description = "Build Rust release"
+        workingDir = file("src/main/rust")
+        commandLine("cargo", "build", "--release")
+    }
+
+val generateBindings by
+    tasks.registering(Exec::class) {
+        group = "build"
+        description = "Generate uniffi bindings"
+        workingDir = file("src/main/rust")
+        // Run the binding generation only after a successful build
+        dependsOn(cargoBuild)
+        commandLine(
+            "cargo",
+            "run",
+            "--bin",
+            "uniffi-bindgen",
+            "generate",
+            "--library",
+            "target/release/libcpgrust.so",
+            "--language",
+            "kotlin",
+            "--out-dir",
+            "out",
+        )
+    }
+
+tasks.named("build") { dependsOn(cargoBuild, generateBindings) }
+
 val nativeSrc =
     layout.projectDirectory.dir(
         "src/main/rust/target/release"
@@ -52,4 +85,6 @@ tasks.register<Copy>("copyRustSharedLibToResources") {
     }
 }
 
-tasks.named("processResources") { dependsOn("copyRustSharedLibToResources") }
+tasks.named("processResources") {
+    dependsOn(cargoBuild, generateBindings, "copyRustSharedLibToResources")
+}

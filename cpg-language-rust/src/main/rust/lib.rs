@@ -85,7 +85,6 @@ pub enum RSAst {
 impl From<SyntaxNode> for RSAst {
     fn from(syntax: SyntaxNode) -> Self {
         let kind = syntax.kind();
-        println!("SN kind: {:?}", kind);
         if let Some(rnode) = Abi::cast(syntax.clone_subtree()) {
             return RSAst::RustAbi(rnode.into())
         }
@@ -350,8 +349,6 @@ pub struct RSFn {
 }
 impl From<Fn> for RSFn {
     fn from(node:  Fn) -> Self {
-        println!("Function node {}", node);
-        println!("{:#?}", node.syntax().children().find_map(BlockExpr::cast));
 
         RSFn{
             ast_node: node.syntax().into(),
@@ -376,7 +373,11 @@ impl From<Abi> for RSAbi {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RSImpl {pub(crate) ast_node: RSNode}
 impl From<Impl> for RSImpl {
-    fn from(node:  Impl) -> Self {RSImpl{ast_node: node.syntax().into()}}
+    fn from(node:  Impl) -> Self {
+        RSImpl{
+            ast_node: node.syntax().into()
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -601,8 +602,6 @@ impl From<BlockExpr> for RSBlockExpr {
             stmts: node.stmt_list().map(|sl| sl.statements().map(Into::into).collect::<Vec<_>>()).unwrap_or_default(),
             tail_expr:node.stmt_list().map(|sl|sl.tail_expr().map(Into::into)).flatten().into_iter().collect()
         };
-        println!("Nr. of statements: {}", ret.stmts.len());
-        println!("{:?}", node.tail_expr());
         ret
     }
 }
@@ -617,7 +616,6 @@ impl From<BreakExpr> for RSBreakExpr {
 pub struct RSCallExpr {pub(crate) ast_node: RSNode, expr: Vec<RSExpr>, arguments: Vec<RSExpr>}
 impl From<CallExpr> for RSCallExpr {
     fn from(node:  CallExpr) -> Self {
-        ;//.for_each(|a|println!("Arglistelement:{:#?}", a.kind())));
         RSCallExpr{
             ast_node: node.syntax().into(),
             expr: node.expr().map(Into::into).into_iter().collect(),
@@ -706,7 +704,6 @@ impl From<Literal> for RSLiteral {
                 _ => RSLiteralType::UnknownL
             }
         }
-        println!("{:#?}", node.syntax().kind());
         RSLiteral{ast_node: node.syntax().into(), literal_type: kind}
     }
 }
