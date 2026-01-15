@@ -76,11 +76,11 @@ private constructor(
      * @param cleanup - Whether to clean up the frontends after analysis. Default is `true`.
      * @return a [CompletableFuture] with the [TranslationResult].
      */
-    fun analyze(
-        ctx: TranslationContext = TranslationContext(config)
-    ): CompletableFuture<TranslationResult> {
+    fun analyze(ctx: TranslationContext? = null): CompletableFuture<TranslationResult> {
         // We wrap the analysis in a CompletableFuture, i.e. in an async task.
-        return CompletableFuture.supplyAsync { analyzeNonAsync(ctx = ctx) }
+        return CompletableFuture.supplyAsync {
+            analyzeNonAsync(ctx = ctx ?: TranslationContext(config))
+        }
     }
 
     private fun analyzeNonAsync(ctx: TranslationContext): TranslationResult {
