@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.rust
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import uniffi.cpgrust.RsAst
+import uniffi.cpgrust.RsBinExpr
 import uniffi.cpgrust.RsBlockExpr
 import uniffi.cpgrust.RsCallExpr
 import uniffi.cpgrust.RsExpr
@@ -51,6 +52,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             is RsExpr.CallExpr -> handleCallExpr(node.v1)
             is RsExpr.MacroExpr -> handleMacroExpr(node.v1)
             is RsExpr.PathExpr -> handlePathExpr(node.v1)
+            is RsExpr.BinExpr -> handleBinExpr(node.v1)
             else -> handleNotSupported(RsAst.RustExpr(node), node::class.simpleName ?: "")
         }
     }
@@ -65,7 +67,9 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             block.statements += frontend.statementHandler.handle(RsAst.RustStmt(stmt))
         }
 
-        blockExpr.stmts
+        blockExpr.tailExpr.getOrNull(0)?.let {
+            block.statements += frontend.expressionHandler.handle(RsAst.RustExpr(it))
+        }
 
         frontend.scopeManager.leaveScope(block)
         return block
@@ -132,7 +136,11 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     fun handleMacroExpr(macroExpr: RsMacroExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.MacroExpr(macroExpr))
         macroExpr.macroCall?.let {
-            val call = newCallExpression(rawNode = raw)
+            val base =
+                it.path?.segment?.nameRef?.let {
+                    newReference(it.text, rawNode = RsAst.RustExpr(RsExpr.NameRef(it)))
+                }
+            val call = newCallExpression(callee = base, rawNode = raw)
             call.arguments += newLiteral(it.macroString)
             return call
         }
@@ -146,8 +154,43 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     fun handlePathExpr(pathExpr: RsPathExpr): Expression {
         val raw = RsAst.RustExpr(RsExpr.PathExpr(pathExpr))
 
+        pathExpr.segment?.nameRef?.let {
+            return newReference(it.text, rawNode = raw)
+        }
+
         return newProblemExpression(
-            problem = "MacroExpression does not contain Macro Call",
+            problem = "PathExpression does not contain reference to a name",
+            rawNode = raw,
+        )
+    }
+
+    fun handleBinExpr(binExpr: RsBinExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.BinExpr(binExpr))
+        if (binExpr.expressions.size == 2) {
+            return newBinaryOperator(binExpr.operator, raw).also {
+                it.lhs =
+                    frontend.expressionHandler.handle(RsAst.RustExpr(binExpr.expressions.first()))
+                it.rhs =
+                    frontend.expressionHandler.handle(RsAst.RustExpr(binExpr.expressions.last()))
+            }
+        } else if (binExpr.expressions.size == 1) {
+            return newUnaryOperator(
+                    binExpr.operator,
+                    postfix = false,
+                    prefix = false,
+                    rawNode = raw,
+                )
+                .also {
+                    it.input =
+                        frontend.expressionHandler.handle(
+                            RsAst.RustExpr(binExpr.expressions.first())
+                        )
+                }
+        }
+
+        return newProblemExpression(
+            problem =
+                "Operator based expression has an incorrect amount of ${binExpr.expressions} operators",
             rawNode = raw,
         )
     }

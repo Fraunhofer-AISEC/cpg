@@ -6,8 +6,9 @@ use ra_ap_syntax::{ast, SourceFile, SyntaxNode};
 use ra_ap_syntax::{AstNode, Edition};
 use itertools::Itertools;
 use ra_ap_parser::SyntaxKind;
-use ra_ap_syntax::ast::{Abi, Adt, ArgList, ArrayExpr, ArrayType, AsmClobberAbi, AsmConst, AsmExpr, AsmLabel, AsmOperand, AsmOperandNamed, AsmOptions, AsmPiece, AsmRegOperand, AsmSym, AssocItem, AssocTypeArg, AwaitExpr, BecomeExpr, BinExpr, BlockExpr, BoxPat, BreakExpr, CallExpr, CastExpr, ClosureExpr, Const, ConstArg, ConstBlockPat, ConstParam, ContinueExpr, DocCommentIter, DynTraitType, Enum, Expr, ExprStmt, ExternBlock, ExternCrate, ExternItem, FieldExpr, FieldList, Fn, FnPtrType, ForExpr, ForType, FormatArgsExpr, GenericArg, GenericParam, HasArgList, HasName, IdentPat, IfExpr, Impl, ImplTraitType, IndexExpr, InferType, Item, LetElse, LetExpr, LetStmt, Lifetime, LifetimeArg, LifetimeParam, Literal, LiteralPat, LoopExpr, MacroCall, MacroDef, MacroExpr, MacroPat, MacroRules, MacroType, MatchExpr, MethodCallExpr, Module, NameRef, NeverType, OffsetOfExpr, OrPat, Param, ParamList, ParenExpr, ParenPat, ParenType, Pat, Path, PathExpr, PathPat, PathSegment, PathType, PrefixExpr, PtrType, RangeExpr, RangePat, RecordExpr, RecordFieldList, RecordPat, RefExpr, RefPat, RefType, RestPat, ReturnExpr, SelfParam, SlicePat, SliceType, Static, Stmt, Struct, TokenTree, Trait, TryExpr, TupleExpr, TupleFieldList, TuplePat, TupleStructPat, TupleType, Type, TypeAlias, TypeArg, TypeParam, UnderscoreExpr, Union, Use, UseBoundGenericArg, Variant, VariantDef, WhileExpr, WildcardPat, YeetExpr, YieldExpr};
+use ra_ap_syntax::ast::{Abi, Adt, ArgList, ArrayExpr, ArrayType, AsmClobberAbi, AsmConst, AsmExpr, AsmLabel, AsmOperand, AsmOperandNamed, AsmOptions, AsmPiece, AsmRegOperand, AsmSym, AssocItem, AssocTypeArg, AwaitExpr, BecomeExpr, BinExpr, BlockExpr, BoxPat, BreakExpr, CallExpr, CastExpr, ClosureExpr, Const, ConstArg, ConstBlockPat, ConstParam, ContinueExpr, DocCommentIter, DynTraitType, Enum, Expr, ExprStmt, ExternBlock, ExternCrate, ExternItem, FieldExpr, FieldList, Fn, FnPtrType, ForExpr, ForType, FormatArgsExpr, GenericArg, GenericParam, HasArgList, HasName, IdentPat, IfExpr, Impl, ImplTraitType, IndexExpr, InferType, Item, LetElse, LetExpr, LetStmt, Lifetime, LifetimeArg, LifetimeParam, Literal, LiteralPat, LoopExpr, MacroCall, MacroDef, MacroExpr, MacroPat, MacroRules, MacroType, MatchExpr, MethodCallExpr, Module, NameRef, NeverType, OffsetOfExpr, OrPat, Param, ParamList, ParenExpr, ParenPat, ParenType, Pat, Path, PathExpr, PathPat, PathSegment, PathType, PrefixExpr, PtrType, RangeExpr, RangePat, RecordExpr, RecordField, RecordFieldList, RecordPat, RefExpr, RefPat, RefType, RestPat, ReturnExpr, SelfParam, SlicePat, SliceType, Static, Stmt, Struct, TokenTree, Trait, TryExpr, TupleExpr, TupleField, TupleFieldList, TuplePat, TupleStructPat, TupleType, Type, TypeAlias, TypeArg, TypeParam, UnderscoreExpr, Union, Use, UseBoundGenericArg, Variant, VariantDef, WhileExpr, WildcardPat, YeetExpr, YieldExpr};
 use crate::RSAst::RustProblem;
+use ra_ap_syntax::ast::HasModuleItem;
 
 #[derive(uniffi::Record)]
 pub struct RSSourceFile {
@@ -401,9 +402,16 @@ impl From<MacroRules> for RSMacroRules {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSModule {pub(crate) ast_node: RSNode}
+pub struct RSModule {pub(crate) ast_node: RSNode, name: Option<String>, items: Vec<RSItem>}
 impl From<Module> for RSModule {
-    fn from(node:  Module) -> Self {RSModule{ast_node: node.syntax().into()}}
+    fn from(node:  Module) -> Self {
+
+        RSModule{
+            ast_node: node.syntax().into(),
+            name: node.name().map(|n|n.to_string()),
+            items: node.item_list().map(|il| il.items().map(Into::into).collect::<Vec<_>>()).unwrap_or_default()
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -413,9 +421,19 @@ impl From<Static> for RSStatic {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSStruct {pub(crate) ast_node: RSNode}
+pub struct RSStruct {
+    pub(crate) ast_node: RSNode,
+    name: Option<String>,
+    fieldList: Option<RSFieldList>
+}
 impl From<Struct> for RSStruct {
-    fn from(node:  Struct) -> Self {RSStruct{ast_node: node.syntax().into()}}
+    fn from(node:  Struct) -> Self {
+        RSStruct{
+            ast_node: node.syntax().into(),
+            name: node.name().map(|n|n.to_string()),
+            fieldList: node.field_list().map(Into::into)
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -484,6 +502,9 @@ pub enum RSExpr {
     WhileExpr(RSWhileExpr),
     YeetExpr(RSYeetExpr),
     YieldExpr(RSYieldExpr),
+    Path(RSPath),
+    PathSegment(RSPathSegment),
+    NameRef(RSNameRef)
 }
 
 impl From<Expr> for RSExpr {
@@ -1227,15 +1248,51 @@ impl From<FieldList> for RSFieldList {
 
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSRecordFieldList {pub(crate) ast_node: RSNode}
+pub struct RSRecordFieldList {pub(crate) ast_node: RSNode, fields: Vec<RSRecordField>}
 impl From<RecordFieldList> for RSRecordFieldList {
-    fn from(node: RecordFieldList ) -> Self {RSRecordFieldList{ast_node: node.syntax().into()}}
+    fn from(node: RecordFieldList ) -> Self {
+        RSRecordFieldList{
+            ast_node: node.syntax().into(),
+            fields: node.fields().map(|f| f.into()).collect(),
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSTupleFieldList {pub(crate) ast_node: RSNode}
+pub struct RSTupleFieldList {pub(crate) ast_node: RSNode, fields: Vec<RSTupleField>}
 impl From<TupleFieldList> for RSTupleFieldList {
-    fn from(node: TupleFieldList ) -> Self {RSTupleFieldList{ast_node: node.syntax().into()}}
+    fn from(node: TupleFieldList ) -> Self {
+        RSTupleFieldList{
+            ast_node: node.syntax().into(),
+            fields: node.fields().map(|f| f.into()).collect(),
+        }
+    }
+}
+
+#[derive(uniffi::Record)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RSTupleField {pub(crate) ast_node: RSNode, field_type: Option<RSType>}
+impl From<TupleField> for RSTupleField{
+    fn from(node: TupleField ) -> Self {RSTupleField{ast_node: node.syntax().into(), field_type: node.ty().map(Into::into)}}
+}
+
+#[derive(uniffi::Record)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RSRecordField {
+    pub(crate) ast_node: RSNode,
+    field_type: Option<RSType>,
+    expr: Option<RSExpr>,
+    name: Option<String>
+}
+impl From<RecordField> for RSRecordField{
+    fn from(node: RecordField ) -> Self {
+        RSRecordField{
+            ast_node: node.syntax().into(),
+            field_type: node.ty().map(Into::into),
+            expr: node.expr().map(Into::into),
+            name: node.name().map(|n|n.to_string())
+        }
+    }
 }
 
 #[derive(uniffi::Enum)]

@@ -28,10 +28,13 @@ package de.fraunhofer.aisec.cpg.frontends.rust
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import uniffi.cpgrust.RsAst
+import uniffi.cpgrust.RsFieldList
 import uniffi.cpgrust.RsFn
 import uniffi.cpgrust.RsItem
+import uniffi.cpgrust.RsModule
 import uniffi.cpgrust.RsParam
 import uniffi.cpgrust.RsPat
+import uniffi.cpgrust.RsStruct
 
 class DeclarationHandler(frontend: RustLanguageFrontend) :
     RustHandler<Declaration, RsAst.RustItem>(::ProblemDeclaration, frontend) {
@@ -40,6 +43,8 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         return when (item) {
             is RsItem.Fn -> handleFunctionDeclaration(item.v1)
             is RsItem.Param -> handleParameterDeclaration(item.v1)
+            is RsItem.Module -> handleModule(item.v1)
+            is RsItem.Struct -> handleStruct(item.v1)
             else -> handleNotSupported(node, node::class.simpleName ?: "")
         }
     }
@@ -71,6 +76,69 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                 rawNode = RsAst.RustItem(RsItem.Param(param)),
             )
 
+        frontend.scopeManager.addDeclaration(parameter)
+
         return parameter
+    }
+
+    private fun handleModule(module: RsModule): Declaration {
+        val namespace =
+            newNamespaceDeclaration(
+                module.name ?: "",
+                rawNode = RsAst.RustItem(RsItem.Module(module)),
+            )
+        frontend.scopeManager.enterScope(namespace)
+
+        for (item in module.items) {
+            val declaration = handle(RsAst.RustItem(item))
+            frontend.scopeManager.addDeclaration(declaration)
+            namespace.declarations += declaration
+        }
+
+        frontend.scopeManager.leaveScope(namespace)
+        return namespace
+    }
+
+    private fun handleStruct(struct: RsStruct): Declaration {
+        val raw = RsAst.RustItem(RsItem.Struct(struct))
+
+        val record = newRecordDeclaration(struct.name ?: "", "struct", raw)
+
+        struct.fieldList?.let { fields ->
+            when (fields) {
+                is RsFieldList.RecordFieldList -> {
+                    val rfs = fields.v1
+                    for (rField in rfs.fields) {
+                        val type = rField.fieldType?.let { frontend.typeOf(it) }
+
+                        val field = newFieldDeclaration(rField.name ?: "", type ?: unknownType())
+
+                        field.initializer =
+                            rField.expr?.let {
+                                frontend.expressionHandler.handle(RsAst.RustExpr(it))
+                            }
+                        record.fields += field
+                        frontend.scopeManager.addDeclaration(field)
+                    }
+                }
+                is RsFieldList.TupleFieldList -> {
+                    var fieldCounter = 0
+                    val tfs = fields.v1
+                    for (tField in tfs.fields) {
+                        val type = tField.fieldType?.let { frontend.typeOf(it) }
+
+                        val field =
+                            newFieldDeclaration(fieldCounter.toString(), type ?: unknownType())
+
+                        record.fields += field
+                        frontend.scopeManager.addDeclaration(field)
+                        fieldCounter++
+                    }
+                }
+                else -> {}
+            }
+        }
+
+        return record
     }
 }

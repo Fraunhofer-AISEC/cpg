@@ -84,6 +84,9 @@ fun RsExpr.astNode(): RsNode {
         is RsExpr.WhileExpr -> this.v1.astNode
         is RsExpr.YeetExpr -> this.v1.astNode
         is RsExpr.YieldExpr -> this.v1.astNode
+        is RsExpr.Path -> this.v1.astNode
+        is RsExpr.PathSegment -> this.v1.astNode
+        is RsExpr.NameRef -> this.v1.astNode
     }
 }
 
