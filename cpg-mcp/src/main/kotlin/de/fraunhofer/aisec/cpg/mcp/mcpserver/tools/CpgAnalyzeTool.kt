@@ -74,6 +74,7 @@ import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
 import de.fraunhofer.aisec.cpg.passes.configuration.PassOrderingHelper
 import de.fraunhofer.aisec.cpg.passes.consumeTargets
 import de.fraunhofer.aisec.cpg.passes.hardDependencies
+import de.fraunhofer.aisec.cpg.passes.softDependencies
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
@@ -290,6 +291,7 @@ fun Server.addListPasses() {
                                 else ""
                         },
                     dependsOn = pass.hardDependencies.map { it.qualifiedName.toString() },
+                    softDependencies = pass.softDependencies.map { it.qualifiedName.toString() },
                 )
             }
 
@@ -353,7 +355,7 @@ fun Server.addListPasses() {
             passesList +=
                 passToInfo(
                     PythonFileConceptPass::class,
-                    "Applies Python-specific file concepts to the CPG, enriching the graph with additional semantic information relevant to Python files.",
+                    "Applies file concepts to the CPG, enriching the graph with additional semantic information relevant to handling files. It only considers code written in python.",
                 )
 
             // C-specific pass is added only if C language is available
@@ -409,7 +411,11 @@ fun Server.addListPasses() {
 /** Keeps track of which passes have been run on which nodes to avoid redundant executions. */
 val nodeToPass = IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>>()
 
-/** Runs a specified [de.fraunhofer.aisec.cpg.passes.Pass] on a specified [Node]. */
+/**
+ * Registers a tool which runs a [Pass] on a specified [Node] or the closest suitable node(s) for
+ * the pass by first searching upwards and then (in case no suitable node was found) downwards the
+ * AST. The tool further takes care of dependencies between the passes.
+ */
 fun Server.addRunPass() {
     this.addTool(
         name = "cpg_run_pass",
