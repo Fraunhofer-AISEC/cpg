@@ -388,56 +388,71 @@ fun Server.addRunPass() {
             val passClass =
                 try {
                     (Class.forName(payload.passName).kotlin as? KClass<out Pass<*>>)
+                        ?: return@runOnCpg CallToolResult(
+                            content =
+                                listOf(TextContent("Could not find the pass ${payload.passName}."))
+                        )
                 } catch (_: ClassNotFoundException) {
-                    null
-                }
-                    ?: return@runOnCpg CallToolResult(
+                    return@runOnCpg CallToolResult(
                         content =
                             listOf(TextContent("Could not find the pass ${payload.passName}."))
                     )
+                }
 
-            val node =
-                result.nodes.find { it.id.toString() == payload.nodeId }
-                    ?: return@runOnCpg CallToolResult(
-                        content =
-                            listOf(
-                                TextContent(
-                                    "Could not find any node with the ID ${payload.nodeId}."
-                                )
-                            )
-                    )
+            val nodes = result.nodes.filter { it.id.toString() == payload.nodeId }
+
+            if (nodes.isEmpty())
+                return@runOnCpg CallToolResult(
+                    content =
+                        listOf(
+                            TextContent("Could not find any node with the ID ${payload.nodeId}.")
+                        )
+                )
             val executedPasses = mutableListOf<TextContent>()
-
             // Check if all required passes have been run before executing this pass.
             val orderingHelper = PassOrderingHelper(listOf(passClass))
-            val orderedPassesToExecute = orderingHelper.order().flatten()
-            for (passToExecute in orderedPassesToExecute) {
-                // Check if pass has already been executed for the respective node
-                if (passToExecute !in nodeToPass.computeIfAbsent(node) { mutableSetOf() }) {
-                    // Execute the pass for the node
-                    ctx?.let { ctx ->
-                        val passResult = runPassForNode(node, passToExecute, ctx)
-                        if (passResult.success) {
-                            executedPasses.add(TextContent(passResult.message))
-                        } else {
-                            // Return if there was an error during pass execution
-                            return@runOnCpg CallToolResult(
+            val orderedPassesToExecute =
+                try {
+                    orderingHelper.order().flatten()
+                } catch (_: ConfigurationException) {
+                    // There was an exception while ordering the passes (e.g., cyclic dependency).
+                    // We just add the requested pass and hope that the AI knows what it is doing.
+                    // Note: We do not log this error because it has led to problems with the MCP
+                    // server via stdio in the past.
+                    listOf(passClass)
+                }
+
+            for (node in nodes) {
+                for (passToExecute in orderedPassesToExecute) {
+                    // Check if pass has already been executed for the respective node
+                    if (passToExecute !in nodeToPass.computeIfAbsent(node) { mutableSetOf() }) {
+                        // Execute the pass for the node
+                        ctx?.let { ctx ->
+                            val passResult = runPassForNode(node, passToExecute, ctx)
+                            if (passResult.success) {
+                                executedPasses.add(TextContent(passResult.message))
+                            } else {
+                                // Return if there was an error during pass execution
+                                return@runOnCpg CallToolResult(
+                                    content =
+                                        listOf(
+                                            TextContent(passResult.message),
+                                            *executedPasses.toTypedArray(),
+                                        )
+                                )
+                            }
+                            // Mark pass as executed
+                            nodeToPass[node]?.add(passToExecute)
+                        }
+                            ?: return@runOnCpg CallToolResult(
                                 content =
                                     listOf(
-                                        TextContent(passResult.message),
-                                        *executedPasses.toTypedArray(),
+                                        TextContent(
+                                            "Cannot run run_pass without translation context."
+                                        )
                                     )
                             )
-                        }
-                        // Mark pass as executed
-                        nodeToPass[node]?.add(passToExecute)
                     }
-                        ?: return@runOnCpg CallToolResult(
-                            content =
-                                listOf(
-                                    TextContent("Cannot run run_pass without translation context.")
-                                )
-                        )
                 }
             }
 
