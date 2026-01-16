@@ -145,9 +145,11 @@ fun Server.addCpgAnalyzeTool() {
 }
 
 /**
- * Translate the given [payload] to the CPG. If [runPasses] is true, all default passes will be run,
- * otherwise no pass will be run. If [cleanup] is true, we clean up the [TypeManager] memory after
- * analysis.
+ * Translate the given [payload] to the CPG. If there has been another analysis before, it resets
+ * the context and cleans up all frontends.
+ *
+ * If [runPasses] is true, all default passes will be run, otherwise no pass will be run. If
+ * [cleanup] is true, we clean up the [TypeManager] memory after analysis.
  */
 fun runCpgAnalyze(
     payload: CpgAnalyzePayload?,
@@ -267,7 +269,7 @@ fun Server.addListPasses() {
             """Provides a list of all available passes that can be applied to the CPG. It also lists dependencies and what kind of node the pass expects."""
                 .trimIndent(),
         inputSchema = ToolSchema(properties = buildJsonObject {}, required = listOf()),
-    ) { request ->
+    ) { _ ->
         try {
 
             fun passToInfo(pass: KClass<out Pass<*>>, description: String): PassInfo {
@@ -315,7 +317,7 @@ fun Server.addListPasses() {
                     ),
                     passToInfo(
                         DFGPass::class,
-                        "Adds DFG edges to the graph. These are a flow-insensitive data flow representation.",
+                        "Adds DFG edges to the graph. These are a controlflow-insensitive data flow representation.",
                     ),
                     passToInfo(
                         ControlFlowSensitiveDFGPass::class,
@@ -358,7 +360,7 @@ fun Server.addListPasses() {
             passesList +=
                 passToInfo(
                     CXXExtraPass::class,
-                    "This Pass executes certain C++ specific conversions on initializers, that are only possible once we know all the types. It may be extended in the future with other things that we currently still do in the frontend, but might be more accurate to do once we parsed all files and have all type information.",
+                    "This Pass executes certain C++ specific conversions on initializers, that are only possible once we know all the types.",
                 )
 
             // LLVM-specific pass is added only if LLVM language is available
@@ -379,8 +381,7 @@ fun Server.addListPasses() {
                     JavaExtraPass::class,
                     "This pass is responsible for handling Java-specific cases that are not covered by the general CPG logic. For example, Java has static member access, which is not modeled as a member expression, but as a reference with an FQN. This pass will convert such member expressions to references with FQNs.",
                 )
-            passesList +=
-                passToInfo(JavaImportResolver::class, "Pass that deals with Java imports.")
+            passesList += passToInfo(JavaImportResolver::class, "Pass that resolves Java imports.")
 
             // Go-specific pass is added only if Go language is available
             passesList +=
@@ -512,34 +513,36 @@ fun Server.addRunPass() {
 data class PassExecutionResult(val success: Boolean, val message: String)
 
 /**
- * Internal helper function that runs the specified [prototype] pass on the given [node] within the
- * provided [ctx] (TranslationContext). It uses the [preList] if provided, otherwise it collects
- * nodes of type [T] starting from the given [node] (either the node itself, its first parent of
- * type [T], or all children of type [T]).
+ * Internal helper function that runs the [Pass] of class [passClass] on the given [node] within the
+ * provided [TranslationContext] [ctx]. As a [Pass] has to work on one or multiple nodes, one can
+ * provide the list of nodes where the pass should start using the [preList]. If [preList] is not
+ * provided, it collects nodes of type [T] starting from the given [node] (either the node itself,
+ * its first parent of type [T], or all children of type [T]).
  */
 inline fun <reified T : Node> runPassForNode(
     node: Node,
-    prototype: Pass<T>,
-    passClass: KClass<out Pass<*>>,
+    passClass: KClass<out Pass<T>>,
     ctx: TranslationContext,
     preList: List<T>? = null,
 ): PassExecutionResult {
-    val list = preList?.toMutableList() ?: listOfNotNull(node as? T).toMutableList()
-    if (list.isEmpty())
-        list.addAll(
+    val nodesToAnalyze = preList?.toMutableList() ?: listOfNotNull(node as? T).toMutableList()
+    if (nodesToAnalyze.isEmpty())
+        nodesToAnalyze.addAll(
             node.firstParentOrNull<T>()?.let { listOf(it) } ?: node.allChildrenWithOverlays<T>()
         )
-    return if (list.isNotEmpty()) {
+    return if (nodesToAnalyze.isNotEmpty()) {
         consumeTargets(
-            cls = prototype::class,
+            cls = passClass,
             ctx = ctx,
             targets =
-                list.filter { nodeToPass.computeIfAbsent(it) { mutableSetOf() }.add(passClass) },
+                nodesToAnalyze.filter {
+                    nodeToPass.computeIfAbsent(it) { mutableSetOf() }.add(passClass)
+                },
             executedFrontends = ctx.executedFrontends,
         )
         PassExecutionResult(
             true,
-            "Ran pass ${passClass.simpleName} on nodes ${list.map { it.id.toString() }}.",
+            "Ran pass ${passClass.simpleName} on nodes ${nodesToAnalyze.map { it.id.toString() }}.",
         )
     } else {
         PassExecutionResult(
@@ -580,19 +583,19 @@ fun runPassForNode(
 
     return when (prototype) {
         is TranslationResultPass -> {
-            runPassForNode<TranslationResult>(node, prototype, passClass, ctx)
+            runPassForNode<TranslationResult>(node, prototype::class, ctx)
         }
         is ComponentPass -> {
-            runPassForNode<Component>(node, prototype, passClass, ctx)
+            runPassForNode<Component>(node, prototype::class, ctx)
         }
         is TranslationUnitPass -> {
-            runPassForNode<TranslationUnitDeclaration>(node, prototype, passClass, ctx)
+            runPassForNode<TranslationUnitDeclaration>(node, prototype::class, ctx)
         }
         is EOGStarterPass -> {
-
-            val list = listOfNotNull<Node>((node as? EOGStarterHolder) as? Node).toMutableList()
-            if (list.isEmpty())
-                list.addAll(
+            val eogStarters =
+                listOfNotNull<Node>((node as? EOGStarterHolder) as? Node).toMutableList()
+            if (eogStarters.isEmpty())
+                eogStarters.addAll(
                     node
                         .firstParentOrNull<Node>({ it is EOGStarterHolder && it.prevEOG.isEmpty() })
                         ?.let { listOf(it) }
@@ -600,7 +603,7 @@ fun runPassForNode(
                             it is EOGStarterHolder && it.prevEOG.isEmpty()
                         }
                 )
-            runPassForNode<Node>(node, prototype, passClass, ctx, preList = list)
+            runPassForNode<Node>(node, prototype::class, ctx, preList = eogStarters)
         }
     }
 }

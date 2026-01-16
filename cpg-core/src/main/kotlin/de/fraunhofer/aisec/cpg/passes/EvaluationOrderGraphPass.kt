@@ -72,8 +72,8 @@ import org.slf4j.LoggerFactory
  * [currentPredecessors] or even temporarily save and restore the valid eog exits of an ast subtree,
  * e.g. [IfStatement].
  *
- * The EOG is similar to the CFG `ControlFlowGraphPass`, but there are some subtle differences:
- * * For methods without explicit return statement, EOF will have an edge to a virtual return node
+ * The EOG is similar to the CFG (Control Flow Graph), but there are some subtle differences:
+ * * For methods without explicit return statement, EOG will have an edge to a virtual return node
  *   with line number -1 which does not exist in the original code. A CFG will always end with the
  *   last reachable statement(s) and not insert any virtual return statements.
  * * EOG considers an opening blocking ("Block", indicated by a "{") as a separate node. A CFG will
