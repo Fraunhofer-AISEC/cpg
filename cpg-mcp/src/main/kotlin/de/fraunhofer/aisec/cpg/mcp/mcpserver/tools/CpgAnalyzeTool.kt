@@ -232,7 +232,7 @@ fun Server.addCpgTranslate() {
         name = "cpg_translate",
         description =
             """
-        Translates the source code into the AST of the CPG (Code Property Graph). This serves a basis for subsequent passes and analyses.
+        Translates the source code into the AST of the CPG (Code Property Graph). This serves as a basis for subsequent passes and analyses.
         
         $cpgDescription
         
@@ -405,6 +405,9 @@ fun Server.addListPasses() {
     }
 }
 
+/**
+ * Keeps track of which passes have been run on which nodes to avoid redundant executions.
+ */
 val nodeToPass = IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>>()
 
 /** Runs a specified [de.fraunhofer.aisec.cpg.passes.Pass] on a specified [Node]. */
