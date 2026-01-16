@@ -79,7 +79,7 @@ val resourceSubdir = "linux-x86-64" // Todo Can I extend this to all possible ta
 tasks.register<Copy>("copyRustSharedLibToResources") {
     // Todo Extend this to also do the cargo build and bindings generation part
     from(nativeSrc.file(nativeName))
-    into(layout.buildDirectory.dir("resources/main/$resourceSubdir"))
+    into(layout.buildDirectory.dir("resources/main"))
     doFirst {
         println("Copying native lib from ${nativeSrc.file(nativeName).asFile} to resources...")
     }
