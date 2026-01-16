@@ -209,12 +209,16 @@ val Persistable.connectedNodes: IdentitySet<Node>
 
         for (entry in this::class.schemaRelationships) {
             val value = entry.value.call(this)
-            if (value is EdgeCollection<*, *>) {
-                nodes += value.toNodeCollection()
-            } else if (value is List<*>) {
-                nodes += value.filterIsInstance<Node>()
-            } else if (value is Node) {
-                nodes += value
+            when (value) {
+                is EdgeCollection<*, *> -> {
+                    nodes += value.toNodeCollection()
+                }
+                is List<*> -> {
+                    nodes += value.filterIsInstance<Node>()
+                }
+                is Node -> {
+                    nodes += value
+                }
             }
         }
 
@@ -227,31 +231,35 @@ private fun List<Node>.collectRelationships(): List<Relationship> {
     for (node in this) {
         for (entry in node::class.schemaRelationships) {
             val value = entry.value.call(node)
-            if (value is EdgeCollection<*, *>) {
-                relationships +=
-                    value.map { edge ->
-                        mapOf(
-                            "startId" to edge.start.id.toString(),
-                            "endId" to edge.end.id.toString(),
-                            "type" to entry.key,
-                        ) + edge.properties()
-                    }
-            } else if (value is List<*>) {
-                relationships +=
-                    value.filterIsInstance<Node>().map { end ->
+            when (value) {
+                is EdgeCollection<*, *> -> {
+                    relationships +=
+                        value.map { edge ->
+                            mapOf(
+                                "startId" to edge.start.id.toString(),
+                                "endId" to edge.end.id.toString(),
+                                "type" to entry.key,
+                            ) + edge.properties()
+                        }
+                }
+                is List<*> -> {
+                    relationships +=
+                        value.filterIsInstance<Node>().map { end ->
+                            mapOf(
+                                "startId" to node.id.toString(),
+                                "endId" to end.id.toString(),
+                                "type" to entry.key,
+                            )
+                        }
+                }
+                is Node -> {
+                    relationships +=
                         mapOf(
                             "startId" to node.id.toString(),
-                            "endId" to end.id.toString(),
+                            "endId" to value.id.toString(),
                             "type" to entry.key,
                         )
-                    }
-            } else if (value is Node) {
-                relationships +=
-                    mapOf(
-                        "startId" to node.id.toString(),
-                        "endId" to value.id.toString(),
-                        "type" to entry.key,
-                    )
+                }
             }
         }
     }
