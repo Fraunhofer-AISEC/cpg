@@ -355,46 +355,55 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     suspend fun acceptInternal(node: Node) {
         // For now, we only execute this for function declarations, we will support all EOG starters
         // in the future.
-        if (node !is FunctionDeclaration) {
+        if (node !is EOGStarterHolder) {
             return
         }
 
-        // If we haven't done so yet, set the total number of functions
-        if (totalFunctionDeclarationCount == 0)
-            totalFunctionDeclarationCount =
-                node.firstParentOrNull<TranslationResult>().functions.size
+        if (node is FunctionDeclaration) {
+            // If we haven't done so yet, set the total number of functions
+            if (totalFunctionDeclarationCount == 0)
+                totalFunctionDeclarationCount =
+                    node.firstParentOrNull<TranslationResult>().functions.size
 
-        analyzedFunctionDeclarationCount++
+            analyzedFunctionDeclarationCount++
 
-        // If the node has a body and a function summary, we have visited it before and can
-        // return here.
-        if (
-            (node.functionSummary.isNotEmpty() && node.body != null) &&
-                node.functionSummary.keys.any { it in node.parameters || it in node.returns }
-        ) {
-            "Skipping function ${node.name} because we already have a function Summary. (Function $analyzedFunctionDeclarationCount / $totalFunctionDeclarationCount)"
-            return
-        }
-
-        functionSummaryAnalysisChain.add(node)
-
-        // Calculate the complexity of the function and see, if it exceeds our threshold
-        val max = passConfig<Configuration>()?.maxComplexity
-        val c = node.body?.cyclomaticComplexity() ?: 0
-        if (max != null && c > max) {
-            log.info(
-                "Ignoring function ${node.name} because its complexity (${NumberFormat.getNumberInstance(Locale.US).format(c)}) is greater than the configured maximum (${max})"
-            )
-            // Add an empty function Summary so that we don't try again
-            node.functionSummary.computeIfAbsent(ReturnStatement()) {
-                ConcurrentHashMap.newKeySet<FSEntry>()
+            // If the node has a body and a function summary, we have visited it before and can
+            // return here.
+            if (
+                (node.functionSummary.isNotEmpty() && node.body != null) &&
+                    node.functionSummary.keys.any { it in node.parameters || it in node.returns }
+            ) {
+                log.info(
+                    "Skipping function ${node.name} because we already have a function Summary. (Function $analyzedFunctionDeclarationCount / $totalFunctionDeclarationCount)"
+                )
+                return
             }
-            return
-        }
 
-        log.info(
-            "Analyzing function ${node.name}. Complexity: ${NumberFormat.getNumberInstance(Locale.US).format(c)}. (Function $analyzedFunctionDeclarationCount / $totalFunctionDeclarationCount)"
-        )
+            functionSummaryAnalysisChain.add(node)
+            // Calculate the complexity of the function and see, if it exceeds our threshold
+            val max = passConfig<Configuration>()?.maxComplexity
+            val c = node.body?.cyclomaticComplexity() ?: 0
+            if (max != null && c > max) {
+                log.info(
+                    "Ignoring function ${node.name} because its complexity (${
+                        NumberFormat.getNumberInstance(Locale.US).format(c)
+                    }) is greater than the configured maximum (${max})"
+                )
+                // Add an empty function Summary so that we don't try again
+                node.functionSummary.computeIfAbsent(ReturnStatement()) {
+                    ConcurrentHashMap.newKeySet<FSEntry>()
+                }
+                return
+            }
+
+            log.info(
+                "Analyzing function ${node.name}. Complexity: ${
+                    NumberFormat.getNumberInstance(Locale.US).format(c)
+                }. (Function $analyzedFunctionDeclarationCount / $totalFunctionDeclarationCount)"
+            )
+        } else {
+            log.info("Analyzing EOGStarterHolder ${node.name}. Complexity unknown")
+        }
 
         val lattice =
             PointsToState(
@@ -418,10 +427,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 ),
             )
 
-        startState = initializeParameters(lattice, node.parameters, startState)
+        if (node is FunctionDeclaration)
+            startState = initializeParameters(lattice, node.parameters, startState)
 
         val finalState =
-            if (node.body == null) {
+            if (node is FunctionDeclaration && node.body == null) {
                 handleEmptyFunctionDeclaration(lattice, startState, node)
             } else {
                 val result =
@@ -433,7 +443,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     )
                 if (result == null) {
                     log.info("Timeout exceeded when analyzing ${node.name.localName}.")
-                    handleEmptyFunctionDeclaration(lattice, startState, node)
+                    if (node is FunctionDeclaration)
+                        handleEmptyFunctionDeclaration(lattice, startState, node)
+                    else startState
                 } else result as PointsToState.Element
             }
 
@@ -501,18 +513,21 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             }
         }
 
-        /* Store function summary for this FunctionDeclaration. */
-        if (node.body != null) storeFunctionSummary(node, finalState)
-        if (functionSummaryAnalysisChain.last() == node) functionSummaryAnalysisChain.remove(node)
-        else
-            log.error(
-                "finished analyzing $node, which is not at the end of the functionSummaryAnalysis chain, which is surprising"
-            )
+        if (node is FunctionDeclaration) {
+            /* Store function summary for this FunctionDeclaration. */
+            if (node.body != null) storeFunctionSummary(node, finalState)
+            if (functionSummaryAnalysisChain.last() == node)
+                functionSummaryAnalysisChain.remove(node)
+            else
+                log.error(
+                    "finished analyzing $node, which is not at the end of the functionSummaryAnalysis chain, which is surprising"
+                )
+        }
     }
 
     /**
      * This function draws the basic DFG-Edges based on the functionDeclaration, such as edges
-     * between ParameterMemoryValues
+     * between ParameterDeclaration/ParameterMemoryValues
      */
     private suspend fun handleEmptyFunctionDeclaration(
         lattice: PointsToState,
