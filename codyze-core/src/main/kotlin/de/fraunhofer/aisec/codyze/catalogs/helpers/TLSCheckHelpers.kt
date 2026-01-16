@@ -87,7 +87,7 @@ fun TLS1_2.checkTLS12Configuration(
     acceptedSupportedGroups: Collection<String>,
 ): QueryTree<Boolean> {
     return this.cipherSuites12
-        ?.map { cipherSuite ->
+        .map { cipherSuite ->
             val ciphersuiteAllowed = cipherSuite.isCipherSuiteAccepted(acceptedCipherSuites)
 
             if (
@@ -98,20 +98,14 @@ fun TLS1_2.checkTLS12Configuration(
                 ciphersuiteAllowed and supportedGroupsOk
             } else ciphersuiteAllowed
         }
-        ?.mergeWithAll()
-        ?: QueryTree(
-            value = false,
-            stringRepresentation = "No cipher suites found for TLS 1.2",
-            node = this,
-            operator = GenericQueryOperators.EVALUATE,
-        )
+        .mergeWithAll()
 }
 
 fun TLS1_3.usesOnlyRecommendedCipherSuites(
     recommendedCipherSuites: Collection<String>
 ): QueryTree<Boolean> =
     this.cipherSuites
-        ?.map { suite ->
+        .map { suite ->
             val isRecommendedSuite =
                 suite != null && suite.name.toString() in recommendedCipherSuites
             QueryTree(
@@ -126,13 +120,7 @@ fun TLS1_3.usesOnlyRecommendedCipherSuites(
                 operator = GenericQueryOperators.EVALUATE,
             )
         }
-        ?.mergeWithAll()
-        ?: QueryTree(
-            value = false,
-            stringRepresentation = "No cipher suites found for TLS 1.3",
-            node = this,
-            operator = GenericQueryOperators.EVALUATE,
-        )
+        .mergeWithAll()
 
 fun TLS1_3.usesOnlyRecommendedCertSignatureAlgorithms(
     recommendedCertSignatureAlgorithms: Collection<String>
