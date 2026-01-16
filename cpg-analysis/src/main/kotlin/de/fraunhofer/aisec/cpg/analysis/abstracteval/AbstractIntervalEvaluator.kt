@@ -143,13 +143,13 @@ class DeclarationState<NodeId>(innerLattice: Lattice<IntervalLattice.Element>) :
         }
 
         fun findKey(nodeId: NodeId): NodeId {
-            return if (nodeId is Integer) {
+            return if (nodeId is Int) {
                 this.entries.singleOrNull { it.key == nodeId }?.key ?: nodeId
             } else nodeId
         }
 
         override fun containsKey(key: NodeId?): Boolean {
-            return if (key is Integer) {
+            return if (key is Int) {
                 this.entries.singleOrNull { it.key == key } != null
             } else {
                 super.containsKey(key)
@@ -168,7 +168,7 @@ class DeclarationState<NodeId>(innerLattice: Lattice<IntervalLattice.Element>) :
          * @return The [IntervalLattice.Element] for the node, or null if not found.
          */
         override operator fun get(nodeId: NodeId): IntervalLattice.Element? {
-            return if (nodeId is Integer) {
+            return if (nodeId is Int) {
                 this.entries.singleOrNull { it.key == nodeId }?.value
             } else {
                 super.get(nodeId)
@@ -443,6 +443,7 @@ class AbstractIntervalEvaluator {
  * @param node The [Node] whose interval is to be fetched.
  * @return The [LatticeInterval] associated with the node, or [LatticeInterval.TOP] if not found.
  */
+@Suppress("UNCHECKED_CAST")
 fun <NodeId> TupleStateElement<NodeId>.intervalOf(node: Node): LatticeInterval {
     val id =
         node.objectIdentifier()?.let { tmpId ->
@@ -461,6 +462,7 @@ fun <NodeId> TupleStateElement<NodeId>.intervalOf(node: Node): LatticeInterval {
  * @param interval The new [LatticeInterval] to set.
  * @return The updated tuple state element.
  */
+@Suppress("UNCHECKED_CAST")
 fun <NodeId> TupleState<NodeId>.changeDeclarationState(
     current: TupleStateElement<NodeId>,
     node: Node,
@@ -482,6 +484,7 @@ fun <NodeId> TupleState<NodeId>.changeDeclarationState(
  * @param interval The [LatticeInterval] to push.
  * @return The updated tuple state element.
  */
+@Suppress("UNCHECKED_CAST")
 fun <NodeId> TupleState<NodeId>.pushToDeclarationState(
     current: TupleStateElement<NodeId>,
     node: Node,
