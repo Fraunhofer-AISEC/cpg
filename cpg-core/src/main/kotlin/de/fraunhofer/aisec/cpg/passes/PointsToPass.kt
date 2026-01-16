@@ -1000,7 +1000,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 lattice,
                 doubleState,
                 sources,
-                destinations,
+                concurrentIdentitySetOf(),
                 destinationsAddresses,
                 lastWrites,
             )

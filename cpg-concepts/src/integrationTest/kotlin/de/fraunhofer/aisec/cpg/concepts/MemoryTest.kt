@@ -52,8 +52,7 @@ import java.io.File
 import kotlin.test.*
 
 class MemoryTest {
-    // TODO for merge
-    @Ignore
+
     @Test
     fun testMemoryDeleteFunction() {
         val topLevel = File("src/integrationTest/resources/python")
@@ -108,8 +107,6 @@ class MemoryTest {
         assertTrue(queryTreeResult.value)
     }
 
-    // TODO for merge
-    @Ignore
     @Test
     fun testMemoryDeleteFailFunction() {
         val topLevel = File("src/integrationTest/resources/python")
@@ -136,8 +133,6 @@ class MemoryTest {
         assertFalse(queryTreeResult.value)
     }
 
-    // TODO for merge
-    @Ignore
     @Test
     fun testMemoryDeleteCall() {
         val topLevel = File("src/integrationTest/resources/python")
@@ -193,8 +188,6 @@ class MemoryTest {
         assertEquals(2, tree.children.size)
     }
 
-    // TODO for merge
-    @Ignore
     @Test
     fun testMemoryDeleteFailCall() {
         val topLevel = File("src/integrationTest/resources/python")
