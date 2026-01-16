@@ -45,6 +45,7 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.runOnCpg
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toNodeInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
 import de.fraunhofer.aisec.cpg.mcp.setupTranslationConfiguration
+import de.fraunhofer.aisec.cpg.passes.BasicBlockCollectorPass
 import de.fraunhofer.aisec.cpg.passes.CXXExtraPass
 import de.fraunhofer.aisec.cpg.passes.ComponentPass
 import de.fraunhofer.aisec.cpg.passes.CompressLLVMPass
@@ -63,13 +64,16 @@ import de.fraunhofer.aisec.cpg.passes.JavaImportResolver
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.PrepareSerialization
 import de.fraunhofer.aisec.cpg.passes.ProgramDependenceGraphPass
+import de.fraunhofer.aisec.cpg.passes.PythonAddDeclarationsPass
 import de.fraunhofer.aisec.cpg.passes.ResolveCallExpressionAmbiguityPass
 import de.fraunhofer.aisec.cpg.passes.ResolveMemberExpressionAmbiguityPass
+import de.fraunhofer.aisec.cpg.passes.SccPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.TranslationResultPass
 import de.fraunhofer.aisec.cpg.passes.TranslationUnitPass
 import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
+import de.fraunhofer.aisec.cpg.passes.briefDescription
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
 import de.fraunhofer.aisec.cpg.passes.configuration.PassOrderingHelper
 import de.fraunhofer.aisec.cpg.passes.consumeTargets
@@ -273,10 +277,10 @@ fun Server.addListPasses() {
     ) { _ ->
         try {
 
-            fun passToInfo(pass: KClass<out Pass<*>>, description: String): PassInfo {
+            fun passToInfo(pass: KClass<out Pass<*>>): PassInfo {
                 return PassInfo(
                     fqn = pass.qualifiedName.toString(),
-                    description = description,
+                    description = pass.briefDescription,
                     requiredNodeType =
                         pass.supertypes.fold("") { old, it ->
                             old +
@@ -297,105 +301,41 @@ fun Server.addListPasses() {
 
             val passesList =
                 mutableListOf(
-                    passToInfo(
-                        PrepareSerialization::class,
-                        "Prepares the CPG for serialization by cleaning up unnecessary data and optimizing the graph structure.",
-                    ),
-                    passToInfo(
-                        DynamicInvokeResolver::class,
-                        "Resolves dynamic method invocations in the CPG, enhancing the accuracy of call relationships within the graph.",
-                    ),
-                    passToInfo(
-                        ImportResolver::class,
-                        "Resolves import statements in the code, linking imported entities to their definitions within the CPG.",
-                    ),
-                    passToInfo(
-                        SymbolResolver::class,
-                        "Resolves symbols in the CPG, linking variable and function usages (i.e., refersTo and calledBy/invokes edges) to their respective declarations. Generates the call graph.",
-                    ),
-                    passToInfo(
-                        EvaluationOrderGraphPass::class,
-                        "Adds EOG edges to the graph. These represent the execution order of statements or expressions and is similar to a fine-grained version of a control flow graph.",
-                    ),
-                    passToInfo(
-                        DFGPass::class,
-                        "Adds DFG edges to the graph. These are a controlflow-insensitive data flow representation.",
-                    ),
-                    passToInfo(
-                        ControlFlowSensitiveDFGPass::class,
-                        "Enhances the Data Flow Graph (DFG) by considering control flow information, leading to more accurate (i.e., flow-sensitive) data flow representation.",
-                    ),
-                    passToInfo(
-                        ControlDependenceGraphPass::class,
-                        "Adds CDG edges to the graph. These represent control dependence graph and thus show if executing code depends on a condition of a control-flow controlling statement",
-                    ),
-                    passToInfo(
-                        ProgramDependenceGraphPass::class,
-                        "Combines the Data Flow Graph (DFG) and Control Dependence Graph (CDG) into a Program Dependence Graph (PDG), providing a comprehensive view of both data and control dependencies within the program.",
-                    ),
-                    passToInfo(
-                        TypeResolver::class,
-                        "Resolves and infers types for nodes in the CPG, enhancing the semantic understanding of the code represented in the graph.",
-                    ),
-                    passToInfo(
-                        TypeHierarchyResolver::class,
-                        "Builds the type hierarchy within the CPG, establishing relationships between types such as inheritance and interface implementation.",
-                    ),
-                    passToInfo(
-                        ResolveMemberExpressionAmbiguityPass::class,
-                        "A translation unit pass that resolves ambiguities in member expressions within a translation unit. This pass checks whether the base or member name in a member expression refers to an import and, if so, replaces the member expression with a reference using the fully qualified name.",
-                    ),
-                    passToInfo(
-                        ResolveCallExpressionAmbiguityPass::class,
-                        "Tries to identify and resolve ambiguous CallExpressions that could also be CastExpressions or ConstructExpressions. The initial translation cannot distinguish between these expression types in some languages (having the trait HasCallExpressionAmbiguity in the CPG and try to fix these issues by this pass.",
-                    ),
+                    passToInfo(PrepareSerialization::class),
+                    passToInfo(DynamicInvokeResolver::class),
+                    passToInfo(ImportResolver::class),
+                    passToInfo(SymbolResolver::class),
+                    passToInfo(EvaluationOrderGraphPass::class),
+                    passToInfo(DFGPass::class),
+                    passToInfo(ControlFlowSensitiveDFGPass::class),
+                    passToInfo(ControlDependenceGraphPass::class),
+                    passToInfo(ProgramDependenceGraphPass::class),
+                    passToInfo(TypeResolver::class),
+                    passToInfo(TypeHierarchyResolver::class),
+                    passToInfo(ResolveMemberExpressionAmbiguityPass::class),
+                    passToInfo(ResolveCallExpressionAmbiguityPass::class),
+                    passToInfo(SccPass::class),
+                    passToInfo(BasicBlockCollectorPass::class),
                 )
 
             // Python-specific pass is added only if Python language is available
-            passesList +=
-                passToInfo(
-                    PythonFileConceptPass::class,
-                    "Applies file concepts to the CPG, enriching the graph with additional semantic information relevant to handling files. It only considers code written in python.",
-                )
+            passesList += passToInfo(PythonFileConceptPass::class)
+            passesList += passToInfo(PythonAddDeclarationsPass::class)
 
             // C-specific pass is added only if C language is available
-            passesList +=
-                passToInfo(
-                    CXXExtraPass::class,
-                    "This Pass executes certain C++ specific conversions on initializers, that are only possible once we know all the types.",
-                )
+            passesList += passToInfo(CXXExtraPass::class)
 
             // LLVM-specific pass is added only if LLVM language is available
-            passesList +=
-                passToInfo(
-                    CompressLLVMPass::class,
-                    "Re-organizes some nodes in the CPG if they originate from LLVM IR code, removing redundant nodes and edges to optimize the graph structure for analysis.",
-                )
+            passesList += passToInfo(CompressLLVMPass::class)
 
             // Java-specific pass is added only if Java language is available
-            passesList +=
-                passToInfo(
-                    JavaExternalTypeHierarchyResolver::class,
-                    "Adds some java types and their hierarchy information that are not part of the analyzed code (e.g., from the standard library) to the CPG's type hierarchy.",
-                )
-            passesList +=
-                passToInfo(
-                    JavaExtraPass::class,
-                    "This pass is responsible for handling Java-specific cases that are not covered by the general CPG logic. For example, Java has static member access, which is not modeled as a member expression, but as a reference with an FQN. This pass will convert such member expressions to references with FQNs.",
-                )
-            passesList += passToInfo(JavaImportResolver::class, "Pass that resolves Java imports.")
+            passesList += passToInfo(JavaExternalTypeHierarchyResolver::class)
+            passesList += passToInfo(JavaExtraPass::class)
+            passesList += passToInfo(JavaImportResolver::class)
 
             // Go-specific pass is added only if Go language is available
-            passesList +=
-                passToInfo(
-                    GoExtraPass::class,
-                    "This pass takes care of several things that we need to clean up, once all translation units are successfully parsed, but before any of the remaining CPG passes, such as call resolving occurs. Adds Type Listeners for Key/Value Variables in For-Each Statements, Infers NamespaceDeclarations for Import Packages, Declares Variables in Short Assignments, Adjust Names of Keys in Key Value Expressions to FQN, and Adds Methods of Embedded Structs to the Record's Scope.",
-                )
-            passesList +=
-                passToInfo(
-                    GoEvaluationOrderGraphPass::class,
-                    "This pass contains fine-grained improvements to the EOG for the go language.",
-                )
+            passesList += passToInfo(GoExtraPass::class)
+            passesList += passToInfo(GoEvaluationOrderGraphPass::class)
 
             CallToolResult(
                 content = passesList.map { passInfo -> TextContent(Json.encodeToString(passInfo)) }

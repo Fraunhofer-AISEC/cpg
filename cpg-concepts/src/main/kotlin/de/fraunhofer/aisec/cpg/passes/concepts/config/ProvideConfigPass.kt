@@ -43,6 +43,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.operationNodes
 import de.fraunhofer.aisec.cpg.graph.translationResult
 import de.fraunhofer.aisec.cpg.helpers.Util
+import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.config.python.stringValues
 
@@ -51,6 +52,9 @@ import de.fraunhofer.aisec.cpg.passes.concepts.config.python.stringValues
  * configuration sources found in the graph. It connects a [ConfigurationSource] with a matching
  * [Configuration].
  */
+@Description(
+    "A pass that creates ProvideConfiguration concepts linking ConfigurationSources to Configurations."
+)
 class ProvideConfigPass(ctx: TranslationContext) : ConceptPass(ctx) {
     override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
         when (node) {

@@ -34,9 +34,13 @@ import de.fraunhofer.aisec.cpg.graph.concepts.flows.newLibraryEntryPoint
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.newMain
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 
 /** A pass that fills the [EntryPoint] concept into the CPG. */
+@Description(
+    "A pass that identifies C/C++ entry points like main and DllMain and adds the respective concepts to the CPG."
+)
 class CXXEntryPointsPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
     override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {

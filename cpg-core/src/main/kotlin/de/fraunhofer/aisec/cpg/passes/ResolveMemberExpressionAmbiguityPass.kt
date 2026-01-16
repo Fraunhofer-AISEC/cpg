@@ -62,6 +62,9 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 @ExecuteBefore(ResolveCallExpressionAmbiguityPass::class)
 @DependsOn(ImportResolver::class)
 @RequiresLanguageTrait(HasMemberExpressionAmbiguity::class)
+@Description(
+    "A translation unit pass that resolves ambiguities in member expressions within a translation unit. This pass checks whether the base or member name in a member expression refers to an import and, if so, replaces the member expression with a reference using the fully qualified name."
+)
 class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
     lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>

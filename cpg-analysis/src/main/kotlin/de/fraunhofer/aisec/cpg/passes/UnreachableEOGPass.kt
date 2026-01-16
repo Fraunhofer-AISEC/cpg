@@ -47,6 +47,7 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  * by setting the [EvaluationOrder.unreachable] property to true.
  */
 @DependsOn(ControlFlowSensitiveDFGPass::class)
+@Description("A pass which marks unreachable EOG edges.")
 open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     override fun cleanup() {

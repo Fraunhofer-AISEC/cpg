@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.passes.DFGPass
+import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.concepts.EOGConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.NodeToOverlayStateElement
@@ -59,7 +60,9 @@ import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
 @DependsOn(EvaluationOrderGraphPass::class, false)
 @DependsOn(PythonTempFilePass::class, false)
 @ExecuteBefore(PythonFileConceptPass::class, false)
+@Description("Handles python's os.path.join calls to create better understanding of File nodes.")
 class PythonFileJoinPass(ctx: TranslationContext) : EOGConceptPass(ctx) {
+
     override fun handleCallExpression(
         state: NodeToOverlayStateElement,
         node: CallExpression,

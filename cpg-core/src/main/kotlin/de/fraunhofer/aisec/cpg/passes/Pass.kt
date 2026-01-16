@@ -182,6 +182,7 @@ object EOGStarterLeastTUImportCatchLastSorter : Sorter<Node>() {
  */
 sealed class Pass<T : Node>(final override val ctx: TranslationContext, val sort: Sorter<T>) :
     Consumer<T>, ContextProvider, RawNodeTypeProvider<Nothing>, ScopeProvider {
+
     var name: String
         protected set
 
@@ -560,6 +561,11 @@ val KClass<out Pass<*>>.softExecuteBefore: Set<KClass<out Pass<*>>>
             .filter { it.softDependency == true }
             .map { it.other }
             .toSet()
+    }
+
+val KClass<out Pass<*>>.briefDescription: String
+    get() {
+        return this.findAnnotations<Description>().singleOrNull()?.briefDescription ?: ""
     }
 
 val KClass<out Pass<*>>.hardExecuteBefore: Set<KClass<out Pass<*>>>
