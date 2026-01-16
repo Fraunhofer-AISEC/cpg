@@ -58,7 +58,7 @@ class ProgramDependences<NodeType : Node> :
         outgoing: Boolean,
     ) : super(
         thisRef,
-        init = { start, end ->
+        init = { _, _ ->
             throw UnsupportedOperationException(
                 "This container only allows adding existing edges, but not creating new ones."
             )
@@ -68,8 +68,8 @@ class ProgramDependences<NodeType : Node> :
         this.mirrorProperty = mirrorProperty
     }
 
-    override fun add(e: Edge<NodeType>): Boolean {
-        return super<EdgeSet>.add(e)
+    override fun add(element: Edge<NodeType>): Boolean {
+        return super<EdgeSet>.add(element)
     }
 }
 

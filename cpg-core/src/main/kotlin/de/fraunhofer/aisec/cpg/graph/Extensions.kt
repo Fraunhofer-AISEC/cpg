@@ -47,7 +47,7 @@ import kotlin.math.absoluteValue
 /**
  * Flattens the AST beginning with this node and returns all nodes of type [T]. For convenience, an
  * optional predicate function [predicate] can be supplied, which will be applied via
- * [Collection.filter]
+ * [Iterable.filter].
  *
  * @param stopAtNode Indicates if the node should be stopped at, i.e., we do not visit this node and
  *   its children.
@@ -86,7 +86,7 @@ fun Node.hasLocation(pathSuffix: String?, startLine: Int?, endLine: Int?): Boole
 /**
  * Flattens the AST beginning with this node and returns all nodes of type [T]. For convenience, an
  * optional predicate function [predicate] can be supplied, which will be applied via
- * [Collection.filter]
+ * [Iterable.filter]
  */
 @JvmOverloads
 inline fun <reified T> Node?.allChildrenWithOverlays(
@@ -110,9 +110,9 @@ inline fun <reified T : OverlayNode> Node.hasOverlay(): Boolean {
 
 /**
  * Returns a list of all [Node]s, starting from the current [Node], which are the beginning of an
- * EOG path created by the [EvaluationOrderGraphPass]. Typical examples include all top-level
- * declarations, such as functions and variables. For a more detailed explanation, see
- * [EOGStarterHolder].
+ * EOG path created by the [de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass]. Typical
+ * examples include all top-level declarations, such as functions and variables. For a more detailed
+ * explanation, see [EOGStarterHolder].
  *
  * While it is in theory possible to retrieve this property from all nodes, most use cases should
  * include retrieving it from either an individual [TranslationUnitDeclaration] or the complete
@@ -235,10 +235,10 @@ operator fun <T : Node> Collection<T>.invoke(lookup: String): List<T> {
  * For convenience, `n` defaults to zero, so that the first statement is always easy to fetch.
  */
 inline fun <reified T : Statement> FunctionDeclaration.bodyOrNull(n: Int = 0): T? {
-    var body = this.body
+    val body = this.body
     return if (body is Block) {
-        var statements = body.statements
-        var idx =
+        val statements = body.statements
+        val idx =
             if (n < 0) {
                 statements.size - n.absoluteValue
             } else {
@@ -697,9 +697,10 @@ fun Node.collectAllNextCDGPaths(interproceduralAnalysis: Boolean): List<NodePath
 
 /**
  * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
- * contains all possible shortest data flow paths (with [ProgramDependencies]) between the starting
- * node [this] and the end node fulfilling [predicate]. The paths are represented as lists of nodes.
- * Paths which do not end at such a node are included in [FulfilledAndFailedPaths.failed].
+ * contains all possible shortest data flow paths (with
+ * [de.fraunhofer.aisec.cpg.graph.edges.flows.ProgramDependences]) between the starting node [this]
+ * and the end node fulfilling [predicate]. The paths are represented as lists of nodes. Paths which
+ * do not end at such a node are included in [FulfilledAndFailedPaths.failed].
  *
  * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
@@ -712,7 +713,7 @@ fun Node.followNextPDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx, _, loopingPaths ->
+        x = { currentNode, ctx, _, _ ->
             val nextNodes = currentNode.nextPDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
@@ -743,7 +744,7 @@ fun Node.followNextCDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx, _, loopingPaths ->
+        x = { currentNode, ctx, _, _ ->
             val nextNodes = currentNode.nextCDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll((currentNode as? CallExpression)?.calls ?: listOf())
@@ -759,10 +760,10 @@ fun Node.followNextCDGUntilHit(
 
 /**
  * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
- * contains all possible shortest data flow paths (with [ProgramDependencies]) between the starting
- * node [this] and the end node fulfilling [predicate] (backwards analysis). The paths are
- * represented as lists of nodes. Paths which do not end at such a node are included in
- * [FulfilledAndFailedPaths.failed].
+ * contains all possible shortest data flow paths (with
+ * [de.fraunhofer.aisec.cpg.graph.edges.flows.ProgramDependences]) between the starting node [this]
+ * and the end node fulfilling [predicate] (backwards analysis). The paths are represented as lists
+ * of nodes. Paths which do not end at such a node are included in [FulfilledAndFailedPaths.failed].
  *
  * Hence, if "fulfilled" is a non-empty list, a CDG path from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
@@ -776,7 +777,7 @@ fun Node.followPrevPDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx, _, loopingPaths ->
+        x = { currentNode, ctx, _, _ ->
             val nextNodes = currentNode.prevPDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll(
@@ -818,7 +819,7 @@ fun Node.followPrevCDGUntilHit(
     predicate: (Node) -> Boolean,
 ): FulfilledAndFailedPaths {
     return followXUntilHit(
-        x = { currentNode, ctx, _, loopingPaths ->
+        x = { currentNode, ctx, _, _ ->
             val nextNodes = currentNode.prevCDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll(
@@ -1011,16 +1012,16 @@ val FunctionDeclaration.lastEOGNodes: Collection<Node>
             // In some cases, we do not have a body, so we have to jump directly to the
             // function declaration.
             listOf(this)
-        } else lastEOG.filter { it.unreachable != true }.map { it.start }
+        } else lastEOG.filter { !it.unreachable }.map { it.start }
     }
 
 /** Returns only potentially reachable previous EOG edges. */
 val Node.reachablePrevEOG: Collection<Node>
-    get() = this.prevEOGEdges.filter { it.unreachable != true }.map { it.start }
+    get() = this.prevEOGEdges.filter { !it.unreachable }.map { it.start }
 
 /** Returns only potentially reachable previous EOG edges. */
 val Node.reachableNextEOG: Collection<Node>
-    get() = this.nextEOGEdges.filter { it.unreachable != true }.map { it.end }
+    get() = this.nextEOGEdges.filter { !it.unreachable }.map { it.end }
 
 /**
  * Returns a list of edges which are from the evaluation order between the starting node [this] and
@@ -1032,7 +1033,7 @@ val Node.reachableNextEOG: Collection<Node>
 fun Node.followNextEOG(predicate: (Edge<*>) -> Boolean): List<Edge<*>>? {
     val path = mutableListOf<Edge<*>>()
 
-    for (edge in this.nextEOGEdges.filter { it.unreachable != true }) {
+    for (edge in this.nextEOGEdges.filter { !it.unreachable }) {
         val target = edge.end
 
         path.add(edge)
@@ -1062,7 +1063,7 @@ fun Node.followNextEOG(predicate: (Edge<*>) -> Boolean): List<Edge<*>>? {
 fun Node.followPrevEOG(predicate: (Edge<*>) -> Boolean): List<Edge<*>>? {
     val path = mutableListOf<Edge<*>>()
 
-    for (edge in this.prevEOGEdges.filter { it.unreachable != true }) {
+    for (edge in this.prevEOGEdges.filter { !it.unreachable }) {
         val source = edge.start
 
         path.add(edge)
@@ -1452,12 +1453,12 @@ private fun Node.eogDistanceTo(to: Node): Int {
  * When called on the right-hand side of this assignment, this function will return `a`.
  */
 fun Expression?.unwrapReference(): Reference? {
-    return when {
-        this is Reference -> this
-        this is UnaryOperator && (this.operatorCode == "*" || this.operatorCode == "&") ->
+    return when (this) {
+        is Reference -> this
+        is UnaryOperator if (this.operatorCode == "*" || this.operatorCode == "&") ->
             this.input.unwrapReference()
 
-        this is CastExpression -> this.expression.unwrapReference()
+        is CastExpression -> this.expression.unwrapReference()
         else -> null
     }
 }
@@ -1516,24 +1517,27 @@ val Node.component: Component?
  */
 val Expression.importedFrom: List<ImportDeclaration>
     get() {
-        if (this is CallExpression) {
-            return this.callee.importedFrom
-        } else if (this is MemberExpression) {
-            return this.base.importedFrom
-        } else if (this is Reference) {
-            val imports = this.translationUnit.imports
+        when (this) {
+            is CallExpression -> {
+                return this.callee.importedFrom
+            }
+            is MemberExpression -> {
+                return this.base.importedFrom
+            }
+            is Reference -> {
+                val imports = this.translationUnit.imports
 
-            return if (name.parent == null) {
-                // If the name does not have a parent, this reference could directly be the name
-                // of an import, let's check
-                imports.filter { it.import.lastPartsMatch(name) }
-            } else {
-                // Otherwise, the parent name could be the import
-                imports.filter { it.import == this.name.parent }
-            } ?: listOf<ImportDeclaration>()
+                return if (name.parent == null) {
+                    // If the name does not have a parent, this reference could directly be the name
+                    // of an import, let's check
+                    imports.filter { it.import.lastPartsMatch(name) }
+                } else {
+                    // Otherwise, the parent name could be the import
+                    imports.filter { it.import == this.name.parent }
+                } ?: listOf()
+            }
+            else -> return listOf()
         }
-
-        return listOf<ImportDeclaration>()
     }
 
 /**
