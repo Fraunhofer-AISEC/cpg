@@ -67,6 +67,7 @@ import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import de.fraunhofer.aisec.cpg.passes.briefDescription
 import de.fraunhofer.aisec.cpg.passes.configuration.PassOrderingHelper
+import de.fraunhofer.aisec.cpg.passes.configuration.ReplacePass
 import de.fraunhofer.aisec.cpg.passes.consumeTargets
 import de.fraunhofer.aisec.cpg.passes.hardDependencies
 import de.fraunhofer.aisec.cpg.passes.softDependencies
@@ -79,6 +80,7 @@ import java.io.File
 import java.util.IdentityHashMap
 import kotlin.String
 import kotlin.reflect.KClass
+import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.typeOf
 import kotlinx.serialization.json.Json
@@ -506,19 +508,26 @@ inline fun <reified T : Node> runPassForNode(
             node.firstParentOrNull<T>()?.let { listOf(it) } ?: node.allChildrenWithOverlays<T>()
         )
     return if (nodesToAnalyze.isNotEmpty()) {
-        consumeTargets(
-            cls = passClass,
-            ctx = ctx,
-            targets =
-                nodesToAnalyze.filter {
-                    nodeToPass.computeIfAbsent(it) { mutableSetOf() }.add(passClass)
-                },
-            executedFrontends = ctx.executedFrontends,
-        )
-        PassExecutionResult(
-            true,
-            "Ran pass ${passClass.simpleName} on nodes ${nodesToAnalyze.map { it.id.toString() }}.",
-        )
+        val messages = mutableListOf<String>()
+        for ((language, nodes) in nodesToAnalyze.groupBy { it.language }) {
+            // Check if we have to replace the pass for this language
+            val actualClass =
+                (language::class.findAnnotations<ReplacePass>().find { it.old == passClass }
+                    as? KClass<out Pass<T>>) ?: passClass
+
+            consumeTargets(
+                cls = actualClass,
+                ctx = ctx,
+                targets =
+                    nodesToAnalyze.filter {
+                        nodeToPass.computeIfAbsent(it) { mutableSetOf() }.add(passClass)
+                    },
+                executedFrontends = ctx.executedFrontends,
+            )
+            messages +=
+                "Ran pass ${passClass.simpleName} on nodes ${nodesToAnalyze.map { it.id.toString() }}."
+        }
+        PassExecutionResult(true, messages.joinToString(","))
     } else {
         PassExecutionResult(
             false,
