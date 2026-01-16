@@ -71,18 +71,20 @@ private constructor(
      *
      * This method orchestrates all passes that will do the main work.
      *
+     * @param ctx - The [TranslationContext] to use for the analysis. If none is provided, a new one
+     *   is created.
+     * @param cleanup - Whether to clean up the frontends after analysis. Default is `true`.
      * @return a [CompletableFuture] with the [TranslationResult].
      */
-    fun analyze(): CompletableFuture<TranslationResult> {
+    fun analyze(ctx: TranslationContext? = null): CompletableFuture<TranslationResult> {
         // We wrap the analysis in a CompletableFuture, i.e. in an async task.
-        return CompletableFuture.supplyAsync { analyzeNonAsync() }
+        return CompletableFuture.supplyAsync {
+            analyzeNonAsync(ctx = ctx ?: TranslationContext(config))
+        }
     }
 
-    private fun analyzeNonAsync(): TranslationResult {
+    private fun analyzeNonAsync(ctx: TranslationContext): TranslationResult {
         var executedFrontends = setOf<LanguageFrontend<*, *>>()
-
-        // Build a new global translation context
-        val ctx = TranslationContext(config)
 
         // Build a new translation result
         val result = TranslationResult(this, ctx)
@@ -94,6 +96,7 @@ private constructor(
             // Parse Java/C/CPP files
             val bench = Benchmark(this.javaClass, "Executing Language Frontend", false, result)
             executedFrontends = runFrontends(ctx, result)
+            ctx.executedFrontends.addAll(executedFrontends)
             bench.addMeasurement()
 
             if (config.useParallelPasses) {

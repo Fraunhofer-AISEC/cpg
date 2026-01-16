@@ -85,6 +85,9 @@ import org.slf4j.LoggerFactory
 @DependsOn(TypeHierarchyResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(ImportResolver::class)
+@Description(
+    "Resolves symbols in the CPG, linking variable and function usages (i.e., refersTo and calledBy/invokes edges) to their respective declarations. Generates the call graph."
+)
 open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     /** Configuration for the [SymbolResolver]. */

@@ -55,6 +55,7 @@ import java.io.File
 @DependsOn(DFGPass::class, softDependency = false)
 @DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
 @ExecuteBefore(ConceptPass::class, softDependency = true)
+@Description("Loads persisted concepts from YAML or JSON files and adds them to the CPG.")
 class LoadPersistedConcepts(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
     /**

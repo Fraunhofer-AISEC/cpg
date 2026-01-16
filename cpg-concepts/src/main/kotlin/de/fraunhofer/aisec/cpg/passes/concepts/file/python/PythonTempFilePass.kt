@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.file.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.passes.DFGPass
+import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.concepts.EOGConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.NodeToOverlayStateElement
@@ -51,7 +52,11 @@ import java.util.*
 @DependsOn(EvaluationOrderGraphPass::class, false)
 @ExecuteBefore(PythonFileJoinPass::class, false)
 @ExecuteBefore(PythonFileConceptPass::class, false)
+@Description(
+    "This pass handles various library calls in Python code that are related to temporary files."
+)
 class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
+
     override fun handleCallExpression(
         state: NodeToOverlayStateElement,
         node: CallExpression,

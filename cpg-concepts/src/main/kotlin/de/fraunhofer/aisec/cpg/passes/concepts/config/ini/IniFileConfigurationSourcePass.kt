@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
+import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.config.ProvideConfigPass
@@ -45,6 +46,9 @@ import kotlin.collections.singleOrNull
  */
 @DependsOn(ImportResolver::class)
 @ExecuteBefore(ProvideConfigPass::class)
+@Description(
+    "This pass is responsible for creating ConfigurationSource nodes based on the INI file frontend."
+)
 class IniFileConfigurationSourcePass(ctx: TranslationContext) : ConceptPass(ctx) {
     override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
         // Since we cannot directly depend on the ini frontend, we have to check the language here

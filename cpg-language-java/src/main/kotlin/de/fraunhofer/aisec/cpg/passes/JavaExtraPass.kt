@@ -49,6 +49,9 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  */
 @DependsOn(TypeResolver::class)
 @ExecuteBefore(SymbolResolver::class)
+@Description(
+    "This pass is responsible for handling Java-specific cases that are not covered by the general CPG logic. For example, Java has static member access, which is not modeled as a member expression, but as a reference with an FQN. This pass will convert such member expressions to references with FQNs."
+)
 class JavaExtraPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     private lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
 
