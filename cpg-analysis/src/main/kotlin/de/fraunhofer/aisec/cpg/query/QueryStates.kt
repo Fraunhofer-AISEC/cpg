@@ -32,14 +32,13 @@ import de.fraunhofer.aisec.cpg.assumptions.AssumptionStatus
 
 sealed class AcceptanceStatus : Comparable<AcceptanceStatus> {
     override fun compareTo(other: AcceptanceStatus): Int {
-        return when {
-            this is AcceptedResult && other is AcceptedResult -> 0
-            this is RejectedResult && other is RejectedResult -> 0
-            this is UndecidedResult && other is UndecidedResult -> 0
-            this is AcceptedResult -> 1 // Accepted is the best status
-            this is RejectedResult && other is AcceptedResult ->
-                -1 // Rejected is "worse" than Accepted
-            this is RejectedResult && other is UndecidedResult ->
+        return when (this) {
+            is AcceptedResult if other is AcceptedResult -> 0
+            is RejectedResult if other is RejectedResult -> 0
+            is UndecidedResult if other is UndecidedResult -> 0
+            is AcceptedResult -> 1 // Accepted is the best status
+            is RejectedResult if other is AcceptedResult -> -1 // Rejected is "worse" than Accepted
+            is RejectedResult if other is UndecidedResult ->
                 1 // Rejected is "better" than Undecided
             else -> -1 // Undecided is worse than both Accepted and Rejected
         }

@@ -311,8 +311,7 @@ open class QueryTree<T>(
                 // If there are no children, we collect the assumptions from the value
                 // This is useful for cases where the value itself is a HasAssumptions
                 // or a Collection of HasAssumptions
-                val value = this.value
-                when (value) {
+                when (val value = this.value) {
                     is HasAssumptions -> {
                         value.relevantAssumptions()
                     }

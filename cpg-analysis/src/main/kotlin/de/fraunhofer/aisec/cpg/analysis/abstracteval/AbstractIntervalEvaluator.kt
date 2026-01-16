@@ -97,12 +97,8 @@ class DeclarationState<NodeId>(innerLattice: Lattice<IntervalLattice.Element>) :
         widen: Boolean,
     ): Element<NodeId, IntervalLattice.Element> {
         val result = super.lub(one, two, allowModify, widen)
-        if (result is DeclarationStateElement<NodeId>) {
-            // If the result is a DeclarationStateElement, we can return it directly
-            return result
-        } else {
-            return DeclarationStateElement<NodeId>(result)
-        }
+        // If the result is a DeclarationStateElement, we can return it directly
+        return result as? DeclarationStateElement<NodeId> ?: DeclarationStateElement<NodeId>(result)
     }
 
     override fun glb(
@@ -110,12 +106,8 @@ class DeclarationState<NodeId>(innerLattice: Lattice<IntervalLattice.Element>) :
         two: Element<NodeId, IntervalLattice.Element>,
     ): Element<NodeId, IntervalLattice.Element> {
         val result = super.glb(one, two)
-        if (result is DeclarationStateElement<NodeId>) {
-            // If the result is a DeclarationStateElement, we can return it directly
-            return result
-        } else {
-            return DeclarationStateElement<NodeId>(result)
-        }
+        // If the result is a DeclarationStateElement, we can return it directly
+        return result as? DeclarationStateElement<NodeId> ?: DeclarationStateElement<NodeId>(result)
     }
 
     class DeclarationStateElement<NodeId>(expectedMaxSize: Int) :
