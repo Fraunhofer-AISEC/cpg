@@ -46,25 +46,17 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toNodeInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
 import de.fraunhofer.aisec.cpg.mcp.setupTranslationConfiguration
 import de.fraunhofer.aisec.cpg.passes.BasicBlockCollectorPass
-import de.fraunhofer.aisec.cpg.passes.CXXExtraPass
 import de.fraunhofer.aisec.cpg.passes.ComponentPass
-import de.fraunhofer.aisec.cpg.passes.CompressLLVMPass
 import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.DFGPass
 import de.fraunhofer.aisec.cpg.passes.DynamicInvokeResolver
 import de.fraunhofer.aisec.cpg.passes.EOGStarterPass
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
-import de.fraunhofer.aisec.cpg.passes.GoEvaluationOrderGraphPass
-import de.fraunhofer.aisec.cpg.passes.GoExtraPass
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
-import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
-import de.fraunhofer.aisec.cpg.passes.JavaExtraPass
-import de.fraunhofer.aisec.cpg.passes.JavaImportResolver
 import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.PrepareSerialization
 import de.fraunhofer.aisec.cpg.passes.ProgramDependenceGraphPass
-import de.fraunhofer.aisec.cpg.passes.PythonAddDeclarationsPass
 import de.fraunhofer.aisec.cpg.passes.ResolveCallExpressionAmbiguityPass
 import de.fraunhofer.aisec.cpg.passes.ResolveMemberExpressionAmbiguityPass
 import de.fraunhofer.aisec.cpg.passes.SccPass
@@ -74,7 +66,6 @@ import de.fraunhofer.aisec.cpg.passes.TranslationUnitPass
 import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
 import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import de.fraunhofer.aisec.cpg.passes.briefDescription
-import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
 import de.fraunhofer.aisec.cpg.passes.configuration.PassOrderingHelper
 import de.fraunhofer.aisec.cpg.passes.consumeTargets
 import de.fraunhofer.aisec.cpg.passes.hardDependencies
@@ -276,7 +267,6 @@ fun Server.addListPasses() {
         inputSchema = ToolSchema(properties = buildJsonObject {}, required = listOf()),
     ) { _ ->
         try {
-
             fun passToInfo(pass: KClass<out Pass<*>>): PassInfo {
                 return PassInfo(
                     fqn = pass.qualifiedName.toString(),
@@ -299,6 +289,14 @@ fun Server.addListPasses() {
                 )
             }
 
+            fun optionalPassToInfo(passName: String): PassInfo? {
+                return try {
+                    (Class.forName(passName).kotlin as? KClass<out Pass<*>>)?.let { passToInfo(it) }
+                } catch (_: ClassNotFoundException) {
+                    null
+                }
+            }
+
             val passesList =
                 mutableListOf(
                     passToInfo(PrepareSerialization::class),
@@ -318,24 +316,42 @@ fun Server.addListPasses() {
                     passToInfo(BasicBlockCollectorPass::class),
                 )
 
-            // Python-specific pass is added only if Python language is available
-            passesList += passToInfo(PythonFileConceptPass::class)
-            passesList += passToInfo(PythonAddDeclarationsPass::class)
+            // Python-specific passes are added only if Python language is available
+            optionalPassToInfo(
+                    "de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass"
+                )
+                ?.let { passesList += it }
+            optionalPassToInfo("de.fraunhofer.aisec.cpg.passes.PythonAddDeclarationsPass")?.let {
+                passesList += it
+            }
 
             // C-specific pass is added only if C language is available
-            passesList += passToInfo(CXXExtraPass::class)
+            optionalPassToInfo("de.fraunhofer.aisec.cpg.passes.CXXExtraPass")?.let {
+                passesList += it
+            }
 
             // LLVM-specific pass is added only if LLVM language is available
-            passesList += passToInfo(CompressLLVMPass::class)
+            optionalPassToInfo("de.fraunhofer.aisec.cpg.passes.CompressLLVMPass")?.let {
+                passesList += it
+            }
 
             // Java-specific pass is added only if Java language is available
-            passesList += passToInfo(JavaExternalTypeHierarchyResolver::class)
-            passesList += passToInfo(JavaExtraPass::class)
-            passesList += passToInfo(JavaImportResolver::class)
+            optionalPassToInfo("de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver")
+                ?.let { passesList += it }
+            optionalPassToInfo("de.fraunhofer.aisec.cpg.passes.JavaExtraPass")?.let {
+                passesList += it
+            }
+            optionalPassToInfo("de.fraunhofer.aisec.cpg.passes.JavaImportResolver")?.let {
+                passesList += it
+            }
 
             // Go-specific pass is added only if Go language is available
-            passesList += passToInfo(GoExtraPass::class)
-            passesList += passToInfo(GoEvaluationOrderGraphPass::class)
+            optionalPassToInfo("de.fraunhofer.aisec.cpg.passes.GoExtraPass")?.let {
+                passesList += it
+            }
+            optionalPassToInfo("de.fraunhofer.aisec.cpg.passes.GoEvaluationOrderGraphPass")?.let {
+                passesList += it
+            }
 
             CallToolResult(
                 content = passesList.map { passInfo -> TextContent(Json.encodeToString(passInfo)) }
