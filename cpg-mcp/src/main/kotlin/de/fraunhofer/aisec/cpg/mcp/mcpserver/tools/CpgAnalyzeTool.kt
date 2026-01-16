@@ -406,9 +406,7 @@ fun Server.addListPasses() {
     }
 }
 
-/**
- * Keeps track of which passes have been run on which nodes to avoid redundant executions.
- */
+/** Keeps track of which passes have been run on which nodes to avoid redundant executions. */
 val nodeToPass = IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>>()
 
 /** Runs a specified [de.fraunhofer.aisec.cpg.passes.Pass] on a specified [Node]. */
