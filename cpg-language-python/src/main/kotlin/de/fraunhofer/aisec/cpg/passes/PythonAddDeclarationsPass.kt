@@ -51,6 +51,7 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 @ExecuteBefore(ImportResolver::class)
 @ExecuteBefore(SymbolResolver::class)
 @RequiredFrontend(PythonLanguageFrontend::class)
+@Description("Adds declarations for python's variables as the CPG requires them.")
 class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), LanguageProvider {
 
     lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>

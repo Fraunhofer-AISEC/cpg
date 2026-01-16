@@ -50,6 +50,7 @@ import kotlinx.coroutines.runBlocking
 @DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
 @DependsOn(PointsToPass::class, softDependency = true)
 @DependsOn(DFGPass::class, softDependency = true)
+@Description("A pass which marks unreachable EOG edges.")
 open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     override fun cleanup() {

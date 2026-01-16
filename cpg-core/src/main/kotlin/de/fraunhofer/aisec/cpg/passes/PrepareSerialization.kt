@@ -38,6 +38,7 @@ import kotlin.reflect.jvm.javaField
 
 /** Pass with some graph transformations useful when doing serialization. */
 @ExecuteLate
+@Description("Prepares the CPG for serialization.")
 class PrepareSerialization(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     private val nodeNameField =
         Node::class

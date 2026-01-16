@@ -62,6 +62,9 @@ import java.util.function.Consumer
 @DependsOn(DFGPass::class)
 @DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
 @DependsOn(PointsToPass::class, softDependency = true)
+@Description(
+    "Resolves dynamic method invocations and calls of function pointers in the CPG, enhancing the accuracy of call relationships within the graph."
+)
 class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     private lateinit var walker: ScopedWalker<AstNode>
     private var inferDfgForUnresolvedCalls = false

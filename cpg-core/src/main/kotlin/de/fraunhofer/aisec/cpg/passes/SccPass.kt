@@ -41,6 +41,7 @@ import kotlin.math.min
  */
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(BasicBlockCollectorPass::class, softDependency = true)
+@Description("Pass that finds strongly connected components in the EOG using Tarjan's algorithm.")
 class SccPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     data class TarjanInfo(val blackList: List<Node>) {
         var blockCounter = 0

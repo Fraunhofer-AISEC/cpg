@@ -184,6 +184,7 @@ object EOGStarterLeastTUImportCatchLastSorter : Sorter<Node>() {
  */
 sealed class Pass<T : Node>(final override val ctx: TranslationContext, val sort: Sorter<T>) :
     Consumer<T>, ContextProvider, RawNodeTypeProvider<Nothing>, ScopeProvider {
+
     var name: String
         protected set
 
@@ -464,7 +465,7 @@ fun executePass(
  * Depending on the configuration of [TranslationConfiguration.useParallelPasses], the individual
  * targets will either be consumed sequentially or in parallel.
  */
-private inline fun <reified T : Node> consumeTargets(
+inline fun <reified T : Node> consumeTargets(
     cls: KClass<out Pass<T>>,
     ctx: TranslationContext,
     targets: Collection<T>,
@@ -488,7 +489,7 @@ private inline fun <reified T : Node> consumeTargets(
  * different instances of the same [Pass] class are executed at the same time (on different [target]
  * nodes) using this function.
  */
-private inline fun <reified T : Node> consumeTarget(
+inline fun <reified T : Node> consumeTarget(
     cls: KClass<out Pass<T>>,
     ctx: TranslationContext,
     target: T,
@@ -566,6 +567,11 @@ val KClass<out Pass<*>>.softExecuteBefore: Set<KClass<out Pass<*>>>
             .filter { it.softDependency == true }
             .map { it.other }
             .toSet()
+    }
+
+val KClass<out Pass<*>>.briefDescription: String
+    get() {
+        return this.findAnnotations<Description>().singleOrNull()?.briefDescription ?: ""
     }
 
 val KClass<out Pass<*>>.hardExecuteBefore: Set<KClass<out Pass<*>>>

@@ -29,6 +29,8 @@ extend the class `Pass` and implement its base function`accept(result: Translati
 The remaining structure of the pass is free to be designed by the
 implementer.
 
+Each pass should have a short description of its purpose in the annotation `@Description`.
+
 ## Registering a Pass
 
 A newly created pass has to be registered with the `TranslationManager` through

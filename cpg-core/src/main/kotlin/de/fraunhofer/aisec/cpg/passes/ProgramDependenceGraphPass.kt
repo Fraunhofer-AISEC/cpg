@@ -46,6 +46,9 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 @DependsOn(PointsToPass::class, softDependency = true)
 @DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
 @DependsOn(DynamicInvokeResolver::class)
+@Description(
+    "Combines the Data Flow Graph (DFG) and Control Dependence Graph (CDG) into a Program Dependence Graph (PDG), providing a comprehensive view of both data and control dependencies within the program."
+)
 class ProgramDependenceGraphPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
     private val visitor =
         object : IVisitor<AstNode>() {
