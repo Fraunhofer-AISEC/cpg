@@ -471,7 +471,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleAttribute(node: Python.AST.Attribute): Expression {
-        var base = handle(node.value)
+        val base = handle(node.value)
 
         return newMemberExpression(name = node.attr, base = base, rawNode = node)
     }
@@ -521,7 +521,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * TODO: cast, memberexpression, magic
      */
     private fun handleCall(node: Python.AST.Call): Expression {
-        var callee = frontend.expressionHandler.handle(node.func)
+        val callee = frontend.expressionHandler.handle(node.func)
 
         val ret =
             if (callee is MemberExpression) {
