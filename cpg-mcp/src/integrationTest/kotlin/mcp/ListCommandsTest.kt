@@ -103,7 +103,7 @@ class ListCommandsTest {
         val functionNames =
             result.content.map {
                 assertIs<TextContent>(it)
-                Json.decodeFromString<FunctionInfo>(it.text ?: "").name
+                Json.decodeFromString<FunctionInfo>(it.text).name
             }
         assertNotNull(
             functionNames.singleOrNull { it == "print" },
@@ -175,7 +175,7 @@ class ListCommandsTest {
             )
         val callsResult = callsTool.handler(callsRequest)
         val callId =
-            Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text ?: "")
+            Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text)
                 .nodeId
 
         server.getAllArgs()
@@ -206,9 +206,7 @@ class ListCommandsTest {
         assertNotNull(wrongArgsResult)
         assertTrue(wrongArgsResult.content.isNotEmpty(), "Should return arguments for the call")
         assertThrows<IllegalArgumentException> {
-            Json.decodeFromString<NodeInfo>(
-                (wrongArgsResult.content.first() as TextContent).text.orEmpty()
-            )
+            Json.decodeFromString<NodeInfo>((wrongArgsResult.content.first() as TextContent).text)
         }
     }
 
@@ -222,7 +220,7 @@ class ListCommandsTest {
             )
         val callsResult = callsTool.handler(callsRequest)
         val callId =
-            Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text ?: "")
+            Json.decodeFromString<CallInfo>((callsResult.content.first() as TextContent).text)
                 .nodeId
 
         server.getArgByIndexOrName()
