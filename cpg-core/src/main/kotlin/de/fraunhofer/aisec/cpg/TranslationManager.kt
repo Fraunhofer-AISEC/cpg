@@ -73,7 +73,6 @@ private constructor(
      *
      * @param ctx - The [TranslationContext] to use for the analysis. If none is provided, a new one
      *   is created.
-     * @param cleanup - Whether to clean up the frontends after analysis. Default is `true`.
      * @return a [CompletableFuture] with the [TranslationResult].
      */
     fun analyze(ctx: TranslationContext? = null): CompletableFuture<TranslationResult> {
@@ -207,7 +206,7 @@ private constructor(
                         // to disable it.
                         if (useParallelFrontends && !supportsParallelParsing) {
                             log.warn(
-                                "Parallel frontends are not yet supported for the language frontend ${frontendClass?.simpleName}"
+                                "Parallel frontends are not yet supported for the language frontend ${frontendClass.simpleName}"
                             )
                             useParallelFrontends = false
                         }
@@ -321,7 +320,7 @@ private constructor(
                         component.name = compName
                         component.location = includePath.toLocation()
                         result.addComponent(component)
-                        ctx.config.topLevels.put(includePath.name, includePath.toFile())
+                        ctx.config.topLevels[includePath.name] = includePath.toFile()
                     }
 
                     usedFrontends.addAll(
@@ -424,7 +423,7 @@ private constructor(
             }
         }
 
-        var b =
+        val b =
             Benchmark(
                 TranslationManager::class.java,
                 "Merging type and scope information to final context",
@@ -501,19 +500,19 @@ private constructor(
             }
 
             // Check, if the frontend supports the new API
-            var tu =
+            val tu =
                 if (frontend is SupportsNewParse) {
                     // Read the file contents and supply it to the frontend. This gives us a chance
                     // to do some statistics here, for example on the lines of code. For now, we
                     // just print it, in a future PR we will gather this information and consolidate
                     // it.
-                    var path = sourceLocation.toPath().absolute()
-                    var content = path.readText()
-                    var linesOfCode = content.linesOfCode
+                    val path = sourceLocation.toPath().absolute()
+                    val content = path.readText()
+                    val linesOfCode = content.linesOfCode
 
                     log.info("{} has {} LoC", path, linesOfCode)
 
-                    var tu = frontend.parse(content, path)
+                    val tu = frontend.parse(content, path)
 
                     // Add the LoC. This needs to be synchronized on the stats object, because of
                     // parallel parsing

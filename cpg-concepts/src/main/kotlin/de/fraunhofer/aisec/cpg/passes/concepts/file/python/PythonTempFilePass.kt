@@ -40,7 +40,6 @@ import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
-import java.util.*
 
 /**
  * This pass handles various library calls in Python code that are related to temporary files. It
@@ -255,7 +254,7 @@ class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
 
     /**
      * Creates a temporary file with a unique name based on the provided [prefix], [suffix],
-     * [middle] aand the id of the [callExpression].
+     * [middle] and the id of the [callExpression].
      */
     fun createFilename(
         prefix: String,

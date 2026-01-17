@@ -63,7 +63,7 @@ class Neo4JTest {
     fun testPushConcepts() {
         val (application, result) = createTranslationResult()
 
-        val tu = result.translationUnits.firstOrNull()
+        val tu = result.components.firstOrNull()?.translationUnits?.firstOrNull()
         assertNotNull(tu)
 
         val connectCall = result.calls["connect"]

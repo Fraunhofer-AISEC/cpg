@@ -63,9 +63,7 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
 
     private fun handleThrowExpression(throwStmt: JThrowStmt): ThrowExpression {
         val expr = newThrowExpression(rawNode = throwStmt)
-        expr.exception =
-            frontend.expressionHandler.handle(throwStmt.op)
-                ?: newProblemExpression("missing throwable expression")
+        expr.exception = frontend.expressionHandler.handle(throwStmt.op)
 
         return expr
     }
@@ -84,14 +82,12 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
         for (local in body.locals) {
             val decl = frontend.declarationHandler.handle(local)
 
-            if (decl != null) {
-                // We need to wrap them into a declaration statement and put them into the outer
-                // block
-                val stmt = newDeclarationStatement(rawNode = local)
-                frontend.scopeManager.addDeclaration(decl)
-                stmt.declarations += decl
-                outerBlock += stmt
-            }
+            // We need to wrap them into a declaration statement and put them into the outer
+            // block
+            val stmt = newDeclarationStatement(rawNode = local)
+            frontend.scopeManager.addDeclaration(decl)
+            stmt.declarations += decl
+            outerBlock += stmt
         }
 
         // Parse statements and segment them into (sub)-blocks.
@@ -137,9 +133,7 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
 
     private fun handleIfStmt(ifStmt: JIfStmt): IfStatement {
         val stmt = newIfStatement(rawNode = ifStmt)
-        stmt.condition =
-            frontend.expressionHandler.handle(ifStmt.condition)
-                ?: newProblemExpression("missing condition")
+        stmt.condition = frontend.expressionHandler.handle(ifStmt.condition)
         stmt.thenStatement = handleBranchingStmt(ifStmt)
 
         return stmt
@@ -178,9 +172,7 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
 
     private fun handleReturnStmt(returnStmt: JReturnStmt): ReturnStatement {
         val stmt = newReturnStatement(rawNode = returnStmt)
-        stmt.returnValue =
-            frontend.expressionHandler.handle(returnStmt.op)
-                ?: newProblemExpression("missing return value")
+        stmt.returnValue = frontend.expressionHandler.handle(returnStmt.op)
 
         return stmt
     }

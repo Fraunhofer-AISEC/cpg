@@ -156,10 +156,8 @@ class JVMLanguageFrontend(
             scopeManager.enterScope(pkg)
 
             val decl = declarationHandler.handle(sootClass)
-            if (decl != null) {
-                scopeManager.addDeclaration(decl)
-                pkg.addDeclaration(decl)
-            }
+            scopeManager.addDeclaration(decl)
+            pkg.addDeclaration(decl)
 
             // Leave namespace scope
             scopeManager.leaveScope(pkg)

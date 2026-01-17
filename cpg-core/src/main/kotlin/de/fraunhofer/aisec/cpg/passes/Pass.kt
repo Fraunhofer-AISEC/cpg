@@ -252,6 +252,7 @@ sealed class Pass<T : Node>(final override val ctx: TranslationContext, val sort
         val log: Logger = LoggerFactory.getLogger(Pass::class.java)
     }
 
+    @Suppress("UNCHECKED_CAST")
     fun <T : PassConfiguration> passConfig(): T? {
         return this.config.passConfigurations[this::class] as? T
     }
@@ -352,10 +353,7 @@ fun executePassesSequentially(
         // Check, if we pass the max executions
         val numExec = executions[pass] ?: 0
         if (numExec >= ctx.config.maxPassExecutions) {
-            TranslationManager.Companion.log.warn(
-                "Pass {} reached max executions, skipping",
-                pass.simpleName,
-            )
+            TranslationManager.log.warn("Pass {} reached max executions, skipping", pass.simpleName)
             result.assume(
                 AssumptionType.CompletenessAssumption,
                 "We assume that after $numExec repeated executions of the ${pass.simpleName} no new information is obtained and skip further executions.",
@@ -371,7 +369,7 @@ fun executePassesSequentially(
 
         // After each pass execution, identify "dirty" nodes and identify which passes
         // should be run afterward
-        var scheduledPasses = result.dirtyNodes.values.flatten()
+        val scheduledPasses = result.dirtyNodes.values.flatten()
         for (scheduledPass in scheduledPasses) {
             // If the pass is already in the queue, ignore it
             if (scheduledPass in queue) {
@@ -383,7 +381,7 @@ fun executePassesSequentially(
         }
 
         if (result.isCancelled) {
-            TranslationManager.Companion.log.warn("Analysis interrupted, stopping Pass evaluation")
+            TranslationManager.log.warn("Analysis interrupted, stopping Pass evaluation")
             break
         }
     }
@@ -542,7 +540,7 @@ val KClass<out Pass<*>>.isLatePass: Boolean
 val KClass<out Pass<*>>.softDependencies: Set<KClass<out Pass<*>>>
     get() {
         return this.findAnnotations<DependsOn>()
-            .filter { it.softDependency == true }
+            .filter { it.softDependency }
             .map { it.value }
             .toSet()
     }
@@ -550,7 +548,7 @@ val KClass<out Pass<*>>.softDependencies: Set<KClass<out Pass<*>>>
 val KClass<out Pass<*>>.hardDependencies: Set<KClass<out Pass<*>>>
     get() {
         return this.findAnnotations<DependsOn>()
-            .filter { it.softDependency == false }
+            .filter { !it.softDependency }
             .map { it.value }
             .toSet()
     }
@@ -558,7 +556,7 @@ val KClass<out Pass<*>>.hardDependencies: Set<KClass<out Pass<*>>>
 val KClass<out Pass<*>>.softExecuteBefore: Set<KClass<out Pass<*>>>
     get() {
         return this.findAnnotations<ExecuteBefore>()
-            .filter { it.softDependency == true }
+            .filter { it.softDependency }
             .map { it.other }
             .toSet()
     }
@@ -571,7 +569,7 @@ val KClass<out Pass<*>>.briefDescription: String
 val KClass<out Pass<*>>.hardExecuteBefore: Set<KClass<out Pass<*>>>
     get() {
         return this.findAnnotations<ExecuteBefore>()
-            .filter { it.softDependency == false }
+            .filter { !it.softDependency }
             .map { it.other }
             .toSet()
     }
