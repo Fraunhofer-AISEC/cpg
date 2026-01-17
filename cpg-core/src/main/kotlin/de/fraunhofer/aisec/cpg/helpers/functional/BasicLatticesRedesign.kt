@@ -483,6 +483,7 @@ interface Lattice<T : Lattice.Element> {
                 timeout == null ||
                     startTime.elapsedNow().toLong(DurationUnit.MILLISECONDS) < timeouts.last()
             ) {
+                @Suppress("UNCHECKED_CAST")
                 val newState =
                     transformation(
                         this@Lattice,
@@ -902,6 +903,7 @@ open class ConcurrentMapLattice<K, V : Lattice.Element>(val innerLattice: Lattic
                     someGreater = true // key is missing in other, so this is greater
                 }
             }
+            @Suppress("KotlinConstantConditions")
             return if (!someGreater && !someLesser) {
                 // All entries are the same, so the maps are equal
                 Order.EQUAL
@@ -1340,6 +1342,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
             }
         }
 
+        @Suppress("UNCHECKED_CAST")
         override fun duplicate(): Element<K, V> {
             return Element(this.map { (k, v) -> Pair<K, V>(k, v.duplicate() as V) })
         }
@@ -1506,6 +1509,7 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
             return compareMultiple(result1, result2)
         }
 
+        @Suppress("UNCHECKED_CAST")
         override fun duplicate(): Element<S, T> {
             return Element(first.duplicate() as S, second.duplicate() as T)
         }
@@ -1625,6 +1629,7 @@ open class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.E
             return compareMultiple(result1, result2, result3)
         }
 
+        @Suppress("UNCHECKED_CAST")
         override fun duplicate(): Element<R, S, T> {
             return Element(first.duplicate() as R, second.duplicate() as S, third.duplicate() as T)
         }

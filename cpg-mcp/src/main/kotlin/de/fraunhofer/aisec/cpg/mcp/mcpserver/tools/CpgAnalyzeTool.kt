@@ -1,4 +1,31 @@
 /*
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *                    $$$$$$\  $$$$$$$\   $$$$$$\
+ *                   $$  __$$\ $$  __$$\ $$  __$$\
+ *                   $$ /  \__|$$ |  $$ |$$ /  \__|
+ *                   $$ |      $$$$$$$  |$$ |$$$$\
+ *                   $$ |      $$  ____/ $$ |\_$$ |
+ *                   $$ |  $$\ $$ |      $$ |  $$ |
+ *                   \$$$$$   |$$ |      \$$$$$   |
+ *                    \______/ \__|       \______/
+ *
+ */
+@file:Suppress("UNCHECKED_CAST")
+
+/*
  * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -131,7 +158,7 @@ fun Server.addCpgAnalyzeTool() {
         request ->
         try {
             val payload = request.arguments?.toObject<CpgAnalyzePayload>()
-            val analysisResult = runCpgAnalyze(payload, true, true)
+            val analysisResult = runCpgAnalyze(payload, runPasses = true, cleanup = true)
             val jsonResult = Json.encodeToString(analysisResult)
             CallToolResult(content = listOf(TextContent(jsonResult)))
         } catch (e: Exception) {
@@ -248,7 +275,7 @@ fun Server.addCpgTranslate() {
     ) { request ->
         try {
             val payload = request.arguments?.toObject<CpgAnalyzePayload>()
-            val analysisResult = runCpgAnalyze(payload, false, false)
+            val analysisResult = runCpgAnalyze(payload, runPasses = false, cleanup = false)
             val jsonResult = Json.encodeToString(analysisResult)
             CallToolResult(content = listOf(TextContent(jsonResult)))
         } catch (e: Exception) {
@@ -276,15 +303,17 @@ fun Server.addListPasses() {
                     requiredNodeType =
                         pass.supertypes.fold("") { old, it ->
                             old +
-                                if (it.classifier == EOGStarterPass::class)
-                                    EOGStarterHolder::class.qualifiedName.toString()
-                                else if (it.classifier == TranslationUnitPass::class)
-                                    TranslationUnitDeclaration::class.qualifiedName.toString()
-                                else if (it.classifier == TranslationResultPass::class)
-                                    TranslationResult::class.qualifiedName.toString()
-                                else if (it.classifier == ComponentPass::class)
-                                    Component::class.qualifiedName.toString()
-                                else ""
+                                when (it.classifier) {
+                                    EOGStarterPass::class ->
+                                        EOGStarterHolder::class.qualifiedName.toString()
+                                    TranslationUnitPass::class ->
+                                        TranslationUnitDeclaration::class.qualifiedName.toString()
+                                    TranslationResultPass::class ->
+                                        TranslationResult::class.qualifiedName.toString()
+                                    ComponentPass::class ->
+                                        Component::class.qualifiedName.toString()
+                                    else -> ""
+                                }
                         },
                     dependsOn = pass.hardDependencies.map { it.qualifiedName.toString() },
                     softDependencies = pass.softDependencies.map { it.qualifiedName.toString() },
@@ -512,20 +541,20 @@ inline fun <reified T : Node> runPassForNode(
         for ((language, nodes) in nodesToAnalyze.groupBy { it.language }) {
             // Check if we have to replace the pass for this language
             val actualClass =
-                (language::class.findAnnotations<ReplacePass>().find { it.old == passClass }
+                (language::class.findAnnotations<ReplacePass>().find { it.old == passClass }?.with
                     as? KClass<out Pass<T>>) ?: passClass
 
             consumeTargets(
                 cls = actualClass,
                 ctx = ctx,
                 targets =
-                    nodesToAnalyze.filter {
-                        nodeToPass.computeIfAbsent(it) { mutableSetOf() }.add(passClass)
+                    nodes.filter {
+                        nodeToPass.computeIfAbsent(it) { mutableSetOf() }.add(actualClass)
                     },
                 executedFrontends = ctx.executedFrontends,
             )
             messages +=
-                "Ran pass ${passClass.simpleName} on nodes ${nodesToAnalyze.map { it.id.toString() }}."
+                "Ran pass ${actualClass.simpleName} on nodes ${nodesToAnalyze.map { it.id.toString() }}."
         }
         PassExecutionResult(true, messages.joinToString(","))
     } else {
@@ -576,12 +605,11 @@ fun runPassForNode(
             runPassForNode<TranslationUnitDeclaration>(node, prototype::class, ctx)
         }
         is EOGStarterPass -> {
-            val eogStarters =
-                listOfNotNull<Node>((node as? EOGStarterHolder) as? Node).toMutableList()
+            val eogStarters = listOfNotNull((node as? EOGStarterHolder) as? Node).toMutableList()
             if (eogStarters.isEmpty())
                 eogStarters.addAll(
                     node
-                        .firstParentOrNull<Node>({ it is EOGStarterHolder && it.prevEOG.isEmpty() })
+                        .firstParentOrNull<Node> { it is EOGStarterHolder && it.prevEOG.isEmpty() }
                         ?.let { listOf(it) }
                         ?: node.allChildrenWithOverlays<Node> {
                             it is EOGStarterHolder && it.prevEOG.isEmpty()

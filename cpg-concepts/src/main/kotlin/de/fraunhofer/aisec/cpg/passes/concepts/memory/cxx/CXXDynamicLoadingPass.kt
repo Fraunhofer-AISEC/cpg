@@ -174,7 +174,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
         val component =
             path?.let {
                 call.translationResult?.findComponentForLibrary(
-                    Path(it).fileName.nameWithoutExtension.toString()
+                    Path(it).fileName.nameWithoutExtension
                 )
             }
 

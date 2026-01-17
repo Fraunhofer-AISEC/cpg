@@ -93,9 +93,7 @@ open class DFAOrderEvaluator(
             log.error("There was a failure in the order of statements at node: $node")
         }
         log.error(
-            fsm.executionTrace
-                .fold("") { r, t -> "$r${t.state}${t.edge} (node: ${t.cpgNode})\n" }
-                .toString()
+            fsm.executionTrace.fold("") { r, t -> "$r${t.state}${t.edge} (node: ${t.cpgNode})\n" }
         )
     }
 
@@ -276,7 +274,7 @@ open class DFAOrderEvaluator(
 
     /**
      * Checks if the call expression [node] has a considered base as an argument. If so, this base
-     * could be used inside the function called and we might miss transitions in the DFA.
+     * could be used inside the function called, and we might miss transitions in the DFA.
      */
     private fun callUsesInterestingBase(node: CallExpression, eogPath: String): List<String> {
         val allUsedBases =
@@ -432,7 +430,7 @@ open class DFAOrderEvaluator(
         val outNodes = mutableListOf<Node>()
         outNodes +=
             if (eliminateUnreachableCode) {
-                node.nextEOGEdges.filter { e -> e.unreachable != true }.map { it.end }
+                node.nextEOGEdges.filter { e -> !e.unreachable }.map { it.end }
             } else {
                 node.nextEOG
             }
@@ -442,7 +440,7 @@ open class DFAOrderEvaluator(
             // simply propagate the current eogPath to the next node.
             outNodes[0].addEogPath(eogPath)
         } else if (outNodes.size == 1) {
-            // We still add this node but this time, we also check if have seen the state it before
+            // We still add this node but this time, we also check if we have seen the state before
             // to avoid endless loops etc.
             outNodes[0].addEogPath(eogPath)
             val stateOfNext = getStateSnapshot(outNodes[0], baseToFSM)

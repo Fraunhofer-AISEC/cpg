@@ -233,7 +233,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private fun logOpHelper(callExpression: CallExpression, logger: Log) {
         val callee = callExpression.callee
-        when (callee.name.localName.toString()) {
+        when (callee.name.localName) {
             "fatal",
             "critical",
             "error",
@@ -241,7 +241,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
             "warning",
             "info",
             "debug" -> {
-                val name = callExpression.name.localName.toString()
+                val name = callExpression.name.localName
                 val lvl = logLevelStringToEnum(name)
                 newLogWrite(
                     underlyingNode = callExpression,

@@ -42,7 +42,6 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.InitializerListExpre
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
-import de.fraunhofer.aisec.cpg.query.size
 import de.fraunhofer.aisec.cpg.query.value
 import java.util.concurrent.ConcurrentHashMap
 

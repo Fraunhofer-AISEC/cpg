@@ -76,13 +76,13 @@ fun Pass<*>.tryNamespaceInference(name: Name, source: Node): NamespaceDeclaratio
 
     // If we could not find a scope, but we have an FQN, we can try to infer a namespace (or a
     // parent record)
-    var parentName = name.parent
+    val parentName = name.parent
     if (scope == null && parentName != null) {
         holder = tryScopeInference(parentName, source)
     }
 
     return (holder ?: scopeManager.translationUnitForInference<NamespaceDeclaration>(source))
-        ?.startInference(ctx)
+        .startInference(ctx)
         ?.inferNamespaceDeclaration(name, null, source)
 }
 
@@ -125,7 +125,7 @@ internal fun Pass<*>.tryRecordInference(type: Type, source: Node): RecordDeclara
 
     // If we could not find a scope, but we have an FQN, we can try to infer a namespace (or a
     // parent record)
-    var parentName = type.name.parent
+    val parentName = type.name.parent
     if (scope == null && parentName != null) {
         holder = tryScopeInference(parentName, source)
     }
@@ -165,7 +165,7 @@ internal fun Pass<*>.tryRecordInference(type: Type, source: Node): RecordDeclara
  *   This is something we do not want to do see (see above).
  */
 internal fun Pass<*>.tryVariableInference(ref: Reference): VariableDeclaration? {
-    var currentRecordType = scopeManager.currentRecord?.toType() as? ObjectType
+    val currentRecordType = scopeManager.currentRecord?.toType()
     return if (
         ref.language is HasImplicitReceiver &&
             !ref.name.isQualified() &&
@@ -197,7 +197,7 @@ internal fun Pass<*>.tryVariableInference(ref: Reference): VariableDeclaration? 
         // supports this
         scopeManager
             .translationUnitForInference<VariableDeclaration>(ref)
-            ?.startInference(this.ctx)
+            .startInference(this.ctx)
             ?.inferVariableDeclaration(ref)
     } else {
         // Nothing to infer
@@ -298,7 +298,7 @@ internal fun Pass<*>.tryFunctionInference(
             scope = scopeManager.globalScope
         }
         val func =
-            when (val start = scope?.astNode) {
+            when (val start = scope.astNode) {
                 is TranslationUnitDeclaration -> start.inferFunction(call, ctx = this.ctx)
                 is NamespaceDeclaration -> start.inferFunction(call, ctx = this.ctx)
                 else -> null
@@ -315,7 +315,7 @@ internal fun Pass<*>.tryFunctionInferenceFromFunctionPointer(
     type: FunctionPointerType,
 ): ValueDeclaration? {
     // Determine the scope where we want to start our inference
-    var extracted = scopeManager.extractScope(ref)
+    val extracted = scopeManager.extractScope(ref)
     val scope =
         if (extracted?.scope !is NameScope) {
             null
@@ -355,7 +355,7 @@ internal fun Pass<*>.tryMethodInference(
     // inference.
     // 1a) If the language does not even support functions at a global level, it's easy
     // 1b) If this is a member call expression, it's also easy
-    var inferGlobalFunction =
+    val inferGlobalFunction =
         if (call.language !is HasGlobalFunctions || call is MemberCallExpression) {
             false
         } else if (bestGuess is ObjectType && methodExists(bestGuess, call.name.localName)) {
@@ -373,7 +373,7 @@ internal fun Pass<*>.tryMethodInference(
             // course, we could run into a scenario where we have multiple calls to `init()` in
             // several classes and in all occasions the `this` was left out; but this seems
             // unlikely
-            var others =
+            val others =
                 ctx.currentComponent.calls {
                     it != call && it.name == call.name && call !is MemberCallExpression
                 }
@@ -381,7 +381,7 @@ internal fun Pass<*>.tryMethodInference(
         }
 
     if (inferGlobalFunction) {
-        var currentTU =
+        val currentTU =
             scopeManager.currentScope.globalScope?.astNode as? TranslationUnitDeclaration
         return listOfNotNull(currentTU?.inferFunction(call, ctx = ctx))
     }
@@ -417,7 +417,7 @@ internal fun Pass<*>.tryScopeInference(scopeName: Name, source: Node): Declarati
     // At this point, we need to check whether we have any type reference to our scope
     // name. If we have (e.g. it is used in a function parameter, variable, etc.), then we
     // have a high chance that this is actually a parent record and not a namespace
-    var parentType = typeManager.lookupResolvedType(scopeName)
+    val parentType = typeManager.lookupResolvedType(scopeName)
     return if (parentType != null) {
         tryRecordInference(parentType, source = source)
     } else {
@@ -435,7 +435,7 @@ internal fun Pass<*>.tryScopeInference(scopeName: Name, source: Node): Declarati
  * This function should solely be used in [tryMethodInference].
  */
 private fun methodExists(type: ObjectType, name: String): Boolean {
-    var types = type.ancestors.map { it.type }
-    var methods = types.map { it.recordDeclaration }.flatMap { it.methods }
+    val types = type.ancestors.map { it.type }
+    val methods = types.map { it.recordDeclaration }.flatMap { it.methods }
     return methods.any { it.name.localName == name }
 }
