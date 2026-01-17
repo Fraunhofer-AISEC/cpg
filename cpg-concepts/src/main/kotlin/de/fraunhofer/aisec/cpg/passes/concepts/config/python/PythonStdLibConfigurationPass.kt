@@ -132,7 +132,7 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
         return when (last) {
             // If we can follow it directly to the configuration node, then we access a group
             is Configuration -> {
-                handleGroupAccess(last, sub)?.onEach { it.addAssumptionDependence(path) }
+                handleGroupAccess(last, sub).onEach { it.addAssumptionDependence(path) }
             }
             is ConfigurationGroup -> {
                 handleOptionAccess(last, sub).onEach { it.addAssumptionDependence(path) }
@@ -145,7 +145,7 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
     private fun handleGroupAccess(
         conf: Configuration,
         sub: SubscriptExpression,
-    ): MutableList<ConfigurationOperation>? {
+    ): MutableList<ConfigurationOperation> {
         val ops = mutableListOf<ConfigurationOperation>()
 
         // Look for the group
