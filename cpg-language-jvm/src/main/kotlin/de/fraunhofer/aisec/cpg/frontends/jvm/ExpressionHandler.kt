@@ -148,7 +148,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
     }
 
     private fun handleInstanceFieldRef(instanceFieldRef: JInstanceFieldRef): Reference {
-        val base = handle(instanceFieldRef.base) ?: newProblemExpression("missing base")
+        val base = handle(instanceFieldRef.base)
 
         val ref =
             newMemberExpression(
@@ -166,8 +166,8 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
 
     private fun handleArrayRef(arrayRef: JArrayRef): SubscriptExpression {
         val sub = newSubscriptExpression(rawNode = arrayRef)
-        sub.arrayExpression = handle(arrayRef.base) ?: newProblemExpression("missing base")
-        sub.subscriptExpression = handle(arrayRef.index) ?: newProblemExpression("missing index")
+        sub.arrayExpression = handle(arrayRef.base)
+        sub.subscriptExpression = handle(arrayRef.index)
 
         return sub
     }
@@ -175,7 +175,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
     private fun handleAbstractInstanceInvokeExpr(
         invokeExpr: AbstractInstanceInvokeExpr
     ): MemberCallExpression {
-        val base = handle(invokeExpr.base) ?: newProblemExpression("could not parse base")
+        val base = handle(invokeExpr.base)
         // Not really necessary, but since we already have the type information, we can use it
         base.type = frontend.typeOf(invokeExpr.methodSignature.declClassType)
 
@@ -270,7 +270,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
 
     private fun handleCastExpr(castExpr: JCastExpr): CastExpression {
         val cast = newCastExpression(rawNode = castExpr)
-        cast.expression = handle(castExpr.op) ?: newProblemExpression("missing expression")
+        cast.expression = handle(castExpr.op)
         cast.castType = frontend.typeOf(castExpr.type)
 
         return cast
@@ -278,8 +278,8 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
 
     private fun handleAbstractBinopExpr(expr: AbstractBinopExpr): BinaryOperator {
         val op = newBinaryOperator(expr.symbol.trim(), rawNode = expr)
-        op.lhs = handle(expr.op1) ?: newProblemExpression("missing lhs")
-        op.rhs = handle(expr.op2) ?: newProblemExpression("missing rhs")
+        op.lhs = handle(expr.op1)
+        op.rhs = handle(expr.op2)
         op.type = frontend.typeOf(expr.type)
 
         return op
@@ -287,7 +287,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
 
     private fun handleNegExpr(expr: AbstractUnopExpr): UnaryOperator {
         val op = newUnaryOperator("-", postfix = false, prefix = true, rawNode = expr)
-        op.input = handle(expr.op) ?: newProblemExpression("missing input")
+        op.input = handle(expr.op)
         op.type = frontend.typeOf(expr.type)
 
         return op
@@ -295,7 +295,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
 
     private fun handleInstanceOfExpr(instanceOfExpr: JInstanceOfExpr): BinaryOperator {
         val op = newBinaryOperator("instanceof", rawNode = instanceOfExpr)
-        op.lhs = handle(instanceOfExpr.op) ?: newProblemExpression("missing lhs")
+        op.lhs = handle(instanceOfExpr.op)
 
         val type = frontend.typeOf(instanceOfExpr.checkType)
         op.rhs = newTypeExpression("", type, rawNode = type)
@@ -307,7 +307,7 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
 
     private fun handleLengthExpr(lengthExpr: JLengthExpr): UnaryOperator {
         val op = newUnaryOperator("lengthof", prefix = true, postfix = false, rawNode = lengthExpr)
-        op.input = handle(lengthExpr.op) ?: newProblemExpression("missing input")
+        op.input = handle(lengthExpr.op)
         op.type = frontend.typeOf(lengthExpr.type)
 
         return op
