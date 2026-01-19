@@ -335,8 +335,8 @@ fun <T : AstNode, AstNodeType> T.codeAndLocationFromChildren(
                     first,
                     current,
                     compareBy(
-                        { it?.location?.region?.startLine },
-                        { it?.location?.region?.startColumn },
+                        { it.location?.region?.startLine },
+                        { it.location?.region?.startColumn },
                     ),
                 )
             last =

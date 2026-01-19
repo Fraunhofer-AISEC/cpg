@@ -298,8 +298,9 @@ inline fun <reified K : Node, V> iterateEogInternal(
             transformation(nextNode, if (insideBB) state else state.duplicate(), worklist)
         if (worklist.update(nextNode, newState)) {
             nextNode.nextEOGEdges.forEach {
-                if (it is K) {
-                    worklist.push(it, newState)
+                val end = it.end
+                if (end is K) {
+                    worklist.push(end, newState)
                 }
             }
         }

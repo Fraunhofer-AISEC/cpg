@@ -543,7 +543,7 @@ class Application : Callable<Int> {
         return translationConfiguration.build()
     }
 
-    public fun printSchema(filenames: Collection<String>, format: Schema.Format) {
+    fun printSchema(filenames: Collection<String>, format: Schema.Format) {
         val schema = Schema()
         schema.extractSchema()
         filenames.forEach { schema.printToFile(it, format) }
@@ -618,7 +618,7 @@ class Application : Callable<Int> {
 /**
  * Starts a command line application of the cpg-vis-neo4j.
  *
- * @throws IllegalArgumentException, if there was no arguments provided, or the path does not point
+ * @throws IllegalArgumentException, if there were no arguments provided, or the path does not point
  *   to a file, is a directory or point to a hidden file or the paths does not have the same top
  *   level path
  * @throws InterruptedException, if the thread is interrupted while it try´s to connect to the neo4j

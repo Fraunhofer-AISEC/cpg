@@ -49,6 +49,9 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 @ExecuteBefore(EvaluationOrderGraphPass::class)
 @ExecuteBefore(ResolveCallExpressionAmbiguityPass::class)
 @DependsOn(TypeResolver::class)
+@Description(
+    "This Pass executes certain C++ specific conversions on initializers, that are only possible once we know all the types."
+)
 class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     private lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>

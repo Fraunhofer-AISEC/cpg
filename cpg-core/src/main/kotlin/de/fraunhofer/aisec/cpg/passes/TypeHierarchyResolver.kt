@@ -56,6 +56,9 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  * information in the graph might not be fully correct
  */
 @DependsOn(TypeResolver::class)
+@Description(
+    "Builds the type hierarchy within the CPG, establishing relationships between types such as inheritance and interface implementation."
+)
 open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     protected val recordMap = mutableMapOf<Name, RecordDeclaration>()
     protected val enums = mutableListOf<EnumDeclaration>()
