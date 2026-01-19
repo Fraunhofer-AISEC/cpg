@@ -257,7 +257,10 @@ open class QueryTree<T>(
                 }
             }
 
-        return Uuid.fromLongs(nodePart ?: 0, childrenIds + Objects.hash(value))
+        return Uuid.fromLongs(
+            nodePart ?: 0,
+            childrenIds + Objects.hash(value, stringRepresentation),
+        )
     }
 
     fun printNicely(depth: Int = 0): String {
