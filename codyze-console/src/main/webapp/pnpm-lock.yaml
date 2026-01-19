@@ -23,10 +23,10 @@ importers:
         version: 5.2.7
       '@sveltejs/adapter-static':
         specifier: ^3.0.8
-        version: 3.0.8(@sveltejs/kit@2.49.5(@sveltejs/vite-plugin-svelte@5.1.0(svelte@5.33.4)(vite@6.4.1(jiti@2.4.2)(lightningcss@1.30.1)))(svelte@5.33.4)(typescript@5.8.3)(vite@6.4.1(jiti@2.4.2)(lightningcss@1.30.1)))
+        version: 3.0.8(@sveltejs/kit@2.50.0(@sveltejs/vite-plugin-svelte@5.1.0(svelte@5.33.4)(vite@6.4.1(jiti@2.4.2)(lightningcss@1.30.1)))(svelte@5.33.4)(typescript@5.8.3)(vite@6.4.1(jiti@2.4.2)(lightningcss@1.30.1)))
       '@sveltejs/kit':
         specifier: ^2.20.6
-        version: 2.49.5(@sveltejs/vite-plugin-svelte@5.1.0(svelte@5.33.4)(vite@6.4.1(jiti@2.4.2)(lightningcss@1.30.1)))(svelte@5.33.4)(typescript@5.8.3)(vite@6.4.1(jiti@2.4.2)(lightningcss@1.30.1))
+        version: 2.50.0(@sveltejs/vite-plugin-svelte@5.1.0(svelte@5.33.4)(vite@6.4.1(jiti@2.4.2)(lightningcss@1.30.1)))(svelte@5.33.4)(typescript@5.8.3)(vite@6.4.1(jiti@2.4.2)(lightningcss@1.30.1))
       '@sveltejs/vite-plugin-svelte':
         specifier: ^5.0.0
         version: 5.1.0(svelte@5.33.4)(vite@6.4.1(jiti@2.4.2)(lightningcss@1.30.1))
@@ -501,8 +501,8 @@ packages:
     peerDependencies:
       '@sveltejs/kit': ^2.0.0
 
-  '@sveltejs/kit@2.49.5':
-    resolution: {integrity: sha512-dCYqelr2RVnWUuxc+Dk/dB/SjV/8JBndp1UovCyCZdIQezd8TRwFLNZctYkzgHxRJtaNvseCSRsuuHPeUgIN/A==}
+  '@sveltejs/kit@2.50.0':
+    resolution: {integrity: sha512-Hj8sR8O27p2zshFEIJzsvfhLzxga/hWw6tRLnBjMYw70m1aS9BSYCqAUtzDBjRREtX1EvLMYgaC0mYE3Hz4KWA==}
     engines: {node: '>=18.13'}
     hasBin: true
     peerDependencies:
@@ -1454,6 +1454,7 @@ packages:
   tar@7.4.3:
     resolution: {integrity: sha512-5S7Va8hKfV7W5U6g3aYxXmlPoZVAwUMy9AOKyF2fVuZa2UD3qZjg578OrLRt8PcNN1PleVaL/5/yYATNL0ICUw==}
     engines: {node: '>=18'}
+    deprecated: Old versions of tar are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exhorbitant rates) by contacting i@izs.me
 
   tinyglobby@0.2.15:
     resolution: {integrity: sha512-j2Zq4NyQYG5XMST4cbs02Ak8iJUdxRM0XI5QyxXuZOzKOINmWurp3smXu3y5wDcJrptwpSjgXHzIQxR0omXljQ==}
@@ -1841,11 +1842,11 @@ snapshots:
     dependencies:
       acorn: 8.15.0
 
-  '@sveltejs/adapter-static@3.0.8(@sveltejs/kit@2.49.5(@sveltejs/vite-plugin-svelte@5.1.0(svelte@5.33.4)(vite@6.4.1(jiti@2.4.2)(lightningcss@1.30.1)))(svelte@5.33.4)(typescript@5.8.3)(vite@6.4.1(jiti@2.4.2)(lightningcss@1.30.1)))':
+  '@sveltejs/adapter-static@3.0.8(@sveltejs/kit@2.50.0(@sveltejs/vite-plugin-svelte@5.1.0(svelte@5.33.4)(vite@6.4.1(jiti@2.4.2)(lightningcss@1.30.1)))(svelte@5.33.4)(typescript@5.8.3)(vite@6.4.1(jiti@2.4.2)(lightningcss@1.30.1)))':
     dependencies:
-      '@sveltejs/kit': 2.49.5(@sveltejs/vite-plugin-svelte@5.1.0(svelte@5.33.4)(vite@6.4.1(jiti@2.4.2)(lightningcss@1.30.1)))(svelte@5.33.4)(typescript@5.8.3)(vite@6.4.1(jiti@2.4.2)(lightningcss@1.30.1))
+      '@sveltejs/kit': 2.50.0(@sveltejs/vite-plugin-svelte@5.1.0(svelte@5.33.4)(vite@6.4.1(jiti@2.4.2)(lightningcss@1.30.1)))(svelte@5.33.4)(typescript@5.8.3)(vite@6.4.1(jiti@2.4.2)(lightningcss@1.30.1))
 
-  '@sveltejs/kit@2.49.5(@sveltejs/vite-plugin-svelte@5.1.0(svelte@5.33.4)(vite@6.4.1(jiti@2.4.2)(lightningcss@1.30.1)))(svelte@5.33.4)(typescript@5.8.3)(vite@6.4.1(jiti@2.4.2)(lightningcss@1.30.1))':
+  '@sveltejs/kit@2.50.0(@sveltejs/vite-plugin-svelte@5.1.0(svelte@5.33.4)(vite@6.4.1(jiti@2.4.2)(lightningcss@1.30.1)))(svelte@5.33.4)(typescript@5.8.3)(vite@6.4.1(jiti@2.4.2)(lightningcss@1.30.1))':
     dependencies:
       '@standard-schema/spec': 1.1.0
       '@sveltejs/acorn-typescript': 1.0.8(acorn@8.15.0)
