@@ -2797,7 +2797,7 @@ fun PointsToState.Element.getValues(
              * For PointerReferences, the value is the address of the input
              * For example, the value of `&i` is the address of `i`
              */
-            fetchAddressFromGeneralState(node.input).mapTo(PowersetLattice.Element()) {
+            this.getAddresses(node.input, node.input).mapTo(PowersetLattice.Element()) {
                 Pair(it, false)
             }
         }
