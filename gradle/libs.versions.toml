@@ -40,8 +40,8 @@ neo4j-ogm-bolt-driver = { module = "org.neo4j:neo4j-ogm-bolt-driver", version.re
 neo4j-driver = { module = "org.neo4j.driver:neo4j-java-driver", version.ref = "neo4j5"}
 
 javaparser = { module = "com.github.javaparser:javaparser-symbol-solver-core", version = "3.28.0"}
-jackson = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version = "2.20.1"}
-jacksonyml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version = "2.20.1"}
+jackson = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version = "2.21.0"}
+jacksonyml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version = "2.21.0"}
 eclipse-runtime = { module = "org.eclipse.platform:org.eclipse.core.runtime", version = "3.34.100"}
 osgi-service = { module = "org.osgi:org.osgi.service.prefs", version = "1.1.2"}
 icu4j = { module = "com.ibm.icu:icu4j", version = "77.1"}
