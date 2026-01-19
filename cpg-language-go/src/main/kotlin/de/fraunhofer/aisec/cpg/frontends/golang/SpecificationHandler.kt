@@ -301,7 +301,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         }
     }
 
-    // TODO Never used -> missing implementation?
+    @Suppress("unused")
     private fun handleFuncTypeSpec(
         spec: GoStandardLibrary.Ast.TypeSpec,
         type: GoStandardLibrary.Ast.FuncType,

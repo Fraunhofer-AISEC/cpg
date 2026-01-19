@@ -104,7 +104,8 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     private lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
 
-    // Note: Code analysis suggests that this property is non-nullable.
+    // Note: Code analysis suggests that this property is non-nullable, but there is a complex reason, why it has to be
+    // nullable.
     override val scope: Scope?
         get() = scopeManager.currentScope
 
