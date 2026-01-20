@@ -52,6 +52,7 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.Pair
 import kotlin.collections.MutableSet
+import kotlin.collections.contains
 import kotlin.collections.filter
 import kotlin.collections.map
 import kotlin.let
@@ -421,7 +422,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 startState,
                 node,
                 DeclarationStateEntryElement(
-                    PowersetLattice.Element(),
+                    PowersetLattice.Element(startState.getAddresses(node, node)),
                     PowersetLattice.Element(),
                     PowersetLattice.Element(),
                 ),
@@ -1496,11 +1497,23 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     functionSummaryAnalysisChain.map { it.name.localName },
                 )
                 if (invoke !in functionSummaryAnalysisChain) {
-                    //                    val summaryCopy = functionSummaryAnalysisChain.toSet()
-                    log.info("Calling acceptInteral(${invoke.name.localName}")
-                    acceptInternal(invoke)
-                    log.info("Finished with acceptInteral(${invoke.name.localName})")
-                    //                    functionSummaryAnalysisChain.addAll(summaryCopy)
+                    // If the node has a body and a functionSummary, we have visited it before, no
+                    // need to analyze it again.
+                    // Otherwise, we call acceptInternal on it
+                    if (
+                        (invoke.functionSummary.isNotEmpty() && invoke.body != null) &&
+                            invoke.functionSummary.keys.any {
+                                it in invoke.parameters || it in invoke.returns
+                            }
+                    ) {
+                        log.info(
+                            "Not calling acceptInternal on ${invoke.name} because we already have a functionSummary."
+                        )
+                    } else {
+                        log.info("Calling acceptInternal(${invoke.name.localName}")
+                        acceptInternal(invoke)
+                        log.info("Finished with acceptInternal(${invoke.name.localName})")
+                    }
                 } else {
                     log.error(
                         "Cannot calculate functionSummary for ${invoke.name.localName} as it's recursively called. callChain: ${functionSummaryAnalysisChain.map{it.name.localName}}"
