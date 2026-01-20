@@ -371,13 +371,13 @@ impl From<Abi> for RSAbi {
 
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSImpl {pub(crate) ast_node: RSNode, items: Vec<RSAssocItem>}
+pub struct RSImpl {pub(crate) ast_node: RSNode, items: Vec<RSAssocItem>, path_types: Vec<RSPathType>}
 impl From<Impl> for RSImpl {
     fn from(node:  Impl) -> Self {
-
         RSImpl{
             ast_node: node.syntax().into(),
-            items: node.assoc_item_list().map(|ail|ail.assoc_items().map(Into::into).collect::<Vec<_>>()).unwrap_or_default()
+            items: node.assoc_item_list().map(|ail|ail.assoc_items().map(Into::into).collect::<Vec<_>>()).unwrap_or_default(),
+            path_types: node.syntax().children().filter_map(PathType::cast).map(Into::into).collect::<Vec<_>>()
         }
     }
 }

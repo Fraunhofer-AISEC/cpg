@@ -53,7 +53,7 @@ class RustLanguage :
 
 {
     override val fileExtensions = listOf("rs")
-    override val namespaceDelimiter = "."
+    override val namespaceDelimiter = "::"
     @Convert(value = SimpleNameConverter::class)
     // override val builtinsNamespace: Name = Name("")
     // override val builtinsFileCandidates = nameToLanguageFiles(builtinsNamespace)

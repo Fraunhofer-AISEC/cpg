@@ -27,9 +27,11 @@ package de.fraunhofer.aisec.cpg.frontends.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import uniffi.cpgrust.RsAssocItem
 import uniffi.cpgrust.RsAst
 import uniffi.cpgrust.RsFieldList
 import uniffi.cpgrust.RsFn
+import uniffi.cpgrust.RsImpl
 import uniffi.cpgrust.RsItem
 import uniffi.cpgrust.RsModule
 import uniffi.cpgrust.RsParam
@@ -45,6 +47,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             is RsItem.Param -> handleParameterDeclaration(item.v1)
             is RsItem.Module -> handleModule(item.v1)
             is RsItem.Struct -> handleStruct(item.v1)
+            is RsItem.Impl -> handleImpl(item.v1)
             else -> handleNotSupported(node, node::class.simpleName ?: "")
         }
     }
@@ -140,5 +143,57 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         }
 
         return record
+    }
+
+    private fun handleImpl(impl: RsImpl): Declaration {
+        impl.pathTypes.toString()
+        // I think i want to make a block here or a namespace declaration like we have in C++ i
+        // think
+        // Todo the first part of the name is an interface "anouncement"
+        // The second part is like a namespace
+
+        val implTarget = impl.pathTypes.last()
+
+        var name = implTarget.path?.segment?.nameRef?.let { parseName(it.text) } ?: Name("")
+
+        val scope =
+            frontend.scopeManager.lookupScope(
+                parseName(
+                    frontend.scopeManager.currentNamespace
+                        .fqn(name.toString(), delimiter = name.delimiter)
+                        .toString()
+                )
+            )
+        val currentScope = frontend.scopeManager.currentScope
+
+        scope?.let { frontend.scopeManager.enterScope(it) }
+
+        val scopedNode = scope?.astNode
+
+        for (item in impl.items){
+            when (item) {
+                is RsAssocItem.Fn -> {
+                    val func = handleFunctionDeclaration(item.v1)
+
+                    
+                }
+                is RsAssocItem.Const -> {
+
+                }
+                is RsAssocItem.TypeAlias -> {
+
+                }
+                is RsAssocItem.MacroCall -> {
+
+                }
+            }
+        }
+
+        scope?.let {
+            frontend.scopeManager.leaveScope(it)
+            frontend.scopeManager.enterScope(currentScope)
+        }
+
+        return newProblemDeclaration()
     }
 }
