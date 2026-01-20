@@ -48,6 +48,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.DynamicInvokeResolver
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.flows.cxx.CXXEntryPointsPass
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -56,7 +57,8 @@ import kotlin.io.path.Path
 import kotlin.io.path.nameWithoutExtension
 
 /** A pass that fills the [DynamicLoading] concept into the CPG. */
-@DependsOn(ControlFlowSensitiveDFGPass::class)
+@DependsOn(ControlFlowSensitiveDFGPass::class, true)
+@DependsOn(PointsToPass::class, true)
 @DependsOn(CXXEntryPointsPass::class)
 @ExecuteBefore(DynamicInvokeResolver::class)
 class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
