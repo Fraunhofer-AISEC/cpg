@@ -403,16 +403,24 @@ fun Node.generatesNewData(): NodeCollectionWithAssumption {
  */
 fun Node.identifyInfoToTrack(
     scope: AnalysisScope,
+    direction: AnalysisDirection = Forward(GraphToFollow.DFG),
     vararg sensitivities: AnalysisSensitivity =
         ContextSensitive + FieldSensitive + FilterUnreachableEOG,
 ): Set<NodeWithAssumption> {
     // Get all next DFG nodes. These must include all relevant operations to make this work but that
     // should be the case with our current implementation.
     val reachableDFGNodes =
-        this.collectAllNextDFGPaths(
-                interproceduralAnalysis = scope is Interprocedural,
-                contextSensitive = ContextSensitive in sensitivities,
-            )
+        if (direction is Forward) {
+                this.collectAllNextDFGPaths(
+                    interproceduralAnalysis = scope is Interprocedural,
+                    contextSensitive = ContextSensitive in sensitivities,
+                )
+            } else {
+                this.collectAllPrevDFGPaths(
+                    interproceduralAnalysis = scope is Interprocedural,
+                    contextSensitive = ContextSensitive in sensitivities,
+                )
+            }
             .map { it.nodes }
             .flatten()
             .toSet()
@@ -423,6 +431,185 @@ fun Node.identifyInfoToTrack(
         result.addAll(targets.nodes.map { NodeWithAssumption(it).addAssumptionDependence(targets) })
     }
     return result
+}
+
+/**
+ * This function tracks if the data in [this] always originates from a node which fulfills
+ * [predicate]. An early termination can be specified by the predicate [earlyTermination].
+ * [allowOverwritingValue] can be used to configure if overwriting the value (or part of it) results
+ * in a failure of the requirement (if `false`) or if it does not affect the evaluation. The
+ * analysis can be configured with [scope] and [sensitivities]. [stopIfImpossible] enables the
+ * option to stop iterating through the EOG if we already left the function where we started and
+ * none of the nodes reaching by the DFG is in the new scope or one of its parents (i.e., the
+ * condition cannot be fulfilled anymore).
+ */
+fun Node.alwaysComesFrom(
+    allowOverwritingValue: Boolean = false,
+    earlyTermination: ((Node) -> Boolean)? = null,
+    identifyCopies: Boolean = true,
+    stopIfImpossible: Boolean = true,
+    scope: AnalysisScope,
+    vararg sensitivities: AnalysisSensitivity =
+        ContextSensitive + FieldSensitive + FilterUnreachableEOG,
+    predicate: (Node) -> Boolean,
+): QueryTree<Boolean> {
+    return this.alwaysComesFromInternal(
+        allowOverwritingValue = allowOverwritingValue,
+        noSinkIsGood = false,
+        earlyTermination = earlyTermination,
+        identifyCopies = identifyCopies,
+        stopIfImpossible = stopIfImpossible,
+        scope = scope,
+        sensitivities = sensitivities,
+        predicate = predicate,
+    )
+}
+
+/**
+ * This function tracks if the data in [this] always come from a node which fulfills [predicate]. An
+ * early termination can be specified by the predicate [earlyTermination]. [allowOverwritingValue]
+ * can be used to configure if overwriting the value (or part of it) results in a failure of the
+ * requirement (if `false`) or if it does not affect the evaluation. The analysis can be configured
+ * with [scope] and [sensitivities]. [stopIfImpossible] enables the option to stop iterating through
+ * the EOG if we already left the function where we started and none of the nodes reaching by the
+ * DFG is in the new scope or one of its parents (i.e., the condition cannot be fulfilled anymore).
+ *
+ * If [noSinkIsGood] is set to `true`, all results with "ended path" are considered as fulfilled.
+ */
+internal fun Node.alwaysComesFromInternal(
+    allowOverwritingValue: Boolean = false,
+    noSinkIsGood: Boolean = false,
+    earlyTermination: ((Node) -> Boolean)? = null,
+    identifyCopies: Boolean = true,
+    stopIfImpossible: Boolean = true,
+    scope: AnalysisScope,
+    vararg sensitivities: AnalysisSensitivity =
+        ContextSensitive + FieldSensitive + FilterUnreachableEOG,
+    predicate: (Node) -> Boolean,
+): QueryTree<Boolean> {
+    val nodesToTrack =
+        if (identifyCopies) {
+            this.identifyInfoToTrack(
+                scope = scope,
+                direction = Backward(GraphToFollow.DFG),
+                sensitivities = sensitivities,
+            )
+        } else {
+            setOf(NodeWithAssumption(this))
+        }
+    val allChildren = mutableListOf<QueryTree<Boolean>>()
+    for (nodeToTrack in nodesToTrack) {
+        val prevDFGPaths =
+            nodeToTrack.node
+                .collectAllPrevDFGPaths(
+                    interproceduralAnalysis = scope is Interprocedural,
+                    contextSensitive = ContextSensitive in sensitivities,
+                )
+                .map { it.nodes }
+                .flatten()
+                .toSet()
+        val earlyTerminationPredicate = { n: Node, ctx: Context ->
+            earlyTermination?.let { it(n) } == true ||
+                // If we are not allowed to overwrite the value, we need to check if the node may
+                // overwrite the value. In this case, we terminate early.
+                (!allowOverwritingValue &&
+                    // TODO: This should be replaced with some check if the memory location/whatever
+                    // where the data is kept is (partially) written to.
+                    nodeToTrack.node in n.nextDFG &&
+                    (n as? Reference)?.access == AccessValues.WRITE)
+        }
+        val eogScope =
+            if (stopIfImpossible && scope is Interprocedural) {
+                InterproceduralWithDfgTermination(
+                    maxCallDepth = scope.maxCallDepth,
+                    maxSteps = scope.maxSteps,
+                    allReachableNodes =
+                        prevDFGPaths
+                            .filter { it.scope != null && it !is FunctionDeclaration }
+                            .toSet(),
+                )
+            } else scope
+        val prevEOGEvaluation =
+            nodeToTrack.node.followEOGEdgesUntilHit(
+                direction = Backward(GraphToFollow.EOG),
+                collectFailedPaths = true,
+                findAllPossiblePaths = true,
+                scope = eogScope,
+                sensitivities = sensitivities,
+                earlyTermination = earlyTerminationPredicate,
+            ) {
+                predicate(it) && it in prevDFGPaths
+            }
+        allChildren +=
+            prevEOGEvaluation.failed.map { (failureReason, path) ->
+                SinglePathResult(
+                    // If we configure this function with "noSinkIsGood == true", then we only
+                    // consider paths which hit the early termination or which exceeded the steps
+                    // (though the latter is debatable).
+                    // If "noSinkIsGood == false", we consider all paths which are not fulfilled as
+                    // failed.
+                    value = noSinkIsGood && failureReason == FailureReason.PATH_ENDED,
+                    children =
+                        mutableListOf(
+                            QueryTree(value = path.nodes, operator = GenericQueryOperators.EVALUATE)
+                                .addAssumptionDependence(path)
+                        ),
+                    stringRepresentation =
+                        "The EOG path reached the end  " +
+                            if (earlyTermination != null)
+                                "(or ${path.nodes.lastOrNull()} which a predicate marking the end) "
+                            else
+                                "" +
+                                    "before passing through a node matching the required predicate.",
+                    node = nodeToTrack.node,
+                    terminationReason =
+                        if (failureReason == FailureReason.PATH_ENDED) {
+                            PathEnded(path.nodes.last())
+                        } else if (failureReason == FailureReason.HIT_EARLY_TERMINATION) {
+                            HitEarlyTermination(path.nodes.last())
+                        } else {
+                            StepsExceeded(path.nodes.last())
+                        },
+                    operator = GenericQueryOperators.EVALUATE,
+                )
+            } +
+                prevEOGEvaluation.fulfilled.map {
+                    SinglePathResult(
+                        value = true,
+                        children =
+                            mutableListOf(
+                                QueryTree(
+                                        value = it.nodes,
+                                        operator = GenericQueryOperators.EVALUATE,
+                                    )
+                                    .addAssumptionDependence(it)
+                            ),
+                        stringRepresentation =
+                            "The EOG path reached the node ${it.nodes.lastOrNull()} matching the required predicate" +
+                                if (earlyTermination != null)
+                                    " before reaching a node matching the early termination predicate"
+                                else "",
+                        node = this,
+                        terminationReason = Success(it.nodes.last()),
+                        operator = GenericQueryOperators.EVALUATE,
+                    )
+                }
+    }
+
+    val nothingFailed = allChildren.all { it.value }
+    return QueryTree(
+        value = nothingFailed,
+        children = allChildren.toMutableList(),
+        stringRepresentation =
+            if (nothingFailed) {
+                "All EOG paths fulfilled the predicate"
+            } else {
+                "Some EOG paths failed to fulfill the predicate"
+            },
+        node = this,
+        assumptions = nodesToTrack.flatMap { it.assumptions }.toMutableSet(),
+        operator = GenericQueryOperators.ALL,
+    )
 }
 
 /**
