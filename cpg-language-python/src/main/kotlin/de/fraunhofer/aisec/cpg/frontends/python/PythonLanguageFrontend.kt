@@ -313,7 +313,7 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
     }
 
     private fun pythonASTtoCPG(pyAST: PyObject, path: Path): TranslationUnitDeclaration {
-        var topLevel = ctx.currentComponent?.topLevel() ?: path.parent.toFile()
+        val topLevel = ctx.currentComponent?.topLevel() ?: path.parent.toFile()
 
         val pythonASTModule =
             fromPython(pyAST) as? Python.AST.Module
@@ -341,14 +341,14 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
         // with packages. Note: in reality, only directories that have __init__.py file present are
         // actually packages, but we skip this for now. Since we are dealing with potentially
         // relative paths, we need to canonicalize both paths.
-        var relative =
+        val relative =
             path.toFile().canonicalFile.relativeToOrNull(topLevel.canonicalFile)?.toPath()
-        var module = path.nameWithoutExtension
-        var modulePaths = (relative?.parent?.pathString?.split("/") ?: listOf()) + module
+        val module = path.nameWithoutExtension
+        val modulePaths = (relative?.parent?.pathString?.split("/") ?: listOf()) + module
 
         val lastNamespace =
             modulePaths.fold(null) { previous: NamespaceDeclaration?, path ->
-                var fqn = previous?.name.fqn(path)
+                val fqn = previous?.name.fqn(path)
 
                 // The __init__ module is very special in Python. The symbols that are declared by
                 // __init__.py are available directly under the path of the package (not module) it
@@ -452,7 +452,7 @@ fun populateSystemInformation(
     config: TranslationConfiguration,
     tu: TranslationUnitDeclaration,
 ): SystemInformation {
-    var sysInfo =
+    val sysInfo =
         SystemInformation(
             platform = config.symbols["PYTHON_PLATFORM"],
             versionInfo = config.versionInfo,

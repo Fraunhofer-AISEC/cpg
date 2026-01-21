@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,23 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
-package example
+package de.fraunhofer.aisec.cpg.passes
 
-project {
-    suppressions {
-        /** The encrypt function has 7 characters, so it's ok. */
-        queryTreeById("00000000-137f-f4c6-ffff-ffffde545796" to true)
-
-        /**
-         * This is a suppression for a query that checks for a function named "foo" and contains a
-         * greater than sign in its string representation.
-         *
-         * Foo is so common that we do not want to report it.
-         */
-        queryTree(
-            { qt: QueryTree<Boolean> ->
-                qt.node?.name?.localName == "foo" && qt.stringRepresentation.contains(">")
-            } to true
-        )
-    }
-}
+/** Provides a brief description for the annotated pass. */
+@Retention(AnnotationRetention.RUNTIME)
+@Target(AnnotationTarget.CLASS)
+@Repeatable
+annotation class Description(val briefDescription: String)

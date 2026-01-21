@@ -50,6 +50,9 @@ import kotlin.collections.component2
 /** This pass builds the Control Dependence Graph (CDG) by iterating through the EOG. */
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(BasicBlockCollectorPass::class)
+@Description(
+    "Adds CDG edges to the graph. These represent control dependence graph and thus show if executing code depends on a condition of a control-flow controlling statement."
+)
 open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     class Configuration(

@@ -33,7 +33,12 @@ import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
+/**
+ * This pass collects [BasicBlock]s by iterating through the EOG of [EOGStarterHolder]s. A basic
+ * block is defined as a sequence of nodes with a single entry point and a single exit point.
+ */
 @DependsOn(EvaluationOrderGraphPass::class)
+@Description("Collects basic blocks for all functions in the EOG.")
 class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     override fun cleanup() {

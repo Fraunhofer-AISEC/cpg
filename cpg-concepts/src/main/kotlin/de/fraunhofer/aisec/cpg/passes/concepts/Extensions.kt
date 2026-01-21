@@ -212,8 +212,7 @@ data class Selector<T : Node>(
      */
     operator fun invoke(node: Node): T? {
         // Try to cast the node to T, if it's not an instance of T, it is null
-        val tNode = klass.safeCast(node)
-        if (tNode == null) return null
+        val tNode = klass.safeCast(node) ?: return null
 
         // Check, if predicate matches
         return if (
@@ -228,10 +227,8 @@ data class Selector<T : Node>(
 }
 
 /**
- * A selector that describes a possible selection of a CPG [Node] by the following properties:
- * - its [KClass] (mandatory, see [klass]),
- * - its [Node.name] (see [namePredicate]),
- * - any other property (see [predicate])
+ * Starting from a given [Node], we also want to propagate information to other nodes. This node is
+ * identified by [transformation].
  */
 data class Propagator<S : Node, T : Node>(val transformation: ((S) -> T)) {
     var builders = mutableListOf<(BuilderContext<T>) -> List<OverlayNode>>()

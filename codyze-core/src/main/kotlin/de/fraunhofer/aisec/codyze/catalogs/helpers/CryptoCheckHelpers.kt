@@ -245,7 +245,7 @@ fun Cipher.isRSA(): QueryTree<Boolean> =
 
 /**
  * Checks if the key exchange mechanism used by this [HybridCipher] is considered state of the art
- * according to the provided [de.fraunhofer.aisec.confirmate.queries.catalogs.CryptoCatalog].
+ * according to the provided [CryptoCatalog].
  */
 context(catalog: CryptoCatalog)
 fun HybridCipher.isKeyExchangeOk() =

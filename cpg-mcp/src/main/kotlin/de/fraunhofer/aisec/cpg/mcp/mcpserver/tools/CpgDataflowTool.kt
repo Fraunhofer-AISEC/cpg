@@ -103,8 +103,8 @@ fun Server.addCpgDataflowTool() {
                     )
 
             val allOverlayNodes = result.allChildrenWithOverlays<OverlayNode>()
-            val sourceNodes = allOverlayNodes.filter { it.name.localName == payload?.from }
-            val targetNodes = allOverlayNodes.filter { it.name.localName == payload?.to }
+            val sourceNodes = allOverlayNodes.filter { it.name.localName == payload.from }
+            val targetNodes = allOverlayNodes.filter { it.name.localName == payload.to }
 
             if (sourceNodes.isEmpty() || targetNodes.isEmpty()) {
                 return@runOnCpg CallToolResult(

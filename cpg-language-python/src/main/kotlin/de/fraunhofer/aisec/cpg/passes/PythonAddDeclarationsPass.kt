@@ -51,6 +51,7 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 @ExecuteBefore(ImportResolver::class)
 @ExecuteBefore(SymbolResolver::class)
 @RequiredFrontend(PythonLanguageFrontend::class)
+@Description("Adds declarations for python's variables as the CPG requires them.")
 class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), LanguageProvider {
 
     lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
@@ -102,12 +103,12 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         }
 
         // Look for a potential scope modifier for this reference
-        var targetScope =
+        val targetScope =
             scopeManager.currentScope.predefinedLookupScopes[ref.name.toString()]?.targetScope
 
         // Try to see whether our symbol already exists. There are basically three rules to follow
         // here.
-        var symbol =
+        val symbol =
             when {
                 // When a target scope is set, then we have a `global` or `nonlocal` keyword for
                 // this symbol, and we need to start looking in this scope

@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.ComponentPass
 import de.fraunhofer.aisec.cpg.passes.DFGPass
+import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -54,6 +55,7 @@ import org.slf4j.LoggerFactory
 @DependsOn(SymbolResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(DFGPass::class)
+@Description("Translates Python logging imports and calls to logging concept nodes.")
 class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private var log: Logger = LoggerFactory.getLogger(this.javaClass)
     lateinit var walker: SubgraphWalker.ScopedWalker<Node>

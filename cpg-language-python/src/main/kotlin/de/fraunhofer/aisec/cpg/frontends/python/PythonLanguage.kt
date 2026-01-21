@@ -228,15 +228,17 @@ class PythonLanguage :
         rhsType: Type,
         hint: BinaryOperator?,
     ): Type {
-        when {
-            operatorCode == "/" && lhsType is NumericType && rhsType is NumericType -> {
+        when (operatorCode) {
+            "/" if lhsType is NumericType && rhsType is NumericType -> {
                 // In Python, the / operation automatically casts the result to a float
                 return primitiveType("float")
             }
-            operatorCode == "*" && lhsType is StringType && rhsType is NumericType -> {
+
+            "*" if lhsType is StringType && rhsType is NumericType -> {
                 return lhsType
             }
-            operatorCode == "//" && lhsType is NumericType && rhsType is NumericType -> {
+
+            "//" if lhsType is NumericType && rhsType is NumericType -> {
                 return if (lhsType is IntegerType && rhsType is IntegerType) {
                     // In Python, the // operation keeps the type as an int if both inputs are
                     // integers

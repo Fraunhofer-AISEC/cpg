@@ -257,7 +257,10 @@ open class QueryTree<T>(
                 }
             }
 
-        return Uuid.fromLongs(nodePart ?: 0, childrenIds + Objects.hash(value))
+        return Uuid.fromLongs(
+            nodePart ?: 0,
+            childrenIds + Objects.hash(value, stringRepresentation),
+        )
     }
 
     fun printNicely(depth: Int = 0): String {
@@ -311,8 +314,7 @@ open class QueryTree<T>(
                 // If there are no children, we collect the assumptions from the value
                 // This is useful for cases where the value itself is a HasAssumptions
                 // or a Collection of HasAssumptions
-                val value = this.value
-                when (value) {
+                when (val value = this.value) {
                     is HasAssumptions -> {
                         value.relevantAssumptions()
                     }
