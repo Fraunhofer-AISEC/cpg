@@ -34,14 +34,14 @@ import kotlin.Int
 import kotlin.String
 import kotlin.time.Duration
 
-public open class Logging(
-    val logLevelThreshold: LogLevel?,
-    public val enabled: Boolean?,
-    public val monitoringEnabled: Boolean?,
+open class Logging(
+    var logLevelThreshold: LogLevel?,
+    var enabled: Boolean?,
+    var monitoringEnabled: Boolean?,
     name: String?,
-    public val retentionPeriod: Duration?,
-    public val securityAlertsEnabled: Boolean?,
-    public val loggingService: LoggingService?,
+    var retentionPeriod: Duration?,
+    var securityAlertsEnabled: Boolean?,
+    var loggingService: LoggingService?,
     underlyingNode: Node? = null,
 ) : Auditing(underlyingNode) {
     init {
