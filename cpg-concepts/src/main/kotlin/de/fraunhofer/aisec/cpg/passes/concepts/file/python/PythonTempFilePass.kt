@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.file.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.passes.DFGPass
+import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.concepts.EOGConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.NodeToOverlayStateElement
@@ -39,7 +40,6 @@ import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
-import java.util.*
 
 /**
  * This pass handles various library calls in Python code that are related to temporary files. It
@@ -51,7 +51,11 @@ import java.util.*
 @DependsOn(EvaluationOrderGraphPass::class, false)
 @ExecuteBefore(PythonFileJoinPass::class, false)
 @ExecuteBefore(PythonFileConceptPass::class, false)
+@Description(
+    "This pass handles various library calls in Python code that are related to temporary files."
+)
 class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
+
     override fun handleCallExpression(
         state: NodeToOverlayStateElement,
         node: CallExpression,
@@ -250,7 +254,7 @@ class PythonTempFilePass(ctx: TranslationContext) : EOGConceptPass(ctx) {
 
     /**
      * Creates a temporary file with a unique name based on the provided [prefix], [suffix],
-     * [middle] aand the id of the [callExpression].
+     * [middle] and the id of the [callExpression].
      */
     fun createFilename(
         prefix: String,

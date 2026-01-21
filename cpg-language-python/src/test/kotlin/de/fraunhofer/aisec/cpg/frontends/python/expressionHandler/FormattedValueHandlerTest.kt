@@ -95,7 +95,7 @@ class FormattedValueHandlerTest {
         val bArguments = bFormatCall.arguments
         assertEquals(2, bArguments.size)
         assertIs<Literal<*>>(bArguments[0])
-        assertLiteralValue(255L.toLong(), bArguments[0])
+        assertLiteralValue(255L, bArguments[0])
         //        assertIs<Literal<*>>(bArguments[1])
         assertLiteralValue("#x", bArguments[1])
 

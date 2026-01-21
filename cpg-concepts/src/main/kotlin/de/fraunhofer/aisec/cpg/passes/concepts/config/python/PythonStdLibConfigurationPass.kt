@@ -43,6 +43,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.SubscriptExpression
 import de.fraunhofer.aisec.cpg.helpers.Util.warnWithFileLocation
+import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.config.ProvideConfigPass
@@ -56,6 +57,9 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
  */
 @DependsOn(SymbolResolver::class)
 @ExecuteBefore(ProvideConfigPass::class)
+@Description(
+    "This pass is responsible for creating [ConfigurationOperation] nodes based on the configparser module of the Python standard library."
+)
 class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) {
     override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
         when (node) {
@@ -128,7 +132,7 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
         return when (last) {
             // If we can follow it directly to the configuration node, then we access a group
             is Configuration -> {
-                handleGroupAccess(last, sub)?.onEach { it.addAssumptionDependence(path) }
+                handleGroupAccess(last, sub).onEach { it.addAssumptionDependence(path) }
             }
             is ConfigurationGroup -> {
                 handleOptionAccess(last, sub).onEach { it.addAssumptionDependence(path) }
@@ -141,7 +145,7 @@ class PythonStdLibConfigurationPass(ctx: TranslationContext) : ConceptPass(ctx) 
     private fun handleGroupAccess(
         conf: Configuration,
         sub: SubscriptExpression,
-    ): MutableList<ConfigurationOperation>? {
+    ): MutableList<ConfigurationOperation> {
         val ops = mutableListOf<ConfigurationOperation>()
 
         // Look for the group

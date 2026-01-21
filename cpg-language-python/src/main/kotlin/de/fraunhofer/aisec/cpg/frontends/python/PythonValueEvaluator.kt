@@ -88,19 +88,15 @@ class PythonValueEvaluator : ValueEvaluator() {
         }
     }
 
-    override fun handleCallExpression(call: CallExpression, depth: Int): Any? {
-        return when (call.reconstructedImportName.toString()) {
+    override fun handleCallExpression(node: CallExpression, depth: Int): Any? {
+        return when (node.reconstructedImportName.toString()) {
             "os.path.join" -> {
-                call.arguments.joinToString(separator = "/") { arg ->
+                node.arguments.joinToString(separator = "/") { arg ->
                     super.evaluate(arg).toString()
                 }
             }
-            else -> super.handleCallExpression(call, depth)
+            else -> super.handleCallExpression(node, depth)
         }
-    }
-
-    override fun handlePrevDFG(node: Node, depth: Int): Any? {
-        return super.handlePrevDFG(node, depth)
     }
 
     override fun computeBinaryOpEffect(

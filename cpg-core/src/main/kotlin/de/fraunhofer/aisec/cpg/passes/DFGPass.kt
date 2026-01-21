@@ -44,6 +44,7 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /** Adds the DFG edges for various types of nodes. */
 @DependsOn(SymbolResolver::class)
+@Description("Adds DFG edges to the graph but without considering the control flow.")
 class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private val callsInferredFunctions = mutableListOf<CallExpression>()
 

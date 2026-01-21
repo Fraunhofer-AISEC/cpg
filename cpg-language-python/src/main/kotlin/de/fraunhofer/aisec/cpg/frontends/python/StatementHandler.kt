@@ -312,7 +312,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                         rawNode = node,
                     )
                     .implicit()
-            val starOp = newUnaryOperator("*", false, false)
+            val starOp = newUnaryOperator("*", postfix = false, prefix = false)
             starOp.input =
                 newMemberExpression(name = "exec_info", base = newReference("sys").implicit())
                     .implicit()
@@ -320,7 +320,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
             val ifStmt = newIfStatement().implicit()
             ifStmt.thenStatement = newThrowExpression().implicit()
-            val neg = newUnaryOperator("not", false, false).implicit()
+            val neg = newUnaryOperator("not", postfix = false, prefix = false).implicit()
             neg.input = exitCallWithSysExec
             ifStmt.condition = neg
             return ifStmt
@@ -875,8 +875,8 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
         // Technically, our global scope is not identical to the python "global" scope. The reason
         // behind that is that we wrap each file in a namespace (as defined in the python spec). So
         // the "global" scope is actually our current namespace scope.
-        var pythonGlobalScope =
-            frontend.scopeManager.globalScope?.children?.firstOrNull { it is NamespaceScope }
+        val pythonGlobalScope =
+            frontend.scopeManager.globalScope.children.firstOrNull { it is NamespaceScope }
 
         return newLookupScopeStatement(
             global.names.map { parseName(it).localName },
@@ -891,7 +891,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
      */
     private fun handleNonLocal(global: Python.AST.Nonlocal): LookupScopeStatement {
         // We need to find the first outer function scope
-        var outerFunctionScope =
+        val outerFunctionScope =
             frontend.scopeManager.firstScopeOrNull {
                 it is FunctionScope && it != frontend.scopeManager.currentScope
             }

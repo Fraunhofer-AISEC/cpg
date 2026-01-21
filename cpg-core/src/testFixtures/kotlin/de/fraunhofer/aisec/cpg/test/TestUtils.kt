@@ -268,8 +268,7 @@ fun assertUsageOf(usingNode: Node?, usedNode: Node?) {
         assertSame(usedNode, usingNode)
     } else {
         assertTrue(usingNode is Reference)
-        val reference = usingNode as? Reference
-        assertEquals(usedNode, reference?.refersTo)
+        assertEquals(usedNode, usingNode.refersTo)
     }
 }
 
@@ -331,7 +330,7 @@ fun <T : Any?> assertLiteralValue(expected: T, expr: Expression?, message: Strin
 }
 
 fun ContextProvider.assertResolvedType(fqn: String): Type {
-    var type =
+    val type =
         ctx.typeManager.lookupResolvedType(fqn, language = (this as? LanguageProvider)?.language)
     return assertNotNull(type)
 }

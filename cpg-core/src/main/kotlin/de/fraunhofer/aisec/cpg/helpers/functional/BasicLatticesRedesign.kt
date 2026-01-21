@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.helpers.functional
 
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.statements.LoopStatement
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
@@ -203,25 +204,68 @@ interface Lattice<T : Lattice.Element> {
         // current basic block that we are currently processing. We select this one with priority
         // over the other options.
         val currentBBEdgesList = mutableListOf<EvaluationOrder>()
+        // The second priority are edges that point to a node within the same loop
+        // A high priority in the SCC-Label indicates a high priority in the queue
+        val sccEdgesQueue =
+            PriorityQueue<Pair<Int, EvaluationOrder>>(compareByDescending { it.first })
         // This list contains the edge(s) that are the next branch(es) to process. We process these
         // after the current basic block has been processed.
         val nextBranchEdgesList = mutableListOf<EvaluationOrder>()
         // This list contains the merge points that we have to process. We process these after the
         // current basic block and the next branches have been processed to reduce the amount of
         // merges.
-        val mergePointsEdgesList = mutableListOf<EvaluationOrder>()
+        val mergePointsEdgesMap = IdentityHashMap<EvaluationOrder, MutableSet<Pair<Node, Node>>>()
+
+        fun IdentityHashMap<EvaluationOrder, MutableSet<Pair<Node, Node>>>.hasCandidate(): Boolean {
+            return this.entries.any { (_, v) -> v.isEmpty() }
+        }
+
+        fun IdentityHashMap<EvaluationOrder, MutableSet<Pair<Node, Node>>>
+            .removeIncomingEdgeFromMergePoint(
+            mergePointNextEdge: EvaluationOrder,
+            incomingEdge: EvaluationOrder,
+        ) {
+            if (mergePointNextEdge !in this) {
+                this[mergePointNextEdge] =
+                    mergePointNextEdge.start.prevEOGEdges
+                        .map { Pair(it.end, it.start) }
+                        .toMutableSet()
+            }
+            this[mergePointNextEdge]?.removeIf {
+                it.first == incomingEdge.end && it.second == incomingEdge.start
+            }
+        }
+
+        fun IdentityHashMap<EvaluationOrder, MutableSet<Pair<Node, Node>>>.removeCandidate():
+            EvaluationOrder {
+            // We want an element that were we erased all values
+            // If there are multiple, we take the one with the highest scc
+            val key =
+                this.entries
+                    .filter { (_, v) -> v.isEmpty() }
+                    .maxByOrNull { (k, _) -> k.scc ?: 0 }
+                    ?.key ?: this.keys.first()
+            this.remove(key)
+            return key
+        }
+
         startEdges.forEach { nextBranchEdgesList.add(it) }
 
         while (
             currentBBEdgesList.isNotEmpty() ||
                 nextBranchEdgesList.isNotEmpty() ||
-                mergePointsEdgesList.isNotEmpty()
+                mergePointsEdgesMap.isNotEmpty()
         ) {
             val nextEdge =
                 if (currentBBEdgesList.isNotEmpty()) {
                     // If we have edges in the current basic block, we take these. We prefer to
                     // finish with the whole Basic Block before moving somewhere else.
                     currentBBEdgesList.removeFirst()
+                } else if (sccEdgesQueue.isNotEmpty()) {
+                    // if we have edges pointing into the same SCC, that's our next priority
+                    sccEdgesQueue.poll().second
+                } else if (mergePointsEdgesMap.hasCandidate()) {
+                    mergePointsEdgesMap.removeCandidate()
                 } else if (nextBranchEdgesList.isNotEmpty()) {
                     // If we have points splitting up the EOG, we prefer to process these before
                     // merging the EOG again. This is to hopefully reduce the number of merges that
@@ -229,9 +273,7 @@ interface Lattice<T : Lattice.Element> {
                     // the same basic blocks.
                     nextBranchEdgesList.removeFirst()
                 } else {
-                    // We have a merge point, we try to process this after having processed all
-                    // branches leading there.
-                    mergePointsEdgesList.removeFirst()
+                    mergePointsEdgesMap.removeCandidate()
                 }
 
             // Compute the effects of "nextEdge" on the state by applying the transformation to its
@@ -257,6 +299,7 @@ interface Lattice<T : Lattice.Element> {
                     nextEdge.start.prevEOGEdges.single().start.nextEOGEdges.size == 1 &&
                     nextEdge.start.prevEOGEdges.single().start.prevEOGEdges.size == 1
 
+            @Suppress("UNCHECKED_CAST")
             val newState =
                 transformation(
                     this,
@@ -301,22 +344,30 @@ interface Lattice<T : Lattice.Element> {
                 if (
                     it !in currentBBEdgesList &&
                         it !in nextBranchEdgesList &&
-                        it !in mergePointsEdgesList &&
                         (isNoBranchingPoint ||
                             oldGlobalIt == null ||
-                            newGlobalIt.compare(oldGlobalIt) == Order.GREATER ||
-                            newGlobalIt.compare(oldGlobalIt) == Order.UNEQUAL)
+                            newGlobalIt.compare(oldGlobalIt) in setOf(Order.GREATER, Order.UNEQUAL))
                 ) {
-                    if (it.start.prevEOGEdges.size > 1) {
+                    if (
+                        // We might be at the merge point.
+                        // In comparison to a loop entry, a merge point has multiple prevEOGEdges
+                        // without SCC-Label and at least one nextEOGEdge without
+                        it.start.prevEOGEdges.filter { it.scc == null }.size > 1 &&
+                            it.start.nextEOGEdges.any { it.scc == null }
+                    ) {
                         // This edge brings us to a merge point, so we add it to the list of merge
                         // points.
-                        mergePointsEdgesList.add(0, it)
+                        mergePointsEdgesMap.removeIncomingEdgeFromMergePoint(it, nextEdge)
                     } else if (nextEdge.end.nextEOGEdges.size > 1) {
-                        // If we have multiple next edges, we add this edge to the list of edges of
-                        // a next basic block.
+                        // If we have multiple next edges, we add the ones that stay inside the loop
+                        // (AKA have an SCC label) to the SCCEdgesList
+                        // The other edges we add to the list of edges of to next basic block
+                        // (outside the loop, or for a branch).
                         // We will process these after the current basic block has been processed
                         // (probably very soon).
-                        nextBranchEdgesList.add(0, it)
+                        val sccPriority = it.scc
+                        if (sccPriority != null) sccEdgesQueue.add(Pair(sccPriority, it))
+                        else nextBranchEdgesList.add(0, it)
                     } else {
                         // If we have only one next edge, we add it to the current basic block edges
                         // list.
@@ -329,7 +380,7 @@ interface Lattice<T : Lattice.Element> {
                 nextEdge.end.nextEOGEdges.isEmpty() ||
                     (currentBBEdgesList.isEmpty() &&
                         nextBranchEdgesList.isEmpty() &&
-                        mergePointsEdgesList.isEmpty())
+                        mergePointsEdgesMap.isEmpty())
             ) {
                 finalState = this.lub(finalState, newState, false)
             }
@@ -358,7 +409,7 @@ class PowersetLattice<T>() : Lattice<PowersetLattice.Element<T>> {
         }
 
         override fun equals(other: Any?): Boolean {
-            return other is Element<T> && super<IdentitySet>.equals(other)
+            return other is Element<T> && super.equals(other)
         }
 
         override fun compare(other: Lattice.Element): Order {
@@ -509,6 +560,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                     someGreater = true // key is missing in other, so this is greater
                 }
             }
+            @Suppress("KotlinConstantConditions")
             return if (!someGreater && !someLesser) {
                 // All entries are the same, so the maps are equal
                 Order.EQUAL
@@ -526,6 +578,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
             }
         }
 
+        @Suppress("UNCHECKED_CAST")
         override fun duplicate(): Element<K, V> {
             return Element(this.map { (k, v) -> Pair<K, V>(k, v.duplicate() as V) })
         }
@@ -642,6 +695,7 @@ open class TupleLattice<S : Lattice.Element, T : Lattice.Element>(
             return compareMultiple(result1, result2)
         }
 
+        @Suppress("UNCHECKED_CAST")
         override fun duplicate(): Element<S, T> {
             return Element(first.duplicate() as S, second.duplicate() as T)
         }
@@ -740,6 +794,7 @@ class TripleLattice<R : Lattice.Element, S : Lattice.Element, T : Lattice.Elemen
             return compareMultiple(result1, result2, result3)
         }
 
+        @Suppress("UNCHECKED_CAST")
         override fun duplicate(): Element<R, S, T> {
             return Element(first.duplicate() as R, second.duplicate() as S, third.duplicate() as T)
         }

@@ -36,7 +36,6 @@ import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.*
 import de.fraunhofer.aisec.cpg.query.*
 import de.fraunhofer.aisec.cpg.serialization.*
@@ -253,7 +252,7 @@ data class ConceptRequestJSON(
                         ),
                     constructorArguments =
                         this.constructorArgs?.map {
-                            LoadPersistedConcepts.ConstructorArgumentEntry(
+                            ConstructorArgumentEntry(
                                 name = it.argumentName,
                                 value = it.argumentValue,
                             )

@@ -297,7 +297,7 @@ class ApplicationTest {
 
         application { configureWebconsole(mockService) }
         val client = createClient { install(ContentNegotiation) { json() } }
-        var response =
+        val response =
             client.post("/api/concepts") {
                 contentType(ContentType.Application.Json)
                 setBody(

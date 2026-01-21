@@ -49,6 +49,9 @@ import kotlin.collections.plusAssign
  * [ObjectType]s) and their [RecordDeclaration].
  */
 @DependsOn(ImportResolver::class)
+@Description(
+    "Resolves and infers types for nodes in the CPG, enhancing the semantic understanding of the code represented in the graph."
+)
 open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
     lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
