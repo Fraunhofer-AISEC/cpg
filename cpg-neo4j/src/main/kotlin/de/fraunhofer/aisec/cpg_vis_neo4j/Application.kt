@@ -460,6 +460,7 @@ class Application : Callable<Int> {
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.typescript.SvelteLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage")
