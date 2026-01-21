@@ -87,6 +87,7 @@ export interface ChatMessage {
   content: string;
   contentType?: 'text' | 'tool-result';
   toolResult?: ToolResult;
+  reasoning?: string;
   timestamp: Date;
 }
 

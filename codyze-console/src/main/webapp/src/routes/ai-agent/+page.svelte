@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { PageProps } from './$types';
-  import type { NodeJSON, ChatMessage, LLMMessage } from '$lib/types';
+  import type { ChatMessage, LLMMessage } from '$lib/types';
   import { WelcomeScreen, ChatInterface } from '$lib/components/ai-agent';
   import { PageHeader } from '$lib/components/navigation';
   import {
@@ -37,7 +37,7 @@
   let currentMessage = $state('');
   let isLoading = $state(false);
   let streamingContent = $state('');
-  let visibleStreamingContent = $state('');
+  let streamingReasoning = $state('');
   let showWelcome = $state(persisted.showWelcome);
   let pendingToolResult = $state<{ toolName: string; content: any } | null>(null);
 
@@ -63,6 +63,7 @@
     chatMessages = [];
     currentMessage = '';
     streamingContent = '';
+    streamingReasoning = '';
   }
 
   async function sendMessage() {
@@ -79,6 +80,7 @@
     currentMessage = '';
     isLoading = true;
     streamingContent = '';
+    streamingReasoning = '';
 
     try {
       const llmMessages: LLMMessage[] = chatMessages.map((msg) => ({
@@ -95,11 +97,9 @@
             if (event.type === 'text') {
               // Normal text streaming
               streamingContent += event.content;
-
-              // Only show visible content if we have non-whitespace characters
-              if (streamingContent.trim().length > 0) {
-                visibleStreamingContent = streamingContent;
-              }
+            } else if (event.type === 'reasoning') {
+              // LLM thinking/reasoning content - accumulate it
+              streamingReasoning += event.content;
             } else if (event.type === 'tool_result') {
               // Tool result with toolName and content
               console.log('Received tool_result event:', event);
@@ -125,9 +125,11 @@
           chatMessages = [...chatMessages, errorMessage];
           isLoading = false;
           streamingContent = '';
-          visibleStreamingContent = '';
         },
         onComplete: () => {
+          // Capture reasoning before reset
+          const reasoning = streamingReasoning || undefined;
+
           // If we have a tool result, show the widget
           if (pendingToolResult) {
             const toolResultMessage: ChatMessage = {
@@ -136,6 +138,7 @@
               content: '',
               contentType: 'tool-result',
               toolResult: pendingToolResult,
+              reasoning,
               timestamp: new Date()
             };
             chatMessages = [...chatMessages, toolResultMessage];
@@ -149,6 +152,7 @@
               role: 'assistant' as const,
               content: content,
               contentType: 'text',
+              reasoning,
               timestamp: new Date()
             };
             chatMessages = [...chatMessages, textMessage];
@@ -157,7 +161,7 @@
           // Reset state
           isLoading = false;
           streamingContent = '';
-          visibleStreamingContent = '';
+          streamingReasoning = '';
           pendingToolResult = null;
         }
       };
@@ -215,6 +219,7 @@
     {currentMessage}
     {isLoading}
     {streamingContent}
+    isThinking={streamingReasoning.length > 0}
     {analysisResult}
     onSendMessage={sendMessage}
     onReset={resetChat}

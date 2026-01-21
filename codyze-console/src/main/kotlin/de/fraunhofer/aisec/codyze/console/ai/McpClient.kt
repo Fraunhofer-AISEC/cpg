@@ -99,9 +99,9 @@ class McpClient : AutoCloseable {
             try {
                 val llmResponse =
                     queryLlm(
-                        messages = request.messages,
-                        systemPrompt = request.systemPrompt,
-                        maxTokens = request.maxTokens,
+                        messages = request.params.messages,
+                        systemPrompt = request.params.systemPrompt,
+                        maxTokens = request.params.maxTokens,
                     )
 
                 // Return result to server
@@ -180,6 +180,11 @@ class McpClient : AutoCloseable {
     fun chat(request: ChatRequestJSON): Flow<String> = channelFlow {
         // Check for cancellation before starting
         ensureActive()
+
+        // Send immediate keepalive to prevent browser timeout while LLM initializes
+        val keepaliveEvent = buildJsonObject { put("type", "keepalive") }
+        send(Json.encodeToString(keepaliveEvent))
+
         val userMessage = request.messages.lastOrNull()?.content ?: ""
 
         // Convert MCP tools to LLM format
@@ -262,6 +267,22 @@ class McpClient : AutoCloseable {
                                     val firstChoice = choices?.firstOrNull()?.jsonObject
                                     val delta = firstChoice?.get("delta")?.jsonObject
 
+                                    // Check for reasoning/thinking content first
+                                    val reasoning =
+                                        delta?.get("reasoning")?.jsonPrimitive?.contentOrNull
+                                    if (!reasoning.isNullOrEmpty()) {
+                                        val reasoningEvent = buildJsonObject {
+                                            put("type", "reasoning")
+                                            put("content", reasoning)
+                                        }
+                                        try {
+                                            send(Json.encodeToString(reasoningEvent))
+                                        } catch (e: Exception) {
+                                            throw e
+                                        }
+                                    }
+
+                                    // Check for regular content
                                     val content =
                                         delta?.get("content")?.jsonPrimitive?.contentOrNull
                                     if (!content.isNullOrEmpty()) {

@@ -73,7 +73,6 @@ fun Server.addCpgLlmAnalyzeTool() {
         name = "cpg_llm_analyze",
         description = toolDescription,
         inputSchema = inputSchema,
-        //        outputSchema = outputSchema - not supported by all LLMs yet
     ) { request ->
         try {
             val payload =

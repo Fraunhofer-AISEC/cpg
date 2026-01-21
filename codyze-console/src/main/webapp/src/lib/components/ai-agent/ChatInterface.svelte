@@ -61,6 +61,7 @@
     currentMessage: string;
     isLoading: boolean;
     streamingContent: string;
+    isThinking: boolean;
     analysisResult?: AnalysisResultJSON | null;
     onSendMessage: () => void;
     onReset: () => void;
@@ -72,6 +73,7 @@
     currentMessage,
     isLoading,
     streamingContent,
+    isThinking,
     analysisResult,
     onSendMessage,
     onReset,
@@ -162,6 +164,41 @@
         {:else}
           <!-- AI Message -->
           <div class="px-6 py-6">
+            <!-- Show saved reasoning if present (collapsed by default, inline style) -->
+            {#if message.reasoning}
+              {@const messageId = message.id}
+              <div class="mb-2 inline-block">
+                <button
+                  class="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                  onclick={() => {
+                    const el = document.getElementById(`reasoning-${messageId}`);
+                    if (el) el.classList.toggle('hidden');
+                    const chevron = document.getElementById(`chevron-${messageId}`);
+                    if (chevron) chevron.classList.toggle('rotate-90');
+                  }}
+                >
+                  <svg
+                    id="chevron-{messageId}"
+                    class="h-3 w-3 transition-transform duration-200"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                  <svg class="h-3 w-3 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+                  </svg>
+                  <span>Thought process</span>
+                </button>
+                <div id="reasoning-{messageId}" class="hidden mt-1.5 ml-4 pl-3 border-l-2 border-gray-200 max-w-xl">
+                  <p class="whitespace-pre-wrap text-xs italic text-gray-400 leading-relaxed">
+                    {message.reasoning}
+                  </p>
+                </div>
+              </div>
+            {/if}
             {#if message.contentType === 'tool-result' && message.toolResult}
               <!-- Tool Result Widget -->
               <ToolResultWidget data={message.toolResult} onItemClick={handleNodeClick} />
@@ -175,27 +212,21 @@
         {/if}
       {/each}
 
-      {#if isLoading || displayContent}
+      {#if isLoading || displayContent || isThinking}
         <!-- Streaming AI Message -->
         <div class="px-6 py-6">
+          <!-- Main content -->
           {#if displayContent}
             <div class="prose prose-sm max-w-4xl text-gray-800">
               <MarkdownRenderer content={displayContent} />
             </div>
           {:else}
-            <!-- Typing indicator -->
-            <div class="flex items-center space-x-2">
-              <div class="flex space-x-1">
-                <div class="h-2 w-2 animate-pulse rounded-full bg-gray-400"></div>
-                <div
-                  class="h-2 w-2 animate-pulse rounded-full bg-gray-400"
-                  style="animation-delay: 0.2s"
-                ></div>
-                <div
-                  class="h-2 w-2 animate-pulse rounded-full bg-gray-400"
-                  style="animation-delay: 0.4s"
-                ></div>
-              </div>
+            <!-- Thinking indicator while loading -->
+            <div class="flex items-center gap-2 text-sm text-gray-500">
+              <svg class="h-4 w-4 animate-pulse text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+              </svg>
+              <span>Thinking...</span>
             </div>
           {/if}
         </div>
