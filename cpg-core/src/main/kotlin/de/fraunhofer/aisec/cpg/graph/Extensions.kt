@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.assumptions.addAssumptionDependence
+import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ControlDependence
@@ -1659,14 +1660,14 @@ fun Node.isNullCheck(refersTo: Declaration?): Boolean {
         // NULL check on our variable
         if (
             ((operator.rhs.name.localName == "NULL" ||
-                operator.rhs.evaluate() == 0 ||
+                operator.rhs.evaluate(ValueEvaluator()) == 0 ||
                 // Hack for now until the CPG correctly parses '\0'
-                operator.rhs.evaluate() == '\\') &&
+                operator.rhs.evaluate(ValueEvaluator()) == '\\') &&
                 (operator.lhs as? Reference)?.refersTo == refersTo) ||
                 // the same for the other way round
-                ((operator.lhs.evaluate() == '\\' ||
+                ((operator.lhs.evaluate(ValueEvaluator()) == '\\' ||
                     operator.lhs.name.localName == "NULL" ||
-                    operator.lhs.evaluate() == 0) &&
+                    operator.lhs.evaluate(ValueEvaluator()) == 0) &&
                     (operator.lhs as? Reference)?.refersTo == refersTo)
         ) {
             operatorPassedCheck = true
