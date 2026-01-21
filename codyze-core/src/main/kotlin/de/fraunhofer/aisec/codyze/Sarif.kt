@@ -139,7 +139,7 @@ fun QueryTree<*>.getCodeflow(): List<List<Node>> {
     } else if (this.value is Boolean) {
         this.children.flatMap { it.getCodeflow() }
     } else {
-        listOf<List<Node>>()
+        listOf()
     }
 }
 

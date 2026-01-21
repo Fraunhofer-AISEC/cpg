@@ -49,6 +49,9 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 @ExecuteBefore(EvaluationOrderGraphPass::class)
 @ExecuteBefore(ResolveCallExpressionAmbiguityPass::class)
 @DependsOn(TypeResolver::class)
+@Description(
+    "This Pass executes certain C++ specific conversions on initializers, that are only possible once we know all the types."
+)
 class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     private lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
@@ -114,7 +117,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // If the name (`long` in the example) is a type, then the unary operator (`(long)`)
         // is really a cast and our binary operator is really a unary operator `&addr`.
-        var type = (fakeUnaryOp.input as? Reference)?.nameIsType()
+        val type = (fakeUnaryOp.input as? Reference)?.nameIsType()
         if (type != null) {
             // We need to perform the following steps:
             // * create a cast expression out of the ()-unary operator, with the type that is
@@ -152,7 +155,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    protected fun fixInitializers(node: Node) {
+    private fun fixInitializers(node: Node) {
         if (node is VariableDeclaration) {
             // check if we have the corresponding class for this type
             val record = node.type.root.recordDeclaration
@@ -178,6 +181,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 ) {
                     // This should actually be a construct expression, not a call!
                     val arguments = currInitializer.arguments
+                    // Note: Cannot simplify call chain due to nullable `Node::code`
                     val signature = arguments.map(Node::code).joinToString(", ")
                     val initializer =
                         newConstructExpression(typeString)
@@ -215,25 +219,24 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         if (scope is GlobalScope) {
             scope = scopeManager.globalScope
         }
-        if (scope != null) {
-            // Update the definition
-            val candidates =
-                scope.symbols[declaration.symbol]?.filterIsInstance<FunctionDeclaration>()?.filter {
-                    // We should only connect methods to methods, functions to functions and
-                    // constructors to constructors.
-                    it::class == declaration::class &&
-                        !it.isDefinition &&
-                        it.signature == declaration.signature
-                } ?: emptyList()
-            for (candidate in candidates) {
-                candidate.definition = declaration
+        // Note: scope is not null.
+        // Update the definition
+        val candidates =
+            scope.symbols[declaration.symbol]?.filterIsInstance<FunctionDeclaration>()?.filter {
+                // We should only connect methods to methods, functions to functions and
+                // constructors to constructors.
+                it::class == declaration::class &&
+                    !it.isDefinition &&
+                    it.signature == declaration.signature
+            } ?: emptyList()
+        for (candidate in candidates) {
+            candidate.definition = declaration
 
-                // Do some additional magic with default parameters, which I do not really
-                // understand
-                for (i in declaration.parameters.indices) {
-                    if (candidate.parameters[i].default != null) {
-                        declaration.parameters[i].default = candidate.parameters[i].default
-                    }
+            // Do some additional magic with default parameters, which I do not really
+            // understand
+            for (i in declaration.parameters.indices) {
+                if (candidate.parameters[i].default != null) {
+                    declaration.parameters[i].default = candidate.parameters[i].default
                 }
             }
         }

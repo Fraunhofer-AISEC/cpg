@@ -102,7 +102,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
      * `receiver` (most often called `self`).
      */
     private fun handleFunctionDef(s: Python.AST.NormalOrAsyncFunctionDef): FunctionDeclaration {
-        var recordDeclaration =
+        val recordDeclaration =
             (frontend.scopeManager.currentScope as? RecordScope)?.astNode as? RecordDeclaration
         val language = language
         val func =
@@ -114,7 +114,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                         rawNode = s,
                     )
                 } else if (language is HasOperatorOverloading && s.name.isKnownOperatorName) {
-                    var decl =
+                    val decl =
                         newOperatorDeclaration(
                             name = s.name,
                             recordDeclaration = recordDeclaration,
@@ -360,7 +360,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
     ): List<Annotation> {
         val annotations = mutableListOf<Annotation>()
         for (decorator in decoratorList) {
-            var annotation =
+            val annotation =
                 when (decorator) {
                     is Python.AST.Name -> {
                         val parsedDecorator = frontend.expressionHandler.handle(decorator)

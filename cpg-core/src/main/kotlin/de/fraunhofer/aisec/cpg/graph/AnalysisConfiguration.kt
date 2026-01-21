@@ -23,6 +23,8 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("UNCHECKED_CAST")
+
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
@@ -464,44 +466,50 @@ class Backward(graphToFollow: GraphToFollow) : AnalysisDirection(graphToFollow) 
 
             GraphToFollow.EOG -> {
                 val interprocedural =
-                    if (currentNode is CallExpression && currentNode.invokes.isNotEmpty()) {
-                        val returnedFrom = currentNode.invokeEdges as Collection<Edge<Node>>
+                    when (currentNode) {
+                        is CallExpression if currentNode.invokes.isNotEmpty() -> {
+                            val returnedFrom = currentNode.invokeEdges as Collection<Edge<Node>>
 
-                        filterEdges(
+                            filterEdges(
+                                    currentNode = currentNode,
+                                    edges = returnedFrom,
+                                    ctx = ctx,
+                                    scope = scope,
+                                    path = path,
+                                    loopingPaths = loopingPaths,
+                                    sensitivities = sensitivities,
+                                )
+                                .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
+                        }
+
+                        is FunctionDeclaration -> {
+                            val calledBy = currentNode.calledByEdges as Collection<Edge<Node>>
+
+                            filterAndJump(
                                 currentNode = currentNode,
-                                edges = returnedFrom,
+                                edges = calledBy,
                                 ctx = ctx,
                                 scope = scope,
+                                sensitivities = sensitivities,
+                                nextStep = { it.prevEOGEdges },
                                 path = path,
                                 loopingPaths = loopingPaths,
-                                sensitivities = sensitivities,
+                                nodeStart = { it.start },
                             )
-                            .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
-                    } else if (currentNode is FunctionDeclaration) {
-                        val calledBy = currentNode.calledByEdges as Collection<Edge<Node>>
+                        }
 
-                        filterAndJump(
-                            currentNode = currentNode,
-                            edges = calledBy,
-                            ctx = ctx,
-                            scope = scope,
-                            sensitivities = sensitivities,
-                            nextStep = { it.prevEOGEdges },
-                            path = path,
-                            loopingPaths = loopingPaths,
-                            nodeStart = { it.start },
-                        )
-                    } else {
-                        filterEdges(
-                                currentNode = currentNode,
-                                edges = currentNode.prevEOGEdges,
-                                ctx = ctx,
-                                scope = scope,
-                                path = path,
-                                loopingPaths = loopingPaths,
-                                sensitivities = sensitivities,
-                            )
-                            .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
+                        else -> {
+                            filterEdges(
+                                    currentNode = currentNode,
+                                    edges = currentNode.prevEOGEdges,
+                                    ctx = ctx,
+                                    scope = scope,
+                                    path = path,
+                                    loopingPaths = loopingPaths,
+                                    sensitivities = sensitivities,
+                                )
+                                .map { (edge, newCtx) -> this.unwrapNextStepFromEdge(edge, newCtx) }
+                        }
                     }
 
                 interprocedural.ifEmpty {
@@ -600,7 +608,7 @@ object FilterUnreachableEOG : AnalysisSensitivity() {
         loopingPaths: MutableList<NodePath>,
         analysisDirection: AnalysisDirection,
     ): Boolean {
-        return edge !is EvaluationOrder || edge.unreachable != true
+        return edge !is EvaluationOrder || !edge.unreachable
     }
 }
 

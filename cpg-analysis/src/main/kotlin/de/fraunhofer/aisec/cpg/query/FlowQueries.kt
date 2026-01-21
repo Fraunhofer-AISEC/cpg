@@ -82,16 +82,21 @@ fun FulfilledAndFailedPaths.toQueryTree(
                     "$queryType from $startNode to ${nodePath.nodes.last()} does not fulfill the requirement",
                 node = startNode,
                 terminationReason =
-                    if (reason == FailureReason.PATH_ENDED) {
-                        PathEnded(nodePath.nodes.last())
-                    } else if (reason == FailureReason.HIT_EARLY_TERMINATION) {
-                        HitEarlyTermination(nodePath.nodes.last())
-                    } else {
-                        // TODO: We cannot set this (yet) but it might be useful to differentiate
-                        // between "path is really at the end" or "we just stopped". Requires
-                        // adaptions
-                        // in followXUntilHit and all of its callers
-                        StepsExceeded(nodePath.nodes.last())
+                    when (reason) {
+                        FailureReason.PATH_ENDED -> {
+                            PathEnded(nodePath.nodes.last())
+                        }
+                        FailureReason.HIT_EARLY_TERMINATION -> {
+                            HitEarlyTermination(nodePath.nodes.last())
+                        }
+                        else -> {
+                            // TODO: We cannot set this (yet) but it might be useful to
+                            // differentiate
+                            // between "path is really at the end" or "we just stopped". Requires
+                            // adaptions
+                            // in followXUntilHit and all of its callers
+                            StepsExceeded(nodePath.nodes.last())
+                        }
                     },
                 operator = GenericQueryOperators.EVALUATE,
             )
@@ -180,7 +185,7 @@ fun dataFlow(
 ): QueryTree<Boolean> {
     val collectFailedPaths = type == Must
     val findAllPossiblePaths = type == Must
-    val earlyTermination = { n: Node, ctx: Context -> earlyTermination?.let { it(n) } == true }
+    val earlyTermination = { n: Node, _: Context -> earlyTermination?.let { it(n) } == true }
 
     val evalRes =
         if (direction is Bidirectional) {
@@ -227,7 +232,7 @@ fun executionPath(
 ): QueryTree<Boolean> {
     val collectFailedPaths = type == Must
     val findAllPossiblePaths = type == Must
-    val earlyTermination = { n: Node, ctx: Context -> earlyTermination?.let { it(n) } == true }
+    val earlyTermination = { n: Node, _: Context -> earlyTermination?.let { it(n) } == true }
 
     val evalRes =
         if (direction is Bidirectional) {
@@ -492,7 +497,7 @@ internal fun Node.alwaysFlowsToInternal(
                 .map { it.nodes }
                 .flatten()
                 .toSet()
-        val earlyTerminationPredicate = { n: Node, ctx: Context ->
+        val earlyTerminationPredicate = { n: Node, _: Context ->
             earlyTermination?.let { it(n) } == true ||
                 // If we are not allowed to overwrite the value, we need to check if the node may
                 // overwrite the value. In this case, we terminate early.
@@ -546,12 +551,16 @@ internal fun Node.alwaysFlowsToInternal(
                                     "before passing through a node matching the required predicate.",
                     node = nodeToTrack.node,
                     terminationReason =
-                        if (failureReason == FailureReason.PATH_ENDED) {
-                            PathEnded(path.nodes.last())
-                        } else if (failureReason == FailureReason.HIT_EARLY_TERMINATION) {
-                            HitEarlyTermination(path.nodes.last())
-                        } else {
-                            StepsExceeded(path.nodes.last())
+                        when (failureReason) {
+                            FailureReason.PATH_ENDED -> {
+                                PathEnded(path.nodes.last())
+                            }
+                            FailureReason.HIT_EARLY_TERMINATION -> {
+                                HitEarlyTermination(path.nodes.last())
+                            }
+                            else -> {
+                                StepsExceeded(path.nodes.last())
+                            }
                         },
                     operator = GenericQueryOperators.EVALUATE,
                 )

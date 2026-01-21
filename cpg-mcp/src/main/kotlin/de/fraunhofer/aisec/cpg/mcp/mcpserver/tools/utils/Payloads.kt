@@ -44,6 +44,14 @@ data class CpgCallArgumentByNameOrIndexPayload(
 @Serializable data class CpgApplyConceptsPayload(val assignments: List<ConceptAssignment>)
 
 @Serializable
+data class CpgRunPassPayload(
+    /** The FQN of the pass to run. */
+    val passName: String,
+    /** The ID of the node which should be analyzed by the pass. */
+    val nodeId: String,
+)
+
+@Serializable
 data class ConceptAssignment(
     val nodeId: String,
     /* FQN of concept or operation class */
@@ -60,3 +68,29 @@ data class ConceptAssignment(
 @Serializable data class CpgDataflowPayload(val from: String, val to: String)
 
 @Serializable data class CpgLlmAnalyzePayload(val description: String? = null)
+
+/**
+ * This class represents information about a pass, including its fully qualified name (FQN), a
+ * description, required node type, dependencies, and soft dependencies.
+ */
+@Serializable
+data class PassInfo(
+    /** The fully qualified name of the pass. */
+    val fqn: String,
+    /** A brief description of the pass. */
+    val description: String,
+    /** The type of node required by the pass. */
+    val requiredNodeType: String,
+    /**
+     * A list of passes whose results are required for this pass to run correctly. These are hard
+     * requirements. Note that it may be sufficient to run these passes for the same nodes that this
+     * pass should run on and may not require analyzing the whole CPG.
+     */
+    val dependsOn: List<String>,
+    /**
+     * A list of passes whose results can enhance the analysis of this pass but are not strictly
+     * necessary. These are soft requirements. However, if the passes in this list may be run on the
+     * node, this should happen before this pass.
+     */
+    val softDependencies: List<String>,
+)

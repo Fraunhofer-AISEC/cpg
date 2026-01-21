@@ -44,11 +44,7 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
     /** Explicit representation of the bottom element of the lattice. */
     object BOTTOM : LatticeInterval()
 
-    object TOP :
-        LatticeInterval.Bounded(
-            LatticeInterval.Bound.NEGATIVE_INFINITE,
-            LatticeInterval.Bound.INFINITE,
-        )
+    object TOP : Bounded(Bound.NEGATIVE_INFINITE, Bound.INFINITE)
 
     fun duplicate(): LatticeInterval {
         return when (this) {
@@ -606,22 +602,26 @@ sealed class LatticeInterval : Comparable<LatticeInterval> {
     }
 
     private fun divideBounds(a: Bound, b: Bound): Bound {
-        return when {
-            // ∞ / ∞ is not a defined operation
-            // x / 0 is not a defined operation
-            a is Bound.INFINITE && b > Bound.Value(0) && b !is Bound.INFINITE -> Bound.INFINITE
-            a is Bound.INFINITE && b < Bound.Value(0) && b !is Bound.NEGATIVE_INFINITE ->
+        // ∞ / ∞ is not a defined operation
+        // x / 0 is not a defined operation
+        return when (a) {
+            is Bound.INFINITE if b > Bound.Value(0) && b !is Bound.INFINITE -> Bound.INFINITE
+            is Bound.INFINITE if b < Bound.Value(0) && b !is Bound.NEGATIVE_INFINITE ->
                 Bound.NEGATIVE_INFINITE
-            a is Bound.NEGATIVE_INFINITE && b > Bound.Value(0) && b !is Bound.INFINITE ->
+
+            is Bound.NEGATIVE_INFINITE if b > Bound.Value(0) && b !is Bound.INFINITE ->
                 Bound.NEGATIVE_INFINITE
-            a is Bound.NEGATIVE_INFINITE && b < Bound.Value(0) && b !is Bound.NEGATIVE_INFINITE ->
+
+            is Bound.NEGATIVE_INFINITE if b < Bound.Value(0) && b !is Bound.NEGATIVE_INFINITE ->
                 Bound.INFINITE
             // We estimate x / ∞ as 0 (with x != ∞)
-            a !is Bound.NEGATIVE_INFINITE &&
-                a !is Bound.INFINITE &&
-                (b is Bound.NEGATIVE_INFINITE || b is Bound.INFINITE) -> Bound.Value(0)
-            a is Bound.Value && b is Bound.Value && b != Bound.Value(0) ->
+            !is Bound.NEGATIVE_INFINITE if
+                a !is Bound.INFINITE && (b is Bound.NEGATIVE_INFINITE || b is Bound.INFINITE)
+             -> Bound.Value(0)
+
+            is Bound.Value if b is Bound.Value && b != Bound.Value(0) ->
                 Bound.Value(a.value / b.value)
+
             else -> throw IllegalArgumentException("Unsupported bound type $a and $b")
         }
     }

@@ -45,6 +45,7 @@ import java.util.regex.Pattern
  */
 @DependsOn(TypeHierarchyResolver::class)
 @RequiredFrontend(JavaLanguageFrontend::class)
+@Description("Pass that resolves Java imports.")
 open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     protected val records: MutableList<RecordDeclaration> = ArrayList()
     protected val importables: MutableMap<String, Declaration> = HashMap()
