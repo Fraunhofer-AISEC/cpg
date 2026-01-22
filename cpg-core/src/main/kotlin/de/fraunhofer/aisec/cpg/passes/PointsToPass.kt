@@ -1285,8 +1285,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         var doubleState = doubleState
         val mapDstToSrc = ConcurrentHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>()
 
-        log.info("Starting handleCallExpression for $currentNode")
-
         // The toIdentitySet avoids having the same elements multiple times
         val invokes = currentNode.invokes.toConcurrentIdentitySet()
         invokes.forEach { invoke ->
@@ -1294,7 +1292,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             if (inv != null) {
                 doubleState =
                     calculateIncomingCallingContexts(lattice, inv, currentNode, doubleState)
-                log.info("Finished with calculateIncomingCallingContexts")
 
                 // If we have a FunctionSummary, we push the values of the arguments and
                 // return value
@@ -1365,15 +1362,12 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             } else log.info("inv is null, skipping")
         }
 
-        log.info("Collected all entries for mapDstToSrc. size: ${mapDstToSrc.size}")
-
         val callingContextOut = CallingContextOut(mutableListOf(currentNode))
         mapDstToSrc.forEach { (dstAddr, values) ->
             doubleState =
                 writeMapEntriesToState(lattice, doubleState, dstAddr, values, callingContextOut)
         }
-
-        log.info("Finished in handleCallExpression for $currentNode")
+        
         return doubleState
     }
 
