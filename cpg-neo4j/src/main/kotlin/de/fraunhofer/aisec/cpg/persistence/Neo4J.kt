@@ -35,6 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import java.net.ConnectException
+import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
 import org.slf4j.LoggerFactory
 
@@ -61,6 +63,23 @@ const val nodeChunkSize = 10000
 internal val log = LoggerFactory.getLogger("Persistence")
 
 internal typealias Relationship = Map<String, Any?>
+
+/**
+ * This function creates a new Neo4j session, optionally purges the database, and persists the
+ * current [TranslationResult] into the database using the [persist] function (which requires a
+ * session context often not available at the call-site).
+ *
+ * @param noPurgeDb A boolean flag indicating whether to skip the database purge step. If set to
+ *   true, the existing data in the database will not be deleted before persisting the new data.
+ */
+fun TranslationResult.pushToNeo4jWithNewSession(noPurgeDb: Boolean = false) {
+    val session: Session = connect()
+    with(session) {
+        if (!noPurgeDb) executeWrite { tx -> tx.run("MATCH (n) DETACH DELETE n").consume() }
+        this@pushToNeo4jWithNewSession.persist()
+    }
+    session.close()
+}
 
 /**
  * Persists the current [TranslationResult] into a graph database.
@@ -274,4 +293,30 @@ private fun List<Node>.collectRelationships(): List<Relationship> {
         ) + edge.properties()
     }*/
     return relationships
+}
+
+/**
+ * Connects to the neo4j db.
+ *
+ * @return a Pair of Optionals of the Session and the SessionFactory, if it is possible to connect
+ *   to neo4j. If it is not possible, the return value is a Pair of empty Optionals.
+ * @throws InterruptedException, if the thread is interrupted while it try´s to connect to the neo4j
+ *   db.
+ * @throws ConnectException, if there is no connection to bolt://localhost:7687 possible
+ */
+@Throws(InterruptedException::class, ConnectException::class)
+fun connect(
+    protocol: String = Neo4jConnectionDefaults.PROTOCOL,
+    host: String = Neo4jConnectionDefaults.HOST,
+    port: Int = Neo4jConnectionDefaults.PORT,
+    neo4jUsername: String = Neo4jConnectionDefaults.USERNAME,
+    neo4jPassword: String = Neo4jConnectionDefaults.PASSWORD,
+): Session {
+    val driver =
+        GraphDatabase.driver(
+            "$protocol$host:$port",
+            org.neo4j.driver.AuthTokens.basic(neo4jUsername, neo4jPassword),
+        )
+    driver.verifyConnectivity()
+    return driver.session()
 }
