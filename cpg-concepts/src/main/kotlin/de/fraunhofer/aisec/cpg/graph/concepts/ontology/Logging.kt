@@ -34,6 +34,14 @@ import kotlin.Int
 import kotlin.String
 import kotlin.time.Duration
 
+open class LoggingField
+
+object CurrentTimeField : LoggingField()
+
+object LoggerNameField : LoggingField()
+
+object LogMessage : LoggingField()
+
 open class Logging(
     var logLevelThreshold: LogLevel?,
     var enabled: Boolean?,
@@ -43,6 +51,7 @@ open class Logging(
     var securityAlertsEnabled: Boolean?,
     var loggingService: LoggingService?,
     underlyingNode: Node? = null,
+    var logFields: MutableList<LoggingField> = mutableListOf(),
 ) : Auditing(underlyingNode) {
     init {
         name?.let { this.name = Name(localName = it) }

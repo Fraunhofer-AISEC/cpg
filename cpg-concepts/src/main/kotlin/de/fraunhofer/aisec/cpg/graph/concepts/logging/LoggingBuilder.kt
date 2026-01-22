@@ -36,6 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogGet
 import de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogLevel
 import de.fraunhofer.aisec.cpg.graph.concepts.ontology.LogWrite
 import de.fraunhofer.aisec.cpg.graph.concepts.ontology.Logging
+import de.fraunhofer.aisec.cpg.graph.concepts.ontology.LoggingField
 import de.fraunhofer.aisec.cpg.graph.concepts.ontology.LoggingService
 import kotlin.time.Duration
 
@@ -57,6 +58,7 @@ import kotlin.time.Duration
 fun MetadataProvider.newLogging(
     underlyingNode: Node,
     name: String,
+    logFields: MutableList<LoggingField> = mutableListOf(),
     logLevelThreshold: LogLevel? = null,
     enabled: Boolean? = null,
     monitoringEnabled: Boolean? = null,
@@ -68,6 +70,7 @@ fun MetadataProvider.newLogging(
     newConcept(
             {
                 Logging(
+                    logFields = logFields,
                     logLevelThreshold = logLevelThreshold,
                     enabled = enabled,
                     monitoringEnabled = monitoringEnabled,
