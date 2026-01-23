@@ -31,14 +31,14 @@ import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
-import de.fraunhofer.aisec.cpg.persistence.persist
+import de.fraunhofer.aisec.cpg.persistence.Neo4jConnectionDefaults
+import de.fraunhofer.aisec.cpg.persistence.pushToNeo4j
 import java.io.File
 import java.net.ConnectException
 import java.nio.file.Paths
 import java.util.concurrent.Callable
 import kotlin.reflect.KClass
 import kotlin.system.exitProcess
-import org.neo4j.driver.GraphDatabase
 import org.neo4j.ogm.context.EntityGraphMapper
 import org.neo4j.ogm.context.MappingContext
 import org.neo4j.ogm.cypher.compiler.MultiStatementCypherCompiler
@@ -54,12 +54,7 @@ private const val S_TO_MS_FACTOR = 1000
 private const val EXIT_SUCCESS = 0
 private const val EXIT_FAILURE = 1
 private const val DEBUG_PARSER = true
-private const val PROTOCOL = "neo4j://"
 
-private const val DEFAULT_HOST = "localhost"
-private const val DEFAULT_PORT = 7687
-private const val DEFAULT_USER_NAME = "neo4j"
-private const val DEFAULT_PASSWORD = "password"
 private const val DEFAULT_SAVE_DEPTH = -1
 private const val DEFAULT_MAX_COMPLEXITY = -1
 
@@ -84,7 +79,7 @@ data class JsonGraph(val nodes: List<JsonNode>, val edges: List<JsonEdge>)
  *
  * For example using docker:
  * ```
- * docker run -p 7474:7474 -p 7687:7687 -d -e NEO4J_AUTH=neo4j/password -e NEO4JLABS_PLUGINS='["apoc"]' neo4j:5
+ * docker run -p 127.0.0.1:7474:7474 -p 127.0.0.1:7687:7687 -d -e NEO4J_AUTH=neo4j/password -e NEO4JLABS_PLUGINS='["apoc"]' neo4j:5
  * ```
  */
 class Application : Callable<Int> {
@@ -139,27 +134,29 @@ class Application : Callable<Int> {
 
     @CommandLine.Option(
         names = ["--user"],
-        description = ["Neo4j user name (default: $DEFAULT_USER_NAME)"],
+        description = ["Neo4j user name (default: ${Neo4jConnectionDefaults.USERNAME})"],
     )
-    var neo4jUsername: String = DEFAULT_USER_NAME
+    var neo4jUsername: String = Neo4jConnectionDefaults.USERNAME
 
     @CommandLine.Option(
         names = ["--password"],
-        description = ["Neo4j password (default: $DEFAULT_PASSWORD"],
+        description = ["Neo4j password (default: ${Neo4jConnectionDefaults.USERNAME})"],
     )
-    var neo4jPassword: String = DEFAULT_PASSWORD
+    var neo4jPassword: String = Neo4jConnectionDefaults.PASSWORD
 
     @CommandLine.Option(
         names = ["--host"],
-        description = ["Set the host of the neo4j Database (default: $DEFAULT_HOST)."],
+        description =
+            ["Set the host of the neo4j Database (default: ${Neo4jConnectionDefaults.HOST})."],
     )
-    private var host: String = DEFAULT_HOST
+    private var host: String = Neo4jConnectionDefaults.HOST
 
     @CommandLine.Option(
         names = ["--port"],
-        description = ["Set the port of the neo4j Database (default: $DEFAULT_PORT)."],
+        description =
+            ["Set the port of the neo4j Database (default: ${Neo4jConnectionDefaults.PORT})."],
     )
-    private var port: Int = DEFAULT_PORT
+    private var port: Int = Neo4jConnectionDefaults.PORT
 
     @CommandLine.Option(
         names = ["--save-depth"],
@@ -394,40 +391,6 @@ class Application : Callable<Int> {
     }
 
     /**
-     * Pushes the whole translationResult to the neo4j db.
-     *
-     * @param translationResult, not null
-     */
-    fun pushToNeo4j(translationResult: TranslationResult) {
-        val session = connect()
-        with(session) {
-            if (!noPurgeDb) executeWrite { tx -> tx.run("MATCH (n) DETACH DELETE n").consume() }
-            translationResult.persist()
-        }
-        session.close()
-    }
-
-    /**
-     * Connects to the neo4j db.
-     *
-     * @return a Pair of Optionals of the Session and the SessionFactory, if it is possible to
-     *   connect to neo4j. If it is not possible, the return value is a Pair of empty Optionals.
-     * @throws InterruptedException, if the thread is interrupted while it try´s to connect to the
-     *   neo4j db.
-     * @throws ConnectException, if there is no connection to bolt://localhost:7687 possible
-     */
-    @Throws(InterruptedException::class, ConnectException::class)
-    fun connect(): org.neo4j.driver.Session {
-        val driver =
-            GraphDatabase.driver(
-                "$PROTOCOL$host:$port",
-                org.neo4j.driver.AuthTokens.basic(neo4jUsername, neo4jPassword),
-            )
-        driver.verifyConnectivity()
-        return driver.session()
-    }
-
-    /**
      * Checks if all elements in the parameter are a valid file and returns a list of files.
      *
      * @param filenames The filenames to check
@@ -594,7 +557,13 @@ class Application : Callable<Int> {
 
         exportJsonFile?.let { exportToJson(translationResult, it) }
         if (!noNeo4j) {
-            pushToNeo4j(translationResult)
+            translationResult.pushToNeo4j(
+                noPurgeDb = noPurgeDb,
+                host = host,
+                port = port,
+                neo4jUsername = neo4jUsername,
+                neo4jPassword = neo4jPassword,
+            )
         }
 
         val pushTime = System.currentTimeMillis()
