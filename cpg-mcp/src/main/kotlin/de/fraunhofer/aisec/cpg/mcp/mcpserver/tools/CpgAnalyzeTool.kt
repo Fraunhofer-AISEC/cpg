@@ -422,7 +422,7 @@ fun Server.addRunPass() {
                             put("description", "The ID of the node on which the pass should be ran")
                         }
                     },
-                required = listOf("pass_name", "nodeId"),
+                required = listOf("passName", "nodeId"),
             ),
     ) { request ->
         request.runOnCpg { result: TranslationResult, request: CallToolRequest ->

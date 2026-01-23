@@ -236,7 +236,7 @@ fun Server.getArgByIndexOrName() {
         ToolSchema(
             properties =
                 buildJsonObject {
-                    putJsonObject("id") {
+                    putJsonObject("nodeId") {
                         put("type", "string")
                         put(
                             "description",
@@ -283,7 +283,7 @@ fun Server.getArgByIndexOrName() {
                     listOf(
                         TextContent(
                             result.calls
-                                .single { it.id.toString() == payload.id }
+                                .single { it.id.toString() == payload.nodeId }
                                 .argumentByNameOrPosition(
                                     name = payload.argumentName,
                                     position = payload.index,
