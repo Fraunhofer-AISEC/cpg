@@ -64,7 +64,7 @@ import kotlin.uuid.Uuid
 open class QueryTree<T>(
     value: T,
     var children: List<QueryTree<*>> = emptyList(),
-    var stringRepresentation: String = "",
+    stringRepresentation: String = "",
 
     /**
      * The node, to which this current element of the query tree is associated with. This is useful
@@ -95,6 +95,14 @@ open class QueryTree<T>(
     open val confidence: AcceptanceStatus
         get() {
             return calculateConfidence()
+        }
+
+    var stringRepresentation: String = stringRepresentation
+        set(fieldValue) {
+            field = fieldValue
+
+            // Update the ID whenever the value changes
+            id = computeId()
         }
 
     /** The value of the [QueryTree] is the result of the query evaluation. */
