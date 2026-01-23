@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.persistence.pushToNeo4j
 import java.math.BigInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -43,7 +44,7 @@ class Neo4JTest {
         // 22 inferred functions, 1 inferred method, 2 inferred constructors, 11 regular functions
         assertEquals(36, result.functions.size)
 
-        application.pushToNeo4j(result)
+        result.pushToNeo4j()
     }
 
     @Test
@@ -56,7 +57,7 @@ class Neo4JTest {
         assertIs<Literal<BigInteger>>(lit)
         assertEquals(BigInteger("10958011617037158669"), lit.value)
 
-        application.pushToNeo4j(result)
+        result.pushToNeo4j()
     }
 
     @Test
@@ -99,6 +100,6 @@ class Neo4JTest {
         )
         assertEquals(1, tu.operationNodes.size, "Expected to find the `Connect` operation.")
 
-        application.pushToNeo4j(result)
+        result.pushToNeo4j()
     }
 }
