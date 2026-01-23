@@ -39,7 +39,7 @@ import kotlin.test.assertNotNull
 class Neo4JTest {
     @Test
     fun testPush() {
-        val (application, result) = createTranslationResult()
+        val (_, result) = createTranslationResult()
 
         // 22 inferred functions, 1 inferred method, 2 inferred constructors, 11 regular functions
         assertEquals(36, result.functions.size)
@@ -49,7 +49,7 @@ class Neo4JTest {
 
     @Test
     fun testPushVeryLong() {
-        val (application, result) = createTranslationResult("very_long.cpp")
+        val (_, result) = createTranslationResult("very_long.cpp")
 
         assertEquals(1, result.variables.size)
 
@@ -62,7 +62,7 @@ class Neo4JTest {
 
     @Test
     fun testPushConcepts() {
-        val (application, result) = createTranslationResult()
+        val (_, result) = createTranslationResult()
 
         val tu = result.components.firstOrNull()?.translationUnits?.firstOrNull()
         assertNotNull(tu)

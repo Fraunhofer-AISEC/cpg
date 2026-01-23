@@ -79,7 +79,7 @@ data class JsonGraph(val nodes: List<JsonNode>, val edges: List<JsonEdge>)
  *
  * For example using docker:
  * ```
- * docker run -p 7474:7474 -p 7687:7687 -d -e NEO4J_AUTH=neo4j/password -e NEO4JLABS_PLUGINS='["apoc"]' neo4j:5
+ * docker run -p 127.0.0.1:7474:7474 -p 127.0.0.1:7687:7687 -d -e NEO4J_AUTH=neo4j/password -e NEO4JLABS_PLUGINS='["apoc"]' neo4j:5
  * ```
  */
 class Application : Callable<Int> {
@@ -557,7 +557,13 @@ class Application : Callable<Int> {
 
         exportJsonFile?.let { exportToJson(translationResult, it) }
         if (!noNeo4j) {
-            translationResult.pushToNeo4j()
+            translationResult.pushToNeo4j(
+                noPurgeDb = noPurgeDb,
+                host = host,
+                port = port,
+                neo4jUsername = neo4jUsername,
+                neo4jPassword = neo4jPassword,
+            )
         }
 
         val pushTime = System.currentTimeMillis()
