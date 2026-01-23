@@ -749,9 +749,21 @@ impl From<MatchExpr> for RSMatchExpr {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSMethodCallExpr {pub(crate) ast_node: RSNode}
+pub struct RSMethodCallExpr {pub(crate) ast_node: RSNode, receiver: Vec<RSExpr>, name_ref: Option<RSNameRef>, arguments: Vec<RSExpr>}
 impl From<MethodCallExpr> for RSMethodCallExpr {
-    fn from(node:  MethodCallExpr) -> Self {RSMethodCallExpr{ast_node: node.syntax().into()}}
+    fn from(node:  MethodCallExpr) -> Self {
+        RSMethodCallExpr{
+            ast_node: node.syntax().into(),
+            receiver: node.receiver().map(Into::into).into_iter().collect(),
+            name_ref: node.name_ref().map(Into::into),
+            arguments: node
+                .arg_list()
+                .into_iter()
+                .flat_map(|a| a.syntax().children().filter_map(Expr::cast).map(Into::into))
+                .collect()
+
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
