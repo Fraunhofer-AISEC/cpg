@@ -32,8 +32,7 @@ import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
 import de.fraunhofer.aisec.cpg.persistence.Neo4jConnectionDefaults
-import de.fraunhofer.aisec.cpg.persistence.connect
-import de.fraunhofer.aisec.cpg.persistence.persist
+import de.fraunhofer.aisec.cpg.persistence.pushToNeo4j
 import java.io.File
 import java.net.ConnectException
 import java.nio.file.Paths
@@ -392,21 +391,6 @@ class Application : Callable<Int> {
     }
 
     /**
-     * Pushes the whole translationResult to the neo4j db.
-     *
-     * @param translationResult, not null
-     */
-    fun pushToNeo4j(translationResult: TranslationResult) {
-        val session =
-            connect(Neo4jConnectionDefaults.PROTOCOL, host, port, neo4jUsername, neo4jPassword)
-        with(session) {
-            if (!noPurgeDb) executeWrite { tx -> tx.run("MATCH (n) DETACH DELETE n").consume() }
-            translationResult.persist()
-        }
-        session.close()
-    }
-
-    /**
      * Checks if all elements in the parameter are a valid file and returns a list of files.
      *
      * @param filenames The filenames to check
@@ -573,7 +557,7 @@ class Application : Callable<Int> {
 
         exportJsonFile?.let { exportToJson(translationResult, it) }
         if (!noNeo4j) {
-            pushToNeo4j(translationResult)
+            translationResult.pushToNeo4j()
         }
 
         val pushTime = System.currentTimeMillis()

@@ -72,11 +72,11 @@ internal typealias Relationship = Map<String, Any?>
  * @param noPurgeDb A boolean flag indicating whether to skip the database purge step. If set to
  *   true, the existing data in the database will not be deleted before persisting the new data.
  */
-fun TranslationResult.pushToNeo4jWithNewSession(noPurgeDb: Boolean = false) {
+fun TranslationResult.pushToNeo4j(noPurgeDb: Boolean = false) {
     val session: Session = connect()
     with(session) {
         if (!noPurgeDb) executeWrite { tx -> tx.run("MATCH (n) DETACH DELETE n").consume() }
-        this@pushToNeo4jWithNewSession.persist()
+        this@pushToNeo4j.persist()
     }
     session.close()
 }
