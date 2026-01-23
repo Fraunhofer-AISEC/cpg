@@ -25,9 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.helpers.functional
 
-import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
+import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.LoopStatement
 import de.fraunhofer.aisec.cpg.helpers.ConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
@@ -47,6 +47,8 @@ import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.math.ceil
+import kotlin.time.DurationUnit
+import kotlin.time.TimeSource
 import kotlinx.coroutines.*
 
 val CPU_CORES = Runtime.getRuntime().availableProcessors()
@@ -152,6 +154,9 @@ fun <T> equalLinkedHashSetOf(vararg elements: T): EqualLinkedHashSet<T> {
     set.addAll(elements)
     return set
 }
+
+/** Used to track the timeout of all functions being currently analyzed * */
+val timeouts = mutableListOf<Long>()
 
 /** Used to identify the order of elements */
 enum class Order {
@@ -331,13 +336,13 @@ interface Lattice<T : Lattice.Element> {
         timeout: Long? = null,
     ): T? {
         return runBlocking {
-            if (timeout != null) {
+            /*            if (timeout != null) {
                 withTimeoutOrNull(timeout) {
                     iterateEogInternal(startEdges, startState, transformation, strategy)
                 }
-            } else {
-                iterateEogInternal(startEdges, startState, transformation, strategy)
-            }
+            } else {*/
+            iterateEogInternal(startEdges, startState, transformation, strategy, timeout)
+            //            }
         }
     }
 
@@ -346,7 +351,14 @@ interface Lattice<T : Lattice.Element> {
         startState: T,
         transformation: suspend (Lattice<T>, EvaluationOrder, T) -> T,
         strategy: Strategy,
+        timeout: Long?,
     ): T {
+        // mark the time when we started the calculation to know when we stop
+        val startTime = TimeSource.Monotonic.markNow()
+        if (timeout != null) {
+            timeouts.addLast(timeout)
+        }
+
         val globalState = ConcurrentIdentityHashMap<EvaluationOrder, T>()
         var finalState: T = this.bottom
         for (startEdge in startEdges) {
@@ -455,103 +467,136 @@ interface Lattice<T : Lattice.Element> {
                     nextEdge.start.prevEOGEdges.single().start.nextEOGEdges.size == 1 &&
                     nextEdge.start.prevEOGEdges.single().start.prevEOGEdges.size == 1
 
-            val newState =
-                transformation(
-                    this@Lattice,
-                    nextEdge,
-                    if (isNotNearStartOrEndOfBasicBlock) nextGlobal else nextGlobal.duplicate() as T,
-                )
-            nextEdge.end.nextEOGEdges.forEach {
-                // We continue with the nextEOG edge if we haven't seen it before or if we
-                // updated the state in comparison to the previous time we were there.
+            if (
+                timeout == null ||
+                    startTime.elapsedNow().toLong(DurationUnit.MILLISECONDS) < timeouts.last()
+            ) {
+                val newState =
+                    transformation(
+                        this@Lattice,
+                        nextEdge,
+                        if (isNotNearStartOrEndOfBasicBlock) nextGlobal
+                        else nextGlobal.duplicate() as T,
+                    )
+                nextEdge.end.nextEOGEdges.forEach {
+                    // We continue with the nextEOG edge if we haven't seen it before or if we
+                    // updated the state in comparison to the previous time we were there.
 
-                val oldGlobalIt = globalState[it]
+                    val oldGlobalIt = globalState[it]
 
-                // If we're on the loop head (some node is LoopStatement), and we use
-                // WIDENING or WIDENING_NARROWING, we have to apply the widening/narrowing
-                // here (if oldGlobalIt is not null).
-                val newGlobalIt =
+                    // If we're on the loop head (some node is LoopStatement), and we use
+                    // WIDENING or WIDENING_NARROWING, we have to apply the widening/narrowing
+                    // here (if oldGlobalIt is not null).
+                    val newGlobalIt =
+                        if (
+                            nextEdge.end is LoopStatement &&
+                                (strategy == Strategy.WIDENING ||
+                                    strategy == Strategy.WIDENING_NARROWING) &&
+                                oldGlobalIt != null
+                        ) {
+                            this@Lattice.lub(
+                                one = newState,
+                                two = oldGlobalIt,
+                                allowModify = isNotNearStartOrEndOfBasicBlock,
+                                widen = true,
+                            )
+                        } else if (strategy == Strategy.NARROWING) {
+                            TODO()
+                        } else {
+                            val result =
+                                (oldGlobalIt?.let {
+                                    this@Lattice.lub(
+                                        one = newState,
+                                        two = it,
+                                        allowModify = isNotNearStartOrEndOfBasicBlock,
+                                    )
+                                } ?: newState)
+                            result
+                        }
+
+                    globalState.put(it, newGlobalIt)
+
                     if (
-                        nextEdge.end is LoopStatement &&
-                            (strategy == Strategy.WIDENING ||
-                                strategy == Strategy.WIDENING_NARROWING) &&
-                            oldGlobalIt != null
-                    ) {
-                        this@Lattice.lub(
-                            one = newState,
-                            two = oldGlobalIt,
-                            allowModify = isNotNearStartOrEndOfBasicBlock,
-                            widen = true,
-                        )
-                    } else if (strategy == Strategy.NARROWING) {
-                        TODO()
-                    } else {
-                        val result =
-                            (oldGlobalIt?.let {
-                                this@Lattice.lub(
-                                    one = newState,
-                                    two = it,
-                                    allowModify = isNotNearStartOrEndOfBasicBlock,
+                        it !in currentBBEdgesList &&
+                            it !in nextBranchEdgesList &&
+                            (isNoBranchingPoint ||
+                                oldGlobalIt == null ||
+                                // If we deal with PointsToState Elements, we use their special
+                                // parallelCompare function, otherwise, we resort to the
+                                // traditional compare
+                                ((newGlobalIt as? PointsToState.Element)?.parallelCompare(
+                                    oldGlobalIt
                                 )
-                            } ?: newState)
-                        result
-                    }
-
-                globalState.put(it, newGlobalIt)
-
-                if (
-                    it !in currentBBEdgesList &&
-                        it !in nextBranchEdgesList &&
-                        (isNoBranchingPoint ||
-                            oldGlobalIt == null ||
-                            // If we deal with PointsToState Elements, we use their special
-                            // parallelCompare function, otherwise, we resort to the
-                            // traditional compare
-                            ((newGlobalIt as? PointsToState.Element)?.parallelCompare(oldGlobalIt)
-                                ?: (newGlobalIt as? ConcurrentMapLattice.Element<*, *>)
-                                    ?.parallelCompare(oldGlobalIt)
-                                ?: newGlobalIt.compare(oldGlobalIt)) in
-                                setOf(Order.GREATER, Order.UNEQUAL))
-                ) {
-                    if (
-                        // We might be at the merge point.
-                        // In comparison to a loop entry, a merge point has multiple prevEOGEdges
-                        // without SCC-Label and at least one nextEOGEdge without
-                        it.start.prevEOGEdges.filter { it.scc == null }.size > 1 &&
-                            it.start.nextEOGEdges.any { it.scc == null }
+                                    ?: (newGlobalIt as? ConcurrentMapLattice.Element<*, *>)
+                                        ?.parallelCompare(oldGlobalIt)
+                                    ?: newGlobalIt.compare(oldGlobalIt)) in
+                                    setOf(Order.GREATER, Order.UNEQUAL))
                     ) {
-                        // This edge brings us to a merge point, so we add it to the list of merge
-                        // points.
-                        mergePointsEdgesMap.removeIncomingEdgeFromMergePoint(it, nextEdge)
-                    } else if (nextEdge.end.nextEOGEdges.size > 1) {
-                        // If we have multiple next edges, we add the ones that stay inside the loop
-                        // (AKA have an SCC label) to the SCCEdgesList
-                        // The other edges we add to the list of edges of to next basic block
-                        // (outside the loop, or for a branch).
-                        // We will process these after the current basic block has been processed
-                        // (probably very soon).
-                        val sccPriority = it.scc
-                        if (sccPriority != null) sccEdgesQueue.add(Pair(sccPriority, it))
-                        else nextBranchEdgesList.add(0, it)
-                    } else {
-                        // If we have only one next edge, we add it to the current basic
-                        // block edges list.
-                        currentBBEdgesList.add(0, it)
+                        if (
+                            // We might be at the merge point.
+                            // In comparison to a loop entry, a merge point has multiple
+                            // prevEOGEdges
+                            // without SCC-Label and at least one nextEOGEdge without
+                            it.start.prevEOGEdges.filter { it.scc == null }.size > 1 &&
+                                it.start.nextEOGEdges.any { it.scc == null }
+                        ) {
+                            // This edge brings us to a merge point, so we add it to the list of
+                            // merge
+                            // points.
+                            mergePointsEdgesMap.removeIncomingEdgeFromMergePoint(it, nextEdge)
+                        } else if (nextEdge.end.nextEOGEdges.size > 1) {
+                            // If we have multiple next edges, we add the ones that stay inside the
+                            // loop
+                            // (AKA have an SCC label) to the SCCEdgesList
+                            // The other edges we add to the list of edges of to next basic block
+                            // (outside the loop, or for a branch).
+                            // We will process these after the current basic block has been
+                            // processed
+                            // (probably very soon).
+                            val sccPriority = it.scc
+                            if (sccPriority != null) sccEdgesQueue.add(Pair(sccPriority, it))
+                            else nextBranchEdgesList.add(0, it)
+                        } else {
+                            // If we have only one next edge, we add it to the current basic
+                            // block edges list.
+                            currentBBEdgesList.add(0, it)
+                        }
                     }
                 }
-            }
 
-            if (
-                nextEdge.end.nextEOGEdges.isEmpty() ||
-                    (currentBBEdgesList.isEmpty() &&
-                        nextBranchEdgesList.isEmpty() &&
-                        mergePointsEdgesMap.isEmpty() &&
-                        sccEdgesQueue.isEmpty())
-            ) {
-                finalState = this@Lattice.lub(finalState, newState, false)
+                if (
+                    nextEdge.end.nextEOGEdges.isEmpty() ||
+                        (currentBBEdgesList.isEmpty() &&
+                            nextBranchEdgesList.isEmpty() &&
+                            mergePointsEdgesMap.isEmpty() &&
+                            sccEdgesQueue.isEmpty())
+                ) {
+                    finalState = this@Lattice.lub(finalState, newState, false)
+                }
+            } else {
+                println("Reached analysis timeout, stopping further analysis")
+                // We are done, so we remove the current timeout
+                timeouts.removeLast()
+                // In some passes, the accept function may call itself. We need to consider this by
+                // adjusting the timeout, i.e. if we are not finished with a run but come here
+                // again, we increase the previous timeout
+                timeouts.replaceAll { it + timeout }
+                if (timeouts.isNotEmpty())
+                    println(
+                        "+++ called iterateEOGInternal on a recursive call that exceeded the time. We have ${timeouts.size} existing timeouts in the queue which we increased by the timeout"
+                    )
+                return this@Lattice.lub(finalState, nextGlobal, false)
             }
         }
 
+        // We are done, so we remove the current timeout
+        if (timeout != null) {
+            timeouts.removeLast()
+            // In some passes, the accept function may call itself. We need to consider this by
+            // adjusting the timeout, i.e. if we are not finished with a run but come here again, we
+            // increase the previous timeout by the time we spent here
+            timeouts.replaceAll { it + startTime.elapsedNow().toLong(DurationUnit.MILLISECONDS) }
+        }
         return finalState
     }
 }
