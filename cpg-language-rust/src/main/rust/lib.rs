@@ -278,7 +278,8 @@ pub enum RSItem {
     Union(RSUnion),
     Use(RSUse),
     // Defined by us
-    Param(RSParam)
+    Param(RSParam),
+    SelfParam(RSSelfParam)
 }
 
 

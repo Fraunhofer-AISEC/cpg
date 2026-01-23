@@ -53,8 +53,28 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleFunctionDeclaration(fn: RsFn): FunctionDeclaration {
+        val name = frontend.scopeManager.currentNamespace.fqn(fn.name ?: "")
+        val raw = RsAst.RustItem(RsItem.Fn(fn))
+
         val function =
-            newFunctionDeclaration(fn.name ?: "", rawNode = RsAst.RustItem(RsItem.Fn(fn)))
+            fn.paramList?.selfParam?.let {
+                newMethodDeclaration(
+                        name,
+                        recordDeclaration = frontend.scopeManager.currentRecord,
+                        rawNode = raw,
+                    )
+                    .apply {
+                        val type = it.ty?.let { frontend.typeOf(it) }
+                        this.parameters +=
+                            newParameterDeclaration(
+                                it.astNode.text,
+                                type = type ?: unknownType(),
+                                rawNode = RsAst.RustItem(RsItem.SelfParam(it)),
+                            )
+                        frontend.scopeManager.addDeclaration(this.parameters.last())
+                    }
+            } ?: newFunctionDeclaration(name, rawNode = raw)
+
         frontend.scopeManager.enterScope(function)
         for (param in fn.paramList?.params ?: listOf()) {
             function.parameters += handleParameterDeclaration(param) as ParameterDeclaration
@@ -107,6 +127,8 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
         val record = newRecordDeclaration(struct.name ?: "", "struct", raw)
 
+        frontend.scopeManager.enterScope(record)
+
         struct.fieldList?.let { fields ->
             when (fields) {
                 is RsFieldList.RecordFieldList -> {
@@ -142,6 +164,8 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             }
         }
 
+        frontend.scopeManager.leaveScope(record)
+
         return record
     }
 
@@ -170,22 +194,24 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
         val scopedNode = scope?.astNode
 
-        for (item in impl.items){
+        val implAsNamespaceDecl = newExtensionDeclaration(name, RsAst.RustItem(RsItem.Impl(impl)))
+
+        frontend.scopeManager.enterScope(implAsNamespaceDecl)
+
+        for (item in impl.items) {
             when (item) {
                 is RsAssocItem.Fn -> {
                     val func = handleFunctionDeclaration(item.v1)
 
-                    
+                    if (scopedNode is RecordDeclaration) {
+                        // Todo set impl first
+                        frontend.scopeManager.addDeclaration(func)
+                    }
+                    implAsNamespaceDecl.declarations += func
                 }
-                is RsAssocItem.Const -> {
-
-                }
-                is RsAssocItem.TypeAlias -> {
-
-                }
-                is RsAssocItem.MacroCall -> {
-
-                }
+                is RsAssocItem.Const -> {}
+                is RsAssocItem.TypeAlias -> {}
+                is RsAssocItem.MacroCall -> {}
             }
         }
 
@@ -194,6 +220,8 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             frontend.scopeManager.enterScope(currentScope)
         }
 
-        return newProblemDeclaration()
+        frontend.scopeManager.leaveScope(implAsNamespaceDecl)
+
+        return implAsNamespaceDecl
     }
 }

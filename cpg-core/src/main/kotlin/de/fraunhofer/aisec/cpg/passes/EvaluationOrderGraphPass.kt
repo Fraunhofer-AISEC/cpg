@@ -198,6 +198,16 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         processedListener.clearProcessed()
     }
 
+    /** The Extension Declaration only contains other declarations and therefore does not */
+    protected fun handleExtensionDeclaration(node: ExtensionDeclaration) {
+        // Handle the declarations contained in the extension
+        for (child in node.declarations) {
+            currentPredecessors.clear()
+            handleEOG(child)
+        }
+        processedListener.clearProcessed()
+    }
+
     /**
      * See
      * [Specification for VariableDeclaration](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#variabledeclaration)
@@ -350,6 +360,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             is TranslationUnitDeclaration -> handleTranslationUnitDeclaration(node)
             is NamespaceDeclaration -> handleNamespaceDeclaration(node)
             is RecordDeclaration -> handleRecordDeclaration(node)
+            is ExtensionDeclaration -> handleExtensionDeclaration(node)
             is FunctionDeclaration -> handleFunctionDeclaration(node)
             is TupleDeclaration -> handleTupleDeclaration(node)
             is VariableDeclaration -> handleVariableDeclaration(node)

@@ -110,6 +110,7 @@ fun RsItem.astNode(): RsNode {
         is RsItem.TypeAlias -> this.v1.astNode
         is RsItem.Union -> this.v1.astNode
         is RsItem.Param -> this.v1.astNode
+        is RsItem.SelfParam -> this.v1.astNode
     }
 }
 
