@@ -35,6 +35,7 @@ import uniffi.cpgrust.RsExpr
 import uniffi.cpgrust.RsLiteral
 import uniffi.cpgrust.RsLiteralType
 import uniffi.cpgrust.RsMacroExpr
+import uniffi.cpgrust.RsMethodCallExpr
 import uniffi.cpgrust.RsPathExpr
 
 class ExpressionHandler(frontend: RustLanguageFrontend) :
@@ -50,6 +51,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             is RsExpr.BlockExpr -> handleBlockExpr(node.v1)
             is RsExpr.Literal -> handleLiteral(node.v1)
             is RsExpr.CallExpr -> handleCallExpr(node.v1)
+            is RsExpr.MethodCallExpr -> handleMethodCallExpr(node.v1)
             is RsExpr.MacroExpr -> handleMacroExpr(node.v1)
             is RsExpr.PathExpr -> handlePathExpr(node.v1)
             is RsExpr.BinExpr -> handleBinExpr(node.v1)
@@ -131,6 +133,26 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         }
 
         return call
+    }
+
+    fun handleMethodCallExpr(methodCallExpr: RsMethodCallExpr): MemberCallExpression {
+
+
+
+        val callee: Expression? = methodCallExpr.receiver.firstOrNull()?.let { handleNode(it)}
+
+        val method =
+            newMemberCallExpression(
+                callee = callee,
+                rawNode = RsAst.RustExpr(RsExpr.MethodCallExpr(methodCallExpr)),
+            )
+
+
+        for (arg in methodCallExpr.arguments) {
+            method.arguments += handleNode(arg)
+        }
+
+        return method
     }
 
     fun handleMacroExpr(macroExpr: RsMacroExpr): Expression {
