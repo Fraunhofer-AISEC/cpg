@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.cpgDescription
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgLlmAnalyzePayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.OverlaySuggestion
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableConcepts
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableOperations
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
@@ -41,10 +42,10 @@ import io.modelcontextprotocol.kotlin.sdk.types.Role
 import io.modelcontextprotocol.kotlin.sdk.types.SamplingMessage
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonObject
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.*
+
+@Serializable data class OverlaySuggestionsResponse(val items: List<OverlaySuggestion>)
 
 fun Server.addCpgLlmAnalyzeTool() {
     val toolDescription =
@@ -173,7 +174,7 @@ fun Server.addCpgLlmAnalyzeTool() {
                 appendLine(
                     """
                 {
-                  "overlaySuggestions": [
+                  "items": [
                     {
                       "nodeId": "1234",
                       "overlay": "fully.qualified.class.Name",
@@ -193,7 +194,7 @@ fun Server.addCpgLlmAnalyzeTool() {
                 )
             }
 
-            // Get the session ID (assuming single session setup)
+            // Get the session ID
             val sessionId = this.sessions.values.firstOrNull()?.sessionId
 
             if (sessionId == null) {
@@ -228,10 +229,37 @@ fun Server.addCpgLlmAnalyzeTool() {
                 // Send sampling request to client (which will forward to LLM)
                 val result = this.createMessage(sessionId, samplingRequest)
 
-                // Extract the text content from the result
+                // Extract the LLM response
                 val llmResponse = (result.content as? TextContent)?.text ?: "No response from LLM"
 
-                CallToolResult(content = listOf(TextContent(llmResponse)))
+                // Extract and validate JSON
+                val jsonStr = extractJson(llmResponse)
+
+                // Parse LLM response and enrich with further node properties
+                try {
+                    val parsed = Json.decodeFromString<OverlaySuggestionsResponse>(jsonStr)
+                    val nodes = globalAnalysisResult?.nodes ?: emptyList()
+
+                    val enrichedItems =
+                        parsed.items.map { suggestion ->
+                            val node = nodes.find { it.id.toString() == suggestion.nodeId }
+                            val conceptNode =
+                                suggestion.conceptNodeId?.let { id ->
+                                    nodes.find { it.id.toString() == id }
+                                }
+
+                            suggestion.copy(
+                                node = node?.toJSON(noEdges = true),
+                                conceptNode = conceptNode?.toJSON(noEdges = true),
+                            )
+                        }
+
+                    val response = OverlaySuggestionsResponse(items = enrichedItems)
+                    CallToolResult(content = listOf(TextContent(Json.encodeToString(response))))
+                } catch (_: Exception) {
+                    // If parsing fails, return the extracted JSON anyway
+                    CallToolResult(content = listOf(TextContent(jsonStr)))
+                }
             }
         } catch (e: Exception) {
             CallToolResult(
@@ -242,4 +270,27 @@ fun Server.addCpgLlmAnalyzeTool() {
             )
         }
     }
+}
+
+/**
+ * Extract JSON from LLM response that might be wrapped in markdown code blocks or contain extra
+ * text
+ */
+private fun extractJson(response: String): String {
+    val trimmed = response.trim()
+
+    val fencedMatch = Regex("(?s)```(?:json)?\\s*(\\{.*?\\})\\s*```").find(trimmed)
+    if (fencedMatch != null) {
+        return fencedMatch.groupValues[1]
+    }
+
+    // Try to extract JSON between first { and last }
+    val firstBrace = trimmed.indexOf('{')
+    val lastBrace = trimmed.lastIndexOf('}')
+    if (firstBrace >= 0 && lastBrace > firstBrace) {
+        return trimmed.substring(firstBrace, lastBrace + 1)
+    }
+
+    // Return as-is if no extraction worked
+    return trimmed
 }

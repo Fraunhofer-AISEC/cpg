@@ -39,7 +39,8 @@
   let streamingContent = $state('');
   let streamingReasoning = $state('');
   let showWelcome = $state(persisted.showWelcome);
-  let pendingToolResult = $state<{ toolName: string; content: any } | null>(null);
+  // Track pending tools by name for loading state
+  let pendingTools = $state<Map<string, { toolName: string; arguments?: string }>>(new Map());
 
   // Save state to sessionStorage whenever it changes
   $effect(() => {
@@ -64,6 +65,7 @@
     currentMessage = '';
     streamingContent = '';
     streamingReasoning = '';
+    pendingTools = new Map();
   }
 
   async function sendMessage() {
@@ -100,13 +102,61 @@
             } else if (event.type === 'reasoning') {
               // LLM thinking/reasoning content - accumulate it
               streamingReasoning += event.content;
-            } else if (event.type === 'tool_result') {
-              // Tool result with toolName and content
-              console.log('Received tool_result event:', event);
-              pendingToolResult = {
-                toolName: event.toolName,
-                content: event.content
+            } else if (event.type === 'tool_pending') {
+              // Tool is starting - add a pending message immediately
+              const pendingMessage: ChatMessage = {
+                id: `pending-${event.toolName}-${Date.now()}`,
+                role: 'assistant' as const,
+                content: '',
+                contentType: 'tool-pending',
+                toolResult: {
+                  toolName: event.toolName,
+                  content: null,
+                  isPending: true
+                },
+                timestamp: new Date()
               };
+              chatMessages = [...chatMessages, pendingMessage];
+              // Track this pending tool
+              pendingTools.set(event.toolName, { toolName: event.toolName, arguments: event.arguments });
+            } else if (event.type === 'tool_result') {
+              // Tool completed - replace pending message with result
+              console.log('Received tool_result event:', event);
+              // Find and update the pending message for this tool
+              const pendingIdx = chatMessages.findIndex(
+                m => m.contentType === 'tool-pending' && m.toolResult?.toolName === event.toolName
+              );
+              if (pendingIdx !== -1) {
+                // Replace pending with actual result
+                const updatedMessages = [...chatMessages];
+                updatedMessages[pendingIdx] = {
+                  ...updatedMessages[pendingIdx],
+                  id: Date.now().toString(),
+                  contentType: 'tool-result',
+                  toolResult: {
+                    toolName: event.toolName,
+                    content: event.content,
+                    isPending: false
+                  }
+                };
+                chatMessages = updatedMessages;
+              } else {
+                // No pending message found, add as new
+                chatMessages = [...chatMessages, {
+                  id: Date.now().toString(),
+                  role: 'assistant' as const,
+                  content: '',
+                  contentType: 'tool-result',
+                  toolResult: {
+                    toolName: event.toolName,
+                    content: event.content,
+                    isPending: false
+                  },
+                  timestamp: new Date()
+                }];
+              }
+              // Remove from pending tracking
+              pendingTools.delete(event.toolName);
             }
           } catch (e) {
             // If JSON parsing fails, treat as plain text
@@ -127,42 +177,45 @@
           streamingContent = '';
         },
         onComplete: () => {
-          // Capture reasoning before reset
+          // Capture reasoning and attach to first tool message if exists
           const reasoning = streamingReasoning || undefined;
-
-          // If we have a tool result, show the widget
-          if (pendingToolResult) {
-            const toolResultMessage: ChatMessage = {
-              id: Date.now().toString(),
-              role: 'assistant' as const,
-              content: '',
-              contentType: 'tool-result',
-              toolResult: pendingToolResult,
-              reasoning,
-              timestamp: new Date()
-            };
-            chatMessages = [...chatMessages, toolResultMessage];
+          if (reasoning) {
+            // Find first tool-result message and attach reasoning
+            const firstToolIdx = chatMessages.findIndex(
+              m => m.contentType === 'tool-result' || m.contentType === 'tool-pending'
+            );
+            if (firstToolIdx !== -1 && !chatMessages[firstToolIdx].reasoning) {
+              const updatedMessages = [...chatMessages];
+              updatedMessages[firstToolIdx] = {
+                ...updatedMessages[firstToolIdx],
+                reasoning
+              };
+              chatMessages = updatedMessages;
+            }
           }
 
-          // Show text response only if there are NO tool results and we have text
+          // Add text response (LLM summary) if present
           const content = streamingContent;
-          if (!pendingToolResult && content && content.trim().length > 0) {
-            const textMessage: ChatMessage = {
+          if (content && content.trim().length > 0) {
+            const hasToolResults = chatMessages.some(
+              m => m.contentType === 'tool-result' || m.contentType === 'tool-pending'
+            );
+            chatMessages = [...chatMessages, {
               id: (Date.now() + 1).toString(),
               role: 'assistant' as const,
               content: content,
               contentType: 'text',
-              reasoning,
+              // Attach reasoning to text only if no tool results
+              reasoning: !hasToolResults ? reasoning : undefined,
               timestamp: new Date()
-            };
-            chatMessages = [...chatMessages, textMessage];
+            }];
           }
 
           // Reset state
           isLoading = false;
           streamingContent = '';
           streamingReasoning = '';
-          pendingToolResult = null;
+          pendingTools = new Map();
         }
       };
 

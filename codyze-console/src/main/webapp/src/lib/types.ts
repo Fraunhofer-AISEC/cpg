@@ -79,13 +79,14 @@ export interface ToolResult {
   toolName?: string;
   content: any;
   isError?: boolean;
+  isPending?: boolean;
 }
 
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  contentType?: 'text' | 'tool-result';
+  contentType?: 'text' | 'tool-result' | 'tool-pending';
   toolResult?: ToolResult;
   reasoning?: string;
   timestamp: Date;

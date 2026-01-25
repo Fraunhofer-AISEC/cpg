@@ -119,9 +119,9 @@ fun Server.addCpgApplyConceptsTool() {
         ToolSchema(
             properties =
                 buildJsonObject {
-                    putJsonObject("assignments") {
+                    putJsonObject("items") {
                         put("type", "array")
-                        put("description", "List of concept assignments to perform")
+                        put("description", "List of overlay suggestions to apply")
                         putJsonObject("items") {
                             put("type", "object")
                             putJsonObject("properties") {
@@ -163,7 +163,7 @@ fun Server.addCpgApplyConceptsTool() {
                         }
                     }
                 },
-            required = listOf("assignments"),
+            required = listOf("items"),
         )
 
     this.addTool(
@@ -185,32 +185,32 @@ fun Server.addCpgApplyConceptsTool() {
 
             val applied = mutableListOf<String>()
 
-            payload.assignments.forEach { assignment ->
+            payload.items.forEach { suggestion ->
                 try {
-                    val node = result.nodes.find { it.id.toString() == assignment.nodeId }
+                    val node = result.nodes.find { it.id.toString() == suggestion.nodeId }
                     if (node == null) {
-                        applied.add("Node ${assignment.nodeId} not found")
+                        applied.add("Node ${suggestion.nodeId} not found")
                         return@forEach
                     }
 
-                    when (assignment.overlayType?.lowercase()) {
+                    when (suggestion.overlayType?.lowercase()) {
                         "concept" -> {
                             result.conceptBuildHelper(
-                                name = assignment.overlay,
+                                name = suggestion.overlay,
                                 underlyingNode = node,
-                                constructorArguments = /*assignment.arguments ?:*/
+                                constructorArguments = /*suggestion.arguments ?:*/
                                     emptyMap(), // TODO: handle arguments
                                 connectDFGUnderlyingNodeToConcept = true,
                             )
                             applied.add(
-                                "Applied concept ${assignment.overlay} to node ${assignment.nodeId} (${node::class.simpleName})"
+                                "Applied concept ${suggestion.overlay} to node ${suggestion.nodeId} (${node::class.simpleName})"
                             )
                         }
                         "operation" -> {
-                            val conceptNodeId = assignment.conceptNodeId
+                            val conceptNodeId = suggestion.conceptNodeId
                             if (conceptNodeId == null) {
                                 applied.add(
-                                    "Cannot apply operation ${assignment.overlay} to node ${assignment.nodeId}: conceptNodeId is required for operations"
+                                    "Cannot apply operation ${suggestion.overlay} to node ${suggestion.nodeId}: conceptNodeId is required for operations"
                                 )
                                 return@forEach
                             }
@@ -221,38 +221,37 @@ fun Server.addCpgApplyConceptsTool() {
                                 conceptNode?.overlays?.filterIsInstance<Concept>()?.firstOrNull()
                             if (concept == null) {
                                 applied.add(
-                                    "Cannot apply operation ${assignment.overlay} to node ${assignment.nodeId}: No concept found on node $conceptNodeId"
+                                    "Cannot apply operation ${suggestion.overlay} to node ${suggestion.nodeId}: No concept found on node $conceptNodeId"
                                 )
                                 return@forEach
                             }
 
                             result.operationBuildHelper(
-                                name = assignment.overlay,
+                                name = suggestion.overlay,
                                 underlyingNode = node,
                                 concept = concept,
-                                constructorArguments = /*assignment.arguments ?:*/
+                                constructorArguments = /*suggestion.arguments ?:*/
                                     emptyMap(), // TODO: handle arguments
                                 connectDFGUnderlyingNodeToConcept = true,
                             )
                             applied.add(
-                                "Applied operation ${assignment.overlay} to node ${assignment.nodeId} with concept ${concept::class.simpleName}"
+                                "Applied operation ${suggestion.overlay} to node ${suggestion.nodeId} with concept ${concept::class.simpleName}"
                             )
                         }
                         else -> {
                             applied.add(
-                                "Unknown overlay type '${assignment.overlayType}' for node ${assignment.nodeId}"
+                                "Unknown overlay type '${suggestion.overlayType}' for node ${suggestion.nodeId}"
                             )
                         }
                     }
                 } catch (e: Exception) {
                     applied.add(
-                        "Failed to create ${assignment.overlayType} ${assignment.overlay} for node ${assignment.nodeId}: ${e.message}"
+                        "Failed to create ${suggestion.overlayType} ${suggestion.overlay} for node ${suggestion.nodeId}: ${e.message}"
                     )
                 }
             }
 
-            val summary =
-                "Applied ${payload.assignments.size} concept(s):\n" + applied.joinToString("\n")
+            val summary = "Applied ${payload.items.size} concept(s):\n" + applied.joinToString("\n")
 
             CallToolResult(content = listOf(TextContent(summary)))
         }

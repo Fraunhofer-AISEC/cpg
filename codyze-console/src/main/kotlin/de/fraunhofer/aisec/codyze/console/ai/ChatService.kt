@@ -25,20 +25,87 @@
  */
 package de.fraunhofer.aisec.codyze.console.ai
 
+import com.typesafe.config.ConfigFactory
+import de.fraunhofer.aisec.codyze.console.ai.clients.GeminiClient
+import de.fraunhofer.aisec.codyze.console.ai.clients.OpenAiClient
+import io.ktor.client.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.sse.*
+import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 @Serializable data class ChatMessageJSON(val role: String, val content: String)
 
 @Serializable data class ChatRequestJSON(val messages: List<ChatMessageJSON>)
 
-/**
- * ChatService wraps the McpClient to provide a clean API for chat interactions. Uses Ollama as the
- * LLM backend with MCP tools.
- */
-class ChatService(private val mcpClient: McpClient? = null) {
+/** ChatService manages LLM client configuration and provides an API for chat interactions. */
+class ChatService {
+    private val config = ConfigFactory.load()
+    private val llmClient: String = config.getString("llm.client")
+
+    private val llmModel: String =
+        when (llmClient) {
+            "ollama" -> config.getString("llm.ollama.model")
+            "vLLM" -> config.getString("llm.vLLM.model")
+            "gemini" -> config.getString("llm.gemini.model")
+            else -> config.getString("llm.ollama.model")
+        }
+
+    private val httpClient =
+        HttpClient(CIO) {
+            install(ContentNegotiation) {
+                json(
+                    Json {
+                        ignoreUnknownKeys = true
+                        isLenient = true
+                    }
+                )
+            }
+            install(SSE)
+            install(HttpTimeout) {
+                requestTimeoutMillis = 600_000
+                connectTimeoutMillis = 30_000
+                socketTimeoutMillis = 600_000
+            }
+        }
+
+    val geminiClient: GeminiClient? =
+        if (llmClient == "gemini") {
+            val apiKey =
+                System.getenv("GOOGLE_API_KEY")
+                    ?: throw IllegalStateException("GOOGLE_API_KEY not set")
+            GeminiClient(httpClient, llmModel, apiKey, config.getString("llm.gemini.baseUrl"))
+        } else null
+
+    val openAiClient: OpenAiClient? =
+        when (llmClient) {
+            "ollama" -> OpenAiClient(httpClient, llmModel, config.getString("llm.ollama.baseUrl"))
+            "vLLM" -> OpenAiClient(httpClient, llmModel, config.getString("llm.vLLM.baseUrl"))
+            else -> null
+        }
+
+    private val mcpClient: McpClient =
+        McpClient(
+            httpClient = httpClient,
+            geminiClient = geminiClient,
+            openAiClient = openAiClient,
+            llmModel = llmModel,
+            mcpServerUrl = config.getString("mcp.serverUrl"),
+        )
+
+    suspend fun connect() {
+        mcpClient.connect()
+    }
 
     fun chat(request: ChatRequestJSON): Flow<String> {
-        return mcpClient?.chat(request) ?: throw IllegalStateException("McpClient not initialized")
+        return mcpClient.chat(request)
+    }
+
+    fun close() {
+        httpClient.close()
     }
 }

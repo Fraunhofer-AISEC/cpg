@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils
 
+import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -41,8 +42,6 @@ data class CpgCallArgumentByNameOrIndexPayload(
     val index: Int? = null,
 )
 
-@Serializable data class CpgApplyConceptsPayload(val assignments: List<ConceptAssignment>)
-
 @Serializable
 data class CpgRunPassPayload(
     /** The FQN of the pass to run. */
@@ -52,18 +51,19 @@ data class CpgRunPassPayload(
 )
 
 @Serializable
-data class ConceptAssignment(
+data class OverlaySuggestion(
     val nodeId: String,
-    /* FQN of concept or operation class */
     val overlay: String,
-    /* "Concept" or "Operation" from LLM response */
     val overlayType: String? = null,
-    /* NodeId of concept this operation references */
     val conceptNodeId: String? = null,
     val arguments: Map<String, String>? = null,
     val reasoning: String? = null,
     val securityImpact: String? = null,
+    val node: NodeJSON? = null,
+    val conceptNode: NodeJSON? = null,
 )
+
+@Serializable data class CpgApplyConceptsPayload(val items: List<OverlaySuggestion>)
 
 @Serializable data class CpgDataflowPayload(val from: String, val to: String)
 
