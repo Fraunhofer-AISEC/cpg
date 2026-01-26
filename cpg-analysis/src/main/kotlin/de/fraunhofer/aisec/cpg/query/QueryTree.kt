@@ -64,6 +64,10 @@ import kotlin.uuid.Uuid
 open class QueryTree<T>(
     value: T,
     var children: List<QueryTree<*>> = emptyList(),
+    /**
+     * A human-readable string representation of the query tree element. This should contain info
+     * about the (syntactic) meaning or interpretation of this query tree.
+     */
     stringRepresentation: String = "",
 
     /**
@@ -97,6 +101,10 @@ open class QueryTree<T>(
             return calculateConfidence()
         }
 
+    /**
+     * A human-readable string representation of the query tree element. This should contain info
+     * about the (syntactic) meaning or interpretation of this query tree.
+     */
     var stringRepresentation: String = stringRepresentation
         set(fieldValue) {
             field = fieldValue
