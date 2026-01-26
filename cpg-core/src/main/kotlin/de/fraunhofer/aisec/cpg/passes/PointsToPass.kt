@@ -1367,7 +1367,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             doubleState =
                 writeMapEntriesToState(lattice, doubleState, dstAddr, values, callingContextOut)
         }
-        
+
         return doubleState
     }
 
@@ -1504,7 +1504,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                             "Not calling acceptInternal on ${invoke.name} because we already have a functionSummary."
                         )
                     } else {
-                        log.info("Calling acceptInternal(${invoke.name.localName}")
+                        log.info("Calling acceptInternal(${invoke.name.localName})")
                         acceptInternal(invoke)
                         log.info("Finished with acceptInternal(${invoke.name.localName})")
                     }

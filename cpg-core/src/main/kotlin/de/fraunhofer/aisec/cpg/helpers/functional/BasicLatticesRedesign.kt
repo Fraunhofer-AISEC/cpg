@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.helpers.functional
 
+import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.get
@@ -416,12 +417,22 @@ interface Lattice<T : Lattice.Element> {
 
         startEdges.forEach { nextBranchEdgesList.add(it) }
 
+        var debugCounter = 0L
+
         while (
             currentBBEdgesList.isNotEmpty() ||
                 nextBranchEdgesList.isNotEmpty() ||
                 mergePointsEdgesMap.isNotEmpty() ||
                 sccEdgesQueue.isNotEmpty()
         ) {
+            debugCounter++
+
+            if (debugCounter % 1000 == 0L) {
+                TranslationManager.Companion.log.info(
+                    "Looping. debugCounter: $debugCounter, timeout: $timeout, startTime: ${startTime.elapsedNow().toLong(DurationUnit.MILLISECONDS)}, timeouts.last: ${timeouts.last()}"
+                )
+            }
+
             val nextEdge =
                 if (currentBBEdgesList.isNotEmpty()) {
                     // If we have edges in the current basic block, we take these. We prefer to
@@ -574,7 +585,10 @@ interface Lattice<T : Lattice.Element> {
                     finalState = this@Lattice.lub(finalState, newState, false)
                 }
             } else {
-                println("Reached analysis timeout, stopping further analysis")
+                TranslationManager.Companion.log.info(
+                    "Reached analysis timeout for ${startEdges.first().start}, stopping further analysis"
+                )
+                //                println("Reached analysis timeout, stopping further analysis")
                 // We are done, so we remove the current timeout
                 timeouts.removeLast()
                 // In some passes, the accept function may call itself. We need to consider this by
@@ -582,7 +596,7 @@ interface Lattice<T : Lattice.Element> {
                 // again, we increase the previous timeout
                 timeouts.replaceAll { it + timeout }
                 if (timeouts.isNotEmpty())
-                    println(
+                    TranslationManager.Companion.log.info(
                         "+++ called iterateEOGInternal on a recursive call that exceeded the time. We have ${timeouts.size} existing timeouts in the queue which we increased by the timeout"
                     )
                 return this@Lattice.lub(finalState, nextGlobal, false)
