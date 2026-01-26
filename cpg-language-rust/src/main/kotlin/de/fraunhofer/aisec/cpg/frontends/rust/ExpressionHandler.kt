@@ -137,9 +137,18 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     fun handleMethodCallExpr(methodCallExpr: RsMethodCallExpr): MemberCallExpression {
 
+        val callee: Expression? =
+            methodCallExpr.receiver.firstOrNull()?.let {
+                val base = handleNode(it)
 
-
-        val callee: Expression? = methodCallExpr.receiver.firstOrNull()?.let { handleNode(it)}
+                methodCallExpr.nameRef?.let { call ->
+                    newMemberExpression(
+                        call.text,
+                        base,
+                        rawNode = RsAst.RustExpr(RsExpr.NameRef(call)),
+                    )
+                }
+            }
 
         val method =
             newMemberCallExpression(
