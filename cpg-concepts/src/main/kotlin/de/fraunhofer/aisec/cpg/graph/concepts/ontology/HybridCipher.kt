@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,9 +34,9 @@ import kotlin.String
 
 public open class HybridCipher(
     public val keyDerivationFunction: KeyDerivationFunction?,
-    public val keyExchange: AsymmetricCipher?,
     public val messageAuthenticationCode: MessageAuthenticationCode?,
     public val symmetricCipher: SymmetricCipher?,
+    public val uses: AsymmetricCipher?,
     blockSize: Int?,
     cipherName: String?,
     keySize: Int?,
@@ -47,16 +47,16 @@ public open class HybridCipher(
         other is HybridCipher &&
             super.equals(other) &&
             other.keyDerivationFunction == this.keyDerivationFunction &&
-            other.keyExchange == this.keyExchange &&
             other.messageAuthenticationCode == this.messageAuthenticationCode &&
-            other.symmetricCipher == this.symmetricCipher
+            other.symmetricCipher == this.symmetricCipher &&
+            other.uses == this.uses
 
     override fun hashCode(): Int =
         Objects.hash(
             super.hashCode(),
             keyDerivationFunction,
-            keyExchange,
             messageAuthenticationCode,
             symmetricCipher,
+            uses,
         )
 }

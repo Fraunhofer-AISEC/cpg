@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,9 +35,9 @@ import kotlin.Int
 public open class EqualityCheck(
     public val leftPrincipal: Principal?,
     public val rightPrincipal: Principal?,
-    linkedConcept: Policy,
+    operatesOn: Policy,
     underlyingNode: Node? = null,
-) : PolicyOperation(linkedConcept, underlyingNode) {
+) : PolicyOperation(operatesOn, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is EqualityCheck &&
             super.equals(other) &&

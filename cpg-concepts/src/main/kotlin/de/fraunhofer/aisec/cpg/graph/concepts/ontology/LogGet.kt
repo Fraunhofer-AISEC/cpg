@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,8 +32,8 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** A log get operation e.g. `logging.getLogger("...")`. */
-public open class LogGet(linkedConcept: Logging, underlyingNode: Node? = null) :
-    LogOperation(linkedConcept, underlyingNode) {
+public open class LogGet(operatesOn: Logging, underlyingNode: Node? = null) :
+    LogOperation(operatesOn, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is LogGet && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

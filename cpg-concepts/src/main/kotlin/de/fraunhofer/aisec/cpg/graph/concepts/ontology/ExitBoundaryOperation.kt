@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,8 +36,8 @@ import kotlin.Int
  * Represents an exit operation that is part of a [Boundary]. This operation is used to define the
  * point at which data leaves the boundary.
  */
-public open class ExitBoundaryOperation(linkedConcept: Boundary, underlyingNode: Node? = null) :
-    Operation(linkedConcept, underlyingNode) {
+public open class ExitBoundaryOperation(operatesOn: Boundary, underlyingNode: Node? = null) :
+    Operation(operatesOn, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is ExitBoundaryOperation && super.equals(other)
 

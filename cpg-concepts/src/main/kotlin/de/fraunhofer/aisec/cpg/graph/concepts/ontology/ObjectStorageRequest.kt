@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,9 +36,9 @@ import kotlin.String
 public open class ObjectStorageRequest(
     public val source: String?,
     public val objectStorage: ObjectStorage?,
-    linkedConcept: Storage,
+    operatesOn: Storage,
     underlyingNode: Node? = null,
-) : Operation(linkedConcept, underlyingNode) {
+) : Operation(operatesOn, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is ObjectStorageRequest &&
             super.equals(other) &&

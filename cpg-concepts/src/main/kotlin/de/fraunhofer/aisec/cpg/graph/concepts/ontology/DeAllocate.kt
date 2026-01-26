@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,8 +35,8 @@ import kotlin.Int
  * Represents a memory de-allocation operation. This can be done using `free` in C or `delete` in
  * C++ or by calling a destructor in managed languages.
  */
-public open class DeAllocate(linkedConcept: Memory, underlyingNode: Node? = null) :
-    MemoryOperation(linkedConcept, underlyingNode) {
+public open class DeAllocate(operatesOn: Memory, underlyingNode: Node? = null) :
+    MemoryOperation(operatesOn, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is DeAllocate && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

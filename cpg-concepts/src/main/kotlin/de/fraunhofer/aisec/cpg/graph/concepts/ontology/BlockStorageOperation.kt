@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,8 +32,8 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public open class BlockStorageOperation(linkedConcept: BlockStorage, underlyingNode: Node? = null) :
-    Operation(linkedConcept, underlyingNode) {
+public open class BlockStorageOperation(operatesOn: BlockStorage, underlyingNode: Node? = null) :
+    Operation(operatesOn, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is BlockStorageOperation && super.equals(other)
 

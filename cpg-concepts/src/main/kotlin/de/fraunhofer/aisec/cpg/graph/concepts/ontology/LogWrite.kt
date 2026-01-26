@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,9 +45,9 @@ public enum class LogLevel {
 /** A log write operation e.g. `loggint.warn("...")`. */
 public open class LogWrite(
     public val logLevel: LogLevel?,
-    linkedConcept: Logging,
+    operatesOn: Logging,
     underlyingNode: Node? = null,
-) : LogOperation(linkedConcept, underlyingNode) {
+) : LogOperation(operatesOn, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is LogWrite && super.equals(other) && other.logLevel == this.logLevel
 

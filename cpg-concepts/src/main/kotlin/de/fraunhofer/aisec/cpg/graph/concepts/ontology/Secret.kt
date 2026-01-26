@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ public open class Secret(
     expirationDate: ZonedDateTime?,
     isManaged: Boolean?,
     notBeforeDate: ZonedDateTime?,
-    usedByMultiple: Infrastructure?,
+    infrastructures: Infrastructure?,
     internetAccessibleEndpoint: Boolean?,
     geoLocation: GeoLocation?,
     loggings: MutableList<Logging?>,
@@ -63,7 +63,7 @@ public open class Secret(
         expirationDate,
         isManaged,
         notBeforeDate,
-        usedByMultiple,
+        infrastructures,
         internetAccessibleEndpoint,
         geoLocation,
         loggings,

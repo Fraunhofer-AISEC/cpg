@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ import kotlin.String
 public open class MessageAuthenticationCode(
     public val type: String?,
     public val input: Input?,
-    public val selectorKey: SelectorKey?,
+    public val key: Key?,
     underlyingNode: Node? = null,
 ) : Functionality(underlyingNode) {
     override fun equals(other: Any?): Boolean =
@@ -43,7 +43,7 @@ public open class MessageAuthenticationCode(
             super.equals(other) &&
             other.type == this.type &&
             other.input == this.input &&
-            other.selectorKey == this.selectorKey
+            other.key == this.key
 
-    override fun hashCode(): Int = Objects.hash(super.hashCode(), type, input, selectorKey)
+    override fun hashCode(): Int = Objects.hash(super.hashCode(), type, input, key)
 }
