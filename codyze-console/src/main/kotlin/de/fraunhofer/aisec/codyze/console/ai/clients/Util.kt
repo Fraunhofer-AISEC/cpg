@@ -26,10 +26,10 @@
 package de.fraunhofer.aisec.codyze.console.ai.clients
 
 import io.ktor.utils.io.*
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 const val SYSTEM_PROMPT =
     "You are a code analysis assistant with access to CPG (Code Property Graph) tools. " +
@@ -59,12 +59,13 @@ suspend fun readSseStream(channel: ByteReadChannel, processLine: suspend (String
     }
 }
 
-/** Process <think> tags during streaming - updates seenThinkClose via mutable parameter */
-suspend fun processThinkTagsStreaming(
+/** LLMs like GLM use <think> tags instead of the common approach using <reasoning> tags */
+suspend fun thinkTagsStreaming(
     content: String,
     reasoningBuffer: StringBuilder,
     seenThinkClose: Boolean,
-    emit: suspend (String) -> Unit,
+    onText: suspend (String) -> Unit,
+    onReasoning: suspend (String) -> Unit,
 ): Boolean {
     var closed = seenThinkClose
 
@@ -73,7 +74,7 @@ suspend fun processThinkTagsStreaming(
         reasoningBuffer.append(beforeClose)
 
         if (reasoningBuffer.isNotEmpty()) {
-            emit(Events.reasoning(reasoningBuffer.toString()))
+            onReasoning(reasoningBuffer.toString())
             reasoningBuffer.clear()
         }
 
@@ -81,13 +82,13 @@ suspend fun processThinkTagsStreaming(
 
         val afterClose = content.substringAfter("</think>")
         if (afterClose.isNotEmpty()) {
-            emit(Events.text(afterClose))
+            onText(afterClose)
         }
     } else {
         if (!closed) {
             reasoningBuffer.append(content)
         } else {
-            emit(Events.text(content))
+            onText(content)
         }
     }
 
@@ -99,36 +100,32 @@ fun stripThinkTags(content: String): String {
     return content.replace(Regex("<think>.*?</think>", RegexOption.DOT_MATCHES_ALL), "").trim()
 }
 
-/** Stream events sent to frontend */
-@Serializable
-data class StreamEvent(
-    val type: String,
-    val content: String? = null,
-    val toolName: String? = null,
-    val arguments: String? = null,
-    val toolContent: JsonElement? = null,
-)
-
-/** Helper to create stream events */
+/** Helper to create stream events for the frontend */
 object Events {
-    fun text(content: String) = Json.encodeToString(StreamEvent(type = "text", content = content))
-
-    fun reasoning(content: String) =
-        Json.encodeToString(StreamEvent(type = "reasoning", content = content))
-
-    fun keepalive() = Json.encodeToString(StreamEvent(type = "keepalive"))
-
-    fun toolPending(toolCall: ToolCall) =
+    fun text(content: String): String =
         Json.encodeToString(
-            StreamEvent(
-                type = "tool_pending",
-                toolName = toolCall.name,
-                arguments = toolCall.arguments,
-            )
+            buildJsonObject {
+                put("type", "text")
+                put("content", content)
+            }
         )
 
-    fun toolResult(toolName: String, content: JsonElement) =
+    fun reasoning(content: String): String =
         Json.encodeToString(
-            StreamEvent(type = "tool_result", toolName = toolName, toolContent = content)
+            buildJsonObject {
+                put("type", "reasoning")
+                put("content", content)
+            }
+        )
+
+    fun keepalive(): String = Json.encodeToString(buildJsonObject { put("type", "keepalive") })
+
+    fun toolResult(toolName: String, content: JsonElement): String =
+        Json.encodeToString(
+            buildJsonObject {
+                put("type", "tool_result")
+                put("toolName", toolName)
+                put("content", content)
+            }
         )
 }

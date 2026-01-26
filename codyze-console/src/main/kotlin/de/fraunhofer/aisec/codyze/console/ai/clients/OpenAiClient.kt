@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.codyze.console.ai.clients
 
+import de.fraunhofer.aisec.codyze.console.ai.ChatMessageJSON
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -40,14 +41,15 @@ class OpenAiClient(
     private val httpClient: HttpClient,
     private val model: String,
     private val baseUrl: String,
-) {
+) : LlmClient {
+    override val modelName: String = model
     private val usesThinkTags = model.contains("glm", ignoreCase = true)
 
-    /** Query (non-streaming) for sampling requests */
-    suspend fun query(
+    /** Query the LLM when we have a tool that uses sampling */
+    override suspend fun query(
         messages: List<SamplingMessage>,
         systemPrompt: String?,
-        maxTokens: Int,
+        maxTokens: Int?,
     ): String {
         val openAiMessages = buildList {
             if (systemPrompt != null) {
@@ -85,36 +87,26 @@ class OpenAiClient(
         return extractContentFromResponse(result) ?: "No response"
     }
 
-    /** Send a prompt to the LLM and stream the response. */
-    suspend fun sendPrompt(
+    override suspend fun sendPrompt(
         userMessage: String,
-        conversationHistory: List<Any> = emptyList(),
-        tools: List<Tool> = emptyList(),
-        toolResults: List<ToolCallWithResult>? = null,
-        emit: suspend (String) -> Unit,
+        conversationHistory: List<ChatMessageJSON>,
+        tools: List<Tool>,
+        toolResults: List<ToolCallWithResult>?,
+        onText: suspend (String) -> Unit,
+        onReasoning: suspend (String) -> Unit,
     ): List<ToolCall> {
         val collectedToolCalls = mutableListOf<ToolCall>()
         val accumulatedToolCalls = mutableListOf<JsonObject>()
 
-        // Build messages based on conversation history and tool results
         val messages = buildList {
             add(OpenAiMessage(role = "system", content = JsonPrimitive(SYSTEM_PROMPT)))
 
-            // Add conversation history
             conversationHistory.dropLast(1).forEach { msg ->
-                try {
-                    val msgJson = Json.parseToJsonElement(Json.encodeToString(msg)).jsonObject
-                    val role = msgJson["role"]?.jsonPrimitive?.contentOrNull ?: "user"
-                    val content = msgJson["content"]?.jsonPrimitive?.contentOrNull ?: ""
-                    if (role == "user" && content.isNotBlank()) {
-                        add(OpenAiMessage(role = role, content = JsonPrimitive(content)))
-                    }
-                } catch (_: Exception) {
-                    // Skip messages
+                if (msg.role == "user" && msg.content.isNotBlank()) {
+                    add(OpenAiMessage(role = msg.role, content = JsonPrimitive(msg.content)))
                 }
             }
 
-            // Add current user message
             add(OpenAiMessage(role = "user", content = JsonPrimitive(userMessage)))
 
             if (toolResults != null) {
@@ -148,7 +140,6 @@ class OpenAiClient(
             }
         }
 
-        // Build tools if available and not already processing tool results
         val openAiTools =
             if (toolResults == null && tools.isNotEmpty()) {
                 tools.map { tool ->
@@ -165,10 +156,10 @@ class OpenAiClient(
                                             "properties",
                                             tool.inputSchema.properties ?: buildJsonObject {},
                                         )
-                                        tool.inputSchema.required?.let {
+                                        tool.inputSchema.required?.let { required ->
                                             put(
                                                 "required",
-                                                JsonArray(it.map { r -> JsonPrimitive(r) }),
+                                                JsonArray(required.map { r -> JsonPrimitive(r) }),
                                             )
                                         }
                                     },
@@ -180,6 +171,18 @@ class OpenAiClient(
         val request =
             OpenAiRequest(model = model, messages = messages, tools = openAiTools, stream = true)
 
+        // Token estimation: messages + tools
+        val msgChars = messages.sumOf { (it.content as? JsonPrimitive)?.content?.length ?: 0 }
+        val toolChars =
+            openAiTools?.sumOf { it.function.description.length + it.function.name.length } ?: 0
+        val systemChars = SYSTEM_PROMPT.length
+        val totalChars = msgChars + toolChars + systemChars
+        println(
+            "[OpenAI] Sending request | Messages: ${messages.size} | Tools: ${openAiTools?.size ?: 0} | ~${totalChars / 4} tokens"
+        )
+        val requestJson = Json { prettyPrint = true }.encodeToString(request)
+        println("[OpenAI] Request:\n$requestJson")
+
         httpClient
             .preparePost("$baseUrl/v1/chat/completions") {
                 contentType(ContentType.Application.Json)
@@ -188,17 +191,13 @@ class OpenAiClient(
             .execute { response ->
                 if (!response.status.isSuccess()) {
                     val errorBody = response.body<String>()
-                    val errorMsg =
-                        "LLM request failed: ${response.status.value} ${response.status.description}\n$errorBody"
-                    println("ERROR: $errorMsg")
-                    emit(Events.text(errorMsg))
+                    onText("LLM request failed: ${response.status.value}\n$errorBody")
                     return@execute
                 }
                 val channel = response.body<ByteReadChannel>()
-                processStream(channel, emit, accumulatedToolCalls)
+                streamMessages(channel, onText, onReasoning, accumulatedToolCalls)
             }
 
-        // Convert accumulated tool calls to ToolCall objects
         for (tcObj in accumulatedToolCalls) {
             val function = tcObj["function"]?.jsonObject
             val name = function?.get("name")?.jsonPrimitive?.contentOrNull
@@ -211,9 +210,10 @@ class OpenAiClient(
         return collectedToolCalls
     }
 
-    private suspend fun processStream(
+    private suspend fun streamMessages(
         channel: ByteReadChannel,
-        emit: suspend (String) -> Unit,
+        onText: suspend (String) -> Unit,
+        onReasoning: suspend (String) -> Unit,
         accumulatedToolCalls: MutableList<JsonObject>,
     ) {
         val toolCallsMap = mutableMapOf<Int, MutableMap<String, Any?>>()
@@ -226,34 +226,32 @@ class OpenAiClient(
                 chunk["choices"]?.jsonArray?.firstOrNull()?.jsonObject?.get("delta")?.jsonObject
 
             if (delta != null) {
-                // Try different reasoning fields that different models might use
                 val reasoningContent =
                     delta["reasoning"]?.jsonPrimitive?.contentOrNull
                         ?: delta["thoughts"]?.jsonPrimitive?.contentOrNull
                         ?: delta["thinking"]?.jsonPrimitive?.contentOrNull
 
                 if (reasoningContent?.isNotEmpty() == true) {
-                    emit(Events.reasoning(reasoningContent))
+                    onReasoning(reasoningContent)
                 }
 
-                // Regular content
                 delta["content"]?.jsonPrimitive?.contentOrNull?.let { content ->
                     if (content.isNotEmpty()) {
                         if (usesThinkTags) {
                             seenThinkClose =
-                                processThinkTagsStreaming(
+                                thinkTagsStreaming(
                                     content,
                                     reasoningBuffer,
                                     seenThinkClose,
-                                    emit,
+                                    onText,
+                                    onReasoning,
                                 )
                         } else {
-                            emit(Events.text(content))
+                            onText(content)
                         }
                     }
                 }
 
-                // Tool calls
                 delta["tool_calls"]?.jsonArray?.forEach { tcElement ->
                     val tc = tcElement.jsonObject
                     val index = tc["index"]?.jsonPrimitive?.intOrNull ?: 0
@@ -279,7 +277,6 @@ class OpenAiClient(
             }
         }
 
-        // Convert accumulated tool calls to JsonObjects
         toolCallsMap.values.forEach { toolCall ->
             if (toolCall["name"] != null) {
                 accumulatedToolCalls.add(
@@ -311,11 +308,7 @@ class OpenAiClient(
                 ?.jsonPrimitive
                 ?.content
 
-        return processContentForModel(content)
-    }
-
-    private fun processContentForModel(content: String?): String? {
-        if (content == null) return null
-        return if (usesThinkTags) stripThinkTags(content) else content
+        return if (content == null) null
+        else if (usesThinkTags) stripThinkTags(content) else content
     }
 }

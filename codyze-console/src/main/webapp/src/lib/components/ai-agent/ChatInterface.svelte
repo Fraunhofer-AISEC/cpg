@@ -199,7 +199,7 @@
                 </div>
               </div>
             {/if}
-            {#if (message.contentType === 'tool-result' || message.contentType === 'tool-pending') && message.toolResult}
+            {#if message.contentType === 'tool-result' && message.toolResult}
               <!-- Tool Result Widget -->
               <ToolResultWidget data={message.toolResult} onItemClick={handleNodeClick} />
             {:else if message.content}

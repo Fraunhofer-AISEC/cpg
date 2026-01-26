@@ -39,8 +39,6 @@
   let streamingContent = $state('');
   let streamingReasoning = $state('');
   let showWelcome = $state(persisted.showWelcome);
-  // Track pending tools by name for loading state
-  let pendingTools = $state<Map<string, { toolName: string; arguments?: string }>>(new Map());
 
   // Save state to sessionStorage whenever it changes
   $effect(() => {
@@ -65,7 +63,6 @@
     currentMessage = '';
     streamingContent = '';
     streamingReasoning = '';
-    pendingTools = new Map();
   }
 
   async function sendMessage() {
@@ -97,66 +94,21 @@
             const event = JSON.parse(chunk);
 
             if (event.type === 'text') {
-              // Normal text streaming
               streamingContent += event.content;
             } else if (event.type === 'reasoning') {
-              // LLM thinking/reasoning content - accumulate it
               streamingReasoning += event.content;
-            } else if (event.type === 'tool_pending') {
-              // Tool is starting - add a pending message immediately
-              const pendingMessage: ChatMessage = {
-                id: `pending-${event.toolName}-${Date.now()}`,
+            } else if (event.type === 'tool_result') {
+              chatMessages = [...chatMessages, {
+                id: Date.now().toString(),
                 role: 'assistant' as const,
                 content: '',
-                contentType: 'tool-pending',
+                contentType: 'tool-result',
                 toolResult: {
                   toolName: event.toolName,
-                  content: null,
-                  isPending: true
+                  content: event.content
                 },
                 timestamp: new Date()
-              };
-              chatMessages = [...chatMessages, pendingMessage];
-              // Track this pending tool
-              pendingTools.set(event.toolName, { toolName: event.toolName, arguments: event.arguments });
-            } else if (event.type === 'tool_result') {
-              // Tool completed - replace pending message with result
-              console.log('Received tool_result event:', event);
-              // Find and update the pending message for this tool
-              const pendingIdx = chatMessages.findIndex(
-                m => m.contentType === 'tool-pending' && m.toolResult?.toolName === event.toolName
-              );
-              if (pendingIdx !== -1) {
-                // Replace pending with actual result
-                const updatedMessages = [...chatMessages];
-                updatedMessages[pendingIdx] = {
-                  ...updatedMessages[pendingIdx],
-                  id: Date.now().toString(),
-                  contentType: 'tool-result',
-                  toolResult: {
-                    toolName: event.toolName,
-                    content: event.content,
-                    isPending: false
-                  }
-                };
-                chatMessages = updatedMessages;
-              } else {
-                // No pending message found, add as new
-                chatMessages = [...chatMessages, {
-                  id: Date.now().toString(),
-                  role: 'assistant' as const,
-                  content: '',
-                  contentType: 'tool-result',
-                  toolResult: {
-                    toolName: event.toolName,
-                    content: event.content,
-                    isPending: false
-                  },
-                  timestamp: new Date()
-                }];
-              }
-              // Remove from pending tracking
-              pendingTools.delete(event.toolName);
+              }];
             }
           } catch (e) {
             // If JSON parsing fails, treat as plain text
@@ -177,13 +129,11 @@
           streamingContent = '';
         },
         onComplete: () => {
-          // Capture reasoning and attach to first tool message if exists
           const reasoning = streamingReasoning || undefined;
+
+          // Attach reasoning to first tool-result message if exists
           if (reasoning) {
-            // Find first tool-result message and attach reasoning
-            const firstToolIdx = chatMessages.findIndex(
-              m => m.contentType === 'tool-result' || m.contentType === 'tool-pending'
-            );
+            const firstToolIdx = chatMessages.findIndex(m => m.contentType === 'tool-result');
             if (firstToolIdx !== -1 && !chatMessages[firstToolIdx].reasoning) {
               const updatedMessages = [...chatMessages];
               updatedMessages[firstToolIdx] = {
@@ -194,18 +144,15 @@
             }
           }
 
-          // Add text response (LLM summary) if present
+          // Add text response if present
           const content = streamingContent;
           if (content && content.trim().length > 0) {
-            const hasToolResults = chatMessages.some(
-              m => m.contentType === 'tool-result' || m.contentType === 'tool-pending'
-            );
+            const hasToolResults = chatMessages.some(m => m.contentType === 'tool-result');
             chatMessages = [...chatMessages, {
               id: (Date.now() + 1).toString(),
               role: 'assistant' as const,
               content: content,
               contentType: 'text',
-              // Attach reasoning to text only if no tool results
               reasoning: !hasToolResults ? reasoning : undefined,
               timestamp: new Date()
             }];
@@ -215,7 +162,6 @@
           isLoading = false;
           streamingContent = '';
           streamingReasoning = '';
-          pendingTools = new Map();
         }
       };
 

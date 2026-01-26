@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.codyze.console.ai.clients
 
+import de.fraunhofer.aisec.codyze.console.ai.ChatMessageJSON
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -40,8 +41,14 @@ class GeminiClient(
     private val model: String,
     private val apiKey: String,
     private val baseUrl: String,
-) {
-    suspend fun query(messages: List<SamplingMessage>, systemPrompt: String?): String {
+) : LlmClient {
+    override val modelName: String = model
+
+    override suspend fun query(
+        messages: List<SamplingMessage>,
+        systemPrompt: String?,
+        maxTokens: Int?,
+    ): String {
         val request =
             GeminiRequest(
                 systemInstruction =
@@ -67,17 +74,16 @@ class GeminiClient(
         return extractTextFromResponse(result) ?: "No response"
     }
 
-    /** Send a prompt to Gemini and stream the response. */
-    suspend fun sendPrompt(
+    override suspend fun sendPrompt(
         userMessage: String,
-        conversationHistory: List<Any> = emptyList(),
-        tools: List<Tool> = emptyList(),
-        toolResults: List<ToolCallWithResult>? = null,
-        emit: suspend (String) -> Unit,
+        conversationHistory: List<ChatMessageJSON>,
+        tools: List<Tool>,
+        toolResults: List<ToolCallWithResult>?,
+        onText: suspend (String) -> Unit,
+        onReasoning: suspend (String) -> Unit,
     ): List<ToolCall> {
         val toolCalls = mutableListOf<ToolCall>()
 
-        // Only include tools if we're not already processing tool results
         val geminiTools =
             if (toolResults == null && tools.isNotEmpty()) {
                 listOf(
@@ -101,7 +107,6 @@ class GeminiClient(
                 )
             } else null
 
-        // Build contents based on whether we have tool results
         val contents =
             if (toolResults != null) {
                 listOf(
@@ -154,20 +159,20 @@ class GeminiClient(
             .execute { response ->
                 if (response.status.value >= 400) {
                     val errorBody = response.body<String>()
-                    emit(Events.text("Gemini API error (${response.status}): $errorBody"))
+                    onText("Gemini API error (${response.status}): $errorBody")
                     return@execute
                 }
 
                 val channel = response.body<ByteReadChannel>()
-                processStream(channel, emit, toolCalls)
+                streamMessages(channel, onText, toolCalls)
             }
 
         return toolCalls
     }
 
-    private suspend fun processStream(
+    private suspend fun streamMessages(
         channel: ByteReadChannel,
-        emit: suspend (String) -> Unit,
+        onText: suspend (String) -> Unit,
         toolCalls: MutableList<ToolCall>,
     ) {
         readSseStream(channel) { jsonStr ->
@@ -186,7 +191,7 @@ class GeminiClient(
                 val partObj = part.jsonObject
 
                 partObj["text"]?.jsonPrimitive?.contentOrNull?.let { text ->
-                    if (text.isNotEmpty()) emit(Events.text(text))
+                    if (text.isNotEmpty()) onText(text)
                 }
 
                 partObj["functionCall"]?.jsonObject?.let { fc ->

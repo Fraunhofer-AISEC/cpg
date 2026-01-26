@@ -59,19 +59,7 @@
 </script>
 
 <div class="tool-result-widget">
-  {#if data.isPending}
-    <!-- Pending state: Tool is running -->
-    <div class="pending-widget">
-      <div class="pending-header">
-        <div class="pending-spinner"></div>
-        <span class="tool-name">{data.toolName}</span>
-        <span class="pending-badge">Running</span>
-      </div>
-      <div class="pending-content">
-        <span class="pending-text">Executing tool...</span>
-      </div>
-    </div>
-  {:else if selectedWidget}
+  {#if selectedWidget}
     <!-- Render the selected specialized widget -->
     {@const SelectedWidget = selectedWidget}
     <SelectedWidget {data} {onItemClick} />
@@ -140,58 +128,5 @@
     overflow-x: auto;
     white-space: pre-wrap;
     word-wrap: break-word;
-  }
-
-  /* Pending state styles */
-  .pending-widget {
-    margin: 0.5rem 0;
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.5rem;
-    overflow: hidden;
-  }
-
-  .pending-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    background: #f0f9ff;
-    border-bottom: 1px solid #e0f2fe;
-  }
-
-  .pending-spinner {
-    width: 1rem;
-    height: 1rem;
-    border: 2px solid #bfdbfe;
-    border-top-color: #3b82f6;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
-  .pending-badge {
-    padding: 0.25rem 0.5rem;
-    background: #dbeafe;
-    color: #1d4ed8;
-    font-size: 0.75rem;
-    font-weight: 600;
-    border-radius: 0.25rem;
-    text-transform: uppercase;
-  }
-
-  .pending-content {
-    padding: 1rem;
-  }
-
-  .pending-text {
-    color: #6b7280;
-    font-size: 0.875rem;
-    font-style: italic;
   }
 </style>

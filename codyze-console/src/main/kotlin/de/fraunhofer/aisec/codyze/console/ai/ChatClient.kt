@@ -25,11 +25,7 @@
  */
 package de.fraunhofer.aisec.codyze.console.ai
 
-import de.fraunhofer.aisec.codyze.console.ai.clients.Events
-import de.fraunhofer.aisec.codyze.console.ai.clients.GeminiClient
-import de.fraunhofer.aisec.codyze.console.ai.clients.OpenAiClient
-import de.fraunhofer.aisec.codyze.console.ai.clients.ToolCall
-import de.fraunhofer.aisec.codyze.console.ai.clients.ToolCallWithResult
+import de.fraunhofer.aisec.codyze.console.ai.clients.*
 import io.ktor.client.*
 import io.modelcontextprotocol.kotlin.sdk.client.Client as McpSdkClient
 import io.modelcontextprotocol.kotlin.sdk.client.ClientOptions
@@ -39,11 +35,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.serialization.json.*
 
-class McpClient(
+class ChatClient(
     private val httpClient: HttpClient,
-    private val geminiClient: GeminiClient?,
-    private val openAiClient: OpenAiClient?,
-    private val llmModel: String,
+    private val llm: LlmClient,
     private val mcpServerUrl: String,
 ) {
 
@@ -72,32 +66,22 @@ class McpClient(
             _ ->
             try {
                 val llmResponse =
-                    when {
-                        geminiClient != null ->
-                            geminiClient.query(
-                                messages = request.params.messages,
-                                systemPrompt = request.params.systemPrompt,
-                            )
-                        openAiClient != null ->
-                            openAiClient.query(
-                                messages = request.params.messages,
-                                systemPrompt = request.params.systemPrompt,
-                                maxTokens = request.params.maxTokens,
-                            )
-                        else -> throw IllegalStateException("No LLM client configured")
-                    }
+                    llm.query(
+                        messages = request.params.messages,
+                        systemPrompt = request.params.systemPrompt,
+                    )
 
                 CreateMessageResult(
                     role = Role.Assistant,
                     content = TextContent(text = llmResponse),
-                    model = llmModel,
+                    model = llm.modelName,
                     stopReason = StopReason.EndTurn,
                 )
             } catch (e: Exception) {
                 CreateMessageResult(
                     role = Role.Assistant,
                     content = TextContent(text = "Error: ${e.message}"),
-                    model = llmModel,
+                    model = llm.modelName,
                     stopReason = StopReason.EndTurn,
                 )
             }
@@ -106,57 +90,39 @@ class McpClient(
 
     /** Process a chat query using the LLM with MCP tool support */
     fun chat(request: ChatRequestJSON): Flow<String> = channelFlow {
-        // Send keepalive to prevent browser timeout
-        // TODO: Why is this needed even though the HTTP client has a timeout configured?
-        // Apparently, it is only needed when prompting our local models
         send(Events.keepalive())
 
         val userMessage = request.messages.lastOrNull()?.content ?: ""
         val conversationHistory = request.messages
 
         try {
-            // First call: check for tool calls, stream everything
             val toolCalls =
-                sendPrompt(userMessage, conversationHistory = conversationHistory, tools = tools) {
-                    event ->
-                    // Stream all events (reasoning and text) directly
-                    send(event)
-                }
+                llm.sendPrompt(
+                    userMessage = userMessage,
+                    conversationHistory = conversationHistory,
+                    tools = tools,
+                    onText = { text -> send(Events.text(text)) },
+                    onReasoning = { thought -> send(Events.reasoning(thought)) },
+                )
 
             if (toolCalls.isNotEmpty()) {
                 val toolResults =
                     toolCalls.map { toolCall ->
-                        val result = executeToolCall(toolCall) { event -> send(event) }
+                        val result = executeToolCall(toolCall) { jsonEvent -> send(jsonEvent) }
                         ToolCallWithResult(toolCall, result)
                     }
 
-                sendPrompt(
-                    userMessage,
+                llm.sendPrompt(
+                    userMessage = userMessage,
                     conversationHistory = conversationHistory,
                     toolResults = toolResults,
-                ) { event ->
-                    send(event)
-                }
+                    onText = { text -> send(Events.text(text)) },
+                    onReasoning = { thought -> send(Events.reasoning(thought)) },
+                )
             }
         } catch (e: Exception) {
+            println("[LLM] Error: ${e.message}")
             send(Events.text("Error: ${e.message}"))
-        }
-    }
-
-    /** Send a prompt to the configured LLM */
-    private suspend fun sendPrompt(
-        userMessage: String,
-        conversationHistory: List<ChatMessageJSON> = emptyList(),
-        tools: List<Tool> = emptyList(),
-        toolResults: List<ToolCallWithResult>? = null,
-        emit: suspend (String) -> Unit,
-    ): List<ToolCall> {
-        return when {
-            geminiClient != null ->
-                geminiClient.sendPrompt(userMessage, conversationHistory, tools, toolResults, emit)
-            openAiClient != null ->
-                openAiClient.sendPrompt(userMessage, conversationHistory, tools, toolResults, emit)
-            else -> throw IllegalStateException("No LLM client configured")
         }
     }
 
@@ -166,9 +132,6 @@ class McpClient(
         emit: suspend (String) -> Unit,
     ): String {
         return try {
-            // Emit pending state so frontend can show loading indicator
-            emit(Events.toolPending(toolCall))
-
             val jsonArgs = Json.parseToJsonElement(toolCall.arguments).jsonObject
             val arguments: Map<String, Any?> = jsonArgs.toMap()
 
@@ -177,7 +140,9 @@ class McpClient(
             val resultText = contentTexts.joinToString("\n")
 
             val content = buildToolContentPayload(contentTexts)
-            emit(Events.toolResult(toolCall.name, content))
+            val event = Events.toolResult(toolCall.name, content)
+            println("[Tool] Emitting event: $event")
+            emit(event)
 
             resultText
         } catch (e: Exception) {

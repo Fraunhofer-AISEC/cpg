@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.codyze.console.ai
 
 import com.typesafe.config.ConfigFactory
 import de.fraunhofer.aisec.codyze.console.ai.clients.GeminiClient
+import de.fraunhofer.aisec.codyze.console.ai.clients.LlmClient
 import de.fraunhofer.aisec.codyze.console.ai.clients.OpenAiClient
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
@@ -45,10 +46,10 @@ import kotlinx.serialization.json.Json
 /** ChatService manages LLM client configuration and provides an API for chat interactions. */
 class ChatService {
     private val config = ConfigFactory.load()
-    private val llmClient: String = config.getString("llm.client")
+    private val llmProvider: String = config.getString("llm.client")
 
     private val llmModel: String =
-        when (llmClient) {
+        when (llmProvider) {
             "ollama" -> config.getString("llm.ollama.model")
             "vLLM" -> config.getString("llm.vLLM.model")
             "gemini" -> config.getString("llm.gemini.model")
@@ -73,36 +74,33 @@ class ChatService {
             }
         }
 
-    val geminiClient: GeminiClient? =
-        if (llmClient == "gemini") {
-            val apiKey =
-                System.getenv("GOOGLE_API_KEY")
-                    ?: throw IllegalStateException("GOOGLE_API_KEY not set")
-            GeminiClient(httpClient, llmModel, apiKey, config.getString("llm.gemini.baseUrl"))
-        } else null
-
-    val openAiClient: OpenAiClient? =
-        when (llmClient) {
-            "ollama" -> OpenAiClient(httpClient, llmModel, config.getString("llm.ollama.baseUrl"))
-            "vLLM" -> OpenAiClient(httpClient, llmModel, config.getString("llm.vLLM.baseUrl"))
-            else -> null
+    private val llmClient: LlmClient =
+        when (llmProvider) {
+            "gemini" -> {
+                val apiKey =
+                    System.getenv("GOOGLE_API_KEY")
+                        ?: throw IllegalStateException("GOOGLE_API_KEY not set")
+                GeminiClient(httpClient, llmModel, apiKey, config.getString("llm.gemini.baseUrl"))
+            }
+            "ollama",
+            "vLLM",
+            "local" -> OpenAiClient(httpClient, llmModel, config.getString("llm.ollama.baseUrl"))
+            else -> throw IllegalArgumentException("Unsupported LLM provider: $llmProvider")
         }
 
-    private val mcpClient: McpClient =
-        McpClient(
+    private val chatClient: ChatClient =
+        ChatClient(
             httpClient = httpClient,
-            geminiClient = geminiClient,
-            openAiClient = openAiClient,
-            llmModel = llmModel,
+            llm = llmClient,
             mcpServerUrl = config.getString("mcp.serverUrl"),
         )
 
     suspend fun connect() {
-        mcpClient.connect()
+        chatClient.connect()
     }
 
     fun chat(request: ChatRequestJSON): Flow<String> {
-        return mcpClient.chat(request)
+        return chatClient.chat(request)
     }
 
     fun close() {
