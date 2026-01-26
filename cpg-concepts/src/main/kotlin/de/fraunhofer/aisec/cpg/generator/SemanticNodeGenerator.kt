@@ -43,7 +43,7 @@ object SemanticNodeGenerator {
 
         // IMPORTANT: Only OWL/XML and RDF/XML are supported
 
-        var owlInputPath = "../external/security-metrics/ontology/1.0/ontology-merged.owx"
+        var owlInputPath = "external/security-metrics/ontology/v1/ontology-merged.owx"
 
         val file = File(owlInputPath)
         if (!file.exists()) {
