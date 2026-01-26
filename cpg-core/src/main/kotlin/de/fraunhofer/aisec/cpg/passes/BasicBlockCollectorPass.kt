@@ -26,12 +26,15 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ShortCircuitOperator
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import java.util.*
 
 /**
  * This pass collects [BasicBlock]s by iterating through the EOG of [EOGStarterHolder]s. A basic
@@ -46,20 +49,26 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     override fun accept(t: Node) {
-        val firstBasicBlock = collectBasicBlocks(t)
+        val firstBasicBlock = collectBasicBlocks(t, t.language is HasShortCircuitOperators)
         (t as? EOGStarterHolder)?.firstBasicBlock = firstBasicBlock
     }
 
     /**
      * Collects all basic blocks starting at the given [startNode]. We identify basic blocks by
      * iterating through the EOG in O(n) and collecting all nodes which are reachable from the
-     * [startNode].
+     * [startNode]. We identify basic blocks by merges and branches in the EOG but may not consider
+     * [ShortCircuitOperator]s as EOG-splitting nodes if we set [splitOnShortCircuitOperator] to
+     * `false`.
      *
      * It returns the first basic block, which is the one starting at the [startNode].
      *
      * @param startNode The node to start the collection from, usually a [FunctionDeclaration].
+     * @param splitOnShortCircuitOperator If true, the basic blocks will be split on short-circuit
+     *   operators (e.g., `&&` or `||`). If false, the short-circuit operators will not be
+     *   considered, and the basic blocks will be collected as if they were not splitting up the
+     *   EOG.
      */
-    fun collectBasicBlocks(startNode: Node): BasicBlock {
+    fun collectBasicBlocks(startNode: Node, splitOnShortCircuitOperator: Boolean): BasicBlock {
         val firstBB = BasicBlock()
         val worklist =
             mutableListOf<Triple<Node, EvaluationOrder?, BasicBlock>>(
@@ -76,7 +85,6 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 oldBB.prevEOG += basicBlock
                 continue
             }
-            // We have not seen this node yet, so we can continue.
 
             if (
                 currentStartNode.prevEOG.size > 1 &&
@@ -100,9 +108,30 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                         }
                     }
             }
+
             basicBlock.nodes.add(currentStartNode)
 
-            val nextRelevantEOGEdges = currentStartNode.nextEOGEdges
+            // Note: This may not identify all cases correctly, e.g., if a ShortCircuitOperator is
+            // not the direct astParent.
+            val shortCircuit = currentStartNode.astParent as? ShortCircuitOperator
+            val language = shortCircuit?.language
+            val nextRelevantEOGEdges =
+                if (
+                    shortCircuit != null &&
+                        language is HasShortCircuitOperators &&
+                        !splitOnShortCircuitOperator &&
+                        currentStartNode.nextEOGEdges.size > 1
+                ) {
+                    // For ShortCircuitOperators, we select only the branch which is not a shortcut
+                    // because it's not really a CDG-relevant node, and we want to save the branches
+                    // it introduces.
+                    currentStartNode.nextEOGEdges.filter {
+                        shortCircuit.operatorCode in language.conjunctiveOperators == it.branch ||
+                            it.branch == null
+                    }
+                } else {
+                    currentStartNode.nextEOGEdges
+                }
 
             if (nextRelevantEOGEdges.size > 1) {
                 // If the currentStartNode splits up into multiple paths, the next nodes start a new
@@ -142,6 +171,7 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 // List is empty, nothing to do.
             }
         }
+
         return firstBB
     }
 }
