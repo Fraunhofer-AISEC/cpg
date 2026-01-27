@@ -74,15 +74,26 @@ inline fun <reified T> Server.addTool(
         toolAnnotations = toolAnnotations,
         meta = meta,
     ) { request ->
-        val payload =
-            request.arguments?.toObject<T>()
-                ?: return@addTool CallToolResult(
-                    content =
-                        listOf(
-                            TextContent("Invalid or missing payload for cpg_list_calls_to tool.")
-                        )
-                )
-        payload.runOnCpg(handler)
+        try {
+            val payload =
+                request.arguments?.toObject<T>()
+                    ?: return@addTool CallToolResult(
+                        content =
+                            listOf(
+                                TextContent(
+                                    "Invalid or missing payload for cpg_list_calls_to tool."
+                                )
+                            )
+                    )
+            payload.runOnCpg(handler)
+        } catch (e: Exception) {
+            CallToolResult(
+                content =
+                    listOf(
+                        TextContent("Error executing query: ${e.message ?: e::class.simpleName}")
+                    )
+            )
+        }
     }
 }
 

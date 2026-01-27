@@ -38,7 +38,6 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.runOnCpg
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toJson
 import io.modelcontextprotocol.kotlin.sdk.server.Server
-import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 
@@ -84,7 +83,7 @@ fun Server.listConceptsAndOperations() {
 
     this.addTool(name = "cpg_list_concepts_and_operations", description = toolDescription) { request
         ->
-        request.runOnCpg { result: TranslationResult, _: CallToolRequest ->
+        request.runOnCpg { result: TranslationResult, _ ->
             val concepts =
                 result.allChildrenWithOverlays<Concept>().map { TextContent(it.toJson()) }
             val operations =
