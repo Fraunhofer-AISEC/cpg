@@ -721,8 +721,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             return if (other is DFGPassState) {
                 val (_, generalUpdate) = generalState.lub(other.generalState)
                 val (_, declUpdate) = declarationsState.lub(other.declarationsState)
-                val (_, returnUpdate) = returnStatements.lub(other.returnStatements)
-                Pair(this, generalUpdate || declUpdate || returnUpdate)
+                returnStatements.lub(other.returnStatements)
+                Pair(this, generalUpdate || declUpdate)
             } else {
                 val (_, generalUpdate) = generalState.lub(other)
                 Pair(this, generalUpdate)
@@ -732,8 +732,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         override fun needsUpdate(other: State<Node, V>): Boolean {
             return if (other is DFGPassState) {
                 generalState.needsUpdate(other.generalState) ||
-                    declarationsState.needsUpdate(other.declarationsState) ||
-                    returnStatements.needsUpdate(other.returnStatements)
+                    declarationsState.needsUpdate(other.declarationsState)
             } else {
                 generalState.needsUpdate(other)
             }
