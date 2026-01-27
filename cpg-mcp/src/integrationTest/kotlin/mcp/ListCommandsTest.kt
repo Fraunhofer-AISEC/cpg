@@ -233,7 +233,7 @@ class ListCommandsTest {
                     name = "cpg_list_call_arg_by_name_or_index",
                     arguments =
                         buildJsonObject {
-                            put("id", callId)
+                            put("nodeId", callId)
                             put("index", 0)
                         },
                 )
