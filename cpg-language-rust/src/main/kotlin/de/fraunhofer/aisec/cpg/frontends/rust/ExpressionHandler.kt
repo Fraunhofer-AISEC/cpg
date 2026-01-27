@@ -156,7 +156,6 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                 rawNode = RsAst.RustExpr(RsExpr.MethodCallExpr(methodCallExpr)),
             )
 
-
         for (arg in methodCallExpr.arguments) {
             method.arguments += handleNode(arg)
         }
