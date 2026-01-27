@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
@@ -161,6 +162,22 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
 
         if (s.body.isNotEmpty()) {
             func.body = frontend.statementHandler.makeBlock(s.body, parentNode = s)
+        }
+
+        if (func is ConstructorDeclaration) {
+            (func.body as? Block)?.let { block ->
+                block +=
+                    newReturnStatement().apply {
+                        this.isImplicit = true
+                        this.returnValue =
+                            newReference("self").apply {
+                                this.isImplicit = true
+                                this.access = AccessValues.READ
+                                this.refersTo = func.receiver
+                            }
+                        this.codeAndLocationFrom(func)
+                    }
+            }
         }
 
         frontend.scopeManager.leaveScope(func)
