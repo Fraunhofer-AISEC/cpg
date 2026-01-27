@@ -36,6 +36,8 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import sootup.apk.frontend.ApkAnalysisInputLocation
+import sootup.apk.frontend.DexBodyInterceptors
+import sootup.core.cache.provider.LRUCacheProvider
 import sootup.core.model.Body
 import sootup.core.model.SootMethod
 import sootup.core.model.SourceType
@@ -123,9 +125,14 @@ class JVMLanguageFrontend(
                     )
                 }
                 "apk" -> {
-                    val apkAnalysis = ApkAnalysisInputLocation(file.toPath(), "", bodyInterceptors)
+                    val apkAnalysis =
+                        ApkAnalysisInputLocation(
+                            file.toPath(),
+                            "",
+                            DexBodyInterceptors.Default.bodyInterceptors(),
+                        )
 
-                    JavaView(apkAnalysis)
+                    JavaView(listOf(apkAnalysis), LRUCacheProvider(2))
                 }
                 "jimple" -> {
                     JimpleView(
