@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.query.QueryTree
-import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import java.util.function.BiFunction
@@ -93,8 +92,8 @@ fun getAvailableOperations(): List<Class<out Operation>> {
 
 inline fun <reified T> JsonObject.toObject() = Json.decodeFromString<T>(Json.encodeToString(this))
 
-fun CallToolRequest.runOnCpg(
-    query: BiFunction<TranslationResult, CallToolRequest, CallToolResult>
+inline fun <reified T> T.runOnCpg(
+    query: BiFunction<TranslationResult, T, CallToolResult>
 ): CallToolResult {
     return try {
         val result =
