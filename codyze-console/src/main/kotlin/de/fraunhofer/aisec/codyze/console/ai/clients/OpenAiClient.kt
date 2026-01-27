@@ -219,6 +219,7 @@ class OpenAiClient(
         val toolCallsMap = mutableMapOf<Int, MutableMap<String, Any?>>()
         val reasoningBuffer = StringBuilder()
         var seenThinkClose = false
+        var totalOutputChars = 0
 
         readSseStream(channel) { jsonStr ->
             val chunk = Json.parseToJsonElement(jsonStr).jsonObject
@@ -232,10 +233,12 @@ class OpenAiClient(
                         ?: delta["thinking"]?.jsonPrimitive?.contentOrNull
 
                 if (reasoningContent?.isNotEmpty() == true) {
+                    totalOutputChars += reasoningContent.length
                     onReasoning(reasoningContent)
                 }
 
                 delta["content"]?.jsonPrimitive?.contentOrNull?.let { content ->
+                    totalOutputChars += content.length
                     if (content.isNotEmpty()) {
                         if (usesThinkTags) {
                             seenThinkClose =
@@ -268,14 +271,20 @@ class OpenAiClient(
                     tc["id"]?.jsonPrimitive?.contentOrNull?.let { toolCall["id"] = it }
                     tc["type"]?.jsonPrimitive?.contentOrNull?.let { toolCall["type"] = it }
                     tc["function"]?.jsonObject?.let { func ->
-                        func["name"]?.jsonPrimitive?.contentOrNull?.let { toolCall["name"] = it }
+                        func["name"]?.jsonPrimitive?.contentOrNull?.let {
+                            toolCall["name"] = it
+                            totalOutputChars += it.length
+                        }
                         func["arguments"]?.jsonPrimitive?.contentOrNull?.let { args ->
                             toolCall["arguments"] = (toolCall["arguments"] as String) + args
+                            totalOutputChars += args.length
                         }
                     }
                 }
             }
         }
+
+        println("Response finished | ~${totalOutputChars / 4} tokens")
 
         toolCallsMap.values.forEach { toolCall ->
             if (toolCall["name"] != null) {
