@@ -36,12 +36,87 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
+import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.query.QueryTree
+import io.modelcontextprotocol.kotlin.sdk.ToolAnnotations
+import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
+import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import java.util.function.BiFunction
+import kotlin.reflect.KClass
+import kotlin.reflect.KType
+import kotlin.reflect.full.findAnnotations
+import kotlin.reflect.full.memberProperties
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
+
+inline fun <reified T> Server.addTool(
+    name: String,
+    description: String,
+    title: String? = null,
+    outputSchema: ToolSchema? = null,
+    toolAnnotations: ToolAnnotations? = null,
+    meta: JsonObject? = null,
+    noinline handler: (TranslationResult, T) -> CallToolResult,
+) {
+    val inputSchema = T::class.toSchema()
+    // TODO: Extend the description with parameter information from the schema.
+    this.addTool(
+        name,
+        description,
+        inputSchema = inputSchema,
+        title = title,
+        outputSchema = outputSchema,
+        toolAnnotations = toolAnnotations,
+        meta = meta,
+    ) { request ->
+        val payload =
+            request.arguments?.toObject<T>()
+                ?: return@addTool CallToolResult(
+                    content =
+                        listOf(
+                            TextContent("Invalid or missing payload for cpg_list_calls_to tool.")
+                        )
+                )
+        payload.runOnCpg(handler)
+    }
+}
+
+fun KType.toSchemaType(): String {
+    return when (this.classifier) {
+        String::class -> "string"
+        Int::class,
+        Long::class -> "integer"
+        Float::class,
+        Double::class -> "number"
+        else -> TODO()
+    }
+}
+
+fun KClass<*>.toSchema(): ToolSchema {
+    val required = mutableListOf<String>()
+    // Get properties of the KClass, their types and descriptions to build the schema
+    val properties = buildJsonObject {
+        this@toSchema.memberProperties.forEach { property ->
+            val propertyName = property.name
+            val propertyType = property.returnType.toSchemaType()
+            val description = property.findAnnotations<Description>().firstOrNull()
+            putJsonObject(propertyName) {
+                put("type", propertyType)
+                description?.let { put("description", it.briefDescription) }
+            }
+            if (!property.returnType.isMarkedNullable) {
+                required.add(propertyName)
+            }
+        }
+    }
+
+    return ToolSchema(properties = properties, required = required)
+}
 
 fun Node.toNodeInfo(): NodeInfo {
     return NodeInfo(this)

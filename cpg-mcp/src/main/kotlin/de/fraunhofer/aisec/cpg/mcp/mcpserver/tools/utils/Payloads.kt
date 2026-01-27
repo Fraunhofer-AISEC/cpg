@@ -25,19 +25,29 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils
 
+import de.fraunhofer.aisec.cpg.passes.Description
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class CpgAnalyzePayload(val content: String? = null, val extension: String? = null)
 
-@Serializable data class CpgNamePayload(val name: String)
+@Serializable
+@Description("The payload to identify a node by its name.")
+data class CpgNamePayload(@Description("The local name of the node to consider.") val name: String)
 
-@Serializable data class CpgIdPayload(val id: String)
+@Serializable
+@Description("The payload to identify a node by its id.")
+data class CpgIdPayload(@Description("The id of the node to consider.") val id: String)
 
 @Serializable
 data class CpgCallArgumentByNameOrIndexPayload(
+    @Description("ID of the method/function call whose arguments should be listed.")
     val nodeId: String,
+    @Description("The name of the argument (if arguments can be passed by name).")
     val argumentName: String? = null,
+    @Description(
+        "The index/position of the argument. The first argument is at index 0. We do not support the base/receiver of a method call here."
+    )
     val index: Int? = null,
 )
 
