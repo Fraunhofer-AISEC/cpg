@@ -43,8 +43,7 @@ import kotlin.test.*
 import org.junit.jupiter.api.assertTimeout
 
 class WalkerTest : BaseTest() {
-    // TODO for merge
-    @Ignore
+
     @Test
     fun testWalkerSpeed() {
         val tu = TranslationUnitDeclaration()
