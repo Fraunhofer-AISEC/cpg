@@ -37,7 +37,7 @@ data class CpgAnalyzePayload(val content: String? = null, val extension: String?
 
 @Serializable
 data class CpgCallArgumentByNameOrIndexPayload(
-    val id: String,
+    val nodeId: String,
     val argumentName: String? = null,
     val index: Int? = null,
 )
