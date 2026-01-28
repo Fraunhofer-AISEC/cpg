@@ -2919,7 +2919,6 @@ fun PointsToState.Element.getValues(
             this.getAddresses(node, startNode).forEach { addr ->
                 // For globals fetch the values from the globalDeref map
                 if (isGlobal(node)) {
-                    if (node.refersTo is FunctionDeclaration) println()
                     retVals.addAll(
                         fetchValueFromDeclarationState(addr).map { Pair(it.value, false) }
                     )
