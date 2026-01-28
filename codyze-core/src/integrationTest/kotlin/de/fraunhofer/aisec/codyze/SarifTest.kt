@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.query.dataFlow
 import de.fraunhofer.aisec.cpg.test.analyze
 import io.github.detekt.sarif4k.ResultKind
 import kotlin.io.path.Path
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -69,8 +68,6 @@ class SarifTest {
         assertEquals(5, onlyHeader.physicalLocation?.region?.endColumn)
     }
 
-    // TODO for merge
-    @Ignore
     @Test
     fun testQueryTreeSarif() {
         val topLevel = Path("src/integrationTest/resources")
