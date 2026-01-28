@@ -173,7 +173,6 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                             newReference("self").apply {
                                 this.isImplicit = true
                                 this.access = AccessValues.READ
-                                this.refersTo = func.receiver
                             }
                         this.codeAndLocationFrom(func)
                     }
@@ -290,6 +289,8 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                         newProblemExpression("Receiver with default value", rawNode = args)
                 }
             }
+            // Add the receiver to the scope so that references to it can be resolved
+            frontend.scopeManager.addDeclaration(recvNode)
 
             when (result) {
                 is ConstructorDeclaration,
