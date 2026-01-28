@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.helpers.ConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.toConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
+import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.passes.PointsToState
 import java.io.Serializable
@@ -596,10 +597,12 @@ interface Lattice<T : Lattice.Element> {
                 // again, we increase the previous timeout
                 timeouts.replaceAll { it + timeout }
                 if (timeouts.isNotEmpty())
-                    TranslationManager.Companion.log.info(
-                        "+++ called iterateEOGInternal on a recursive call that exceeded the time. We have ${timeouts.size} existing timeouts in the queue which we increased by the timeout"
+                    Pass.Companion.log.info(
+                        "+++ called iterateEOGInternal on a recursive call that exceeded the time. We have ${timeouts.size} existing timeouts in the queue which we increased by the timeout: ${timeouts.map { it }}"
                     )
-                return this@Lattice.lub(finalState, nextGlobal, false)
+                val r = this@Lattice.lub(finalState, nextGlobal, false)
+                Pass.Companion.log.info("Finished calculating final lub")
+                return r
             }
         }
 

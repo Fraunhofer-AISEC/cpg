@@ -300,15 +300,18 @@ private fun isGlobal(node: Node): Boolean {
     return when (node) {
         is VariableDeclaration -> node.isGlobal
         is MemberExpression -> isGlobal(node.base)
-        is Reference -> (node.refersTo as? VariableDeclaration)?.isGlobal == true
+        is Reference ->
+            node.refersTo is FunctionDeclaration ||
+                (node.refersTo as? VariableDeclaration)?.isGlobal == true
         is MemoryAddress -> node.isGlobal
+        is FunctionDeclaration -> true
         else -> false
     }
 }
 
 // We also need a place to store the derefs of global variables. The Boolean indicates if this is a
 // value stored for a short function Summary
-var globalDerefs = mutableMapOf<Node, PowersetLattice.Element<Pair<Node, Boolean>>>()
+var globalDerefs = ConcurrentIdentityHashMap<Node, PowersetLattice.Element<Pair<Node, Boolean>>>()
 
 @DependsOn(SymbolResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
@@ -417,16 +420,22 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             )
 
         var startState = lattice.bottom
+        val addresses = startState.getAddresses(node, node)
         startState =
             lattice.pushToDeclarationsState(
                 startState,
                 node,
                 DeclarationStateEntryElement(
-                    PowersetLattice.Element(startState.getAddresses(node, node)),
+                    PowersetLattice.Element(addresses),
                     PowersetLattice.Element(),
                     PowersetLattice.Element(),
                 ),
             )
+
+        // Add the address-node mapping to the global Deref map
+        addresses.forEach { addr ->
+            globalDerefs.put(addr, PowersetLattice.Element(Pair(node, false)))
+        }
 
         if (node is FunctionDeclaration)
             startState = initializeParameters(lattice, node.parameters, startState)
@@ -514,6 +523,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             }
         }
 
+        log.info("Finished drawing DFG Edges")
+
         if (node is FunctionDeclaration) {
             /* Store function summary for this FunctionDeclaration. */
             if (node.body != null) storeFunctionSummary(node, finalState)
@@ -524,6 +535,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     "finished analyzing $node, which is not at the end of the functionSummaryAnalysis chain, which is surprising"
                 )
         }
+        log.info("Finished with acceptInternal for $node")
     }
 
     /**
@@ -2556,7 +2568,7 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
                         UnknownMemoryValue(newName, true)
                     }
                 // TODO: Check if the boolean should be true sometimes
-                globalDerefs[node] = PowersetLattice.Element(Pair(newEntry, false))
+                globalDerefs.put(node, PowersetLattice.Element(Pair(newEntry, false)))
                 ret.add(
                     FetchElementFromDeclarationStateEntry(
                         newEntry,
@@ -2662,9 +2674,14 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
 fun PointsToState.Element.getLastWrites(
     node: Node
 ): PowersetLattice.Element<NodeWithPropertiesKey> {
+    // For pointerReferences, we take the memoryAddress of the refersTo, no matter if global or not
+    if (node is PointerReference)
+    // TODO: Handle other input types (e.g. SubscriptExpression, MemberExpression)
+    return (node.input as? Reference)?.refersTo?.memoryAddresses?.mapTo(PowersetLattice.Element()) {
+            NodeWithPropertiesKey(it, equalLinkedHashSetOf())
+        } ?: PowersetLattice.Element(NodeWithPropertiesKey(node, equalLinkedHashSetOf()))
     if (isGlobal(node)) {
         return when (node) {
-            //            is PointerReference -> { TODO()}
             is MemberExpression -> {
                 // We overapproximate here: For memberExpressions, we ignore the field and only
                 // consider the base
@@ -2684,37 +2701,40 @@ fun PointsToState.Element.getLastWrites(
         }
     }
     return when (node) {
-        is PointerReference -> {
-            // TODO: Handle other input types (e.g. SubscriptExpression, MemberExpression)
-            // For pointerReferences, we take the memoryAddress of the refersTo
-            return (node.input as? Reference)?.refersTo?.memoryAddresses?.mapTo(
-                PowersetLattice.Element()
-            ) {
-                NodeWithPropertiesKey(it, equalLinkedHashSetOf())
-            } ?: PowersetLattice.Element(NodeWithPropertiesKey(node, equalLinkedHashSetOf()))
-        }
         is PointerDereference -> {
             val ret = PowersetLattice.Element<NodeWithPropertiesKey>()
             this.getAddresses(node, node).forEach { addr ->
-                val lastWrite = this.declarationsState[addr]?.third
-                // Usually, we should have a lastwrite, so we take that
-                if (lastWrite?.isNotEmpty() == true)
-                    lastWrite.mapTo(PowersetLattice.Element()) {
-                        val newProps = equalLinkedHashSetOf<Any>().apply { addAll(it.properties) }
-                        ret.add(NodeWithPropertiesKey(it.node, newProps))
-                    }
-                // However, there might be cases were we don't yet have written to the dereferenced
-                // value, in this case we return an UnknownMemoryValue
-                else {
-                    val newName = Name(getNodeName(addr).localName + ".derefvalue")
-                    ret.add(
-                        NodeWithPropertiesKey(
-                            nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, newName)) {
-                                UnknownMemoryValue(newName)
-                            },
-                            equalLinkedHashSetOf(),
+                if (isGlobal(addr)) {
+                    // for globals, the last Write is the Declaration. For FunctionDeclarations, we
+                    // find that in the globalDerefs map
+                    globalDerefs[addr]?.forEach { entry ->
+                        ret.add(
+                            NodeWithPropertiesKey(entry.first, equalLinkedHashSetOf(entry.second))
                         )
-                    )
+                    }
+                } else {
+                    val lastWrite = this.declarationsState[addr]?.third
+                    // Usually, we should have a lastwrite, so we take that
+                    if (lastWrite?.isNotEmpty() == true)
+                        lastWrite.mapTo(PowersetLattice.Element()) {
+                            val newProps =
+                                equalLinkedHashSetOf<Any>().apply { addAll(it.properties) }
+                            ret.add(NodeWithPropertiesKey(it.node, newProps))
+                        }
+                    // However, there might be cases were we don't yet have written to the
+                    // dereferenced
+                    // value, in this case we return an UnknownMemoryValue
+                    else {
+                        val newName = Name(getNodeName(addr).localName + ".derefvalue")
+                        ret.add(
+                            NodeWithPropertiesKey(
+                                nodesCreatingUnknownValues.computeIfAbsent(Pair(addr, newName)) {
+                                    UnknownMemoryValue(newName)
+                                },
+                                equalLinkedHashSetOf(),
+                            )
+                        )
+                    }
                 }
             }
             return ret
@@ -2898,11 +2918,12 @@ fun PointsToState.Element.getValues(
             val retVals = PowersetLattice.Element<Pair<Node, Boolean>>()
             this.getAddresses(node, startNode).forEach { addr ->
                 // For globals fetch the values from the globalDeref map
-                if (isGlobal(node))
+                if (isGlobal(node)) {
+                    if (node.refersTo is FunctionDeclaration) println()
                     retVals.addAll(
                         fetchValueFromDeclarationState(addr).map { Pair(it.value, false) }
                     )
-                else {
+                } else {
                     this.getValues(addr, startNode).forEach { v ->
                         // We want to skip values that contain the node itself and therefore could
                         // cause a loop
@@ -3020,7 +3041,12 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): ConcurrentI
             node.refersTo?.let { refersTo ->
                 /* In some cases, the refersTo might not yet have an initialized MemoryAddress, for example if it's a FunctionDeclaration. So let's do this here */
                 if (refersTo.memoryAddresses.isEmpty()) {
-                    refersTo.memoryAddresses += MemoryAddress(node.name, isGlobal(node))
+                    val newAddress = MemoryAddress(node.name, isGlobal(node))
+                    refersTo.memoryAddresses += newAddress
+                    // For functions, we also add the address - functionDeclaration mapping to the
+                    // globalDerefMap
+                    if (refersTo is FunctionDeclaration)
+                        globalDerefs.put(newAddress, PowersetLattice.Element(Pair(refersTo, false)))
                 }
 
                 refersTo.memoryAddresses.toConcurrentIdentitySet()
