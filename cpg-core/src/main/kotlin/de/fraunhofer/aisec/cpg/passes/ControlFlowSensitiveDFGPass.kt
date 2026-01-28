@@ -721,8 +721,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             return if (other is DFGPassState) {
                 val (_, generalUpdate) = generalState.lub(other.generalState)
                 val (_, declUpdate) = declarationsState.lub(other.declarationsState)
-                returnStatements.lub(other.returnStatements)
-                Pair(this, generalUpdate || declUpdate)
+                val (_, returnUpdate) = returnStatements.lub(other.returnStatements)
+                Pair(this, generalUpdate || declUpdate || returnUpdate)
             } else {
                 val (_, generalUpdate) = generalState.lub(other)
                 Pair(this, generalUpdate)
