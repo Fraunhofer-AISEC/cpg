@@ -767,7 +767,11 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         var returnStatements: State<Node, V> = State(),
     ) : State<Node, V>() {
         override fun duplicate(): DFGPassState<V> {
-            return DFGPassState(generalState.duplicate(), declarationsState.duplicate())
+            return DFGPassState(
+                generalState.duplicate(),
+                declarationsState.duplicate(),
+                returnStatements.duplicate(),
+            )
         }
 
         override fun get(key: Node): LatticeElement<V>? {
@@ -778,7 +782,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             return if (other is DFGPassState) {
                 val (_, generalUpdate) = generalState.lub(other.generalState)
                 val (_, declUpdate) = declarationsState.lub(other.declarationsState)
-                Pair(this, generalUpdate || declUpdate)
+                val (_, returnUpdate) = returnStatements.lub(other.returnStatements)
+                Pair(this, generalUpdate || declUpdate || returnUpdate)
             } else {
                 val (_, generalUpdate) = generalState.lub(other)
                 Pair(this, generalUpdate)

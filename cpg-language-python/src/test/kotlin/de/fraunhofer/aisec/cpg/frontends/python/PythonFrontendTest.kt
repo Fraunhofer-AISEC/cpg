@@ -549,6 +549,7 @@ class PythonFrontendTest : BaseTest() {
         assertEquals(1, fooMemCall.invokes.size)
         assertInvokes(fooMemCall, bar)
         assertLocalName("self", fooMemCall.base)
+        assertRefersTo(fooMemCall.base, foo.receiver)
     }
 
     @Test

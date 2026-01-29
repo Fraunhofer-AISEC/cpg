@@ -1027,4 +1027,37 @@ class DFGTest {
             "We expect two incoming DFG edges: The full edge from line 9.",
         )
     }
+
+    @Test
+    fun testConstructorDFG() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(listOf(topLevel.resolve("constructor_dfg.py").toFile()), topLevel, true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        val fooClass = result.records["Foo"]
+        assertNotNull(fooClass)
+        val init = fooClass.constructors.singleOrNull()
+        assertNotNull(init)
+        val implicitReturn = init.returns.singleOrNull { it.isImplicit }
+        assertNotNull(implicitReturn, "Expected implicit return self in constructor")
+        val selfRef = implicitReturn.returnValue
+        assertIs<Reference>(selfRef)
+        assertEquals(init.receiver, selfRef.refersTo)
+
+        val baz = result.literals.singleOrNull { it.value == "baz" }
+        assertNotNull(baz)
+        val barFunc = result.functions["bar"]
+        assertNotNull(barFunc)
+        val returnF = barFunc.returns.singleOrNull()
+        assertNotNull(returnF)
+
+        val paths = baz.followDFGEdgesUntilHit(collectFailedPaths = false) { it == returnF }
+        assertTrue(
+            paths.fulfilled.isNotEmpty(),
+            "Expected DFG path from 'baz' through the constructor to return f",
+        )
+    }
 }
