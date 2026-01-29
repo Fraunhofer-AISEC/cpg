@@ -284,7 +284,6 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                 val defaultValue =
                     args.defaults.getOrNull(0)?.let { frontend.expressionHandler.handle(it) }
                 defaultValue?.let {
-                    frontend.scopeManager.addDeclaration(recvNode)
                     result.additionalProblems +=
                         newProblemExpression("Receiver with default value", rawNode = args)
                 }
