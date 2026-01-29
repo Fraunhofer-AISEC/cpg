@@ -48,13 +48,9 @@ class ChatService {
     private val config = ConfigFactory.load()
     private val llmProvider: String = config.getString("llm.client")
 
-    private val llmModel: String =
-        when (llmProvider) {
-            "ollama" -> config.getString("llm.ollama.model")
-            "vLLM" -> config.getString("llm.vLLM.model")
-            "gemini" -> config.getString("llm.gemini.model")
-            else -> config.getString("llm.ollama.model")
-        }
+    private val llmModel: String = config.getString("llm.$llmProvider.model")
+
+    private val llmBaseUrl: String = config.getString("llm.$llmProvider.baseUrl")
 
     private val httpClient =
         HttpClient(CIO) {
@@ -80,12 +76,9 @@ class ChatService {
                 val apiKey =
                     System.getenv("GOOGLE_API_KEY")
                         ?: throw IllegalStateException("GOOGLE_API_KEY not set")
-                GeminiClient(httpClient, llmModel, apiKey, config.getString("llm.gemini.baseUrl"))
+                GeminiClient(httpClient, llmModel, apiKey, llmBaseUrl)
             }
-            "ollama",
-            "vLLM",
-            "local" -> OpenAiClient(httpClient, llmModel, config.getString("llm.ollama.baseUrl"))
-            else -> throw IllegalArgumentException("Unsupported LLM provider: $llmProvider")
+            else -> OpenAiClient(httpClient, llmModel, llmBaseUrl)
         }
 
     private val chatClient: ChatClient =

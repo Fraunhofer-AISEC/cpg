@@ -107,41 +107,58 @@ class GeminiClient(
                 )
             } else null
 
+        val historyContents = buildList {
+            conversationHistory.dropLast(1).forEach { msg ->
+                if (msg.content.isNotBlank()) {
+                    val role = if (msg.role == "assistant") "model" else "user"
+                    add(GeminiContent(role = role, parts = listOf(GeminiPart(text = msg.content))))
+                }
+            }
+        }
+
         val contents =
             if (toolResults != null) {
-                listOf(
-                    GeminiContent(role = "user", parts = listOf(GeminiPart(text = userMessage))),
-                    GeminiContent(
-                        role = "model",
-                        parts =
-                            toolResults.map { tr ->
-                                GeminiPart(
-                                    functionCall =
-                                        GeminiFunctionCall(
-                                            name = tr.call.name,
-                                            args =
-                                                Json.parseToJsonElement(tr.call.arguments)
-                                                    .jsonObject,
-                                        )
-                                )
-                            },
-                    ),
-                    GeminiContent(
-                        role = "user",
-                        parts =
-                            toolResults.map { tr ->
-                                GeminiPart(
-                                    functionResponse =
-                                        GeminiFunctionResponse(
-                                            name = tr.call.name,
-                                            response = buildJsonObject { put("result", tr.result) },
-                                        )
-                                )
-                            },
-                    ),
-                )
+                historyContents +
+                    listOf(
+                        GeminiContent(
+                            role = "user",
+                            parts = listOf(GeminiPart(text = userMessage)),
+                        ),
+                        GeminiContent(
+                            role = "model",
+                            parts =
+                                toolResults.map { tr ->
+                                    GeminiPart(
+                                        functionCall =
+                                            GeminiFunctionCall(
+                                                name = tr.call.name,
+                                                args =
+                                                    Json.parseToJsonElement(tr.call.arguments)
+                                                        .jsonObject,
+                                            )
+                                    )
+                                },
+                        ),
+                        GeminiContent(
+                            role = "user",
+                            parts =
+                                toolResults.map { tr ->
+                                    GeminiPart(
+                                        functionResponse =
+                                            GeminiFunctionResponse(
+                                                name = tr.call.name,
+                                                response =
+                                                    buildJsonObject { put("result", tr.result) },
+                                            )
+                                    )
+                                },
+                        ),
+                    )
             } else {
-                listOf(GeminiContent(role = "user", parts = listOf(GeminiPart(text = userMessage))))
+                historyContents +
+                    listOf(
+                        GeminiContent(role = "user", parts = listOf(GeminiPart(text = userMessage)))
+                    )
             }
 
         val request =

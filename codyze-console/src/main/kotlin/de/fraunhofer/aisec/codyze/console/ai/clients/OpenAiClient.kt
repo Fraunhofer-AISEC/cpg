@@ -102,7 +102,7 @@ class OpenAiClient(
             add(OpenAiMessage(role = "system", content = JsonPrimitive(SYSTEM_PROMPT)))
 
             conversationHistory.dropLast(1).forEach { msg ->
-                if (msg.role == "user" && msg.content.isNotBlank()) {
+                if (msg.content.isNotBlank()) {
                     add(OpenAiMessage(role = msg.role, content = JsonPrimitive(msg.content)))
                 }
             }
@@ -171,7 +171,6 @@ class OpenAiClient(
         val request =
             OpenAiRequest(model = model, messages = messages, tools = openAiTools, stream = true)
 
-        // Token estimation: messages + tools
         val msgChars = messages.sumOf { (it.content as? JsonPrimitive)?.content?.length ?: 0 }
         val toolChars =
             openAiTools?.sumOf { it.function.description.length + it.function.name.length } ?: 0
