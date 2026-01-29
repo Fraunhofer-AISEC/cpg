@@ -178,10 +178,10 @@ class OpenAiClient(
         val systemChars = SYSTEM_PROMPT.length
         val totalChars = msgChars + toolChars + systemChars
         println(
-            "[OpenAI] Sending request | Messages: ${messages.size} | Tools: ${openAiTools?.size ?: 0} | ~${totalChars / 4} tokens"
+            "Sending request: Messages: ${messages.size} | Tools: ${openAiTools?.size ?: 0} | ~${totalChars / 4} tokens"
         )
         val requestJson = Json { prettyPrint = true }.encodeToString(request)
-        println("[OpenAI] Request:\n$requestJson")
+        println("Request:\n$requestJson")
 
         httpClient
             .preparePost("$baseUrl/v1/chat/completions") {
