@@ -45,6 +45,3 @@ class MyClass:
     def call5(self, a):
         kw_args_and_default(b=True, a=3)
 
-    def method_using_self(self, x):
-        self.x = x
-

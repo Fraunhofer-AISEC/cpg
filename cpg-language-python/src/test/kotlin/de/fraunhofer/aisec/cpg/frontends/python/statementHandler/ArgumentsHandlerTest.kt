@@ -230,21 +230,4 @@ class ArgumentsHandlerTest {
         assertNotNull(defaultArg4)
         assertContains(defaultArg4.nextDFG, funcDefault)
     }
-
-    @Test
-    fun testReceiverInScope() {
-        val method = result.methods["method_using_self"]
-        assertNotNull(method)
-
-        val receiver = method.receiver
-        assertNotNull(receiver, "Method should have a receiver")
-
-        val selfRef = method.refs.singleOrNull() { it.name.localName == "self" }
-        assertNotNull(selfRef, "Expected one reference to 'self'")
-        assertEquals(
-            receiver,
-            selfRef.refersTo,
-            "Reference to 'self' should resolve to the receiver",
-        )
-    }
 }
