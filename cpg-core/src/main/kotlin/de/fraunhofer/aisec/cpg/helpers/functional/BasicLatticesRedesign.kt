@@ -428,7 +428,7 @@ interface Lattice<T : Lattice.Element> {
         ) {
             debugCounter++
 
-            if (debugCounter % 1000 == 0L) {
+            if (debugCounter % 100 == 0L) {
                 TranslationManager.Companion.log.info(
                     "Looping. debugCounter: $debugCounter, timeout: $timeout, startTime: ${startTime.elapsedNow().toLong(DurationUnit.MILLISECONDS)}, timeouts.last: ${timeouts.last()}"
                 )
@@ -587,19 +587,14 @@ interface Lattice<T : Lattice.Element> {
                 }
             } else {
                 TranslationManager.Companion.log.info(
-                    "Reached analysis timeout for ${startEdges.first().start}, stopping further analysis"
+                    "Reached analysis timeout for ${startEdges.first().start.name.localName}, stopping further analysis"
                 )
-                //                println("Reached analysis timeout, stopping further analysis")
                 // We are done, so we remove the current timeout
                 timeouts.removeLast()
-                // In some passes, the accept function may call itself. We need to consider this by
-                // adjusting the timeout, i.e. if we are not finished with a run but come here
-                // again, we increase the previous timeout
-                timeouts.replaceAll { it + timeout }
-                if (timeouts.isNotEmpty())
+/*                if (timeouts.isNotEmpty())
                     Pass.Companion.log.info(
                         "+++ called iterateEOGInternal on a recursive call that exceeded the time. We have ${timeouts.size} existing timeouts in the queue which we increased by the timeout: ${timeouts.map { it }}"
-                    )
+                    )*/
                 val r = this@Lattice.lub(finalState, nextGlobal, false)
                 Pass.Companion.log.info("Finished calculating final lub")
                 return r
@@ -609,10 +604,6 @@ interface Lattice<T : Lattice.Element> {
         // We are done, so we remove the current timeout
         if (timeout != null) {
             timeouts.removeLast()
-            // In some passes, the accept function may call itself. We need to consider this by
-            // adjusting the timeout, i.e. if we are not finished with a run but come here again, we
-            // increase the previous timeout by the time we spent here
-            timeouts.replaceAll { it + startTime.elapsedNow().toLong(DurationUnit.MILLISECONDS) }
         }
         return finalState
     }

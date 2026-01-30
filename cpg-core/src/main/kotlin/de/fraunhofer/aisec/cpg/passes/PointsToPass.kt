@@ -58,6 +58,8 @@ import kotlin.collections.map
 import kotlin.let
 import kotlin.text.contains
 import kotlinx.coroutines.*
+import kotlin.time.DurationUnit
+import kotlin.time.TimeSource
 
 val nodesCreatingUnknownValues = ConcurrentHashMap<Pair<Node, Name>, MemoryAddress>()
 var totalFunctionDeclarationCount = 0
@@ -535,7 +537,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     "finished analyzing $node, which is not at the end of the functionSummaryAnalysis chain, which is surprising"
                 )
         }
-        log.info("Finished with acceptInternal for $node")
+        log.info("Finished with acceptInternal for ${node.name.localName}")
     }
 
     /**
@@ -1517,8 +1519,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         )
                     } else {
                         log.info("Calling acceptInternal(${invoke.name.localName})")
+                        val startTime = TimeSource.Monotonic.markNow()
                         acceptInternal(invoke)
-                        log.info("Finished with acceptInternal(${invoke.name.localName})")
+                        log.info("Finished with acceptInternal(${invoke.name.localName}). Old last timeout: ${timeouts.last()}")
+                        timeouts[timeouts.size - 1] = timeouts.last() + startTime.elapsedNow().toLong(DurationUnit.MILLISECONDS)
+                        log.info("Increased last timeout to consider time spent in acceptInternal. New timeout: ${timeouts.last()}")
                     }
                 } else {
                     log.error(
