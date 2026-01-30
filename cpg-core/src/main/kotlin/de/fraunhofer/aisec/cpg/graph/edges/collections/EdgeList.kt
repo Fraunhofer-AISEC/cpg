@@ -36,7 +36,7 @@ abstract class EdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     override var outgoing: Boolean = true,
     override var onAdd: ((EdgeType) -> Unit)? = null,
     override var onRemove: ((EdgeType) -> Unit)? = null,
-) : ArrayList<EdgeType>(), EdgeCollection<NodeType, EdgeType> {
+) : ArrayList<EdgeType>(1), EdgeCollection<NodeType, EdgeType> {
 
     override fun add(element: EdgeType): Boolean {
         // Make sure, the index is always set

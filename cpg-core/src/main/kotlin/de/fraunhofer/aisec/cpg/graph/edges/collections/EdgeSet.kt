@@ -39,7 +39,7 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
     override var outgoing: Boolean = true,
     override var onAdd: ((EdgeType) -> Unit)? = null,
     override var onRemove: ((EdgeType) -> Unit)? = null,
-) : HashSet<EdgeType>(), EdgeCollection<NodeType, EdgeType> {
+) : HashSet<EdgeType>(1), EdgeCollection<NodeType, EdgeType> {
     override fun add(element: EdgeType): Boolean {
         val ok = super<HashSet>.add(element)
         if (ok) {

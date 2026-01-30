@@ -41,7 +41,7 @@ class ControlDependence(
     start: Node,
     end: Node,
     /** A set of [EvaluationOrder.branch] values. */
-    var branches: Set<Boolean> = setOf(),
+    var branches: Set<Boolean> = HashSet(1),
 ) : ProgramDependence(start, end, DependenceType.CONTROL) {
 
     override var labels = super.labels.plus("CDG")

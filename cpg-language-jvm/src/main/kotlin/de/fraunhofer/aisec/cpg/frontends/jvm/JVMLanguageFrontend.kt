@@ -191,6 +191,12 @@ class JVMLanguageFrontend(
             } catch (e: IllegalArgumentException) {
                 log.error("Could not retrieve the code of $astNode", e)
             }
+        } else {
+            try {
+                return astNode.toString()
+            } catch (e: Exception) {
+                log.error("Could not retrieve the code of $astNode", e)
+            }
         }
         return null
     }
