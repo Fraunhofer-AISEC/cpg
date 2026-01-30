@@ -220,12 +220,11 @@ fun SymbolResolver.acceptWithIterateEOG(t: Node) {
         }
 
     t.scope?.let { startState = startState.pushDeclarationToScope(lattice, it) }
-    val finalState =
+    val (finalState, timeout) =
         runBlocking { lattice.iterateEOG(t.nextEOGEdges, startState, ::transfer) }
-            ?: run {
-                log.warn("Could not compute final state for function {} (due to timeout)", t.name)
-                return@acceptWithIterateEOG
-            }
+    if (timeout) {
+        log.warn("Could not compute final state for function {} (due to timeout)", t.name)
+    }
 
     finalState.candidates.forEach { node, candidates ->
         if (node is Reference) {

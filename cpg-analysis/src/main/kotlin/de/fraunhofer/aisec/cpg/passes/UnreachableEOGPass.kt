@@ -78,15 +78,14 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         }
 
         val nextEog = node.nextEOGEdges.toList()
-        val finalStateNew =
+        val (finalStateNew, timeout) =
             runBlocking { unreachabilityState.iterateEOG(nextEog, startState, ::transfer) }
-                ?: run {
-                    log.warn(
-                        "Could not compute unreachability of EOG edges for {}, reached a timeout",
-                        node.name,
-                    )
-                    return@handle
-                }
+        if (timeout) {
+            log.warn(
+                "Could not compute unreachability of EOG edges for {}, reached a timeout",
+                node.name,
+            )
+        }
 
         for ((key, value) in finalStateNew) {
             if (value.reachability == Reachability.UNREACHABLE) {

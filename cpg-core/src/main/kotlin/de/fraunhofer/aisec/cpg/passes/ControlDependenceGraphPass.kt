@@ -132,22 +132,21 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
 
         log.trace("Iterating EOG of {}", firstBasicBlock)
         var finalState: PrevEOGStateElement
-        finalState =
-            runBlocking {
+        finalState = runBlocking {
+            val (state, timeout) =
                 prevEOGState.iterateEOG(
                     firstBasicBlock.nextEOGEdges,
                     startState,
                     ::transfer,
                     timeout = passConfig<Configuration>()?.timeout,
                 )
-            }
-                ?: run {
-                    log.warn(
-                        "Timeout while computing CDG for {}, skipping CDG generation",
-                        startNode.name,
-                    )
-                    return@accept
-                }
+            if (timeout)
+                log.warn(
+                    "Timeout while computing CDG for {}, skipping CDG generation",
+                    startNode.name,
+                )
+            state
+        }
 
         log.trace("Done iterating EOG for {}. Generating the edges now.", startNode.name)
 

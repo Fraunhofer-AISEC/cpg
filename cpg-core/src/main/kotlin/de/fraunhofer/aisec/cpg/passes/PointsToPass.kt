@@ -57,9 +57,9 @@ import kotlin.collections.filter
 import kotlin.collections.map
 import kotlin.let
 import kotlin.text.contains
-import kotlinx.coroutines.*
 import kotlin.time.DurationUnit
 import kotlin.time.TimeSource
+import kotlinx.coroutines.*
 
 val nodesCreatingUnknownValues = ConcurrentHashMap<Pair<Node, Name>, MemoryAddress>()
 var totalFunctionDeclarationCount = 0
@@ -359,8 +359,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     }
 
     suspend fun acceptInternal(node: Node) {
-        // For now, we only execute this for function declarations, we will support all EOG starters
-        // in the future.
+        var analysisTimeout = false
         if (node !is EOGStarterHolder) {
             return
         }
@@ -446,19 +445,25 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             if (node is FunctionDeclaration && node.body == null) {
                 handleEmptyFunctionDeclaration(lattice, startState, node)
             } else {
-                val result =
+                var (result, timeout) =
                     lattice.iterateEOG(
                         node.nextEOGEdges,
                         startState,
                         ::transfer,
                         timeout = passConfig<Configuration>()?.timeout,
                     )
-                if (result == null) {
-                    log.info("Timeout exceeded when analyzing ${node.name.localName}.")
-                    if (node is FunctionDeclaration)
-                        handleEmptyFunctionDeclaration(lattice, startState, node)
-                    else startState
-                } else result as PointsToState.Element
+                // If we had a timeout, treat it as an empty FunctionDeclaration but still include
+                // the results we got
+                if (timeout && node is FunctionDeclaration) {
+                    analysisTimeout = true
+                    result =
+                        handleEmptyFunctionDeclaration(
+                            lattice,
+                            result as PointsToState.Element,
+                            node,
+                        )
+                }
+                result as PointsToState.Element
             }
 
         if (nodeVisitedCounterMap.isNotEmpty()) {
@@ -529,7 +534,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         if (node is FunctionDeclaration) {
             /* Store function summary for this FunctionDeclaration. */
-            if (node.body != null) storeFunctionSummary(node, finalState)
+            if (node.body != null && !analysisTimeout) storeFunctionSummary(node, finalState)
             if (functionSummaryAnalysisChain.last() == node)
                 functionSummaryAnalysisChain.remove(node)
             else
@@ -1521,9 +1526,16 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         log.info("Calling acceptInternal(${invoke.name.localName})")
                         val startTime = TimeSource.Monotonic.markNow()
                         acceptInternal(invoke)
-                        log.info("Finished with acceptInternal(${invoke.name.localName}). Old last timeout: ${timeouts.last()}")
-                        timeouts[timeouts.size - 1] = timeouts.last() + startTime.elapsedNow().toLong(DurationUnit.MILLISECONDS)
-                        log.info("Increased last timeout to consider time spent in acceptInternal. New timeout: ${timeouts.last()}")
+                        log.info("Finished with acceptInternal(${invoke.name.localName})")
+                        if (timeouts.isNotEmpty()) {
+                            log.info("Old last timeout: ${timeouts.last()}")
+                            timeouts[timeouts.size - 1] =
+                                timeouts.last() +
+                                    startTime.elapsedNow().toLong(DurationUnit.MILLISECONDS)
+                            log.info(
+                                "Increased last timeout to consider time spent in acceptInternal. New timeout: ${timeouts.last()}"
+                            )
+                        }
                     }
                 } else {
                     log.error(

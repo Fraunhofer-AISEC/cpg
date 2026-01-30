@@ -336,7 +336,7 @@ interface Lattice<T : Lattice.Element> {
         transformation: suspend (Lattice<T>, EvaluationOrder, T) -> T,
         strategy: Strategy = Strategy.PRECISE,
         timeout: Long? = null,
-    ): T? {
+    ): Pair<T, Boolean> {
         return runBlocking {
             /*            if (timeout != null) {
                 withTimeoutOrNull(timeout) {
@@ -354,7 +354,7 @@ interface Lattice<T : Lattice.Element> {
         transformation: suspend (Lattice<T>, EvaluationOrder, T) -> T,
         strategy: Strategy,
         timeout: Long?,
-    ): T {
+    ): Pair<T, Boolean> {
         // mark the time when we started the calculation to know when we stop
         val startTime = TimeSource.Monotonic.markNow()
         if (timeout != null) {
@@ -428,7 +428,7 @@ interface Lattice<T : Lattice.Element> {
         ) {
             debugCounter++
 
-            if (debugCounter % 100 == 0L) {
+            if (debugCounter % 100 == 0L && timeouts.isNotEmpty()) {
                 TranslationManager.Companion.log.info(
                     "Looping. debugCounter: $debugCounter, timeout: $timeout, startTime: ${startTime.elapsedNow().toLong(DurationUnit.MILLISECONDS)}, timeouts.last: ${timeouts.last()}"
                 )
@@ -591,13 +591,13 @@ interface Lattice<T : Lattice.Element> {
                 )
                 // We are done, so we remove the current timeout
                 timeouts.removeLast()
-/*                if (timeouts.isNotEmpty())
-                    Pass.Companion.log.info(
-                        "+++ called iterateEOGInternal on a recursive call that exceeded the time. We have ${timeouts.size} existing timeouts in the queue which we increased by the timeout: ${timeouts.map { it }}"
-                    )*/
+                /*                if (timeouts.isNotEmpty())
+                Pass.Companion.log.info(
+                    "+++ called iterateEOGInternal on a recursive call that exceeded the time. We have ${timeouts.size} existing timeouts in the queue which we increased by the timeout: ${timeouts.map { it }}"
+                )*/
                 val r = this@Lattice.lub(finalState, nextGlobal, false)
                 Pass.Companion.log.info("Finished calculating final lub")
-                return r
+                return Pair(r, true)
             }
         }
 
@@ -605,7 +605,7 @@ interface Lattice<T : Lattice.Element> {
         if (timeout != null) {
             timeouts.removeLast()
         }
-        return finalState
+        return Pair(finalState, false)
     }
 }
 
