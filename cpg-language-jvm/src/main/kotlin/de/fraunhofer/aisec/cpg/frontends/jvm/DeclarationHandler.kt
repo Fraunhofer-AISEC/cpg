@@ -37,18 +37,26 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
     Handler<Declaration, Any, JVMLanguageFrontend>(::ProblemDeclaration, frontend) {
 
     override fun handle(ctx: Any): Declaration {
-        return when (ctx) {
-            is SootClass -> handleClass(ctx)
-            is SootMethod -> handleMethod(ctx)
-            is SootField -> handleField(ctx)
-            is Local -> handleLocal(ctx)
-            else -> {
-                log.warn("Unhandled declaration type: ${ctx.javaClass.simpleName}")
-                newProblemDeclaration(
-                    "Unhandled declaration type: ${ctx.javaClass.simpleName}",
-                    rawNode = ctx,
-                )
+        try {
+            return when (ctx) {
+                is SootClass -> handleClass(ctx)
+                is SootMethod -> handleMethod(ctx)
+                is SootField -> handleField(ctx)
+                is Local -> handleLocal(ctx)
+                else -> {
+                    log.warn("Unhandled declaration type: ${ctx.javaClass.simpleName}")
+                    newProblemDeclaration(
+                        "Unhandled declaration type: ${ctx.javaClass.simpleName}",
+                        rawNode = ctx,
+                    )
+                }
             }
+        } catch (e: Exception) {
+            log.error("Error while handling a declaration", e)
+            return newProblemDeclaration(
+                "Error handling declaration ${ctx}: ${e.message}",
+                rawNode = ctx,
+            )
         }
     }
 
@@ -134,7 +142,14 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
             method.parameters += param
         }
 
-        if (sootMethod.isConcrete) {
+        val config =
+            (this.ctx.config.frontendConfigurations[this.frontend::class]
+                as? JVMFrontendConfiguration)
+
+        if (
+            config?.packagesToIgnore?.none { record?.name.toString().startsWith(it) } != false &&
+                sootMethod.isConcrete
+        ) {
             // Handle method body
             method.body = frontend.statementHandler.handle(sootMethod.body)
         }

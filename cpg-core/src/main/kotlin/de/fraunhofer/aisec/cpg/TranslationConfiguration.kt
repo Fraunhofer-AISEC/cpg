@@ -124,6 +124,7 @@ private constructor(
     matchCommentsToNodes: Boolean,
     addIncludesToGraph: Boolean,
     passConfigurations: Map<KClass<out Pass<*>>, PassConfiguration>,
+    frontendConfigurations: Map<KClass<out LanguageFrontend<*, *>>, FrontendConfiguration>,
     /** The maximum number a pass will get executed, in order to prevent loops. */
     val maxPassExecutions: Int,
     /** A list of exclusion patterns used to filter files and directories. */
@@ -200,8 +201,8 @@ private constructor(
 
     /** This sub configuration object holds all information about inference and smart-guessing. */
     val inferenceConfiguration: InferenceConfiguration
-
     val passConfigurations: Map<KClass<out Pass<*>>, PassConfiguration>
+    val frontendConfigurations: Map<KClass<out LanguageFrontend<*, *>>, FrontendConfiguration>
 
     init {
         this.registeredPasses = passes
@@ -218,6 +219,7 @@ private constructor(
         this.matchCommentsToNodes = matchCommentsToNodes
         this.addIncludesToGraph = addIncludesToGraph
         this.passConfigurations = passConfigurations
+        this.frontendConfigurations = frontendConfigurations
     }
 
     /** Returns a list of all analyzed files. */
@@ -271,6 +273,9 @@ private constructor(
         private var addIncludesToGraph = true
         private var useDefaultPasses = false
         private var passConfigurations: MutableMap<KClass<out Pass<*>>, PassConfiguration> =
+            mutableMapOf()
+        private var frontendConfigurations:
+            MutableMap<KClass<out LanguageFrontend<*, *>>, FrontendConfiguration> =
             mutableMapOf()
         private var maxPassExecutions = 5
         private val exclusionPatternsByRegex = mutableListOf<Regex>()
@@ -469,6 +474,20 @@ private constructor(
         inline fun <reified T : Language<*>> registerLanguage(): Builder {
             registerLanguage(T::class)
             return this
+        }
+
+        fun <T : LanguageFrontend<*, *>> configureFrontend(
+            clazz: KClass<T>,
+            config: FrontendConfiguration,
+        ): Builder {
+            this.frontendConfigurations[clazz] = config
+            return this
+        }
+
+        inline fun <reified T : LanguageFrontend<*, *>> configureFrontend(
+            config: FrontendConfiguration
+        ): Builder {
+            return this.configureFrontend(T::class, config)
         }
 
         fun <T : Pass<*>> configurePass(clazz: KClass<T>, config: PassConfiguration): Builder {
@@ -720,6 +739,7 @@ private constructor(
                 matchCommentsToNodes,
                 addIncludesToGraph,
                 passConfigurations,
+                frontendConfigurations,
                 maxPassExecutions,
                 exclusionPatternsByString,
                 exclusionPatternsByRegex,
