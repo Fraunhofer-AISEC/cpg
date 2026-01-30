@@ -100,6 +100,9 @@ abstract class EOGStarterPass(
 
 open class PassConfiguration
 
+/** Configuration specific to the frontend. */
+open class FrontendConfiguration
+
 /** Implementations of this abstract class sort nodes before they are passed to the [Pass]es. */
 abstract class Sorter<T : Node> : (TranslationResult) -> List<T>
 

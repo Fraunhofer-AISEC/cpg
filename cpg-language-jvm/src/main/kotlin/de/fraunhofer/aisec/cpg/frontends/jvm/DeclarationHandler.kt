@@ -142,7 +142,14 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
             method.parameters += param
         }
 
-        if (sootMethod.isConcrete) {
+        val config =
+            (this.ctx.config.frontendConfigurations[this.frontend::class]
+                as? JVMFrontendConfiguration)
+
+        if (
+            config?.packagesToIgnore?.none { record?.name.toString().startsWith(it) } != false &&
+                sootMethod.isConcrete
+        ) {
             // Handle method body
             method.body = frontend.statementHandler.handle(sootMethod.body)
         }

@@ -202,6 +202,20 @@ class JVMLanguageFrontendTest {
                 true,
             ) {
                 it.registerLanguage<JVMLanguage>()
+                it.configureFrontend<JVMLanguageFrontend>(
+                    JVMFrontendConfiguration(
+                        packagesToIgnore =
+                            listOf(
+                                "android.",
+                                "androidx.",
+                                "com.android.",
+                                "kotlin.",
+                                "kotlinx.",
+                                "java.",
+                                "javax.",
+                            )
+                    )
+                )
             }
         assertNotNull(tu)
         assertEquals(0, tu.problems.size)

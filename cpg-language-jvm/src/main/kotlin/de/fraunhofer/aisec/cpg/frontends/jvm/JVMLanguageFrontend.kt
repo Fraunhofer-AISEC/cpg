@@ -45,14 +45,7 @@ import sootup.core.transform.BodyInterceptor
 import sootup.core.types.ArrayType
 import sootup.core.types.UnknownType
 import sootup.core.util.printer.NormalStmtPrinter
-import sootup.interceptors.Aggregator
-import sootup.interceptors.CastAndReturnInliner
-import sootup.interceptors.CopyPropagator
-import sootup.interceptors.EmptySwitchEliminator
-import sootup.interceptors.LocalNameStandardizer
-import sootup.interceptors.NopEliminator
-import sootup.interceptors.TypeAssigner
-import sootup.interceptors.UnreachableCodeEliminator
+import sootup.interceptors.*
 import sootup.java.bytecode.frontend.inputlocation.JavaClassPathAnalysisInputLocation
 import sootup.java.core.views.JavaView
 import sootup.java.frontend.inputlocation.JavaSourcePathAnalysisInputLocation
