@@ -51,7 +51,10 @@ data class CpgCallArgumentByNameOrIndexPayload(
     val index: Int? = null,
 )
 
-@Serializable data class CpgApplyConceptsPayload(val assignments: List<ConceptAssignment>)
+@Serializable
+data class CpgApplyConceptsPayload(
+    @Description("List of concept assignments to perform") val assignments: List<ConceptAssignment>
+)
 
 @Serializable
 data class CpgRunPassPayload(
@@ -62,16 +65,23 @@ data class CpgRunPassPayload(
 )
 
 @Serializable
+data class KeyValuePair<K, V>(
+    @Description("The key of the key-value pair") val key: K,
+    @Description("The value of the key-value pair") val value: V,
+)
+
+@Serializable
 data class ConceptAssignment(
-    val nodeId: String,
-    /* FQN of concept or operation class */
-    val overlay: String,
-    /* "Concept" or "Operation" from LLM response */
-    val overlayType: String? = null,
-    /* NodeId of concept this operation references */
+    @Description("ID of the node to apply overlay to") val nodeId: String,
+    @Description("Fully qualified name of concept or operation class") val overlay: String,
+    @Description("Type of overlay: 'Concept' or 'Operation'") val overlayType: String? = null,
+    @Description("NodeId of the concept this operation references (only for operations)")
     val conceptNodeId: String? = null,
-    val arguments: Map<String, String>? = null,
+    @Description("Additional constructor arguments (optional)")
+    val arguments: List<KeyValuePair<String, String>>? = null,
+    @Description("Reasoning for applying this concept/operation (optional)")
     val reasoning: String? = null,
+    @Description("A description if this concept could have security implications (optional)")
     val securityImpact: String? = null,
 )
 

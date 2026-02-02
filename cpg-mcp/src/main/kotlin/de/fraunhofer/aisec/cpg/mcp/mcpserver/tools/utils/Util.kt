@@ -46,12 +46,17 @@ import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import java.util.function.BiFunction
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
+import kotlin.reflect.KTypeParameter
+import kotlin.reflect.KTypeProjection
 import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.memberProperties
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonObjectBuilder
+import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
 inline fun <reified T> Server.addTool(
@@ -97,32 +102,76 @@ inline fun <reified T> Server.addTool(
     }
 }
 
-fun KType.toSchemaType(): String {
-    return when (this.classifier) {
-        String::class -> "string"
+fun KType.toSchemaType(
+    typeProjections: Map<KTypeParameter, KTypeProjection?>? = null
+): Pair<String, (JsonObjectBuilder.() -> Unit)?> {
+    typeProjections?.get(this.classifier)?.let {
+        return it.type?.toSchemaType(typeProjections) ?: ("object" to null)
+    }
+
+    return when (val classifier = this.classifier) {
+        String::class -> "string" to null
         Int::class,
-        Long::class -> "integer"
+        Long::class -> "integer" to null
         Float::class,
-        Double::class -> "number"
-        else -> TODO()
+        Double::class -> "number" to null
+        List::class ->
+            "array" to
+                {
+                    this@toSchemaType.arguments.singleOrNull()?.type?.let { itemType ->
+                        putJsonObject("items") {
+                            val (type, modifier) = itemType.toSchemaType()
+                            put("type", type)
+                            modifier?.invoke(this)
+                        }
+                    }
+                }
+        else ->
+            "object" to
+                {
+                    (classifier as? KClass<*>)?.let { kClass ->
+                        this.put("properties", kClass.toSchemaJson(this@toSchemaType.arguments))
+                        putJsonArray("required") {
+                            kClass.memberProperties.forEach { property ->
+                                if (!property.returnType.isMarkedNullable) {
+                                    add(property.name)
+                                }
+                            }
+                        }
+                    }
+                }
+    }
+}
+
+fun KClass<*>.toSchemaJson(typeProjections: List<KTypeProjection>? = null): JsonObject {
+    // Get properties of the KClass, their types and descriptions to build the schema
+    return buildJsonObject {
+        this@toSchemaJson.memberProperties.forEach { property ->
+            val propertyName = property.name
+            val paramToProjection =
+                this@toSchemaJson.typeParameters
+                    .mapIndexed { index, p -> p to typeProjections?.get(index) }
+                    .toMap()
+            val (propertyType, modifier) = property.returnType.toSchemaType(paramToProjection)
+            val description = property.findAnnotations<Description>().firstOrNull()
+            putJsonObject(propertyName) {
+                put("type", propertyType)
+                description?.let { put("description", it.briefDescription) }
+                modifier?.invoke(this)
+            }
+        }
     }
 }
 
 fun KClass<*>.toSchema(): ToolSchema {
     val required = mutableListOf<String>()
     // Get properties of the KClass, their types and descriptions to build the schema
-    val properties = buildJsonObject {
-        this@toSchema.memberProperties.forEach { property ->
-            val propertyName = property.name
-            val propertyType = property.returnType.toSchemaType()
-            val description = property.findAnnotations<Description>().firstOrNull()
-            putJsonObject(propertyName) {
-                put("type", propertyType)
-                description?.let { put("description", it.briefDescription) }
-            }
-            if (!property.returnType.isMarkedNullable) {
-                required.add(propertyName)
-            }
+    val properties = this.toSchemaJson()
+
+    // Check which properties are nullable
+    this@toSchema.memberProperties.forEach { property ->
+        if (!property.returnType.isMarkedNullable) {
+            required.add(property.name)
         }
     }
 
