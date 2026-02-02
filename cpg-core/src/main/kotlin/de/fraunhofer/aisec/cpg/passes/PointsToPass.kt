@@ -433,11 +433,6 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 ),
             )
 
-        // Add the address-node mapping to the global Deref map
-        addresses.forEach { addr ->
-            globalDerefs.put(addr, PowersetLattice.Element(Pair(node, false)))
-        }
-
         if (node is FunctionDeclaration)
             startState = initializeParameters(lattice, node.parameters, startState)
 
@@ -2556,6 +2551,14 @@ fun PointsToState.Element.fetchValueFromDeclarationState(
 
     // For global nodes, we check the globalDerefs map
     if (isGlobal(node)) {
+        // The value of a FunctionDeclaration is the FunctionDeclaration itself
+        if (node is FunctionDeclaration) {
+            ret.add(
+                FetchElementFromDeclarationStateEntry(node, false, "", PowersetLattice.Element())
+            )
+            return ret
+        }
+
         val element = globalDerefs[node]
         if (element != null)
             element.map {
@@ -2692,11 +2695,16 @@ fun PointsToState.Element.getLastWrites(
     node: Node
 ): PowersetLattice.Element<NodeWithPropertiesKey> {
     // For pointerReferences, we take the memoryAddress of the refersTo, no matter if global or not
-    if (node is PointerReference)
-    // TODO: Handle other input types (e.g. SubscriptExpression, MemberExpression)
-    return (node.input as? Reference)?.refersTo?.memoryAddresses?.mapTo(PowersetLattice.Element()) {
-            NodeWithPropertiesKey(it, equalLinkedHashSetOf())
-        } ?: PowersetLattice.Element(NodeWithPropertiesKey(node, equalLinkedHashSetOf()))
+    if (node is PointerReference) {
+        // TODO: Handle other input types (e.g. SubscriptExpression, MemberExpression)
+        val refersTo = (node.input as? Reference)?.refersTo
+        return if (refersTo is FunctionDeclaration)
+            PowersetLattice.Element(NodeWithPropertiesKey(refersTo, equalLinkedHashSetOf()))
+        else
+            refersTo?.memoryAddresses?.mapTo(PowersetLattice.Element()) {
+                NodeWithPropertiesKey(it, equalLinkedHashSetOf())
+            } ?: PowersetLattice.Element(NodeWithPropertiesKey(node, equalLinkedHashSetOf()))
+    }
     if (isGlobal(node)) {
         return when (node) {
             is MemberExpression -> {
@@ -3055,17 +3063,19 @@ fun PointsToState.Element.getAddresses(node: Node, startNode: Node): ConcurrentI
              * For references, the address is the same as for the declaration, AKA the refersTo
              */
             node.refersTo?.let { refersTo ->
-                /* In some cases, the refersTo might not yet have an initialized MemoryAddress, for example if it's a FunctionDeclaration. So let's do this here */
-                if (refersTo.memoryAddresses.isEmpty()) {
-                    val newAddress = MemoryAddress(node.name, isGlobal(node))
-                    refersTo.memoryAddresses += newAddress
-                    // For functions, we also add the address - functionDeclaration mapping to the
-                    // globalDerefMap
-                    if (refersTo is FunctionDeclaration)
-                        globalDerefs.put(newAddress, PowersetLattice.Element(Pair(refersTo, false)))
-                }
+                /* If the refersTo is a FunctionDeclaration, its address is the FunctionDeclaration itself */
+                if (refersTo is FunctionDeclaration) {
+                    globalDerefs.put(refersTo, PowersetLattice.Element(Pair(refersTo, false)))
+                    concurrentIdentitySetOf(refersTo)
+                } else {
+                    /* In some cases, the refersTo might not yet have an initialized MemoryAddress, for example if it's a FunctionDeclaration. So let's do this here */
+                    if (refersTo.memoryAddresses.isEmpty()) {
+                        val newAddress = MemoryAddress(node.name, isGlobal(node))
+                        refersTo.memoryAddresses += newAddress
+                    }
 
-                refersTo.memoryAddresses.toConcurrentIdentitySet()
+                    refersTo.memoryAddresses.toConcurrentIdentitySet()
+                }
             } ?: concurrentIdentitySetOf()
         }
         is CastExpression -> {

@@ -39,6 +39,7 @@ import java.nio.file.Path
 import java.util.*
 import java.util.function.Consumer
 import java.util.regex.Pattern
+import kotlin.io.path.Path
 import kotlin.test.*
 
 internal class FunctionPointerTest : BaseTest() {
@@ -183,8 +184,6 @@ internal class FunctionPointerTest : BaseTest() {
         return functions[0]
     }
 
-    // TODO for merge
-    @Ignore
     @Test
     @Throws(Exception::class)
     fun testC() {
