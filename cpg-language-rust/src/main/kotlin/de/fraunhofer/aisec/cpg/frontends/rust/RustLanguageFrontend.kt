@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -107,19 +108,19 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
 
     override fun typeOf(type: RsType): Type {
         return when (type) {
-            is RsType.ArrayType -> unknownType()
-            is RsType.TupleType -> unknownType()
+            is RsType.ArrayType -> typeOf(type.v1.ty.first()).array()
+            is RsType.TupleType -> TupleType(type.v1.fields.map { t -> typeOf(t) })
             is RsType.FnPtrType -> unknownType()
-            is RsType.InferType -> unknownType()
+            is RsType.InferType -> unknownType() // Todo Auto type?
             is RsType.MacroType -> unknownType()
             is RsType.DynTraitType -> unknownType()
             is RsType.ForType -> unknownType()
             is RsType.ImplTraitType -> unknownType()
             is RsType.NeverType -> unknownType()
-            is RsType.ParenType -> unknownType()
+            is RsType.ParenType -> typeOf(type.v1.ty.first())
             is RsType.PathType -> unknownType()
-            is RsType.PtrType -> unknownType()
-            is RsType.RefType -> unknownType()
+            is RsType.PtrType -> typeOf(type.v1.ty.first()).pointer()
+            is RsType.RefType -> typeOf(type.v1.ty.first()).ref()
             is RsType.SliceType -> unknownType()
         }
     }
