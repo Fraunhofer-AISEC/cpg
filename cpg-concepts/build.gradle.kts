@@ -58,7 +58,7 @@ dependencies {
     implementation("net.sourceforge.owlapi:org.semanticweb.hermit:1.3.8.413")
 
     // roaster
-    implementation("org.jboss.forge.roaster:roaster-api:2.30.3.Final")
+    implementation("org.jboss.forge.roaster:roaster-api:2.31.0.Final")
     implementation("org.jboss.forge.roaster:roaster-jdt:2.30.3.Final")
     implementation("org.apache.jena:jena-arq:5.6.0")
     implementation(libs.reflections)
