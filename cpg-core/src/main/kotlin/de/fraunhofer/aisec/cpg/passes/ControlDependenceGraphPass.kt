@@ -196,7 +196,12 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                             }
                     }
                     .flatten()
-            finalDominators = finalDominators.minus(transitiveDominators.toSet()).toMutableList()
+            // Major hack: In both transitiveDominators and finalDominators, we have Pairs, we need
+            // to make sure that those are compared by equality
+            finalDominators =
+                finalDominators.mapNotNullTo(mutableListOf()) { dom ->
+                    if (dom in transitiveDominators) null else dom
+                }
 
             // After deleting a bunch of stuff, we have two options: 1) there are no dominators
             // left, and we assign the function declaration, or 2) there is one or multiple
