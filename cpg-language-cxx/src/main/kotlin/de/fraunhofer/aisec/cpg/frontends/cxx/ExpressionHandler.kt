@@ -607,8 +607,12 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
         val operatorCode = String(ASTStringUtil.getBinaryOperatorString(ctx))
         val assign = newAssignExpression(operatorCode, listOf(lhs), listOf(rhs), rawNode = ctx)
-        if (rhs is UnaryOperator && rhs.input is Reference) {
+        if (rhs is PointerReference && rhs.input is Reference) {
             (rhs.input as Reference).resolutionHelper = lhs
+            rhs.resolutionHelper = lhs
+        } else if (rhs is PointerDereference && rhs.input is Reference) {
+            (rhs.input as Reference).resolutionHelper = lhs
+            rhs.resolutionHelper = lhs
         }
 
         return assign

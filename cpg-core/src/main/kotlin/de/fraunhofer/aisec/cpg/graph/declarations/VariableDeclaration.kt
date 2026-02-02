@@ -72,6 +72,12 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
                 exchangeTypeObserverWithAccessPropagation(old, new)
                 if (value is Reference) {
                     value.resolutionHelper = this
+                    // If we are dealing with Pointer(De)References, we also have to set the
+                    // resolutionHelper for the input
+                    val input =
+                        ((value as? PointerReference)?.input as? Reference)
+                            ?: ((value as? PointerDereference)?.input as? Reference)
+                    input?.let { it.resolutionHelper = this }
                 }
             }
         )

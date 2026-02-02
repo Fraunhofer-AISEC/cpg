@@ -183,8 +183,7 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             // Do not consider the base for member expressions, we have to know possible values of
             // the member (e.g. field).
             val prevDFGToPush =
-                ((curr as? PointerDereference)?.input ?: curr)
-                    .prevDFGEdges
+                curr.prevDFGEdges
                     .filter { it.granularity is FullDataflowGranularity }
                     .map { it.start }
                     .toMutableList()
