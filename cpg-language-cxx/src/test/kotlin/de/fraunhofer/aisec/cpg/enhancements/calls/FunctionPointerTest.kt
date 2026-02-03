@@ -190,8 +190,6 @@ internal class FunctionPointerTest : BaseTest() {
         test("c") { it.registerLanguage<CLanguage>() }
     }
 
-    // TODO for merge
-    @Ignore
     @Test
     @Throws(Exception::class)
     fun testCPP() {

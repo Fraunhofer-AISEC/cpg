@@ -360,54 +360,60 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     suspend fun acceptInternal(node: Node) {
         var analysisTimeout = false
-        if (node !is EOGStarterHolder) {
+        if (node !is EOGStarterHolder || node.eogStarters.isEmpty()) {
             return
         }
+        if (node.eogStarters.size > 1) {
+            log.warn("Found multiple eogStarters for $node, only taking the first one")
+        }
+        val startNode = node.eogStarters.first()
 
-        if (node is FunctionDeclaration) {
+        if (startNode is FunctionDeclaration) {
             // If we haven't done so yet, set the total number of functions
             if (totalFunctionDeclarationCount == 0)
                 totalFunctionDeclarationCount =
-                    node.firstParentOrNull<TranslationResult>().functions.size
+                    startNode.firstParentOrNull<TranslationResult>()?.functions?.size ?: 0
 
             analyzedFunctionDeclarationCount++
 
             // If the node has a body and a function summary, we have visited it before and can
             // return here.
             if (
-                (node.functionSummary.isNotEmpty() && node.body != null) &&
-                    node.functionSummary.keys.any { it in node.parameters || it in node.returns }
+                (startNode.functionSummary.isNotEmpty() && startNode.body != null) &&
+                    startNode.functionSummary.keys.any {
+                        it in startNode.parameters || it in startNode.returns
+                    }
             ) {
                 log.info(
-                    "Skipping function ${node.name} because we already have a function Summary. (Function $analyzedFunctionDeclarationCount / $totalFunctionDeclarationCount)"
+                    "Skipping function ${startNode.name} because we already have a function Summary. (Function $analyzedFunctionDeclarationCount / $totalFunctionDeclarationCount)"
                 )
                 return
             }
 
-            functionSummaryAnalysisChain.add(node)
+            functionSummaryAnalysisChain.add(startNode)
             // Calculate the complexity of the function and see, if it exceeds our threshold
             val max = passConfig<Configuration>()?.maxComplexity
-            val c = node.body?.cyclomaticComplexity() ?: 0
+            val c = startNode.body?.cyclomaticComplexity() ?: 0
             if (max != null && c > max) {
                 log.info(
-                    "Ignoring function ${node.name} because its complexity (${
+                    "Ignoring function ${startNode.name} because its complexity (${
                         NumberFormat.getNumberInstance(Locale.US).format(c)
                     }) is greater than the configured maximum (${max})"
                 )
                 // Add an empty function Summary so that we don't try again
-                node.functionSummary.computeIfAbsent(ReturnStatement()) {
+                startNode.functionSummary.computeIfAbsent(ReturnStatement()) {
                     ConcurrentHashMap.newKeySet<FSEntry>()
                 }
                 return
             }
 
             log.info(
-                "Analyzing function ${node.name}. Complexity: ${
+                "Analyzing function ${startNode.name}. Complexity: ${
                     NumberFormat.getNumberInstance(Locale.US).format(c)
                 }. (Function $analyzedFunctionDeclarationCount / $totalFunctionDeclarationCount)"
             )
         } else {
-            log.info("Analyzing EOGStarterHolder ${node.name}. Complexity unknown")
+            log.info("Analyzing EOGStarterHolder ${startNode.name}. Complexity unknown")
         }
 
         val lattice =
@@ -421,11 +427,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             )
 
         var startState = lattice.bottom
-        val addresses = startState.getAddresses(node, node)
+        val addresses = startState.getAddresses(startNode, startNode)
         startState =
             lattice.pushToDeclarationsState(
                 startState,
-                node,
+                startNode,
                 DeclarationStateEntryElement(
                     PowersetLattice.Element(addresses),
                     PowersetLattice.Element(),
@@ -433,29 +439,29 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 ),
             )
 
-        if (node is FunctionDeclaration)
-            startState = initializeParameters(lattice, node.parameters, startState)
+        if (startNode is FunctionDeclaration)
+            startState = initializeParameters(lattice, startNode.parameters, startState)
 
         val finalState =
-            if (node is FunctionDeclaration && node.body == null) {
-                handleEmptyFunctionDeclaration(lattice, startState, node)
+            if (startNode is FunctionDeclaration && startNode.body == null) {
+                handleEmptyFunctionDeclaration(lattice, startState, startNode)
             } else {
                 var (result, timeout) =
                     lattice.iterateEOG(
-                        node.nextEOGEdges,
+                        startNode.nextEOGEdges,
                         startState,
                         ::transfer,
                         timeout = passConfig<Configuration>()?.timeout,
                     )
                 // If we had a timeout, treat it as an empty FunctionDeclaration but still include
                 // the results we got
-                if (timeout && node is FunctionDeclaration) {
+                if (timeout && startNode is FunctionDeclaration) {
                     analysisTimeout = true
                     result =
                         handleEmptyFunctionDeclaration(
                             lattice,
                             result as PointsToState.Element,
-                            node,
+                            startNode,
                         )
                 }
                 result as PointsToState.Element
@@ -527,17 +533,18 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         log.info("Finished drawing DFG Edges")
 
-        if (node is FunctionDeclaration) {
+        if (startNode is FunctionDeclaration) {
             /* Store function summary for this FunctionDeclaration. */
-            if (node.body != null && !analysisTimeout) storeFunctionSummary(node, finalState)
-            if (functionSummaryAnalysisChain.last() == node)
-                functionSummaryAnalysisChain.remove(node)
+            if (startNode.body != null && !analysisTimeout)
+                storeFunctionSummary(startNode, finalState)
+            if (functionSummaryAnalysisChain.last() == startNode)
+                functionSummaryAnalysisChain.remove(startNode)
             else
                 log.error(
-                    "finished analyzing $node, which is not at the end of the functionSummaryAnalysis chain, which is surprising"
+                    "finished analyzing $startNode, which is not at the end of the functionSummaryAnalysis chain, which is surprising"
                 )
         }
-        log.info("Finished with acceptInternal for ${node.name.localName}")
+        log.info("Finished with acceptInternal for ${startNode.name.localName}")
     }
 
     /**
