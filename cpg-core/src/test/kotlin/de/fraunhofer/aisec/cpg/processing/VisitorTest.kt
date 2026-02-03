@@ -25,17 +25,18 @@
  */
 package de.fraunhofer.aisec.cpg.processing
 
-import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.GraphExamples
+import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.bodyOrNull
-import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.records
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+import de.fraunhofer.aisec.cpg.test.*
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeoutException
 import kotlin.test.Test
@@ -58,11 +59,11 @@ class VisitorTest : BaseTest() {
         // Let's visit
         tu.accept(
             Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(n: Node) {
-                    visited += n
+            object : IVisitor<AstNode>() {
+                override fun visit(t: AstNode) {
+                    visited += t
                 }
-            }
+            },
         )
 
         assertEquals(listOf<Node>(tu, name, func), visited)
@@ -71,24 +72,25 @@ class VisitorTest : BaseTest() {
     /** Visits all nodes along EOG. */
     @Test
     fun testAllEogNodeVisitor() {
-        val nodeList: MutableList<Node> = ArrayList()
-        // val recordDeclaration = namespace?.getDeclarationAs(0, RecordDeclaration::class.java)
-        assertNotNull(recordDeclaration)
+        var record = recordDeclaration
+        assertNotNull(record)
 
-        val method = recordDeclaration!!.byNameOrNull<MethodDeclaration>("method")
+        val nodeList: MutableList<Node> = ArrayList()
+        val method = record.methods["method"]
         assertNotNull(method)
 
-        val firstStmt = method.bodyOrNull<Statement>()
+        // the "first" statement includes the block itself, so we need to get index 1 instead of 0
+        val firstStmt = method.bodyOrNull<de.fraunhofer.aisec.cpg.graph.statements.Statement>(0)
         assertNotNull(firstStmt)
 
         firstStmt.accept(
             Strategy::EOG_FORWARD,
             object : IVisitor<Node>() {
-                override fun visit(n: Node) {
-                    log.info("Node: $n")
-                    nodeList.add(n)
+                override fun visit(t: Node) {
+                    log.info("Node: $t")
+                    nodeList.add(t)
                 }
-            }
+            },
         )
         assertEquals(24, nodeList.size)
     }
@@ -101,12 +103,12 @@ class VisitorTest : BaseTest() {
         val nodeList = mutableListOf<Node>()
         recordDeclaration!!.accept(
             Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(n: Node) {
-                    log.info("Node: $n")
-                    nodeList.add(n)
+            object : IVisitor<AstNode>() {
+                override fun visit(t: AstNode) {
+                    log.info("Node: $t")
+                    nodeList.add(t)
                 }
-            }
+            },
         )
         // TODO: It seems to expect a FieldDeclaration for "System" but that's contrary to other
         // tests where it shouldn't exist.
@@ -122,13 +124,68 @@ class VisitorTest : BaseTest() {
 
         recordDeclaration!!.accept(
             Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
+            object : IVisitor<AstNode>() {
                 fun visit(r: ReturnStatement) {
                     returnStatements.add(r)
                 }
-            }
+            },
         )
         assertEquals(2, returnStatements.size)
+    }
+
+    @Test
+    fun testFallbackComponentLeastImported() {
+        val component1 = Component().also { it.name = Name("component1") }
+        val component2 = Component().also { it.name = Name("component2") }
+
+        val tr =
+            TranslationResult(
+                translationManager = TranslationManager.builder().build(),
+                finalCtx = TranslationContext(),
+            )
+        tr.components += component1
+        tr.components += component2
+
+        // will trigger fallback as we have no dependency information
+        val fallback = Strategy.COMPONENTS_LEAST_IMPORTS(tr).asSequence().toList()
+        assertEquals(listOf(component1, component2), fallback)
+
+        tr.componentDependencies =
+            ImportDependencies<Component>(tr.components).also {
+                it.add(component1, component2)
+                it
+            }
+
+        // will use sorted
+        val sorted = Strategy.COMPONENTS_LEAST_IMPORTS(tr).asSequence().toList()
+        assertEquals(listOf(component2, component1), sorted)
+        assertEquals(tr.componentDependencies?.sorted, sorted)
+    }
+
+    @Test
+    fun testFallbackTULeastImported() {
+        val component = Component()
+
+        val tr1 = TranslationUnitDeclaration().also { it.name = Name("tr1") }
+        val tr2 = TranslationUnitDeclaration().also { it.name = Name("tr2") }
+
+        component.translationUnits += tr1
+        component.translationUnits += tr2
+
+        // will trigger fallback as we have no dependency information
+        val fallback = Strategy.TRANSLATION_UNITS_LEAST_IMPORTS(component).asSequence().toList()
+        assertEquals(listOf(tr1, tr2), fallback)
+
+        component.translationUnitDependencies =
+            ImportDependencies<TranslationUnitDeclaration>(component.translationUnits).also {
+                it.add(tr1, tr2)
+                it
+            }
+
+        // will use sorted
+        val sorted = Strategy.TRANSLATION_UNITS_LEAST_IMPORTS(component).asSequence().toList()
+        assertEquals(listOf(tr2, tr1), sorted)
+        assertEquals(component.translationUnitDependencies?.sorted, sorted)
     }
 
     companion object {
@@ -140,7 +197,7 @@ class VisitorTest : BaseTest() {
             TranslationException::class,
             InterruptedException::class,
             ExecutionException::class,
-            TimeoutException::class
+            TimeoutException::class,
         )
         fun setup() {
             val cpg = GraphExamples.getVisitorTest()

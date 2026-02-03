@@ -29,29 +29,32 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
  * A [Pass] collecting statistics for the graph. Currently, it collects the number of nodes and the
  * number of problem nodes (i.e., nodes where the translation failed for some reason).
  */
+@Description(
+    "A pass that collects statistics (number of nodes and number of problems) about the graph."
+)
 class StatisticsCollectionPass(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
     /** Iterates the nodes of the [result] to collect statistics. */
     override fun accept(result: TranslationResult) {
         var problemNodes = 0
         var nodes = 0
-        val walker = ScopedWalker(ctx.scopeManager)
-        walker.registerHandler { _: RecordDeclaration?, _: Node?, currNode: Node? ->
+        val walker = ScopedWalker(ctx.scopeManager, Strategy::AST_FORWARD)
+        walker.registerHandler { node: Node ->
             nodes++
-            if (currNode is ProblemNode) {
+            if (node is ProblemNode) {
                 problemNodes++
             }
         }
 
-        for (tu in result.translationUnits) {
+        for (tu in result.components.flatMap { it.translationUnits }) {
             walker.iterate(tu)
         }
 

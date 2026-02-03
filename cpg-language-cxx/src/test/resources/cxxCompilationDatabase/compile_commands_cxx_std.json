@@ -1,0 +1,80 @@
+[
+  {
+    "command": "/usr/bin/gcc -c version.cpp -std=gnu++20 -o CMakeFiles/cxx20.dir/version.cpp.o",
+    "directory": "src/test/resources/cxxCompilationDatabase",
+    "file": "version.cpp",
+    "output": "src/CMakeFiles/cxx20.dir/version.cpp.o"
+  },
+  {
+    "command": "/usr/bin/gcc -c version.cpp -std=c++17 -o CMakeFiles/cxx17.dir/version.cpp.o",
+    "directory": "src/test/resources/cxxCompilationDatabase",
+    "file": "version.cpp",
+    "output": "src/CMakeFiles/cxx17.dir/version.cpp.o"
+  },
+  {
+    "command": "/usr/bin/gcc -c version.cpp -std=c++14 -o CMakeFiles/cxx14.dir/version.cpp.o",
+    "directory": "src/test/resources/cxxCompilationDatabase",
+    "file": "version.cpp",
+    "output": "src/CMakeFiles/cxx14.dir/version.cpp.o"
+  },
+  {
+    "command": "/usr/bin/gcc -c version.cpp -std=c++11 -o CMakeFiles/cxx11.dir/version.cpp.o",
+    "directory": "src/test/resources/cxxCompilationDatabase",
+    "file": "version.cpp",
+    "output": "src/CMakeFiles/cxx11.dir/version.cpp.o"
+  },
+  {
+    "command": "/usr/bin/gcc -c version.cpp -std=c++98 -o CMakeFiles/cxx98.dir/version.cpp.o",
+    "directory": "src/test/resources/cxxCompilationDatabase",
+    "file": "version.cpp",
+    "output": "src/CMakeFiles/cxx98.dir/version.cpp.o"
+  },
+  {
+    "command": "/usr/bin/gcc -c version.cpp -std=c23 -o CMakeFiles/c23.dir/version.c.o",
+    "directory": "src/test/resources/cxxCompilationDatabase",
+    "file": "version.c",
+    "output": "src/CMakeFiles/c23.dir/version.c.o"
+  },
+  {
+    "command": "/usr/bin/gcc -c version.cpp -std=c2x -o CMakeFiles/c2x.dir/version.c.o",
+    "directory": "src/test/resources/cxxCompilationDatabase",
+    "file": "version.c",
+    "output": "src/CMakeFiles/c2x.dir/version.c.o"
+  },
+  {
+    "command": "/usr/bin/gcc -c version.cpp -std=c20 -o CMakeFiles/c20.dir/version.c.o",
+    "directory": "src/test/resources/cxxCompilationDatabase",
+    "file": "version.c",
+    "output": "src/CMakeFiles/c20.dir/version.c.o"
+  },
+  {
+    "command": "/usr/bin/gcc -c version.cpp -std=c17 -o CMakeFiles/c17.dir/version.c.o",
+    "directory": "src/test/resources/cxxCompilationDatabase",
+    "file": "version.c",
+    "output": "src/CMakeFiles/c17.dir/version.c.o"
+  },
+  {
+    "command": "/usr/bin/gcc -c version.cpp -std=c14 -o CMakeFiles/c14.dir/version.c.o",
+    "directory": "src/test/resources/cxxCompilationDatabase",
+    "file": "version.c",
+    "output": "src/CMakeFiles/c14.dir/version.c.o"
+  },
+  {
+    "command": "/usr/bin/gcc -c version.cpp -std=c11 -o CMakeFiles/c11.dir/version.c.o",
+    "directory": "src/test/resources/cxxCompilationDatabase",
+    "file": "version.c",
+    "output": "src/CMakeFiles/c11.dir/version.c.o"
+  },
+  {
+    "command": "/usr/bin/gcc -c version.cpp -std=c99 -o CMakeFiles/c99.dir/version.c.o",
+    "directory": "src/test/resources/cxxCompilationDatabase",
+    "file": "version.c",
+    "output": "src/CMakeFiles/c99.dir/version.c.o"
+  },
+  {
+    "command": "/usr/bin/gcc -c version.cpp -std=c94 -o CMakeFiles/c94.dir/version.c.o",
+    "directory": "src/test/resources/cxxCompilationDatabase",
+    "file": "version.c",
+    "output": "src/CMakeFiles/c94.dir/version.c.o"
+  }
+]

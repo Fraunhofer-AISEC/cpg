@@ -30,5 +30,5 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 class IndexedIdentifierNode(
     location: PhysicalLocation,
     val identifier: IdentifierNode,
-    val indexOperators: List<IndexOperatorNode>
+    val indexOperators: List<IndexOperatorNode>,
 ) : ASTNode(location)

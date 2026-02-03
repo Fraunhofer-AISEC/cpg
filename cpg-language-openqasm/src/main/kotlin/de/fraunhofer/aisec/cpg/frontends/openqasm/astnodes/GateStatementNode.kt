@@ -31,5 +31,5 @@ class GateStatementNode(
     location: PhysicalLocation,
     val identifier: String,
     val identifierList: IdentifierListNode?,
-    val scope: ScopeNode
+    val scope: ScopeNode,
 ) : StatementNode(location)

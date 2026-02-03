@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.helpers.Util
 
@@ -44,38 +45,43 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         }
     }
 
-    private fun handleImportSpec(importSpec: GoStandardLibrary.Ast.ImportSpec): IncludeDeclaration {
-        // We set the name of the include declaration to the imported name, i.e., the package name
-        val name = importSpec.importName
-
+    private fun handleImportSpec(importSpec: GoStandardLibrary.Ast.ImportSpec): ImportDeclaration {
         // We set the filename of the include declaration to the package path, i.e., its full path
         // including any module identifiers. This way we can match the include declaration back to
         // the namespace's path and name
-        val filename = importSpec.path.value.removeSurrounding("\"")
-        val include = newIncludeDeclaration(filename, rawNode = importSpec)
-        include.name = parseName(name)
+        val filename = importSpec.path.value.removeSurrounding("\"").removeSurrounding("`")
 
-        val alias = importSpec.name?.name
-        if (alias != null && alias != name) {
-            val location = frontend.locationOf(importSpec)
+        // We set the name of the include declaration to the imported name, i.e., the package name
+        val name = parseName(importSpec.importName)
 
-            // If the name differs from the import name, we have an alias
-            // Add an alias for the package on the current file
-            location?.artifactLocation?.let {
-                frontend.scopeManager.addAlias(it, Name(name), Name(alias))
+        // Check for a possible alias
+        val alias =
+            importSpec.name?.name?.let {
+                if (it != name.localName) {
+                    parseName(it)
+                } else {
+                    null
+                }
             }
-        }
 
-        return include
+        val import =
+            newImportDeclaration(
+                import = name,
+                alias = alias,
+                style = ImportStyle.IMPORT_NAMESPACE,
+                rawNode = importSpec,
+            )
+        import.importURL = filename
+
+        return import
     }
 
     private fun handleTypeSpec(spec: GoStandardLibrary.Ast.TypeSpec): Declaration {
-        val type = spec.type
         val decl =
-            when (type) {
+            when (val type = spec.type) {
                 is GoStandardLibrary.Ast.StructType -> handleStructTypeSpec(spec, type)
                 is GoStandardLibrary.Ast.InterfaceType -> handleInterfaceTypeSpec(spec, type)
-                is GoStandardLibrary.Ast.FuncType -> handleFuncTypeSpec(spec, type)
+                is GoStandardLibrary.Ast.FuncType,
                 is GoStandardLibrary.Ast.Ident,
                 is GoStandardLibrary.Ast.SelectorExpr,
                 is GoStandardLibrary.Ast.MapType,
@@ -90,12 +96,9 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
     private fun handleStructTypeSpec(
         typeSpec: GoStandardLibrary.Ast.TypeSpec,
-        structType: GoStandardLibrary.Ast.StructType
+        structType: GoStandardLibrary.Ast.StructType,
     ): RecordDeclaration {
         val record = buildRecordDeclaration(structType, typeSpec.name.name, typeSpec)
-
-        // Make sure to register the type
-        frontend.typeManager.registerType(record.toType())
 
         return record
     }
@@ -114,8 +117,8 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 val type = frontend.typeOf(field.type)
 
                 // A field can also have no name, which means that it is embedded. In this case, it
-                // can be accessed by the local name of its type and therefore we name the field
-                // accordingly. We use the modifiers property to denote that this is an embedded
+                // can be accessed by the local name of its type, and therefore we name the field
+                // accordingly. We use the "modifiers" property to denote that this is an embedded
                 // field, so we can easily retrieve them later
                 val (fieldName, modifiers) =
                     if (field.names.isEmpty()) {
@@ -125,9 +128,9 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                         Pair(field.names[0].name, listOf())
                     }
 
-                val decl = newFieldDeclaration(fieldName, type, modifiers)
-                frontend.setCodeAndLocation(decl, field)
+                val decl = newFieldDeclaration(fieldName, type, modifiers, rawNode = field)
                 frontend.scopeManager.addDeclaration(decl)
+                record.fields += decl
             }
         }
 
@@ -138,12 +141,9 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
     private fun handleInterfaceTypeSpec(
         typeSpec: GoStandardLibrary.Ast.TypeSpec,
-        interfaceType: GoStandardLibrary.Ast.InterfaceType
+        interfaceType: GoStandardLibrary.Ast.InterfaceType,
     ): Declaration {
         val record = newRecordDeclaration(typeSpec.name.name, "interface", rawNode = typeSpec)
-
-        // Make sure to register the type
-        frontend.typeManager.registerType(record.toType())
 
         frontend.scopeManager.enterScope(record)
 
@@ -156,20 +156,20 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 // "method" actually has a name, we declare a new method
                 // declaration.
                 if (field.names.isNotEmpty()) {
-                    val method = newMethodDeclaration(field.names[0].name)
-                    frontend.setCodeAndLocation(method, field)
+                    val method = newMethodDeclaration(field.names[0].name, rawNode = field)
                     method.type = type
 
                     frontend.scopeManager.enterScope(method)
 
                     val params = (field.type as? GoStandardLibrary.Ast.FuncType)?.params
                     if (params != null) {
-                        frontend.declarationHandler.handleFuncParams(params)
+                        frontend.declarationHandler.handleFuncParams(method, params)
                     }
 
                     frontend.scopeManager.leaveScope(method)
 
                     frontend.scopeManager.addDeclaration(method)
+                    record.methods += method
                 } else {
                     log.debug("Adding {} as super class of interface {}", type.name, record.name)
                     // Otherwise, it contains either types or interfaces. For now, we
@@ -190,9 +190,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
      * Since this can potentially declare multiple variables with one "spec", this returns a
      * [DeclarationSequence].
      */
-    private fun handleValueSpec(
-        valueSpec: GoStandardLibrary.Ast.ValueSpec,
-    ): Declaration {
+    private fun handleValueSpec(valueSpec: GoStandardLibrary.Ast.ValueSpec): Declaration {
         // Increment iota value
         frontend.declCtx.iotaValue++
 
@@ -202,7 +200,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         if (lenValues == 1 && lenValues != valueSpec.names.size) {
             // We need to construct a "tuple" declaration on the left side that holds all the
             // variables
-            val tuple = TupleDeclaration()
+            val tuple = newTupleDeclaration(listOf(), null, rawNode = valueSpec)
             tuple.type = autoType()
 
             for (ident in valueSpec.names) {
@@ -227,9 +225,8 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                     tuple.initializer = frontend.expressionHandler.handle(valueSpec.values[0])
                 }
 
-                // We need to manually add the variables to the scope manager
+                // We need to manually add the variables to the AST
                 frontend.scopeManager.addDeclaration(decl)
-
                 tuple += decl
             }
             return tuple
@@ -282,7 +279,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                             Util.errorWithFileLocation(
                                 decl,
                                 log,
-                                "Const declaration is missing its initializer"
+                                "Const declaration is missing its initializer",
                             )
                         } else {
                             decl.initializer = frontend.expressionHandler.handle(initializerExpr)
@@ -304,7 +301,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
     private fun handleFuncTypeSpec(
         spec: GoStandardLibrary.Ast.TypeSpec,
-        type: GoStandardLibrary.Ast.FuncType
+        type: GoStandardLibrary.Ast.FuncType,
     ): Declaration {
         // We model function types as typedef's, so that we can resolve it later
         val funcType = frontend.typeOf(type)
@@ -317,7 +314,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
     private fun handleTypeDef(
         spec: GoStandardLibrary.Ast.TypeSpec,
-        type: GoStandardLibrary.Ast.Expr
+        type: GoStandardLibrary.Ast.Expr,
     ): Declaration {
         val targetType = frontend.typeOf(type)
 
@@ -335,16 +332,18 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
             }
             // Otherwise, we are creating a new type, which is *different*. Since Go allows to add
             // methods to these kind of types, we need to create them as a record declaration. We
-            // use the special kind "overlay" to identity such types and put the target type in the
-            // list of superclasses.
+            // use the special kind "type" to identity such records and put the target type (also
+            // called the "underlying type") in the list of superclasses.
             else -> {
-                val record = newRecordDeclaration(spec.name.name, "overlay")
+                val record = newRecordDeclaration(spec.name.name, "type")
 
                 // We add the underlying type as the single super class
                 record.superClasses = mutableListOf(targetType)
 
-                // Register the type with the type system
-                frontend.typeManager.registerType(record.toType())
+                // Make sure to add the scope to the scope manager
+                frontend.scopeManager.enterScope(record)
+                frontend.scopeManager.leaveScope(record)
+
                 record
             }
         }

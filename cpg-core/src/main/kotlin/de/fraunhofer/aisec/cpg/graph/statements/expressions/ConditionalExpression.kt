@@ -27,33 +27,44 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.commonType
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents an expression containing a ternary operator: `var x = condition ? valueIfTrue :
  * valueIfFalse`;
  */
 class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasType.TypeObserver {
-    @AST var condition: Expression = ProblemExpression("could not parse condition expression")
+    @Relationship("CONDITION")
+    var conditionEdge =
+        astEdgeOf<Expression>(ProblemExpression("could not parse condition expression"))
+    var condition by unwrapping(ConditionalExpression::conditionEdge)
 
-    @AST
-    var thenExpression: Expression? = null
-        set(value) {
-            field?.unregisterTypeObserver(this)
-            field = value
-            value?.registerTypeObserver(this)
-        }
+    @Relationship("THEN_EXPRESSION")
+    var thenExpressionEdge =
+        astOptionalEdgeOf<Expression>(
+            onChanged = { old, new ->
+                old?.end?.unregisterTypeObserver(this)
+                new?.end?.registerTypeObserver(this)
+            }
+        )
+    var thenExpression by unwrapping(ConditionalExpression::thenExpressionEdge)
 
-    @AST
-    var elseExpression: Expression? = null
-        set(value) {
-            field?.unregisterTypeObserver(this)
-            field = value
-            value?.registerTypeObserver(this)
-        }
+    @Relationship("ELSE_EXPRESSION")
+    var elseExpressionEdge =
+        astOptionalEdgeOf<Expression>(
+            onChanged = { old, new ->
+                old?.end?.unregisterTypeObserver(this)
+                new?.end?.registerTypeObserver(this)
+            }
+        )
+    var elseExpression by unwrapping(ConditionalExpression::elseExpressionEdge)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
@@ -64,16 +75,37 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
             .build()
     }
 
-    override val branchedBy: Node
+    override val branchedBy
         get() = condition
 
     override fun addArgument(expression: Expression) {
-        // Do nothing
+        if (condition is ProblemExpression) {
+            condition = expression
+        } else if (thenExpression == null) {
+            thenExpression = expression
+        } else {
+            elseExpression = expression
+        }
     }
 
     override fun replaceArgument(old: Expression, new: Expression): Boolean {
-        // Do nothing
-        return false
+        return when (old) {
+            thenExpression -> {
+                thenExpression = new
+                true
+            }
+            elseExpression -> {
+                elseExpression = new
+                true
+            }
+            else -> {
+                false
+            }
+        }
+    }
+
+    override fun hasArgument(expression: Expression): Boolean {
+        return this.thenExpression == expression || elseExpression == expression
     }
 
     override fun typeChanged(newType: Type, src: HasType) {
@@ -107,4 +139,14 @@ class ConditionalExpression : Expression(), ArgumentHolder, BranchingNode, HasTy
 
     override fun hashCode() =
         Objects.hash(super.hashCode(), condition, thenExpression, elseExpression)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return condition.getStartingPrevEOG()
+    }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return ((this.thenExpression?.getExitNextEOG() ?: setOf()) +
+                (this.elseExpression?.getExitNextEOG() ?: setOf()))
+            .ifEmpty { this.nextEOG }
+    }
 }

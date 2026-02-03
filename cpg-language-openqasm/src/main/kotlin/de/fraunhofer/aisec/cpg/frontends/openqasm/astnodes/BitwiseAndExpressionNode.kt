@@ -30,5 +30,5 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 class BitwiseAndExpressionNode(
     location: PhysicalLocation,
     val lhs: ExpressionNode,
-    val rhs: ExpressionNode
+    val rhs: ExpressionNode,
 ) : ExpressionNode(location)

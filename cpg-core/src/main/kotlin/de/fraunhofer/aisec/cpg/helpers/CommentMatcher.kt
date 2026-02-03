@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -43,24 +43,22 @@ class CommentMatcher {
      * region.
      */
     fun getEnclosingChild(
-        node: Node,
+        node: AstNode,
         location: Region,
-        artifactLocation: PhysicalLocation.ArtifactLocation?
-    ): Node {
+        artifactLocation: PhysicalLocation.ArtifactLocation?,
+    ): AstNode {
         // If there's an ArtifactLocation specified, it should at least be in the same file.
-        var children =
-            SubgraphWalker.getAstChildren(node)
+        val children =
+            node.astChildren
                 .filter {
                     artifactLocation == null || artifactLocation == it.location?.artifactLocation
                 }
-                .toMutableList()
-        // As some frontends add regional implicit namespaces we have to search amongst its children
-        // instead.
-        children.addAll(
-            children.filterIsInstance<NamespaceDeclaration>().flatMap { namespace ->
-                SubgraphWalker.getAstChildren(namespace).filter { it !in children }
-            }
-        )
+                .toMutableSet()
+
+        // When a child has no location we can not properly decide if it encloses the comment, we
+        // instead consider its children with locations.
+        expandCandidatesByLocation(children)
+
         val enclosing =
             children.firstOrNull {
                 val nodeRegion: Region = it.location?.region ?: Region()
@@ -84,30 +82,26 @@ class CommentMatcher {
         comment: String,
         location: Region,
         tu: TranslationUnitDeclaration,
-        artifactLocation: PhysicalLocation.ArtifactLocation? = null
+        artifactLocation: PhysicalLocation.ArtifactLocation? = null,
     ) {
         var enclosingNode: Node = tu
-        var smallestEnclosingNode: Node = getEnclosingChild(tu, location, artifactLocation)
+        var smallestEnclosingNode = getEnclosingChild(tu, location, artifactLocation)
         while (enclosingNode != smallestEnclosingNode) {
             enclosingNode = smallestEnclosingNode
             smallestEnclosingNode =
                 getEnclosingChild(smallestEnclosingNode, location, artifactLocation)
         }
 
-        var children =
-            SubgraphWalker.getAstChildren(smallestEnclosingNode)
+        val children =
+            smallestEnclosingNode.astChildren
                 .filter {
                     artifactLocation == null || artifactLocation == it.location?.artifactLocation
                 }
-                .toMutableList()
+                .toMutableSet()
 
-        // Because we sometimes wrap all elements into a NamespaceDeclaration we have to extract the
-        // children with a location
-        children.addAll(
-            children.filterIsInstance<NamespaceDeclaration>().flatMap { namespace ->
-                SubgraphWalker.getAstChildren(namespace).filter { it !in children }
-            }
-        )
+        // When a child has no location we can not properly consider it for comment matching,
+        // however, instead we consider its contained children that have a location.
+        expandCandidatesByLocation(children)
 
         // Searching for the closest successor to our comment amongst the children of the smallest
         // enclosing nodes
@@ -123,11 +117,11 @@ class CommentMatcher {
                 .sortedWith(
                     compareBy(
                         { it.location?.region?.startLine ?: 0 },
-                        { it.location?.region?.startColumn ?: 0 }
+                        { it.location?.region?.startColumn ?: 0 },
                     )
                 )
                 .firstOrNull()
-        val closestLine = closest?.location?.region?.startLine ?: location.endLine + 1
+        var closestLine = closest?.location?.region?.startLine ?: (location.endLine + 1)
 
         // If the closest successor is not in the same line there may be a more adequate predecessor
         // to associate the comment to (Has to be in the same line)
@@ -144,12 +138,11 @@ class CommentMatcher {
                     .sortedWith(
                         compareBy(
                             { it.location?.region?.endLine ?: 0 },
-                            { it.location?.region?.endColumn ?: 0 }
+                            { it.location?.region?.endColumn ?: 0 },
                         )
                     )
                     .lastOrNull()
-            val closestLine =
-                closestPredecessor?.location?.region?.endLine ?: location.startLine - 1
+            closestLine = closestPredecessor?.location?.region?.endLine ?: (location.startLine - 1)
             if (closestPredecessor != null && closestLine == location.startLine) {
                 closest = closestPredecessor
             }
@@ -161,5 +154,22 @@ class CommentMatcher {
         }
 
         closest.comment = (closest.comment ?: "") + comment
+    }
+
+    /**
+     * Expands the given list of candidates by exploring their children iteratively until all
+     * candidates without a location are expanded by their children with a location.
+     */
+    fun expandCandidatesByLocation(candidates: MutableSet<AstNode>) {
+        var locationLess =
+            candidates.filter { node -> node.location == null || node.location?.region == Region() }
+        while (locationLess.isNotEmpty()) {
+            val containedChildren = locationLess.flatMap { it.astChildren }
+            locationLess =
+                containedChildren
+                    .filter { node -> node.location == null || node.location?.region == Region() }
+                    .filter { it !in candidates }
+            candidates.addAll(containedChildren)
+        }
     }
 }

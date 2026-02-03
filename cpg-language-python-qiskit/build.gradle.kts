@@ -23,9 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-plugins {
-    id("cpg.frontend-conventions")
-}
+plugins { id("cpg.frontend-conventions") }
 
 dependencies {
     api(project(":cpg-language-python"))

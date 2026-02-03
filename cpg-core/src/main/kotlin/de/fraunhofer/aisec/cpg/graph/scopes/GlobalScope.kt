@@ -27,7 +27,9 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationManager
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.nodes
 
 /**
  * This should ideally only be called once. It constructs a new global scope, which is not
@@ -36,7 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
  * scope that is restricted to a translation unit, i.e. C++ while still maintaining a unique list of
  * global variables.
  */
-class GlobalScope : StructureDeclarationScope(null) {
+class GlobalScope() : Scope(null) {
 
     /**
      * Because the way we currently handle parallel parsing in [TranslationManager.parseParallel],
@@ -48,12 +50,28 @@ class GlobalScope : StructureDeclarationScope(null) {
      */
     fun mergeFrom(others: Collection<GlobalScope>) {
         for (other in others) {
-            structureDeclarations.addAll(other.structureDeclarations)
-            valueDeclarations.addAll(other.valueDeclarations)
             typedefs.putAll(other.typedefs)
+
+            // Make sure, the child scopes of the global scope point to the new global scope parent
+            // (this)
             for (child in other.children) {
                 child.parent = this
                 children.add(child)
+            }
+
+            // Merge symbols lists
+            symbols.mergeFrom(other.symbols)
+            wildcardImports.addAll(other.wildcardImports)
+
+            for (node in other.astNode?.nodes ?: listOf()) {
+                when {
+                    // If the node's scope is the global scope, we need to update it to point to
+                    // this (the new global scope)
+                    node.scope is GlobalScope -> node.scope = this
+                    // If the node is a declaration, we also need to update the declaring scope
+                    node is Declaration && node.declaringScope is GlobalScope ->
+                        node.declaringScope = this
+                }
             }
         }
 

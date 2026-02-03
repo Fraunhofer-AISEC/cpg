@@ -25,15 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.enhancements.calls
 
-import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.variables
+import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.*
 
@@ -43,8 +40,7 @@ internal class ConstructorsTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testJava() {
-        val result =
-            TestUtils.analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
+        val result = analyze("java", topLevel, true) { it.registerLanguage<JavaLanguage>() }
         val constructors = result.allChildren<ConstructorDeclaration>()
         val noArg = findByUniquePredicate(constructors) { it.parameters.isEmpty() }
         val singleArg = findByUniquePredicate(constructors) { it.parameters.size == 1 }

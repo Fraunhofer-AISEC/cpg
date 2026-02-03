@@ -30,5 +30,5 @@ import de.fraunhofer.aisec.cpg.graph.Node
 abstract class QuantumPauliGate(
     cpgNode: Node?,
     quantumCircuit: QuantumCircuit,
-    val quantumBit0: QuantumBitReference
+    val quantumBit0: QuantumBitReference,
 ) : QuantumGate(cpgNode, quantumCircuit) {}

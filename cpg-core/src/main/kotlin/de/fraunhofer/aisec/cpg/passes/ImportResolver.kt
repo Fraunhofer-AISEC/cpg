@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,149 +25,405 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
+import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
-import de.fraunhofer.aisec.cpg.passes.order.DependsOn
-import de.fraunhofer.aisec.cpg.processing.IVisitor
+import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.AstNode
+import de.fraunhofer.aisec.cpg.graph.Component
+import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.component
+import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.Import
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
+import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
+import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+import de.fraunhofer.aisec.cpg.graph.translationUnit
+import de.fraunhofer.aisec.cpg.helpers.IdentitySet
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.Util.errorWithFileLocation
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg.helpers.toIdentitySet
+import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
+import de.fraunhofer.aisec.cpg.passes.inference.tryNamespaceInference
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
-import java.util.*
-import java.util.regex.Pattern
+import java.util.IdentityHashMap
 
-@DependsOn(TypeHierarchyResolver::class)
-open class ImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
-    protected val records: MutableList<RecordDeclaration> = ArrayList()
-    protected val importables: MutableMap<String, Declaration> = HashMap()
+/**
+ * This class holds the information about import dependencies between nodes that represent some kind
+ * of "module" (usually either a [TranslationUnitDeclaration] or a [Component]). The dependency is
+ * based on which module imports symbols of another module (usually in the form of a
+ * [NamespaceDeclaration]). The idea is to provide a sorted list of modules in which to resolve
+ * symbols and imports ideally. This is stored in [sorted] and is automatically computed the fist
+ * time someone accesses the property.
+ */
+@Description(
+    "Resolves import statements in the code, linking imported entities to their definitions within the CPG."
+)
+class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T, IdentitySet<T>>() {
 
-    override fun cleanup() {
-        records.clear()
-        importables.clear()
+    init {
+        // Populate the map with all modules so that we have an entry in our list
+        // for all
+        this += modules.map { Pair(it, identitySetOf()) }
     }
 
-    override fun accept(component: Component) {
-        for (tu in component.translationUnits) {
-            findImportables(tu)
-        }
-        for (recordDecl in records) {
-            val imports = getDeclarationsForTypeNames(recordDecl.importStatements)
-            recordDecl.imports = imports
-            val staticImports = getStaticImports(recordDecl)
-            recordDecl.staticImports = staticImports
-        }
-    }
+    /**
+     * The list of [T] module nodes, sorted by their position in the dependency graph. Nodes without
+     * dependencies are first in the list, following by nodes that import nodes without
+     * dependencies, and so on.
+     */
+    val sorted: List<T> by lazy { WorkList(this).resolveDependencies() }
 
-    protected fun getStaticImports(
-        recordDeclaration: RecordDeclaration
-    ): MutableSet<ValueDeclaration> {
-        val partitioned =
-            recordDeclaration.staticImportStatements.groupBy { it.endsWith("*") }.toMutableMap()
-
-        val staticImports = mutableSetOf<ValueDeclaration>()
-        val importPattern = Pattern.compile("(?<base>.*)\\.(?<member>.*)")
-
-        for (specificStaticImport in partitioned[false] ?: listOf()) {
-            val matcher = importPattern.matcher(specificStaticImport)
-            if (!matcher.matches()) {
-                continue
-            }
-            val base = importables[matcher.group("base")]
-            var members = setOf<ValueDeclaration>()
-            if (base is RecordDeclaration) {
-                members = getOrCreateMembers(base, matcher.group("member"))
-            } else if (base is EnumDeclaration) {
-                members = getOrCreateMembers(base, matcher.group("member"))
-            }
-            staticImports.addAll(members)
+    /** Adds a dependency from [importer] to [imported]. */
+    fun add(importer: T, imported: T): Boolean {
+        if (importer === imported) {
+            return false
         }
 
-        for (asteriskImport in partitioned[true] ?: listOf()) {
-            val base = importables[asteriskImport.replace(".*", "")]
-            if (base is RecordDeclaration) {
-                val classes = listOf(base, *base.superTypeDeclarations.toTypedArray())
-                // Add all the static methods implemented in the class "base" and its superclasses
-                staticImports.addAll(
-                    classes.flatMap { it.methods }.filter(MethodDeclaration::isStatic)
-                )
-                // Add all the static fields implemented in the class "base" and its superclasses
-                staticImports.addAll(
-                    classes.flatMap { it.fields }.filter { "static" in it.modifiers }
-                )
-            } else if (base is EnumDeclaration) {
-                staticImports.addAll(base.entries)
-            }
+        val list = this.computeIfAbsent(importer) { identitySetOf<T>() }
+        return list.add(imported)
+    }
+
+    /**
+     * A work-list, which contains a local copy of our dependency map, so that we can remove items
+     * from it while determining the order.
+     */
+    class WorkList<T : Node>(start: ImportDependencies<T>) : IdentityHashMap<T, IdentitySet<T>>() {
+
+        init {
+            // Populate the work-list with a copy of the import dependency map
+            this +=
+                start.map { entry ->
+                    Pair(
+                        entry.key,
+                        // We ignore entries that point to different parents. For example, if we
+                        // analyze translation units, we are only interested in resolving
+                        // relationships within the current component (which is the AST parent of a
+                        // translation unit). The reason for that is that we are already processing
+                        // the components in the order they are necessary and then process the TUs
+                        // in the desired order within the component. We might change that in the
+                        // future, if we see a benefit to NOT group processing per component but
+                        // rather just process all TUs in the order they are necessary regardless of
+                        // their parent component.
+                        entry.value.filter { entry.key.astParent == it.astParent }.toIdentitySet(),
+                    )
+                }
         }
-        return staticImports
-    }
 
-    protected fun getDeclarationsForTypeNames(targetTypes: List<String>): MutableSet<Declaration> {
-        return targetTypes.mapNotNull { importables[it] }.toMutableSet()
-    }
+        /**
+         * Resolves the import dependencies and returns the list in which modules should be
+         * processed. The algorithm is as follows:
+         * - We loop through all modules in the map
+         * - We try to fetch the next modules without any dependencies
+         * - If there is one, we add it to the list and call [markAsDone]. This will remove the
+         *   module as dependency from the map
+         * - If there is none, we are either finished (if no modules are left) -- or we ran into a
+         *   problem
+         * - If we ran into a problem, we add all leftover modules in a nondeterministic order to
+         *   the list
+         */
+        fun resolveDependencies(): List<T> {
+            val list = mutableListOf<T>()
 
-    protected fun getOrCreateMembers(base: EnumDeclaration, name: String): Set<ValueDeclaration> {
-        return base.entries.filter { it.name.localName == name }.toSet()
-    }
-
-    protected fun getOrCreateMembers(base: RecordDeclaration, name: String): Set<ValueDeclaration> {
-        val memberMethods = base.methods.filter { it.name.localName.endsWith(name) }.toMutableSet()
-
-        // add methods from superclasses
-        memberMethods.addAll(
-            base.superTypeDeclarations
-                .flatMap { it.methods }
-                .filter { it.name.localName.endsWith(name) }
-        )
-        val memberFields = base.fields.filter { it.name.localName == name }.toMutableSet()
-        // add fields from superclasses
-        memberFields.addAll(
-            base.superTypeDeclarations.flatMap { it.fields }.filter { it.name.localName == name }
-        )
-
-        // now it gets weird: you can import a field and a number of methods that have the same
-        // name, all with a *single* static import...
-        // TODO(oxisto): Move all of the following code to the [Inference] class
-        val result = mutableSetOf<ValueDeclaration>()
-        result.addAll(memberMethods)
-        result.addAll(memberFields)
-        if (result.isEmpty()) {
-            // the target might be a field or a method, we don't know. Thus, we need to create both
-            val targetField =
-                newFieldDeclaration(
-                    name,
-                    UnknownType.getUnknownType(base.language),
-                    ArrayList(),
-                    null,
-                    false,
-                )
-            targetField.language = base.language
-            targetField.isInferred = true
-
-            val targetMethod = newMethodDeclaration(name, true, base)
-            targetMethod.language = base.language
-            targetMethod.isInferred = true
-
-            base.addField(targetField)
-            base.addMethod(targetMethod)
-            result.add(targetField)
-            result.add(targetMethod)
-        }
-        return result
-    }
-
-    protected fun findImportables(node: Node) {
-        // Using a visitor to avoid loops in the AST
-        node.accept(
-            Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
-                    if (t is RecordDeclaration) {
-                        records.add(t)
-                        importables.putIfAbsent(t.name.toString(), t)
-                    } else if (t is EnumDeclaration) {
-                        importables.putIfAbsent(t.name.toString(), t)
+            while (true) {
+                // Try to get the next module
+                var tu = nextWithoutDependencies()
+                if (tu == null) {
+                    val remaining = keys
+                    // No modules without dependencies found. If there are no modules left, this
+                    // means we are done
+                    if (remaining.isEmpty()) {
+                        break
+                    } else {
+                        // If there are still modules left, we have a problem. This might
+                        // be cyclic imports or other cases we did not think of yet. We still want
+                        // to handle all the modules, so we pick the one with the least
+                        // dependencies, hoping that this could unlock more
+                        log.warn(
+                            "We still have {} items with import dependency problems. We will just pick the one with the least dependencies",
+                            remaining.size,
+                        )
+                        tu = remaining.sortedBy { this[it]?.size }.firstOrNull()
+                        if (tu == null) {
+                            break
+                        }
                     }
                 }
+
+                // Add tu
+                list += tu
+                // Mark it as done, this will remove any dependencies to this module from the map
+                markAsDone(tu)
             }
-        )
+
+            return list
+        }
+
+        /**
+         * Retrieves the next [T] without any dependencies to others. Returns null if only modules
+         * WITH dependencies are left.
+         */
+        fun nextWithoutDependencies(): T? {
+            // Loop through all entries to find one without a dependency
+            for (entry in entries) {
+                if (entry.value.isEmpty()) {
+                    return entry.key
+                }
+            }
+
+            return null
+        }
+
+        /**
+         * Marks the processing of this [T] as done. It removes it from the map and also removes it
+         * from the dependencies of all other modules.
+         */
+        private fun markAsDone(tu: T) {
+            log.debug("Next suitable item is {}", tu.name)
+            // Remove it from the map
+            remove(tu)
+
+            // And also remove it from all lists
+            values.forEach { it.remove(tu) }
+        }
+    }
+}
+
+/**
+ * This pass looks for [ImportDeclaration] nodes and imports symbols into their respective [Scope].
+ * It does so by first building a dependency map between [TranslationUnitDeclaration] nodes, based
+ * on their [ImportDeclaration] nodes.
+ */
+class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
+
+    lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
+    lateinit var tr: TranslationResult
+
+    override fun accept(tr: TranslationResult) {
+        this.tr = tr
+
+        // Create a new import dependency object for the result, to make sure that all components
+        // are included.
+        tr.componentDependencies = ImportDependencies(tr.components)
+
+        // In order to resolve imports as good as possible, we need the information which namespace
+        // does an import on which other
+        walker = SubgraphWalker.ScopedWalker(scopeManager, Strategy::AST_FORWARD)
+        walker.registerHandler { node ->
+            if (node is Component) {
+                // Create a new import dependency object for the component, to make sure that all
+                // TUs are included.
+                node.translationUnitDependencies = ImportDependencies(node.translationUnits)
+            } else if (node is ImportDeclaration) {
+                collectImportDependencies(node)
+            }
+        }
+        walker.iterate(tr)
+
+        // Now we need to iterate through all modules
+        walker.clearCallbacks()
+        walker.registerHandler { node ->
+            if (node is ImportDeclaration) {
+                handleImportDeclaration(node)
+            }
+        }
+
+        for (tu in
+            (Strategy::COMPONENTS_LEAST_IMPORTS)(tr).asSequence().flatMap {
+                (Strategy::TRANSLATION_UNITS_LEAST_IMPORTS)(it).asSequence()
+            }) {
+            log.debug("Resolving imports for translation unit {}", tu.name)
+            walker.iterate(tu)
+        }
+    }
+
+    /**
+     * This callback collects dependencies between [TranslationUnitDeclaration] nodes based on a
+     * [ImportDeclaration].
+     */
+    private fun collectImportDependencies(import: ImportDeclaration) {
+        val currentComponent = import.component
+        if (currentComponent == null) {
+            errorWithFileLocation(import, log, "Cannot determine component of import node")
+            return
+        }
+
+        // Populate the imported scopes edges
+        import.populateImportedScopes()
+
+        // Let's look for imported namespaces
+        // First, we collect the individual parts of the name
+        val parts = mutableListOf<Name>()
+        var name: Name? = import.import
+        while (name != null) {
+            parts += name
+            name = name.parent
+        }
+
+        // We collect a list of all declarations for all parts of the name, beginning with the
+        // "largest" part and filter, whether they belong to a namespace declaration. Once we have
+        // found something, we need to abort in order to only import the most specific namespace.
+        //
+        // For example, in the Python snippet `from backend.app import db`, we first need to look
+        // whether `backend.app.db` is a namespace, if not, we look at `backend.app` and lastly at
+        // `backend`. We do this in order to make the dependency as fine-grained as possible.
+        for (part in parts) {
+            val namespaces =
+                scopeManager.lookupSymbolByName(
+                    part,
+                    import.language,
+                    import.location,
+                    import.scope,
+                ) {
+                    // We are only interested in "leaf" namespace declarations, meaning that they do
+                    // not have sub-declarations. The reason for that is that we usually need to
+                    // nest namespace declarations, and thus a "parent" namespace declaration often
+                    // exists in more than one file. We only want to depend on the particular
+                    // translation unit that is the authoritative source of this namespace and this
+                    // is the case if there is no sub-declaration.
+                    //
+                    // Note: One might be inclined to use the "namespaces" extensions to filter for
+                    // leaf namespaces. However, this can be extremely slow because it first gathers
+                    // all children and then filters them. Instead, we can directly filter for the
+                    // child declarations.
+                    it is NamespaceDeclaration &&
+                        !it.isInferred &&
+                        it.declarations.filterIsInstance<NamespaceDeclaration>().isEmpty()
+                }
+
+            // We are only interested in "leaf" namespace declarations, meaning that they do not
+            // have sub-declarations. The reason for that is that we usually need to nest namespace
+            // declarations, and thus a "parent" namespace declaration often exists in more than one
+            // file. We only want to depend on the particular translation unit that is the
+            // authoritative source of this namespace and this is the case if there is no
+            // sub-declaration.
+
+            // Next, we loop through all namespaces in order to "connect" them to our current module
+            for (declaration in namespaces) {
+                // Retrieve the module of the declarations
+                val namespaceTu = declaration.translationUnit
+                val namespaceComponent = declaration.component
+                val importTu = import.translationUnit
+                // Skip, if we cannot find the module or if they belong to the same module (we do
+                // not want self-references)
+                if (
+                    namespaceTu == null ||
+                        namespaceComponent == null ||
+                        importTu == null ||
+                        namespaceTu == importTu
+                ) {
+                    continue
+                }
+
+                // Lastly, store the namespace module as an import dependency of the module where
+                // the import was
+                var added =
+                    currentComponent.translationUnitDependencies?.add(importTu, namespaceTu) == true
+                if (added) {
+                    log.debug("Added {} as an dependency of {}", namespaceTu.name, importTu.name)
+                }
+
+                // Add it on translation result level as well
+                added = tr.componentDependencies?.add(currentComponent, namespaceComponent) == true
+                if (added) {
+                    log.debug(
+                        "Added {} as an dependency of {}",
+                        namespaceComponent.name,
+                        currentComponent.name,
+                    )
+                }
+            }
+
+            // If we had any imported namespaces, we break here
+            if (namespaces.isNotEmpty()) {
+                break
+            }
+        }
+    }
+
+    private fun handleImportDeclaration(import: ImportDeclaration) {
+        ctx.scopeManager.updateImportedSymbols(import)
+    }
+
+    /**
+     * This function populates the [Scope.importedScopes] property of the [Scope] that the
+     * [ImportDeclaration] "lives" in.
+     */
+    private fun ImportDeclaration.populateImportedScopes() {
+        val startScope = scope
+        val name =
+            when (style) {
+                ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE -> {
+                    import.parent
+                }
+
+                ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+                ImportStyle.IMPORT_NAMESPACE -> {
+                    import
+                }
+            }
+        if (name == null) {
+            errorWithFileLocation(this, log, "Could not get namespace name from import declaration")
+            return
+        } else if (startScope == null) {
+            errorWithFileLocation(this, log, "Could not get scope from import declaration")
+            return
+        }
+
+        // Try to look up the namespace scope by the name
+        var targetScope = scopeManager.lookupScope(name) as? NamespaceScope
+        if (targetScope == null) {
+            // Try to infer it, if inference is configured
+            val decl = tryNamespaceInference(name, this)
+            if (decl != null) {
+                targetScope = scopeManager.lookupScope(name) as? NamespaceScope
+            }
+        }
+
+        // If we have a target scope, we can create an "import" edge
+        if (targetScope != null) {
+            // Create a new import edge with all the necessary information
+            val edge = Import(startScope, targetScope, this)
+            startScope.importedScopeEdges += edge
+        }
+    }
+
+    override fun cleanup() {
+        // Nothing to do
+    }
+}
+
+/**
+ * This function updates the [ImportDeclaration.importedSymbols]. This is done once at the beginning
+ * by the [ImportResolver]. However, we need to update this list once we infer new symbols in
+ * namespaces that are imported at a later stage (e.g., in the [TypeResolver]), otherwise they won't
+ * be visible to the later passes.
+ */
+fun ScopeManager.updateImportedSymbols(import: ImportDeclaration) {
+    // We always need to search at the global scope because we are "importing" something, so by
+    // definition, this is not in the scope of the current file.
+    val scope = globalScope
+
+    // Let's do some importing. We need to import either a wildcard
+    if (import.style == ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE) {
+        val list = lookupSymbolByName(import.import, import.language, import.location, scope)
+        val symbol = list.singleOrNull()
+        if (symbol != null) {
+            // In this case, the symbol must point to a name scope
+            val symbolScope = lookupScope(symbol)
+            if (symbolScope is NameScope) {
+                import.importedSymbols = symbolScope.symbols
+            }
+        }
+    } else {
+        // or a symbol directly
+        val list =
+            lookupSymbolByName(import.import, import.language, import.location, scope)
+                .toMutableList()
+        import.importedSymbols = mutableMapOf(import.symbol to list)
     }
 }

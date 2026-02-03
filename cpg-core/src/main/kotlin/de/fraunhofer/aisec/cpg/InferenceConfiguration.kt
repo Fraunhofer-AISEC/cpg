@@ -34,32 +34,75 @@ import org.apache.commons.lang3.builder.ToStringStyle
  */
 class InferenceConfiguration
 private constructor(
-    /** Enables smart guessing of cast vs. call expressions in the C/C++ language frontend */
-    val guessCastExpressions: Boolean,
+    /** Enables or disables the inference system as a whole. */
+    val enabled: Boolean,
 
-    /** Enables the inference of record declarations */
+    /** Enables the inference of namespace declarations. */
+    val inferNamespaces: Boolean,
+
+    /** Enables the inference of record declarations. */
     val inferRecords: Boolean,
+
+    /** Enables the inference of function declarations. */
+    val inferFunctions: Boolean,
+
+    /** Enables the inference of field declarations. */
+    val inferFields: Boolean,
+
+    /** Enables the inference of variables, such as global variables. */
+    val inferVariables: Boolean,
+
+    /**
+     * A very EXPERIMENTAL feature. If this is enabled, we will try to infer return types of
+     * functions based on the context of the call it originated out of. This is disabled by default.
+     */
+    val inferReturnTypes: Boolean,
+
     /**
      * Uses heuristics to add DFG edges for call expressions to unresolved functions (i.e.,
      * functions not implemented in the given source code).
      */
-    val inferDfgForUnresolvedSymbols: Boolean
+    val inferDfgForUnresolvedSymbols: Boolean,
 ) {
     class Builder(
-        var guessCastExpressions: Boolean = false,
-        var inferRecords: Boolean = false,
-        var inferDfgForUnresolvedCalls: Boolean = true
+        private var enabled: Boolean = true,
+        private var inferNamespaces: Boolean = true,
+        private var inferRecords: Boolean = true,
+        private var inferFields: Boolean = true,
+        private var inferFunctions: Boolean = true,
+        private var inferVariables: Boolean = true,
+        private var inferReturnTypes: Boolean = false,
+        private var inferDfgForUnresolvedCalls: Boolean = true,
     ) {
-        fun guessCastExpressions(guess: Boolean) = apply { this.guessCastExpressions = guess }
+        fun enabled(infer: Boolean) = apply { this.enabled = infer }
+
+        fun inferNamespaces(infer: Boolean) = apply { this.inferNamespaces = infer }
 
         fun inferRecords(infer: Boolean) = apply { this.inferRecords = infer }
+
+        fun inferFunctions(infer: Boolean) = apply { this.inferFunctions = infer }
+
+        fun inferFields(infer: Boolean) = apply { this.inferFields = infer }
+
+        fun inferVariables(infer: Boolean) = apply { this.inferVariables = infer }
+
+        fun inferReturnTypes(infer: Boolean) = apply { this.inferReturnTypes = infer }
 
         fun inferDfgForUnresolvedCalls(infer: Boolean) = apply {
             this.inferDfgForUnresolvedCalls = infer
         }
 
         fun build() =
-            InferenceConfiguration(guessCastExpressions, inferRecords, inferDfgForUnresolvedCalls)
+            InferenceConfiguration(
+                enabled,
+                inferNamespaces,
+                inferRecords,
+                inferFunctions,
+                inferFields,
+                inferVariables,
+                inferReturnTypes,
+                inferDfgForUnresolvedCalls,
+            )
     }
 
     companion object {
@@ -71,7 +114,6 @@ private constructor(
 
     override fun toString(): String {
         return ToStringBuilder(this, ToStringStyle.JSON_STYLE)
-            .append("guessCastExpressions", guessCastExpressions)
             .append("inferRecords", inferRecords)
             .append("inferDfgForUnresolvedCalls", inferDfgForUnresolvedSymbols)
             .toString()

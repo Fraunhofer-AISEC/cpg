@@ -25,4 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-class EmptyStatement : Statement()
+@Suppress("EqualsOrHashCode")
+class EmptyStatement : Statement() {
+    override fun equals(other: Any?): Boolean {
+        return other is EmptyStatement && super.equals(other)
+    }
+}

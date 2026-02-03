@@ -71,7 +71,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             if (assignStmt.tok == 47) {
                 ":="
             } else {
-                ""
+                "="
             }
 
         return newAssignExpression(operatorCode, lhs, rhs, rawNode = assignStmt)
@@ -164,7 +164,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         block?.let { frontend.scopeManager.enterScope(it) }
 
         // TODO(oxisto): This variable is not yet resolvable
-        if (isTypeSwitch && typeSwitchRhs != null && typeSwitchLhs != null) {
+        if (isTypeSwitch && typeSwitchLhs != null) {
             val stmt = newDeclarationStatement()
             stmt.isImplicit = true
 
@@ -190,8 +190,8 @@ class StatementHandler(frontend: GoLanguageFrontend) :
 
             // Add the variable to the declaration statement as well as to the current scope (aka
             // our block wrapper)
-            stmt.addToPropertyEdgeDeclaration(decl)
             frontend.scopeManager.addDeclaration(decl)
+            stmt.declarations += decl
 
             if (block != null) {
                 block += stmt
@@ -221,15 +221,15 @@ class StatementHandler(frontend: GoLanguageFrontend) :
         // Let's create a variable declaration (wrapped with a declaration stmt) with
         // this, because we define the variable here
         val stmt = newDeclarationStatement(rawNode = declStmt)
-        val sequence = frontend.declarationHandler.handle(declStmt.decl)
-        if (sequence is DeclarationSequence) {
-            for (declaration in sequence.declarations) {
+        val declaration = frontend.declarationHandler.handle(declStmt.decl)
+        if (declaration is DeclarationSequence) {
+            for (declaration in declaration.declarations) {
                 frontend.scopeManager.addDeclaration(declaration)
             }
-            stmt.declarations = sequence.asList()
-        } else {
-            frontend.scopeManager.addDeclaration(sequence)
-            stmt.singleDeclaration = sequence
+            stmt.declarations = declaration.asMutableList()
+        } else if (declaration != null) {
+            frontend.scopeManager.addDeclaration(declaration)
+            stmt.singleDeclaration = declaration
         }
 
         return stmt
@@ -281,7 +281,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
                 incDecStmt.tokString,
                 postfix = true,
                 prefix = false,
-                rawNode = incDecStmt
+                rawNode = incDecStmt,
             )
         op.input = frontend.expressionHandler.handle(incDecStmt.x)
 
@@ -327,9 +327,9 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             rangeStmt.key?.let {
                 val ref = frontend.expressionHandler.handle(it)
                 if (ref is Reference) {
-                    val key = newVariableDeclaration(ref.name).codeAndLocationFrom(frontend, it)
+                    val key = newVariableDeclaration(ref.name, rawNode = it)
                     frontend.scopeManager.addDeclaration(key)
-                    stmt.addToPropertyEdgeDeclaration(key)
+                    stmt.declarationEdges += key
                 }
             }
 
@@ -337,9 +337,9 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             rangeStmt.value?.let {
                 val ref = frontend.expressionHandler.handle(it)
                 if (ref is Reference) {
-                    val key = newVariableDeclaration(ref.name).codeAndLocationFrom(frontend, it)
+                    val key = newVariableDeclaration(ref.name, rawNode = it)
                     frontend.scopeManager.addDeclaration(key)
-                    stmt.addToPropertyEdgeDeclaration(key)
+                    stmt.declarationEdges += key
                 }
             }
 

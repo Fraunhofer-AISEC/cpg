@@ -25,30 +25,32 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.allChildren
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
 
-/** Represents a conditional loop statement of the form: `do{...}while(...)`. */
-class DoStatement : Statement(), ArgumentHolder {
+/**
+ * Represents a conditional loop statement of the form: `do{...}while(...)`. Where the body, usually
+ * a [Block], is executed and re-executed if the [condition] evaluates to true.
+ */
+class DoStatement : LoopStatement(), ArgumentHolder {
+    @Relationship("CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
     /**
      * The loop condition that is evaluated after the loop statement and may trigger reevaluation.
      */
-    @AST var condition: Expression? = null
-
-    /**
-     * The statement that is going to be executed and re-executed, until the condition evaluates to
-     * false for the first time. Usually a [Block].
-     */
-    @AST var statement: Statement? = null
+    var condition by unwrapping(DoStatement::conditionEdge)
 
     override fun toString() =
         ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
             .append("condition", condition)
-            .append("statement", statement)
             .toString()
 
     override fun addArgument(expression: Expression) {
@@ -63,11 +65,25 @@ class DoStatement : Statement(), ArgumentHolder {
         return false
     }
 
+    override fun hasArgument(expression: Expression): Boolean {
+        return condition == expression
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is DoStatement) return false
-        return super.equals(other) && condition == other.condition && statement == other.statement
+        return super.equals(other) && condition == other.condition
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), condition, statement)
+    override fun hashCode() = Objects.hash(super.hashCode(), condition)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return statement?.getStartingPrevEOG()?.filter { it != this }
+            ?: condition?.getStartingPrevEOG()
+            ?: this.prevEOG
+    }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return this.nextEOG.filter { it !in statement.allChildren<Node> { true } }
+    }
 }

@@ -49,7 +49,7 @@ class PythonQiskitTestPass : BaseTest() {
             TestUtils.analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("intro_tutorial_1.py").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<PythonLanguage>()
                 it.registerPass<QuantumEOGPass>()
@@ -66,7 +66,7 @@ class PythonQiskitTestPass : BaseTest() {
             TestUtils.analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("if.py").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerPass<EdgeCachePass>()
                 it.registerLanguage<PythonLanguage>()

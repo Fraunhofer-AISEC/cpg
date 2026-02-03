@@ -35,40 +35,30 @@ import org.neo4j.ogm.annotation.Relationship
  * is no such pointer concept.
  */
 class PointerType : Type, SecondOrderType {
-    @Relationship(value = "ELEMENT_TYPE") override lateinit var elementType: Type
+    @Relationship(value = "ELEMENT_TYPE") override var elementType: Type
 
     enum class PointerOrigin {
         POINTER,
-        ARRAY
+        ARRAY,
     }
 
     var pointerOrigin: PointerOrigin? = null
         private set
 
-    constructor() : super()
-
-    constructor(elementType: Type, pointerOrigin: PointerOrigin?) : super() {
-        language = elementType.language
-        name =
-            if (pointerOrigin == PointerOrigin.ARRAY) {
-                elementType.name.append("[]")
-            } else {
-                elementType.name.append("*")
-            }
+    constructor(
+        elementType: Type,
+        pointerOrigin: PointerOrigin?,
+    ) : super(
+        if (pointerOrigin == PointerOrigin.ARRAY) {
+            elementType.name.append("[]")
+        } else {
+            elementType.name.append("*")
+        },
+        elementType.language,
+    ) {
         this.pointerOrigin = pointerOrigin
         this.elementType = elementType
-    }
-
-    constructor(type: Type?, elementType: Type, pointerOrigin: PointerOrigin?) : super(type) {
-        language = elementType.language
-        name =
-            if (pointerOrigin == PointerOrigin.ARRAY) {
-                elementType.name.append("[]")
-            } else {
-                elementType.name.append("*")
-            }
-        this.pointerOrigin = pointerOrigin
-        this.elementType = elementType
+        this.elementType.secondOrderTypes += this
     }
 
     /**
@@ -105,26 +95,6 @@ class PointerType : Type, SecondOrderType {
 
     val isArray: Boolean
         get() = pointerOrigin == PointerOrigin.ARRAY
-
-    override fun isSimilar(t: Type?): Boolean {
-        if (t !is PointerType) {
-            return false
-        }
-        return (referenceDepth == t.referenceDepth &&
-            elementType.isSimilar(t.root) &&
-            super.isSimilar(t))
-    }
-
-    override val referenceDepth: Int
-        get() {
-            var depth = 1
-            var containedType = elementType
-            while (containedType is PointerType) {
-                depth++
-                containedType = containedType.elementType
-            }
-            return depth
-        }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

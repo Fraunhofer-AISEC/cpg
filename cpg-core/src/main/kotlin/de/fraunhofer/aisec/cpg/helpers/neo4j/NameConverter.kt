@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.helpers.neo4j
 
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.parseName
-import org.neo4j.ogm.typeconversion.CompositeAttributeConverter
 
 /**
  * This converter can be used in a Neo4J session to persist the [Name] class into its components:
@@ -37,7 +36,7 @@ import org.neo4j.ogm.typeconversion.CompositeAttributeConverter
  *
  * Additionally, it converts the aforementioned Neo4J attributes in a node back into a [Name].
  */
-class NameConverter : CompositeAttributeConverter<Name?> {
+class NameConverter : CpgCompositeConverter<Name?> {
 
     companion object {
         const val FIELD_FULL_NAME = "fullName"
@@ -61,13 +60,21 @@ class NameConverter : CompositeAttributeConverter<Name?> {
 
             // For reasons such as backwards compatibility and the fact that Neo4J likes to display
             // nodes in the UI with a "name" field as default, we also persist the full name (aka
-            // the
-            // toString() representation) as "name"
+            // the toString() representation) as "name"
             map[FIELD_NAME] = value.toString()
         }
 
         return map
     }
+
+    override val graphSchema: List<Pair<String, String>>
+        get() =
+            listOf(
+                Pair("String", FIELD_FULL_NAME),
+                Pair("String", FIELD_LOCAL_NAME),
+                Pair("String", FIELD_NAME),
+                Pair("String", FIELD_NAME_DELIMITER),
+            )
 
     override fun toEntityAttribute(value: MutableMap<String, *>): Name {
         return parseName(value[FIELD_FULL_NAME].toString(), value[FIELD_NAME_DELIMITER].toString())

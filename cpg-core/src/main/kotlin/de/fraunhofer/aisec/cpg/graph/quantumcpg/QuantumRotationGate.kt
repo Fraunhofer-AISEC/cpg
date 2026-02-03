@@ -33,14 +33,14 @@ abstract class QuantumRotationGate(
     quantumCircuit: QuantumCircuit,
     val axis: Axis,
     val theta: Node,
-    val quantumBit: QuantumBitReference
+    val quantumBit: QuantumBitReference,
 ) : QuantumGate(cpgNode, quantumCircuit)
 
 class QuantumRotationXGate(
     cpgNode: Node?,
     quantumCircuit: QuantumCircuit,
     theta: Node,
-    quantumBit: QuantumBitReference
+    quantumBit: QuantumBitReference,
 ) : QuantumRotationGate(cpgNode, quantumCircuit, Axis.X, theta, quantumBit) {
     override val fidelity: Float
         get() = TODO("Not yet implemented")
@@ -50,7 +50,7 @@ class QuantumRotationYGate(
     cpgNode: Node?,
     quantumCircuit: QuantumCircuit,
     theta: Node,
-    quantumBit: QuantumBitReference
+    quantumBit: QuantumBitReference,
 ) : QuantumRotationGate(cpgNode, quantumCircuit, Axis.Y, theta, quantumBit) {
     override val fidelity: Float
         get() = TODO("Not yet implemented")
@@ -60,7 +60,7 @@ class QuantumRotationZGate(
     cpgNode: Node?,
     quantumCircuit: QuantumCircuit,
     theta: Node,
-    quantumBit: QuantumBitReference
+    quantumBit: QuantumBitReference,
 ) : QuantumRotationGate(cpgNode, quantumCircuit, Axis.Z, theta, quantumBit) {
     override val fidelity: Float
         get() = TODO("Not yet implemented")
@@ -72,5 +72,5 @@ enum class Axis {
     /** The Y-axis */
     Y,
     /** The Z-axis */
-    Z
+    Z,
 }

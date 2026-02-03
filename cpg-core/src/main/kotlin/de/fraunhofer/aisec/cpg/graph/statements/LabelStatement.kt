@@ -25,19 +25,26 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
 
 /**
  * A label attached to a statement that is used to change control flow by labeled continue and
  * breaks (Java) or goto(C++).
  */
 class LabelStatement : Statement(), StatementHolder {
+    @Relationship(value = "SUB_STATEMENT") var subStatementEdge = astOptionalEdgeOf<Statement>()
+
     /** Statement that the label is attached to. Can be a simple or compound statement. */
-    @AST var subStatement: Statement? = null
+    var subStatement by unwrapping(LabelStatement::subStatementEdge)
 
     /** Label in the form of a String */
     var label: String? = null
@@ -50,11 +57,19 @@ class LabelStatement : Statement(), StatementHolder {
             .toString()
     }
 
-    override var statementEdges: MutableList<PropertyEdge<Statement>>
-        get() = subStatement?.let { PropertyEdge.wrap(listOf(it), this) } ?: mutableListOf()
-        set(value) {
-            subStatement = PropertyEdge.unwrap(value).firstOrNull()
+    override var statementEdges: AstEdges<Statement, AstEdge<Statement>>
+        get() {
+            var list = astEdgesOf<Statement>()
+            subStatement?.let { list.resetTo(listOf(it)) }
+            return list
         }
+        set(value) {
+            subStatement = value.toNodeCollection().firstOrNull()
+        }
+
+    override var statements: MutableList<Statement>
+        get() = unwrapping(LabelStatement::statementEdges)
+        set(value) {}
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -63,4 +78,12 @@ class LabelStatement : Statement(), StatementHolder {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), label)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.subStatement?.getStartingPrevEOG() ?: this.prevEOG
+    }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return this.subStatement?.getExitNextEOG() ?: this.nextEOG
+    }
 }

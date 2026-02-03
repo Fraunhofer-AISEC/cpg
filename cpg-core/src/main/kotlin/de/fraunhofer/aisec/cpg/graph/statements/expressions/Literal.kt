@@ -25,8 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import java.math.BigInteger
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.typeconversion.Convert
+import org.neo4j.ogm.typeconversion.AttributeConverter
 
 /**
  * Represents a literal value, meaning the value is fixed and not depending on the runtime
@@ -35,7 +38,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * @param <T> the literal type. </T>
  */
 class Literal<T> : Expression() {
-    var value: T? = null
+    @Convert(ValueConverter::class) var value: T? = null
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
@@ -53,4 +56,25 @@ class Literal<T> : Expression() {
     // include the value in the hash code, otherwise the hash set/map implementation falls back
     // to equals() because the node's hash code only depends on the name
     override fun hashCode() = Objects.hash(super.hashCode(), value)
+}
+
+class ValueConverter : AttributeConverter<Any?, Any?> {
+    override fun toGraphProperty(value: Any?): Any? {
+        // Neo4J only supports a limited set of primitive values natively, everything else, we need
+        // to convert to a string.
+        return when (value) {
+            null -> null
+            (value is Number && value !is BigInteger) -> value
+            is Boolean -> value
+            is String -> value
+            else -> value.toString()
+        }
+    }
+
+    override fun toEntityAttribute(value: Any?): Any? {
+        // Note: this will most likely produce false results when we try to load back a BigInteger.
+        // But loading the graph from a Neo4J database is not really supported because a lot of
+        // things, such as scopes are not populated correctly.
+        return value
+    }
 }

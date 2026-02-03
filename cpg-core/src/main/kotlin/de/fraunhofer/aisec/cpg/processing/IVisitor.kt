@@ -33,7 +33,7 @@ import java.lang.reflect.InvocationTargetException
  *
  * @param <V> V must implement `IVisitable`. </V>
  */
-abstract class IVisitor<V : IVisitable<V>> {
+abstract class IVisitor<V : IVisitable> {
     @JvmField val visited = IdentitySet<V>()
 
     open fun visit(t: V) {
@@ -43,6 +43,10 @@ abstract class IVisitor<V : IVisitable<V>> {
             mostSpecificVisit.invoke(this, t)
         } catch (e: NoSuchMethodException) {
             // Nothing to do here
-        } catch (e: InvocationTargetException) {} catch (e: IllegalAccessException) {}
+        } catch (e: InvocationTargetException) {
+            // Nothing to do here
+        } catch (e: IllegalAccessException) {
+            // Nothing to do here
+        }
     }
 }

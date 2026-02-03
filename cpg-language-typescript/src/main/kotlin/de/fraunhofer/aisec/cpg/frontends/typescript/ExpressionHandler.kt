@@ -62,8 +62,10 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handleJsxAttribute(node: TypeScriptNode): KeyValueExpression {
-        val key = node.children?.first()?.let { this.handle(it) }
-        val value = node.children?.last()?.let { this.handle(it) }
+        val key =
+            node.children?.first()?.let { this.handle(it) } ?: newProblemExpression("missing key")
+        val value =
+            node.children?.last()?.let { this.handle(it) } ?: newProblemExpression("missing value")
 
         return newKeyValueExpression(key, value, rawNode = node)
     }
@@ -93,8 +95,11 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
 
         // and a container named JsxAttributes, with JsxAttribute nodes
         tag.expressions =
-            node.firstChild("JsxAttributes")?.children?.mapNotNull { this.handle(it) }
-                ?: emptyList()
+            node
+                .firstChild("JsxAttributes")
+                ?.children
+                ?.mapNotNull { this.handle(it) }
+                ?.toMutableList() ?: mutableListOf()
 
         return tag
     }
@@ -102,7 +107,8 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     private fun handeJsxElement(node: TypeScriptNode): ExpressionList {
         val jsx = newExpressionList(rawNode = node)
 
-        jsx.expressions = node.children?.mapNotNull { this.handle(it) } ?: emptyList()
+        jsx.expressions =
+            node.children?.mapNotNull { this.handle(it) }?.toMutableList() ?: mutableListOf()
 
         return jsx
     }
@@ -136,8 +142,10 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     }
 
     private fun handlePropertyAssignment(node: TypeScriptNode): KeyValueExpression {
-        val key = node.children?.first()?.let { this.handle(it) }
-        val value = node.children?.last()?.let { this.handle(it) }
+        val key =
+            node.children?.first()?.let { this.handle(it) } ?: newProblemExpression("missing key")
+        val value =
+            node.children?.last()?.let { this.handle(it) } ?: newProblemExpression("missing value")
 
         return newKeyValueExpression(key, value, rawNode = node)
     }
@@ -145,7 +153,8 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleObjectLiteralExpression(node: TypeScriptNode): InitializerListExpression {
         val ile = newInitializerListExpression(unknownType(), rawNode = node)
 
-        ile.initializers = node.children?.mapNotNull { this.handle(it) } ?: emptyList()
+        ile.initializers =
+            node.children?.mapNotNull { this.handle(it) }?.toMutableList() ?: mutableListOf()
 
         return ile
     }
@@ -160,8 +169,7 @@ class ExpressionHandler(lang: TypeScriptLanguageFrontend) :
                 ?.trim()
                 ?.replace("\"", "")
                 ?.replace("`", "")
-                ?.replace("'", "")
-                ?: ""
+                ?.replace("'", "") ?: ""
 
         return newLiteral(value, primitiveType("string"), rawNode = node)
     }

@@ -29,6 +29,8 @@ extend the class `Pass` and implement its base function`accept(result: Translati
 The remaining structure of the pass is free to be designed by the
 implementer.
 
+Each pass should have a short description of its purpose in the annotation `@Description`.
+
 ## Registering a Pass
 
 A newly created pass has to be registered with the `TranslationManager` through
@@ -47,9 +49,9 @@ constructs have to be respected.
 
 For example, the `EvaluationOrderGraphPass` uses an internal handle structure.
 When extending this pass, it is necessary to add handlers of new Node types to
-the internal handler map. If a developer needs to override an exisiting handler,
+the internal handler map. If a developer needs to override an existing handler,
 the handle has to be implemented with the same signature to use the polymorphism
-feature. Additionally the mapping of `node type -> handler` needs to be replaced
+feature. Additionally, the mapping of `node type -> handler` needs to be replaced
 by a new entry `node type -> overridden` handler.
 
 ## Ordering Passes
@@ -66,4 +68,6 @@ following annotations for the passes:
 * `ExecuteLast` -- The annotated pass is executed as the last pass if possible.
 * `RequiredFrontend(frontend: KClass<out LanguageFrontend>)` -- The annotated pass
    is only executed if the frontend has been used.
-
+* `RequiresLanguageTrait(trait: KClass<out LanguageTrait>)` -- The annotated pass
+  is only executed if the `language` of the `TranslationUnit` which is currently studied
+  implements the given `trait`.

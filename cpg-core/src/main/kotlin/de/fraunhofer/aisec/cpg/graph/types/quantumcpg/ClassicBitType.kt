@@ -33,6 +33,6 @@ import de.fraunhofer.aisec.cpg.graph.types.NumericType
 class ClassicBitType(
     typeName: CharSequence = "ClassicBit",
     bitWidth: Int? = 1,
-    language: Language<out LanguageFrontend<*, *>>? = null,
-    modifier: Modifier = Modifier.NOT_APPLICABLE
+    language: Language<out LanguageFrontend<*, *>>,
+    modifier: Modifier = Modifier.NOT_APPLICABLE,
 ) : NumericType(typeName, bitWidth, language, modifier) {}

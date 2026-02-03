@@ -4,6 +4,8 @@ class SimpleClass {
 
   private int field;
 
+  private int field1 = 1, field2 = 2;
+
   SimpleClass() {
     // constructor
   }

@@ -26,9 +26,8 @@
 package de.fraunhofer.aisec.cpg.enhancements
 
 import de.fraunhofer.aisec.cpg.GraphExamples
-import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.*
 
 class InferenceTest {
@@ -80,7 +79,7 @@ class InferenceTest {
 
         assertNotNull(tu)
 
-        val record = tu.byNameOrNull<RecordDeclaration>("T")
+        val record = tu.records["T"]
         assertNotNull(record)
         assertLocalName("T", record)
         assertEquals(true, record.isInferred)
@@ -95,5 +94,74 @@ class InferenceTest {
         val nextField = record.fields["next"]
         assertNotNull(nextField)
         assertLocalName("T*", nextField.type)
+    }
+
+    @Test
+    fun testUnaryOperatorReturnType() {
+        val result = GraphExamples.getInferenceUnaryOperatorReturnType()
+        assertNotNull(result)
+        with(result) {
+            val longType = assertResolvedType("long")
+
+            val bar = functions["bar"]
+            assertNotNull(bar)
+
+            assertEquals(longType, bar.returnTypes.singleOrNull())
+        }
+    }
+
+    @Test
+    fun testTupleTypeReturnType() {
+        val result = GraphExamples.getInferenceTupleReturnType()
+        assertNotNull(result)
+        with(result) {
+            val fooType = assertResolvedType("Foo")
+            val barType = assertResolvedType("Bar")
+
+            val bar = functions["bar"]
+            assertNotNull(bar)
+
+            assertEquals(listOf(fooType, barType), bar.returnTypes)
+        }
+    }
+
+    @Test
+    fun testBinaryOperatorReturnType() {
+        val result = GraphExamples.getInferenceBinaryOperatorReturnType()
+        assertNotNull(result)
+        with(result) {
+            val intType = assertResolvedType("int")
+            val longType = assertResolvedType("long")
+
+            val bar = functions["bar"]
+            assertNotNull(bar)
+            assertEquals(intType, bar.returnTypes.singleOrNull())
+
+            val baz = functions["baz"]
+            assertNotNull(baz)
+            assertEquals(longType, baz.returnTypes.singleOrNull())
+        }
+    }
+
+    @Test
+    fun testNestedNamespace() {
+        val result = GraphExamples.getInferenceNestedNamespace()
+        with(result) {
+            val java = result.namespaces["java"]
+            assertNotNull(java)
+            assertLocalName("java", java)
+
+            val javaLang = result.namespaces["java.lang"]
+            assertNotNull(javaLang)
+            assertLocalName("lang", javaLang)
+            // should exist in the scope of "java"
+            assertEquals(java, javaLang.scope?.astNode)
+
+            val javaLangString = result.records["java.lang.String"]
+            assertNotNull(javaLangString)
+            assertLocalName("String", javaLangString)
+            // should exist in the scope of "java.lang"
+            assertEquals(javaLang, javaLangString.scope?.astNode)
+        }
     }
 }

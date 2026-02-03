@@ -30,5 +30,5 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 class QuantumDeclarationStatementNode(
     location: PhysicalLocation,
     val qubitType: QubitTypeNode,
-    val identifier: IdentifierNode
+    val identifier: IdentifierNode,
 ) : StatementNode(location)

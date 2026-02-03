@@ -25,25 +25,30 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the creation of a new object through the `new` keyword. */
 class NewExpression : Expression(), HasInitializer {
+    @Relationship("INITIALIZER") var initializerEdge = astOptionalEdgeOf<Expression>()
+
     /** The initializer expression. */
-    @AST override var initializer: Expression? = null
+    override var initializer by unwrapping(NewExpression::initializerEdge)
 
     /**
      * We need a way to store the templateParameters that a NewExpression might have before the
      * ConstructExpression is created
      */
     @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    @AST
-    var templateParameters: List<Node>? = null
+    var templateParameterEdges = astEdgesOf<AstNode>()
+    var templateParameters by unwrapping(NewExpression::templateParameterEdges)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
@@ -59,4 +64,8 @@ class NewExpression : Expression(), HasInitializer {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), initializer)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.initializer?.getStartingPrevEOG() ?: this.prevEOG
+    }
 }

@@ -23,18 +23,23 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg
 
+import de.fraunhofer.aisec.cpg.frontends.CastResult
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.TemplateScope
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg.passes.Pass
+import de.fraunhofer.aisec.cpg.passes.Pass.Companion.log
+import de.fraunhofer.aisec.cpg.passes.ResolveCallExpressionAmbiguityPass
+import de.fraunhofer.aisec.cpg.passes.TypeResolver
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
@@ -56,8 +61,11 @@ class TypeManager {
         MutableMap<TemplateDeclaration, MutableList<ParameterizedType>> =
         ConcurrentHashMap()
 
-    val firstOrderTypes: MutableSet<Type> = ConcurrentHashMap.newKeySet()
-    val secondOrderTypes: MutableSet<Type> = ConcurrentHashMap.newKeySet()
+    /**
+     * Stores all resolved first order types. This is a set of all types that have been resolved by
+     * the [TypeResolver].
+     */
+    val resolvedTypes = identitySetOf<Type>()
 
     /**
      * @param recordDeclaration that is instantiated by a template containing parameterizedtypes
@@ -85,7 +93,7 @@ class TypeManager {
      */
     fun addTypeParameter(
         recordDeclaration: RecordDeclaration,
-        typeParameters: List<ParameterizedType>
+        typeParameters: List<ParameterizedType>,
     ) {
         recordToTypeParameters[recordDeclaration] = typeParameters
     }
@@ -100,7 +108,7 @@ class TypeManager {
      */
     private fun getTypeParameter(
         templateDeclaration: TemplateDeclaration,
-        name: String
+        name: String,
     ): ParameterizedType? {
         if (templateToTypeParameters.containsKey(templateDeclaration)) {
             for (parameterizedType in templateToTypeParameters[templateDeclaration] ?: listOf()) {
@@ -135,14 +143,13 @@ class TypeManager {
      */
     fun searchTemplateScopeForDefinedParameterizedTypes(
         scope: Scope?,
-        name: String
+        name: String,
     ): ParameterizedType? {
         if (scope is TemplateScope) {
             val node = scope.astNode
 
             // We need an additional check here, because of parsing or other errors, the AST node
-            // might
-            // not necessarily be a template declaration.
+            // might not necessarily be a template declaration.
             if (node is TemplateDeclaration) {
                 val parameterizedType = getTypeParameter(node, name)
                 if (parameterizedType != null) {
@@ -164,7 +171,7 @@ class TypeManager {
      */
     fun addTypeParameter(
         templateDeclaration: TemplateDeclaration,
-        typeParameter: ParameterizedType
+        typeParameter: ParameterizedType,
     ) {
         val parameters =
             templateToTypeParameters.computeIfAbsent(templateDeclaration) { mutableListOf() }
@@ -183,7 +190,7 @@ class TypeManager {
     fun createOrGetTypeParameter(
         templateDeclaration: TemplateDeclaration,
         typeName: String,
-        language: Language<*>?
+        language: Language<*>,
     ): ParameterizedType {
         var parameterizedType = getTypeParameter(templateDeclaration, typeName)
         if (parameterizedType == null) {
@@ -193,66 +200,40 @@ class TypeManager {
         return parameterizedType
     }
 
-    inline fun <reified T : Type> registerType(t: T): T {
-        // Skip as they should be unique to each class and not globally unique
-        if (t is ParameterizedType) {
-            return t
-        }
-
-        if (t.isFirstOrderType) {
-            // Make sure we only ever return one unique object per type
-            if (!firstOrderTypes.add(t)) {
-                return firstOrderTypes.first { it == t && it is T } as T
-            } else {
-                log.trace(
-                    "Registering unique first order type {}{}",
-                    t.name,
-                    if (t is ObjectType && t.generics.isNotEmpty()) {
-                        " with generics [${t.generics.joinToString(",") { it.name.toString() }}]"
-                    } else {
-                        ""
-                    }
-                )
-            }
-        } else if (t is SecondOrderType) {
-            if (!secondOrderTypes.add(t)) {
-                return secondOrderTypes.first { it == t && it is T } as T
-            } else {
-                log.trace("Registering unique second order type {}", t.name)
-            }
-        }
-
-        return t
-    }
-
-    fun typeExists(name: String): Boolean {
-        return firstOrderTypes.stream().anyMatch { type: Type -> type.root.name.toString() == name }
-    }
-
-    /**
-     * Creates a typedef / type alias in the form of a [TypedefDeclaration] to the scope manager and
-     * returns it.
-     *
-     * @param frontend the language frontend
-     * @param rawCode the raw code
-     * @param target the target type
-     * @param alias the alias type
-     * @return the typedef declaration
-     */
-    fun createTypeAlias(
-        frontend: LanguageFrontend<*, *>,
-        target: Type,
-        alias: Type,
-    ): Declaration {
-        val typedef = frontend.newTypedefDeclaration(target, alias)
-        frontend.scopeManager.addTypedef(typedef)
-        return typedef
+    /** Checks, whether a [Type] with the given [name] exists. */
+    fun typeExists(name: CharSequence): Boolean {
+        return resolvedTypes.any { type: Type -> type.root.name == name }
     }
 
     fun resolvePossibleTypedef(alias: Type, scopeManager: ScopeManager): Type {
         val finalToCheck = alias.root
-        val applicable = scopeManager.typedefFor(finalToCheck)
+        val applicable = scopeManager.typedefFor(finalToCheck.name, alias.scope)
         return applicable ?: alias
+    }
+
+    /**
+     * This function returns the first (there should be only one) [Type] with the given [fqn] that
+     * is [Type.Origin.RESOLVED].
+     */
+    fun lookupResolvedType(
+        fqn: CharSequence,
+        generics: List<Type>? = null,
+        language: Language<*>? = null,
+    ): Type? {
+        var primitiveType = language?.getSimpleTypeOf(fqn)
+        if (primitiveType != null) {
+            return primitiveType
+        }
+
+        return resolvedTypes.firstOrNull {
+            (it.typeOrigin == Type.Origin.RESOLVED || it.typeOrigin == Type.Origin.GUESSED) &&
+                it.root.name == fqn &&
+                if (generics != null) {
+                    (it as? ObjectType)?.generics == generics
+                } else {
+                    true
+                }
+        }
     }
 }
 
@@ -264,18 +245,21 @@ val Type.ancestors: Set<Type.Ancestor>
 internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
     val types = mutableSetOf<Type.Ancestor>()
 
-    // Recursively call ourselves on our super types. There is a little hack here that we need to do
-    // for object types created from RecordDeclaration::toType() because their supertypes might not
-    // be set correctly. This would be better, if we change a RecordDeclaration to a
-    // ValueDeclaration and set the corresponding object type to its type.
-    val superTypes =
-        if (this is ObjectType) {
-            this.recordDeclaration?.superTypes ?: setOf()
-        } else {
-            superTypes
-        }
-
-    types += superTypes.flatMap { it.getAncestors(depth + 1) }
+    // Recursively call ourselves on our super types.
+    types +=
+        superTypes
+            .filter {
+                if (it == this) {
+                    log.warn(
+                        "Removing type {} from the list of its own supertypes. This would create a type cycle that is not allowed.",
+                        this,
+                    )
+                    false
+                } else {
+                    true
+                }
+            }
+            .flatMap { it.getAncestors(depth + 1) }
 
     // Since the chain starts with our type, we add ourselves to it
     types += Type.Ancestor(this, depth)
@@ -284,15 +268,15 @@ internal fun Type.getAncestors(depth: Int): Set<Type.Ancestor> {
 }
 
 /**
- * Checks, if this [Type] is either derived from or equals to [superType]. This is forwarded to the
- * [Language] of the [Type] and can be overridden by the individual languages.
+ * This function checks, if this [Type] can be cast into [targetType]. Note, this also takes the
+ * [TypeOperations] of the type into account, which means that pointer types of derived types will
+ * not match with a non-pointer type of its base type. But, if both are pointer types, they will
+ * match.
+ *
+ * Optionally, the nodes that hold the respective type can be supplied as [hint] and [targetHint].
  */
-fun Type.isDerivedFrom(
-    superType: Type,
-    hint: HasType? = null,
-    superHint: HasType? = null
-): Boolean {
-    return this.language?.isDerivedFrom(this, superType, hint, superHint) ?: false
+fun Type.tryCast(targetType: Type, hint: HasType? = null, targetHint: HasType? = null): CastResult {
+    return this.language.tryCast(this, targetType, hint, targetHint)
 }
 
 /**
@@ -321,8 +305,8 @@ val Collection<Type>.commonType: Type?
         // (which contains the pointer origins), because otherwise we need to re-create the
         // equivalent wrap state at the end. Make sure we only have one wrap state before we
         // proceed.
-        val wrapStates = this.map { it.wrapState }.toSet()
-        val wrapState = wrapStates.singleOrNull() ?: return null
+        val operations = this.map { it.typeOperations }.toSet()
+        val typeOp = operations.singleOrNull() ?: return null
 
         // Build all ancestors out of the root types. This way we compare the most inner type,
         // regardless of the wrap state.
@@ -345,8 +329,7 @@ val Collection<Type>.commonType: Type?
                             // only look at its type. Therefore, ancestors with the same type but
                             // different depths will match here.
                             it == ancestor
-                        }
-                            ?: return@mapNotNull null
+                        } ?: return@mapNotNull null
 
                     // We then need to select one of both, depending on the depth
                     if (ancestor.depth >= other.depth) {
@@ -359,61 +342,31 @@ val Collection<Type>.commonType: Type?
 
         // Find the one with the largest depth (which is closest to the original type, since the
         // root node is 0) and re-wrap the final common type back into the original wrap state
-        return commonAncestors.minByOrNull(Type.Ancestor::depth)?.type?.wrap(wrapState)
+        return commonAncestors.minByOrNull(Type.Ancestor::depth)?.type?.let { typeOp.apply(it) }
     }
 
 /**
- * Calculates and returns the [WrapState] of the current type. A [WrapState] can be used to compute
- * a "wrapped" type, for example a [PointerType] back from its [Type.root].
+ * A utility function that checks whether our [Reference] refers to a [Type]. This is used by many
+ * passes that replace certain [Reference] nodes with other nodes, e.g., the
+ * [ResolveCallExpressionAmbiguityPass].
+ *
+ * Note: This involves some symbol lookup (using [ScopeManager.lookupTypeSymbolByName]), so this can
+ * only be used in passes.
  */
-val Type.wrapState: WrapState
-    get() {
-        val wrapState = WrapState()
-        var type = this
-
-        // A reference can only be the last item, so we check if the most outer type is a reference
-        // type
-        if (type is ReferenceType) {
-            wrapState.referenceType = this as ReferenceType?
-            wrapState.isReference = true
-            type = type.elementType
-        }
-
-        // We already know the depth, so we can just set this and allocate the pointer origins array
-        wrapState.depth = this.referenceDepth
-        wrapState.pointerOrigins = arrayOfNulls(wrapState.depth)
-
-        // If we have a pointer type, "unwrap" the type until we are back at the element type
-        if (type is PointerType) {
-            var i = 0
-            wrapState.pointerOrigins[i] = type.pointerOrigin
-            while (type is PointerType) {
-                type = type.elementType
-                if (type is PointerType) {
-                    wrapState.pointerOrigins[++i] = type.pointerOrigin
-                }
-            }
-        }
-
-        return wrapState
+context(pass: Pass<*>)
+fun Reference.nameIsType(): Type? {
+    // First, check if it is a simple type
+    var type = language.getSimpleTypeOf(name)
+    if (type != null) {
+        return type
     }
 
-/**
- * Wraps the given [Type] into a chain of [PointerType]s and [ReferenceType]s, given the
- * instructions in [WrapState].
- */
-fun Type.wrap(wrapState: WrapState): Type {
-    var type = this
-    if (wrapState.depth > 0) {
-        for (i in wrapState.depth - 1 downTo 0) {
-            type = type.reference(wrapState.pointerOrigins[i])
-        }
+    // This could also be a typedef
+    type = pass.scopeManager.typedefFor(name, scope)
+    if (type != null) {
+        return type
     }
 
-    if (wrapState.isReference) {
-        wrapState.referenceType?.elementType = type
-        return wrapState.referenceType!!
-    }
-
-    return type
+    // Lastly, check if the reference contains a symbol that points to type (declaration)
+    return pass.scopeManager.lookupTypeSymbolByName(name, language, scope)?.declaredType
 }

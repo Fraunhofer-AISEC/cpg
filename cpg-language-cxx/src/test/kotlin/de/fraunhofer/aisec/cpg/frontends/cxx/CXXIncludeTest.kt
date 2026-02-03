@@ -25,17 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
-import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
-import de.fraunhofer.aisec.cpg.TestUtils.analyzeWithBuilder
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.get
-import de.fraunhofer.aisec.cpg.graph.methods
-import de.fraunhofer.aisec.cpg.graph.records
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.sarif.Region
+import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.*
 import kotlin.test.Test
@@ -54,28 +49,21 @@ internal class CXXIncludeTest : BaseTest() {
         }
         assertEquals(6, tu.declarations.size)
 
-        val someClass =
-            tu.getDeclarationsByName("SomeClass", RecordDeclaration::class.java).iterator().next()
+        val someClass = tu.records["SomeClass"]
         assertNotNull(someClass)
 
-        val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
-        assertFalse(main.isEmpty())
+        val main = tu.functions["main"]
+        assertNotNull(main)
 
-        val someClassConstructor =
-            tu.getDeclarationsByName("SomeClass::SomeClass", ConstructorDeclaration::class.java)
-                .iterator()
-                .next()
+        val someClassConstructor = someClass.constructors["SomeClass::SomeClass"]
         assertNotNull(someClassConstructor)
         assertEquals(someClass, someClassConstructor.recordDeclaration)
 
-        val doSomething =
-            tu.getDeclarationsByName("SomeClass::DoSomething", MethodDeclaration::class.java)
-                .iterator()
-                .next()
+        val doSomething = tu.methods["SomeClass::DoSomething"]?.definition as? MethodDeclaration
         assertNotNull(doSomething)
         assertEquals(someClass, doSomething.recordDeclaration)
 
-        val returnStatement = doSomething.getBodyStatementAs(0, ReturnStatement::class.java)
+        val returnStatement = doSomething.returns.firstOrNull()
         assertNotNull(returnStatement)
 
         val ref = returnStatement.returnValue as Reference
@@ -95,10 +83,10 @@ internal class CXXIncludeTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val someClass = tu.getDeclarationsByName("SomeClass", RecordDeclaration::class.java)
-        assertFalse(someClass.isEmpty())
+        val someClass = tu.records["SomeClass"]
+        assertNotNull(someClass)
 
-        val decl = someClass.iterator().next().constructors[0]
+        val decl = someClass.constructors[0]
         assertEquals("SomeClass();", decl.code)
 
         val location = decl.location
@@ -271,5 +259,48 @@ internal class CXXIncludeTest : BaseTest() {
         // however, we should still have two methods (one of which is a constructor declaration)
         assertEquals(2, tu.methods.size)
         assertEquals(1, tu.methods.filterIsInstance<ConstructorDeclaration>().size)
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testUnityBuild() {
+        val file = File("src/test/resources/include.cpp")
+        val tus =
+            analyzeWithBuilder(
+                TranslationConfiguration.builder()
+                    .sourceLocations(listOf(file))
+                    .loadIncludes(true)
+                    .useUnityBuild(true)
+                    .debugParser(true)
+                    .registerLanguage<CPPLanguage>()
+                    .failOnError(true)
+            )
+        assertNotNull(tus)
+
+        val tu = tus.firstOrNull()
+        assertNotNull(tu)
+        assertFalse(tu.records.isEmpty())
+    }
+
+    @Test
+    @Throws(Exception::class)
+    fun testUnityBuildWithComponent() {
+        val file = File("src/test/resources/include.cpp")
+        val tus =
+            analyzeWithBuilder(
+                TranslationConfiguration.builder()
+                    .sourceLocations(listOf(file))
+                    .topLevel(file.parentFile)
+                    .loadIncludes(true)
+                    .useUnityBuild(true)
+                    .debugParser(true)
+                    .registerLanguage<CPPLanguage>()
+                    .failOnError(true)
+            )
+        assertNotNull(tus)
+
+        val tu = tus.firstOrNull()
+        assertNotNull(tu)
+        assertFalse(tu.records.isEmpty())
     }
 }

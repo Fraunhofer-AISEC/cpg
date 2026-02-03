@@ -47,13 +47,13 @@ import org.slf4j.LoggerFactory
 abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<in HandlerNode, *>>(
     protected val configConstructor: Supplier<ResultNode>,
     /** Returns the frontend which used this handler. */
-    val frontend: L
+    val frontend: L,
 ) :
     LanguageProvider by frontend,
+    ContextProvider by frontend,
     CodeAndLocationProvider<HandlerNode> by frontend,
     ScopeProvider by frontend,
     NamespaceProvider by frontend,
-    ContextProvider by frontend,
     RawNodeTypeProvider<HandlerNode> {
     protected val map = HashMap<Class<out HandlerNode>, HandlerInterface<ResultNode, HandlerNode>>()
     private val typeOfT: Class<*>?
@@ -90,13 +90,13 @@ abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<in 
             handler = map[toHandle]
             if (
                 handler != null && // always ok to handle as generic literal expr
-                !ctx.javaClass.simpleName.contains("LiteralExpr")
+                    !ctx.javaClass.simpleName.contains("LiteralExpr")
             ) {
                 errorWithFileLocation(
                     frontend,
                     ctx,
                     log,
-                    "No handler for type ${ctx.javaClass}, resolving for its superclass $toHandle."
+                    "No handler for type ${ctx.javaClass}, resolving for its superclass $toHandle.",
                 )
             }
             if (toHandle == typeOfT || typeOfT != null && !typeOfT.isAssignableFrom(toHandle)) {
@@ -106,12 +106,6 @@ abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<in 
         if (handler != null) {
             val s = handler.handle(ctx)
             if (s != null) {
-                // The language frontend might set a location, which we should respect. Otherwise,
-                // we will
-                // set the location here.
-                if (s.location == null) {
-                    frontend.setCodeAndLocation(s, ctx)
-                }
                 frontend.setComment(s, ctx)
             }
             ret = s
@@ -120,7 +114,7 @@ abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<in 
                 frontend,
                 ctx,
                 log,
-                "Parsing of type ${ctx.javaClass} is not supported (yet)"
+                "Parsing of type ${ctx.javaClass} is not supported (yet)",
             )
             ret = configConstructor.get()
             if (ret is ProblemNode) {
@@ -136,7 +130,7 @@ abstract class Handler<ResultNode : Node?, HandlerNode, L : LanguageFrontend<in 
                 frontend,
                 ctx,
                 log,
-                "Parsing of type ${ctx.javaClass} did not produce a proper CPG node"
+                "Parsing of type ${ctx.javaClass} did not produce a proper CPG node",
             )
             ret = configConstructor.get()
         }

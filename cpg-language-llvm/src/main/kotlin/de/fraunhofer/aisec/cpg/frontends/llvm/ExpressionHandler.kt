@@ -63,6 +63,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             LLVMPoisonValueValueKind -> {
                 newReference("poison", frontend.typeOf(value), rawNode = value)
             }
+            LLVMConstantTargetNoneValueKind -> newLiteral(null, unknownType(), rawNode = value)
             LLVMConstantTokenNoneValueKind -> newLiteral(null, unknownType(), rawNode = value)
             LLVMUndefValueValueKind -> initializeAsUndef(frontend.typeOf(value), value)
             LLVMConstantAggregateZeroValueKind -> initializeAsZero(frontend.typeOf(value), value)
@@ -81,44 +82,34 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             }
             LLVMMetadataAsValueValueKind,
             LLVMInlineAsmValueKind -> {
-                // TODO
                 return newProblemExpression(
                     "Metadata or ASM value kind not supported yet",
                     ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = value
+                    rawNode = value,
                 )
             }
             else -> {
-                log.info(
-                    "Not handling value kind {} in handleValue yet. Falling back to the legacy way. Please change",
-                    kind
-                )
-                val cpgType = frontend.typeOf(value)
-
-                // old stuff from getOperandValue, needs to be refactored to the when above
-                // TODO also move the other stuff to the expression handler
+                // old stuff from getOperandValue, needs to be refactored to the `when` above
                 return if (LLVMIsConstant(value) != 1) {
-                    val operandName: String =
+                    log.info("Update handling value kind {} to the new way", kind)
+                    var printVal =
                         if (LLVMIsAGlobalAlias(value) != null || LLVMIsGlobalConstant(value) == 1) {
-                            val aliasee = LLVMAliasGetAliasee(value)
-                            LLVMPrintValueToString(aliasee)
-                                .string // Already resolve the aliasee of the constant
+                            // Already resolve the aliasee of the constant
+                            LLVMAliasGetAliasee(value)
                         } else {
-                            // TODO This does not return the actual constant but only a string
-                            // representation
-                            LLVMPrintValueToString(value).string
+                            value
                         }
-                    newLiteral(operandName, cpgType, rawNode = value)
-                } else if (LLVMIsUndef(value) == 1) {
-                    newReference("undef", cpgType, rawNode = value)
-                } else if (LLVMIsPoison(value) == 1) {
-                    newReference("poison", cpgType, rawNode = value)
+                    newLiteral(
+                        LLVMPrintValueToString(printVal).string,
+                        frontend.typeOf(value),
+                        rawNode = value,
+                    )
                 } else {
                     log.error("Unknown expression {}", kind)
                     newProblemExpression(
                         "Unknown expression $kind",
                         ProblemNode.ProblemType.TRANSLATION,
-                        rawNode = value
+                        rawNode = value,
                     )
                 }
             }
@@ -203,64 +194,42 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
      * regular expression.
      */
     private fun handleConstantExprValueKind(value: LLVMValueRef): Expression {
-        val expr =
-            when (val kind = LLVMGetConstOpcode(value)) {
-                LLVMGetElementPtr -> handleGetElementPtr(value)
-                LLVMSelect -> handleSelect(value)
-                LLVMTrunc,
-                LLVMZExt,
-                LLVMSExt,
-                LLVMFPToUI,
-                LLVMFPToSI,
-                LLVMUIToFP,
-                LLVMSIToFP,
-                LLVMFPTrunc,
-                LLVMFPExt,
-                LLVMPtrToInt,
-                LLVMIntToPtr,
-                LLVMBitCast,
-                LLVMAddrSpaceCast -> handleCastInstruction(value)
-                LLVMAdd,
-                LLVMFAdd ->
-                    frontend.statementHandler.handleBinaryOperator(value, "+", false) as? Expression
-                        ?: newProblemExpression(
-                            "Wrong type of constant binary operation +",
-                            ProblemNode.ProblemType.TRANSLATION,
-                            rawNode = value
-                        )
-                LLVMSub,
-                LLVMFSub ->
-                    frontend.statementHandler.handleBinaryOperator(value, "-", false) as? Expression
-                        ?: newProblemExpression(
-                            "Wrong type of constant binary operation -",
-                            ProblemNode.ProblemType.TRANSLATION,
-                            rawNode = value
-                        )
-                LLVMAShr ->
-                    frontend.statementHandler.handleBinaryOperator(value, ">>", false)
-                        as? Expression
-                        ?: newProblemExpression(
-                            "Wrong type of constant binary operation >>",
-                            ProblemNode.ProblemType.TRANSLATION,
-                            rawNode = value
-                        )
-                LLVMICmp -> frontend.statementHandler.handleIntegerComparison(value) as? Expression
-                        ?: newProblemExpression(
-                            "Wrong type of constant comparison",
-                            ProblemNode.ProblemType.TRANSLATION,
-                            rawNode = value
-                        )
-                else -> {
-                    log.error("Not handling constant expression of opcode {} yet", kind)
-                    newProblemExpression(
-                        "Not handling constant expression of opcode $kind yet",
-                        ProblemNode.ProblemType.TRANSLATION,
-                        rawNode = value
-                    )
-                }
+        return when (val kind = LLVMGetConstOpcode(value)) {
+            LLVMGetElementPtr -> handleGetElementPtr(value)
+            LLVMSelect -> handleSelect(value)
+            LLVMTrunc,
+            LLVMZExt,
+            LLVMSExt,
+            LLVMFPToUI,
+            LLVMFPToSI,
+            LLVMUIToFP,
+            LLVMSIToFP,
+            LLVMFPTrunc,
+            LLVMFPExt,
+            LLVMPtrToInt,
+            LLVMIntToPtr,
+            LLVMBitCast,
+            LLVMAddrSpaceCast -> handleCastInstruction(value)
+            LLVMAdd,
+            LLVMFAdd -> frontend.statementHandler.handleBinaryOperator(value, "+", false)
+            LLVMSub,
+            LLVMFSub -> frontend.statementHandler.handleBinaryOperator(value, "-", false)
+            LLVMMul,
+            LLVMFMul -> frontend.statementHandler.handleBinaryOperator(value, "*", false)
+            LLVMShl -> frontend.statementHandler.handleBinaryOperator(value, "<<", false)
+            LLVMLShr,
+            LLVMAShr -> frontend.statementHandler.handleBinaryOperator(value, ">>", false)
+            LLVMXor -> frontend.statementHandler.handleBinaryOperator(value, "^", false)
+            LLVMICmp -> frontend.statementHandler.handleIntegerComparison(value)
+            else -> {
+                log.error("Not handling constant expression of opcode {} yet", kind)
+                newProblemExpression(
+                    "Not handling constant expression of opcode $kind yet",
+                    ProblemNode.ProblemType.TRANSLATION,
+                    rawNode = value,
+                )
             }
-
-        return expr
+        }
     }
 
     /**
@@ -431,7 +400,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
             newProblemExpression(
                 "Default node for getelementptr",
                 ProblemNode.ProblemType.TRANSLATION,
-                rawNode = instr
+                rawNode = instr,
             )
 
         // loop through all operands / indices
@@ -472,12 +441,7 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 var record = (baseType as? ObjectType)?.recordDeclaration
 
                 if (record == null) {
-                    record =
-                        frontend.scopeManager
-                            .resolve<RecordDeclaration>(frontend.scopeManager.globalScope, true) {
-                                it.name == baseType.name
-                            }
-                            .firstOrNull()
+                    record = frontend.scopeManager.getRecordForName(baseType.name, language)
                     if (record != null) {
                         (baseType as? ObjectType)?.recordDeclaration = record
                     }
@@ -487,13 +451,14 @@ class ExpressionHandler(lang: LLVMIRLanguageFrontend) :
                 if (record == null) {
                     log.error(
                         "Could not find structure type with name {}, cannot continue",
-                        baseType.typeName
+                        baseType.typeName,
                     )
                     break
                 }
 
                 log.debug(
-                    "Trying to access a field within the record declaration of ${record.name}"
+                    "Trying to access a field within the record declaration of {}",
+                    record.name,
                 )
 
                 // look for the field

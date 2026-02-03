@@ -25,18 +25,20 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.ScopeManager
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordTemplateDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TypeParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.TypeExpression
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
+import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.graph.types.apply
 
 /**
  * Adds the resolved default template arguments recursively to the templateParameter list of the
@@ -46,22 +48,21 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
  * @param constructExpression
  * @param template
  */
-fun addRecursiveDefaultTemplateArgs(
+fun SymbolResolver.addRecursiveDefaultTemplateArgs(
     constructExpression: ConstructExpression,
     template: RecordTemplateDeclaration,
-    scopeManager: ScopeManager
 ) {
     var templateParameters: Int
     do {
         // Handle Explicit Template Arguments
-        templateParameters = constructExpression.templateParameters.size
-        val templateParametersExplicitInitialization = mutableMapOf<Node, Node>()
+        templateParameters = constructExpression.templateArguments.size
+        val templateParametersExplicitInitialization = mutableMapOf<Node, AstNode>()
         handleExplicitTemplateParameters(
             constructExpression,
             template,
-            templateParametersExplicitInitialization
+            templateParametersExplicitInitialization,
         )
-        val templateParameterRealDefaultInitialization = mutableMapOf<Node, Node?>()
+        val templateParameterRealDefaultInitialization = mutableMapOf<Node, AstNode?>()
 
         // Handle defaults of parameters
         handleDefaultTemplateParameters(template, templateParameterRealDefaultInitialization)
@@ -72,9 +73,8 @@ fun addRecursiveDefaultTemplateArgs(
             constructExpression,
             templateParametersExplicitInitialization,
             templateParameterRealDefaultInitialization,
-            scopeManager
         )
-    } while (templateParameters != constructExpression.templateParameters.size)
+    } while (templateParameters != constructExpression.templateArguments.size)
 }
 
 /**
@@ -88,10 +88,10 @@ fun addRecursiveDefaultTemplateArgs(
 fun handleExplicitTemplateParameters(
     constructExpression: ConstructExpression,
     template: RecordTemplateDeclaration,
-    templateParametersExplicitInitialization: MutableMap<Node, Node>
+    templateParametersExplicitInitialization: MutableMap<Node, AstNode>,
 ) {
-    for (i in constructExpression.templateParameters.indices) {
-        val explicit = constructExpression.templateParameters[i]
+    for (i in constructExpression.templateArguments.indices) {
+        val explicit = constructExpression.templateArguments[i]
         if (template.parameters[i] is TypeParameterDeclaration) {
             templateParametersExplicitInitialization[
                 (template.parameters[i] as TypeParameterDeclaration).type] = explicit
@@ -111,39 +111,44 @@ fun handleExplicitTemplateParameters(
  * @param templateParameterRealDefaultInitialization mapping of template parameter to its real
  *   default (no recursive)
  */
-fun applyMissingParams(
+fun SymbolResolver.applyMissingParams(
     template: RecordTemplateDeclaration,
     constructExpression: ConstructExpression,
-    templateParametersExplicitInitialization: Map<Node, Node>,
-    templateParameterRealDefaultInitialization: Map<Node, Node?>,
-    scopeManager: ScopeManager
+    templateParametersExplicitInitialization: Map<Node, AstNode>,
+    templateParameterRealDefaultInitialization: Map<Node, AstNode?>,
 ) {
     with(constructExpression) {
-        val missingParams: List<Node?> =
+        val missingParams =
             template.parameterDefaults.subList(
-                constructExpression.templateParameters.size,
-                template.parameterDefaults.size
+                constructExpression.templateArguments.size,
+                template.parameterDefaults.size,
             )
         for (m in missingParams) {
-            var missingParam = m
+            var missingParam: Node? = m
             if (missingParam is Reference) {
                 if (missingParam.refersTo == null) {
                     val currentScope = scopeManager.currentScope
                     scopeManager.jumpTo(missingParam.scope)
-                    missingParam.refersTo = scopeManager.resolveReference(missingParam)
+                    missingParam.refersTo =
+                        scopeManager.lookupSymbolByNodeName(missingParam).singleOrNull()
                     scopeManager.jumpTo(currentScope)
                 }
                 missingParam = missingParam.refersTo
+            } else if (missingParam is TypeExpression) {
+                // If the missing parameter is a TypeExpression, we need to get the type
+                missingParam = missingParam.type
             }
+
             if (missingParam in templateParametersExplicitInitialization) {
                 // If default is a previously defined template argument that has been explicitly
                 // passed
                 templateParametersExplicitInitialization[missingParam]?.let {
                     constructExpression.addTemplateParameter(
                         it,
-                        TemplateDeclaration.TemplateInitialization.DEFAULT
+                        TemplateDeclaration.TemplateInitialization.DEFAULT,
                     )
                 }
+
                 // If template argument is a type add it as a generic to the type as well
                 (templateParametersExplicitInitialization[missingParam] as? TypeExpression)
                     ?.type
@@ -159,7 +164,7 @@ fun applyMissingParams(
                 templateParameterRealDefaultInitialization[missingParam]?.let {
                     constructExpression.addTemplateParameter(
                         it,
-                        TemplateDeclaration.TemplateInitialization.DEFAULT
+                        TemplateDeclaration.TemplateInitialization.DEFAULT,
                     )
                 }
                 (templateParametersExplicitInitialization[missingParam] as? TypeExpression)
@@ -183,7 +188,7 @@ fun applyMissingParams(
  */
 fun handleDefaultTemplateParameters(
     template: RecordTemplateDeclaration,
-    templateParameterRealDefaultInitialization: MutableMap<Node, Node?>
+    templateParameterRealDefaultInitialization: MutableMap<Node, AstNode?>,
 ) {
     val declaredTemplateTypes = mutableListOf<Type?>()
     val declaredNonTypeTemplate = mutableListOf<ParameterDeclaration>()
@@ -192,7 +197,7 @@ fun handleDefaultTemplateParameters(
         if (declaration is TypeParameterDeclaration) {
             declaredTemplateTypes.add(declaration.type)
             if (
-                declaration.default !in declaredTemplateTypes &&
+                declaration.default?.type !in declaredTemplateTypes &&
                     declaration in parametersWithDefaults
             ) {
                 templateParameterRealDefaultInitialization[declaration.type] = declaration.default
@@ -208,4 +213,37 @@ fun handleDefaultTemplateParameters(
             }
         }
     }
+}
+
+/**
+ * This function "realizes" a type that is based on a [ParameterizedType] (a template type), based
+ * on the [initializationSignature]. Basically the [incomingType] is either directly a
+ * [ParameterizedType], e.g. `T` or a derived type, such as a [PointerType] (e.g. `T*`). If the
+ * [initializationSignature] specifies that `T` is initialized with a [TypeExpression] pointing to
+ * `int`, we will return a type representing `int` in the first example and `int*` the second
+ * example.
+ */
+internal fun realizeType(
+    language: Language<*>?,
+    parameterizedTypeResolution: Map<ParameterizedType, TypeParameterDeclaration>,
+    incomingType: Type,
+    initializationSignature: Map<Declaration?, Node?>,
+): Type {
+    var type: Type = UnknownType.getUnknownType(language)
+
+    // The root type of our incoming type should be a ParameterizedType. We need to find its
+    // matching TypeParameterDeclaration, to find out how the parameter is initialized.
+    val typeParamDeclaration = parameterizedTypeResolution[incomingType.root]
+    if (typeParamDeclaration != null) {
+        val node = initializationSignature[typeParamDeclaration]
+        if (node is TypeExpression) {
+            // We might need basically exchange the root node, and we can do this using type
+            // operations
+            val operations = incomingType.typeOperations
+            val newType = operations.apply(node.type)
+
+            type = newType
+        }
+    }
+    return type
 }

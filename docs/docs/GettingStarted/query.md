@@ -17,7 +17,7 @@ can use to identify bugs or vulnerabilities in the code under analysis. You can
 use a number of operations that you know from arithmetics, logics and many
 programming languages.
 
-The Query API provides a way validate if nodes in the graph fulfil certain
+The Query API provides a way validate if nodes in the graph fulfill certain
 requirements. It is a mixture of typical logical expressions (e.g. and, or, xor,
 implies), quantors (e.g. forall, exists), comparisons (e.g. <, >, ==, !=), some
 special operations (e.g., `in` to check for collections or `is` for types) and a
@@ -60,6 +60,22 @@ all (==> false)
 
 ## Operators of the detailed mode
 
+The starting point of an analysis is typically one operation inspired by predicate
+logics (**allExtended** or **existsExtended**) which work as follows:
+
+- They allow you to specify which type of nodes serve as starting point via
+  a reified type parameter.
+- The first argument is a function/lambda which describes certain pre-filtering
+  requirements for the nodes to check. This can be used to write something like
+  "implies" in the logical sense.
+- The second argument check the condition which has to hold for all or at least
+  one of these pre-filtered nodes.
+
+Example (the first argument of a call to "foo" must be 2): 
+```
+result.allExtended<CallExpression>{it.name.localName == "foo"} {it.argument[0].intValue eq const(2) }
+```
+
 Numerous methods allow to evaluate the queries while keeping track of all the
 steps. Currently, the following operations are supported:
 
@@ -86,6 +102,10 @@ For numeric values:
 
 **Note:** The detailed mode and its operators require the user to take care of
 the correct order. I.e., the user has to put the brackets!
+
+For a full list of available methods, check the dokka documentation pages functions
+and properties and look for the methods which somehow make use of the `QueryTree`
+[here](https://fraunhofer-aisec.github.io/cpg/dokka/main/cpg-analysis/de.fraunhofer.aisec.cpg.query/index.html).
 
 ## Operators of the less detailed mode
 
@@ -118,13 +138,32 @@ set of analyses and functions to use them. These are:
   E.g., the default value evaluator could return different numbers (transferring
   them e.g. with `toLong()` or `toFloat()` could make sense), a string, or an error.
 - **sizeof(n: Node)**: The length of an array or string
-- **dataFlow(from: Node, to: Node)**: Checks if a data flow is possible between
-  the nodes `from` as a source and `to` as sink.
-- **executionPath(from: Node, to: Node)**: Checks if a path of execution flow is
-  possible between the nodes `from` and `to`.
-- **executionPath(from: Node, predicate: (Node) -> Boolean)**: Checks if a path
-  of execution flow is possible starting at node `from` and fulfilling the
-  requirement specified in `predicate`.
+- **dataFlow(startNode: Node, direction: AnalysisDirection, type: AnalysisType, vararg sensitivities: AnalysisSensitivity, scope: AnalysisScope = Interprocedural(), verbose: Boolean, earlyTermination: ((Node) -> Boolean)?, predicate: (Node) -> Boolean)**:
+  Checks if a data flow is possible between the nodes `from` as a source and a
+  node matching the `predicate` as sink and has various configuration options:
+  * It can be configured as `Must` or `May` analysis via the argument `type`.
+  * There are several options for `sensitivities` which can be used to specify
+    which requirements you have for the analysis, e.g. `FieldSensitive`,
+    `ContextSensitive`, `OnlyFullDFG` or `Implicit`.
+  * The `scope` can be used to configure an `Intraprocedural` or `Interprocedural`
+    analysis or to look up only a certain number of steps or depth in the call
+    stack.
+  * `earlyTermination` lets the query fail early if there was no node matching
+    `predicate` on the path so far.
+- **executionPath(startNode: Node, direction: AnalysisDirection, type: AnalysisType, vararg sensitivities: AnalysisSensitivity, scope: AnalysisScope = Interprocedural(), verbose: Boolean, earlyTermination: ((Node) -> Boolean)?, predicate: (Node) -> Boolean)**:
+  Checks if an execution path is possible between the nodes `from` as a source
+  and a node matching the `predicate` as sink and has various configuration
+  options which are the same as the ones for `dataFlow`. However, other options
+  for `sensitivities` make more sense in this context.
+- **dataFlowWithValidator(source: Node, validatorPredicate: (Node) -> Boolean, sinkPredicate: (Node) -> Boolean, scope: AnalysisScope, vararg sensitivities: AnalysisSensitivity)**:
+  Checks if each execution path between the `source` and a sink matching
+  `sinkPredicate` has a node matching `validatorPredicate`, where the data
+  in `source` also flow into `validatorPredicate`. This is interesting to
+ "sanitize" data on the given path.
+- **Node.alwaysFlowsTo(allowOverwritingValue: Boolean, earlyTermination: ((Node) -> Boolean)?, scope: AnalysisScope, vararg sensitivities: AnalysisSensitivity, predicate: (Node) -> Boolean)**:
+  Checks if on each execution path starting at `source`, the data kept in
+  `source` reach a sink matching `predicate` without passing another node
+  matching `earlyTermination`.
 
 ## Running a query
 
@@ -164,7 +203,7 @@ val queryTreeResult =
     )
 ```
 
-Less detailled:
+Less detailed:
 ```kotlin
 val queryTreeResult =
     result.all<CallExpression>(

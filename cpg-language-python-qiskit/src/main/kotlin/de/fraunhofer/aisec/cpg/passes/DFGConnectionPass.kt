@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.analysis.ValueEvaluator
+import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.ClassicBit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.ClassicBitReference
@@ -36,7 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.passes.order.DependsOn
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumDFGPass
 
 @DependsOn(QuantumDFGPass::class)
@@ -64,28 +64,29 @@ class DFGConnectionPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // Get the jobs which are run using the compiled circuit
             val jobs =
                 call
-                    .followNextDFGEdgesUntilHit {
+                    .followDFGEdgesUntilHit {
                         (it as? MemberCallExpression)?.name?.localName == "run"
                         // TODO: Actually, we would want to check the call's base comes from the
                         // return of the transpile call
                     }
                     .fulfilled
-                    .map(List<Node>::last)
+                    .map { it.nodes.last() }
+
             jobs.forEach { job ->
                 // Get the calls to result on these jobs
                 val results =
-                    job.followNextDFGEdgesUntilHit { next ->
+                    job.followDFGEdgesUntilHit { next ->
                             (next as? MemberCallExpression)?.name?.localName == "result"
                             // TODO: Actually, we would want to check the "run" call's base comes
                             // from the return of the result call
                         }
                         .fulfilled
-                        .map(List<Node>::last)
+                        .map { it.nodes.last() }
 
                 // Add DFG for the call to result(): All classical bits which are measured flow to
                 // the return value
                 measures?.forEach { measure ->
-                    results.forEach { result -> measure.cBit.addNextDFG(result) }
+                    results.forEach { result -> measure.cBit.nextDFG += (result) }
                 }
 
                 // Add DFG for access to the resulting array (single index or whole region)
@@ -95,11 +96,11 @@ class DFGConnectionPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 val countsDicts =
                     results.flatMap { result ->
                         result
-                            .followNextDFGEdgesUntilHit { next ->
+                            .followDFGEdgesUntilHit { next ->
                                 (next as? MemberCallExpression)?.name?.localName == "get_counts"
                             }
                             .fulfilled
-                            .map(List<Node>::last)
+                            .map { it.nodes.last() }
                     }
                 val keyAccesses =
                     countsDicts.flatMap { countsDict -> findAccessToCountsDictKey(countsDict) }
@@ -107,7 +108,7 @@ class DFGConnectionPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     keyAccesses.flatMap { keyAccess ->
                         flatTr.filterIsInstance<SubscriptExpression>().filter { flatNode ->
                             keyAccess
-                                .followNextDFGEdgesUntilHit { it == flatNode }
+                                .followDFGEdgesUntilHit { it == flatNode }
                                 .fulfilled
                                 .isNotEmpty()
                         }
@@ -132,10 +133,9 @@ class DFGConnectionPass(ctx: TranslationContext) : ComponentPass(ctx) {
                                 ?.flatMap { m ->
                                     ((m.cBit as? ClassicBitReference)?.refersToClassicBit
                                             as? ClassicBit)
-                                        ?.references
-                                        ?: setOf()
+                                        ?.references ?: setOf()
                                 }
-                                ?.forEach { cBit -> bitAccess.addPrevDFG(cBit) }
+                                ?.forEach { cBit -> bitAccess.prevDFG += (cBit) }
                         }
                     }
                 }
@@ -149,13 +149,13 @@ class DFGConnectionPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private fun findAccessToCountsDictKey(countsDict: Node): List<Node> {
         return countsDict
-            .followNextEOGEdgesUntilHit {
+            .followEOGEdgesUntilHit {
                 (it as? ForEachStatement)?.iterable?.followPrevDFG { prev -> prev == countsDict } !=
                     null
             }
             .fulfilled
             .mapNotNull {
-                val variable = (it.last() as? ForEachStatement)?.variable
+                val variable = (it.nodes.last() as? ForEachStatement)?.variable
                 if (variable is DeclarationStatement) {
                     variable.variables
                 } else null

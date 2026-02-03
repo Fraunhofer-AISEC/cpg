@@ -76,7 +76,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                 } else {
                     "class"
                 },
-                rawNode = node
+                rawNode = node,
             )
 
         this.frontend.scopeManager.enterScope(record)
@@ -89,7 +89,11 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                     it.type == "Constructor" ||
                     it.type == "MethodDeclaration"
             }
-            ?.map { this.frontend.scopeManager.addDeclaration(this.handle(it)) }
+            ?.mapNotNull { this.handle(it) }
+            ?.map {
+                this.frontend.scopeManager.addDeclaration(it)
+                record.addDeclaration(it)
+            }
 
         this.frontend.scopeManager.leaveScope(record)
 
@@ -116,11 +120,13 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
             if (childNode.type.endsWith("Statement")) {
                 val statement = this.frontend.statementHandler.handle(childNode)
 
-                statement?.let { tu.addStatement(it) }
+                statement?.let { tu.statements += it }
             } else {
                 val decl = this.handle(childNode)
-
-                this.frontend.scopeManager.addDeclaration(decl)
+                if (decl != null) {
+                    this.frontend.scopeManager.addDeclaration(decl)
+                    tu.declarations += decl
+                }
             }
         }
 
@@ -143,7 +149,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                     newConstructorDeclaration(
                         record?.name?.toString() ?: "",
                         record,
-                        rawNode = node
+                        rawNode = node,
                     )
                 }
                 else -> newFunctionDeclaration(name, rawNode = node)
@@ -158,12 +164,16 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
             ?.filter { it.type == "Parameter" }
             ?.forEach {
                 val param = this.frontend.declarationHandler.handleNode(it)
+                if (param !is ParameterDeclaration) {
+                    return@forEach
+                }
 
                 if (func is MethodDeclaration) {
                     this.frontend.processAnnotations(param, it)
                 }
 
                 this.frontend.scopeManager.addDeclaration(param)
+                func.parameters += param
             }
 
         // parse body, if it exists

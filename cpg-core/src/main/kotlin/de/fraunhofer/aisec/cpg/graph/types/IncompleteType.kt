@@ -25,21 +25,19 @@
  */
 package de.fraunhofer.aisec.cpg.graph.types
 
+import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin
-import java.util.*
 
 /**
  * IncompleteTypes are defined as object with unknown size. For instance: void, arrays of unknown
- * length, forward declarated classes in C++
+ * length, forward declared classes in C++
  *
  * Right now we are only dealing with void for objects with unknown size, therefore the name is
  * fixed to void. However, this can be changed in the future, in order to support other objects with
  * unknown size apart from void. Therefore, this Type is not called VoidType
  */
 class IncompleteType : Type {
-    constructor() : super("void", null)
-
-    constructor(type: Type?) : super(type)
+    constructor(language: Language<*>) : super("void", language)
 
     /** @return PointerType to a IncompleteType, e.g. void* */
     override fun reference(pointer: PointerOrigin?): Type {
@@ -55,5 +53,5 @@ class IncompleteType : Type {
         return other is IncompleteType
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode())
+    override fun hashCode() = super.hashCode()
 }

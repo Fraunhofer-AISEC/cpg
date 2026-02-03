@@ -25,32 +25,44 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.HasBase
+import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.fqn
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents access to a member of a [RecordDeclaration], such as `obj.property`. Another common
  * use-case is access of a member function (method) as part of the [MemberCallExpression.callee]
  * property of a [MemberCallExpression].
  */
-class MemberExpression : Reference(), ArgumentHolder, HasBase {
-    @AST
-    override var base: Expression = ProblemExpression("could not parse base expression")
-        set(value) {
-            field.unregisterTypeObserver(this)
-            field = value
-            updateName()
-            value.registerTypeObserver(this)
-        }
+class MemberExpression : Reference(), HasOverloadedOperation, ArgumentHolder, HasBase {
+    @Relationship("BASE")
+    var baseEdge =
+        astEdgeOf<Expression>(
+            ProblemExpression("could not parse base expression"),
+            onChanged = { old, new ->
+                exchangeTypeObserverWithAccessPropagation(old, new)
+                updateName()
+            },
+        )
+    override var base by unwrapping(MemberExpression::baseEdge)
 
     override var operatorCode: String? = null
+
+    override val operatorArguments: List<Expression>
+        get() = listOf()
+
+    override val operatorBase: Expression
+        get() = base
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
@@ -70,6 +82,10 @@ class MemberExpression : Reference(), ArgumentHolder, HasBase {
         }
 
         return false
+    }
+
+    override fun hasArgument(expression: Expression): Boolean {
+        return base == expression
     }
 
     override fun equals(other: Any?): Boolean {
@@ -92,5 +108,9 @@ class MemberExpression : Reference(), ArgumentHolder, HasBase {
 
     private fun updateName() {
         this.name = base.type.root.name.fqn(name.localName)
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.base.getStartingPrevEOG()
     }
 }

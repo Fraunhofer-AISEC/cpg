@@ -9,5 +9,5 @@ int main() {
    f( 1 ,  2 ); // non-template
    f('a', 'b'); // template
    f( 1 , 'b'); // non-template
-   f<>( 1 , 'b'); // error
+   f<>( 1 , 'b'); // error; we fall back to non-template for now
 }

@@ -26,24 +26,37 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.*
+import org.neo4j.ogm.annotation.Relationship
 import org.slf4j.LoggerFactory
 
 class CastExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
-    @AST
-    var expression: Expression = ProblemExpression("could not parse inner expression")
-        set(value) {
-            field.unregisterTypeObserver(this)
-            field = value
-            value.registerTypeObserver(this)
-        }
+    /**
+     * The [Expression] that is cast to [castType].
+     *
+     * Note: While the [type] will always stay the same (i.e. the [castType]), we still want to
+     * register ourselves as a type observer to the expression. The reason for that is that we want
+     * to propagate the [assignedTypes] of our [expression] to us and then possibly to other nodes.
+     * This way we can still access the original type of expression (e.g., created by a
+     * [NewExpression]), even when it is cast.
+     */
+    @Relationship(type = "EXPRESSION")
+    var expressionEdge =
+        astEdgeOf<Expression>(
+            of = ProblemExpression("could not parse inner expression"),
+            onChanged = ::exchangeTypeObserverWithAccessPropagation,
+        )
+    var expression by unwrapping(CastExpression::expressionEdge)
 
     var castType: Type = unknownType()
         set(value) {
             field = value
             type = value
+            name = value.name
         }
 
     fun setCastOperator(operatorCode: Int) {
@@ -63,15 +76,21 @@ class CastExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
 
     override fun addArgument(expression: Expression) {
         this.expression = expression
+        this.expression.access = access
     }
 
     override fun replaceArgument(old: Expression, new: Expression): Boolean {
         if (this.expression == old) {
             this.expression = new
+            this.expression.access = access
             return true
         }
 
         return false
+    }
+
+    override fun hasArgument(expression: Expression): Boolean {
+        return this.expression == expression
     }
 
     override fun typeChanged(newType: Type, src: HasType) {
@@ -96,6 +115,16 @@ class CastExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), expression, castType)
+
+    override var access = AccessValues.READ
+        set(value) {
+            field = value
+            this.expression.access = value
+        }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.expression.getStartingPrevEOG()
+    }
 
     companion object {
         private val log = LoggerFactory.getLogger(CastExpression::class.java)

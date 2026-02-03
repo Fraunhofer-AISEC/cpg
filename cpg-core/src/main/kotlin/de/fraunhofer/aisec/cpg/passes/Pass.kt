@@ -23,22 +23,40 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.*
+import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
+import de.fraunhofer.aisec.cpg.assumptions.assume
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.LanguageTrait
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+import de.fraunhofer.aisec.cpg.graph.statements.CatchClause
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
-import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteFirst
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLast
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
+import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
+import de.fraunhofer.aisec.cpg.passes.configuration.RequiresLanguageTrait
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.concurrent.CompletableFuture
 import java.util.function.Consumer
 import kotlin.reflect.KClass
+import kotlin.reflect.full.findAnnotation
+import kotlin.reflect.full.findAnnotations
+import kotlin.reflect.full.hasAnnotation
+import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.primaryConstructor
+import org.apache.commons.lang3.builder.ToStringBuilder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -46,43 +64,125 @@ import org.slf4j.LoggerFactory
  * A [TranslationResultPass] is a pass that operates on a [TranslationResult]. If used with
  * [executePass], one [Pass] object is instantiated for the whole [TranslationResult].
  */
-abstract class TranslationResultPass(ctx: TranslationContext) : Pass<TranslationResult>(ctx)
+abstract class TranslationResultPass(
+    ctx: TranslationContext,
+    sort: Sorter<TranslationResult> = TranslationResultSorter,
+) : Pass<TranslationResult>(ctx, sort)
 
 /**
  * A [ComponentPass] is a pass that operates on a [Component]. If used with [executePass], one
  * [Pass] object is instantiated for each [Component] in a [TranslationResult].
  */
-abstract class ComponentPass(ctx: TranslationContext) : Pass<Component>(ctx)
+abstract class ComponentPass(
+    ctx: TranslationContext,
+    sort: Sorter<Component> = LeastImportComponentSorter,
+) : Pass<Component>(ctx, sort)
 
 /**
  * A [TranslationUnitPass] is a pass that operates on a [TranslationUnitDeclaration]. If used with
  * [executePass], one [Pass] object is instantiated for each [TranslationUnitDeclaration] in a
  * [Component].
  */
-abstract class TranslationUnitPass(ctx: TranslationContext) : Pass<TranslationUnitDeclaration>(ctx)
+abstract class TranslationUnitPass(
+    ctx: TranslationContext,
+    sort: Sorter<TranslationUnitDeclaration> = LeastImportTranslationUnitSorter,
+) : Pass<TranslationUnitDeclaration>(ctx, sort)
 
 /**
  * A [EOGStarterPass] is a pass that operates on nodes that are contained in a [EOGStarterHolder].
  * If used with [executePass], one [Pass] object is instantiated for each [Node] in a
  * [EOGStarterHolder] in each [TranslationUnitDeclaration] in each [Component].
  */
-abstract class EOGStarterPass(ctx: TranslationContext) : Pass<Node>(ctx)
+abstract class EOGStarterPass(
+    ctx: TranslationContext,
+    sort: Sorter<Node> = EOGStarterLeastTUImportSorter,
+) : Pass<Node>(ctx, sort)
 
-open class PassConfiguration {}
+open class PassConfiguration
+
+/** Implementations of this abstract class sort nodes before they are passed to the [Pass]es. */
+abstract class Sorter<T : Node> : (TranslationResult) -> List<T>
+
+/**
+ * This class is only used to provide a common interface also for [TranslationResultPass]es. It will
+ * return a list containing only the [TranslationResult].
+ */
+object TranslationResultSorter : Sorter<TranslationResult>() {
+    override fun invoke(result: TranslationResult): List<TranslationResult> = listOf(result)
+}
+
+/**
+ * Execute the [Component]s in the "sorted" order (if available). They are sorted based on least
+ * import dependencies.
+ */
+object LeastImportComponentSorter : Sorter<Component>() {
+    override fun invoke(result: TranslationResult): List<Component> =
+        (Strategy::COMPONENTS_LEAST_IMPORTS)(result).asSequence().toList()
+}
+
+/**
+ * Execute the [TranslationUnitDeclaration]s in the "sorted" order (if available) w.r.t. less import
+ * dependencies. To do so, it first sorts the [Component]s using the [LeastImportComponentSorter]
+ * and then decides on their [TranslationUnitDeclaration]s.
+ */
+object LeastImportTranslationUnitSorter : Sorter<TranslationUnitDeclaration>() {
+    override fun invoke(result: TranslationResult): List<TranslationUnitDeclaration> =
+        LeastImportComponentSorter.invoke(result)
+            .flatMap { (Strategy::TRANSLATION_UNITS_LEAST_IMPORTS)(it).asSequence() }
+            .toList()
+}
+
+/**
+ * First, sorts the [TranslationUnitDeclaration]s with the [LeastImportTranslationUnitSorter] and
+ * then gathers all resolution EOG starters; and make sure they really do not have a predecessor,
+ * otherwise we might analyze a node multiple times. Note that the [EOGStarterHolder]s are not
+ * sorted.
+ */
+object EOGStarterLeastTUImportSorter : Sorter<Node>() {
+    override fun invoke(result: TranslationResult): List<Node> =
+        LeastImportTranslationUnitSorter.invoke(result)
+            .flatMap { it.allUniqueEOGStartersOrSingles }
+            .toList()
+}
+
+/**
+ * First, sorts the [TranslationUnitDeclaration]s with the [LeastImportTranslationUnitSorter] and
+ * then gathers all resolution EOG starters; and make sure they really do not have a predecessor,
+ * otherwise we might analyze a node multiple times. The [EOGStarterHolder]s are only sorted as
+ * follows: The [CatchClause]s come last in the order because they actually are executed after a
+ * part of the `try` block and, more importantly, the code before it, which is not guaranteed by the
+ * EOG.
+ */
+object EOGStarterLeastTUImportCatchLastSorter : Sorter<Node>() {
+    override fun invoke(result: TranslationResult): List<Node> =
+        LeastImportTranslationUnitSorter.invoke(result)
+            .flatMap {
+                val allUniqueStarters = it.allUniqueEOGStartersOrSingles
+                val result = mutableListOf<Node>()
+                result.addAll(allUniqueStarters.filter { it !is CatchClause })
+                result.addAll(allUniqueStarters.filterIsInstance<CatchClause>())
+                result
+            }
+            .toList()
+}
 
 /**
  * Represents an abstract class that enhances the graph before it is persisted. Passes can exist at
- * three different levels:
+ * different levels:
  * - the overall [TranslationResult]
- * - a [Component], and
- * - a [TranslationUnitDeclaration].
+ * - a [Component],
+ * - a [TranslationUnitDeclaration], and
+ * - a [EOGStarterHolder].
  *
  * A level should be chosen as granular as possible, to allow for the (future) parallel execution of
  * passes. Instead of directly subclassing this type, one of the types [TranslationResultPass],
  * [ComponentPass] or [TranslationUnitPass] must be used.
+ *
+ * [sort] can be used to specify the order in which the Pass will visit/process the nodes.
  */
-sealed class Pass<T : Node>(final override val ctx: TranslationContext) :
+sealed class Pass<T : Node>(final override val ctx: TranslationContext, val sort: Sorter<T>) :
     Consumer<T>, ContextProvider, RawNodeTypeProvider<Nothing>, ScopeProvider {
+
     var name: String
         protected set
 
@@ -102,7 +202,14 @@ sealed class Pass<T : Node>(final override val ctx: TranslationContext) :
     override val scope: Scope?
         get() = scopeManager.currentScope
 
+    /** This method is called for each "target" that is passed to the pass. */
     abstract fun cleanup()
+
+    /**
+     * This method is called after all targets have been processed. It can be used to do some
+     * cleanup of static fields, e.g., in companion objects.
+     */
+    open fun finalCleanup() {}
 
     /**
      * Check if the pass requires a specific language frontend and if that frontend has been
@@ -112,21 +219,83 @@ sealed class Pass<T : Node>(final override val ctx: TranslationContext) :
      *   [RequiredFrontend]
      */
     fun runsWithCurrentFrontend(usedFrontends: Collection<LanguageFrontend<*, *>>): Boolean {
-        if (!this.javaClass.isAnnotationPresent(RequiredFrontend::class.java)) return true
-        val requiredFrontend = this.javaClass.getAnnotation(RequiredFrontend::class.java).value
+        val requiredFrontend = this::class.findAnnotation<RequiredFrontend>() ?: return true
         for (used in usedFrontends) {
-            if (used.javaClass == requiredFrontend.java) return true
+            if (used::class == requiredFrontend.value) return true
         }
         return false
     }
 
-    companion object {
+    /**
+     * Checks, if the pass requires a specific [LanguageTrait] and if the current target of the pass
+     * has this trait.
+     *
+     * @return true, if the pass does not require a specific language trait or if it matches the
+     *   [RequiresLanguageTrait].
+     */
+    fun runsWithLanguageTrait(language: Language<*>?): Boolean {
+        if (language == null) {
+            return true
+        }
 
+        val requiresLanguageTraits = this::class.findAnnotations<RequiresLanguageTrait>()
+        for (requiresLanguageTrait in requiresLanguageTraits) {
+            if (!language::class.isSubclassOf(requiresLanguageTrait.value)) {
+                return false
+            }
+        }
+
+        return true
+    }
+
+    companion object {
         val log: Logger = LoggerFactory.getLogger(Pass::class.java)
     }
 
+    @Suppress("UNCHECKED_CAST")
     fun <T : PassConfiguration> passConfig(): T? {
         return this.config.passConfigurations[this::class] as? T
+    }
+
+    override fun toString(): String {
+        val builder =
+            ToStringBuilder(this, Node.TO_STRING_STYLE).append("pass", this::class.simpleName)
+
+        if (this::class.softDependencies.isNotEmpty()) {
+            builder.append("soft dependencies:", this::class.softDependencies.map { it.simpleName })
+        }
+
+        if (this::class.hardDependencies.isNotEmpty()) {
+            builder.append("hard dependencies:", this::class.hardDependencies.map { it.simpleName })
+        }
+
+        if (this::class.softExecuteBefore.isNotEmpty()) {
+            builder.append(
+                "execute before (soft): ",
+                this::class.softExecuteBefore.map { it.simpleName },
+            )
+        }
+
+        if (this::class.hardExecuteBefore.isNotEmpty()) {
+            builder.append(
+                "execute before (hard): ",
+                this::class.hardExecuteBefore.map { it.simpleName },
+            )
+        }
+
+        if (this::class.isFirstPass) {
+            builder.append("firstPass")
+        }
+
+        if (this::class.isLastPass) {
+            builder.append("lastPass")
+        }
+
+        if (this::class.isLatePass) {
+            builder.append("latePass")
+        }
+
+        return builder.toString()
     }
 }
 
@@ -134,7 +303,7 @@ fun executePassesInParallel(
     classes: List<KClass<out Pass<*>>>,
     ctx: TranslationContext,
     result: TranslationResult,
-    executedFrontends: Collection<LanguageFrontend<*, *>>
+    executedFrontends: Collection<LanguageFrontend<*, *>>,
 ) {
     // Execute a single pass directly sequentially and return
     val pass = classes.singleOrNull()
@@ -149,7 +318,7 @@ fun executePassesInParallel(
             TranslationManager::class.java,
             "Executing Passes [${classes.map { it.simpleName }}] in parallel",
             false,
-            result
+            result,
         )
 
     val futures =
@@ -159,6 +328,63 @@ fun executePassesInParallel(
 
     futures.map(CompletableFuture<Unit>::join)
     bench.stop()
+}
+
+/**
+ * Executes all passes in [TranslationConfiguration.registeredPasses] of [ctx] sequentially. This
+ * also takes care of re-running passes using the [markDirty] / [markClean] system.
+ */
+fun executePassesSequentially(
+    ctx: TranslationContext,
+    result: TranslationResult,
+    executedFrontends: Set<LanguageFrontend<*, *>>,
+) {
+    // Execute all passes in sequence. First convert the list of passes to a queue
+    val queue = ArrayDeque<KClass<out Pass<out Node>>>()
+    queue.addAll(ctx.config.registeredPasses.flatten())
+
+    // Keep a map of pass executions, in order to prevent loops
+    val executions = mutableMapOf<KClass<out Pass<out Node>>, Int>()
+
+    while (queue.isNotEmpty()) {
+        // Get the next pass from the queue
+        val pass = queue.removeFirst()
+
+        // Check, if we pass the max executions
+        val numExec = executions[pass] ?: 0
+        if (numExec >= ctx.config.maxPassExecutions) {
+            TranslationManager.log.warn("Pass {} reached max executions, skipping", pass.simpleName)
+            result.assume(
+                AssumptionType.CompletenessAssumption,
+                "We assume that after $numExec repeated executions of the ${pass.simpleName} no new information is obtained and skip further executions.",
+            )
+            continue
+        }
+
+        // Execute it
+        executePass(pass, ctx, result, executedFrontends)
+
+        // Increment executions
+        executions[pass] = numExec + 1
+
+        // After each pass execution, identify "dirty" nodes and identify which passes
+        // should be run afterward
+        val scheduledPasses = result.dirtyNodes.values.flatten()
+        for (scheduledPass in scheduledPasses) {
+            // If the pass is already in the queue, ignore it
+            if (scheduledPass in queue) {
+                continue
+            }
+
+            // Otherwise, add it to the queue
+            queue.addFirst(scheduledPass)
+        }
+
+        if (result.isCancelled) {
+            TranslationManager.log.warn("Analysis interrupted, stopping Pass evaluation")
+            break
+        }
+    }
 }
 
 /**
@@ -174,7 +400,7 @@ fun executePass(
     cls: KClass<out Pass<out Node>>,
     ctx: TranslationContext,
     result: TranslationResult,
-    executedFrontends: Collection<LanguageFrontend<*, *>>
+    executedFrontends: Collection<LanguageFrontend<*, *>>,
 ) {
     val bench = Benchmark(cls.java, "Executing Pass", false, result)
 
@@ -192,33 +418,35 @@ fun executePass(
             consumeTargets(
                 (prototype as TranslationResultPass)::class,
                 ctx,
-                listOf(result),
-                executedFrontends
+                prototype.sort(result),
+                executedFrontends,
             )
         is ComponentPass ->
             consumeTargets(
                 (prototype as ComponentPass)::class,
                 ctx,
-                result.components,
-                executedFrontends
+                prototype.sort(result),
+                executedFrontends,
             )
         is TranslationUnitPass ->
             consumeTargets(
                 (prototype as TranslationUnitPass)::class,
                 ctx,
-                result.components.flatMap { it.translationUnits },
-                executedFrontends
+                // Execute them in the "sorted" order (if available)
+                prototype.sort(result),
+                executedFrontends,
             )
         is EOGStarterPass -> {
             consumeTargets(
                 (prototype as EOGStarterPass)::class,
                 ctx,
-                result.allEOGStarters,
-                executedFrontends
+                prototype.sort(result),
+                executedFrontends,
             )
         }
     }
 
+    prototype.finalCleanup()
     bench.stop()
 }
 
@@ -229,11 +457,11 @@ fun executePass(
  * Depending on the configuration of [TranslationConfiguration.useParallelPasses], the individual
  * targets will either be consumed sequentially or in parallel.
  */
-private inline fun <reified T : Node> consumeTargets(
+inline fun <reified T : Node> consumeTargets(
     cls: KClass<out Pass<T>>,
     ctx: TranslationContext,
-    targets: List<T>,
-    executedFrontends: Collection<LanguageFrontend<*, *>>
+    targets: Collection<T>,
+    executedFrontends: Collection<LanguageFrontend<*, *>>,
 ) {
     if (ctx.config.useParallelPasses) {
         val futures =
@@ -253,18 +481,21 @@ private inline fun <reified T : Node> consumeTargets(
  * different instances of the same [Pass] class are executed at the same time (on different [target]
  * nodes) using this function.
  */
-private inline fun <reified T : Node> consumeTarget(
+inline fun <reified T : Node> consumeTarget(
     cls: KClass<out Pass<T>>,
     ctx: TranslationContext,
     target: T,
-    executedFrontends: Collection<LanguageFrontend<*, *>>
+    executedFrontends: Collection<LanguageFrontend<*, *>>,
 ): Pass<T>? {
     val language = target.language
 
     val realClass = checkForReplacement(cls, language, ctx.config)
 
     val pass = realClass.primaryConstructor?.call(ctx)
-    if (pass?.runsWithCurrentFrontend(executedFrontends) == true) {
+    if (
+        pass?.runsWithCurrentFrontend(executedFrontends) == true &&
+            pass.runsWithLanguageTrait(language)
+    ) {
         pass.accept(target)
         pass.cleanup()
         return pass
@@ -281,7 +512,7 @@ private inline fun <reified T : Node> consumeTarget(
 fun <T : Node> checkForReplacement(
     cls: KClass<out Pass<T>>,
     language: Language<*>?,
-    config: TranslationConfiguration
+    config: TranslationConfiguration,
 ): KClass<out Pass<T>> {
     if (language == null) {
         return cls
@@ -289,4 +520,73 @@ fun <T : Node> checkForReplacement(
 
     @Suppress("UNCHECKED_CAST")
     return config.replacedPasses[Pair(cls, language::class)] as? KClass<out Pass<T>> ?: cls
+}
+
+val KClass<out Pass<*>>.isFirstPass: Boolean
+    get() {
+        return this.hasAnnotation<ExecuteFirst>()
+    }
+
+val KClass<out Pass<*>>.isLastPass: Boolean
+    get() {
+        return this.hasAnnotation<ExecuteLast>()
+    }
+
+val KClass<out Pass<*>>.isLatePass: Boolean
+    get() {
+        return this.hasAnnotation<ExecuteLate>()
+    }
+
+val KClass<out Pass<*>>.softDependencies: Set<KClass<out Pass<*>>>
+    get() {
+        return this.findAnnotations<DependsOn>()
+            .filter { it.softDependency }
+            .map { it.value }
+            .toSet()
+    }
+
+val KClass<out Pass<*>>.hardDependencies: Set<KClass<out Pass<*>>>
+    get() {
+        return this.findAnnotations<DependsOn>()
+            .filter { !it.softDependency }
+            .map { it.value }
+            .toSet()
+    }
+
+val KClass<out Pass<*>>.softExecuteBefore: Set<KClass<out Pass<*>>>
+    get() {
+        return this.findAnnotations<ExecuteBefore>()
+            .filter { it.softDependency }
+            .map { it.other }
+            .toSet()
+    }
+
+val KClass<out Pass<*>>.briefDescription: String
+    get() {
+        return this.findAnnotations<Description>().singleOrNull()?.briefDescription ?: ""
+    }
+
+val KClass<out Pass<*>>.hardExecuteBefore: Set<KClass<out Pass<*>>>
+    get() {
+        return this.findAnnotations<ExecuteBefore>()
+            .filter { !it.softDependency }
+            .map { it.other }
+            .toSet()
+    }
+
+/**
+ * Mark the node as dirty for the given pass. This is used to mark nodes that have been changed and
+ * need to be re-analyzed by a specific pass. The pass is specified by the type parameter [T].
+ */
+inline fun <reified T : Pass<*>> Node.markDirty() {
+    translationResult?.markDirty(this, T::class)
+}
+
+/**
+ * Mark the node as clean from the invoked pass. This is used to mark nodes that have been analyzed
+ * and do not need to be re-analyzed anymore. The pass is specified by the context parameter.
+ */
+context(pass: Pass<*>)
+fun Node.markClean() {
+    translationResult?.markClean(this, pass::class)
 }

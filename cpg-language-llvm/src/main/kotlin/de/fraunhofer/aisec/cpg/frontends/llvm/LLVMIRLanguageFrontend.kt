@@ -31,7 +31,6 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -40,7 +39,7 @@ import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.CompressLLVMPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
-import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
+import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import java.nio.ByteBuffer
@@ -55,8 +54,8 @@ import org.bytedeco.llvm.global.LLVM.*
  * resort to use [Pointer] as the AST node type here.
  */
 @RegisterExtraPass(CompressLLVMPass::class)
-class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend<Pointer, LLVMTypeRef>(language, ctx) {
+class LLVMIRLanguageFrontend(ctx: TranslationContext, language: Language<LLVMIRLanguageFrontend>) :
+    LanguageFrontend<Pointer, LLVMTypeRef>(ctx, language) {
 
     val statementHandler = StatementHandler(this)
     val declarationHandler = DeclarationHandler(this)
@@ -99,7 +98,7 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
             LLVMCreateMemoryBufferWithContentsOfFile(
                 BytePointer(file.toPath().toString()),
                 buf,
-                errorMessage
+                errorMessage,
             )
         if (result != 0) {
             // something went wrong
@@ -119,6 +118,7 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
         bench = Benchmark(this.javaClass, "Transform to CPG")
 
         val tu = newTranslationUnitDeclaration(file.name)
+        currentTU = tu
 
         // we need to set our translation unit as the global scope
         scopeManager.resetToGlobal(tu)
@@ -128,8 +128,10 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
         while (global != null) {
             // try to parse the variable (declaration)
             val declaration = declarationHandler.handle(global)
-
-            scopeManager.addDeclaration(declaration)
+            if (declaration != null) {
+                scopeManager.addDeclaration(declaration)
+                tu.declarations += declaration
+            }
 
             global = LLVMGetNextGlobal(global)
         }
@@ -139,8 +141,10 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
         while (func != null) {
             // try to parse the function (declaration)
             val declaration = declarationHandler.handle(func)
-
-            scopeManager.addDeclaration(declaration)
+            if (declaration != null) {
+                scopeManager.addDeclaration(declaration)
+                tu.declarations += declaration
+            }
 
             func = LLVMGetNextFunction(func)
         }
@@ -184,7 +188,7 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
 
     internal fun typeOf(
         typeRef: LLVMTypeRef,
-        alreadyVisited: MutableMap<LLVMTypeRef, Type?> = mutableMapOf()
+        alreadyVisited: MutableMap<LLVMTypeRef, Type?> = mutableMapOf(),
     ): Type {
         val typeStr = LLVMPrintTypeToString(typeRef).string
         if (typeStr in typeCache) {
@@ -210,6 +214,10 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
                 LLVMStructTypeKind -> {
                     val record = declarationHandler.handleStructureType(typeRef, alreadyVisited)
                     record.toType()
+                }
+                LLVMFunctionTypeKind -> {
+                    // we are not really interested in function types in this frontend
+                    unknownType()
                 }
                 else -> {
                     objectType(typeStr)
@@ -242,11 +250,7 @@ class LLVMIRLanguageFrontend(language: Language<LLVMIRLanguageFrontend>, ctx: Tr
 
     /** Determines if a struct with [name] exists in the scope. */
     fun isKnownStructTypeName(name: String): Boolean {
-        return this.scopeManager
-            .resolve<RecordDeclaration>(this.scopeManager.globalScope, true) {
-                it.name.toString() == name
-            }
-            .isNotEmpty()
+        return this.scopeManager.getRecordForName(Name(name), language) != null
     }
 
     fun getOperandValueAtIndex(instr: LLVMValueRef, idx: Int): Expression {

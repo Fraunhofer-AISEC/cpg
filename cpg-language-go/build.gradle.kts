@@ -23,39 +23,44 @@
  *                    \______/ \__|       \______/
  *
  */
+import de.undercouch.gradle.tasks.download.Download
+
 plugins {
     id("cpg.frontend-conventions")
+    alias(libs.plugins.download)
 }
 
-publishing {
-    publications {
-        named<MavenPublication>("cpg-language-go") {
-            pom {
-                artifactId = "cpg-language-go"
-                name.set("Code Property Graph - Go Frontend")
-                description.set("A Go language frontend for the CPG")
-            }
-        }
+mavenPublishing {
+    pom {
+        name.set("Code Property Graph - Go Frontend")
+        description.set("A Go language frontend for the CPG")
     }
 }
 
 dependencies {
-    implementation("net.java.dev.jna:jna:5.13.0")
+    implementation("net.java.dev.jna:jna:5.18.1")
     testImplementation(project(":cpg-analysis"))
 }
 
-if (!project.hasProperty("skipGoBuild")) {
-    val compileGolang = tasks.register("compileGolang") {
-        doLast {
-            project.exec {
-                commandLine("./build.sh")
-                    .setStandardOutput(System.out)
-                    .workingDir("src/main/golang")
-            }
-        }
-    }
+tasks {
+    val downloadLibGoAST by
+        registering(Download::class) {
+            val version = "v0.0.5"
 
-    tasks.compileJava {
-        dependsOn(compileGolang)
-    }
+            src(
+                listOf(
+                    "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-arm64.dylib",
+                    "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.dylib",
+                    "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-arm64.so",
+                    "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.so",
+                    "https://github.com/Fraunhofer-AISEC/libgoast/releases/download/${version}/libgoast-amd64.dll",
+                )
+            )
+            dest(projectDir.resolve("src/main/resources"))
+            onlyIfModified(true)
+        }
+
+    processResources { dependsOn(downloadLibGoAST) }
+
+    sourcesJar { dependsOn(downloadLibGoAST) }
 }

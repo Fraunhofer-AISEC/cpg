@@ -25,20 +25,27 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
+import de.fraunhofer.aisec.cpg.IncompatibleSignature
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.AccessValues
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import de.fraunhofer.aisec.cpg.graph.types.ProblemType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.ScopedWalker
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
-import de.fraunhofer.aisec.cpg.passes.order.DependsOn
+import de.fraunhofer.aisec.cpg.matchesSignature
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
 import java.util.function.Consumer
 
@@ -53,14 +60,18 @@ import java.util.function.Consumer
  */
 @DependsOn(SymbolResolver::class)
 @DependsOn(DFGPass::class)
+@DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
+@Description(
+    "Resolves dynamic method invocations and calls of function pointers in the CPG, enhancing the accuracy of call relationships within the graph."
+)
 class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
-    private lateinit var walker: ScopedWalker
+    private lateinit var walker: ScopedWalker<AstNode>
     private var inferDfgForUnresolvedCalls = false
 
     override fun accept(component: Component) {
         inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedSymbols
-        walker = ScopedWalker(scopeManager)
-        walker.registerHandler { node, _ -> handle(node) }
+        walker = ScopedWalker(scopeManager, Strategy::AST_FORWARD)
+        walker.registerHandler { node -> handle(node) }
 
         for (tu in component.translationUnits) {
             walker.iterate(tu)
@@ -81,7 +92,7 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun handleCallExpression(call: CallExpression) {
         val callee = call.callee
         if (
-            callee?.type is FunctionPointerType ||
+            callee.type is FunctionPointerType ||
                 ((callee as? Reference)?.refersTo is ParameterDeclaration ||
                     (callee as? Reference)?.refersTo is VariableDeclaration)
         ) {
@@ -106,9 +117,30 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         // rid of FunctionPointerType and only deal with FunctionTypes.
         val pointerType: FunctionPointerType =
             when (val type = expr.type) {
-                is FunctionType -> type.pointer() as FunctionPointerType
+                is FunctionType -> {
+                    when (val pointerType = type.pointer()) {
+                        is FunctionPointerType -> pointerType
+                        is ProblemType -> {
+                            log.warn("Function has unexpected type: ProblemType; ignore call")
+                            return
+                        }
+                        else -> {
+                            log.warn("Unexpected function type: ${pointerType}; ignore call")
+                            return
+                        }
+                    }
+                }
                 is FunctionPointerType -> type
-                else -> return
+                else -> {
+                    // some languages allow other types to derive from a function type, in this case
+                    // we need to look for a super type
+                    val superType = type.superTypes.singleOrNull()
+                    if (superType is FunctionType) {
+                        superType.pointer() as FunctionPointerType
+                    } else {
+                        return
+                    }
+                }
             }
 
         val invocationCandidates = mutableListOf<FunctionDeclaration>()
@@ -124,7 +156,7 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             val isLambda = curr is VariableDeclaration && curr.initializer is LambdaExpression
             val currentFunction =
                 if (isLambda) {
-                    ((curr as VariableDeclaration).initializer as LambdaExpression).function
+                    (curr.initializer as LambdaExpression).function
                 } else {
                     curr
                 }
@@ -137,7 +169,8 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 if (
                     isLambda &&
                         currentFunction.returnTypes.isEmpty() &&
-                        currentFunction.hasSignature(pointerType.parameters)
+                        currentFunction.matchesSignature(pointerType.parameters) !=
+                            IncompatibleSignature
                 ) {
                     invocationCandidates.add(currentFunction)
                     continue
@@ -149,11 +182,35 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                     continue
                 }
             }
-            curr.prevDFG.forEach(Consumer(work::push))
+            // Do not consider the base for member expressions, we have to know possible values of
+            // the member (e.g. field).
+            val prevDFGToPush =
+                curr.prevDFGEdges
+                    .filter { it.granularity is FullDataflowGranularity }
+                    .map { it.start }
+                    .toMutableList()
+            if (curr is MemberExpression && prevDFGToPush.isEmpty()) {
+                // TODO: This is only a workaround!
+                //   If there is nothing found for MemberExpressions, we may have set the field
+                //   somewhere else but do not yet propagate this to this location (e.g. because it
+                //   happens in another function). In this case, we look at write-usages to the
+                //   field and use all of those. This is only a temporary workaround until someone
+                //   implements an interprocedural analysis (for example).
+                (curr.refersTo as? FieldDeclaration)
+                    ?.usages
+                    ?.filter {
+                        it.access == AccessValues.WRITE || it.access == AccessValues.READWRITE
+                    }
+                    ?.let { prevDFGToPush.addAll(it) }
+                // Also add the initializer of the field (if it exists)
+                (curr.refersTo as? FieldDeclaration)?.initializer?.let { prevDFGToPush.add(it) }
+            }
+
+            prevDFGToPush.forEach(Consumer(work::push))
         }
 
         call.invokes = invocationCandidates
-        call.invokeEdges.forEach { it.addProperty(Properties.DYNAMIC_INVOKE, true) }
+        call.invokeEdges.forEach { it.dynamicInvoke = true }
 
         // We have to update the dfg edges because this call could now be resolved (which was not
         // the case before).

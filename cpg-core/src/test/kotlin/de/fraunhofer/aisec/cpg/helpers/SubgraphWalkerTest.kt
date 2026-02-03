@@ -25,16 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
-import de.fraunhofer.aisec.cpg.BaseTest
 import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.byNameOrNull
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.*
 
 internal class SubgraphWalkerTest : BaseTest() {
@@ -64,7 +63,7 @@ internal class SubgraphWalkerTest : BaseTest() {
                         .debugParser(true)
                         .failOnError(true)
                         .useParallelFrontends(true)
-                        .registerLanguage(TestLanguage("."))
+                        .registerLanguage<TestLanguage>()
                         .defaultPasses()
                         .build()
                 )
@@ -72,10 +71,10 @@ internal class SubgraphWalkerTest : BaseTest() {
                 .first()
                 .translationUnits
                 .first()
-        val namespace = tu.byNameOrNull<NamespaceDeclaration>("compiling")
+        val namespace = tu.namespaces["compiling"]
         assertNotNull(namespace)
 
-        val recordDeclaration = namespace.byNameOrNull<RecordDeclaration>("compiling.SimpleClass")
+        val recordDeclaration = namespace.records["compiling.SimpleClass"]
         assertNotNull(recordDeclaration)
 
         // This calls SubgraphWalker.getAstChildren()

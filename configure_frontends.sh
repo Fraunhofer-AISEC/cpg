@@ -62,3 +62,9 @@ answerOpenQasm=$(ask "Do you want to enable the OpenQASM frontend? (currently $(
 setProperty "enableOpenQasmFrontend" $answerOpenQasm
 answerRuby=$(ask "Do you want to enable the Ruby frontend? (currently $(getProperty "enableRubyFrontend"))")
 setProperty "enableRubyFrontend" $answerRuby
+answerJVM=$(ask "Do you want to enable the JVM frontend? (currently $(getProperty "enableJVMFrontend"))")
+setProperty "enableJVMFrontend" $answerJVM
+answerINI=$(ask "Do you want to enable the INI frontend? (currently $(getProperty "enableINIFrontend"))")
+setProperty "enableINIFrontend" $answerINI
+answerMCP=$(ask "Do you want to enable the MCP module? (currently $(getProperty "enableMCPModule"))")
+setProperty "enableMCPModule" $answerMCP

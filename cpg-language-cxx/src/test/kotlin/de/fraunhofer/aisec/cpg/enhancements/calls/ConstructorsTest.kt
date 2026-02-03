@@ -25,17 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.enhancements.calls
 
-import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
-import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.literals
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.variables
+import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.*
 
@@ -45,7 +41,7 @@ internal class ConstructorsTest : BaseTest() {
     @Test
     @Throws(Exception::class)
     fun testCPP() {
-        val result = TestUtils.analyze("cpp", topLevel, true) { it.registerLanguage<CPPLanguage>() }
+        val result = analyze("cpp", topLevel, true) { it.registerLanguage<CPPLanguage>() }
         val constructors = result.allChildren<ConstructorDeclaration>()
         val noArg =
             findByUniquePredicate(constructors) {
@@ -139,12 +135,12 @@ internal class ConstructorsTest : BaseTest() {
     @Throws(Exception::class)
     fun testCPPFullDefault() {
         val result =
-            TestUtils.analyze(
+            analyze(
                 listOf(
                     Path.of(topLevel.toString(), "defaultarg", "constructorDefault.cpp").toFile()
                 ),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -196,12 +192,12 @@ internal class ConstructorsTest : BaseTest() {
     @Throws(Exception::class)
     fun testCPPPartialDefault() {
         val result =
-            TestUtils.analyze(
+            analyze(
                 listOf(
                     Path.of(topLevel.toString(), "defaultarg", "constructorDefault.cpp").toFile()
                 ),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -242,13 +238,13 @@ internal class ConstructorsTest : BaseTest() {
     @Throws(Exception::class)
     fun testCPPImplicitCast() {
         val result =
-            TestUtils.analyze(
+            analyze(
                 listOf(
                     Path.of(topLevel.toString(), "implicitcastarg", "constructorImplicit.cpp")
                         .toFile()
                 ),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<CPPLanguage>()
             }
@@ -266,12 +262,7 @@ internal class ConstructorsTest : BaseTest() {
         assertFalse(i1Constructor.isImplicit)
         assertEquals(implicitConstructor, i1Constructor.constructor)
         assertEquals(1, i1Constructor.arguments.size)
-        assertTrue(i1Constructor.arguments[0] is CastExpression)
-
-        val i1ConstructorArgument = i1Constructor.arguments[0] as CastExpression
-        assertLocalName("int", i1ConstructorArgument.castType)
-        assertEquals("1.0", i1ConstructorArgument.expression.code)
-        assertLocalName("double", i1ConstructorArgument.expression.type)
+        assertLiteralValue(1.0, i1Constructor.arguments[0])
 
         val implicitConstructorWithDefault =
             findByUniquePredicate(constructors) { c: ConstructorDeclaration ->
@@ -284,13 +275,8 @@ internal class ConstructorsTest : BaseTest() {
         assertFalse(h1Constructor.isImplicit)
         assertEquals(implicitConstructorWithDefault, h1Constructor.constructor)
         assertEquals(1, h1Constructor.arguments.size)
-        assertTrue(h1Constructor.arguments[0] is CastExpression)
+        assertLiteralValue(2.0, h1Constructor.arguments[0])
 
-        val h1ConstructorArgument1 = h1Constructor.arguments[0] as CastExpression
-        assertLocalName("int", h1ConstructorArgument1.castType)
-        assertEquals("2.0", h1ConstructorArgument1.expression.code)
-        assertLocalName("double", h1ConstructorArgument1.expression.type)
-        assertTrue(implicitConstructorWithDefault.nextEOG.contains(literal10))
         for (node in implicitConstructorWithDefault.nextEOG) {
             if (node != literal10) {
                 assertTrue(literal10.nextEOG.contains(node))

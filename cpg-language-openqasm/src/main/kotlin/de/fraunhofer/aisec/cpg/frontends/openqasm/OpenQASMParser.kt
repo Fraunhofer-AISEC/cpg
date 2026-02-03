@@ -53,7 +53,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
         return ProgramNode(
             locationAdderHelper(tokens[0].location, tokens.last().location),
             versionNode,
-            stmts
+            stmts,
         )
     }
 
@@ -136,7 +136,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
         val semicolonToken = eat(SemicolonToken::class)
         return ExpressionStatementNode(
             locationAdderHelper(result.location, semicolonToken.location),
-            result
+            result,
         )
     }
 
@@ -164,7 +164,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
         return QuantumDeclarationStatementNode(
             locationAdderHelper(qubitType.location, semicolon.location),
             qubitType,
-            identifier
+            identifier,
         )
     }
 
@@ -175,7 +175,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
             val designator = handleDesignator()
             return QubitTypeNode(
                 locationAdderHelper(qubit.location, designator.location),
-                designator
+                designator,
             )
         }
         return QubitTypeNode(qubit.location, null)
@@ -200,7 +200,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
         return MeasureArrowAssignmentStatementNode(
             locationAdderHelper(measureExpression, semicolon),
             measureExpression,
-            indexedIdentifier
+            indexedIdentifier,
         )
     }
 
@@ -234,7 +234,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
             locationAdderHelper(ifToken.location, lastLocation),
             cond,
             thenBody,
-            elseBody
+            elseBody,
         )
     }
 
@@ -262,7 +262,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
             scalarType,
             identifier,
             range,
-            body
+            body,
         )
     }
 
@@ -306,7 +306,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
             locationAdderHelper(startPos, lastPos),
             firstExpr,
             secondExpr,
-            thirdExpression
+            thirdExpression,
         )
     }
 
@@ -381,7 +381,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
             locationAdderHelper(tpe, semicolon),
             tpe,
             identifier,
-            declExpression
+            declExpression,
         )
     }
 
@@ -539,7 +539,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
             locationAdderHelper(firstToken, currentToken),
             type,
             identifierNode,
-            designatorNode
+            designatorNode,
         )
     }
 
@@ -654,8 +654,8 @@ class OpenQASMParser(private val tokens: List<Token>) {
                     idtoken.location.region.startLine,
                     idtoken.location.region.startColumn,
                     endLine,
-                    endColumn
-                )
+                    endColumn,
+                ),
             )
         return CallExpressionNode(location, identifierNode, args)
     }
@@ -678,7 +678,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
                 LogicalOrExpressionNode(
                     locationAdderHelper(startPosition.location, rhs.location),
                     lhs,
-                    rhs
+                    rhs,
                 )
         }
         return lhs
@@ -694,7 +694,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
                 LogicalAndExpressionNode(
                     locationAdderHelper(startPosition.location, rhs.location),
                     lhs,
-                    rhs
+                    rhs,
                 )
         }
         return lhs
@@ -710,7 +710,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
                 BitwiseOrExpressionNode(
                     locationAdderHelper(startPosition.location, rhs.location),
                     lhs,
-                    rhs
+                    rhs,
                 )
         }
         return lhs
@@ -726,7 +726,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
                 BitwiseXorExpressionNode(
                     locationAdderHelper(startPosition.location, rhs.location),
                     lhs,
-                    rhs
+                    rhs,
                 )
         }
         return lhs
@@ -742,7 +742,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
                 BitwiseAndExpressionNode(
                     locationAdderHelper(startPosition.location, rhs.location),
                     lhs,
-                    rhs
+                    rhs,
                 )
         }
         return lhs
@@ -882,19 +882,19 @@ class OpenQASMParser(private val tokens: List<Token>) {
                     expr =
                         UnaryExpressionAsteriskNode(
                             locationAdderHelper(stack.first().location, expr.location),
-                            expr
+                            expr,
                         )
                 is ExclamationPointToken ->
                     expr =
                         UnaryExpressionExclamationPointNode(
                             locationAdderHelper(stack.first().location, expr.location),
-                            expr
+                            expr,
                         )
                 is MinusToken ->
                     expr =
                         UnaryExpressionMinusNode(
                             locationAdderHelper(stack.first().location, expr.location),
-                            expr
+                            expr,
                         )
             }
             stack.removeFirst()
@@ -949,7 +949,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
                         IndexExpressionNode(
                             locationAdderHelper(identifier, indexOp),
                             identifier.payload,
-                            indexOp
+                            indexOp,
                         )
                     }
                     is LParenToken -> {
@@ -1021,7 +1021,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
                 idx++
                 ExpressionStatementNode(
                     locationAdderHelper(firstToken, semicolon),
-                    LiteralExpressionIdentifierNode(firstToken.location, identifier)
+                    LiteralExpressionIdentifierNode(firstToken.location, identifier),
                 )
             }
             is LBracketToken -> {
@@ -1071,8 +1071,8 @@ class OpenQASMParser(private val tokens: List<Token>) {
                     CallExpressionNode(
                         locationAdderHelper(identifier.location, rParenToken.location),
                         identifier,
-                        exprList
-                    )
+                        exprList,
+                    ),
                 )
             idx++
             return result
@@ -1090,7 +1090,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
                 identifier,
                 exprList,
                 designator,
-                gateOpList
+                gateOpList,
             )
         }
     }
@@ -1148,7 +1148,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
         return IndexedIdentifierNode(
             locationAdderHelper(identifier.location, lastLocation),
             identifier,
-            idxOperators
+            idxOperators,
         )
     }
 
@@ -1244,7 +1244,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
         if (includeToken == null || stringToken == null || semicolonToken == null) TODO()
         return IncludeStatementNode(
             locationAdderHelper(includeToken.location, semicolonToken.location),
-            stringToken.payload
+            stringToken.payload,
         )
     }
 
@@ -1287,7 +1287,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
             locationAdderHelper(gateToken, scopeToken),
             identifierToken.payload,
             identifierList,
-            scope
+            scope,
         )
     }
 
@@ -1337,7 +1337,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
         if (openQASMToken == null || semicolonToken == null) TODO()
         return VersionNode(
             locationAdderHelper(openQASMToken, semicolonToken),
-            openQASMToken.versionString
+            openQASMToken.versionString,
         )
     }
 
@@ -1352,7 +1352,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
      */
     private fun locationAdderHelper(
         loc1: PhysicalLocation,
-        loc2: PhysicalLocation
+        loc2: PhysicalLocation,
     ): PhysicalLocation {
         if (loc1.artifactLocation != loc2.artifactLocation) TODO()
         val region1 = loc1.region
@@ -1387,7 +1387,7 @@ class OpenQASMParser(private val tokens: List<Token>) {
         }
         return PhysicalLocation(
             loc1.artifactLocation.uri,
-            Region(startLine, startColumn, endLine, endColumn)
+            Region(startLine, startColumn, endLine, endColumn),
         )
     }
 

@@ -34,5 +34,5 @@ class GateCallStatementNode(
     val identifier: IdentifierNode?,
     val exprList: List<ExpressionNode>?,
     val designator: DesignatorNode?,
-    val gateOperandList: GateOperandListNode?
+    val gateOperandList: GateOperandListNode?,
 ) : StatementNode(location)

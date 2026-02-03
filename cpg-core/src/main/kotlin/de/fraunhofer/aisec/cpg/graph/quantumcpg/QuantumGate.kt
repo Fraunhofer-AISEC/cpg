@@ -36,7 +36,7 @@ abstract class QuantumGate(override val cpgNode: Node?, val quantumCircuit: Quan
 class UnknownQuantumGate(
     cpgNode: Node?,
     quantumCircuit: QuantumCircuit,
-    vararg val quantumBitArgs: QuantumBitReference
+    vararg val quantumBitArgs: QuantumBitReference,
 ) : QuantumGate(cpgNode, quantumCircuit) {
     override val fidelity: Float
         get() = TODO("Not yet implemented")

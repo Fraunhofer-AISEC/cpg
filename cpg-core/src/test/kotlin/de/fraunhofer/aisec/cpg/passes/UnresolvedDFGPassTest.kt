@@ -25,11 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.GraphExamples.Companion.testFrontend
 import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
@@ -37,12 +37,13 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class UnresolvedDFGPassTest {
     @Test
     fun testUnresolvedCalls() {
-        val result = getDfgUnresolvedCalls(true)
+        val result = getDfgUnresolvedCalls(true, false)
 
         // Flow from base to return value
         val firstCall = result.calls { it.name.localName == "get" }[0]
@@ -55,7 +56,7 @@ class UnresolvedDFGPassTest {
         assertEquals(2, callWithParam.prevDFG.size)
         assertEquals(
             osDecl,
-            callWithParam.prevDFG.filterIsInstance<Reference>().firstOrNull()?.refersTo
+            callWithParam.prevDFG.filterIsInstance<Reference>().firstOrNull()?.refersTo,
         )
         assertEquals(4, callWithParam.prevDFG.filterIsInstance<Literal<*>>().firstOrNull()?.value)
 
@@ -69,11 +70,10 @@ class UnresolvedDFGPassTest {
 
     @Test
     fun testUnresolvedCallsNoInference() {
-        val result = getDfgUnresolvedCalls(false)
+        val result = getDfgUnresolvedCalls(false, false)
 
         // No flow from base to return value
         val firstCall = result.calls { it.name.localName == "get" }[0]
-        val osDecl = result.variables["os"]
         assertEquals(0, firstCall.prevDFG.size)
 
         // No flow from base or argument to return value
@@ -88,16 +88,65 @@ class UnresolvedDFGPassTest {
         assertTrue(knownCall.prevDFG.firstOrNull() is MethodDeclaration)
     }
 
+    @Test
+    fun testUnresolvedCallsWithInference() {
+        // For calls with an inferred function declaration, we connect the arguments with the
+        // parameter declaration.
+        // The parameter declaration is connected to the function declaration which then flows to
+        // the lhs of the assignment.
+        val result = getDfgUnresolvedCalls(false, true)
+
+        val osDecl = result.variables["os"]
+        assertNotNull(osDecl)
+
+        // Flow from base to method declaration which then flows to the call
+        val firstCall = result.calls { it.name.localName == "get" }[0]
+        assertEquals(1, firstCall.prevDFG.size)
+        // Check if it's the "get" method.
+        val getMethod1 = firstCall.prevDFG.singleOrNull { it.name.localName == "get" }
+        assertNotNull(getMethod1)
+        assertEquals(1, getMethod1.prevDFG.size)
+        assertEquals(
+            osDecl,
+            (getMethod1.prevDFG.singleOrNull()?.prevDFG?.singleOrNull() as? Reference)?.refersTo,
+        )
+
+        // Flow from base and argument to return value
+        val callWithParam = result.calls { it.name.localName == "get" }[1]
+        assertEquals(1, callWithParam.prevDFG.size)
+        // Check if it's the "get" method.
+        val getMethod2 = callWithParam.prevDFG.singleOrNull { it.name.localName == "get" }
+        assertNotNull(getMethod2)
+        assertEquals(2, getMethod2.prevDFG.size)
+        val callWithParamArgs = getMethod2.prevDFG.flatMap { it.prevDFG }
+        assertEquals(
+            osDecl,
+            callWithParamArgs.filterIsInstance<Reference>().firstOrNull()?.refersTo,
+        )
+        assertEquals(4, callWithParamArgs.filterIsInstance<Literal<*>>().firstOrNull()?.value)
+
+        // No specific flows for resolved functions
+        // => Goes through the method declaration and then follows the instructions in the method's
+        // implementation
+        val knownCall = result.calls { it.name.localName == "knownFunction" }[0]
+        assertEquals(1, knownCall.prevDFG.size)
+        assertTrue(knownCall.prevDFG.firstOrNull() is MethodDeclaration)
+    }
+
     companion object {
 
-        fun getDfgUnresolvedCalls(inferUnresolved: Boolean): TranslationResult {
+        fun getDfgUnresolvedCalls(
+            inferUnresolved: Boolean,
+            inferFunctions: Boolean,
+        ): TranslationResult {
             val config =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .inferenceConfiguration(
                         InferenceConfiguration.builder()
                             .inferDfgForUnresolvedCalls(inferUnresolved)
+                            .inferFunctions(inferFunctions)
                             .build()
                     )
                     .build()

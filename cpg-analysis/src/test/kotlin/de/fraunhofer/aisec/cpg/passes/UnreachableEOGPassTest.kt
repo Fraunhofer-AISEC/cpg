@@ -27,13 +27,13 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
+import de.fraunhofer.aisec.cpg.helpers.functional.Order
+import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.testcases.Passes
 import kotlin.test.*
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.assertThrows
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class UnreachableEOGPassTest {
@@ -49,11 +49,11 @@ class UnreachableEOGPassTest {
         val method = tu.functions["ifBothPossible"]
         assertNotNull(method)
 
-        val ifStatement = method.bodyOrNull<IfStatement>()
+        val ifStatement = method.ifs.firstOrNull()
         assertNotNull(ifStatement)
 
         for (edge in ifStatement.nextEOGEdges) {
-            assertFalse(edge.getProperty(Properties.UNREACHABLE) as Boolean)
+            assertFalse(edge.unreachable)
         }
     }
 
@@ -62,49 +62,49 @@ class UnreachableEOGPassTest {
         val method = tu.functions["ifTrue"]
         assertNotNull(method)
 
-        val ifStatement = method.bodyOrNull<IfStatement>()
+        val ifStatement = method.ifs.firstOrNull()
         assertNotNull(ifStatement)
 
         // Check if the then-branch is set as reachable including all the edges until reaching the
         // print
         val thenDecl = ifStatement.nextEOGEdges[0]
-        assertFalse(thenDecl.getProperty(Properties.UNREACHABLE) as Boolean)
+        assertFalse(thenDecl.unreachable)
         assertEquals(1, thenDecl.end.nextEOGEdges.size)
         // The "++"
         val incOp = thenDecl.end.nextEOGEdges[0]
-        assertFalse(incOp.getProperty(Properties.UNREACHABLE) as Boolean)
+        assertFalse(incOp.unreachable)
         assertEquals(1, incOp.end.nextEOGEdges.size)
         // The block
         val thenCompound = incOp.end.nextEOGEdges[0]
-        assertFalse(thenCompound.getProperty(Properties.UNREACHABLE) as Boolean)
+        assertFalse(thenCompound.unreachable)
         assertEquals(1, thenCompound.end.nextEOGEdges.size)
         // There's the outgoing EOG edge to the statement after the branching
         val thenExit = thenCompound.end.nextEOGEdges[0]
-        assertFalse(thenExit.getProperty(Properties.UNREACHABLE) as Boolean)
+        assertFalse(thenExit.unreachable)
 
         // Check if the else-branch is set as unreachable including all the edges until reaching the
         // print
         val elseDecl = ifStatement.nextEOGEdges[1]
-        assertTrue(elseDecl.getProperty(Properties.UNREACHABLE) as Boolean)
+        assertTrue(elseDecl.unreachable)
         assertEquals(1, elseDecl.end.nextEOGEdges.size)
         // The "--"
         val decOp = elseDecl.end.nextEOGEdges[0]
-        assertTrue(decOp.getProperty(Properties.UNREACHABLE) as Boolean)
+        assertTrue(decOp.unreachable)
         assertEquals(1, decOp.end.nextEOGEdges.size)
         // The block
         val elseCompound = decOp.end.nextEOGEdges[0]
-        assertTrue(elseCompound.getProperty(Properties.UNREACHABLE) as Boolean)
+        assertTrue(elseCompound.unreachable)
         assertEquals(1, elseCompound.end.nextEOGEdges.size)
         // There's the outgoing EOG edge to the statement after the branching
         val elseExit = elseCompound.end.nextEOGEdges[0]
-        assertTrue(elseExit.getProperty(Properties.UNREACHABLE) as Boolean)
+        assertTrue(elseExit.unreachable)
 
         // After the branching, it's reachable again. Check that we found the merge node and that we
         // continue with reachable edges.
         assertEquals(thenExit.end, elseExit.end)
         val mergeNode = thenExit.end
         assertEquals(1, mergeNode.nextEOGEdges.size)
-        assertFalse(mergeNode.nextEOGEdges[0].getProperty(Properties.UNREACHABLE) as Boolean)
+        assertFalse(mergeNode.nextEOGEdges[0].unreachable)
     }
 
     @Test
@@ -112,11 +112,11 @@ class UnreachableEOGPassTest {
         val method = tu.functions["ifFalse"]
         assertNotNull(method)
 
-        val ifStatement = method.bodyOrNull<IfStatement>()
+        val ifStatement = method.ifs.firstOrNull()
         assertNotNull(ifStatement)
 
-        assertFalse(ifStatement.nextEOGEdges[1].getProperty(Properties.UNREACHABLE) as Boolean)
-        assertTrue(ifStatement.nextEOGEdges[0].getProperty(Properties.UNREACHABLE) as Boolean)
+        assertFalse(ifStatement.nextEOGEdges[1].unreachable)
+        assertTrue(ifStatement.nextEOGEdges[0].unreachable)
     }
 
     @Test
@@ -124,11 +124,11 @@ class UnreachableEOGPassTest {
         val method = tu.functions["ifTrueComputed"]
         assertNotNull(method)
 
-        val ifStatement = method.bodyOrNull<IfStatement>()
+        val ifStatement = method.ifs.firstOrNull()
         assertNotNull(ifStatement)
 
-        assertFalse(ifStatement.nextEOGEdges[0].getProperty(Properties.UNREACHABLE) as Boolean)
-        assertTrue(ifStatement.nextEOGEdges[1].getProperty(Properties.UNREACHABLE) as Boolean)
+        assertFalse(ifStatement.nextEOGEdges[0].unreachable)
+        assertTrue(ifStatement.nextEOGEdges[1].unreachable)
     }
 
     @Test
@@ -136,11 +136,11 @@ class UnreachableEOGPassTest {
         val method = tu.functions["ifFalseComputed"]
         assertNotNull(method)
 
-        val ifStatement = method.bodyOrNull<IfStatement>()
+        val ifStatement = method.ifs.firstOrNull()
         assertNotNull(ifStatement)
 
-        assertFalse(ifStatement.nextEOGEdges[1].getProperty(Properties.UNREACHABLE) as Boolean)
-        assertTrue(ifStatement.nextEOGEdges[0].getProperty(Properties.UNREACHABLE) as Boolean)
+        assertFalse(ifStatement.nextEOGEdges[1].unreachable)
+        assertTrue(ifStatement.nextEOGEdges[0].unreachable)
     }
 
     @Test
@@ -148,11 +148,11 @@ class UnreachableEOGPassTest {
         val method = tu.functions["whileTrueEndless"]
         assertNotNull(method)
 
-        val whileStatement = method.bodyOrNull<WhileStatement>()
+        val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
-        assertFalse(whileStatement.nextEOGEdges[0].getProperty(Properties.UNREACHABLE) as Boolean)
-        assertTrue(whileStatement.nextEOGEdges[1].getProperty(Properties.UNREACHABLE) as Boolean)
+        assertFalse(whileStatement.nextEOGEdges[0].unreachable)
+        assertTrue(whileStatement.nextEOGEdges[1].unreachable)
     }
 
     @Test
@@ -160,11 +160,11 @@ class UnreachableEOGPassTest {
         val method = tu.functions["whileTrue"]
         assertNotNull(method)
 
-        val whileStatement = method.bodyOrNull<WhileStatement>()
+        val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
-        assertFalse(whileStatement.nextEOGEdges[0].getProperty(Properties.UNREACHABLE) as Boolean)
-        assertFalse(whileStatement.nextEOGEdges[1].getProperty(Properties.UNREACHABLE) as Boolean)
+        assertFalse(whileStatement.nextEOGEdges[0].unreachable)
+        assertFalse(whileStatement.nextEOGEdges[1].unreachable)
     }
 
     @Test
@@ -172,11 +172,11 @@ class UnreachableEOGPassTest {
         val method = tu.functions["whileComputedTrue"]
         assertNotNull(method)
 
-        val whileStatement = method.bodyOrNull<WhileStatement>()
+        val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
-        assertFalse(whileStatement.nextEOGEdges[0].getProperty(Properties.UNREACHABLE) as Boolean)
-        assertTrue(whileStatement.nextEOGEdges[1].getProperty(Properties.UNREACHABLE) as Boolean)
+        assertFalse(whileStatement.nextEOGEdges[0].unreachable)
+        assertTrue(whileStatement.nextEOGEdges[1].unreachable)
     }
 
     @Test
@@ -184,11 +184,11 @@ class UnreachableEOGPassTest {
         val method = tu.functions["whileFalse"]
         assertNotNull(method)
 
-        val whileStatement = method.bodyOrNull<WhileStatement>()
+        val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
-        assertFalse(whileStatement.nextEOGEdges[1].getProperty(Properties.UNREACHABLE) as Boolean)
-        assertTrue(whileStatement.nextEOGEdges[0].getProperty(Properties.UNREACHABLE) as Boolean)
+        assertFalse(whileStatement.nextEOGEdges[1].unreachable)
+        assertTrue(whileStatement.nextEOGEdges[0].unreachable)
     }
 
     @Test
@@ -196,11 +196,11 @@ class UnreachableEOGPassTest {
         val method = tu.functions["whileComputedFalse"]
         assertNotNull(method)
 
-        val whileStatement = method.bodyOrNull<WhileStatement>()
+        val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
-        assertFalse(whileStatement.nextEOGEdges[1].getProperty(Properties.UNREACHABLE) as Boolean)
-        assertTrue(whileStatement.nextEOGEdges[0].getProperty(Properties.UNREACHABLE) as Boolean)
+        assertFalse(whileStatement.nextEOGEdges[1].unreachable)
+        assertTrue(whileStatement.nextEOGEdges[0].unreachable)
     }
 
     @Test
@@ -208,10 +208,53 @@ class UnreachableEOGPassTest {
         val method = tu.functions["whileUnknown"]
         assertNotNull(method)
 
-        val whileStatement = method.bodyOrNull<WhileStatement>()
+        val whileStatement = method.whileLoops.firstOrNull()
         assertNotNull(whileStatement)
 
-        assertFalse(whileStatement.nextEOGEdges[1].getProperty(Properties.UNREACHABLE) as Boolean)
-        assertFalse(whileStatement.nextEOGEdges[0].getProperty(Properties.UNREACHABLE) as Boolean)
+        assertFalse(whileStatement.nextEOGEdges[1].unreachable)
+        assertFalse(whileStatement.nextEOGEdges[0].unreachable)
+    }
+
+    @Test
+    fun testReachabilityLattice() {
+        val lattice = ReachabilityLattice()
+        val bottom = lattice.bottom
+        assertEquals(Reachability.BOTTOM, bottom.reachability)
+        val unreachable = ReachabilityLattice.Element(Reachability.UNREACHABLE)
+        val reachable = ReachabilityLattice.Element(Reachability.REACHABLE)
+        val reachable2 = lattice.duplicate(reachable)
+        assertNotSame(reachable, reachable2)
+        assertEquals(reachable, reachable2)
+        assertEquals(setOf(bottom, unreachable, reachable), lattice.elements)
+
+        assertEquals(bottom, lattice.glb(bottom, unreachable))
+        assertEquals(bottom, lattice.glb(bottom, reachable))
+        assertEquals(unreachable, lattice.glb(unreachable, reachable))
+        assertEquals(reachable, lattice.glb(reachable, reachable2))
+        assertEquals(bottom, lattice.glb(unreachable, bottom))
+        assertEquals(bottom, lattice.glb(reachable, bottom))
+        assertEquals(unreachable, lattice.glb(reachable, unreachable))
+        assertEquals(reachable, lattice.glb(reachable, reachable2))
+
+        assertEquals(unreachable, lattice.lub(bottom, unreachable))
+        assertEquals(reachable, lattice.lub(bottom, reachable))
+        assertEquals(reachable, lattice.lub(unreachable, reachable))
+        assertEquals(reachable, lattice.lub(reachable, reachable2))
+        assertEquals(unreachable, lattice.lub(unreachable, bottom))
+        assertEquals(reachable, lattice.lub(reachable, bottom))
+        assertEquals(reachable, lattice.lub(reachable, unreachable))
+        assertEquals(reachable, lattice.lub(reachable, reachable2))
+
+        assertEquals(Order.LESSER, lattice.compare(bottom, unreachable))
+        assertEquals(Order.LESSER, lattice.compare(bottom, reachable))
+        assertEquals(Order.LESSER, lattice.compare(unreachable, reachable))
+        assertEquals(Order.EQUAL, lattice.compare(bottom, bottom.duplicate()))
+        assertEquals(Order.EQUAL, lattice.compare(unreachable, unreachable.duplicate()))
+        assertEquals(Order.EQUAL, lattice.compare(reachable, reachable2))
+        assertEquals(Order.GREATER, lattice.compare(unreachable, bottom))
+        assertEquals(Order.GREATER, lattice.compare(reachable, bottom))
+        assertEquals(Order.GREATER, lattice.compare(reachable, unreachable))
+
+        assertThrows<IllegalArgumentException> { bottom.compare(PowersetLattice.Element<String>()) }
     }
 }

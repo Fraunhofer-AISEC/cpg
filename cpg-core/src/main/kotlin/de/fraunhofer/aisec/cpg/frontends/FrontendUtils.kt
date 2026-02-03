@@ -53,7 +53,7 @@ class FrontendUtils {
             nodeLength: Int,
             nodeOffset: Int,
             startingLineNumber: Int,
-            endingLineNumber: Int
+            endingLineNumber: Int,
         ): Region? {
             // Get start column by stepping backwards from begin of node to first occurrence of
             // '\n'
@@ -64,7 +64,7 @@ class FrontendUtils {
                     LOGGER.warn(
                         "Requested index {} exceeds length of translation unit code ({})",
                         i,
-                        fileContent.length
+                        fileContent.length,
                     )
                     return null
                 }
@@ -116,7 +116,7 @@ class FrontendUtils {
          * the same line, the comment is matched to that closest predecessor.
          */
         fun matchCommentToNode(comment: String, location: Region, tu: TranslationUnitDeclaration) {
-            val nodes: List<Node> = SubgraphWalker.flattenAST(tu)
+            val nodes = SubgraphWalker.flattenAST(tu)
 
             // Get a List of all Nodes that enclose the comment
             var enclosingNodes =
@@ -137,13 +137,13 @@ class FrontendUtils {
             val smallestEnclosingNode =
                 enclosingNodes.sortedWith(compareBy { it.code?.length ?: 10000 }).first()
 
-            val children = SubgraphWalker.getAstChildren(smallestEnclosingNode).toMutableList()
+            val children = smallestEnclosingNode.astChildren.toMutableList()
 
             // Because in GO we wrap all elements into a NamespaceDeclaration we have to extract the
             // natural children
             children.addAll(
                 children.filterIsInstance<NamespaceDeclaration>().flatMap { namespace ->
-                    SubgraphWalker.getAstChildren(namespace).filter { it !in children }
+                    namespace.astChildren.filter { it !in children }
                 }
             )
 
@@ -162,7 +162,7 @@ class FrontendUtils {
                     .sortedWith(
                         compareBy(
                             { it.location?.region?.startLine ?: 0 },
-                            { it.location?.region?.startColumn ?: 0 }
+                            { it.location?.region?.startColumn ?: 0 },
                         )
                     )
                     .firstOrNull()
@@ -183,7 +183,7 @@ class FrontendUtils {
                         .sortedWith(
                             compareBy(
                                 { it.location?.region?.endLine ?: 0 },
-                                { it.location?.region?.endColumn ?: 0 }
+                                { it.location?.region?.endColumn ?: 0 },
                             )
                         )
                         .lastOrNull()

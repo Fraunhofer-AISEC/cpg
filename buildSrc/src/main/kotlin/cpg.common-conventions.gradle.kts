@@ -1,15 +1,16 @@
-import org.jetbrains.dokka.gradle.DokkaTask
+import org.gradle.accessors.dm.LibrariesForLibs
+import org.gradle.api.services.BuildServiceParameters.None
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     id("cpg.formatting-conventions")
 
     `java-library`
+    `jvm-test-suite`
     jacoco
     signing
-    `maven-publish`
     kotlin("jvm")
-    id("org.jetbrains.dokka")
+    kotlin("plugin.serialization")
 }
 
 java {
@@ -23,12 +24,13 @@ repositories {
     mavenCentral()
 
     ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/11.3/cdt-11.3.1/plugins")
+        setUrl("https://download.eclipse.org/tools/cdt/releases/")
         metadataSources {
             artifact()
         }
+
         patternLayout {
-            artifact("/[organisation].[module]_[revision].[ext]")
+            artifact("[organisation].[module]_[revision].[ext]")
         }
     }
 }
@@ -41,88 +43,105 @@ tasks.withType<GenerateModuleMetadata> {
     enabled = false
 }
 
-val dokkaHtml by tasks.getting(DokkaTask::class)
-val javadocJar by tasks.registering(Jar::class) {
-    dependsOn(dokkaHtml)
-    archiveClassifier.set("javadoc")
-    from(dokkaHtml.outputDirectory)
+//
+// common compilation configuration
+//
+// specify Java & Kotlin JVM version
+kotlin {
+    jvmToolchain(21)
 }
 
-publishing {
-    publications {
-        create<MavenPublication>(name) {
-            artifact(javadocJar)
-            from(components["java"])
+tasks.withType<KotlinCompile> {
+    compilerOptions {
+        freeCompilerArgs = listOf(
+            "-opt-in=kotlin.RequiresOptIn",
+            "-opt-in=kotlin.uuid.ExperimentalUuidApi",
+            "-opt-in=kotlin.experimental.ExperimentalTypeInference",
+            "-Xcontext-parameters",
+        )
+    }
+}
 
-            pom {
-                url.set("https://github.com/Fraunhofer-AISEC/cpg")
-                licenses {
-                    license {
-                        name.set("The Apache License, Version 2.0")
-                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+// Configure our test suites
+@Suppress("UnstableApiUsage")
+testing {
+    suites {
+        // The default unit-test suite
+        val test by getting(JvmTestSuite::class) {
+            useJUnitJupiter()
+            targets {
+                all {
+                    testTask.configure {
+                        maxHeapSize = "4048m"
+                        reports {
+                            junitXml.apply {
+                                isOutputPerTestCase = false
+                            }
+                        }
                     }
                 }
-                developers {
-                    developer {
-                        id.set("oxisto")
-                        organization.set("Fraunhofer AISEC")
-                        organizationUrl.set("https://www.aisec.fraunhofer.de")
+            }
+        }
+
+        // Our integration tests
+        val integrationTest by registering(JvmTestSuite::class) {
+            description = "Runs the integration tests"
+            dependencies {
+                implementation(project())
+                implementation(testFixtures(project(":cpg-core")))
+            }
+
+            // For legacy reasons we also include the unit-test resources in the integration tests,
+            // because some of them are shared
+            sources {
+                resources {
+                    srcDirs("src/test/resources")
+                }
+            }
+
+            targets {
+                all {
+                    testTask.configure {
+                        maxHeapSize = "4048m"
                     }
                 }
-                scm {
-                    connection.set("scm:git:git://github.com:Fraunhofer-AISEC/cpg.git")
-                    developerConnection.set("scm:git:ssh://github.com:Fraunhofer-AISEC/cpg.git")
-                    url.set("https://github.com/Fraunhofer-AISEC/cpg")
+            }
+        }
+
+        // Our performance tests
+        val performanceTest by registering(JvmTestSuite::class) {
+            description = "Runs the performance tests"
+            dependencies {
+                implementation(project())
+                implementation(testFixtures(project(":cpg-core")))
+            }
+
+            targets {
+                all {
+                    testTask.configure {
+                        // do not parallelize tests within the task
+                        maxParallelForks = 1
+                        // make sure that several performance tests (e.g. in different frontends) also do NOT run in parallel
+                        usesService(serialExecutionService)
+                    }
                 }
             }
         }
     }
 }
 
-signing {
-    val signingKey: String? by project
-    val signingPassword: String? by project
-
-    useInMemoryPgpKeys(signingKey, signingPassword)
-
-    setRequired({
-        gradle.taskGraph.hasTask("publish")
-    })
-
-    sign(publishing.publications[name])
-}
-
-//
-// common compilation configuration
-//
-// specify Java & Kotlin JVM version
-kotlin {
-    jvmToolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
+// A build service that ensures serial execution of a group of tasks
+abstract class SerialExecutionService : BuildService<None>
+val serialExecutionService =
+    gradle.sharedServices.registerIfAbsent("serialExecution", SerialExecutionService::class.java) {
+        this.maxParallelUsages.set(1)
     }
+
+// Common dependencies that we need for all modules
+val libs = the<LibrariesForLibs>()  // necessary to be able to use the version catalog in buildSrc
+dependencies {
+    implementation(libs.apache.commons.lang3)
+    implementation(libs.neo4j.ogm.core)
+    implementation(libs.jackson)
 }
 
-tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        freeCompilerArgs = listOf("-opt-in=kotlin.RequiresOptIn", "-Xcontext-receivers")
-    }
-}
-
-//
-// common testing configuration
-//
-tasks.test {
-    useJUnitPlatform() {
-        if (!project.hasProperty("integration")) {
-            excludeTags("integration")
-        }
-    }
-    maxHeapSize = "4048m"
-}
-
-tasks.jacocoTestReport {
-    reports {
-        xml.required.set(true)
-    }
-    dependsOn(tasks.test) // tests are required to run before generating the report
-}

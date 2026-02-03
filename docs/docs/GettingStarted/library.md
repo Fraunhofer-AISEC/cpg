@@ -13,7 +13,7 @@ You can use the CPG library in your kotlin project.
 ## 1. Add the CPG library to your dependencies
 
 First, get the required dependencies, e.g. by installing either the whole
-project or selected submodules from mavencentral.
+project or selected submodules from maven central.
 Here's an excerpt from a `build.gradle.kts` file:
 ```kotlin
 ...
@@ -23,10 +23,8 @@ repositories {
 }
 
 dependencies {
-    implementation("de.fraunhofer.aisec:cpg:6.2.1") // Install everything
-    // OR
-    implementation("de.fraunhofer.aisec:cpg-core:6.2.1") // Only cpg-core
-    implementation("de.fraunhofer.aisec:cpg-language-java:6.2.1") // Only the java language frontend
+    implementation("de.fraunhofer.aisec:cpg-core:9.0.2") // The core functionality
+    implementation("de.fraunhofer.aisec:cpg-language-java:9.0.2") // Only the java language frontend
     ...
 }
 ```
@@ -58,6 +56,8 @@ val translationConfig = TranslationConfiguration
 ```
 
 For a complete list of available methods, please check the KDoc.
+
+If you want/have to specify data flow summaries for some methods or functions, you add the method `registerFunctionSummary` when building the `TranslationCOnfiguration` and add a file with the format specified [here](../CPG/specs/dfg-function-summaries.md)
 
 ## 3. Running the analysis
 

@@ -34,6 +34,8 @@ import de.fraunhofer.aisec.cpg.frontends.golang.GoStandardLibrary.Modfile
 import de.fraunhofer.aisec.cpg.frontends.golang.GoStandardLibrary.Parser
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.DeclarationSequence
+import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.newNamespaceDeclaration
@@ -44,8 +46,8 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.GoEvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.GoExtraPass
-import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
-import de.fraunhofer.aisec.cpg.passes.order.ReplacePass
+import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
+import de.fraunhofer.aisec.cpg.passes.configuration.ReplacePass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
@@ -57,15 +59,15 @@ import java.net.URI
  * We make use of JNA to call a dynamic library which exports C function wrappers around the Go API.
  * This is needed because we cannot directly export Go structs and pointers to C.
  */
-@SupportsParallelParsing(false)
 @RegisterExtraPass(GoExtraPass::class)
 @ReplacePass(
     lang = GoLanguage::class,
     old = EvaluationOrderGraphPass::class,
-    with = GoEvaluationOrderGraphPass::class
+    with = GoEvaluationOrderGraphPass::class,
 )
-class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend<GoStandardLibrary.Ast.Node, GoStandardLibrary.Ast.Expr>(language, ctx) {
+@SupportsParallelParsing(false)
+class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageFrontend>) :
+    LanguageFrontend<GoStandardLibrary.Ast.Node, GoStandardLibrary.Ast.Expr>(ctx, language) {
 
     private var currentFileSet: GoStandardLibrary.Ast.FileSet? = null
     private var currentModule: GoStandardLibrary.Modfile.File? = null
@@ -128,7 +130,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
         if (!shouldBeBuild(file, ctx.config.symbols)) {
             log.debug(
                 "Ignoring the contents of {} because of missing build tags or different GOOS/GOARCH.",
-                file
+                file,
             )
             return newTranslationUnitDeclaration(file.name)
         }
@@ -146,7 +148,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
                     isDependency = true
                     dependency.toFile()
                 }
-                config.topLevel != null -> config.topLevel
+                ctx.currentComponent?.topLevel() != null -> ctx.currentComponent?.topLevel()
                 else -> file.parentFile
             }!!
 
@@ -170,9 +172,17 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
         scopeManager.resetToGlobal(tu)
         currentTU = tu
 
+        // We need to keep imports on a special file scope. We can simulate this by "entering" the
+        // translation unit
+        scopeManager.enterScope(tu)
+
+        // We parse the imports specifically and not as part of the handler later
         for (spec in f.imports) {
             val import = specificationHandler.handle(spec)
-            scopeManager.addDeclaration(import)
+            if (import is ImportDeclaration) {
+                scopeManager.addDeclaration(import)
+                tu.addDeclaration(import)
+            }
         }
 
         val p = newNamespaceDeclaration(f.name.name)
@@ -194,7 +204,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
         } catch (ex: IllegalArgumentException) {
             log.error(
                 "Could not relativize package path to top level. Cannot set package path.",
-                ex
+                ex,
             )
         }
 
@@ -203,33 +213,48 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
             // contain multiple CPG declarations.
             val declaration = declarationHandler.handle(decl)
             if (declaration is DeclarationSequence) {
-                declaration.declarations.forEach { scopeManager.addDeclaration(it) }
+                declaration.declarations.forEach {
+                    scopeManager.addDeclaration(it)
+                    p.addDeclaration(it)
+                }
             } else {
-                scopeManager.addDeclaration(declaration)
+                // We need to be careful with method declarations. We need to put them in the
+                // respective name scope of the record and NOT on the global scope / namespace scope
+                // TODO: this is broken if we see the declaration of the method before the class :(
+                if (declaration is MethodDeclaration) {
+                    declaration.recordDeclaration?.let {
+                        scopeManager.enterScope(it)
+                        scopeManager.addDeclaration(declaration)
+                        scopeManager.leaveScope(it)
+                        // But still add it to the AST of the namespace so our AST walker can find
+                        // it
+                        p.declarations += declaration
+                    }
+                } else if (declaration != null) {
+                    scopeManager.addDeclaration(declaration)
+                    p.addDeclaration(declaration)
+                }
             }
         }
 
         scopeManager.leaveScope(p)
+        scopeManager.leaveScope(tu)
+
+        scopeManager.resetToGlobal(tu)
 
         scopeManager.addDeclaration(p)
+        tu.addDeclaration(p)
 
         return tu
     }
 
     override fun typeOf(type: GoStandardLibrary.Ast.Expr): Type {
-        val type =
+        val cpgType =
             when (type) {
                 is GoStandardLibrary.Ast.Ident -> {
-                    val name: String =
-                        if (isBuiltinType(type.name)) {
-                            // Definitely not an FQN type
-                            type.name
-                        } else {
-                            // FQN'ize this name (with the current file)
-                            "${currentFile?.name?.name}.${type.name}" // this.File.Name.Name
-                        }
-
-                    objectType(name)
+                    // Just return the name here, the type resolver will resolve this correctly to
+                    // an FQN later
+                    objectType(type.name)
                 }
                 is GoStandardLibrary.Ast.SelectorExpr -> {
                     // This is a FQN type
@@ -295,11 +320,13 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
 
                     // Create an anonymous struct, this will add it to the scope manager. This is
                     // somewhat duplicate, but the easiest for now. We need to create it in the
-                    // global
-                    // scope to avoid namespace issues
+                    // global scope to avoid namespace issues
                     var record =
                         scopeManager.withScope(scopeManager.globalScope) {
-                            specificationHandler.buildRecordDeclaration(type, name)
+                            var record = specificationHandler.buildRecordDeclaration(type, name)
+                            scopeManager.addDeclaration(record)
+                            currentTU?.declarations += record
+                            record
                         }
 
                     record.toType()
@@ -343,22 +370,20 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
                         this,
                         type,
                         log,
-                        "Not parsing type of type ${type.goType} yet"
+                        "Not parsing type of type ${type.goType} yet",
                     )
                     unknownType()
                 }
             }
 
-        return typeManager.registerType(typeManager.resolvePossibleTypedef(type, scopeManager))
+        return typeManager.resolvePossibleTypedef(cpgType, scopeManager)
     }
 
     /**
      * A quick helper function to retrieve the type of a field, to check for possible variadic
      * arguments.
      */
-    internal fun fieldTypeOf(
-        paramType: GoStandardLibrary.Ast.Expr,
-    ): Pair<Type, Boolean> {
+    internal fun fieldTypeOf(paramType: GoStandardLibrary.Ast.Expr): Pair<Type, Boolean> {
         var variadic = false
         val type =
             if (paramType is GoStandardLibrary.Ast.Ellipsis) {
@@ -420,7 +445,7 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
                 "solaris",
                 "wasip1",
                 "windows",
-                "zos"
+                "zos",
             )
 
         /**
@@ -441,34 +466,54 @@ class GoLanguageFrontend(language: Language<GoLanguageFrontend>, ctx: Translatio
                 "ppc64",
                 "ppc64le",
                 "riscv64",
-                "s390x"
+                "s390x",
             )
     }
 }
 
+/**
+ * Go has the concept of the [underlying type](https://go.dev/ref/spec#Underlying_types), in which
+ * new named types can be created on top of existing core types (such as function types, slices,
+ * etc.). The named types then derive certain properties of their underlying type.
+ *
+ * For type literals, e.g., a directly specified function type, the underlying type is the type
+ * itself.
+ */
 val Type?.underlyingType: Type?
     get() {
-        return (this as? ObjectType)?.recordDeclaration?.superClasses?.singleOrNull()
+        return if (namedType) {
+            this?.superTypes?.singleOrNull()
+        } else {
+            this
+        }
     }
 
-val Type?.isOverlay: Boolean
+/**
+ * In Go, types can be constructed based on existing types (see [underlyingType]) and if given a
+ * name, they are considered a [named type](https://go.dev/ref/spec#Types).
+ *
+ * Since these named types can also be augmented with methods (see
+ * https://go.dev/ref/spec#Method_sets), we need to model them as an [ObjectType] with an associated
+ * [RecordDeclaration] (of kind "type").
+ */
+val Type?.namedType: Boolean
     get() {
-        return this is ObjectType && this.recordDeclaration?.kind == "overlay"
+        return this is ObjectType && this.recordDeclaration?.kind == "type"
     }
 
 val Type.isInterface: Boolean
     get() {
-        return this is ObjectType && this.recordDeclaration?.kind == "interface"
+        return underlyingType is ObjectType && this.recordDeclaration?.kind == "interface"
     }
 
 val Type.isMap: Boolean
     get() {
-        return this is ObjectType && this.name.localName == "map"
+        return underlyingType is ObjectType && this.name.localName == "map"
     }
 
 val Type.isChannel: Boolean
     get() {
-        return this is ObjectType && this.name.localName == "chan"
+        return underlyingType is ObjectType && this.name.localName == "chan"
     }
 
 val HasType?.isNil: Boolean

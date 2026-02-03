@@ -25,13 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
-import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
 
@@ -48,15 +47,13 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
         DEFAULT,
         /** Template Parameter is provided explicitly */
         EXPLICIT,
-        UNKNOWN
+        UNKNOWN,
     }
 
     /** Parameters the Template requires for instantiation */
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    @AST
-    var parameterEdges: MutableList<PropertyEdge<Declaration>> = ArrayList()
-
-    val parameters by PropertyEdgeDelegate(TemplateDeclaration::parameterEdges)
+    var parameterEdges = astEdgesOf<Declaration>()
+    val parameters by unwrapping(TemplateDeclaration::parameterEdges)
 
     val parametersWithDefaults: List<Declaration>
         get() {
@@ -72,9 +69,9 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
             return parametersWithDefaults
         }
 
-    val parameterDefaults: List<Node?>
+    val parameterDefaults: List<AstNode?>
         get() {
-            val defaults: MutableList<Node?> = ArrayList()
+            val defaults: MutableList<AstNode?> = ArrayList()
             for (declaration in parameters) {
                 if (declaration is TypeParameterDeclaration) {
                     defaults.add(declaration.default)
@@ -85,18 +82,7 @@ abstract class TemplateDeclaration : Declaration(), DeclarationHolder {
             return defaults
         }
 
-    fun addParameter(parameterizedType: TypeParameterDeclaration) {
-        val propertyEdge = PropertyEdge<Declaration>(this, parameterizedType)
-        propertyEdge.addProperty(Properties.INDEX, parameterEdges.size)
-        parameterEdges.add(propertyEdge)
-    }
-
-    fun addParameter(nonTypeTemplateParamDeclaration: ParameterDeclaration) {
-        val propertyEdge = PropertyEdge<Declaration>(this, nonTypeTemplateParamDeclaration)
-        propertyEdge.addProperty(Properties.INDEX, parameterEdges.size)
-        parameterEdges.add(propertyEdge)
-    }
-
+    @DoNotPersist
     override val declarations: List<Declaration>
         get() {
             val list = ArrayList<Declaration>()

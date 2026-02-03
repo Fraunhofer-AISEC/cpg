@@ -58,7 +58,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
                 newProblemDeclaration(
                     "Not handling declaration kind $kind yet.",
                     ProblemNode.ProblemType.TRANSLATION,
-                    rawNode = value
+                    rawNode = value,
                 )
             }
         }
@@ -121,6 +121,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             val decl = newParameterDeclaration(paramName, type, false, rawNode = param)
 
             frontend.scopeManager.addDeclaration(decl)
+            functionDeclaration.parameters += decl
             frontend.bindingsCache[paramSymbolName] = decl
 
             param = LLVMGetNextParam(param)
@@ -152,13 +153,13 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             } else if (LLVMGetEntryBasicBlock(func) == bb) {
                 functionDeclaration.body = newBlock()
                 if (stmt != null) {
-                    (functionDeclaration.body as Block).addStatement(stmt)
+                    (functionDeclaration.body as Block).statements += stmt
                 }
             } else {
                 // add the label statement, containing this basic block as a compound statement to
                 // our body (if we have none, which we should)
                 if (stmt != null) {
-                    (functionDeclaration.body as? Block)?.addStatement(stmt)
+                    (functionDeclaration.body as? Block)?.statements += stmt
                 }
             }
 
@@ -183,7 +184,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      */
     fun handleStructureType(
         typeRef: LLVMTypeRef,
-        alreadyVisited: MutableMap<LLVMTypeRef, Type?> = mutableMapOf()
+        alreadyVisited: MutableMap<LLVMTypeRef, Type?> = mutableMapOf(),
     ): RecordDeclaration {
         // if this is a literal struct, we will give it a pseudo name
         val name =
@@ -194,12 +195,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             }
 
         // try to see, if the struct already exists as a record declaration
-        var record =
-            frontend.scopeManager
-                .resolve<RecordDeclaration>(frontend.scopeManager.globalScope, true) {
-                    it.name.toString() == name
-                }
-                .firstOrNull()
+        var record = frontend.scopeManager.getRecordForName(Name(name), language)
 
         // if yes, return it
         if (record != null) {
@@ -207,8 +203,6 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
         }
 
         record = newRecordDeclaration(name, "struct")
-
-        frontend.scopeManager.enterScope(record)
 
         val size = LLVMCountStructElementTypes(typeRef)
 
@@ -219,15 +213,18 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             // there are no names, so we need to invent some dummy ones for easier reading
             val fieldName = "field_$i"
 
-            val field = newFieldDeclaration(fieldName, fieldType, listOf(), null, false)
+            frontend.scopeManager.enterScope(record)
 
+            val field = newFieldDeclaration(fieldName, fieldType, listOf(), null, false)
             frontend.scopeManager.addDeclaration(field)
+            record.fields += field
+
+            frontend.scopeManager.leaveScope(record)
         }
 
-        frontend.scopeManager.leaveScope(record)
-
-        // add it to the global scope
-        frontend.scopeManager.globalScope?.addDeclaration(record, true)
+        // Add the record to the current TU
+        frontend.scopeManager.addDeclaration(record)
+        frontend.currentTU?.declarations += record
 
         return record
     }
@@ -239,7 +236,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      */
     private fun getLiteralStructName(
         typeRef: LLVMTypeRef,
-        alreadyVisited: MutableMap<LLVMTypeRef, Type?>
+        alreadyVisited: MutableMap<LLVMTypeRef, Type?>,
     ): String {
         val typeStr = LLVMPrintTypeToString(typeRef).string
         if (typeStr in frontend.typeCache) {

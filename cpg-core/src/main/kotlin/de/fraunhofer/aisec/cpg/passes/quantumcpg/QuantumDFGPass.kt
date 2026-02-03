@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.passes.ComponentPass
-import de.fraunhofer.aisec.cpg.passes.order.DependsOn
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
 @DependsOn(QuantumEOGPass::class)
 class QuantumDFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
@@ -62,7 +62,7 @@ class QuantumDFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             for (qubit in circuit.quantumBits ?: arrayOf()) {
 
                 if (operationIsRelevantForQubit(firstQuantumGate, qubit)) {
-                    worklist.add(firstQuantumGate as? QuantumOperation ?: TODO())
+                    worklist.add(firstQuantumGate)
                 } else {
                     advanceGateUntilRelevant(qubit, firstQuantumGate).forEach { worklist.add(it) }
                 }
@@ -88,7 +88,7 @@ class QuantumDFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun connectOperationsForQubit(
         currentOperation: QuantumOperation,
         nextOperation: List<QuantumOperation>,
-        qubit: QuantumBit
+        qubit: QuantumBit,
     ) {
         when (currentOperation) {
             is QuantumGateH -> {
@@ -113,7 +113,7 @@ class QuantumDFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     ?.references
                     ?.forEach {
                         // Really ugly hack to account for having multiple refs to the bit
-                        currentOperation.quBit.addNextDFG(it)
+                        currentOperation.quBit.nextDFG += it
                     }
             }
             is ClassicIf -> {
@@ -121,7 +121,7 @@ class QuantumDFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 if (thenStmt != null) {
                     when (thenStmt) {
                         is QuantumPauliGate -> {
-                            currentOperation.addNextDFG(thenStmt.quantumBit0)
+                            currentOperation.nextDFG += thenStmt.quantumBit0
                         }
                         else -> TODO()
                     }
@@ -136,31 +136,31 @@ class QuantumDFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private fun connectQubitWithNextOperation(
         qubit: QuantumBitReference,
-        nextOperation: List<QuantumOperation>
+        nextOperation: List<QuantumOperation>,
     ) {
         for (nextOp in nextOperation) {
             when (nextOp) {
                 is QuantumGateH -> {
-                    qubit.addNextDFG(nextOp.quantumBit0)
+                    qubit.nextDFG += (nextOp.quantumBit0)
                 }
                 is QuantumGateCX -> {
                     if (nextOp.quBit0.refersToQubit == qubit.refersToQubit) {
-                        qubit.addNextDFG(nextOp.quBit0)
+                        qubit.nextDFG += (nextOp.quBit0)
                     }
                     if (nextOp.quBit1.refersToQubit == qubit.refersToQubit) {
-                        qubit.addNextDFG(nextOp.quBit1)
+                        qubit.nextDFG += (nextOp.quBit1)
                     }
                 }
                 is QuantumPauliGate -> {
-                    qubit.addNextDFG(nextOp.quantumBit0)
+                    qubit.nextDFG += (nextOp.quantumBit0)
                 }
                 is QuantumMeasure -> {
-                    qubit.addNextDFG(nextOp.quBit)
+                    qubit.nextDFG += (nextOp.quBit)
                 }
                 is ClassicIf -> {
                     connectQubitWithNextOperation(
                         qubit,
-                        listOf(nextOp.thenStatement as? QuantumOperation ?: TODO())
+                        listOf(nextOp.thenStatement as? QuantumOperation ?: TODO()),
                     )
                 }
                 else -> {
@@ -173,21 +173,21 @@ class QuantumDFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private fun connectQubitFirstUse(firstOp: QuantumOperation, qubit: QuantumBit) {
         when (firstOp) {
             is QuantumGateH -> {
-                qubit.addNextDFG(firstOp.quantumBit0)
+                qubit.nextDFG += (firstOp.quantumBit0)
             }
             is QuantumPauliGate -> {
-                qubit.addNextDFG(firstOp.quantumBit0)
+                qubit.nextDFG += (firstOp.quantumBit0)
             }
             is QuantumGateCX -> {
                 if (firstOp.quBit0.refersToQubit == qubit) {
-                    qubit.addNextDFG(firstOp.quBit0)
+                    qubit.nextDFG += (firstOp.quBit0)
                 }
                 if (firstOp.quBit1.refersToQubit == qubit) {
-                    qubit.addNextDFG(firstOp.quBit1)
+                    qubit.nextDFG += (firstOp.quBit1)
                 }
             }
             is QuantumMeasure -> {
-                qubit.addNextDFG(firstOp.quBit)
+                qubit.nextDFG += (firstOp.quBit)
             }
             is ClassicIf -> {
                 // TODO?
@@ -232,7 +232,7 @@ class QuantumDFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             when (op) {
                 is QuantumGateCX -> {
                     // data flow from control bit to other bit
-                    op.quBit0.addNextDFG(op.quBit1)
+                    op.quBit0.nextDFG += (op.quBit1)
                 }
                 is QuantumPauliGate -> {
                     // nothing to do
@@ -241,19 +241,19 @@ class QuantumDFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     // nothing to do
                 }
                 is QuantumRotationGate -> {
-                    op.theta.addNextDFG(op.quantumBit)
+                    op.theta.nextDFG += (op.quantumBit)
                 }
                 is QuantumMeasure -> {
                     // data flow from qubit to classic bit
-                    op.quBit.addNextDFG(op.cBit)
+                    op.quBit.nextDFG += (op.cBit)
                 }
                 is ClassicIf -> {
                     // TODO: very hacky, but needed
                     val binOp = op.condition as? BinaryOperator ?: continue
-                    binOp.addPrevDFG(binOp.rhs)
-                    binOp.addPrevDFG(binOp.lhs)
+                    binOp.prevDFG += (binOp.rhs)
+                    binOp.prevDFG += (binOp.lhs)
 
-                    op.addPrevDFG(binOp)
+                    op.prevDFG += (binOp)
                 }
                 else -> TODO("not implemented: $op")
             }
@@ -266,7 +266,7 @@ class QuantumDFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private fun advanceGateUntilRelevant(
         qubit: QuantumBit,
-        startNode: QuantumOperation?
+        startNode: QuantumOperation?,
     ): List<QuantumOperation> {
         val candidates = nextOpEOG(startNode)
         val result: MutableList<QuantumOperation> = mutableListOf()

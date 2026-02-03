@@ -42,7 +42,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.types.quantumcpg.ClassicBitType
 import de.fraunhofer.aisec.cpg.graph.types.quantumcpg.QuantumBitType
-import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
+import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumDFGPass
 import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumEOGPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -52,9 +52,9 @@ import java.io.File
 @RegisterExtraPass(QuantumEOGPass::class)
 @RegisterExtraPass(QuantumDFGPass::class)
 class OpenQasmLanguageFrontend(
+    ctx: TranslationContext,
     language: Language<OpenQasmLanguageFrontend>,
-    ctx: TranslationContext
-) : LanguageFrontend<ASTNode, Any>(language, ctx) { // TODO
+) : LanguageFrontend<ASTNode, Any>(ctx = ctx, language = language) { // TODO
 
     companion object {
         @kotlin.jvm.JvmField var OPENQASM_EXTENSIONS: List<String> = listOf(".qasm")
@@ -73,7 +73,7 @@ class OpenQasmLanguageFrontend(
         return null // TODO
     }
 
-    override fun codeOf(astNode: ASTNode): String? {
+    override fun codeOf(astNode: ASTNode): String {
         return "TODO" // TODO
     }
 
@@ -92,14 +92,17 @@ class OpenQasmLanguageFrontend(
 
     private fun toCpg(ast: ProgramNode): TranslationUnitDeclaration {
         val tu =
-            newTranslationUnitDeclaration(ast.location.artifactLocation.uri.path, rawNode = ast)
+            newTranslationUnitDeclaration(
+                ast.location.artifactLocation.uri?.path ?: Name(""),
+                rawNode = ast,
+            )
         scopeManager.resetToGlobal(tu)
         val nsd = newNamespaceDeclaration("OpenQASM", rawNode = ast)
         scopeManager.addDeclaration(nsd)
         tu.addDeclaration(nsd)
         scopeManager.enterScope(nsd)
         for (stmt in ast.stmts) {
-            nsd.addStatement(handleStatement(stmt))
+            nsd.statements += handleStatement(stmt)
         }
         scopeManager.leaveScope(nsd)
         scopeManager.addDeclaration(nsd)
@@ -166,8 +169,8 @@ class OpenQasmLanguageFrontend(
         val collector = newBlock(rawNode = stmt)
         val tpe =
             when (stmt.type) {
-                "QREG" -> QuantumBitType()
-                "CREG" -> ClassicBitType()
+                "QREG" -> QuantumBitType(language = language)
+                "CREG" -> ClassicBitType(language = language)
                 else -> TODO()
             }
         for (i in 0 until cnt as Int) {
@@ -187,8 +190,7 @@ class OpenQasmLanguageFrontend(
         val lhsName =
             ((stmt.measureExpr.payload as? GateOperandNode)?.payload as? IndexedIdentifierNode)
                 ?.identifier
-                ?.payload
-                ?: TODO()
+                ?.payload ?: TODO()
 
         val lhsRange =
             ((stmt.measureExpr.payload as? GateOperandNode)?.payload as? IndexedIdentifierNode)
@@ -203,8 +205,7 @@ class OpenQasmLanguageFrontend(
                     (lhsRange.firstExpr as? DecimalIntegerLiteralExpressionNode)?.payload
                 is DecimalIntegerLiteralExpressionNode -> lhsRange.payload
                 else -> TODO()
-            }
-                ?: TODO()
+            } ?: TODO()
 
         val lhsEndIdx =
             when (lhsRange) {
@@ -212,8 +213,7 @@ class OpenQasmLanguageFrontend(
                     (lhsRange.secondExpr as? DecimalIntegerLiteralExpressionNode)?.payload
                 is DecimalIntegerLiteralExpressionNode -> lhsRange.payload
                 else -> TODO()
-            }
-                ?: TODO()
+            } ?: TODO()
 
         val rhsName = (stmt.indexedIdentifier?.identifier as? IdentifierNode)?.payload ?: TODO()
         val rhsRange =
@@ -224,16 +224,14 @@ class OpenQasmLanguageFrontend(
                     (rhsRange.firstExpr as? DecimalIntegerLiteralExpressionNode)?.payload
                 is DecimalIntegerLiteralExpressionNode -> rhsRange.payload
                 else -> TODO()
-            }
-                ?: TODO()
+            } ?: TODO()
         val rhsEndIdx =
             when (rhsRange) {
                 is RangeExpressionNode ->
                     (rhsRange.secondExpr as? DecimalIntegerLiteralExpressionNode)?.payload
                 is DecimalIntegerLiteralExpressionNode -> rhsRange.payload
                 else -> TODO()
-            }
-                ?: TODO()
+            } ?: TODO()
 
         if (lhsEndIdx.toInt() - lhsStartIdx.toInt() != rhsEndIdx.toInt() - rhsStartIdx.toInt()) {
             TODO()
@@ -252,7 +250,7 @@ class OpenQasmLanguageFrontend(
                 lhs = listOf(newDeclaredReferenceExpression(lhsIdxName)),
                 rhs = listOf(newDeclaredReferenceExpression(rhsIdxName))
             )*/
-            ret.addStatement(m)
+            ret.statements += m
         }
 
         return ret
@@ -276,12 +274,10 @@ class OpenQasmLanguageFrontend(
             when (stmt.tpe) {
                 is ScalarTypeBitNode ->
                     (stmt.tpe.designatorNode?.payload as? DecimalIntegerLiteralExpressionNode)
-                        ?.payload
-                        ?: TODO()
+                        ?.payload ?: TODO()
                 is ScalarTypeUIntNode ->
                     (stmt.tpe.designatorNode?.payload as? DecimalIntegerLiteralExpressionNode)
-                        ?.payload
-                        ?: TODO()
+                        ?.payload ?: TODO()
                 else -> TODO()
             }
 
@@ -351,7 +347,7 @@ class OpenQasmLanguageFrontend(
         scopeManager.enterScope(func)
         if (stmt.identifierList != null) {
             for (p in stmt.identifierList.identifiers) {
-                func.addParameter(newParameterDeclaration(p, rawNode = stmt.identifierList))
+                func.parameters += newParameterDeclaration(p, rawNode = stmt.identifierList)
             }
         }
 
@@ -366,7 +362,7 @@ class OpenQasmLanguageFrontend(
     private fun handleScopeNode(scope: ScopeNode): Statement {
         val ret = newBlock(rawNode = scope)
         for (s in scope.stmtList) {
-            ret.addStatement(handleStatement(s))
+            ret.statements += handleStatement(s)
         }
         return ret
     }

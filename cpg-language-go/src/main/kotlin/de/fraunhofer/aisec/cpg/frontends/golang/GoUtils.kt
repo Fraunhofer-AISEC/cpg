@@ -80,8 +80,7 @@ internal fun shouldBeBuild(file: File, symbols: Map<String, String>): Boolean {
         file
             .bufferedReader()
             .useLines { lines -> lines.take(50).toList() }
-            .firstOrNull { it.startsWith("//go:build") }
-            ?: return true
+            .firstOrNull { it.startsWith("//go:build") } ?: return true
 
     val constraint = BuildConstraintExpression.fromString(goBuildLine.substringAfter("//go:build "))
 
@@ -115,7 +114,7 @@ private val Map<String, String>.buildTags: Set<String>
                     "linux",
                     "netbsd",
                     "openbsd",
-                    "solaris"
+                    "solaris",
                 )
         ) {
             tags += "unix"
@@ -137,7 +136,7 @@ private val Map<String, String>.buildTags: Set<String>
 internal fun gatherGoFiles(root: File, includeSubDir: Boolean = true): List<File> {
     return root
         .walkTopDown()
-        .onEnter { (it == root || includeSubDir) && !it.name.contains(".go") }
+        .onEnter { (it == root || includeSubDir) && !it.name.endsWith(".go") }
         .filter {
             // skip tests for now
             it.extension == "go" && !it.name.endsWith("_test.go")
@@ -150,12 +149,14 @@ internal fun gatherGoFiles(root: File, includeSubDir: Boolean = true): List<File
  * for other languages. It shares some fields with a [CompilationDatabase] and both could
  * potentially be merged.
  */
-internal class Project {
+class Project {
     var symbols: Map<String, String> = mutableMapOf()
 
     var components: MutableMap<String, List<File>> = mutableMapOf()
 
     var includePaths: List<File> = mutableListOf()
+
+    var topLevel: File? = null
 
     companion object {
         val log: Logger = LoggerFactory.getLogger(Project::class.java)
@@ -167,12 +168,12 @@ internal class Project {
          *
          * Note: This currently is limited to packages of the standard library
          */
-        internal fun buildProject(
+        fun buildProject(
             modulePath: String,
             goos: String? = null,
             goarch: String? = null,
             goVersion: Int? = null,
-            tags: MutableList<String> = mutableListOf()
+            tags: MutableList<String> = mutableListOf(),
         ): Project {
             val project = Project()
             val symbols = mutableMapOf<String, String>()
@@ -180,8 +181,12 @@ internal class Project {
 
             val topLevel = File(modulePath)
 
+            val goModFile = topLevel.resolve("go.mod")
+            val module =
+                GoStandardLibrary.Modfile.parse(goModFile.absolutePath, goModFile.readText())
+
             val pb =
-                ProcessBuilder("go", "list", tags.joinToString(",", "-tags="), "all")
+                ProcessBuilder("go", "list", "-deps", tags.joinToString(",", "-tags="), "all")
                     .directory(topLevel)
                     .redirectOutput(ProcessBuilder.Redirect.PIPE)
 
@@ -195,8 +200,8 @@ internal class Project {
                 log.debug(proc.errorStream.bufferedReader().readLine())
             }
 
-            // For now, we only support deps in the standard library
-            val deps = proc.inputStream.bufferedReader().readLines().filter { !it.contains(".") }
+            // Read deps from standard input
+            val deps = proc.inputStream.bufferedReader().readLines()
 
             log.debug("Identified {} package dependencies (stdlib only)", deps.size)
 
@@ -213,8 +218,31 @@ internal class Project {
 
             log.debug("GOROOT/src is located @ {}", stdLib)
 
-            files += deps.flatMap { gatherGoFiles(stdLib.resolve(it), false) }
-            files += gatherGoFiles(topLevel)
+            // Build directories out of deps
+            val dirs: List<File> =
+                deps.mapNotNull {
+                    if (!it.contains(".")) {
+                        // without a dot, it is a stdlib package
+                        stdLib.resolve(it)
+                    } else if (it.startsWith("vendor")) {
+                        // if the dependency path starts with "vendor", then it is a dependency that
+                        // is vendored within the standard library (and not in the project). we
+                        // don't really include these
+                        // for now since they blow up the stdlib
+                        null
+                    } else if (it.startsWith(module.module.mod.path)) {
+                        topLevel.resolve(it.substringAfter(module.module.mod.path))
+                    } else {
+                        // for all other dependencies, we try whether they are vendored within the
+                        // current project. Note, this differs from the above case, where a
+                        // dependency is vendored in the stdlib.
+                        topLevel.resolve("vendor").resolve(it)
+                    }
+                }
+
+            files += dirs.flatMap { gatherGoFiles(it, false) }
+            // add cmd folder
+            files += gatherGoFiles(topLevel.resolve("cmd"))
 
             goos?.let { symbols["GOOS"] = it }
             goarch?.let { symbols["GOARCH"] = it }
@@ -232,10 +260,11 @@ internal class Project {
             files = files.filter { shouldBeBuild(it, symbols) }.toMutableList()
 
             // TODO(oxisto): look for binaries in cmd folder
-            project.components[TranslationResult.APPLICATION_LOCAL_NAME] = files
+            project.components[TranslationResult.DEFAULT_APPLICATION_NAME] = files
             project.symbols = symbols
             // TODO(oxisto): support vendor includes
             project.includePaths = listOf(stdLib, topLevel.resolve("vendor"))
+            project.topLevel = File(modulePath)
 
             return project
         }

@@ -30,5 +30,5 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 class CallExpressionNode(
     location: PhysicalLocation,
     identifier: IdentifierNode,
-    args: List<ExpressionNode>
+    args: List<ExpressionNode>,
 ) : ExpressionNode(location)

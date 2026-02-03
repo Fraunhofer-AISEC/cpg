@@ -30,5 +30,5 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 class BitshiftRightExpressionNode(
     location: PhysicalLocation,
     val lhs: ExpressionNode,
-    val rhs: ExpressionNode
+    val rhs: ExpressionNode,
 ) : BitshiftExpressionNode(location)

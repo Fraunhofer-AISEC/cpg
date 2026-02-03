@@ -39,6 +39,10 @@ body {
   font-size: 0.7rem;
 }
 
+.admonition.warning p {
+  border: 0px;
+}
+
 .md-typeset hr {
   border: 1px solid #c7cacc;
   border-top: none;
@@ -78,6 +82,20 @@ body {
   padding-left: 0.8rem;
   padding-bottom: 0.8rem;
   margin: 0;
+}
+
+.md-typeset .tabbed-set {
+  border: 1px solid #c7cacc;
+  border-bottom: none;
+  border-top: none;
+  padding-right: 0.8rem;
+  padding-left: 0.8rem;
+  padding-bottom: 0.8rem;
+  margin: 0;
+}
+.md-typeset .tabbed-set .tabbed-content,
+.md-typeset .tabbed-set .tabbed-block {
+  border: none;
 }
 
 .md-typeset div.papers {
@@ -180,6 +198,9 @@ body {
   border-top: none;
   border-bottom: none;
 }
+.md-typeset li>.mermaid {
+  border: none;
+}
 
 .md-typeset .child {
   background: #dddddd;
@@ -231,6 +252,10 @@ body {
   border: none;
 }
 
+[dir="ltr"] .md-typeset ul>li>ul {
+  border: none;
+}
+
 .md-typeset .empty {
   height: 5em;
 }
@@ -272,6 +297,24 @@ body {
   color: #FFFFFF;
   margin-top: 1px;
   margin-bottom: 1px;
+}
+
+
+.md-typeset .info {
+  background-color: var(--fraunhofer-blue-medium);
+  border-color: var(--fraunhofer-blue);
+}
+.md-typeset .info summary  {
+  background-color: var(--fraunhofer-blue);
+}
+
+.md-typeset .info > summary::before {
+  background-color: #FFFFFF;
+  color: #FFFFFF;
+}
+
+.md-typeset .info p{
+  border: none;
 }
 
 .md-typeset details>.admonition-title::before,

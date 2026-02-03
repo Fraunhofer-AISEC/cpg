@@ -26,34 +26,32 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.types.*
-import de.fraunhofer.aisec.cpg.passes.SymbolResolver
-import de.fraunhofer.aisec.cpg.passes.resolveWithImplicitCast
 import kotlin.reflect.KClass
 import org.neo4j.ogm.annotation.Transient
+
+const val CONST = "const"
 
 /** The C language. */
 open class CLanguage :
     Language<CXXLanguageFrontend>(),
-    HasComplexCallResolution,
     HasStructs,
     HasFunctionPointers,
     HasQualifier,
     HasElaboratedTypeSpecifier,
-    HasShortCircuitOperators {
+    HasShortCircuitOperators,
+    HasGlobalVariables,
+    HasGlobalFunctions {
     override val fileExtensions = listOf("c", "h")
     override val namespaceDelimiter = "::"
     @Transient override val frontend: KClass<out CXXLanguageFrontend> = CXXLanguageFrontend::class
-    override val qualifiers = listOf("const", "volatile", "restrict", "atomic")
+    override val qualifiers = listOf(CONST, "volatile", "restrict", "atomic")
     override val elaboratedTypeSpecifier = listOf("struct", "union", "enum")
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
+
+    val unaryOperators = listOf("--", "++", "-", "+", "*", "&", "~")
 
     /**
      * All operators which perform and assignment and an operation using lhs and rhs. See
@@ -110,48 +108,28 @@ open class CLanguage :
             "__int128" to IntegerType("__int128", 128, this, NumericType.Modifier.SIGNED),
         )
 
-    override fun refineNormalCallResolution(
-        call: CallExpression,
-        ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration
-    ): List<FunctionDeclaration> {
-        val invocationCandidates = ctx.scopeManager.resolveFunction(call).toMutableList()
-        if (invocationCandidates.isEmpty()) {
-            // Check for implicit casts
-            invocationCandidates.addAll(resolveWithImplicitCastFunc(call, ctx))
+    override fun tryCast(
+        type: Type,
+        targetType: Type,
+        hint: HasType?,
+        targetHint: HasType?,
+    ): CastResult {
+        val match = super.tryCast(type, targetType, hint, targetHint)
+        if (match != CastNotPossible) {
+            return match
         }
-        return invocationCandidates
-    }
 
-    override fun refineMethodCallResolution(
-        curClass: RecordDeclaration?,
-        possibleContainingTypes: Set<Type>,
-        call: CallExpression,
-        ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration,
-        callResolver: SymbolResolver
-    ): List<FunctionDeclaration> = emptyList()
+        // Numeric types can be cast implicitly
+        if (type is NumericType && targetType is NumericType) {
+            return ImplicitCast
+        }
 
-    override fun refineInvocationCandidatesFromRecord(
-        recordDeclaration: RecordDeclaration,
-        call: CallExpression,
-        name: String,
-        ctx: TranslationContext
-    ): List<FunctionDeclaration> = emptyList()
+        // As a special rule, a non-nested pointer and array of the same type are completely
+        // interchangeable
+        if (type.root == targetType.root && type is PointerType && targetType is PointerType) {
+            return ImplicitCast
+        }
 
-    /**
-     * @param call we want to find invocation targets for by performing implicit casts
-     * @param scopeManager the scope manager used
-     * @return list of invocation candidates by applying implicit casts
-     */
-    protected fun resolveWithImplicitCastFunc(
-        call: CallExpression,
-        ctx: TranslationContext,
-    ): List<FunctionDeclaration> {
-        val initialInvocationCandidates =
-            listOf(
-                *ctx.scopeManager.resolveFunctionStopScopeTraversalOnDefinition(call).toTypedArray()
-            )
-        return resolveWithImplicitCast(call, initialInvocationCandidates)
+        return CastNotPossible
     }
 }

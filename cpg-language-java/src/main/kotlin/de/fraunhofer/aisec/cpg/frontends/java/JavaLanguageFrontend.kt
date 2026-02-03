@@ -58,12 +58,15 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.CommonPath
 import de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver
-import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
+import de.fraunhofer.aisec.cpg.passes.JavaExtraPass
+import de.fraunhofer.aisec.cpg.passes.JavaImportResolver
+import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
@@ -76,8 +79,10 @@ import kotlin.jvm.optionals.getOrNull
 @RegisterExtraPass(
     JavaExternalTypeHierarchyResolver::class
 ) // this pass is always required for Java
-open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend<Node, Type>(language, ctx) {
+@RegisterExtraPass(JavaImportResolver::class)
+@RegisterExtraPass(JavaExtraPass::class)
+open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<JavaLanguageFrontend>) :
+    LanguageFrontend<Node, Type>(ctx, language) {
 
     var context: CompilationUnit? = null
     var javaSymbolResolver: JavaSymbolSolver?
@@ -114,37 +119,66 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
             context?.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolResolver)
 
             // starting point is always a translation declaration
-            val fileDeclaration = newTranslationUnitDeclaration(file.toString(), rawNode = context)
-            currentTU = fileDeclaration
-            scopeManager.resetToGlobal(fileDeclaration)
+            val tud = newTranslationUnitDeclaration(file.toString(), rawNode = context)
+            currentTU = tud
+            scopeManager.resetToGlobal(tud)
             val packDecl = context?.packageDeclaration?.orElse(null)
-            var namespaceDeclaration: NamespaceDeclaration? = null
-            if (packDecl != null) {
-                namespaceDeclaration =
-                    newNamespaceDeclaration(packDecl.name.asString(), rawNode = packDecl)
-                setCodeAndLocation(namespaceDeclaration, packDecl)
-                scopeManager.addDeclaration(namespaceDeclaration)
-                scopeManager.enterScope(namespaceDeclaration)
-            }
+
+            // We need to create nested namespace (if we have a package declaration) so that we have
+            // correct symbols on the global scope. Otherwise, we put everything directly into the
+            // translation unit
+            val holder =
+                packDecl?.name?.toString()?.split(language.namespaceDelimiter)?.fold(null) {
+                    previous: NamespaceDeclaration?,
+                    path ->
+                    val fqn = previous?.name.fqn(path)
+
+                    val nsd = newNamespaceDeclaration(fqn, rawNode = packDecl)
+                    scopeManager.addDeclaration(nsd)
+                    val holder = previous ?: tud
+                    holder.addDeclaration(nsd)
+
+                    scopeManager.enterScope(nsd)
+                    nsd
+                } ?: tud
 
             for (type in context?.types ?: listOf()) {
                 // handle each type. all declaration in this type will be added by the scope manager
-                // along
-                // the way
+                // along the way
                 val declaration = declarationHandler.handle(type)
-                scopeManager.addDeclaration(declaration)
+                if (declaration != null) {
+                    scopeManager.addDeclaration(declaration)
+                    holder.addDeclaration(declaration)
+                }
             }
 
+            // We put imports and includes directly into the file scope, because otherwise the
+            // import would be visible as symbols in the whole namespace
+            scopeManager.enterScope(tud)
             for (anImport in context?.imports ?: listOf()) {
                 val incl = newIncludeDeclaration(anImport.nameAsString)
                 scopeManager.addDeclaration(incl)
+                tud.addDeclaration(incl)
             }
 
-            if (namespaceDeclaration != null) {
-                scopeManager.leaveScope(namespaceDeclaration)
+            // We create an implicit import for "java.lang.*"
+            val decl =
+                newImportDeclaration(
+                        parseName("java.lang"),
+                        style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
+                    )
+                    .implicit("import java.lang.*")
+            scopeManager.addDeclaration(decl)
+            tud.addDeclaration(decl)
+            scopeManager.leaveScope(tud)
+
+            if (holder is NamespaceDeclaration) {
+                tud.allChildren<NamespaceDeclaration>().reversed().forEach {
+                    scopeManager.leaveScope(it)
+                }
             }
             bench.addMeasurement()
-            fileDeclaration
+            tud
         } catch (ex: IOException) {
             throw TranslationException(ex)
         }
@@ -198,7 +232,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                     r.begin.line,
                     r.begin.column,
                     r.end.line,
-                    r.end.column + 1
+                    r.end.column + 1,
                 ) // +1 for SARIF compliance
             return PhysicalLocation(storage.path.toUri(), region)
         }
@@ -207,16 +241,16 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
 
     fun <N : Node, T : Type> getTypeAsGoodAsPossible(
         nodeWithType: NodeWithType<N, T>,
-        resolved: ResolvedValueDeclaration
+        resolved: ResolvedValueDeclaration,
     ): de.fraunhofer.aisec.cpg.graph.types.Type {
         return try {
             val type = nodeWithType.typeAsString
             if (type == "var") {
                 unknownType()
             } else typeOf(resolved.type)
-        } catch (ex: RuntimeException) {
+        } catch (_: RuntimeException) {
             getTypeFromImportIfPossible(nodeWithType.type)
-        } catch (ex: NoClassDefFoundError) {
+        } catch (_: NoClassDefFoundError) {
             getTypeFromImportIfPossible(nodeWithType.type)
         }
     }
@@ -226,9 +260,9 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
             if (type.toString() == "var") {
                 unknownType()
             } else typeOf(type.resolve())
-        } catch (ex: RuntimeException) {
+        } catch (_: RuntimeException) {
             getTypeFromImportIfPossible(type)
-        } catch (ex: NoClassDefFoundError) {
+        } catch (_: NoClassDefFoundError) {
             getTypeFromImportIfPossible(type)
         }
     }
@@ -237,7 +271,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
     fun getQualifiedMethodNameAsGoodAsPossible(callExpr: MethodCallExpr): String {
         return try {
             callExpr.resolve().qualifiedName
-        } catch (ex: RuntimeException) {
+        } catch (_: RuntimeException) {
             val scope = callExpr.scope
             if (scope.isPresent) {
                 val expression = scope.get()
@@ -251,7 +285,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                 }
                 if (scope.get().toString() == THIS) {
                     // this is not strictly true. This could also be a function of a superclass,
-                    // but is the best we can do for now. If the superclass would be known,
+                    // but is the best we can do for now. If the superclass was known,
                     // this would already be resolved by the Java resolver
                     fqn(callExpr.nameAsString).toString()
                 } else {
@@ -270,7 +304,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                 // this is not strictly true. This could also be a function of a superclass or from
                 // a static asterisk import
             }
-        } catch (ex: NoClassDefFoundError) {
+        } catch (_: NoClassDefFoundError) {
             val scope = callExpr.scope
             if (scope.isPresent) {
                 val expression = scope.get()
@@ -341,22 +375,22 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
 
     fun <N : Node, T : Type> getReturnTypeAsGoodAsPossible(
         nodeWithType: NodeWithType<N, T>,
-        resolved: ResolvedMethodDeclaration
+        resolved: ResolvedMethodDeclaration,
     ): de.fraunhofer.aisec.cpg.graph.types.Type {
         return try {
             // Resolve type first with ParameterizedType
             var type: de.fraunhofer.aisec.cpg.graph.types.Type? =
                 typeManager.getTypeParameter(
                     scopeManager.currentRecord,
-                    resolved.returnType.describe()
+                    resolved.returnType.describe(),
                 )
             if (type == null) {
                 type = typeOf(resolved.returnType)
             }
             type
-        } catch (ex: RuntimeException) {
+        } catch (_: RuntimeException) {
             getTypeFromImportIfPossible(nodeWithType.type)
-        } catch (ex: NoClassDefFoundError) {
+        } catch (_: NoClassDefFoundError) {
             getTypeFromImportIfPossible(nodeWithType.type)
         }
     }
@@ -374,7 +408,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
             scopeManager.firstScopeOrNull { scope: Scope -> scope.astNode is NamespaceDeclaration }
                 ?: return simpleName
         // If scope is null we are in a default package
-        return theScope.name?.fqn(simpleName).toString()
+        return theScope.name.fqn(simpleName).toString()
     }
 
     private fun getTypeFromImportIfPossible(type: Type): de.fraunhofer.aisec.cpg.graph.types.Type {
@@ -434,12 +468,9 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
      * @param node the node
      * @param owner the AST owner node
      */
-    fun processAnnotations(
-        node: de.fraunhofer.aisec.cpg.graph.Node,
-        owner: NodeWithAnnotations<*>
-    ) {
+    fun processAnnotations(node: AstNode, owner: NodeWithAnnotations<*>) {
         if (config.processAnnotations) {
-            node.addAnnotations(handleAnnotations(owner))
+            node.annotations += handleAnnotations(owner)
         }
     }
 
@@ -456,7 +487,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                         newAnnotationMember(
                             pair.nameAsString,
                             expressionHandler.handle(pair.value) as Expression,
-                            rawNode = pair.value
+                            rawNode = pair.value,
                         )
                     members.add(member)
                 }
@@ -467,8 +498,8 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
                     val member =
                         newAnnotationMember(
                             ANNOTATION_MEMBER_VALUE,
-                            expressionHandler.handle(value.asLiteralExpr()) as Expression,
-                            rawNode = value
+                            expressionHandler.handle(value) as Expression,
+                            rawNode = value,
                         )
                     members.add(member)
                 }
@@ -486,8 +517,8 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
             is PrimitiveType -> primitiveType(type.asString())
             is ClassOrInterfaceType ->
                 objectType(
-                    type.nameAsString,
-                    type.typeArguments.getOrNull()?.map { this.typeOf(it) } ?: listOf()
+                    type.nameWithScope,
+                    type.typeArguments.getOrNull()?.map { this.typeOf(it) } ?: listOf(),
                 )
             is ReferenceType -> objectType(type.asString())
             else -> objectType(type.asString())
@@ -513,7 +544,7 @@ open class JavaLanguageFrontend(language: Language<JavaLanguageFrontend>, ctx: T
     init {
         val reflectionTypeSolver = ReflectionTypeSolver()
         nativeTypeResolver.add(reflectionTypeSolver)
-        var root = config.topLevel
+        var root = ctx.currentComponent?.topLevel()
         if (root == null && config.softwareComponents.size == 1) {
             root =
                 config.softwareComponents[config.softwareComponents.keys.first()]?.let {

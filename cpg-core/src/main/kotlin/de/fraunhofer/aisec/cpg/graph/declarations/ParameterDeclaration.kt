@@ -25,19 +25,23 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.HasDefault
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
 /** A declaration of a function or nontype template parameter. */
-class ParameterDeclaration : ValueDeclaration(), HasDefault<Expression?> {
+class ParameterDeclaration : ValueDeclaration(), HasDefault<Expression?>, ArgumentHolder {
     var isVariadic = false
 
     @Relationship(value = "DEFAULT", direction = Relationship.Direction.OUTGOING)
-    @AST
-    private var defaultValue: Expression? = null
+    var defaultValueEdge = astOptionalEdgeOf<Expression>()
+    private var defaultValue by unwrapping(ParameterDeclaration::defaultValueEdge)
+
+    var modifiers: List<String> = mutableListOf()
 
     override var default: Expression?
         get() = defaultValue
@@ -54,4 +58,23 @@ class ParameterDeclaration : ValueDeclaration(), HasDefault<Expression?> {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), isVariadic, defaultValue)
+
+    override fun addArgument(expression: Expression) {
+        if (defaultValue == null) {
+            defaultValue = expression
+        }
+    }
+
+    override fun replaceArgument(old: Expression, new: Expression): Boolean {
+        if (defaultValue == old) {
+            defaultValue = new
+            return true
+        }
+
+        return false
+    }
+
+    override fun hasArgument(expression: Expression): Boolean {
+        return defaultValue == expression
+    }
 }

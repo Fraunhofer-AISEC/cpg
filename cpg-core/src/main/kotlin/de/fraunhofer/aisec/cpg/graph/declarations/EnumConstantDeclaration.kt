@@ -26,13 +26,21 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.HasInitializer
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
+import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents a constant within an [EnumDeclaration]. Depending on the language, this might have an
  * explicit initializer value.
  */
 class EnumConstantDeclaration : ValueDeclaration(), HasInitializer {
+    @Relationship("INITIALIZER") var initializerEdge = astOptionalEdgeOf<Expression>()
+    override var initializer by unwrapping(EnumConstantDeclaration::initializerEdge)
 
-    override var initializer: Expression? = null
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return initializer?.getStartingPrevEOG() ?: setOf()
+    }
 }

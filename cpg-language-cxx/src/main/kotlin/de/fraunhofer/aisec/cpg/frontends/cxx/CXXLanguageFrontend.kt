@@ -40,7 +40,7 @@ import de.fraunhofer.aisec.cpg.helpers.CommentMatcher
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.CXXExtraPass
 import de.fraunhofer.aisec.cpg.passes.DynamicInvokeResolver
-import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
+import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
@@ -60,11 +60,11 @@ import org.eclipse.cdt.core.parser.IncludeFileContentProvider
 import org.eclipse.cdt.core.parser.ScannerInfo
 import org.eclipse.cdt.internal.core.dom.parser.ASTNode
 import org.eclipse.cdt.internal.core.dom.parser.ASTTranslationUnit
+import org.eclipse.cdt.internal.core.dom.parser.c.CASTSimpleDeclSpecifier
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTLiteralExpression
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTQualifiedName
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTemplateId
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTTypeId
-import org.eclipse.cdt.internal.core.model.ASTStringUtil
 import org.eclipse.cdt.internal.core.parser.IMacroDictionary
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContent
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContentProvider
@@ -81,8 +81,8 @@ import org.slf4j.LoggerFactory
  */
 @RegisterExtraPass(DynamicInvokeResolver::class)
 @RegisterExtraPass(CXXExtraPass::class)
-open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend<IASTNode, IASTTypeId>(language, ctx) {
+open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLanguageFrontend>) :
+    LanguageFrontend<IASTNode, IASTTypeId>(ctx, language) {
 
     /**
      * The dialect used by this language frontend, either [GCCLanguage] for C or [GPPLanguage] for
@@ -96,6 +96,8 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
      */
     private val includeFileContentProvider: IncludeFileContentProvider =
         object : InternalFileContentProvider() {
+            var cache = mutableMapOf<String, FileContent>()
+
             /**
              * Returns the content of this path, without any cache.
              *
@@ -115,14 +117,17 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                 // check, if the white-list exists at all
                 if (
                     hasIncludeWhitelist() && // and ignore the file if it is not on the whitelist
-                    !absoluteOrRelativePathIsInList(Path.of(path), config.includeWhitelist)
+                        !absoluteOrRelativePathIsInList(Path.of(path), config.includeWhitelist)
                 ) {
                     LOGGER.debug("Include file {} not on the whitelist. Ignoring.", path)
                     return null
                 }
-                LOGGER.debug("Loading include file {}", path)
-                val content = FileContent.createForExternalFileLocation(path)
-                return content as? InternalFileContent
+
+                return cache.computeIfAbsent(path) {
+                    LOGGER.debug("Loading include file {}", path)
+                    val content = FileContent.createForExternalFileLocation(path)
+                    content
+                } as? InternalFileContent
             }
 
             private fun hasIncludeWhitelist(): Boolean {
@@ -151,7 +156,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
 
                 // Check for relative path based on the top level and all include paths
                 val includeLocations: MutableList<Path> = ArrayList()
-                val topLevel = config.topLevel
+                val topLevel = ctx.currentComponent?.topLevel()
                 if (topLevel != null) {
                     includeLocations.add(topLevel.toPath().toAbsolutePath())
                 }
@@ -174,14 +179,14 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
 
             override fun getContentForInclusion(
                 path: String,
-                macroDictionary: IMacroDictionary
+                macroDictionary: IMacroDictionary,
             ): InternalFileContent? {
                 return getContentUncached(path)
             }
 
             override fun getContentForInclusion(
                 ifl: IIndexFileLocation,
-                astPath: String
+                astPath: String,
             ): InternalFileContent? {
                 return getContentUncached(astPath)
             }
@@ -199,16 +204,33 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
         val content = FileContent.createForExternalFileLocation(file.absolutePath)
 
         // include paths
-        val includePaths: MutableList<String> = ArrayList()
-        config.topLevel?.let { includePaths.add(it.toPath().toAbsolutePath().toString()) }
+        val includePaths = mutableSetOf<String>()
+        ctx.currentComponent?.topLevel()?.let {
+            includePaths.add(it.toPath().toAbsolutePath().toString())
+        }
 
         val symbols: HashMap<String, String> = HashMap()
         symbols.putAll(config.symbols)
 
+        // We aim to behave like clang
+        symbols.put("__clang__", "")
+
         includePaths.addAll(config.includePaths.map { it.toAbsolutePath().toString() })
 
         config.compilationDatabase?.getIncludePaths(file)?.let { includePaths.addAll(it) }
-        config.compilationDatabase?.getSymbols(file)?.let { symbols.putAll(it) }
+        if (config.useUnityBuild) {
+            // For a unity build, we cannot access the individual symbols per file, but rather only
+            // for the whole component
+            symbols.putAll(
+                config.compilationDatabase?.getAllSymbols(
+                    ctx.currentComponent?.name?.localName ?: ""
+                ) ?: mutableMapOf()
+            )
+        } else {
+            config.compilationDatabase
+                ?.getSymbols(ctx.currentComponent?.name?.localName ?: "", file)
+                ?.let { symbols.putAll(it) }
+        }
 
         val scannerInfo = ScannerInfo(symbols, includePaths.toTypedArray())
         val log = DefaultLogService()
@@ -222,6 +244,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                     GCCLanguage.getDefault()
                 } else {
                     GPPLanguage.getDefault()
+                    GPPLanguage()
                 }
 
             val translationUnit =
@@ -231,13 +254,13 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                     includeFileContentProvider,
                     null,
                     opts,
-                    log
+                    log,
                 ) as ASTTranslationUnit
             val length = translationUnit.length
             LOGGER.info(
                 "Parsed {} bytes in ${file.name} corresponding roughly to {} LoC",
                 length,
-                length / 50
+                length / 50,
             )
             bench.stop()
             bench = Benchmark(this.javaClass, "Transforming ${file.name} to CPG")
@@ -256,7 +279,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                                 c.rawSignature,
                                 it.region,
                                 translationUnitDeclaration,
-                                it.artifactLocation
+                                it.artifactLocation,
                             )
                     }
                 }
@@ -355,9 +378,9 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
      * @param node the node to process
      * @param owner the AST node which holds the attribute
      */
-    fun processAttributes(node: Node, owner: IASTNode) {
+    fun processAttributes(node: AstNode, owner: IASTNode) {
         if (config.processAnnotations && owner is IASTAttributeOwner) { // set attributes
-            node.addAnnotations(handleAttributes(owner))
+            node.annotations += handleAttributes(owner)
         }
     }
 
@@ -400,7 +423,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                 newLiteral(
                         if (code.length >= 2) code.substring(1, code.length - 1) else "",
                         primitiveType("char").pointer(),
-                        rawNode = token
+                        rawNode = token,
                     )
                 else -> newLiteral(code, primitiveType("char").pointer(), rawNode = token)
             }
@@ -423,7 +446,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
     private fun getMethod(
         type: Class<*>,
         methodName: String,
-        vararg parameterTypes: Class<*>
+        vararg parameterTypes: Class<*>,
     ): Method {
         return try {
             type.getDeclaredMethod(methodName, *parameterTypes)
@@ -464,12 +487,17 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
     fun typeOf(
         declarator: IASTDeclarator,
         specifier: IASTDeclSpecifier,
-        hint: Declaration? = null
+        hint: Declaration? = null,
     ): Type {
-        // Retrieve the "name" of this type, including qualifiers.
-        val name = ASTStringUtil.getSignatureString(specifier, null)
+        var type = typeOf(specifier, hint)
 
-        var resolveAlias = false
+        type = this.adjustType(declarator, type)
+
+        return type
+    }
+
+    fun typeOf(specifier: IASTDeclSpecifier, hint: Declaration? = null): Type {
+        var resolveTypeDef = false
 
         var type =
             when (specifier) {
@@ -486,42 +514,38 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                         specifier.name is CPPASTQualifiedName || specifier.name is CPPASTTemplateId
                     ) {
                         // Case a: FQN or template
-                        resolveAlias = true
+                        resolveTypeDef = true
                         typeOf(specifier.name)
                     } else {
-                        // Case b: Peek into our symbols. This is most likely limited to our current
-                        // translation unit
-                        resolveAlias = true
+                        resolveTypeDef = true
 
-                        val decl = scopeManager.getRecordForName(Name(name))
-
-                        // We found a symbol, so we can use its name
-                        if (decl != null) {
-                            objectType(decl.name)
+                        // It could be, that this is a parameterized type
+                        val paramType =
+                            typeManager.searchTemplateScopeForDefinedParameterizedTypes(
+                                scopeManager.currentScope,
+                                specifier.name.toString(),
+                            )
+                        if (paramType != null) {
+                            paramType
                         } else {
-                            // It could be, that this is a parameterized type
-                            val paramType =
-                                typeManager.searchTemplateScopeForDefinedParameterizedTypes(
-                                    scopeManager.currentScope,
-                                    specifier.name.toString()
-                                )
-                            // Otherwise, we keep it as a local name and hope for the best
-                            paramType ?: typeOf(specifier.name)
+                            // Otherwise, we keep it as a local name and the type normalizer will
+                            // take care of it
+                            typeOf(specifier.name)
                         }
                     }
                 }
                 is IASTCompositeTypeSpecifier -> {
                     // A class. This actually also declares the class. At the moment, we handle this
                     // in handleSimpleDeclaration, but we might want to move it here
-                    resolveAlias = true
+                    resolveTypeDef = true
 
-                    objectType(specifier.name.toString())
+                    objectType(specifier.name.toString(), rawNode = specifier)
                 }
                 is IASTElaboratedTypeSpecifier -> {
-                    resolveAlias = true
+                    resolveTypeDef = true
 
                     // A class or struct
-                    objectType(specifier.name.toString())
+                    objectType(specifier.name.toString(), rawNode = specifier)
                 }
                 else -> {
                     unknownType()
@@ -529,20 +553,15 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
             }
 
         type =
-            if (resolveAlias) {
-                typeManager.registerType(typeManager.resolvePossibleTypedef(type, scopeManager))
+            if (resolveTypeDef) {
+                typeManager.resolvePossibleTypedef(type, scopeManager)
             } else {
-                typeManager.registerType(type)
+                type
             }
-        type = this.adjustType(declarator, type)
-
         return type
     }
 
-    private fun typeOf(
-        specifier: IASTSimpleDeclSpecifier,
-        hint: Declaration? = null,
-    ): Type {
+    private fun typeOf(specifier: IASTSimpleDeclSpecifier, hint: Declaration? = null): Type {
         val name = specifier.rawSignature
 
         return when {
@@ -552,26 +571,46 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
             }
             // void type
             specifier.type == IASTSimpleDeclSpecifier.t_void -> {
-                IncompleteType()
+                incompleteType()
             }
             // __typeof__ type
             specifier.type == IASTSimpleDeclSpecifier.t_typeof -> {
-                objectType("typeof(${specifier.declTypeExpression.rawSignature})")
+                objectType(
+                    "typeof(${specifier.declTypeExpression.rawSignature})",
+                    rawNode = specifier,
+                )
             }
             // A decl type
             specifier.type == IASTSimpleDeclSpecifier.t_decltype -> {
-                objectType("decltype(${specifier.declTypeExpression.rawSignature})")
+                objectType(
+                    "decltype(${specifier.declTypeExpression.rawSignature})",
+                    rawNode = specifier,
+                )
             }
             // The type of constructor declaration is always the declaration itself
             specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
                 hint is ConstructorDeclaration -> {
-                hint.name.parent?.let { objectType(it) } ?: unknownType()
+                hint.name.parent?.let { objectType(it, rawNode = specifier) } ?: unknownType()
             }
             // The type of conversion operator is also always the declaration itself
             specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
                 hint is MethodDeclaration &&
                 hint.name.localName == "operator#0" -> {
-                hint.name.parent?.let { objectType(it) } ?: unknownType()
+                hint.name.parent?.let { objectType(it, rawNode = specifier) } ?: unknownType()
+            }
+            // The type of conversion operator is also always the declaration itself
+            specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
+                hint is MethodDeclaration &&
+                hint.name.localName == "operator#0*" -> {
+                hint.name.parent?.let { objectType(it, rawNode = specifier).pointer() }
+                    ?: unknownType()
+            }
+            // The type of destructor is unspecified, but we model it as a void type to make it
+            // compatible with other methods.
+            specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
+                hint is MethodDeclaration &&
+                hint.isDestructor -> {
+                incompleteType()
             }
             // C (not C++) allows unspecified types in function declarations, they
             // default to int and usually produce a warning
@@ -580,7 +619,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                     this,
                     specifier,
                     log,
-                    "Type specifier missing, defaulting to 'int'"
+                    "Type specifier missing, defaulting to 'int'",
                 )
                 primitiveType("int")
             }
@@ -589,7 +628,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                     this,
                     specifier,
                     log,
-                    "C++ does not allow unspecified type specifiers"
+                    "C++ does not allow unspecified type specifiers",
                 )
                 newProblemType()
             }
@@ -604,7 +643,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                         this,
                         specifier,
                         log,
-                        "Could not determine canonical name for potential primitive type $name"
+                        "Could not determine canonical name for potential primitive type $name",
                     )
                     newProblemType()
                 } else {
@@ -614,7 +653,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
         }
     }
 
-    fun typeOf(name: IASTName, prefix: String? = null): Type {
+    fun typeOf(name: IASTName, prefix: String? = null, doFqn: Boolean = false): Type {
         if (name is CPPASTQualifiedName) {
             val last = name.lastName
             if (last is CPPASTTemplateId) {
@@ -641,9 +680,17 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                 }
             }
 
-            return objectType(fqn, generics)
+            return objectType(fqn, generics, rawNode = name)
         }
-        return objectType(name.toString())
+
+        var typeName =
+            if (doFqn) {
+                scopeManager.currentNamespace.fqn(name.toString())
+            } else {
+                parseName(name.toString())
+            }
+
+        return objectType(typeName, rawNode = name)
     }
 
     /**
@@ -658,9 +705,16 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
         // type into a pointer or similar
         for (op in declarator.pointerOperators) {
             type =
-                when (op) {
-                    is IASTPointer -> type.pointer()
-                    is ICPPASTReferenceOperator -> ReferenceType(type)
+                when {
+                    op is IASTPointer -> type.pointer()
+                    op is ICPPASTReferenceOperator && !op.isRValueReference -> ReferenceType(type)
+                    // this is a little bit of a workaround until we re-design reference types, this
+                    // is a && r-value reference used by move semantics in C++. This is actually
+                    // just one level of reference (with a different operator), but for now we just
+                    // make a double reference out of it to at least differentiate it from a &
+                    // reference.
+                    op is ICPPASTReferenceOperator && op.isRValueReference ->
+                        ReferenceType(ReferenceType(type))
                     else -> type
                 }
         }
@@ -672,7 +726,22 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
             }
         } else if (declarator is IASTStandardFunctionDeclarator) {
             // Loop through the parameters
-            var paramTypes = declarator.parameters.map { typeOf(it.declarator, it.declSpecifier) }
+            var paramTypes =
+                declarator.parameters.map {
+                    val specifier = it.declSpecifier
+                    // If we are running into the situation where the declSpecifier is "unspecified"
+                    // and the name is not, then this is an unnamed parameter of an unknown type and
+                    // CDT is not able to handle this correctly
+                    if (
+                        specifier is CASTSimpleDeclSpecifier &&
+                            specifier.type == IASTDeclSpecifier.sc_unspecified &&
+                            it.declarator.name.toString() != ""
+                    ) {
+                        typeOf(it.declarator.name)
+                    } else {
+                        typeOf(it.declarator, it.declSpecifier)
+                    }
+                }
 
             var i = 0
             // Filter out void
@@ -699,7 +768,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                 paramTypes.joinToString(
                     FunctionDeclaration.COMMA + FunctionDeclaration.WHITESPACE,
                     FunctionDeclaration.BRACKET_LEFT,
-                    FunctionDeclaration.BRACKET_RIGHT
+                    FunctionDeclaration.BRACKET_RIGHT,
                 ) {
                     it.typeName
                 } + type.typeName
@@ -714,14 +783,12 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
             type = adjustType(declarator.nestedDeclarator, type)
         }
 
-        type = typeManager.registerType(type)
-
         // Check for parameterized types
         if (type is SecondOrderType) {
             val templateType =
                 typeManager.searchTemplateScopeForDefinedParameterizedTypes(
                     scopeManager.currentScope,
-                    type.root.name.toString()
+                    type.root.name.toString(),
                 )
             if (templateType != null) {
                 type.root = templateType
@@ -745,7 +812,7 @@ open class CXXLanguageFrontend(language: Language<CXXLanguageFrontend>, ctx: Tra
                     "{}{} -> {}",
                     s,
                     node.javaClass.simpleName,
-                    node.rawSignature.replace('\n', '\\').replace('\t', ' ')
+                    node.rawSignature.replace('\n', '\\').replace('\t', ' '),
                 )
             }
 
@@ -810,4 +877,13 @@ private val IASTSimpleDeclSpecifier.canonicalName: CharSequence
         }
 
         return parts.joinToString(" ")
+    }
+
+/**
+ * Returns whether this method is a
+ * [Destructor](https://en.cppreference.com/w/cpp/language/destructor).
+ */
+val MethodDeclaration.isDestructor: Boolean
+    get() {
+        return "~" + this.name.parent?.localName == this.name.localName
     }

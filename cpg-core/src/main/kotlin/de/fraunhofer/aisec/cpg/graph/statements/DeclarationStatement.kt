@@ -25,12 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -47,19 +46,14 @@ open class DeclarationStatement : Statement() {
      * it only contains a single [Declaration].
      */
     @Relationship(value = "DECLARATIONS", direction = Relationship.Direction.OUTGOING)
-    @AST
-    var declarationEdges: MutableList<PropertyEdge<Declaration>> = ArrayList()
-
-    override var declarations by PropertyEdgeDelegate(DeclarationStatement::declarationEdges)
+    var declarationEdges = astEdgesOf<Declaration>()
+    override var declarations by unwrapping(DeclarationStatement::declarationEdges)
 
     var singleDeclaration: Declaration?
         get() = if (isSingleDeclaration()) declarationEdges[0].end else null
         set(value) {
             if (value == null) return
-            declarationEdges.clear()
-            val propertyEdge = PropertyEdge(this, value)
-            propertyEdge.addProperty(Properties.INDEX, 0)
-            declarationEdges.add(propertyEdge)
+            declarationEdges.resetTo(listOf(value))
         }
 
     fun isSingleDeclaration(): Boolean {
@@ -68,12 +62,6 @@ open class DeclarationStatement : Statement() {
 
     fun <T : Declaration> getSingleDeclarationAs(clazz: Class<T>): T {
         return clazz.cast(singleDeclaration)
-    }
-
-    fun addToPropertyEdgeDeclaration(declaration: Declaration) {
-        val propertyEdge = PropertyEdge(this, declaration)
-        propertyEdge.addProperty(Properties.INDEX, declarationEdges.size)
-        declarationEdges.add(propertyEdge)
     }
 
     override fun toString(): String {
@@ -91,5 +79,13 @@ open class DeclarationStatement : Statement() {
             propertyEqualsList(declarationEdges, other.declarationEdges)
     }
 
+    override fun addDeclaration(declaration: Declaration) {
+        addIfNotContains(declarationEdges, declaration)
+    }
+
     override fun hashCode() = Objects.hash(super.hashCode(), declarations)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.declarations.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
+    }
 }

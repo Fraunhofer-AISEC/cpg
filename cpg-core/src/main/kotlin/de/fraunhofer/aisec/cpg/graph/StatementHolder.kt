@@ -25,11 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.wrap
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
+import de.fraunhofer.aisec.cpg.graph.edges.collections.UnwrappedEdgeList.Delegate
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 
 /**
@@ -43,47 +41,20 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
  */
 interface StatementHolder : Holder<Statement> {
     /** List of statements as property edges. */
-    var statementEdges: MutableList<PropertyEdge<Statement>>
+    var statementEdges: AstEdges<Statement, AstEdge<Statement>>
 
     /**
      * Virtual property to access [statementEdges] without property edges.
      *
-     * Note: We cannot use [PropertyEdgeDelegate] because delegates are not allowed in interfaces.
+     * Note: We cannot use [Delegate] because delegates are not allowed in interfaces.
      */
-    var statements: List<Statement>
-        get() {
-            return unwrap(statementEdges)
-        }
-        set(value) {
-            statementEdges = wrap(value, this as Node)
-        }
+    var statements: MutableList<Statement>
 
-    /**
-     * Adds the specified statement to this statement holder. The statements have to be stored as a
-     * list of statements as we try to avoid adding new AST-nodes that do not exist, e.g. a code
-     * body to hold statements
-     *
-     * @param s the statement
-     */
-    fun addStatement(s: Statement) {
-        val propertyEdge = PropertyEdge((this as Node), s)
-        propertyEdge.addProperty(Properties.INDEX, statementEdges.size)
-        statementEdges.add(propertyEdge)
-    }
-
-    /** Inserts the statement [s] before the statement specified in [before]. */
-    fun insertStatementBefore(s: Statement, before: Statement) {
-        val statements = this.statements
-        val idx = statements.indexOf(before)
-        if (idx != -1) {
-            val before = statements.subList(0, idx)
-            val after = statements.subList(idx, statements.size)
-
-            this.statements = listOf(*before.toTypedArray(), s, *after.toTypedArray())
-        }
+    override fun replace(old: Statement, new: Statement): Boolean {
+        return statementEdges.replace(old, new)
     }
 
     override operator fun plusAssign(node: Statement) {
-        addStatement(node)
+        statementEdges += node
     }
 }

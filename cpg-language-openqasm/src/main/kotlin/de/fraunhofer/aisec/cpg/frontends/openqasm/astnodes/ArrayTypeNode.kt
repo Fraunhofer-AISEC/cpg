@@ -30,5 +30,5 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 class ArrayTypeNode(
     location: PhysicalLocation,
     val scalarType: ScalarTypeNode,
-    val exprs: List<ExpressionNode>
+    val exprs: List<ExpressionNode>,
 ) : TypeNode(location)

@@ -71,7 +71,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
                 value =
                     rawValue.substring(
                         1.coerceAtMost(rawValue.length - 1),
-                        (rawValue.length - 1).coerceAtLeast(0)
+                        (rawValue.length - 1).coerceAtLeast(0),
                     )
                 type = primitiveType("string")
             }
@@ -137,7 +137,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
                 "nil" to Pair(unknownType(), null),
                 "true" to Pair(primitiveType("bool"), true),
                 "false" to Pair(primitiveType("bool"), false),
-                "iota" to Pair(primitiveType("int"), frontend.declCtx.iotaValue)
+                "iota" to Pair(primitiveType("int"), frontend.declCtx.iotaValue),
             )
 
         // Check, if this is one of the builtinLiterals and handle them as a literal
@@ -181,7 +181,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
             is GoStandardLibrary.Ast.FuncType,
             is GoStandardLibrary.Ast.InterfaceType,
             is GoStandardLibrary.Ast.StructType,
-            is GoStandardLibrary.Ast.MapType, -> {
+            is GoStandardLibrary.Ast.MapType -> {
                 val cast = newCastExpression(rawNode = callExpr)
                 cast.castType = frontend.typeOf(unwrapped)
 
@@ -235,7 +235,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
             log.debug(
                 "Call {} has type constraints ({}), but we cannot add them to the call expression yet",
                 call.name,
-                typeConstraints.joinToString(", ") { it.name }
+                typeConstraints.joinToString(", ") { it.name },
             )
         }
 
@@ -348,9 +348,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
         return ref
     }
 
-    private fun isPackageName(
-        name: CharSequence,
-    ): Boolean {
+    private fun isPackageName(name: CharSequence): Boolean {
         for (imp in frontend.currentFile?.imports ?: listOf()) {
             // If we have an alias, we need to check it instead of the import name
             val packageName = imp.name?.name ?: imp.importName
@@ -403,7 +401,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
                     ".(type)",
                     postfix = true,
                     prefix = false,
-                    rawNode = typeAssertExpr
+                    rawNode = typeAssertExpr,
                 )
             op.input = handle(typeAssertExpr.x)
             op
@@ -425,7 +423,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
                 unaryExpr.opString,
                 postfix = false,
                 prefix = false,
-                rawNode = unaryExpr
+                rawNode = unaryExpr,
             )
         op.input = handle(unaryExpr.x)
 
@@ -514,7 +512,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
                 "recover",
                 "print",
                 "println",
-                "error"
+                "error",
             )
     }
 }

@@ -25,11 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
@@ -37,41 +35,18 @@ import org.neo4j.ogm.annotation.Relationship
 /** This declaration represents either an include or an import, depending on the language. */
 class IncludeDeclaration : Declaration() {
     @Relationship(value = "INCLUDES", direction = Relationship.Direction.OUTGOING)
-    @AST
-    private val includeEdges: MutableList<PropertyEdge<IncludeDeclaration>> = ArrayList()
+    val includeEdges = astEdgesOf<IncludeDeclaration>()
+    val includes by unwrapping(IncludeDeclaration::includeEdges)
 
     @Relationship(value = "PROBLEMS", direction = Relationship.Direction.OUTGOING)
-    @AST
-    private val problemEdges: MutableList<PropertyEdge<ProblemDeclaration>> = ArrayList()
+    val problemEdges = astEdgesOf<ProblemDeclaration>()
+    val problems by unwrapping(IncludeDeclaration::problemEdges)
 
     /**
      * This property refers to the file or directory or path. For example, in C this refers to an
      * include header file. In Go, this refers to the package path (e.g., github.com/a/b)
      */
     var filename: String? = null
-
-    val includes: List<IncludeDeclaration> by PropertyEdgeDelegate(IncludeDeclaration::includeEdges)
-
-    val problems: List<ProblemDeclaration> by PropertyEdgeDelegate(IncludeDeclaration::problemEdges)
-
-    fun addInclude(includeDeclaration: IncludeDeclaration?) {
-        if (includeDeclaration == null) return
-        val propertyEdge = PropertyEdge(this, includeDeclaration)
-        propertyEdge.addProperty(Properties.INDEX, includeEdges.size)
-        includeEdges.add(propertyEdge)
-    }
-
-    fun addProblems(c: Collection<ProblemDeclaration>) {
-        for (problemDeclaration in c) {
-            addProblem(problemDeclaration)
-        }
-    }
-
-    fun addProblem(problemDeclaration: ProblemDeclaration) {
-        val propertyEdge = PropertyEdge(this, problemDeclaration)
-        propertyEdge.addProperty(Properties.INDEX, problemEdges.size)
-        problemEdges.add(propertyEdge)
-    }
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
@@ -94,5 +69,5 @@ class IncludeDeclaration : Declaration() {
             filename == other.filename)
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), includes, problems, filename)
+    override fun hashCode() = Objects.hash(super.hashCode(), problems, filename)
 }

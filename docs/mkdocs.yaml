@@ -27,7 +27,7 @@ theme:
   language: en
   features:
     - content.code.annotate
-    # - content.tabs.link
+    - content.tabs.link
     - content.tooltips
     # - header.autohide
     # - navigation.expand
@@ -66,6 +66,10 @@ theme:
 extra_css:
   - stylesheets/extra.css
   - assets/fonts/Inter/inter.css
+
+extra_javascript:
+  - assets/javascripts/mathjax.js
+  - assets/javascripts/MathJax-3.2.2/es5/tex-mml-chtml.js
 
 # Plugins
 plugins:
@@ -142,6 +146,7 @@ markdown_extensions:
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.superfences
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.tasklist:
@@ -152,21 +157,29 @@ nav:
   - "Home": index.md
   - "Getting Started":
       - GettingStarted/index.md
-      - "Installing the CPG library": GettingStarted/installation.md
-      - "Usage as library": GettingStarted/library.md
-      - "Using the Interactive CLI": GettingStarted/cli.md
-      - "Using the Query API": GettingStarted/query.md
-      - "Shortcuts to Explore the Graph": GettingStarted/shortcuts.md
+      - "Using Codyze": GettingStarted/codyze.md
+      - "Usage as library":
+          - "Adding the Dependency": GettingStarted/library.md
+          - "Using the Query API": GettingStarted/query.md
+          - "Shortcuts to Explore the Graph": GettingStarted/shortcuts.md
+      - "Using neo4j": GettingStarted/neo4j.md
   - "Specifications":
       - CPG/specs/index.md
       - "Graph Schema": CPG/specs/graph.md
       - "Dataflow Graph (DFG)": CPG/specs/dfg.md
+      - "Dataflow Graph (DFG) Function Summaries": CPG/specs/dfg-function-summaries.md
       - "Evaluation Order Graph (EOG)": CPG/specs/eog.md
+      - "Program Dependence Graph (PDG)": CPG/specs/pdg.md
+      - "Inference of new nodes": CPG/specs/inference.md
+      - "Overlay Graph": CPG/specs/overlays.md
   - "Implementation":
       - CPG/impl/index.md
+      - "Design Principles": CPG/impl/design_principles.md
       - "Language Frontends": CPG/impl/language.md
-      - "Scopes": CPG/impl/scopes.md
+      - "Scopes and Symbols": CPG/impl/scopes.md
       - "Passes": CPG/impl/passes.md
+      - "Symbol Resolution": CPG/impl/symbol-resolver.md
+      - "Type System": CPG/impl/types.md
   - "Contributing":
       - "Contributing to the CPG library": Contributing/index.md
     # This assumes that the most recent dokka build was generated with the "main" tag!

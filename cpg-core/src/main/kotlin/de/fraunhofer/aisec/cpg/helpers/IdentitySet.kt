@@ -42,15 +42,20 @@ import java.util.concurrent.atomic.AtomicInteger
  * as [Node.hashCode] or even worse [Node.equals], if the hashcode is the same. This can potentially
  * be very resource-intensive if nodes are very similar but not the *same*, in a work-list however
  * we only want just to avoid to place the exact node twice.
+ *
+ * The magic size of 16 comes from the implementation of Java and is randomly chosen. The
+ * [expectedMaxSize] should be 2^n but this will be enforced internally anyway.
  */
-class IdentitySet<T> : MutableSet<T> {
+open class IdentitySet<T>(expectedMaxSize: Int = 16) : MutableSet<T> {
     /**
      * The backing hashmap for our set. The [IdentityHashMap] offers reference-equality for keys and
      * values. In this case we use it to determine, if a node is already in our set or not. The
      * value of the map is not used and is always true. A [Boolean] is used because it seems to be
      * the smallest data type possible.
+     *
+     * The map is twice the [expectedMaxSize] to avoid resizing too often which is expensive.
      */
-    private val map: IdentityHashMap<T, Int> = IdentityHashMap()
+    private val map: IdentityHashMap<T, Int> = IdentityHashMap(expectedMaxSize * 2)
     private val counter = AtomicInteger()
 
     override operator fun contains(element: T): Boolean {
@@ -60,9 +65,9 @@ class IdentitySet<T> : MutableSet<T> {
     }
 
     override fun equals(other: Any?): Boolean {
-        if (other !is IdentitySet<*>) return false
-        val otherSet = other as? IdentitySet<*>
-        return otherSet != null && this.containsAll(otherSet) && otherSet.containsAll(this)
+        if (other === this) return true
+        if (other !is Set<*>) return false
+        return this.size == other.size && this.containsAll(other)
     }
 
     override fun add(element: T): Boolean {
@@ -73,6 +78,18 @@ class IdentitySet<T> : MutableSet<T> {
         }
 
         return false
+    }
+
+    /**
+     * Adds all [elements] to this [IdentitySet] without checking if they are already present. This
+     * should only be used if this set is empty!
+     */
+    fun addAllWithoutCheck(elements: IdentitySet<T>) {
+        // We rely on the input set and add everything without checking if an element is already
+        // present.
+        for (element in elements) {
+            map[element] = counter.addAndGet(1)
+        }
     }
 
     override fun containsAll(elements: Collection<T>): Boolean {
@@ -141,21 +158,21 @@ class IdentitySet<T> : MutableSet<T> {
 }
 
 fun <T> identitySetOf(vararg elements: T): IdentitySet<T> {
-    val set = IdentitySet<T>()
+    val set = IdentitySet<T>(elements.size)
     for (element in elements) set.add(element)
 
     return set
 }
 
 infix fun <T> IdentitySet<T>.union(other: Iterable<T>): IdentitySet<T> {
-    val set = identitySetOf<T>()
+    val set = IdentitySet<T>(this.size * 2)
     set += this
     set += other
     return set
 }
 
 fun <T> Collection<T>.toIdentitySet(): IdentitySet<T> {
-    val set = identitySetOf<T>()
+    val set = IdentitySet<T>(this.size)
     set += this
     return set
 }

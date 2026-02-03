@@ -1,0 +1,7 @@
+[
+  {
+    "command": "/usr/bin/gcc -c lib.c -o lib",
+    "directory": "src/test/resources/cxxCompilationDatabase/src/lib1",
+    "file": "lib.c"
+  }
+]

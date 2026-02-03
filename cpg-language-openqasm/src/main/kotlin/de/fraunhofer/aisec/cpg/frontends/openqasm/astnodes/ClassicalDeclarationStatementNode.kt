@@ -31,5 +31,5 @@ class ClassicalDeclarationStatementNode(
     location: PhysicalLocation,
     val tpe: TypeNode,
     val identifier: IdentifierNode,
-    val declExpression: DeclarationExpressionNode?
+    val declExpression: DeclarationExpressionNode?,
 ) : StatementNode(location)

@@ -1,3 +1,4 @@
+#pragma once
 using namespace std;
 static string staticVarName;
 

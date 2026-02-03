@@ -25,13 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.testcases
 
+import de.fraunhofer.aisec.cpg.InferenceConfiguration
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.array
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.newNewArrayExpression
 import de.fraunhofer.aisec.cpg.graph.pointer
-import de.fraunhofer.aisec.cpg.passes.EdgeCachePass
 
 class Query {
     companion object {
@@ -39,7 +40,7 @@ class Query {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -97,8 +98,8 @@ class Query {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
-                    .registerPass<EdgeCachePass>()
+                    .registerLanguage<TestLanguage>()
+                    .inferenceConfiguration(InferenceConfiguration.builder().enabled(false).build())
                     .build()
         ) =
             testFrontend(config).build {
@@ -141,12 +142,12 @@ class Query {
                                         ref("Dataflow", t("Dataflow")) {
                                             isStatic = true
                                             refersTo = this@record
-                                        }
+                                        },
                                     ) {
                                         this@memberCall.isStatic = true
                                         memberCall(
                                             "toString",
-                                            ref("Integer", t("Integer"), makeMagic = false)
+                                            ref("Integer", t("Integer"), makeMagic = false),
                                         ) {
                                             this.type = t("string")
                                             this@memberCall.isStatic = true
@@ -158,7 +159,7 @@ class Query {
                                     memberCall("log", ref("logger")) {
                                         member("INFO", ref("Level", makeMagic = false))
                                         literal("put ", t("string")) +
-                                            member("a", ref("a", makeMagic = false)) +
+                                            member("a", ref("sc", makeMagic = false)) +
                                             literal(" into highlyCriticalOperation()", t("string"))
                                     }
                                     returnStmt {}
@@ -173,8 +174,10 @@ class Query {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
-                    .registerPass<EdgeCachePass>()
+                    .registerLanguage<TestLanguage>()
+                    .inferenceConfiguration(
+                        InferenceConfiguration.builder().inferFunctions(false).build()
+                    )
                     .build()
         ) =
             testFrontend(config).build {
@@ -215,7 +218,7 @@ class Query {
                                     memberCall("log", ref("logger")) {
                                         member("INFO", ref("Level", makeMagic = false))
                                         literal("put ", t("string")) +
-                                            member("a", ref("a", makeMagic = false)) +
+                                            member("a", ref("sc", makeMagic = false)) +
                                             literal(" into highlyCriticalOperation()", t("string"))
                                     }
 
@@ -224,12 +227,12 @@ class Query {
                                         ref("Dataflow", t("Dataflow")) {
                                             isStatic = true
                                             refersTo = this@record
-                                        }
+                                        },
                                     ) {
                                         this@memberCall.isStatic = true
                                         memberCall(
                                             "toString",
-                                            ref("Integer", t("Integer"), makeMagic = false)
+                                            ref("Integer", t("Integer"), makeMagic = false),
                                         ) {
                                             this.type = t("string")
                                             this@memberCall.isStatic = true
@@ -249,8 +252,7 @@ class Query {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
-                    .registerPass<EdgeCachePass>()
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -302,12 +304,12 @@ class Query {
                                         ref("Dataflow", t("Dataflow")) {
                                             isStatic = true
                                             refersTo = this@record
-                                        }
+                                        },
                                     ) {
                                         this@memberCall.isStatic = true
                                         memberCall(
                                             "toString",
-                                            ref("Integer", t("Integer"), makeMagic = false)
+                                            ref("Integer", t("Integer"), makeMagic = false),
                                         ) {
                                             this.type = t("string")
                                             this@memberCall.isStatic = true
@@ -327,7 +329,7 @@ class Query {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -352,7 +354,7 @@ class Query {
 
                                 declare {
                                     variable("d", t("char")) {
-                                        ase {
+                                        subscriptExpr {
                                             ref("c")
                                             ref("b")
                                         }
@@ -373,7 +375,7 @@ class Query {
                                 }
                             }
                             returnStmt {
-                                ase {
+                                subscriptExpr {
                                     ref("c")
                                     literal(0, t("int"))
                                 }
@@ -387,8 +389,7 @@ class Query {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerPass<EdgeCachePass>()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -407,19 +408,22 @@ class Query {
 
                                 declare { variable("a", t("int")) { literal(0, t("int")) } }
 
-                                forStmt(
-                                    declareVar("i", t("int")) { literal(0, t("int")) },
-                                    ref("i") le literal(4, t("int")),
-                                    ref("i").incNoContext()
-                                ) {
-                                    ref("a") assign
-                                        {
-                                            ref("a") +
-                                                ase {
-                                                    ref("c")
-                                                    ref("i")
-                                                }
-                                        }
+                                forStmt {
+                                    loopBody {
+                                        ref("a") assign
+                                            {
+                                                ref("a") +
+                                                    subscriptExpr {
+                                                        ref("c")
+                                                        ref("i")
+                                                    }
+                                            }
+                                    }
+                                    forInitializer {
+                                        declareVar("i", t("int")) { literal(0, t("int")) }
+                                    }
+                                    forCondition { ref("i") lt literal(5, t("int")) }
+                                    forIteration { ref("i").incNoContext() }
                                 }
 
                                 returnStmt { ref("a") }
@@ -433,8 +437,7 @@ class Query {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerPass<EdgeCachePass>()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -467,19 +470,23 @@ class Query {
 
                                 declare { variable("a", t("int")) { literal(0, t("int")) } }
 
-                                forStmt(
-                                    declareVar("i", t("int")) { literal(0, t("int")) },
-                                    ref("i") le literal(4, t("int")),
-                                    ref("i").incNoContext()
-                                ) {
-                                    ref("a") assign
-                                        {
-                                            ref("a") +
-                                                ase {
-                                                    ref("c")
-                                                    ref("i")
-                                                }
-                                        }
+                                forStmt {
+                                    forInitializer {
+                                        declareVar("i", t("int")) { literal(0, t("int")) }
+                                    }
+                                    forCondition { ref("i") lt literal(5, t("int")) }
+                                    forIteration { ref("i").incNoContext() }
+
+                                    loopBody {
+                                        ref("a") assign
+                                            {
+                                                ref("a") +
+                                                    subscriptExpr {
+                                                        ref("c")
+                                                        ref("i")
+                                                    }
+                                            }
+                                    }
                                 }
 
                                 returnStmt { ref("a") }
@@ -493,8 +500,7 @@ class Query {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerPass<EdgeCachePass>()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -513,19 +519,22 @@ class Query {
 
                                 declare { variable("a", t("int")) { literal(0, t("int")) } }
 
-                                forStmt(
-                                    declareVar("i", t("int")) { literal(0, t("int")) },
-                                    ref("i") lt literal(4, t("int")),
-                                    ref("i").incNoContext()
-                                ) {
-                                    ref("a") assign
-                                        {
-                                            ref("a") +
-                                                ase {
-                                                    ref("c")
-                                                    ref("i")
-                                                }
-                                        }
+                                forStmt {
+                                    loopBody {
+                                        ref("a") assign
+                                            {
+                                                ref("a") +
+                                                    subscriptExpr {
+                                                        ref("c")
+                                                        ref("i")
+                                                    }
+                                            }
+                                    }
+                                    forInitializer {
+                                        declareVar("i", t("int")) { literal(0, t("int")) }
+                                    }
+                                    forCondition { ref("i") lt literal(4, t("int")) }
+                                    forIteration { ref("i").incNoContext() }
                                 }
 
                                 returnStmt { ref("a") }
@@ -539,7 +548,7 @@ class Query {
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -560,11 +569,46 @@ class Query {
                 }
             }
 
+        fun getDivBy0(
+            config: TranslationConfiguration =
+                TranslationConfiguration.builder()
+                    .defaultPasses()
+                    .registerLanguage<TestLanguage>()
+                    .build()
+        ) =
+            testFrontend(config).build {
+                translationResult {
+                    translationUnit("assign.cpp") {
+                        function("main", t("int")) {
+                            body {
+                                declare {
+                                    variable("array", t("char").array()) {
+                                        literal("hello", t("char").array())
+                                    }
+                                }
+                                declare { variable("a", t("short")) { literal(2, t("int")) } }
+
+                                ifStmt {
+                                    condition { ref("array") eq literal("hello", t("string")) }
+                                    thenStmt { ref("a") assign literal(0, t("int")) }
+                                }
+
+                                declare {
+                                    variable("x", t("double")) { literal(5, t("int")) / ref("a") }
+                                }
+
+                                returnStmt { literal(0, t("int")) }
+                            }
+                        }
+                    }
+                }
+            }
+
         fun getVulnerable(
             config: TranslationConfiguration =
                 TranslationConfiguration.builder()
                     .defaultPasses()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -593,7 +637,7 @@ class Query {
 
                                 ifStmt {
                                     condition { ref("array") eq literal("hello", t("string")) }
-                                    thenStmt { ref("a") assign literal(0, t("int")) }
+                                    thenStmt { ref("a") assign literal(1, t("int")) }
                                 }
 
                                 declare {

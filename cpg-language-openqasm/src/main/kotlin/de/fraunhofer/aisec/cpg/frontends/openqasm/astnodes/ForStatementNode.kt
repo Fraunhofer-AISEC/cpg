@@ -32,5 +32,5 @@ class ForStatementNode(
     val scalarTypeNode: ScalarTypeNode,
     val identifierNode: IdentifierNode,
     val range: ExpressionNode,
-    val body: ASTNode
+    val body: ASTNode,
 ) : StatementNode(location)

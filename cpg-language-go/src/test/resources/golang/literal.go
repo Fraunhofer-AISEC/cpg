@@ -40,10 +40,27 @@ var rr = []int{
 	submodule.Zero: 1,
 }
 
+var rr2 = [...]int{
+	submodule.Zero: 1,
+}
+
 var mapr = map[int][]byte{
 	submodule.Zero: {1, 2, 3},
 }
 
 var structr = []MyStruct{
 	0: {Field: 10},
+}
+
+type pairNameValue struct {
+	name, value string
+}
+
+var structKey = map[pairNameValue]uint64{
+	{name: "this", value: "that"}: 1,
+	{name: "that", value: "this"}: 2,
+}
+
+var structValue = map[uint64]pairNameValue{
+	1: {name: "this", value: "that"},
 }

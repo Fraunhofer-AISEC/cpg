@@ -23,6 +23,4 @@
  *                    \______/ \__|       \______/
  *
  */
-plugins {
-    id("cpg.frontend-conventions")
-}
+plugins { id("cpg.frontend-conventions") }

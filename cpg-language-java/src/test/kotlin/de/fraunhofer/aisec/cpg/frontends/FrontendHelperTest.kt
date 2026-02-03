@@ -59,7 +59,7 @@ class FrontendHelperTest {
         val result = analyzer.analyze().get()
         assertNotNull(result)
         // The class should have 2 comments: The javadoc and "Class comment"
-        val tu = result.translationUnits.first()
+        val tu = result.components.flatMap { it.translationUnits }.first()
         val classDeclaration = tu.declarations.first() as RecordDeclaration
         classDeclaration.comment = "" // Reset the comment of the ClassDerclaration
 
@@ -93,7 +93,7 @@ class FrontendHelperTest {
         assertTrue(constructorAssignment.comment?.contains(comment5) == true)
         assertNull(constructor.comment)
 
-        val mainMethod = classDeclaration.declarations[1] as MethodDeclaration
+        val mainMethod = classDeclaration.declarations[2] as MethodDeclaration
         assertNull(mainMethod.comment)
         val forLoop = (mainMethod.body as Block).statements[0] as ForStatement
         forLoop.comment = null
@@ -102,7 +102,7 @@ class FrontendHelperTest {
         FrontendUtils.matchCommentToNode(comment6, Region(15, 14, 15, 22), tu)
         assertEquals(
             comment6,
-            forLoop.comment
+            forLoop.comment,
         ) // It doesn't put the whole comment, only the part that amtches
 
         // TODO IMHO the comment "i decl" should belong to the declaration statement of i. But
@@ -143,7 +143,7 @@ class FrontendHelperTest {
         val result = analyzer.analyze().get()
         assertNotNull(result)
 
-        val tu = result.translationUnits.first()
+        val tu = result.components.flatMap { it.translationUnits }.first()
         val classDeclaration = tu.declarations.first() as RecordDeclaration
         val mainMethod = classDeclaration.declarations[1] as MethodDeclaration
         val forLoop = (mainMethod.body as Block).statements[0] as ForStatement

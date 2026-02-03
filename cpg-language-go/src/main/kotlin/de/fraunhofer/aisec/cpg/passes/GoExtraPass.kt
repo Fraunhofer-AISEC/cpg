@@ -29,13 +29,15 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.golang.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.passes.inference.startInference
-import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
  * This pass takes care of several things that we need to clean up, once all translation units are
@@ -79,20 +81,6 @@ import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
  * In the frontend we only do the assignment, therefore we need to create a new
  * [VariableDeclaration] for `b` and inject a [DeclarationStatement].
  *
- * ## Converting Call Expressions into Cast Expressions
- *
- * In Go, it is possible to convert compatible types by "calling" the type name as a function, such
- * as
- *
- * ```go
- * var i = int(2.0)
- * ```
- *
- * This is also possible with more complex types, such as interfaces or aliased types, as long as
- * they are compatible. Because types in the same package can be defined in multiple files, we
- * cannot decide during the frontend run. Therefore, we need to execute this pass before the
- * [SymbolResolver] and convert certain [CallExpression] nodes into a [CastExpression].
- *
  * ## Adjust Names of Keys in Key Value Expressions to FQN
  *
  * This pass also adjusts the names of keys in a [KeyValueExpression], which is part of an
@@ -107,20 +95,27 @@ import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
  */
 @ExecuteBefore(SymbolResolver::class)
 @ExecuteBefore(EvaluationOrderGraphPass::class)
-@ExecuteBefore(DFGPass::class)
+@DependsOn(ImportResolver::class)
+@DependsOn(TypeResolver::class)
+@Description(
+    "This pass takes care of several things that we need to clean up, once all translation units are successfully parsed, but before any of the remaining CPG passes, such as call resolving occurs. Adds Type Listeners for Key/Value Variables in For-Each Statements, Infers NamespaceDeclarations for Import Packages, Declares Variables in Short Assignments, Adjust Names of Keys in Key Value Expressions to FQN, and Adds Methods of Embedded Structs to the Record's Scope."
+)
 class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
+    private lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
+
+    override val scope: Scope?
+        get() = scopeManager.currentScope
+
     override fun accept(component: Component) {
-        // Add built-int functions, but only if one of the components contains a GoLanguage
+        // Add built-in functions, but only if one of the components contains a GoLanguage
         if (component.translationUnits.any { it.language is GoLanguage }) {
             component.translationUnits += addBuiltIn()
         }
 
-        val walker = SubgraphWalker.ScopedWalker(scopeManager)
-        walker.registerHandler { _, parent, node ->
+        walker = SubgraphWalker.ScopedWalker(scopeManager, Strategy::AST_FORWARD)
+        walker.registerHandler { node ->
             when (node) {
-                is CallExpression -> handleCall(node, parent)
-                is IncludeDeclaration -> handleInclude(node)
                 is RecordDeclaration -> handleRecordDeclaration(node)
                 is AssignExpression -> handleAssign(node)
                 is ForEachStatement -> handleForEachStatement(node)
@@ -160,10 +155,10 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         scopeManager.enterScope(record)
 
         // Loop through the embedded struct and add their methods to the record's scope.
-        for (method in record.embeddedStructs.flatMap { it.methods }) {
+        for (method in record.embeddedStructs.flatMap { it.toType().methods }) {
             // Add it to the scope, but do NOT add it to the underlying AST field (methods),
             // otherwise we would duplicate the method in the AST
-            scopeManager.addDeclaration(method, addToAST = false)
+            scopeManager.addDeclaration(method)
         }
 
         scopeManager.leaveScope(record)
@@ -176,7 +171,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
         return with(builtin) {
             val len = newFunctionDeclaration("len", localNameOnly = true)
-            len.parameters = listOf(newParameterDeclaration("v", autoType()))
+            len.parameters = mutableListOf(newParameterDeclaration("v", autoType()))
             len.returnTypes = listOf(primitiveType("int"))
             addBuiltInFunction(len)
 
@@ -187,7 +182,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
              */
             val append = newFunctionDeclaration("append", localNameOnly = true)
             append.parameters =
-                listOf(
+                mutableListOf(
                     newParameterDeclaration("slice", autoType().array()),
                     newParameterDeclaration("elems", autoType(), variadic = true),
                 )
@@ -200,7 +195,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
              * ```
              */
             val panic = newFunctionDeclaration("panic", localNameOnly = true)
-            panic.parameters = listOf(newParameterDeclaration("v", primitiveType("any")))
+            panic.parameters = mutableListOf(newParameterDeclaration("v", primitiveType("any")))
             addBuiltInFunction(panic)
 
             /**
@@ -224,16 +219,16 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    private fun addBuiltInFunction(func: FunctionDeclaration) {
+    private fun TranslationUnitDeclaration.addBuiltInFunction(func: FunctionDeclaration) {
         func.type =
-            typeManager.registerType(
-                FunctionType(
-                    funcTypeName(func.signatureTypes, func.returnTypes),
-                    func.signatureTypes,
-                    func.returnTypes
-                )
+            FunctionType(
+                funcTypeName(func.signatureTypes, func.returnTypes),
+                func.signatureTypes,
+                func.returnTypes,
+                func.language,
             )
         scopeManager.addDeclaration(func)
+        this.declarations += func
     }
 
     /**
@@ -245,7 +240,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // If our type is an "overlay", we need to look for the underlying type
         type =
-            if (type.isOverlay) {
+            if (type.namedType) {
                 type.underlyingType
             } else {
                 type
@@ -270,11 +265,25 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     init.type = type.elementType
                 } else if (init is KeyValueExpression && init.value is InitializerListExpression) {
                     init.value?.type = type.elementType
+                } else if (init is KeyValueExpression && init.key is InitializerListExpression) {
+                    init.key?.type = type.elementType
+                }
+            }
+        } else if (type?.isMap == true) {
+            for (init in node.initializers) {
+                if (init is KeyValueExpression) {
+                    if (init.key is InitializerListExpression) {
+                        init.key?.type = (type as ObjectType).generics.getOrNull(0) ?: unknownType()
+                    } else if (init.value is InitializerListExpression) {
+                        init.value?.type =
+                            (type as ObjectType).generics.getOrNull(1) ?: unknownType()
+                    }
                 }
             }
         }
 
-        // We are not interested in arrays and maps, but only the "inner" single-object expressions
+        // Afterwards, we are not interested in arrays and maps, but only the "inner" single-object
+        // expressions
         if (
             type is UnknownType ||
                 (type is PointerType && type.isArray) ||
@@ -341,9 +350,9 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // Loop through the target variables (left-hand side)
         for ((idx, expr) in assign.lhs.withIndex()) {
             if (expr is Reference) {
-                // And try to resolve it
-                val ref = scopeManager.resolveReference(expr)
-                if (ref == null) {
+                // And try to resolve it as a variable
+                val ref = scopeManager.lookupSymbolByNodeNameOfType<VariableDeclaration>(expr)
+                if (ref.isEmpty()) {
                     // We need to implicitly declare it, if it's not declared before.
                     val decl = newVariableDeclaration(expr.name, expr.autoType())
                     decl.language = expr.language
@@ -358,115 +367,11 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                         assign.rhs[idx].registerTypeObserver(InitializerTypePropagation(decl))
                     }
 
-                    assign.declarations += decl
-
                     // Add it to the scope, so other assignments / references can "see" it.
                     scopeManager.addDeclaration(decl)
+                    assign.declarations += decl
                 }
             }
-        }
-    }
-
-    /**
-     * This function gets called for every [IncludeDeclaration] (which in Go imports a whole
-     * package) and checks, if we need to infer a [NamespaceDeclaration] for this particular
-     * include.
-     */
-    // TODO: Somehow, this gets called twice?!
-    private fun handleInclude(include: IncludeDeclaration) {
-        // If the namespace is included as _, we can ignore it, as its only included as a runtime
-        // dependency
-        if (include.name.localName == "_") {
-            return
-        }
-
-        // Try to see if we already know about this namespace somehow
-        val namespace =
-            scopeManager.resolve<NamespaceDeclaration>(scopeManager.globalScope, true) {
-                it.name == include.name && it.path == include.filename
-            }
-
-        // If not, we can infer a namespace declaration, so we can bundle all inferred function
-        // declarations in there
-        if (namespace.isEmpty()) {
-            scopeManager.globalScope
-                ?.astNode
-                ?.startInference(ctx)
-                ?.createInferredNamespaceDeclaration(include.name, include.filename)
-        }
-    }
-
-    /**
-     * This function gets called for every [CallExpression] and checks, whether this is actually a
-     * "calling" a type and is thus a [CastExpression] rather than a [CallExpression].
-     */
-    private fun handleCall(call: CallExpression, parent: Node?) {
-        // We need to check, whether the "callee" refers to a type and if yes, convert it into a
-        // cast expression. And this is only really necessary, if the function call has a single
-        // argument.
-        var callee = call.callee
-        if (parent != null && callee != null && call.arguments.size == 1) {
-            val language = parent.language ?: GoLanguage()
-
-            var pointer = false
-            // If the argument is a UnaryOperator, unwrap them
-            if (callee is UnaryOperator && callee.operatorCode == "*") {
-                pointer = true
-                callee = callee.input
-            }
-
-            // First, check if this is a built-in type
-            if (language.builtInTypes.contains(callee.name.toString())) {
-                replaceCallWithCast(callee.name.toString(), parent, call, false)
-            } else {
-                // If not, then this could still refer to an existing type. We need to make sure
-                // that we take the current namespace into account
-                val fqn =
-                    if (callee.name.parent == null) {
-                        scopeManager.currentNamespace.fqn(callee.name.localName)
-                    } else {
-                        callee.name
-                    }
-
-                if (typeManager.typeExists(fqn.toString())) {
-                    replaceCallWithCast(fqn, parent, call, pointer)
-                }
-            }
-        }
-    }
-
-    private fun replaceCallWithCast(
-        typeName: CharSequence,
-        parent: Node,
-        call: CallExpression,
-        pointer: Boolean,
-    ) {
-        val cast = newCastExpression()
-        cast.code = call.code
-        cast.language = call.language
-        cast.location = call.location
-        cast.castType =
-            if (pointer) {
-                call.objectType(typeName).pointer()
-            } else {
-                call.objectType(typeName)
-            }
-        cast.expression = call.arguments.single()
-
-        if (parent !is ArgumentHolder) {
-            log.error(
-                "Parent AST node of call expression is not an argument holder. Cannot convert to cast expression. Further analysis might not be entirely accurate."
-            )
-            return
-        }
-
-        val success = parent.replaceArgument(call, cast)
-        if (!success) {
-            log.error(
-                "Replacing call expression with cast expression was not successful. Further analysis might not be entirely accurate."
-            )
-        } else {
-            call.disconnectFromGraph()
         }
     }
 

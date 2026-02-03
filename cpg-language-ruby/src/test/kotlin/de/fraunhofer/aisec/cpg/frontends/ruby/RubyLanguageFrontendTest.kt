@@ -25,10 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.ruby
 
-import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.LambdaExpression
+import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertIs
@@ -39,11 +38,7 @@ class RubyLanguageFrontendTest {
     fun testFunctionDeclaration() {
         val topLevel = Path.of("src", "test", "resources", "ruby")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("function.rb").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("function.rb").toFile()), topLevel, true) {
                 it.registerLanguage<RubyLanguage>()
             }
         assertNotNull(tu)
@@ -59,10 +54,10 @@ class RubyLanguageFrontendTest {
     fun testVariables() {
         val topLevel = Path.of("src", "test", "resources", "ruby")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("variables.rb").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<RubyLanguage>()
             }
@@ -73,11 +68,7 @@ class RubyLanguageFrontendTest {
     fun testIter() {
         val topLevel = Path.of("src", "test", "resources", "ruby")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("iter.rb").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("iter.rb").toFile()), topLevel, true) {
                 it.registerLanguage<RubyLanguage>()
             }
         assertNotNull(tu)

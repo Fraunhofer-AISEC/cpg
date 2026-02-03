@@ -30,12 +30,13 @@ import de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.followNextEOGEdgesUntilHit
+import de.fraunhofer.aisec.cpg.graph.followEOGEdgesUntilHit
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 
 /** This pass contains fine-grained improvements to the EOG for the [GoLanguage]. */
+@Description("This pass contains fine-grained improvements to the EOG for the go language.")
 class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraphPass(ctx) {
 
     /**
@@ -66,14 +67,14 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
             // Push the node itself to the EOG, not its "input" (the deferred call). However, it
             // seems that the arguments of the deferred call are evaluated at the point of the
             // deferred statement, duh!
-            pushToEOG(node)
+            attachToEOG(node)
 
             // Evaluate the callee
-            input.callee?.let { createEOG(it) }
+            input.callee?.let { handleEOG(it) }
 
             // Then the arguments
             for (arg in input.arguments) {
-                createEOG(arg)
+                handleEOG(arg)
             }
         } else {
             log.error(
@@ -109,12 +110,12 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
         // We need to follow the path from the defer statement to all return statements that are
         // reachable from this point.
         for (defer in defers ?: listOf()) {
-            val paths = defer.followNextEOGEdgesUntilHit { it is ReturnStatement }
+            val paths = defer.followEOGEdgesUntilHit { it is ReturnStatement }
             for (path in paths.fulfilled) {
                 // It is a bit philosophical whether the deferred call happens before or after the
                 // return statement in the EOG. For now, it is easier to have it as the last node
                 // AFTER the return statement
-                addEOGEdge(path.last(), defer.input)
+                val eogEdge = addEOGEdge(path.nodes.last(), defer.input)
             }
         }
     }

@@ -25,20 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
-import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
-import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import java.math.BigInteger
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
+import kotlin.test.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 
@@ -51,10 +47,10 @@ internal class CXXLiteralTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val zero = tu.getDeclarationsByName("zero", FunctionDeclaration::class.java)
-        assertFalse(zero.isEmpty())
+        val zero = tu.functions["zero"]
+        assertNotNull(zero)
 
-        val funcDecl = zero.iterator().next()
+        val funcDecl = zero
         assertLocalName("zero", funcDecl)
         assertLiteral(0, tu.primitiveType("int"), funcDecl, "i")
         assertLiteral(0L, tu.primitiveType("long int"), funcDecl, "l_with_suffix")
@@ -63,7 +59,7 @@ internal class CXXLiteralTest : BaseTest() {
             BigInteger.valueOf(0),
             tu.primitiveType("unsigned long long int"),
             funcDecl,
-            "l_unsigned_long_long_with_suffix"
+            "l_unsigned_long_long_with_suffix",
         )
     }
 
@@ -75,9 +71,10 @@ internal class CXXLiteralTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val decimal = tu.getDeclarationsByName("decimal", FunctionDeclaration::class.java)
-        assertFalse(decimal.isEmpty())
-        val funcDecl = decimal.iterator().next()
+        val decimal = tu.functions["decimal"]
+        assertNotNull(decimal)
+
+        val funcDecl = decimal
         assertLocalName("decimal", funcDecl)
         assertLiteral(42, tu.primitiveType("int"), funcDecl, "i")
         assertLiteral(1000, tu.primitiveType("int"), funcDecl, "i_with_literal")
@@ -87,25 +84,25 @@ internal class CXXLiteralTest : BaseTest() {
             9223372036854775807L,
             tu.primitiveType("long long int"),
             funcDecl,
-            "l_long_long_with_suffix"
+            "l_long_long_with_suffix",
         )
         assertLiteral(
             BigInteger("9223372036854775809"),
             tu.primitiveType("unsigned long int"),
             funcDecl,
-            "l_unsigned_long_with_suffix"
+            "l_unsigned_long_with_suffix",
         )
         assertLiteral(
             BigInteger("9223372036854775808"),
             tu.primitiveType("unsigned long long int"),
             funcDecl,
-            "l_long_long_implicit"
+            "l_long_long_implicit",
         )
         assertLiteral(
             BigInteger("9223372036854775809"),
             tu.primitiveType("unsigned long long int"),
             funcDecl,
-            "l_unsigned_long_long_with_suffix"
+            "l_unsigned_long_long_with_suffix",
         )
     }
 
@@ -117,9 +114,10 @@ internal class CXXLiteralTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val octal = tu.getDeclarationsByName("octal", FunctionDeclaration::class.java)
-        assertFalse(octal.isEmpty())
-        val funcDecl = octal.iterator().next()
+        val octal = tu.functions["octal"]
+        assertNotNull(octal)
+
+        val funcDecl = octal
         assertLocalName("octal", funcDecl)
         assertLiteral(42, tu.primitiveType("int"), funcDecl, "i")
         assertLiteral(42L, tu.primitiveType("long int"), funcDecl, "l_with_suffix")
@@ -127,7 +125,7 @@ internal class CXXLiteralTest : BaseTest() {
             BigInteger.valueOf(42),
             tu.primitiveType("unsigned long long int"),
             funcDecl,
-            "l_unsigned_long_long_with_suffix"
+            "l_unsigned_long_long_with_suffix",
         )
     }
 
@@ -140,9 +138,10 @@ internal class CXXLiteralTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val hex = tu.getDeclarationsByName("hex", FunctionDeclaration::class.java)
-        assertFalse(hex.isEmpty())
-        val funcDecl = hex.iterator().next()
+        val hex = tu.functions["hex"]
+        assertNotNull(hex)
+
+        val funcDecl = hex
         assertLocalName("hex", funcDecl)
         assertLiteral(42, tu.primitiveType("int"), funcDecl, "i")
         assertLiteral(42L, tu.primitiveType("long int"), funcDecl, "l_with_suffix")
@@ -150,7 +149,7 @@ internal class CXXLiteralTest : BaseTest() {
             BigInteger.valueOf(42),
             tu.primitiveType("unsigned long long int"),
             funcDecl,
-            "l_unsigned_long_long_with_suffix"
+            "l_unsigned_long_long_with_suffix",
         )
     }
 
@@ -162,10 +161,10 @@ internal class CXXLiteralTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val main = tu.getDeclarationsByName("main", FunctionDeclaration::class.java)
-        assertFalse(main.isEmpty())
+        val main = tu.functions["main"]
+        assertNotNull(main)
 
-        val funcDecl = main.iterator().next()
+        val funcDecl = main
         val a = funcDecl.variables["a"]
         assertNotNull(a)
         assertEquals(1, (a.getInitializerAs(UnaryOperator::class.java)?.input as Literal<*>).value)
@@ -179,34 +178,64 @@ internal class CXXLiteralTest : BaseTest() {
         assertNotNull(b)
         assertEquals(
             2147483648L,
-            (b.getInitializerAs(UnaryOperator::class.java)?.input as Literal<*>).value
+            (b.getInitializerAs(UnaryOperator::class.java)?.input as Literal<*>).value,
         )
 
         val c = funcDecl.variables["c"]
         assertNotNull(c)
         assertEquals(
             2147483649L,
-            (c.getInitializerAs(UnaryOperator::class.java)?.input as Literal<*>).value
+            (c.getInitializerAs(UnaryOperator::class.java)?.input as Literal<*>).value,
         )
 
         val d = funcDecl.variables["d"]
         assertNotNull(d)
         assertEquals(
             BigInteger("9223372036854775808"),
-            (d.getInitializerAs(UnaryOperator::class.java)?.input as Literal<*>).value
+            (d.getInitializerAs(UnaryOperator::class.java)?.input as Literal<*>).value,
         )
     }
 
+    @Test
+    fun testCharLiteral() {
+        val file = File("src/test/resources/c/char_literal.c")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CLanguage>()
+            }
+        assertNotNull(tu)
+
+        with(tu) {
+            val main = tu.functions["main"]
+            assertNotNull(main)
+
+            assertLiteral('a', primitiveType("char"), main, "a")
+            assertLiteral('\u0000', primitiveType("char"), main, "zero")
+            assertLiteral(Char(8), primitiveType("char"), main, "eight")
+            assertLiteral(Char(255), primitiveType("char"), main, "hex")
+            assertLiteral(Char(255), primitiveType("char"), main, "max_digits")
+            assertLiteral('\n', primitiveType("char"), main, "newline")
+            assertLiteral(258, primitiveType("int"), main, "multi")
+            assertLiteral(21300, primitiveType("int"), main, "multi2")
+
+            val invalid = tu.variables["invalid"]?.initializer
+            assertIs<ProblemExpression>(invalid)
+
+            val invalid2 = tu.variables["invalid2"]?.initializer
+            assertIs<ProblemExpression>(invalid2)
+        }
+    }
+
     private fun assertLiteral(
-        expectedValue: Number,
+        expectedValue: Any,
         expectedType: Type,
         functionDeclaration: FunctionDeclaration,
-        name: String
+        name: String,
     ) {
         val variableDeclaration = functionDeclaration.variables[name]
         assertNotNull(variableDeclaration)
 
-        val literal = variableDeclaration.getInitializerAs(Literal::class.java)!!
+        val literal = variableDeclaration.initializer<Literal<*>>()
         assertNotNull(literal)
         assertEquals(expectedType, literal.type)
         assertEquals(expectedValue, literal.value)

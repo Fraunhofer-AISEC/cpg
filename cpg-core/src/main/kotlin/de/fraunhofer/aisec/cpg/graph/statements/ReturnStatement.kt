@@ -25,16 +25,36 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
+import de.fraunhofer.aisec.cpg.graph.scopes.FunctionScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
 
 /** Represents a statement that returns out of the current function. */
 class ReturnStatement : Statement(), ArgumentHolder {
+    @Relationship(value = "RETURN_VALUES")
+    var returnValueEdges =
+        astEdgesOf<Expression>(
+            onAdd = { edge ->
+                val func =
+                    (this.scope as? FunctionScope
+                            ?: this.scope?.firstScopeParentOrNull<FunctionScope>())
+                        ?.astNode as? FunctionDeclaration
+                if (func != null) {
+                    edge.end.registerTypeObserver(func)
+                }
+            }
+        )
+
     /** The expression whose value will be returned. */
-    @AST var returnValues: MutableList<Expression> = mutableListOf()
+    var returnValues by unwrapping(ReturnStatement::returnValueEdges)
 
     /**
      * A utility property to handle single-valued return statements. In case [returnValues] contains
@@ -46,7 +66,7 @@ class ReturnStatement : Statement(), ArgumentHolder {
             return returnValues.singleOrNull()
         }
         set(value) {
-            value?.let { returnValues = mutableListOf(it) }
+            value?.let { returnValueEdges.resetTo(listOf(it)) }
         }
 
     override fun toString(): String {
@@ -70,6 +90,10 @@ class ReturnStatement : Statement(), ArgumentHolder {
         return true
     }
 
+    override fun hasArgument(expression: Expression): Boolean {
+        return expression in this.returnValues
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is ReturnStatement) return false
@@ -77,4 +101,12 @@ class ReturnStatement : Statement(), ArgumentHolder {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), returnValues)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.returnValue?.getStartingPrevEOG() ?: this.prevEOG
+    }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return setOf()
+    }
 }

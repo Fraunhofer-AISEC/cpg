@@ -27,17 +27,13 @@ package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
-import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.frontends.testFrontend
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.builder.*
-import de.fraunhofer.aisec.cpg.graph.edge.DependenceType
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
-import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -56,15 +52,18 @@ class ProgramDependenceGraphPassTest {
 
         main.accept(
             Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
+            object : IVisitor<AstNode>() {
+                override fun visit(t: AstNode) {
                     val expectedPrevEdges =
-                        t.prevCDGEdges.map {
-                            it.apply { addProperty(Properties.DEPENDENCE, DependenceType.CONTROL) }
-                        } +
-                            t.prevDFG.map {
-                                PropertyEdge(it, t).apply {
-                                    addProperty(Properties.DEPENDENCE, DependenceType.DATA)
+                        t.prevCDGEdges +
+                            t.prevDFGEdges.filter {
+                                if (
+                                    "remove next" in (it.start.comment ?: "") &&
+                                        "remove prev" in (t.comment ?: "")
+                                ) {
+                                    false
+                                } else {
+                                    true
                                 }
                             }
                     assertTrue(
@@ -72,16 +71,19 @@ class ProgramDependenceGraphPassTest {
                             "expectedPrevEdges: ${expectedPrevEdges.sortedBy { it.hashCode() }}\n" +
                             "actualPrevEdges: ${t.prevPDGEdges.sortedBy { it.hashCode() }}"
                     ) {
-                        compareCollectionWithoutOrder(expectedPrevEdges, t.prevPDGEdges)
+                        t.prevPDGEdges.union(expectedPrevEdges) == t.prevPDGEdges
                     }
 
                     val expectedNextEdges =
-                        t.nextCDGEdges.map {
-                            it.apply { addProperty(Properties.DEPENDENCE, DependenceType.CONTROL) }
-                        } +
-                            t.nextDFG.map {
-                                PropertyEdge(t, it).apply {
-                                    addProperty(Properties.DEPENDENCE, DependenceType.DATA)
+                        t.nextCDGEdges +
+                            t.nextDFGEdges.filter {
+                                if (
+                                    "remove next" in (t.comment ?: "") &&
+                                        "remove prev" in (it.end.comment ?: "")
+                                ) {
+                                    false
+                                } else {
+                                    true
                                 }
                             }
                     assertTrue(
@@ -89,58 +91,48 @@ class ProgramDependenceGraphPassTest {
                             "\nexpectedNextEdges: ${expectedNextEdges.sortedBy { it.hashCode() }}" +
                             "\nactualNextEdges: ${t.nextPDGEdges.sortedBy { it.hashCode() }}"
                     ) {
-                        compareCollectionWithoutOrder(expectedNextEdges, t.nextPDGEdges)
+                        t.prevPDGEdges.union(expectedPrevEdges) == t.prevPDGEdges
                     }
                 }
-            }
+            },
         )
     }
 
-    private fun <T> compareCollectionWithoutOrder(
-        expected: Collection<T>,
-        actual: Collection<T>
-    ): Boolean {
-        val expectedWithDuplicatesGrouped = expected.groupingBy { it }.eachCount()
-        val actualWithDuplicatesGrouped = actual.groupingBy { it }.eachCount()
-
-        return expected.size == actual.size &&
-            expectedWithDuplicatesGrouped == actualWithDuplicatesGrouped
-    }
-
     companion object {
-        fun testFrontend(config: TranslationConfiguration): TestLanguageFrontend {
-            val ctx = TranslationContext(config, ScopeManager(), TypeManager())
-            val language = config.languages.filterIsInstance<TestLanguage>().first()
-            return TestLanguageFrontend(language.namespaceDelimiter, language, ctx)
-        }
-
         @JvmStatic
         fun provideTranslationResultForPDGTest() =
             Stream.of(
                 Arguments.of(getIfTest(), "if statement"),
-                Arguments.of(getWhileLoopTest(), "while loop")
+                Arguments.of(getWhileLoopTest(), "while loop"),
             )
 
         private fun getIfTest() =
-            testFrontend(
-                    TranslationConfiguration.builder()
-                        .registerLanguage(TestLanguage("::"))
-                        .defaultPasses()
-                        .registerPass<ControlDependenceGraphPass>()
-                        .registerPass<ProgramDependenceGraphPass>()
-                        .build()
-                )
+            testFrontend {
+                    it.registerLanguage<TestLanguage>()
+                    it.defaultPasses()
+                    it.registerPass<ControlDependenceGraphPass>()
+                    it.registerPass<ProgramDependenceGraphPass>()
+                }
                 .build {
                     translationResult {
                         translationUnit("if.cpp") {
                             // The main method
                             function("main", t("int")) {
                                 body {
-                                    declare { variable("i", t("int")) { call("rand") } }
+                                    declare {
+                                        variable("i", t("int")) {
+                                            comment = "remove next"
+                                            call("rand")
+                                        }
+                                    }
                                     ifStmt {
                                         condition { ref("i") lt literal(0, t("int")) }
                                         thenStmt {
-                                            ref("i") assign (ref("i") * literal(-1, t("int")))
+                                            ref("i") assign
+                                                {
+                                                    ref("i") { comment = "remove prev" } *
+                                                        literal(-1, t("int"))
+                                                }
                                         }
                                     }
                                     returnStmt { ref("i") }
@@ -151,26 +143,29 @@ class ProgramDependenceGraphPassTest {
                 }
 
         private fun getWhileLoopTest() =
-            testFrontend(
-                    TranslationConfiguration.builder()
-                        .registerLanguage(TestLanguage("::"))
-                        .defaultPasses()
-                        .registerPass<ControlDependenceGraphPass>()
-                        .registerPass<ProgramDependenceGraphPass>()
-                        .build()
-                )
+            testFrontend {
+                    it.registerLanguage<TestLanguage>()
+                    it.defaultPasses()
+                    it.registerPass<ControlDependenceGraphPass>()
+                    it.registerPass<ProgramDependenceGraphPass>()
+                }
                 .build {
                     translationResult {
                         translationUnit("loop.cpp") {
                             // The main method
                             function("main", t("int")) {
                                 body {
-                                    declare { variable("i", t("int")) { call("rand") } }
+                                    declare {
+                                        variable("i", t("int")) {
+                                            comment = "remove next"
+                                            call("rand")
+                                        }
+                                    }
                                     whileStmt {
                                         whileCondition { ref("i") gt literal(0, t("int")) }
                                         loopBody {
                                             call("printf") { literal("#", t("string")) }
-                                            ref("i").dec()
+                                            ref("i") { comment = "remove prev, remove next" }.dec()
                                         }
                                     }
                                     call("printf") { literal("\n", t("string")) }

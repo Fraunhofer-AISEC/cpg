@@ -26,12 +26,13 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.frontends.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.primitiveType
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
+import kotlin.math.max
 import org.neo4j.ogm.annotation.Transient
 
 /** The Go language. */
@@ -41,7 +42,8 @@ class GoLanguage :
     HasGenerics,
     HasStructs,
     HasFirstClassFunctions,
-    HasAnonymousIdentifier {
+    HasAnonymousIdentifier,
+    HasFunctionStyleCasts {
     override val fileExtensions = listOf("go")
     override val namespaceDelimiter = "."
     @Transient override val frontend = GoLanguageFrontend::class
@@ -56,6 +58,12 @@ class GoLanguage :
      */
     override val compoundAssignmentOperators =
         setOf("+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&^=", "&=", "|=", "^=")
+
+    /**
+     * Go supports the normal `=` operator, as well as a short assignment operator, which also
+     * declares the variable under certain circumstances. But both act as a simple assignment.
+     */
+    override val simpleAssignmentOperators = setOf("=", ":=")
 
     /** See [Documentation](https://pkg.go.dev/builtin). */
     @Transient
@@ -95,7 +103,7 @@ class GoLanguage :
                     "uintptr",
                     null /* depends on the architecture, so we don't know */,
                     this,
-                    NumericType.Modifier.UNSIGNED
+                    NumericType.Modifier.UNSIGNED,
                 ),
             // https://pkg.go.dev/builtin#float32
             "float32" to FloatingPointType("float32", 32, this, NumericType.Modifier.SIGNED),
@@ -117,45 +125,56 @@ class GoLanguage :
             // https://go.dev/ref/spec#Package_unsafe
             "unsafe.ArbitraryType" to ObjectType("unsafe.ArbitraryType", listOf(), false, this),
             // https://go.dev/ref/spec#Package_unsafe
-            "unsafe.IntegerType" to ObjectType("unsafe.IntegerType", listOf(), false, this)
+            "unsafe.IntegerType" to ObjectType("unsafe.IntegerType", listOf(), false, this),
         )
 
-    override fun isDerivedFrom(
+    override fun tryCast(
         type: Type,
-        superType: Type,
+        targetType: Type,
         hint: HasType?,
-        superHint: HasType?
-    ): Boolean {
+        targetHint: HasType?,
+    ): CastResult {
+        val match = super.tryCast(type, targetType, hint, targetHint)
+        if (match != CastNotPossible) {
+            return match
+        }
+
         if (
-            type == superType ||
+            type == targetType ||
                 // "any" accepts any type
-                superType == primitiveType("any") ||
+                targetType == primitiveType("any") ||
                 // the unsafe.ArbitraryType is a fake type in the unsafe package, that also accepts
                 // any type
-                superType == primitiveType("unsafe.ArbitraryType")
+                targetType == primitiveType("unsafe.ArbitraryType")
         ) {
-            return true
+            return DirectMatch
         }
 
         // This makes lambda expression works, as long as we have the dedicated a
         // FunctionPointerType
-        if (type is FunctionPointerType && superType is FunctionType) {
-            return type == superType.reference(PointerType.PointerOrigin.POINTER)
+        if (type is FunctionPointerType && targetType.underlyingType is FunctionType) {
+            return if (
+                type == targetType.underlyingType?.reference(PointerType.PointerOrigin.POINTER)
+            ) {
+                DirectMatch
+            } else {
+                CastNotPossible
+            }
         }
 
         // the unsafe.IntegerType is a fake type in the unsafe package, that accepts any integer
         // type
-        if (type is IntegerType && superType == primitiveType("unsafe.IntegerType")) {
-            return true
+        if (type is IntegerType && targetType == primitiveType("unsafe.IntegerType")) {
+            return DirectMatch
         }
 
         // If we encounter an auto type as part of the function declaration, we accept this as any
         // type
         if (
-            (type is ObjectType && superType is AutoType) ||
-                (type is PointerType && type.isArray && superType.root is AutoType)
+            (type is ObjectType && targetType is AutoType) ||
+                (type is PointerType && type.isArray && targetType.root is AutoType)
         ) {
-            return true
+            return DirectMatch
         }
 
         // We accept the "nil" literal for the following super types:
@@ -166,62 +185,105 @@ class GoLanguage :
         // - channels
         // - function types
         if (hint.isNil) {
-            return superType is PointerType ||
-                superType.isInterface ||
-                superType.isMap ||
-                superType.isChannel ||
-                superType is FunctionType
+            return if (
+                targetType is PointerType ||
+                    targetType.isInterface ||
+                    targetType.isMap ||
+                    targetType.isChannel ||
+                    targetType.underlyingType is FunctionType
+            ) {
+                DirectMatch
+            } else {
+                CastNotPossible
+            }
         }
 
         // We accept all kind of numbers if the literal is part of the call expression
-        if (superHint is FunctionDeclaration && hint is Literal<*>) {
-            return type is NumericType && superType is NumericType
+        if (targetHint is ParameterDeclaration && hint is Literal<*>) {
+            return if (type is NumericType && targetType is NumericType) {
+                DirectMatch
+            } else {
+                CastNotPossible
+            }
         }
 
         // We additionally want to emulate the behaviour of Go's interface system here
-        if (superType.isInterface) {
-            var b = true
+        if (targetType.isInterface) {
+            var b: CastResult = DirectMatch
             val target = (type.root as? ObjectType)?.recordDeclaration
 
             // Our target struct type needs to implement all the functions of the interface
             // TODO(oxisto): Differentiate on the receiver (pointer vs non-pointer)
-            for (method in superType.recordDeclaration?.methods ?: listOf()) {
+            for (method in targetType.recordDeclaration?.methods ?: listOf()) {
                 if (target?.methods?.firstOrNull { it.signature == method.signature } != null) {
-                    b = false
+                    b = CastNotPossible
                 }
             }
 
             return b
         }
 
-        return false
+        return CastNotPossible
     }
 
-    override fun propagateTypeOfBinaryOperation(operation: BinaryOperator): Type {
-        if (operation.operatorCode == "==") {
-            return super.propagateTypeOfBinaryOperation(operation)
-        }
-
-        // Deal with literals. Numeric literals can also be used in simple arithmetic of the
-        // underlying type is numeric
+    override fun propagateTypeOfBinaryOperation(
+        operatorCode: String?,
+        lhsType: Type,
+        rhsType: Type,
+        hint: BinaryOperator?,
+    ): Type {
+        // Deal with literals. Numeric literals can also be used in simple arithmetic if the
+        // underlying type is numeric.
+        // There are two relevant sources of information: https://go.dev/ref/spec#Operators, and
+        // https://go.dev/ref/spec#Constant_expressions which specify the following:
+        // - If one operand is an untyped constant, the resulting type is the type of the other
+        // operand
+        // - Always Boolean for comparisons
+        // - Always integer for shifts
+        // - If both untyped operands are the same type, it's that one.
+        // - If the untyped operands of a binary operation (other than a shift) are of different
+        //   kinds, the result is of the operand's kind that appears later in this list: integer,
+        //   rune, floating-point, complex
         return when {
-            operation.lhs is Literal<*> && (operation.lhs as Literal<*>).type is NumericType -> {
-                val type = operation.rhs.type
-                if (type is NumericType || type.underlyingType is NumericType) {
-                    type
-                } else {
-                    unknownType()
-                }
-            }
-            operation.rhs is Literal<*> && (operation.rhs as Literal<*>).type is NumericType -> {
-                val type = operation.lhs.type
-                if (type is NumericType || type.underlyingType is NumericType) {
-                    type
-                } else {
-                    unknownType()
-                }
-            }
-            else -> super.propagateTypeOfBinaryOperation(operation)
+            // Enforce bool for comparisons
+            operatorCode in listOf("<", "=<", ">", "<=", "==") ->
+                builtInTypes["bool"] ?: unknownType()
+            // Two untyped literals for shift
+            hint?.lhs is Literal<*> &&
+                hint.rhs is Literal<*> &&
+                operatorCode in listOf("<<", ">>") -> builtInTypes["int"] ?: unknownType()
+            // A single (untyped) literal, so we take the other type
+            hint?.lhs is Literal<*> &&
+                lhsType is NumericType &&
+                hint.rhs !is Literal<*> &&
+                rhsType.underlyingType is NumericType -> rhsType
+            hint?.rhs is Literal<*> &&
+                rhsType is NumericType &&
+                hint.lhs !is Literal<*> &&
+                lhsType.underlyingType is NumericType -> lhsType
+            // Two literals: If both are the same type, we take this type
+            hint?.lhs is Literal<*> && hint.rhs is Literal<*> && lhsType == rhsType -> lhsType
+            // Two literals of different type: Take the "higher one" in the list.
+            hint?.lhs is Literal<*> &&
+                hint.rhs is Literal<*> &&
+                lhsType != rhsType &&
+                lhsType is NumericType &&
+                rhsType is NumericType ->
+                max(
+                        listOf("int", "rune", "float64", "complex").indexOf(lhsType.name.localName),
+                        listOf("int", "rune", "float64", "complex").indexOf(rhsType.name.localName),
+                    )
+                    .let { index ->
+                        when (index) {
+                            0 -> builtInTypes["int"] ?: unknownType()
+                            1 -> builtInTypes["rune"] ?: unknownType()
+                            2 -> builtInTypes["float"] ?: unknownType()
+                            3 -> builtInTypes["complex"] ?: unknownType()
+                            else -> unknownType()
+                        }
+                    }
+            // For all the rest, we take the default behavior
+            else -> super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
         }
     }
 }

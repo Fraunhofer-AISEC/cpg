@@ -25,9 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
+import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Case statement of the form `case expression :` that serves as entry point for switch statements,
@@ -36,11 +39,14 @@ import java.util.Objects
  * compound statement.
  */
 class CaseStatement : Statement() {
+    @Relationship(value = "CASE_EXPRESSION")
+    var caseExpressionEdge = astOptionalEdgeOf<Expression>()
+
     /**
      * Primitive side effect free statement that has to match with the evaluated selector in
      * SwitchStatement
      */
-    @AST var caseExpression: Expression? = null
+    var caseExpression by unwrapping(CaseStatement::caseExpressionEdge)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -49,4 +55,8 @@ class CaseStatement : Statement() {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), caseExpression)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.caseExpression?.getStartingPrevEOG() ?: this.prevEOG
+    }
 }

@@ -25,8 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.Name
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.newTupleDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.types.AutoType
@@ -62,13 +64,11 @@ import de.fraunhofer.aisec.cpg.graph.types.TupleType
  */
 class TupleDeclaration : VariableDeclaration() {
     /** The list of elements in this tuple. */
-    @AST
-    var elements: List<VariableDeclaration> = mutableListOf()
-        set(value) {
-            field = value
-            // Make sure we inform our elements about our type changes
-            value.forEach { registerTypeObserver(it) }
+    var elementEdges =
+        astEdgesOf<VariableDeclaration>(onAdd = { registerTypeObserver(it.end) }) {
+            unregisterTypeObserver(it.end)
         }
+    var elements by unwrapping(TupleDeclaration::elementEdges)
 
     override var name: Name
         get() = Name(elements.joinToString(",", "(", ")") { it.name.toString() })
@@ -78,5 +78,9 @@ class TupleDeclaration : VariableDeclaration() {
         this.elements += element
         // Make sure we inform the new element about our type changes
         registerTypeObserver(element)
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.initializer?.getStartingPrevEOG() ?: setOf()
     }
 }

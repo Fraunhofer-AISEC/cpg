@@ -26,8 +26,10 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import java.util.IdentityHashMap
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * A complete lattice is an ordered structure of values of type [T]. [T] could be anything, e.g., a
@@ -78,7 +80,7 @@ class PowersetLattice(override val elements: IdentitySet<Node>) :
  * updated (e.g. because there are new nodes or because a new lattice element is bigger than the old
  * one).
  */
-open class State<K, V> : IdentityHashMap<K, LatticeElement<V>>() {
+open class State<K, V> : HashMap<K, LatticeElement<V>>() {
 
     /**
      * It updates this state by adding all new nodes in [other] to `this` and by computing the least
@@ -216,9 +218,6 @@ class Worklist<K : Any, N : Any, V>() {
         return node
     }
 
-    /** Checks if [currentNode] has already been visited before. */
-    fun hasAlreadySeen(currentNode: K) = currentNode in alreadySeen
-
     /** Computes the meet over paths for all the states in [globalState]. */
     fun mop(): State<N, V>? {
         val firstKey = globalState.keys.firstOrNull()
@@ -236,6 +235,24 @@ class Worklist<K : Any, N : Any, V>() {
  * [State] [startState]. For each node, the [transformation] is applied which should update the
  * state.
  *
+ * [transformation] receives the current [Node] popped from the worklist and the [State] at this
+ * node which is considered for this analysis. The [transformation] has to return the updated
+ * [State].
+ */
+inline fun <reified K : Node, V> iterateEOG(
+    startNode: K,
+    startState: State<K, V>,
+    timeout: Long? = null,
+    crossinline transformation: (K, State<K, V>) -> State<K, V>,
+): State<K, V>? {
+    return iterateEOG(startNode, startState, timeout) { k, s, _ -> transformation(k, s) }
+}
+
+/**
+ * Iterates through the worklist of the Evaluation Order Graph starting at [startNode] and with the
+ * [State] [startState]. For each node, the [transformation] is applied which should update the
+ * state.
+ *
  * [transformation] receives the current [Node] popped from the worklist, the [State] at this node
  * which is considered for this analysis and even the current [Worklist]. The worklist is given if
  * we have to add more elements out-of-order e.g. because the EOG is traversed in an order which is
@@ -244,7 +261,22 @@ class Worklist<K : Any, N : Any, V>() {
 inline fun <reified K : Node, V> iterateEOG(
     startNode: K,
     startState: State<K, V>,
-    transformation: (K, State<K, V>, Worklist<K, K, V>) -> State<K, V>
+    timeout: Long? = null,
+    crossinline transformation: (K, State<K, V>, Worklist<K, K, V>) -> State<K, V>,
+): State<K, V>? {
+    return runBlocking {
+        if (timeout != null) {
+            withTimeoutOrNull(timeout) { iterateEogInternal(startNode, startState, transformation) }
+        } else {
+            iterateEogInternal(startNode, startState, transformation)
+        }
+    }
+}
+
+inline fun <reified K : Node, V> iterateEogInternal(
+    startNode: K,
+    startState: State<K, V>,
+    transformation: (K, State<K, V>, Worklist<K, K, V>) -> State<K, V>,
 ): State<K, V>? {
     val initialState = IdentityHashMap<K, State<K, V>>()
     initialState[startNode] = startState
@@ -260,13 +292,15 @@ inline fun <reified K : Node, V> iterateEOG(
         // want to copy the state to avoid terminating the iteration too early by messing up with
         // the state-changing checks.
         val insideBB =
-            (nextNode.nextEOG.size == 1 && nextNode.prevEOG.singleOrNull()?.nextEOG?.size == 1)
+            (nextNode.nextEOGEdges.size == 1 &&
+                nextNode.prevEOGEdges.singleOrNull()?.start?.nextEOG?.size == 1)
         val newState =
             transformation(nextNode, if (insideBB) state else state.duplicate(), worklist)
         if (worklist.update(nextNode, newState)) {
-            nextNode.nextEOG.forEach {
-                if (it is K) {
-                    worklist.push(it, newState)
+            nextNode.nextEOGEdges.forEach {
+                val end = it.end
+                if (end is K) {
+                    worklist.push(end, newState)
                 }
             }
         }
@@ -274,10 +308,34 @@ inline fun <reified K : Node, V> iterateEOG(
     return worklist.mop()
 }
 
-inline fun <reified K : PropertyEdge<Node>, N : Any, V> iterateEOG(
+inline fun <reified K : Edge<Node>, N : Any, V> iterateEOG(
     startEdges: List<K>,
     startState: State<N, V>,
-    transformation: (K, State<N, V>, Worklist<K, N, V>) -> State<N, V>
+    timeout: Long? = null,
+    crossinline transformation: (K, State<N, V>) -> State<N, V>,
+): State<N, V>? {
+    return iterateEOG(startEdges, startState, timeout) { k, s, _ -> transformation(k, s) }
+}
+
+inline fun <reified K : Edge<Node>, N : Any, V> iterateEOG(
+    startEdges: List<K>,
+    startState: State<N, V>,
+    timeout: Long? = null,
+    crossinline transformation: (K, State<N, V>, Worklist<K, N, V>) -> State<N, V>,
+): State<N, V>? {
+    return runBlocking {
+        timeout?.let { timeout ->
+            withTimeoutOrNull(timeout) {
+                iterateEogInternal(startEdges, startState, transformation)
+            }
+        } ?: run { iterateEogInternal(startEdges, startState, transformation) }
+    }
+}
+
+inline fun <reified K : Edge<Node>, N : Any, V> iterateEogInternal(
+    startEdges: List<K>,
+    startState: State<N, V>,
+    crossinline transformation: (K, State<N, V>, Worklist<K, N, V>) -> State<N, V>,
 ): State<N, V>? {
     val globalState = IdentityHashMap<K, State<N, V>>()
     for (startEdge in startEdges) {

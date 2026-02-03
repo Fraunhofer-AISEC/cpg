@@ -25,17 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.typescript
 
-import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
-import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.*
 
@@ -45,11 +40,7 @@ class TypeScriptLanguageFrontendTest {
     fun testFunction() {
         val topLevel = Path.of("src", "test", "resources", "typescript")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("function.ts").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("function.ts").toFile()), topLevel, true) {
                 it.registerLanguage<TypeScriptLanguage>()
             }
 
@@ -82,11 +73,7 @@ class TypeScriptLanguageFrontendTest {
     fun testJSFunction() {
         val topLevel = Path.of("src", "test", "resources", "typescript")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("function.js").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("function.js").toFile()), topLevel, true) {
                 it.registerLanguage<JavaScriptLanguage>()
             }
 
@@ -119,21 +106,16 @@ class TypeScriptLanguageFrontendTest {
     fun testJSX() {
         val topLevel = Path.of("src", "test", "resources", "typescript")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("simple.jsx").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("simple.jsx").toFile()), topLevel, true) {
                 it.registerLanguage<JavaScriptLanguage>()
             }
 
         assertNotNull(tu)
 
-        val doJsx =
-            tu.getDeclarationsByName("doJsx", FunctionDeclaration::class.java).iterator().next()
+        val doJsx = tu.functions["doJsx"]
         assertNotNull(doJsx)
 
-        val returnStatement = doJsx.getBodyStatementAs(0, ReturnStatement::class.java)
+        val returnStatement = doJsx.returns.firstOrNull()
         assertNotNull(returnStatement)
 
         // check the return statement for the TSX statements
@@ -149,33 +131,22 @@ class TypeScriptLanguageFrontendTest {
     fun testComplexCall() {
         val topLevel = Path.of("src", "test", "resources", "typescript")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("fetch.ts").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("fetch.ts").toFile()), topLevel, true) {
                 it.registerLanguage<TypeScriptLanguage>()
             }
 
         assertNotNull(tu)
 
-        val function =
-            tu.getDeclarationsByName("handleSubmit", FunctionDeclaration::class.java)
-                .iterator()
-                .next()
+        val function = tu.functions["handleSubmit"]
         assertNotNull(function)
 
-        val preventDefault = function.getBodyStatementAs(0, MemberCallExpression::class.java)
+        val preventDefault = function.mcalls["preventDefault"]
         assertNotNull(preventDefault)
-
         assertLocalName("preventDefault", preventDefault)
         assertLocalName("event", preventDefault.base)
 
-        val apiUrl =
-            function.getBodyStatementAs(1, DeclarationStatement::class.java)?.singleDeclaration
-                as? VariableDeclaration
+        val apiUrl = function.variables["apiUrl"]
         assertNotNull(apiUrl)
-
         assertLocalName("apiUrl", apiUrl)
 
         val literalInitializer = apiUrl.initializer as? Literal<*>
@@ -183,11 +154,8 @@ class TypeScriptLanguageFrontendTest {
 
         assertEquals("/api/v1/groups", literalInitializer.value)
 
-        val token =
-            function.getBodyStatementAs(2, DeclarationStatement::class.java)?.singleDeclaration
-                as? VariableDeclaration
+        val token = function.variables["token"]
         assertNotNull(token)
-
         assertLocalName("token", token)
 
         val callInitializer = token.initializer as? CallExpression
@@ -198,7 +166,7 @@ class TypeScriptLanguageFrontendTest {
 
         assertEquals("access_token", stringArg.value)
 
-        val chainedCall = function.getBodyStatementAs(3, MemberCallExpression::class.java)
+        val chainedCall = function.bodyOrNull<MemberCallExpression>(3)
         assertNotNull(chainedCall)
 
         val fetch = chainedCall.base as? CallExpression
@@ -254,17 +222,17 @@ class TypeScriptLanguageFrontendTest {
     fun testReact() {
         val topLevel = Path.of("src", "test", "resources", "typescript")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("component.tsx").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<TypeScriptLanguage>()
             }
 
         assertNotNull(tu)
 
-        val user = tu.getDeclarationsByName("User", RecordDeclaration::class.java).iterator().next()
+        val user = tu.records["User"]
         assertNotNull(user)
         assertEquals("interface", user.kind)
         assertLocalName("User", user)
@@ -276,9 +244,8 @@ class TypeScriptLanguageFrontendTest {
         assertLocalName("lastName", lastName)
         assertEquals(tu.primitiveType("string"), lastName.type)
 
-        val usersState =
-            tu.getDeclarationsByName("UsersState", RecordDeclaration::class.java).iterator().next()
-        assertNotNull(user)
+        val usersState = tu.records["UsersState"]
+        assertNotNull(usersState)
         assertEquals("interface", usersState.kind)
         assertLocalName("UsersState", usersState)
 
@@ -290,18 +257,17 @@ class TypeScriptLanguageFrontendTest {
         assertIs<PointerType>(users.type)
         assertLocalName("User[]", users.type)
 
-        val usersComponent =
-            tu.getDeclarationsByName("Users", RecordDeclaration::class.java).iterator().next()
+        val usersComponent = tu.records["Users"]
         assertNotNull(usersComponent)
         assertLocalName("Users", usersComponent)
         assertEquals(1, usersComponent.constructors.size)
         assertEquals(2, usersComponent.methods.size)
-        assertEquals(/*0*/ 2 /* because of dummy nodes */, usersComponent.fields.size)
+        assertEquals(0, usersComponent.fields.size)
 
         val render = usersComponent.methods["render"]
         assertNotNull(render)
 
-        val returnStatement = render.getBodyStatementAs(1, ReturnStatement::class.java)
+        val returnStatement = render.returns.firstOrNull()
         assertNotNull(returnStatement)
 
         // check the return statement for the TSX statements
@@ -317,27 +283,23 @@ class TypeScriptLanguageFrontendTest {
     fun testReactFunctionComponent() {
         val topLevel = Path.of("src", "test", "resources", "typescript")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("function-component.tsx").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<TypeScriptLanguage>()
             }
 
         assertNotNull(tu)
 
-        val loginForm =
-            tu.getDeclarationsByName("LoginForm", VariableDeclaration::class.java).iterator().next()
+        val loginForm = tu.variables["LoginForm"]
         assertNotNull(loginForm)
 
         val lambdaFunction = (loginForm.initializer as? LambdaExpression)?.function
         assertNotNull(lambdaFunction)
 
-        val declStatement = lambdaFunction.getBodyStatementAs(3, DeclarationStatement::class.java)
-        assertNotNull(declStatement)
-
-        val validateForm = declStatement.singleDeclaration as? FunctionDeclaration
+        val validateForm = lambdaFunction.functions["validateForm"]
         assertNotNull(validateForm)
         assertLocalName("validateForm", validateForm)
     }
@@ -346,18 +308,17 @@ class TypeScriptLanguageFrontendTest {
     fun testDecorators() {
         val topLevel = Path.of("src", "test", "resources", "typescript")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("decorator.ts").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<TypeScriptLanguage>()
             }
 
         assertNotNull(tu)
 
-        val myClass =
-            tu.getDeclarationsByName("MyClass", RecordDeclaration::class.java).iterator().next()
+        val myClass = tu.records["MyClass"]
         assertNotNull(myClass)
         assertLocalName("awesome", myClass.annotations.firstOrNull())
 
@@ -381,11 +342,7 @@ class TypeScriptLanguageFrontendTest {
     fun testLambda() {
         val topLevel = Path.of("src", "test", "resources", "typescript")
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("lambda.js").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("lambda.js").toFile()), topLevel, true) {
                 it.registerLanguage<JavaScriptLanguage>()
             }
 
@@ -412,30 +369,26 @@ class TypeScriptLanguageFrontendTest {
     fun testComments() {
         val topLevel = Path.of("src", "test", "resources", "typescript")
         val componentTU =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("component.tsx").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<TypeScriptLanguage>()
             }
         val functionTu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("function.ts").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("function.ts").toFile()), topLevel, true) {
                 it.registerLanguage<TypeScriptLanguage>()
             }
 
         assertNotNull(componentTU)
         assertNotNull(functionTu)
 
-        val users = componentTU.byNameOrNull<RecordDeclaration>("Users")
+        val users = componentTU.records["Users"]
         assertNotNull(users)
         assertEquals("Comment on a record", users.comment)
 
-        val i = users.constructors.first()
+        val i = users.constructors.firstOrNull()
         assertNotNull(i)
         assertEquals("Comment on constructor", i.comment)
 
@@ -443,16 +396,15 @@ class TypeScriptLanguageFrontendTest {
         assertNotNull(j)
         assertEquals("Multiline comment inside of a file", j.comment)
 
-        var function = functionTu.byNameOrNull<FunctionDeclaration>("someFunction")
+        var function = functionTu.functions["someFunction"]
         assertNotNull(function)
         assertEquals("Block comment on a function", function.comment)
 
-        val variableDeclaration =
-            SubgraphWalker.flattenAST(function).filterIsInstance<DeclarationStatement>().first()
+        val variableDeclaration = function.allChildren<DeclarationStatement>().firstOrNull()
         assertNotNull(variableDeclaration)
         assertEquals("Comment on a variable", variableDeclaration.comment)
 
-        function = functionTu.byNameOrNull("someOtherFunction")
+        function = functionTu.functions["someOtherFunction"]
         assertNotNull(function)
         assertEquals("Comment on a Function", function.comment)
     }

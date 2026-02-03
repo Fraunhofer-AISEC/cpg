@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -44,18 +44,21 @@ import org.neo4j.ogm.annotation.Relationship
  */
 // TODO Merge and/or refactor
 class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
+
     /** The list of initializers. */
     @Relationship(value = "INITIALIZERS", direction = Relationship.Direction.OUTGOING)
-    @AST
-    var initializerEdges = mutableListOf<PropertyEdge<Expression>>()
-        set(value) {
-            field.forEach { it.end.unregisterTypeObserver(this) }
-            field = value
-            value.forEach { it.end.registerTypeObserver(this) }
+    var initializerEdges =
+        astEdgesOf<Expression>(
+            onAdd = {
+                it.end.registerTypeObserver(this)
+                it.end.access = this.access
+            }
+        ) {
+            it.end.unregisterTypeObserver(this)
         }
 
     /** Virtual property to access [initializerEdges] without property edges. */
-    var initializers by PropertyEdgeDelegate(InitializerListExpression::initializerEdges)
+    var initializers by unwrapping(InitializerListExpression::initializerEdges)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
@@ -66,6 +69,7 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
 
     override fun addArgument(expression: Expression) {
         this.initializers += expression
+        expression.access = this.access
     }
 
     override fun replaceArgument(old: Expression, new: Expression): Boolean {
@@ -74,10 +78,15 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
             old.unregisterTypeObserver(this)
             initializerEdges[idx].end = new
             new.registerTypeObserver(this)
+            new.access = this.access
             return true
         }
 
         return false
+    }
+
+    override fun hasArgument(expression: Expression): Boolean {
+        return expression in this.initializers
     }
 
     override fun typeChanged(newType: Type, src: HasType) {
@@ -119,4 +128,14 @@ class InitializerListExpression : Expression(), ArgumentHolder, HasType.TypeObse
         // unique to avoid too many hash collisions.
         return Objects.hash(super.hashCode(), initializerEdges.size)
     }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return initializers.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
+    }
+
+    override var access = AccessValues.READ
+        set(value) {
+            field = value
+            initializers.forEach { it.access = value }
+        }
 }

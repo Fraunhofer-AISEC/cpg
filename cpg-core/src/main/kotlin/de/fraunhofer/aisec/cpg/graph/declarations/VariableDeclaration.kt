@@ -26,6 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -43,13 +46,10 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
     /**
      * We need a way to store the templateParameters that a [VariableDeclaration] might have before
      * the [ConstructExpression] is created.
-     *
-     * Because templates are only used by a small subset of languages and variable declarations are
-     * used often, we intentionally make this a nullable list instead of an empty list.
      */
     @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    @AST
-    var templateParameters: List<Node>? = null
+    var templateParameterEdges = astEdgesOf<AstNode>()
+    var templateParameters by unwrapping(VariableDeclaration::templateParameterEdges)
 
     /** Determines if this is a global variable. */
     val isGlobal: Boolean
@@ -66,17 +66,19 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
     var isImplicitInitializerAllowed = false
     var isArray = false
 
-    /** The (optional) initializer of the declaration. */
-    @AST
-    override var initializer: Expression? = null
-        set(value) {
-            field?.unregisterTypeObserver(this)
-            field = value
-            if (value is Reference) {
-                value.resolutionHelper = this
+    @Relationship("INITIALIZER")
+    var initializerEdge =
+        astOptionalEdgeOf<Expression>(
+            onChanged = { old, new ->
+                val value = new?.end
+                exchangeTypeObserverWithAccessPropagation(old, new)
+                if (value is Reference) {
+                    value.resolutionHelper = this
+                }
             }
-            value?.registerTypeObserver(this)
-        }
+        )
+    /** The (optional) initializer of the declaration. */
+    override var initializer by unwrapping(VariableDeclaration::initializerEdge)
 
     fun <T> getInitializerAs(clazz: Class<T>): T? {
         return clazz.cast(initializer)
@@ -140,5 +142,13 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
 
     override fun hashCode(): Int {
         return super.hashCode()
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.prevEOG
+    }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return this.initializer?.getExitNextEOG() ?: this.nextEOG
     }
 }

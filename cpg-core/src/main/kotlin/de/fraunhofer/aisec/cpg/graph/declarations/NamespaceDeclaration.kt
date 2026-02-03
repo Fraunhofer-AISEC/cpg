@@ -26,9 +26,11 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.Objects
 import org.neo4j.ogm.annotation.Relationship
 
@@ -48,34 +50,18 @@ class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder, 
      * Edges to nested namespaces, records, functions, fields etc. contained in the current
      * namespace.
      */
-    @AST override val declarations: MutableList<Declaration> = ArrayList()
+    val declarationEdges = astEdgesOf<Declaration>()
+    override val declarations by unwrapping(NamespaceDeclaration::declarationEdges)
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
-    @AST
-    override var statementEdges: MutableList<PropertyEdge<Statement>> = ArrayList()
+    override var statementEdges = astEdgesOf<Statement>()
 
     /**
      * In some languages, there is a relationship between paths / directories and the package
      * structure. Therefore, we need to be aware of the path this namespace / package is in.
      */
     var path: String? = null
-
-    /**
-     * Returns a non-null, possibly empty `Set` of the declaration of a specified type and clazz.
-     *
-     * @param name the name to search for
-     * @param clazz the declaration class, such as [FunctionDeclaration].
-     * @param <T> the type of the declaration
-     * @return a `Set` containing the declarations, if any. </T>
-     */
-    fun <T : Declaration> getDeclarationsByName(name: String, clazz: Class<T>): Set<T> {
-        return declarations.filterIsInstance(clazz).filter { it.name.toString() == name }.toSet()
-    }
-
-    fun <T> getDeclarationAs(i: Int, clazz: Class<T>): T {
-        return clazz.cast(declarations[i])
-    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -89,9 +75,9 @@ class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder, 
         addIfNotContains(declarations, declaration)
     }
 
-    override var statements: List<Statement> by
-        PropertyEdgeDelegate(NamespaceDeclaration::statementEdges)
+    override var statements by unwrapping(NamespaceDeclaration::statementEdges)
 
+    @DoNotPersist
     override val eogStarters: List<Node>
         get() {
             val list = mutableListOf<Node>()
@@ -102,4 +88,14 @@ class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder, 
 
             return list
         }
+
+    override var firstBasicBlock: BasicBlock? = null
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return setOf()
+    }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return setOf()
+    }
 }

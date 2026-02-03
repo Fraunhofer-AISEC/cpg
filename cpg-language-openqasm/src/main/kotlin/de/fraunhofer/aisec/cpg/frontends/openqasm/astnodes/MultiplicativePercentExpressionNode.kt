@@ -30,5 +30,5 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 class MultiplicativePercentExpressionNode(
     location: PhysicalLocation,
     lhs: ExpressionNode,
-    rhs: ExpressionNode
+    rhs: ExpressionNode,
 ) : MultiplicativeExpressionNode(location, lhs, rhs)

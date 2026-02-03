@@ -37,7 +37,7 @@ interface ProblemNode {
         /**
          * The library failed to parse the statement (probably a problem of the code under analysis)
          */
-        PARSING
+        PARSING,
     }
 
     /** A short description of the issue. */

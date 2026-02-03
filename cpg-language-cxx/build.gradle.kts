@@ -23,33 +23,27 @@
  *                    \______/ \__|       \______/
  *
  */
-plugins {
-    id("cpg.frontend-conventions")
-}
+plugins { id("cpg.frontend-conventions") }
 
-publishing {
-    publications {
-        named<MavenPublication>("cpg-language-cxx") {
-            pom {
-                artifactId = "cpg-language-cxx"
-                name.set("Code Property Graph - C/C++ Frontend")
-                description.set("A C/C++ language frontend for the CPG")
-            }
-        }
+mavenPublishing {
+    pom {
+        name.set("Code Property Graph - C/C++ Frontend")
+        description.set("A C/C++ language frontend for the CPG")
     }
 }
 
 dependencies {
     // Eclipse dependencies
-    api(libs.eclipse.runtime) {
+    implementation(libs.eclipse.runtime) {
         // For some reason, this group name is wrong
         exclude("org.osgi.service", "org.osgi.service.prefs")
     }
-    api(libs.osgi.service)
-    api(libs.icu4j)
+    implementation(libs.osgi.service)
+    implementation(libs.icu4j)
 
     // CDT
-    api(libs.eclipse.cdt.core)
+    implementation(libs.eclipse.cdt.core)
 
     testImplementation(libs.junit.params)
+    testImplementation(project(":cpg-analysis"))
 }

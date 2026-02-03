@@ -25,14 +25,16 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.*
 import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Relationship
@@ -42,19 +44,19 @@ import org.neo4j.ogm.annotation.Relationship
  * executable code.
  */
 @NodeEntity
-abstract class Statement : Node(), DeclarationHolder {
+abstract class Statement : AstNode(), DeclarationHolder {
     /**
-     * A list of local variables associated to this statement, defined by their [ ] extracted from
-     * Block because for, while, if, switch can declare locals in their condition or initializers.
+     * A list of local variables (or other values) associated to this statement, defined by their
+     * [ValueDeclaration] extracted from Block because `for`, `while`, `if`, and `switch` can
+     * declare locals in their condition or initializers.
      *
      * TODO: This is actually an AST node just for a subset of nodes, i.e. initializers in for-loops
      */
     @Relationship(value = "LOCALS", direction = Relationship.Direction.OUTGOING)
-    @AST
-    var localEdges = mutableListOf<PropertyEdge<VariableDeclaration>>()
+    var localEdges = astEdgesOf<ValueDeclaration>()
 
     /** Virtual property to access [localEdges] without property edges. */
-    var locals by PropertyEdgeDelegate(Statement::localEdges)
+    var locals by unwrapping(Statement::localEdges)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -68,6 +70,8 @@ abstract class Statement : Node(), DeclarationHolder {
 
     override fun addDeclaration(declaration: Declaration) {
         if (declaration is VariableDeclaration) {
+            addIfNotContains(localEdges, declaration)
+        } else if (declaration is FunctionDeclaration) {
             addIfNotContains(localEdges, declaration)
         }
     }

@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import java.util.*
+import kotlin.uuid.Uuid
 
 /**
  * This class represents anything that can have a "Name". In the simplest case it only represents a
@@ -41,13 +42,27 @@ class Name(
     /** The parent name, e.g., the namespace this name lives in. */
     val parent: Name? = null,
     /** A potential namespace delimiter, usually either `.` or `::`. */
-    val delimiter: String = "."
+    val delimiter: String = ".",
 ) : Cloneable, Comparable<Name>, CharSequence {
     constructor(
         localName: String,
         parent: Name? = null,
-        language: Language<*>?
+        language: Language<*>?,
     ) : this(localName, parent, language?.namespaceDelimiter ?: ".")
+
+    companion object {
+        /**
+         * Creates a temporary name starting with a prefix plus a UUID (version 4) seeded by the
+         * hash code of [prefix] and [seed]. The Name is prefixed by [prefix], followed by a
+         * separator character [separatorChar] and finalized by the UUID ("-" separators also
+         * replaced with [separatorChar]).
+         */
+        fun temporary(prefix: String, separatorChar: Char = '_', vararg seed: Node): Name {
+            val uuid =
+                Uuid.fromLongs(prefix.hashCode().toLong(), seed.sumOf { it.hashCode().toLong() })
+            return Name(localName = prefix + separatorChar + uuid)
+        }
+    }
 
     /**
      * The full string representation of this name. Since [localName] and [parent] are immutable,
@@ -61,6 +76,20 @@ class Name(
     public override fun clone(): Name = Name(localName, parent?.clone(), delimiter)
 
     /**
+     * This function splits a fully qualified name into its parts. For example,
+     * `my::namespace::name` would be split into `["my::namespace::name", "my::namespace", "my"]`.
+     */
+    fun splitTo(out: MutableList<Name>): MutableList<Name> {
+        var current: Name? = this
+        while (current != null) {
+            out += current
+            current = current.parent
+        }
+
+        return out
+    }
+
+    /**
      * Returns the string representation of this name using a fully qualified name notation with the
      * specified [delimiter].
      */
@@ -70,11 +99,13 @@ class Name(
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is Name) return false
+        if (other is String) return this.fullName == other
+        if (other is Name)
+            return localName == other.localName &&
+                parent == other.parent &&
+                delimiter == other.delimiter
 
-        return localName == other.localName &&
-            parent == other.parent &&
-            delimiter == other.delimiter
+        return false
     }
 
     override fun get(index: Int) = fullName[index]
@@ -126,8 +157,9 @@ class Name(
  * (such as a [Node], a [Language], a [LanguageFrontend] or a [Handler]) to parse a fully qualified
  * name.
  */
-fun LanguageProvider?.parseName(fqn: CharSequence) =
-    parseName(fqn, this?.language?.namespaceDelimiter ?: ".")
+fun LanguageProvider.parseName(fqn: CharSequence): Name {
+    return parseName(fqn, this.language.namespaceDelimiter)
+}
 
 /** Tries to parse the given fully qualified name using the specified [delimiter] into a [Name]. */
 internal fun parseName(fqn: CharSequence, delimiter: String, vararg splitDelimiters: String): Name {
@@ -153,9 +185,9 @@ internal fun parseName(fqn: CharSequence, delimiter: String, vararg splitDelimit
 }
 
 /** Returns a new [Name] based on the [localName] and the current name as parent. */
-fun Name?.fqn(localName: String) =
+fun Name?.fqn(localName: String, delimiter: String = this?.delimiter ?: ".") =
     if (this == null) {
-        Name(localName)
+        Name(localName, null, delimiter)
     } else {
-        Name(localName, this, this.delimiter)
+        Name(localName, this, delimiter)
     }

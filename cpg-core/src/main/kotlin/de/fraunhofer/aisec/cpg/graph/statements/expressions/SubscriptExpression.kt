@@ -26,9 +26,12 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.*
+import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents the subscription or access of an array of the form `array[index]`, where both `array`
@@ -36,22 +39,31 @@ import java.util.*
  * overload operators thus changing semantics of array access.
  */
 class SubscriptExpression : Expression(), HasBase, HasType.TypeObserver, ArgumentHolder {
-    /** The array on which the access is happening. This is most likely a [Reference]. */
-    @AST
-    var arrayExpression: Expression = ProblemExpression("could not parse array expression")
+    override var access = AccessValues.READ
         set(value) {
-            field.unregisterTypeObserver(this)
             field = value
-            type = getSubscriptType(value.type)
-            value.registerTypeObserver(this)
+            // Do not propagate the access value to the array expression
+            // arrayExpression.access = value
         }
 
+    @Relationship("ARRAY_EXPRESSION")
+    var arrayExpressionEdge =
+        astEdgeOf<Expression>(
+            of = ProblemExpression("could not parse array expression"),
+            onChanged = ::exchangeTypeObserverWithoutAccessPropagation,
+        )
+    /** The array on which the access is happening. This is most likely a [Reference]. */
+    var arrayExpression by unwrapping(SubscriptExpression::arrayExpressionEdge)
+
+    @Relationship("SUBSCRIPT_EXPRESSION")
+    var subscriptExpressionEdge =
+        astEdgeOf<Expression>(ProblemExpression("could not parse index expression"))
     /**
      * The expression which represents the "subscription" or index on which the array is accessed.
      * This can for example be a reference to another variable ([Reference]), a [Literal] or a
      * [RangeExpression].
      */
-    @AST var subscriptExpression: Expression = ProblemExpression("could not parse index expression")
+    var subscriptExpression by unwrapping(SubscriptExpression::subscriptExpressionEdge)
 
     override val base: Expression
         get() = arrayExpression
@@ -111,6 +123,10 @@ class SubscriptExpression : Expression(), HasBase, HasType.TypeObserver, Argumen
         }
     }
 
+    override fun hasArgument(expression: Expression): Boolean {
+        return arrayExpression == expression || subscriptExpression == expression
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is SubscriptExpression) return false
@@ -120,4 +136,8 @@ class SubscriptExpression : Expression(), HasBase, HasType.TypeObserver, Argumen
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), arrayExpression, subscriptExpression)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.arrayExpression.getStartingPrevEOG()
+    }
 }

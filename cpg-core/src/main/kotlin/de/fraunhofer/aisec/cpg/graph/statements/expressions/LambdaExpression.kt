@@ -28,9 +28,12 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import org.neo4j.ogm.annotation.Relationship
 
 /**
  * This expression denotes the usage of an anonymous / lambda function. It connects the inner
@@ -47,13 +50,12 @@ class LambdaExpression : Expression(), HasType.TypeObserver {
     /** Determines if we can modify variables declared outside the lambda from inside the lambda */
     var areVariablesMutable: Boolean = true
 
-    @AST
-    var function: FunctionDeclaration? = null
-        set(value) {
-            value?.unregisterTypeObserver(this)
-            field = value
-            value?.registerTypeObserver(this)
-        }
+    @Relationship("FUNCTION")
+    var functionEdge =
+        astOptionalEdgeOf<FunctionDeclaration>(
+            onChanged = ::exchangeTypeObserverWithAccessPropagation
+        )
+    var function by unwrapping(LambdaExpression::functionEdge)
 
     override fun typeChanged(newType: Type, src: HasType) {
         // Make sure our src is the function

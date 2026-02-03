@@ -26,8 +26,10 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
+import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
+import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 
 interface DeclarationHolder {
     /**
@@ -44,10 +46,11 @@ interface DeclarationHolder {
         }
     }
 
-    fun <T : Node> addIfNotContains(
-        collection: MutableCollection<PropertyEdge<T>>,
-        declaration: T
-    ) {
+    fun <T : AstNode, P : AstEdge<T>> addIfNotContains(collection: AstEdges<T, P>, declaration: T) {
+        addIfNotContains(collection, declaration, true)
+    }
+
+    fun <T : AstNode, P : Edge<T>> addIfNotContains(collection: EdgeList<T, P>, declaration: T) {
         addIfNotContains(collection, declaration, true)
     }
 
@@ -59,28 +62,31 @@ interface DeclarationHolder {
      * @param <T> the type of the declaration
      * @param outgoing whether the property is outgoing </T>
      */
-    fun <T : Node> addIfNotContains(
-        collection: MutableCollection<PropertyEdge<T>>,
+    fun <T : Node, P : Edge<T>> addIfNotContains(
+        collection: EdgeList<T, out P>,
         declaration: T,
-        outgoing: Boolean
+        outgoing: Boolean,
     ) {
-        // create a new property edge
-        val propertyEdge =
-            if (outgoing) PropertyEdge((this as Node), declaration)
-            else PropertyEdge(declaration, this as T)
-
-        // set the index property
-        propertyEdge.addProperty(Properties.INDEX, collection.size)
         var contains = false
         for (element in collection) {
-            if (element.end == propertyEdge.end) {
-                contains = true
-                break
+            if (outgoing) {
+                if (element.end == declaration) {
+                    contains = true
+                    break
+                }
+            } else {
+                if (element.start == declaration) {
+                    contains = true
+                    break
+                }
             }
         }
-        if (!contains) {
-            collection.add(propertyEdge)
+
+        if (contains) {
+            return
         }
+
+        collection.add(declaration)
     }
 
     val declarations: List<Declaration>

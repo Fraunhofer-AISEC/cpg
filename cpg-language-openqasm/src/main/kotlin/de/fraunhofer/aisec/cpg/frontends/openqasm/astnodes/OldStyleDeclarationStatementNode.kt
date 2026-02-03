@@ -31,5 +31,5 @@ class OldStyleDeclarationStatementNode(
     location: PhysicalLocation,
     val type: String,
     val idNode: IdentifierNode,
-    val designator: DesignatorNode?
+    val designator: DesignatorNode?,
 ) : StatementNode(location)

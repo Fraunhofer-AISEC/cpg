@@ -25,7 +25,7 @@ The EOG is similar to a CFG which connects basic blocks of statements, but there
 ## General Structure
 
 The graphs in this specification abstract the representation of the handled graph, to formally specify how EOG edges are drawn between a parent node and the subgraphs rooted by its children.
-Therefore, a collection of AST children are represented as abstract nodes showing the multiplicity of the node with an indicator (n), in case of sets, or as several nodes showing how the position in a list can impact the construction of an EOG, e.g., nodes (i - 1) to i.
+Therefore, a collection of AST children are represented as abstract nodes showing the multiplicity of the node with an indicator (n), in case of sets, or as several nodes showing how the position in a list can impact the construction of an EOG, e.g., nodes `(i - 1)` to `i`.
 The EOG is constructed as postorder of the AST traversal.
 When building the EOG for the expression a + b, the entire expression is considered evaluated after the subexpression a and the subexpression b is evaluated, therefore EOG edges connect nodes of (a) and (b) before reaching the parent node (+).
 
@@ -48,7 +48,7 @@ Note that, in the following graphics we will often draw an EOG edge to an abstra
 The EOG path through that subtree will depend on the node types of that tree and mostly start connecting one of the AST leaf nodes.
 
 ## FunctionDeclaration
-A function declaration is the start of an intra-procedural EOG and contains its end. Therefore there is no incoming or outgoing edge to `previous` or `next` eog nodes that are not in its AST subtree. The EOG connects the code body, as well as the default values of parameters if they exist.
+A function declaration is the start of an intra-procedural EOG and contains its end. Therefore, there is no incoming or outgoing edge to `previous` or `next` eog nodes that are not in its AST subtree. The EOG connects the code body, as well as the default values of parameters if they exist.
 
 Interesting fields:
 
@@ -69,7 +69,7 @@ flowchart LR
 ```
   
 ## StatementHolder
-StatementHolder is an interface for any node that is not a function and contains code that should be connected with an EOG. The following classes implement this interface: `NamespaceDeclaration`, `TranslationUnitDeclaration`, `RecordDeclaration` and `Block`. The Node implementing the interface is the start of one or multiple EOGs. Note that code inside such a holder can be static or non static (bound to an instance of a record). Therefore, two separate EOGs may be built. 
+StatementHolder is an interface for any node that is not a function and contains code that should be connected with an EOG. The following classes implement this interface: `NamespaceDeclaration`, `TranslationUnitDeclaration`, `RecordDeclaration` and `Block`. The Node implementing the interface is the start of one or multiple EOGs. Note that code inside such a holder can be static or non-static (bound to an instance of a record). Therefore, two separate EOGs may be built. 
 
 Interesting fields:
 
@@ -357,25 +357,26 @@ flowchart LR
   child --EOG-->parent
   parent(["UnaryOperator"]) --EOG--> next:::outer
   parent -."statements(n)".-> child
-
 ```
 
-
-### UnaryOperator for exception throws
-Throwing of exceptions is modelled as unary operation. The EOG continues at an exception catching structure or a function that does a re-throw. 
+## ThrowExpression
+The EOG continues at an exception catching structure or a function that does a re-throw.
 
 Interesting fields:
-* `input: Expression`: Exception to be thrown for exception handling.
+
+* `exception: Expression`: Exception to be thrown for exception handling.
+* `parentException: Expression`: Exception which caused this exception to be thrown.
 
 Scheme:
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
-  prev:::outer --EOG--> child["input"]
-  child --EOG-->parent
-  parent(["throw"]) --EOG--> catchingContext:::outer
-  parent -."statements(n)".-> child
-
+  prev:::outer --EOG--> child1["exception"]
+  child1 --EOG--> child2["parentException"]
+  child2 --EOG-->parent
+  parent(["ThrowExpression"]) --EOG--> catchingContext:::outer
+  parent -.-> child1
+  parent -.-> child2
 ```
 
 
@@ -501,7 +502,7 @@ Interesting fields:
 
 * `initializer: Expression`: To be evaluated before creating a new object.
 
-* Scheme:
+Scheme:
 ```mermaid
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
@@ -527,7 +528,7 @@ flowchart LR
 ```
 
 ## ExpressionList
-List of several expressions that aer evaluated sequentially. The resulting value is the last evaluated expression.
+List of several expressions that are evaluated sequentially. The resulting value is the last evaluated expression.
 
 Interesting fields:
 
@@ -592,7 +593,7 @@ Scheme:
 flowchart LR
   classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
   prev:::outer --EOG--> child1["expression"]
-  child1 --EOG--> parent
+  child1 --EOG--> parent(["SynchronizedStatement"])
   parent --EOG--> child2["block"]
   child2 --EOG--> next:::outer
   parent -.-> child1
@@ -621,6 +622,55 @@ flowchart LR
   parent -.-> child1
   parent -.-> child2
   parent -.-> child3
+```
+
+## CollectionComprehension
+This node iterates through a collection of elements via `comprehensionExpression` and applies `statement` to the elements. 
+
+Interesting fields:
+
+* `comprehensionExpressions: List<ComprehensionExpression>`: The part which iterates through all elements of the collection and filter them.
+* `statement: Statement`: The operation applied to each element iterated over.
+
+Scheme:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child1["comprehensionExpressions[0]"]
+  child1 --EOG:true--> child2["comprehensionExpressions[n]"]
+  child2 --EOG:true--> child3["statement"]
+  child2 --EOG:false--> child1["comprehensionExpressions[0]"]
+  child1 --EOG:false--> parent(["CollectionComprehension"])
+  child3 --EOG--> child2
+  parent --EOG--> next:::outer
+  parent -.-> child3
+  parent -.-> child2
+  parent -.-> child1
+```
+
+## ComprehensionExpression
+This node iterates through a collection of elements of `iterable`, keeps the element in `variable` and evaluates an optional `predicate`.
+
+Interesting fields:
+
+* `iterable: Statement`: The part which iterates through all elements of the collection (or similar).
+* `variable: Statement`: The variable holding each element in the iterable.
+* `predicate: Statement`: A condition which determines if we consider this variable further or if we fetch the next element.
+
+Scheme:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> child1["iterable"]
+  child1 --EOG:true--> child2["variable"]
+  child2 --EOG--> child3["predicate"]
+  child3 --EOG--> parent(["ComprehensionExpression"])
+  parent --EOG:true--> enter:::outer
+  parent --EOG:false--> child1
+  child1 --EOG:false--> exit:::outer
+  parent -.-> child3
+  parent -.-> child2
+  parent -.-> child1
 ```
 
 ## WhileStatement
@@ -810,8 +860,97 @@ flowchart LR
 
 ```
 
+## TypeExpression
+The expression itself is connected to the outer EOG.
 
+Interesting fields: /
 
+Scheme:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> parent["TypeExpression"]
+  parent --EOG--> next:::outer
+```
 
-  
+## LookupScopeStatement
+The statement itself is connected to the outer EOG.
 
+Interesting fields: /
+
+Scheme:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> parent["LookupScopeStatement"]
+  parent --EOG--> next:::outer
+```
+
+## EmptyStatement
+The statement itself is connected to the outer EOG.
+
+Interesting fields: /
+
+Scheme:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> parent["EmptyStatement"]
+  parent --EOG--> next:::outer
+```
+
+## Literal
+The statement itself is connected to the outer EOG.
+
+Interesting fields: /
+
+Scheme:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> parent["Literal"]
+  parent --EOG--> next:::outer
+```
+
+## DefaultStatement
+The statement itself is connected to the outer EOG.
+
+Interesting fields: /
+
+Scheme:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> parent["DefaultStatement"]
+  parent --EOG--> next:::outer
+```
+
+## TypeIdExpression
+The statement itself is connected to the outer EOG.
+
+Interesting fields: /
+
+Scheme:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> parent["TypeIdExpression"]
+  parent --EOG--> next:::outer
+```
+
+## Reference
+The statement itself is connected to the outer EOG.
+
+Interesting fields: /
+
+Scheme:
+```mermaid
+flowchart LR
+  classDef outer fill:#fff,stroke:#ddd,stroke-dasharray:5 5;
+  prev:::outer --EOG--> parent["Reference"]
+  parent --EOG--> next:::outer
+```
+
+## IncludeDeclaration
+The `IncludeDeclaration` is not connected to the EOG.
+We continue with the next statement.

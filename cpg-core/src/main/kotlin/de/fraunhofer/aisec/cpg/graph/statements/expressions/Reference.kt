@@ -32,8 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
@@ -48,8 +46,8 @@ import org.neo4j.ogm.annotation.Relationship
  */
 open class Reference : Expression(), HasType.TypeObserver, HasAliases {
     /**
-     * The [Declaration]s this expression might refer to. This will influence the [declaredType] of
-     * this expression.
+     * The [Declaration]s this expression might refer to. This will influence the [type] of this
+     * expression.
      */
     @PopulatedByPass(SymbolResolver::class)
     @Relationship(value = "REFERS_TO")
@@ -65,7 +63,7 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
             // set it
             field = value
             if (value is ValueDeclaration) {
-                value.addUsage(this)
+                value.usageEdges += this
             }
 
             // Register ourselves to get type updates from the declaration
@@ -74,13 +72,24 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
             }
         }
 
+    /**
+     * For some more complex resolutions, such as call resolutions, we need to do a two-step
+     * process:
+     * - First, identify possible candidates with a matching name / symbol
+     * - Second, restrict this set to list to the actual best viable solution
+     *
+     * In case of call resolution, this is additionally split into two nodes: a [CallExpression],
+     * which holds the arguments and a [Reference] (or [MemberExpression]), which is used as the
+     * [CallExpression.callee] and holds the name of the desired function.
+     *
+     * Until we have proper support for AST parents, we need to rely on the [resolutionHelper] to
+     * find out if this reference is used as a [CallExpression.callee].
+     */
+    var candidates: Set<Declaration> = setOf()
+
     override var aliases = mutableSetOf<HasAliases>()
 
-    /**
-     * Is this reference used for writing data instead of just reading it? Determines dataflow
-     * direction
-     */
-    var access = AccessValues.READ
+    override var access = AccessValues.READ
     var isStaticAccess = false
 
     /**
@@ -127,8 +136,11 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
             this.addAssignedTypes(assignedTypes)
         }
 
-        // We also allow updates from our previous DFG nodes
-        if (prevDFG.contains(src as Node)) {
+        // We also allow updates from our previous DFG nodes; but only for FULL data-flows. This is
+        // important especially for MemberExpression nodes (which are also Reference nodes).
+        // Otherwise, an update in the base's type could propagate to a member (since we have a
+        // PARTIAL DFG from the base to the member) and this is BAD.
+        if (prevFullDFG.contains(src as Node)) {
             this.addAssignedTypes(assignedTypes)
         }
     }
@@ -147,23 +159,12 @@ open class Reference : Expression(), HasType.TypeObserver, HasAliases {
         return super.hashCode()
     }
 
-    override fun addPrevDFG(prev: Node, properties: MutableMap<Properties, Any?>) {
-        super.addPrevDFG(prev, properties)
-
-        // We want to propagate assigned types all through the previous DFG nodes. Therefore, we
-        // override the DFG adding function here and add a type observer to the previous node (if it
-        // is not ourselves)
-        if (prev != this && prev is HasType) {
-            prev.registerTypeObserver(this)
-        }
-    }
-
     /**
      * This function builds a tag for the particular reference, based on its [name],
      * [resolutionHelper] and [scope]. Its purpose is to cache symbol resolutions, similar to LLVMs
      * system of Unified Symbol Resolution (USR). Please be aware, that this tag is not guaranteed
      * to be 100 % unique, especially if the language frontend is missing [Node.location]
-     * information (of the [Scope.astNode]. Therefore, its usage should be similar to a [hashCode],
+     * information (of the [scope.astNode]). Therefore, its usage should be similar to a [hashCode],
      * so that in case of an equal hash-code, a [equals] comparison (in this case of the [scope]) is
      * needed.
      */

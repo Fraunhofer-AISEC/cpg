@@ -15,10 +15,12 @@ out
 .data/
 logs
 /lsp/*.log
-*.class
 
 *.dylib
 *.so
 *.log
 
 gradle.properties
+LibrariesTest.kt
+findings.json
+

@@ -2,8 +2,8 @@
 This branch is currently undergoing export control checks. The source code will be made available here once these checks have been completed.
 
 # Code Property Graph 
-[![Actions Status](https://github.com/Fraunhofer-AISEC/cpg/workflows/build/badge.svg)](https://github.com/Fraunhofer-AISEC/cpg/actions)
- [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=alert_status)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg) [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=security_rating)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Fraunhofer-AISEC_cpg&metric=coverage)](https://sonarcloud.io/dashboard?id=Fraunhofer-AISEC_cpg) [![](https://jitpack.io/v/Fraunhofer-AISEC/cpg.svg)](https://jitpack.io/#Fraunhofer-AISEC/cpg)
+[![Actions Status](https://github.com/Fraunhofer-AISEC/cpg/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/Fraunhofer-AISEC/cpg/actions)
+ [![codecov](https://codecov.io/gh/Fraunhofer-AISEC/cpg/graph/badge.svg?token=XBXZZOQIID)](https://codecov.io/gh/Fraunhofer-AISEC/cpg)
 
 A simple library to extract a *code property graph* out of source code. It has support for multiple passes that can extend the analysis after the graph is constructed. It currently supports C/C++ (C17), Java (Java 13) and has experimental support for Golang, Python and TypeScript. Furthermore, it has support for the [LLVM IR](http://llvm.org/docs/LangRef.html) and thus, theoretically support for all languages that compile using LLVM. 
 
@@ -32,37 +32,46 @@ Instead of manually generating or editing the `gradle.properties` file, you can 
 
 ### For Visualization Purposes
 
-In order to get familiar with the graph itself, you can use the subproject [cpg-neo4j](https://github.com/Fraunhofer-AISEC/cpg/tree/master/cpg-neo4j). It uses this library to generate the CPG for a set of user-provided code files. The graph is then persisted to a [Neo4j](https://neo4j.com/) graph database. The advantage this has for the user, is that Neo4j's visualization software [Neo4j Browser](https://neo4j.com/developer/neo4j-browser/) can be used to graphically look at the CPG nodes and edges, instead of their Java representations.
+In order to get familiar with the graph itself, you can use the subproject [cpg-neo4j](./cpg-neo4j). It uses this library to generate the CPG for a set of user-provided code files. The graph is then persisted to a [Neo4j](https://neo4j.com/) graph database. The advantage this has for the user, is that Neo4j's visualization software [Neo4j Browser](https://neo4j.com/developer/neo4j-browser/) can be used to graphically look at the CPG nodes and edges, instead of their Java representations.
+
+Please make sure, that the [APOC](https://neo4j.com/labs/apoc/) plugin is enabled on your neo4j server. It is used in mass-creating nodes and relationships.
+
+For example using docker:
+```
+docker run -p 7474:7474 -p 7687:7687 -d -e NEO4J_AUTH=neo4j/password -e NEO4JLABS_PLUGINS='["apoc"]' neo4j:5
+```
 
 ### As Library
 
-The most recent version is being published to Maven central and can be used as a simple dependency, either using Maven or Gradle. Since Eclipse CDT is not published on maven central, it is necessary to add a repository with a custom layout to find the released CDT files. For example, using Gradle's Kotlin syntax:
+The most recent version is being published to Maven central and can be used as a simple dependency, either using Maven or Gradle.
 
 ```kotlin
+dependencies {
+    val cpgVersion = "9.0.2"
+
+    // use the 'cpg-core' module
+    implementation("de.fraunhofer.aisec", "cpg-core", cpgVersion)
+
+    // and then add the needed extra modules, such as Go and Python
+    implementation("de.fraunhofer.aisec", "cpg-language-go", cpgVersion)
+    implementation("de.fraunhofer.aisec", "cpg-language-python", cpgVersion)
+}
+```
+
+There are some extra steps necessary for the `cpg-language-cxx` module. Since Eclipse CDT is not published on maven central, it is necessary to add a repository with a custom layout to find the released CDT files. For example, using Gradle's Kotlin syntax:
+```kotlin
 repositories {
+    // This is only needed for the C++ language frontend
     ivy {
-        setUrl("https://download.eclipse.org/tools/cdt/releases/11.3/cdt-11.3.1/plugins")
+        setUrl("https://download.eclipse.org/tools/cdt/releases/")
         metadataSources {
             artifact()
         }
+
         patternLayout {
-            artifact("/[organisation].[module]_[revision].[ext]")
+            artifact("[organisation].[module]_[revision].[ext]")
         }
     }
-}
-
-dependencies {
-    val cpgVersion = "8.0.0"
-
-    // if you want to include all published cpg modules
-    implementation("de.fraunhofer.aisec", "cpg", cpgVersion)
-
-    // if you only want to use some of the cpg modules
-    // use the 'cpg-core' module
-    // and then add the needed extra modules, such as Go and Python
-    implementation("de.fraunhofer.aisec", "cpg-core", cpgVersion)
-    implementation("de.fraunhofer.aisec", "cpg-language-go", cpgVersion)
-    implementation("de.fraunhofer.aisec", "cpg-language-python", cpgVersion)
 }
 ```
 
@@ -70,11 +79,9 @@ Beware, that the `cpg` module includes all optional features and might potential
 
 #### Development Builds
 
-A published artifact of every commit can be requested through [JitPack](https://jitpack.io/#Fraunhofer-AISEC/cpg). This is especially useful, if your external project makes use of a specific feature that is not yet merged in yet or not published as a version yet. Please follow the instructions on the JitPack page. Please be aware, that similar to release builds, the CDT repository needs to be added as well (see above).
+For all builds on the `main` branch, an artefact is published in the [GitHub Packages](https://github.com/orgs/Fraunhofer-AISEC/packages?repo_name=cpg) under the version `main-SNAPSHOT`. Additionally, selected PRs that have the `publish-to-github-packages` label will also be published there. This is useful if an important feature is not yet in main, but you want to test it. The version refers to the PR number, e.g. `1954-SNAPSHOT`.  
 
-### On Command Line
-
-The library can be used on the command line using the `cpg-console` subproject. Please refer to the [README.md](./cpg-console/README.md) of the `cpg-console` as well as our small [tutorial](./tutorial.md) for further details.
+To use the GitHub Gradle Registry, please refer to https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-gradle-registry#using-a-published-package
 
 ### Configuration
 
@@ -114,24 +121,47 @@ val translationConfig = TranslationConfiguration
     .build()
 ```
 
-## Development Setup
+## Development
+This section describes languages, how well they are supported, and how to use and develop them yourself.
 
-### Experimental Languages
+### Language Support
+Languages are maintained to different degrees, and are noted in the table below with:
+- `maintained`: if they are mostly feature complete and bugs have priority of being fixed.
+- `incubating`: if the language is currently being worked on to reach a state of feature completeness.
+- `experimental`: if a first working prototype was implemented, e.g., to support research topics, and its future development is unclear.
+- `discontinued`: if the language is no longer actively developed or maintained but is kept for everyone to fork and adapt.
+  
+The current state of languages is:
 
-Some languages, such as Golang are experimental and depend on other native libraries. Therefore, they are not included in the `cpg-core` module but have separate gradle submodules.
-To include the desired submodules simply toggle them on in your local `gradle.properties` file by setting the value of the properties to `true` e.g., (`enableGoFrontend=true`).
+| Language                 | Module                                | Branch                                                                  | State          |
+|--------------------------|---------------------------------------|-------------------------------------------------------------------------|----------------|
+| Java (Source)            | cpg-language-java                     | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
+| C++                      | cpg-language-cxx                      | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
+| Python                   | cpg-language-python                   | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
+| Go                       | cpg-language-go                       | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
+| INI                      | cpg-language-ini                      | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `maintained`   |
+| JVM (Bytecode)           | cpg-language-jvm                      | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `incubating`   |
+| LLVM                     | cpg-language-llvm                     | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `incubating`   |
+| TypeScript/JavaScript    | cpg-language-typescript               | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `experimental` |
+| Ruby                     | cpg-language-ruby                     | [main](https://github.com/Fraunhofer-AISEC/cpg)                         | `experimental` |
+| {OpenQASM,Python-Qiskit} | cpg-language-{openqasm,python-qiskit} | [quantum-cpg](https://github.com/Fraunhofer-AISEC/cpg/tree/quantum-cpg) | `experimental` |
+
+Note that several languages can be compiled to LLVM IR and thus, can be analyzed using the `cpg-language-llvm` module (see [7]). This includes, but is not limited to, Rust, Swift, Objective-C, and Haskell (see https://llvm.org/ for more information). 
+
+### Languages and Configuration
+`cpg-core` contains the graph nodes, language-independent passes that add semantics to the cpg-AST. Languages are developed in separate gradle submodules. 
+To include the desired language submodules, simply toggle them on in your local `gradle.properties` file by setting the properties to `true`, e.g., (`enableGoFrontend=true`).
 We provide a sample file with all languages switched on [here](./gradle.properties.example).
-Instead of manually editing the `gradle.properties` file, you can also use the `configure_frontends.sh` script, which edits the properties for you.
+Instead of manually editing the `gradle.properties` file, you can also use the `configure_frontends.sh` script, which edits the properties for you. Some languages need additional installation of software to run and will be listed below.
 
 #### Golang
 
-In the case of Golang, the necessary native code can be found in the `src/main/golang` folder of the `cpg-language-go` submodule. Gradle should automatically store the finished library in the `src/main/golang` folder. This currently only works for Linux and macOS.
+In the case of Golang, additional native code, [libgoast](https://github.com/Fraunhofer-AISEC/libgoast), is used to access the Go `ast` packages. Gradle should automatically download the latest version of this library during the build process. This currently only works for Linux and macOS.
 
 #### Python
 
 You need to install [jep](https://github.com/ninia/jep/). This can either be system-wide or in a virtual environment. Your jep version has to match the version used by the CPG (see [version catalog](./gradle/libs.versions.toml)).
-
-Currently, only Python 3.{9,10,11,12,13} is supported.
+Currently, only Python 3.{10,11,12,13,14,15} is supported.
 
 ##### System Wide
 
@@ -147,7 +177,11 @@ Through the `JepSingleton`, the CPG library will look for well known paths on Li
 
 #### TypeScript
 
-For parsing TypeScript, the necessary NodeJS-based code can be found in the `src/main/nodejs` directory of the `cpg-language-typescript` submodule. Gradle should build the script automatically, provided NodeJS (>=16) is installed. The bundles script will be placed inside the jar's resources and should work out of the box.
+For parsing TypeScript, the necessary TypeScript-based code can be found in the `src/main/nodejs` directory of the `cpg-language-typescript` submodule. Gradle should build the script automatically. The bundles script will be placed inside the jar's resources and should work out of the box.
+
+#### MCP
+
+[Model Context Protocol](https://modelcontextprotocol.io/docs/getting-started/intro) functionality is provided via the optional `cpg-mcp` module. It can be enabled/disabled via the `gradle.properties` setting `enableMCPModule`.
 
 ### Code Style
 
@@ -170,25 +204,17 @@ cp style/pre-commit .git/hooks
 
 ## Contributors
 
-The following authors have contributed to this project (in alphabetical order):
-* [fwendland](https://github.com/fwendland)
-* [JulianSchuette](https://github.com/JulianSchuette)
-* [konradweiss](https://github.com/konradweiss)
-* [KuechA](https://github.com/KuechA)
-* [Masrepus](https://github.com/Masrepus)
-* [maximiliankaul](https://github.com/maximiliankaul)
-* [maximilian-galanis](https://github.com/maximilian-galanis)
-* [obraunsdorf](https://github.com/obraunsdorf)
-* [oxisto](https://github.com/oxisto)
-* [peckto](https://github.com/peckto)
-* [titze](https://github.com/titze)
-* [vfsrfs](https://github.com/vfsrfs)
+The following authors have contributed to this project:
+
+<a href="https://github.com/Fraunhofer-AISEC/cpg/graphs/contributors"><img src="https://contrib.rocks/image?repo=Fraunhofer-AISEC/cpg" /></a>
 
 ## Contributing
 
 Before accepting external contributions, you need to sign our [CLA](https://cla-assistant.io/Fraunhofer-AISEC/cpg). Our CLA assistent will check, whether you already signed the CLA when you open your first pull request.
 
 ## Further reading
+
+You can find a complete list of papers [here](https://fraunhofer-aisec.github.io/cpg/#publications)
 
 A quick write-up of our CPG has been published on arXiv:
 
@@ -208,6 +234,11 @@ An initial publication on the concept of using code property graphs for static a
 
 [5] https://github.com/ShiftLeftSecurity/joern/
 
-Additional extensions of the CPG into the field of Cloud security:
+Additional extensions of the CPG to support further use-cases:
 
 [6] Christian Banse, Immanuel Kunz, Angelika Schneider and Konrad Weiss. Cloud Property Graph: Connecting Cloud Security Assessments with Static Code Analysis.  IEEE CLOUD 2021. https://doi.org/10.1109/CLOUD53861.2021.00014
+
+[7] Alexander Küchler, Christian Banse. Representing LLVM-IR in a Code Property Graph. 25th Information Security Conference (ISC). Bali, Indonesia. 2022
+
+[8] Maximilian Kaul, Alexander Küchler, Christian Banse. A Uniform Representation of Classical and Quantum Source Code for Static Code Analysis. IEEE International Conference on Quantum Computing and Engineering (QCE). Bellevue, WA, USA. 2023
+

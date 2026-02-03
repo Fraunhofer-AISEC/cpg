@@ -25,37 +25,40 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
 
-/** Represents a conditional loop statement of the form: `while(...){...}`. */
-class WhileStatement : Statement(), BranchingNode, ArgumentHolder {
+/**
+ * Represents a conditional loop statement of the form: `while(...){...}`. The loop body is executed
+ * until condition evaluates to false for the first time.
+ */
+class WhileStatement : LoopStatement(), BranchingNode, ArgumentHolder {
+    @Relationship(value = "CONDITION_DECLARATION")
+    var conditionDeclarationEdge = astOptionalEdgeOf<Declaration>()
     /** C++ allows defining a declaration instead of a pure logical expression as condition */
-    @AST var conditionDeclaration: Declaration? = null
+    var conditionDeclaration by unwrapping(WhileStatement::conditionDeclarationEdge)
 
+    @Relationship(value = "CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
     /** The condition that decides if the block is executed. */
-    @AST var condition: Expression? = null
+    var condition by unwrapping(WhileStatement::conditionEdge)
 
-    /**
-     * The statement that is going to be executed, until the condition evaluates to false for the
-     * first time. Usually a [Block].
-     */
-    @AST var statement: Statement? = null
-
-    override val branchedBy: Node?
+    override val branchedBy
         get() = condition ?: conditionDeclaration
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
             .appendSuper(super.toString())
             .append("condition", condition)
-            .append("statement", statement)
+            .append("conditionDeclaration", conditionDeclaration)
             .toString()
     }
 
@@ -68,16 +71,29 @@ class WhileStatement : Statement(), BranchingNode, ArgumentHolder {
         return true
     }
 
+    override fun hasArgument(expression: Expression): Boolean {
+        return this.condition == expression
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is WhileStatement) return false
 
         return super.equals(other) &&
             conditionDeclaration == other.conditionDeclaration &&
-            condition == other.condition &&
-            statement == other.statement
+            condition == other.condition
     }
 
-    override fun hashCode() =
-        Objects.hash(super.hashCode(), conditionDeclaration, condition, statement)
+    override fun hashCode() = Objects.hash(super.hashCode(), conditionDeclaration, condition)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        val astChildren = this.allChildren<Node> { true }
+        return condition?.getStartingPrevEOG()?.filter { it !in astChildren }
+            ?: conditionDeclaration?.getStartingPrevEOG()
+            ?: setOf()
+    }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return this.nextEOG.filter { it !in statement.allChildren<Node> { true } }
+    }
 }

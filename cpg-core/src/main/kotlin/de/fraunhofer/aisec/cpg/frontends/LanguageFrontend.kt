@@ -34,7 +34,6 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.util.*
-import org.apache.commons.lang3.StringUtils
 import org.slf4j.LoggerFactory
 
 /**
@@ -43,25 +42,25 @@ import org.slf4j.LoggerFactory
  * after having processed the files, i.e., it won't be available in passes.
  *
  * More information can be found in the
- * [github wiki page](https://github.com/Fraunhofer-AISEC/cpg/wiki/Language-Frontends).
+ * [GitHub wiki page](https://github.com/Fraunhofer-AISEC/cpg/wiki/Language-Frontends).
  */
 abstract class LanguageFrontend<AstNode, TypeNode>(
-    /** The language this frontend works for. */
-    override val language: Language<out LanguageFrontend<AstNode, TypeNode>>,
-
     /**
      * The translation context, which contains all necessary managers used in this frontend parsing
-     * process. Note, that different contexts could passed to frontends, e.g., in parallel parsing
-     * to supply different managers to different frontends.
+     * process. Note, that different contexts could be passed to frontends, e.g., in parallel
+     * parsing to supply different managers to different frontends.
      */
     final override var ctx: TranslationContext,
+
+    /** The language this frontend works for. */
+    override val language: Language<out LanguageFrontend<AstNode, TypeNode>>,
 ) :
     ProcessedListener(),
     CodeAndLocationProvider<AstNode>,
     LanguageProvider,
+    ContextProvider,
     ScopeProvider,
     NamespaceProvider,
-    ContextProvider,
     RawNodeTypeProvider<AstNode> {
     val scopeManager: ScopeManager = ctx.scopeManager
     val typeManager: TypeManager = ctx.typeManager
@@ -109,7 +108,7 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
      * @param astNode the ast node
      * @return the source code </T>
      */
-    abstract fun codeOf(astNode: AstNode): String?
+    abstract override fun codeOf(astNode: AstNode): String?
 
     /**
      * Returns the [Region] of the code with line and column, index starting at 1, generic for java
@@ -119,112 +118,7 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
      * @param astNode the ast node
      * @return the location </T>
      */
-    abstract fun locationOf(astNode: AstNode): PhysicalLocation?
-
-    override fun setCodeAndLocation(cpgNode: Node, astNode: AstNode) {
-        if (config.codeInNodes) {
-            // only set code, if it's not already set or empty
-            val code = codeOf(astNode)
-            if (code != null) {
-                cpgNode.code = code
-            } else {
-                log.warn("Unexpected: No code for node {}", astNode)
-            }
-        }
-        cpgNode.location = locationOf(astNode)
-    }
-
-    /**
-     * To prevent issues with different newline types and formatting.
-     *
-     * @param node
-     * - The newline type is extracted from the nodes code.
-     *
-     * @return the String of the newline
-     */
-    fun getNewLineType(node: Node): String {
-        val nls = listOf("\n\r", "\r\n", "\n")
-        for (nl in nls) {
-            if (node.toString().endsWith(nl)) {
-                return nl
-            }
-        }
-        log.debug("Could not determine newline type. Assuming \\n. {}", node)
-        return "\n"
-    }
-
-    /**
-     * Returns the code represented by the subregion extracted from the parent node and its region.
-     *
-     * @param node
-     * - The parent node of the subregion
-     *
-     * @param nodeRegion
-     * - region needs to be precomputed.
-     *
-     * @param subRegion
-     * - precomputed subregion
-     *
-     * @return the code of the subregion.
-     */
-    fun getCodeOfSubregion(node: Node, nodeRegion: Region, subRegion: Region): String {
-        val code = node.code ?: return ""
-        val nlType = getNewLineType(node)
-        val start =
-            if (subRegion.startLine == nodeRegion.startLine) {
-                subRegion.startColumn - nodeRegion.startColumn
-            } else {
-                (StringUtils.ordinalIndexOf(
-                    code,
-                    nlType,
-                    subRegion.startLine - nodeRegion.startLine
-                ) + subRegion.startColumn)
-            }
-        val end =
-            if (subRegion.endLine == nodeRegion.startLine) {
-                subRegion.endColumn - nodeRegion.startColumn
-            } else {
-                (StringUtils.ordinalIndexOf(
-                    code,
-                    nlType,
-                    subRegion.endLine - nodeRegion.startLine
-                ) + subRegion.endColumn)
-            }
-        return code.substring(start, end)
-    }
-
-    /**
-     * Merges two regions. The new region contains both and is the minimal region to do so.
-     *
-     * @param regionOne the first region
-     * @param regionTwo the second region
-     * @return the merged region
-     */
-    fun mergeRegions(regionOne: Region, regionTwo: Region): Region {
-        val ret = Region()
-        if (
-            regionOne.startLine < regionTwo.startLine ||
-                regionOne.startLine == regionTwo.startLine &&
-                    regionOne.startColumn < regionTwo.startColumn
-        ) {
-            ret.startLine = regionOne.startLine
-            ret.startColumn = regionOne.startColumn
-        } else {
-            ret.startLine = regionTwo.startLine
-            ret.startColumn = regionTwo.startColumn
-        }
-        if (
-            regionOne.endLine > regionTwo.endLine ||
-                regionOne.endLine == regionTwo.endLine && regionOne.endColumn > regionTwo.endColumn
-        ) {
-            ret.endLine = regionOne.endLine
-            ret.endColumn = regionOne.startColumn
-        } else {
-            ret.endLine = regionTwo.endLine
-            ret.endColumn = regionTwo.endColumn
-        }
-        return ret
-    }
+    abstract override fun locationOf(astNode: AstNode): PhysicalLocation?
 
     open fun cleanup() {
         clearProcessed()

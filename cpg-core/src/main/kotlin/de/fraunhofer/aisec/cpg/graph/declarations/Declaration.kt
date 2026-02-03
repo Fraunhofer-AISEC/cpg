@@ -25,7 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.scopes.Scope
+import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import org.neo4j.ogm.annotation.NodeEntity
 
 /**
@@ -37,4 +42,25 @@ import org.neo4j.ogm.annotation.NodeEntity
  * currently have two [FunctionDeclaration] nodes. This is very similar to the behaviour of clang,
  * however clang does establish a connection between those nodes, we currently do not.
  */
-@NodeEntity abstract class Declaration : Node()
+@NodeEntity
+abstract class Declaration : AstNode() {
+    @DoNotPersist
+    val symbol: Symbol
+        get() {
+            return this.name.localName
+        }
+
+    /**
+     * Returns the [Scope] that this [Declaration] declares (if it does). For example, for a
+     * [RecordDeclaration], this will return the [RecordScope] of the particular record or class.
+     */
+    var declaringScope: Scope? = null
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return setOf()
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return setOf()
+    }
+}

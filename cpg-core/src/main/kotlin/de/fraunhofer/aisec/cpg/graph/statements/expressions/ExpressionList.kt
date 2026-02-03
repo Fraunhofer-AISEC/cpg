@@ -25,28 +25,18 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import java.util.*
-import kotlin.collections.ArrayList
 import org.neo4j.ogm.annotation.Relationship
 
 class ExpressionList : Expression() {
     @Relationship(value = "SUBEXPR", direction = Relationship.Direction.OUTGOING)
-    @AST
-    var expressionEdges: MutableList<PropertyEdge<Statement>> = ArrayList()
-
-    var expressions: List<Statement> by PropertyEdgeDelegate(ExpressionList::expressionEdges, true)
-
-    fun addExpression(expression: Statement) {
-        val propertyEdge = PropertyEdge(this, expression)
-        propertyEdge.addProperty(Properties.INDEX, expressionEdges.size)
-        expressionEdges.add(propertyEdge)
-    }
+    var expressionEdges = astEdgesOf<Statement>()
+    var expressions by unwrapping(ExpressionList::expressionEdges)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {
@@ -62,5 +52,9 @@ class ExpressionList : Expression() {
 
     override fun hashCode(): Int {
         return Objects.hash(super.hashCode(), expressions)
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.expressions.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
     }
 }

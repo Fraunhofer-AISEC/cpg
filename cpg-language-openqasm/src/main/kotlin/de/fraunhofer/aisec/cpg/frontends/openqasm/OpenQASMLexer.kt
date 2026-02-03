@@ -156,7 +156,7 @@ class OpenQASMLexer(private val file: File) {
             tokens +=
                 DecimalIntegerLiteralToken(
                     makeLocHelper(currentLine, currentLine, startColumn, currentColumn),
-                    payload.toInt()
+                    payload.toInt(),
                 )
         } else {
             TODO()
@@ -196,7 +196,7 @@ class OpenQASMLexer(private val file: File) {
         tokens +=
             StringLiteralToken(
                 makeLocHelper(startLine, currentLine, startColumn, currentColumn),
-                payload
+                payload,
             )
     }
 
@@ -242,7 +242,7 @@ class OpenQASMLexer(private val file: File) {
 
                     OpenQASMToken(
                         makeLocHelper(startLine, startLine, startColumn, endColumn),
-                        versionString
+                        versionString,
                     )
                 }
                 "include" ->
@@ -311,7 +311,7 @@ class OpenQASMLexer(private val file: File) {
                 else ->
                     IdentifierToken(
                         makeLocHelper(startLine, startLine, startColumn, endColumn),
-                        payload
+                        payload,
                     )
             }
     }
@@ -361,7 +361,7 @@ class OpenQASMLexer(private val file: File) {
         tokens +=
             LineCommentToken(
                 makeLocHelper(startLine, startLine, startColumn, currentColumn),
-                commentString
+                commentString,
             )
     }
 
@@ -392,7 +392,7 @@ class OpenQASMLexer(private val file: File) {
         tokens +=
             BlockCommentToken(
                 makeLocHelper(startLine, endLine, startColumn, endColumn),
-                commentString
+                commentString,
             )
     }
 
@@ -446,7 +446,7 @@ class OpenQASMLexer(private val file: File) {
                                 currentLine,
                                 currentLine,
                                 currentColumn - 1,
-                                currentColumn
+                                currentColumn,
                             )
                         )
                     } else {
@@ -464,7 +464,7 @@ class OpenQASMLexer(private val file: File) {
                                 currentLine,
                                 currentLine,
                                 currentColumn - 1,
-                                currentColumn
+                                currentColumn,
                             )
                         )
                     } else if (nextChar != null && nextChar == '>') {
@@ -474,7 +474,7 @@ class OpenQASMLexer(private val file: File) {
                                 currentLine,
                                 currentLine,
                                 currentColumn - 1,
-                                currentColumn
+                                currentColumn,
                             )
                         )
                     } else {
@@ -492,7 +492,7 @@ class OpenQASMLexer(private val file: File) {
                                 currentLine,
                                 currentLine,
                                 currentColumn - 1,
-                                currentColumn
+                                currentColumn,
                             )
                         )
                     } else if (nextChar != null && nextChar == '+') {
@@ -502,7 +502,7 @@ class OpenQASMLexer(private val file: File) {
                                 currentLine,
                                 currentLine,
                                 currentColumn - 1,
-                                currentColumn
+                                currentColumn,
                             )
                         )
                     } else {
@@ -523,7 +523,7 @@ class OpenQASMLexer(private val file: File) {
                                     currentLine,
                                     currentLine,
                                     currentColumn - 2,
-                                    currentColumn
+                                    currentColumn,
                                 )
                             )
                         } else { // **
@@ -532,7 +532,7 @@ class OpenQASMLexer(private val file: File) {
                                     currentLine,
                                     currentLine,
                                     currentColumn - 1,
-                                    currentColumn
+                                    currentColumn,
                                 )
                             )
                         }
@@ -543,7 +543,7 @@ class OpenQASMLexer(private val file: File) {
                                 currentLine,
                                 currentLine,
                                 currentColumn - 1,
-                                currentColumn
+                                currentColumn,
                             )
                         )
                     } else {
@@ -566,7 +566,7 @@ class OpenQASMLexer(private val file: File) {
                                 currentLine,
                                 currentLine,
                                 currentColumn - 1,
-                                currentColumn
+                                currentColumn,
                             )
                         )
                     } else {
@@ -584,7 +584,7 @@ class OpenQASMLexer(private val file: File) {
                                 currentLine,
                                 currentLine,
                                 currentColumn - 1,
-                                currentColumn
+                                currentColumn,
                             )
                         )
                     } else if (nextChar != null && nextChar == '|') {
@@ -594,7 +594,7 @@ class OpenQASMLexer(private val file: File) {
                                 currentLine,
                                 currentLine,
                                 currentColumn - 1,
-                                currentColumn
+                                currentColumn,
                             )
                         )
                     } else {
@@ -612,7 +612,7 @@ class OpenQASMLexer(private val file: File) {
                                 currentLine,
                                 currentLine,
                                 currentColumn - 1,
-                                currentColumn
+                                currentColumn,
                             )
                         )
                     } else if (nextChar != null && nextChar == '&') {
@@ -622,7 +622,7 @@ class OpenQASMLexer(private val file: File) {
                                 currentLine,
                                 currentLine,
                                 currentColumn - 1,
-                                currentColumn
+                                currentColumn,
                             )
                         )
                     } else {
@@ -640,7 +640,7 @@ class OpenQASMLexer(private val file: File) {
                                 currentLine,
                                 currentLine,
                                 currentColumn - 1,
-                                currentColumn
+                                currentColumn,
                             )
                         )
                     } else {
@@ -663,7 +663,7 @@ class OpenQASMLexer(private val file: File) {
                                 currentLine,
                                 currentLine,
                                 currentColumn - 1,
-                                currentColumn
+                                currentColumn,
                             )
                         )
                     } else {
@@ -681,7 +681,7 @@ class OpenQASMLexer(private val file: File) {
                                 currentLine,
                                 currentLine,
                                 currentColumn - 1,
-                                currentColumn
+                                currentColumn,
                             )
                         )
                     } else {
@@ -702,7 +702,7 @@ class OpenQASMLexer(private val file: File) {
                                     currentLine,
                                     currentLine,
                                     currentColumn - 2,
-                                    currentColumn
+                                    currentColumn,
                                 )
                             )
                         } else { // <<
@@ -711,7 +711,7 @@ class OpenQASMLexer(private val file: File) {
                                     currentLine,
                                     currentLine,
                                     currentColumn - 1,
-                                    currentColumn
+                                    currentColumn,
                                 )
                             )
                         }
@@ -722,7 +722,7 @@ class OpenQASMLexer(private val file: File) {
                                 currentLine,
                                 currentLine,
                                 currentColumn - 1,
-                                currentColumn
+                                currentColumn,
                             )
                         )
                     } else { // <
@@ -743,7 +743,7 @@ class OpenQASMLexer(private val file: File) {
                                     currentLine,
                                     currentLine,
                                     currentColumn - 2,
-                                    currentColumn
+                                    currentColumn,
                                 )
                             )
                         } else { // <<
@@ -752,7 +752,7 @@ class OpenQASMLexer(private val file: File) {
                                     currentLine,
                                     currentLine,
                                     currentColumn - 1,
-                                    currentColumn
+                                    currentColumn,
                                 )
                             )
                         }
@@ -763,7 +763,7 @@ class OpenQASMLexer(private val file: File) {
                                 currentLine,
                                 currentLine,
                                 currentColumn - 1,
-                                currentColumn
+                                currentColumn,
                             )
                         )
                     } else { // >
@@ -794,11 +794,11 @@ class OpenQASMLexer(private val file: File) {
         startLine: Int,
         endLine: Int,
         startColumn: Int,
-        endColumn: Int
+        endColumn: Int,
     ): PhysicalLocation {
         return PhysicalLocation(
             URI("file://" + file.absolutePath),
-            Region(startLine, startColumn, endLine, endColumn)
+            Region(startLine, startColumn, endLine, endColumn),
         )
     }
 }

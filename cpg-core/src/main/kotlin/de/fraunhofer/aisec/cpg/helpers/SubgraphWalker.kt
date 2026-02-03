@@ -23,23 +23,27 @@
  *                    \______/ \__|       \______/
  *
  */
+@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
+
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.ScopeManager
-import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.AstNode
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.checkForPropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.unwrap
+import de.fraunhofer.aisec.cpg.graph.StatementHolder
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
+import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.HasType
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.fieldCache
+import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
+import de.fraunhofer.aisec.cpg.passes.Pass
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.lang.annotation.AnnotationFormatError
 import java.lang.reflect.Field
 import java.util.*
-import java.util.function.BiConsumer
-import java.util.function.Consumer
-import org.neo4j.ogm.annotation.Relationship
 import org.slf4j.LoggerFactory
 
 /** Helper class for graph walking: Walking through ast-, cfg-, ...- edges */
@@ -54,7 +58,7 @@ object SubgraphWalker {
      * @param classType the class type
      * @return its fields, including the ones from its superclass
      */
-    private fun getAllFields(classType: Class<*>): Collection<Field> {
+    fun getAllEdgeFields(classType: Class<*>): Collection<Field> {
         if (classType.superclass != null) {
             val cacheKey = classType.name
 
@@ -64,8 +68,8 @@ object SubgraphWalker {
                 return fieldCache[cacheKey] ?: ArrayList()
             }
             val fields = ArrayList<Field>()
-            fields.addAll(getAllFields(classType.superclass))
-            fields.addAll(listOf(*classType.declaredFields))
+            fields.addAll(getAllEdgeFields(classType.superclass))
+            fields.addAll(listOf(*classType.declaredFields).filter { it.name.contains("Edge") })
 
             // update the cache
             fieldCache[cacheKey] = fields
@@ -75,115 +79,59 @@ object SubgraphWalker {
     }
 
     /**
-     * Retrieves a list of AST children of the specified node by iterating all fields that are
-     * annotated with the [AST] annotation.
+     * Retrieves a list of AST children of the specified node by iterating all edge fields that are
+     * of type [AstEdge].
      *
      * Please note, that you SHOULD NOT call this directly in a recursive function, since the AST
      * might have loops and you will probably run into a [StackOverflowError]. Therefore, use of
      * [Node.accept] with the [Strategy.AST_FORWARD] is encouraged.
      *
      * @param node the start node
+     * @param stopAtNode A predicate to stop the flattening at a specific node (i.e., we won't
+     *   include that node and its ast children)
      * @return a list of children from the node's AST
      */
     @JvmStatic
-    fun getAstChildren(node: Node?): List<Node> {
-        val children = ArrayList<Node>()
+    fun getAstChildren(
+        node: AstNode?,
+        stopAtNode: (AstNode) -> Boolean = { false },
+    ): List<AstNode> {
+        val children = ArrayList<AstNode>()
         if (node == null) return children
         val classType: Class<*> = node.javaClass
 
-        /*for (member in node::class.members) {
-            val subGraph = member.findAnnotation<SubGraph>()
-            if (subGraph != null && listOf(*subGraph.value).contains("AST")) {
-                val old = member.isAccessible
+        // We currently need to stick to pure Java reflection, since Kotlin reflection
+        // is EXTREMELY slow. See https://youtrack.jetbrains.com/issue/KT-32198
+        for (field in getAllEdgeFields(classType)) {
+            try {
+                // We need to synchronize access to the field, because otherwise different
+                // threads might restore the isAccessible property while this thread is still
+                // accessing the field
+                val obj =
+                    synchronized(field) {
+                        // disable access mechanisms
+                        field.trySetAccessible()
+                        val obj = field[node]
 
-                member.isAccessible = true
+                        // restore old state
+                        field.isAccessible = false
+                        obj
+                    } ?: continue
 
-                val obj = member.call(node)
-
-                // skip, if null
-                if (obj == null) {
-                    continue
-                }
-
-                member.isAccessible = old
-
-                var outgoing = true // default
-                var relationship = member.findAnnotation<Relationship>()
-                if (relationship != null) {
-                    outgoing =
-                        relationship.direction ==
-                                Relationship.Direction.OUTGOING)
-                }
-                if (checkForPropertyEdge(field, obj)) {
-                    obj = unwrap(obj as List<PropertyEdge<Node>>, outgoing)
-                }
                 when (obj) {
-                    is Node -> {
-                        children.add(obj)
-                    }
-                    is Collection<*> -> {
-                        children.addAll(obj as Collection<Node>)
+                    is EdgeCollection<*, *> -> {
+                        obj.toNodeCollection({ it is AstEdge<*> }).filterIsInstanceTo(children)
                     }
                     else -> {
                         throw AnnotationFormatError(
-                            "Found @field:SubGraph(\"AST\") on field of type " +
-                                    obj.javaClass +
-                                    " but can only used with node graph classes or collections of graph nodes"
+                            "Found  on field of type " +
+                                obj.javaClass +
+                                " but can only used with edge classes or edge collections"
                         )
                     }
                 }
-            }
-        }*/
-
-        // We currently need to stick to pure Java reflection, since Kotlin reflection
-        // is EXTREMELY slow. See https://youtrack.jetbrains.com/issue/KT-32198
-        for (field in getAllFields(classType)) {
-            val ast = field.getAnnotation(AST::class.java)
-            if (ast != null) {
-                try {
-                    // We need to synchronize access to the field, because otherwise different
-                    // threads might restore the isAccessible property while this thread is still
-                    // accessing the field
-                    var obj =
-                        synchronized(field) {
-                            // disable access mechanisms
-                            field.trySetAccessible()
-                            val obj = field[node]
-
-                            // restore old state
-                            field.isAccessible = false
-                            obj
-                        }
-                            ?: continue
-
-                    // skip, if null
-                    var outgoing = true // default
-                    if (field.getAnnotation(Relationship::class.java) != null) {
-                        outgoing =
-                            (field.getAnnotation(Relationship::class.java).direction ==
-                                Relationship.Direction.OUTGOING)
-                    }
-                    if (checkForPropertyEdge(field, obj)) {
-                        obj = unwrap(obj as List<PropertyEdge<Node>>, outgoing)
-                    }
-                    when (obj) {
-                        is Node -> {
-                            children.add(obj)
-                        }
-                        is Collection<*> -> {
-                            children.addAll(obj as Collection<Node>)
-                        }
-                        else -> {
-                            throw AnnotationFormatError(
-                                "Found @field:SubGraph(\"AST\") on field of type " +
-                                    obj.javaClass +
-                                    " but can only used with node graph classes or collections of graph nodes"
-                            )
-                        }
-                    }
-                } catch (ex: IllegalAccessException) {
-                    LOGGER.error("Error while retrieving AST children: {}", ex.message)
-                }
+            } catch (ex: IllegalAccessException) {
+                LOGGER.error("Error while retrieving AST children: {}", ex.message)
             }
         }
         return children
@@ -193,28 +141,33 @@ object SubgraphWalker {
      * Flattens the tree, starting at Node n into a list.
      *
      * @param n the node which contains the ast children to flatten
+     * @param stopAtNode A predicate to stop the flattening at a specific node (i.e., we won't
+     *   include that node and its ast children)
      * @return the flattened nodes
      */
-    fun flattenAST(n: Node?): List<Node> {
+    fun flattenAST(n: AstNode?, stopAtNode: (Node) -> Boolean = { false }): List<AstNode> {
         if (n == null) {
             return ArrayList()
         }
 
         // We are using an identity set here, to avoid placing the *same* node in the identitySet
-        // twice,
-        // possibly resulting in loops
-        val identitySet = IdentitySet<Node>()
-        flattenASTInternal(identitySet, n)
+        // twice, possibly resulting in loops
+        val identitySet = IdentitySet<AstNode>()
+        flattenASTInternal(identitySet, n, stopAtNode)
         return identitySet.toSortedList()
     }
 
-    private fun flattenASTInternal(identitySet: MutableSet<Node>, n: Node) {
+    private fun flattenASTInternal(
+        identitySet: MutableSet<AstNode>,
+        n: AstNode,
+        stopAtNode: (AstNode) -> Boolean,
+    ) {
         // Add the node itself and abort if its already there, to detect possible loops
-        if (!identitySet.add(n)) {
+        if (stopAtNode(n) || !identitySet.add(n)) {
             return
         }
         for (child in getAstChildren(n)) {
-            flattenASTInternal(identitySet, child)
+            flattenASTInternal(identitySet, child, stopAtNode)
         }
     }
 
@@ -227,13 +180,11 @@ object SubgraphWalker {
      * @param n - root of the subgraph.
      * @return Two lists, list 1 contains all eog entries and list 2 contains all exits.
      */
-    fun getEOGPathEdges(n: Node?): Border {
+    fun getEOGPathEdges(n: AstNode?): Border {
         val border = Border()
         val flattedASTTree = flattenAST(n)
         val eogNodes =
-            flattedASTTree.filter { node: Node ->
-                node.prevEOG.isNotEmpty() || node.nextEOG.isNotEmpty()
-            }
+            flattedASTTree.filter { node -> node.prevEOG.isNotEmpty() || node.nextEOG.isNotEmpty() }
         // Nodes that are incoming edges, no other node
         border.entries =
             eogNodes
@@ -252,46 +203,21 @@ object SubgraphWalker {
      * EOG subgraph, EOG entries and exits in a CFG subgraph.
      */
     class Border {
-        var entries = mutableListOf<Node>()
-        var exits = mutableListOf<Node>()
+        var entries = mutableListOf<AstNode>()
+        var exits = mutableListOf<AstNode>()
     }
 
-    class IterativeGraphWalker {
-        private var todo: Deque<Pair<Node, Node?>>? = null
-        var backlog: Deque<Node>? = null
-            private set
-
-        var strategy: (Node) -> Iterator<Node> = Strategy::AST_FORWARD
+    class IterativeGraphWalker<NodeType : Node>(var strategy: (NodeType) -> Iterator<NodeType>) {
 
         /**
          * This callback is triggered whenever a new node is visited for the first time. This is the
-         * place where usual graph manipulation will happen. The current node is the single argument
-         * passed to the function
+         * place where usual graph manipulation will happen. The current node and its parent are
+         * passed to the consumer.
          */
-        private val onNodeVisit: MutableList<Consumer<Node>> = ArrayList()
-        private val onNodeVisit2: MutableList<BiConsumer<Node, Node?>> = ArrayList()
+        private val onNodeVisit: MutableList<(node: NodeType, parent: NodeType?) -> Unit> =
+            mutableListOf()
 
-        /**
-         * The callback that is designed to tell the user when we leave the current scope. The
-         * exited node is passed as an argument to the callback function. Consider the following
-         * AST:
-         *
-         * .........(1) parent
-         *
-         * ........./........\
-         *
-         * (2) child1....(4) child2
-         *
-         * ........|
-         *
-         * (3) subchild
-         *
-         * Once "parent" has been visited, we continue descending into its children. First into
-         * "child1", followed by "subchild". Once we are done there, we return to "child1". At this
-         * point, the exit handler notifies the user that "subchild" is being exited. Afterwards we
-         * exit "child1", and after "child2" is done, "parent" is exited.
-         */
-        private val onNodeExit: MutableList<Consumer<Node>> = ArrayList()
+        private val replacements = mutableMapOf<NodeType, NodeType>()
 
         /**
          * The core iterative AST traversal algorithm: In a depth-first way we descend into the
@@ -299,58 +225,59 @@ object SubgraphWalker {
          *
          * @param root The node where we should start
          */
-        fun iterate(root: Node) {
-            todo = ArrayDeque()
-            backlog = ArrayDeque()
-            val seen: MutableSet<Node> = LinkedHashSet()
-            todo?.push(Pair<Node, Node?>(root, null))
-            while ((todo as ArrayDeque<Pair<Node, Node?>>).isNotEmpty()) {
-                val (current, parent) = (todo as ArrayDeque<Pair<Node, Node?>>).pop()
-                if (
-                    (backlog as ArrayDeque<Node>).isNotEmpty() &&
-                        (backlog as ArrayDeque<Node>).peek() == current
-                ) {
-                    val exiting = (backlog as ArrayDeque<Node>).pop()
-                    onNodeExit.forEach(Consumer { c: Consumer<Node> -> c.accept(exiting) })
-                } else {
-                    // re-place the current node as a marker for the above check to find out when we
-                    // need to exit a scope
-                    (todo as ArrayDeque<Pair<Node, Node?>>).push(Pair(current, parent))
-                    onNodeVisit.forEach(Consumer { c: Consumer<Node> -> c.accept(current) })
-                    onNodeVisit2.forEach(
-                        Consumer { c: BiConsumer<Node, Node?> -> c.accept(current, parent) }
-                    )
+        fun iterate(root: NodeType) {
+            iterateAll(listOf(root))
+        }
+
+        /**
+         * Iteration starting from several nodes that can explore a joint graph, therefore the
+         * `seen` list is shared between several entries to the potentially joined graph. The search
+         * works in BFS manner from every single entry, but stops at nodes visited by other entries.
+         *
+         * If you require a node to be visited multiple times, i.e. once for every entry it is
+         * reachable by, use [iterate].
+         */
+        fun iterateAll(entries: List<NodeType>) {
+            val todo = ArrayDeque<Pair<NodeType, NodeType?>>()
+            val seen = identitySetOf<NodeType>()
+
+            entries.forEach { entry ->
+                if (entry !in seen) {
+                    todo.push(Pair(entry, null))
+                }
+
+                while (todo.isNotEmpty()) {
+                    var (current, parent) = todo.pop()
+                    onNodeVisit.forEach { it(current, parent) }
+
+                    // Check if we have a replacement node
+                    val toReplace = replacements[current]
+                    if (toReplace != null) {
+                        current = toReplace
+                        replacements.remove(toReplace)
+                    }
+
                     val unseenChildren =
                         strategy(current).asSequence().filter { it !in seen }.toMutableList()
 
                     seen.addAll(unseenChildren)
-                    unseenChildren.asReversed().forEach { child: Node ->
-                        (todo as ArrayDeque<Pair<Node, Node?>>).push(Pair(child, current))
-                    }
-                    (backlog as ArrayDeque<Node>).push(current)
+                    unseenChildren.asReversed().forEach { child -> todo.push(Pair(child, current)) }
                 }
             }
         }
 
-        fun registerOnNodeVisit(callback: Consumer<Node>) {
+        /**
+         * Sometimes during walking the graph, we are replacing the current node. This causes
+         * problems, that the walker still assumes the old node. Calling this function will ensure
+         * that the walker knows about the new node.
+         */
+        fun registerReplacement(from: NodeType, to: NodeType) {
+            replacements[from] = to
+        }
+
+        /** Registers a callback. */
+        fun registerOnNodeVisit(callback: (node: NodeType, parent: NodeType?) -> Unit) {
             onNodeVisit.add(callback)
-        }
-
-        fun registerOnNodeVisit2(callback: BiConsumer<Node, Node?>) {
-            onNodeVisit2.add(callback)
-        }
-
-        fun registerOnNodeExit(callback: Consumer<Node>) {
-            onNodeExit.add(callback)
-        }
-
-        fun clearCallbacks() {
-            onNodeVisit.clear()
-            onNodeExit.clear()
-        }
-
-        fun getTodo(): Deque<Node> {
-            return ArrayDeque(todo?.map { it.first })
         }
     }
 
@@ -361,51 +288,49 @@ object SubgraphWalker {
      * currently in the scope of the "consumed" node in the callback. This can be useful for
      * resolving declarations or other scope-related tasks.
      */
-    class ScopedWalker {
-        lateinit var strategy: (Node) -> Iterator<Node>
-        private var walker: IterativeGraphWalker? = null
+    class ScopedWalker<out NodeType : Node> {
+        val strategy: (@UnsafeVariance NodeType) -> Iterator<NodeType>
+        private var walker: IterativeGraphWalker<NodeType>? = null
         private val scopeManager: ScopeManager
 
-        constructor(lang: LanguageFrontend<*, *>) {
-            scopeManager = lang.scopeManager
-        }
-
-        constructor(
-            scopeManager: ScopeManager,
-            strategy: (Node) -> Iterator<Node> = Strategy::AST_FORWARD
-        ) {
+        constructor(scopeManager: ScopeManager, strategy: (NodeType) -> Iterator<NodeType>) {
             this.scopeManager = scopeManager
             this.strategy = strategy
         }
 
         /**
-         * Callback function(s) getting three arguments: the type of the class we're currently in,
-         * the root node of the current declaration scope, the currently visited node.
+         * Callback function(s) containing two arguments: the previous node and the currently
+         * visited node.
+         *
+         * The previous node depends on the [strategy], for example for [Strategy.AST_FORWARD], the
+         * previous node is equal to [Node.astParent]. But for a strategy like
+         * [Strategy.EOG_FORWARD], the previous node was the previous EOG node.
          */
-        private val handlers = mutableListOf<TriConsumer<RecordDeclaration?, Node?, Node?>>()
+        private val handlers = mutableListOf<(node: NodeType, previous: NodeType?) -> (Unit)>()
 
         fun clearCallbacks() {
             handlers.clear()
         }
 
-        fun registerHandler(handler: TriConsumer<RecordDeclaration?, Node?, Node?>) {
+        /**
+         * Registers a handler that is called whenever a new node is visited. The handler is passed
+         * the current node.
+         */
+        fun registerHandler(handler: (node: NodeType) -> (Unit)) {
+            handlers.add { node, previous -> handler(node) }
+        }
+
+        /**
+         * Registers a handler that is called whenever a new node is visited. The handler is passed
+         * the current node and the previous node (if it exists).
+         */
+        fun registerHandler(handler: (node: NodeType, previous: NodeType?) -> (Unit)) {
             handlers.add(handler)
         }
 
-        fun registerHandler(handler: BiConsumer<Node?, RecordDeclaration?>) {
-            handlers.add(
-                TriConsumer { currClass: RecordDeclaration?, _: Node?, currNode: Node? ->
-                    handler.accept(currNode, currClass)
-                }
-            )
-        }
-
-        fun registerHandler(handler: Consumer<Node?>) {
-            handlers.add(
-                TriConsumer { _: RecordDeclaration?, _: Node?, currNode: Node? ->
-                    handler.accept(currNode)
-                }
-            )
+        /** Informs the walker that a replacement of [from] with [to] was done. */
+        fun registerReplacement(from: @UnsafeVariance NodeType, to: @UnsafeVariance NodeType) {
+            walker?.registerReplacement(from, to)
         }
 
         /**
@@ -413,28 +338,216 @@ object SubgraphWalker {
          *
          * @param root The node where AST descent is started
          */
-        fun iterate(root: Node) {
-            val walker = IterativeGraphWalker()
+        fun iterate(root: @UnsafeVariance NodeType) {
+            val walker = IterativeGraphWalker(strategy)
             walker.strategy = this.strategy
-            handlers.forEach { h -> walker.registerOnNodeVisit { n -> handleNode(n, h) } }
+            handlers.forEach { h -> walker.registerOnNodeVisit { n, p -> handleNode(n, p, h) } }
 
             this.walker = walker
 
             walker.iterate(root)
         }
 
+        /**
+         * Wraps [IterativeGraphWalker] to handle declaration scopes, In contrast to [iterate], this
+         * function is here to iterate over several nodes that may be entries into a joint graph
+         * reachable by the specified strategy and therefore the internal seen list of nodes has to
+         * be shared to avoid duplicate visits.
+         *
+         * If you require a node to be visited multiple times, i.e. once for every entry it is
+         * reachable by, use [iterate].
+         *
+         * @param entries The nodes where the exploration is started from.
+         */
+        fun iterateAll(entries: List<@UnsafeVariance NodeType>) {
+            val walker = IterativeGraphWalker(strategy)
+            walker.strategy = this.strategy
+            handlers.forEach { h -> walker.registerOnNodeVisit { n, p -> handleNode(n, p, h) } }
+
+            this.walker = walker
+
+            walker.iterateAll(entries)
+        }
+
         private fun handleNode(
-            current: Node,
-            handler: TriConsumer<RecordDeclaration?, Node?, Node?>
+            current: NodeType,
+            previous: NodeType?,
+            handler: (node: NodeType, previous: NodeType?) -> (Unit),
         ) {
             // Jump to the node's scope, if it is different from ours.
             if (scopeManager.currentScope != current.scope) {
                 scopeManager.jumpTo(current.scope)
             }
 
-            val parent = walker?.backlog?.peek()
-
-            handler.accept(scopeManager.currentRecord, parent, current)
+            handler(current, previous)
         }
     }
+}
+
+/**
+ * Tries to replace the [old] expression with a [new] one, given the [parent].
+ *
+ * There are different things to consider:
+ * - First, this only works if [parent] is either an [ArgumentHolder] or [StatementHolder].
+ *   Otherwise, we cannot instruct the parent to exchange the node
+ * - Second, since exchanging the node has influence on their edges (such as EOG, DFG, etc.), we
+ *   only support a replacement very early in the pass system. To be specific, we only allow
+ *   replacement BEFORE any DFG edges are set. We are re-wiring EOG edges, but nothing else. If one
+ *   tries to replace a node with existing [Node.nextDFG] or [Node.prevDFG], we fail.
+ * - We also migrate [HasType.typeObservers] from the [old] to the [new] node.
+ * - Lastly, if the [new] node is a [CallExpression.callee] of a [CallExpression] parent, and the
+ *   [old] and [new] expressions are of different types (e.g., exchanging a simple [Reference] for a
+ *   [MemberExpression]), we also replace the [CallExpression] with a [MemberCallExpression].
+ */
+context(provider: ContextProvider)
+fun SubgraphWalker.ScopedWalker<Node>.replace(
+    parent: AstNode?,
+    old: Expression,
+    new: Expression,
+): Boolean {
+    // We do not allow to replace nodes where the DFG (or other dependent nodes, such as PDG have
+    // been set). The reason for that is that these edges contain a lot of information on the edges
+    // themselves and replacing this edge would be very complicated.
+    if (old.prevDFG.isNotEmpty() || old.nextDFG.isNotEmpty()) {
+        return false
+    }
+
+    val success =
+        when (parent) {
+            is CallExpression -> {
+                if (parent.callee == old) {
+                    // Now we are running into a problem. If the previous callee and the new callee
+                    // are of different types (ref/vs. member expression). We also need to replace
+                    // the whole call expression instead.
+                    if (parent is MemberCallExpression && new is Reference) {
+                        val newCall = parent.toCallExpression(new)
+                        return replace(parent.astParent, parent, newCall)
+                    } else if (new is MemberExpression) {
+                        val newCall = parent.toMemberCallExpression(new)
+                        return replace(parent.astParent, parent, newCall)
+                    } else {
+                        parent.callee = new
+                        true
+                    }
+                } else run { parent.replace(old, new) }
+            }
+            is ArgumentHolder -> parent.replace(old, new)
+            is StatementHolder -> parent.replace(old, new)
+            else -> {
+                Pass.log.error(
+                    "Parent AST node is not an argument or statement holder. Cannot replace node. Further analysis might not be entirely accurate."
+                )
+                return false
+            }
+        }
+    if (!success) {
+        Pass.log.error(
+            "Replacing expression $old was not successful. Further analysis might not be entirely accurate."
+        )
+    } else {
+        // Store any eventual EOG nodes and disconnect old node
+        val oldNextEOG = old.getExitNextEOG().toSet()
+        val oldPrevEOG = old.getStartingPrevEOG().toSet()
+        val hasEOG =
+            oldNextEOG.isNotEmpty() ||
+                oldPrevEOG.isNotEmpty() ||
+                old.prevEOG.isNotEmpty() ||
+                old.nextEOG.isNotEmpty()
+        old.disconnectFromGraph()
+
+        if (hasEOG) {
+            // We actively re-trigger the EOG pass to handle the new node but only if it has already
+            // been run before. To figure this out, we check if there's some sort of EOG edges
+            // somewhere. This is required because we
+            // cannot set the currentPredecessors with the incremental building logic.
+            val eogPass = EvaluationOrderGraphPass(provider.ctx)
+            // Set the currentPredecessors to the old prevEOG nodes. This is necessary because the
+            // EOGPass takes these nodes to connect the first node in the children to the EOG and
+            // then
+            // constructs the remaining EOG edges in the new node's AST children.
+            eogPass.currentPredecessors.addAll(oldPrevEOG)
+            eogPass.handleEOG(new)
+            // For the old EOG predecessors, we need to set the new exit node of the EOG of this
+            // subgraph. These are stored in the currentPredecessors of the EOGPass.
+            oldNextEOG.forEach {
+                // TODO: It may be necessary for some nodes to also add properties (e.g. branches)
+                // to the EOG edges but we do not have access to this information here.
+                it.prevEOG = eogPass.currentPredecessors
+            }
+            eogPass.cleanup()
+        }
+
+        // Also move over any type observers
+        old.typeObservers.forEach {
+            old.unregisterTypeObserver(it)
+            new.registerTypeObserver(it)
+        }
+
+        old.astParent = null
+        new.astParent = parent
+
+        // Make sure to inform the walker about our change
+        this.registerReplacement(old, new)
+    }
+
+    return success
+}
+
+/**
+ * Copies the properties of this [CallExpression] to the given [call] and sets the `call.callee` to
+ * [callee]. Note that the ast children are not duplicated. This means that their `astParent` will
+ * now point to [call].
+ */
+private fun CallExpression.duplicateTo(call: CallExpression, callee: Reference) {
+    call.language = this.language
+    call.scope = this.scope
+    call.argumentEdges.clear()
+    // This is required to set the astParent of the arguments to the new edge.
+    this.argumentEdges.forEach { existingEdge ->
+        call.argumentEdges.add(existingEdge.end) { name = existingEdge.name }
+    }
+    call.type = this.type
+    call.assignedTypes = this.assignedTypes
+    call.code = this.code
+    call.location = this.location
+    call.argumentIndex = this.argumentIndex
+    call.annotations = this.annotations
+    call.comment = this.comment
+    call.callee = callee
+    callee.resolutionHelper = call
+    call.isImplicit = this.isImplicit
+    call.isInferred = this.isInferred
+}
+
+/**
+ * Creates a new [CallExpression] with the same properties (e.g. ast childre, etc.) except from DFG
+ * and EOG edges as [this]. It sets the [CallExpression.callee] to [callee].
+ */
+fun MemberCallExpression.toCallExpression(callee: Reference): CallExpression {
+    val call = CallExpression()
+    duplicateTo(call, callee)
+
+    return call
+}
+
+/**
+ * Creates a new [MemberCallExpression] with the same properties (e.g. ast children, etc.) except
+ * from DFG and EOG edges as [this]. It sets the [MemberCallExpression.callee] to [callee].
+ */
+fun CallExpression.toMemberCallExpression(callee: MemberExpression): MemberCallExpression {
+    val call = MemberCallExpression()
+    duplicateTo(call, callee)
+
+    return call
+}
+
+/**
+ * Creates a new [ConstructExpression] with the same properties (e.g. ast children, etc.) except
+ * from DFG and EOG edges as [this]. It sets the [ConstructExpression.callee] to [callee].
+ */
+fun CallExpression.toConstructExpression(callee: Reference): ConstructExpression {
+    val construct = ConstructExpression()
+    duplicateTo(construct, callee)
+
+    return construct
 }

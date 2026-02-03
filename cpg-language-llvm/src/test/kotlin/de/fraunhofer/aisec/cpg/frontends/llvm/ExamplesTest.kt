@@ -25,8 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.llvm
 
-import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.graph.statements.*
+import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertNotNull
@@ -39,10 +38,10 @@ class ExamplesTest {
         val topLevel = Path.of("src", "test", "resources", "llvm", "examples")
 
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
+            analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("rust_sample.ll").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
@@ -55,11 +54,7 @@ class ExamplesTest {
         val topLevel = Path.of("src", "test", "resources", "llvm", "examples", "llvm")
 
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("client.ll").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("client.ll").toFile()), topLevel, true) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
@@ -71,11 +66,7 @@ class ExamplesTest {
         val topLevel = Path.of("src", "test", "resources", "llvm", "examples", "retdec")
 
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("client.ll").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("client.ll").toFile()), topLevel, true) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
@@ -87,11 +78,7 @@ class ExamplesTest {
         val topLevel = Path.of("src", "test", "resources", "llvm", "examples", "retdec")
 
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("if.ll").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("if.ll").toFile()), topLevel, true) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 
@@ -103,11 +90,7 @@ class ExamplesTest {
         val topLevel = Path.of("src", "test", "resources", "llvm", "examples", "retdec")
 
         val tu =
-            TestUtils.analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("main.ll").toFile()),
-                topLevel,
-                true
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("main.ll").toFile()), topLevel, true) {
                 it.registerLanguage<LLVMIRLanguage>()
             }
 

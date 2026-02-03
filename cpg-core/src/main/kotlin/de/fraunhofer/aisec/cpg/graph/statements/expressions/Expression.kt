@@ -25,10 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.frontends.UnknownLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.NodeEntity
 import org.neo4j.ogm.annotation.Transient
@@ -46,7 +49,24 @@ import org.neo4j.ogm.annotation.Transient
  */
 @NodeEntity
 abstract class Expression : Statement(), HasType {
+
+    @DoNotPersist override var observerEnabled: Boolean = true
+
+    /**
+     * Is this node used for writing data instead of just reading it? Determines dataflow direction
+     */
+    open var access: AccessValues = AccessValues.READ
+
     @Transient override val typeObservers: MutableSet<HasType.TypeObserver> = identitySetOf()
+
+    override var language: Language<*> = UnknownLanguage
+        set(value) {
+            // We need to adjust an eventual unknown type, once we know the language
+            field = value
+            if (type is UnknownType) {
+                type = UnknownType.getUnknownType(value)
+            }
+        }
 
     override var type: Type = unknownType()
         set(value) {

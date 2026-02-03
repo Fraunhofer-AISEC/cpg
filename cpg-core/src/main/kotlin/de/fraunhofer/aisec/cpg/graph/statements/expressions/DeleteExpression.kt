@@ -25,17 +25,25 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.Objects
+import org.neo4j.ogm.annotation.Relationship
 
 class DeleteExpression : Expression() {
-    @AST var operand: Expression? = null
+    @Relationship("OPERANDS") var operandEdges = astEdgesOf<Expression>()
+    var operands by unwrapping(DeleteExpression::operandEdges)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is DeleteExpression) return false
-        return super.equals(other) && operand == other.operand
+        return super.equals(other) && operands == other.operands
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), operand)
+    override fun hashCode() = Objects.hash(super.hashCode(), operands)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.operands.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
+    }
 }

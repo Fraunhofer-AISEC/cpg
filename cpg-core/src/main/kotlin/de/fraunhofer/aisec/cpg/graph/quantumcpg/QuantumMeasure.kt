@@ -34,5 +34,5 @@ class QuantumMeasure(
     override val cpgNode: Node?,
     val quantumCircuit: QuantumCircuit,
     val quBit: QuantumBitReference,
-    val cBit: Expression
+    val cBit: Expression,
 ) : CallExpression(), QuantumOperation, QuantumNode {}

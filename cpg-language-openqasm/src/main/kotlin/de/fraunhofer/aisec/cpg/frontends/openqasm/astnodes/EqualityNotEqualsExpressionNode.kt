@@ -30,5 +30,5 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 class EqualityNotEqualsExpressionNode(
     location: PhysicalLocation,
     val lhs: ExpressionNode,
-    val rhs: ExpressionNode
+    val rhs: ExpressionNode,
 ) : EqualityExpressionNode(location)

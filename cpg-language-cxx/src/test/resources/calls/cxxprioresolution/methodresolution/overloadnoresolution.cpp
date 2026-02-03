@@ -19,6 +19,6 @@ public:
 int main()
 {
     Overloaded overload;
-    cout << overload.calc(1) << '\n';
+    overload.calc(1);
     return 0;
 }

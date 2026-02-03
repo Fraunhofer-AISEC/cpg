@@ -66,7 +66,7 @@ class AssignExpressionTest {
                         val func =
                             function(
                                 "func",
-                                returnTypes = listOf(objectType("MyClass"), objectType("error"))
+                                returnTypes = listOf(objectType("MyClass"), objectType("error")),
                             )
 
                         function("main") {
@@ -87,7 +87,7 @@ class AssignExpressionTest {
                 }
             }
 
-            val tu = result.translationUnits.firstOrNull()
+            val tu = result.components.flatMap { it.translationUnits }.firstOrNull()
             with(tu) {
                 val call = tu.calls["func"]
                 val func = tu.functions["func"]
@@ -100,7 +100,7 @@ class AssignExpressionTest {
                 assertNotNull(refErr)
 
                 // This should now set the correct type of the call expression
-                call.invokes = listOf(func)
+                call.invokes = mutableListOf(func)
                 assertIs<TupleType>(call.type)
 
                 // We should at least know the "assigned" type of the references. Their declared

@@ -28,10 +28,13 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents a call to a constructor, usually as an initializer.
@@ -48,8 +51,8 @@ class ConstructExpression : CallExpression() {
     @PopulatedByPass(SymbolResolver::class)
     var constructor: ConstructorDeclaration? = null
         get() =
-            if (anoymousClass != null) {
-                anoymousClass?.constructors?.firstOrNull()
+            if (anonymousClass != null) {
+                anonymousClass?.constructors?.firstOrNull()
             } else {
                 field
             }
@@ -58,18 +61,20 @@ class ConstructExpression : CallExpression() {
 
             // Forward to CallExpression. This will also take care of DFG edges.
             if (value != null) {
-                invokes = listOf(value as FunctionDeclaration)
+                invokes = mutableListOf(value as FunctionDeclaration)
             }
         }
 
-    @AST var anoymousClass: RecordDeclaration? = null
+    @Relationship("ANONYMOUS_CLASS") var anonymousClassEdge = astOptionalEdgeOf<RecordDeclaration>()
+
+    var anonymousClass by unwrapping(ConstructExpression::anonymousClassEdge)
 
     /** The [Declaration] of the type this expression instantiates. */
     @PopulatedByPass(SymbolResolver::class)
     var instantiates: Declaration? = null
         get() =
-            if (anoymousClass != null) {
-                anoymousClass
+            if (anonymousClass != null) {
+                anonymousClass
             } else {
                 field
             }
@@ -98,4 +103,8 @@ class ConstructExpression : CallExpression() {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), constructor, arguments)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return arguments.firstOrNull()?.getStartingPrevEOG() ?: this.prevEOG
+    }
 }

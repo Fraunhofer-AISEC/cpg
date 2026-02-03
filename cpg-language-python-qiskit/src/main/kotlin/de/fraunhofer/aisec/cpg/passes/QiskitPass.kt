@@ -49,17 +49,15 @@ import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumRot
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumNodeBuilder.newQuantumRotationZGate
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
-import de.fraunhofer.aisec.cpg.passes.order.DependsOn
-import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
-import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
+import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
 import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumDFGPass
 import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumEOGPass
-import de.fraunhofer.aisec.cpg.query.value
 
 @RequiredFrontend(PythonLanguageFrontend::class)
 @DependsOn(SymbolResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
-@DependsOn(EdgeCachePass::class)
 @ExecuteBefore(QuantumEOGPass::class)
 @ExecuteBefore(QuantumDFGPass::class)
 class QiskitPass(ctx: TranslationContext) : ComponentPass(ctx) {
@@ -87,7 +85,7 @@ class QiskitPass(ctx: TranslationContext) : ComponentPass(ctx) {
                                     Triple(
                                         (lhs as? Reference)?.refersTo,
                                         (call.arguments[0].evaluate() as? Number)?.toInt(),
-                                        0
+                                        0,
                                     )
                                 } else if (
                                     call.arguments.size == 2 &&
@@ -97,7 +95,7 @@ class QiskitPass(ctx: TranslationContext) : ComponentPass(ctx) {
                                     Triple(
                                         (lhs as? Reference)?.refersTo,
                                         (call.arguments[0].evaluate() as? Number)?.toInt(),
-                                        (call.arguments[1].evaluate() as? Number)?.toInt()
+                                        (call.arguments[1].evaluate() as? Number)?.toInt(),
                                     )
                                 } else {
                                     log.warn(
@@ -252,13 +250,13 @@ class QiskitPass(ctx: TranslationContext) : ComponentPass(ctx) {
                                                 expr,
                                                 currentCircuit,
                                                 qubitIdx?.let { currentCircuit.getQubitByIdx(it) }
-                                                    ?: TODO()
+                                                    ?: TODO(),
                                             ),
                                             newClassicBitRef(
                                                 expr,
                                                 currentCircuit,
                                                 cbitIdx?.let { currentCircuit.getCbitByIdx(it) }
-                                                    ?: TODO()
+                                                    ?: TODO(),
                                             ),
                                         )
                                     comp.translationUnits
@@ -298,7 +296,7 @@ class QiskitPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     val cIf = newClassicIf(call, newGate.quantumCircuit)
                     val binOp = next.newBinaryOperator("==")
                     // mark it as part of the quantum graph
-                    binOp.labels = mutableListOf("QuantumNode")
+                    binOp.additionalLabels = mutableListOf("QuantumNode")
                     val idx = getArgAsInt(call, 0)
                     val cBit = currentCircuit.classicBits?.get(idx) ?: continue
                     val quBitRef = newClassicBitRef(call.arguments.first(), currentCircuit, cBit)
@@ -307,7 +305,7 @@ class QiskitPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     val lit = (call.arguments[1] as Literal<*>).duplicate(true)
                     lit.disconnectFromGraph()
                     // mark it as part of the quantum graph
-                    lit.labels = mutableListOf("QuantumNode")
+                    lit.additionalLabels = mutableListOf("QuantumNode")
                     binOp.rhs = lit
                     cIf.condition = binOp
                     cIf.thenStatement = newGate

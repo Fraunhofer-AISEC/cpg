@@ -25,35 +25,44 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
+import kotlin.collections.plus
+import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents a Java or C++ switch statement of the `switch (selector) {...}` that can include case
- * and default statements. Break statements break out of the switch and labeled breaks in JAva are
+ * and default statements. Break statements break out of the switch and labeled breaks in Java are
  * handled properly.
  */
 class SwitchStatement : Statement(), BranchingNode {
+    @Relationship(value = "SELECTOR") var selectorEdge = astOptionalEdgeOf<Expression>()
     /** Selector that determines the case/default statement of the subsequent execution */
-    @AST var selector: Expression? = null
+    var selector by unwrapping(SwitchStatement::selectorEdge)
 
+    @Relationship(value = "INITIALIZER_STATEMENT")
+    var initializerStatementEdge = astOptionalEdgeOf<Statement>()
     /** C++ can have an initializer statement in a switch */
-    @AST var initializerStatement: Statement? = null
+    var initializerStatement by unwrapping(SwitchStatement::initializerStatementEdge)
 
-    /** C++ allows to use a declaration instead of a expression as selector */
-    @AST var selectorDeclaration: Declaration? = null
+    @Relationship(value = "SELECTOR_DECLARATION")
+    var selectorDeclarationEdge = astOptionalEdgeOf<Declaration>()
+    /** C++ allows to use a declaration instead of an expression as selector */
+    var selectorDeclaration by unwrapping(SwitchStatement::selectorDeclarationEdge)
 
+    @Relationship(value = "STATEMENT") var statementEdge = astOptionalEdgeOf<Statement>()
     /**
      * The compound statement that contains break/default statements with regular statements on the
      * same hierarchy
      */
-    @AST var statement: Statement? = null
+    var statement by unwrapping(SwitchStatement::statementEdge)
 
-    override val branchedBy: Node?
+    override val branchedBy
         get() = selector
 
     override fun equals(other: Any?): Boolean {
@@ -72,6 +81,17 @@ class SwitchStatement : Statement(), BranchingNode {
             initializerStatement,
             selectorDeclaration,
             selector,
-            statement
+            statement,
         )
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.initializerStatement?.getStartingPrevEOG()
+            ?: this.selector?.getStartingPrevEOG()
+            ?: this.selectorDeclaration?.getStartingPrevEOG()
+            ?: this.prevEOG
+    }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return this.statement?.getExitNextEOG() ?: this.nextEOG
+    }
 }

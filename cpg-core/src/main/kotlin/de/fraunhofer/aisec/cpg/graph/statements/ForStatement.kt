@@ -27,22 +27,65 @@ package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
+import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdges
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.*
+import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
 
-class ForStatement : Statement(), BranchingNode {
-    @AST var statement: Statement? = null
+/**
+ * Represents an iterating loop statement of the form `for(initializer; condition; iteration){...}`
+ * that declares variables, can change them in an iteration statement and is executed until the
+ * condition evaluates to false.
+ */
+class ForStatement : LoopStatement(), BranchingNode, StatementHolder {
 
-    @AST var initializerStatement: Statement? = null
+    @Relationship("INITIALIZER_STATEMENT")
+    var initializerStatementEdge = astOptionalEdgeOf<Statement>()
+    var initializerStatement by unwrapping(ForStatement::initializerStatementEdge)
 
-    @AST var conditionDeclaration: Declaration? = null
+    @Relationship("CONDITION_DECLARATION")
+    var conditionDeclarationEdge = astOptionalEdgeOf<Declaration>()
+    var conditionDeclaration by unwrapping(ForStatement::conditionDeclarationEdge)
 
-    @AST var condition: Expression? = null
+    @Relationship("CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
+    var condition by unwrapping(ForStatement::conditionEdge)
 
-    @AST var iterationStatement: Statement? = null
+    @Relationship("ITERATION_STATEMENT") var iterationStatementEdge = astOptionalEdgeOf<Statement>()
+    var iterationStatement by unwrapping(ForStatement::iterationStatementEdge)
 
-    override val branchedBy: Node?
+    override val branchedBy
         get() = condition ?: conditionDeclaration
+
+    override var statementEdges: AstEdges<Statement, AstEdge<Statement>>
+        get() {
+            val statements = astEdgesOf<Statement>()
+            statements += initializerStatementEdge
+            statements += iterationStatementEdge
+            statements += statementEdge
+            statements += elseStatementEdge
+            return statements
+        }
+        set(_) {
+            // Nothing to do here
+        }
+
+    override var statements: MutableList<Statement>
+        get() = unwrapping(ForStatement::statementEdges)
+        set(value) {}
+
+    override fun toString() =
+        ToStringBuilder(this, TO_STRING_STYLE)
+            .appendSuper(super.toString())
+            .append("initializer", initializerStatement)
+            .append("condition", condition)
+            .append("conditionDeclaration", conditionDeclaration)
+            .append("iteration", iterationStatement)
+            .toString()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {
@@ -52,21 +95,31 @@ class ForStatement : Statement(), BranchingNode {
             return false
         }
 
-        return (super.equals(other) &&
-            statement == other.statement &&
+        return super.equals(other) &&
             initializerStatement == other.initializerStatement &&
             conditionDeclaration == other.conditionDeclaration &&
             condition == other.condition &&
-            iterationStatement == other.iterationStatement)
+            iterationStatement == other.iterationStatement
     }
 
     override fun hashCode(): Int {
         return Objects.hash(
-            this.statement,
             this.condition,
             this.initializerStatement,
             this.conditionDeclaration,
-            this.iterationStatement
+            this.iterationStatement,
         )
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        val astChildren = this.allChildren<Node> { true }
+        return initializerStatement?.getStartingPrevEOG()
+            ?: this.condition?.getStartingPrevEOG()?.filter { it !in astChildren }
+            ?: this.conditionDeclaration?.getStartingPrevEOG()?.filter { it !in astChildren }
+            ?: this.prevEOG
+    }
+
+    override fun getExitNextEOG(): Collection<Node> {
+        return this.nextEOG.filter { it !in statement.allChildren<Node> { true } }
     }
 }

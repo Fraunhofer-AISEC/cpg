@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.testcases
 
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
+import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
 
@@ -37,7 +38,7 @@ class Passes {
                 TranslationConfiguration.builder()
                     .defaultPasses()
                     .registerPass<UnreachableEOGPass>()
-                    .registerLanguage(TestLanguage("."))
+                    .registerLanguage<TestLanguage>()
                     .build()
         ) =
             testFrontend(config).build {
@@ -47,7 +48,7 @@ class Passes {
                         record("TestClass") {
                             method("ifBothPossible", void()) {
                                 body {
-                                    declare { variable("y", t("int")) { literal(6, t("int")) } }
+                                    declare { variable("y", t("int")) { literal(5, t("int")) } }
                                     declare {
                                         variable("x", t("int")) {
                                             memberCall("nextUInt", ref("URandomKt"))
@@ -55,7 +56,7 @@ class Passes {
                                     }
 
                                     ifStmt {
-                                        condition { ref("x") lt ref("y") }
+                                        condition { ref("x") le ref("y") }
                                         thenStmt { ref("y").inc() }
                                         elseStmt { ref("y").dec() }
                                     }
@@ -112,7 +113,7 @@ class Passes {
                                     }
 
                                     ifStmt {
-                                        condition { ref("y") lt literal(10, t("int")) }
+                                        condition { ref("y") le literal(9, t("int")) }
                                         thenStmt { ref("y").inc() }
                                         elseStmt { ref("y").dec() }
                                     }
@@ -132,7 +133,7 @@ class Passes {
                                     }
 
                                     ifStmt {
-                                        condition { ref("y") + ref("z") lt literal(10, t("int")) }
+                                        condition { ref("y") + ref("z") le literal(9, t("int")) }
                                         thenStmt { ref("y").inc() }
                                         elseStmt { ref("y").dec() }
                                     }
@@ -153,7 +154,7 @@ class Passes {
                                     }
 
                                     ifStmt {
-                                        condition { ref("y") + ref("z") lt literal(10, t("int")) }
+                                        condition { ref("y") + ref("z") le literal(9, t("int")) }
                                         thenStmt { ref("y").inc() }
                                         elseStmt { ref("y").dec() }
                                     }
@@ -173,7 +174,7 @@ class Passes {
                                     }
 
                                     ifStmt {
-                                        condition { ref("y") lt literal(0, t("int")) }
+                                        condition { ref("y") le literal(-1, t("int")) }
                                         thenStmt { ref("y").inc() }
                                         elseStmt { ref("y").dec() }
                                     }
@@ -250,7 +251,7 @@ class Passes {
                                     declare { variable("x", t("boolean")) { literal(1, t("int")) } }
 
                                     whileStmt {
-                                        whileCondition { ref("x") lt literal(3, t("int")) }
+                                        whileCondition { ref("x") le literal(2, t("int")) }
                                         loopBody {
                                             memberCall("println", member("out", ref("System"))) {
                                                 literal("Cool loop", t("string"))
@@ -294,7 +295,7 @@ class Passes {
                                     }
 
                                     whileStmt {
-                                        whileCondition { ref("y") lt literal(3, t("int")) }
+                                        whileCondition { ref("y") le literal(2, t("int")) }
                                         loopBody {
                                             memberCall("println", member("out", ref("System"))) {
                                                 literal("Cool loop", t("string"))

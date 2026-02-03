@@ -25,24 +25,35 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.BranchingNode
 import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.Objects
+import org.neo4j.ogm.annotation.Relationship
 
 class CatchClause : Statement(), BranchingNode, EOGStarterHolder {
-    @AST var parameter: VariableDeclaration? = null
+    @Relationship(value = "PARAMETER") var parameterEdge = astOptionalEdgeOf<VariableDeclaration>()
 
-    @AST var body: Block? = null
+    var parameter by unwrapping(CatchClause::parameterEdge)
 
-    override val branchedBy: Node?
+    @Relationship(value = "BODY") var bodyEdge = astOptionalEdgeOf<Block>()
+    var body by unwrapping(CatchClause::bodyEdge)
+
+    @DoNotPersist
+    override val branchedBy
         get() = parameter
 
+    @DoNotPersist
     override val eogStarters: List<Node>
         get() = listOf(this)
+
+    override var firstBasicBlock: BasicBlock? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

@@ -28,22 +28,28 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.graph.types.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver.Companion.addImplicitTemplateParametersToCall
 import java.math.BigInteger
 import java.util.*
 import java.util.function.Supplier
 import kotlin.math.max
+import kotlin.math.pow
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.IASTBinaryExpression.*
 import org.eclipse.cdt.core.dom.ast.IASTLiteralExpression.*
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTConstructorInitializer
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTLambdaExpression
+import org.eclipse.cdt.core.dom.ast.gnu.IGNUASTCompoundStatementExpression
 import org.eclipse.cdt.internal.core.dom.parser.c.CASTArrayDesignator
 import org.eclipse.cdt.internal.core.dom.parser.c.CASTArrayRangeDesignator
 import org.eclipse.cdt.internal.core.dom.parser.c.CASTDesignatedInitializer
 import org.eclipse.cdt.internal.core.dom.parser.c.CASTFieldDesignator
+import org.eclipse.cdt.internal.core.dom.parser.c.CASTTypeIdInitializerExpression
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 import org.eclipse.cdt.internal.core.model.ASTStringUtil
 
@@ -67,19 +73,56 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             is IASTFunctionCallExpression -> handleFunctionCallExpression(node)
             is IASTCastExpression -> handleCastExpression(node)
             is IASTExpressionList -> handleExpressionList(node)
-            is IASTInitializerList -> frontend.initializerHandler.handle(node)
+            is IASTInitializerList ->
+                frontend.initializerHandler.handle(node)
                     ?: ProblemExpression("could not parse initializer list")
             is IASTArraySubscriptExpression -> handleArraySubscriptExpression(node)
             is IASTTypeIdExpression -> handleTypeIdExpression(node)
+            is IGNUASTCompoundStatementExpression -> handleCompoundStatementExpression(node)
             is CPPASTNewExpression -> handleNewExpression(node)
             is CPPASTDesignatedInitializer -> handleCXXDesignatedInitializer(node)
             is CASTDesignatedInitializer -> handleCDesignatedInitializer(node)
+            is CASTTypeIdInitializerExpression -> handleTypeIdInitializerExpression(node)
             is CPPASTDeleteExpression -> handleDeleteExpression(node)
-            is CPPASTCompoundStatementExpression -> handleCompoundStatementExpression(node)
             is CPPASTLambdaExpression -> handleLambdaExpression(node)
+            is CPPASTSimpleTypeConstructorExpression -> handleSimpleTypeConstructorExpression(node)
             else -> {
-                return handleNotSupported(node, node.javaClass.name)
+                handleNotSupported(node, node.javaClass.name)
             }
+        }
+    }
+
+    /**
+     * This handles a [CPPASTSimpleTypeConstructorExpression], which handles all cases of
+     * [Explicit type conversion](https://en.cppreference.com/w/cpp/language/explicit_cast).
+     * Depending on the case, we either handle this as a [CastExpression] or a
+     * [ConstructExpression].
+     */
+    private fun handleSimpleTypeConstructorExpression(
+        node: CPPASTSimpleTypeConstructorExpression
+    ): Expression {
+        return if (node.declSpecifier is IASTSimpleDeclSpecifier) {
+            val cast = newCastExpression(rawNode = node)
+            cast.castType = frontend.typeOf(node.declSpecifier)
+
+            // The actual expression that is cast is nested in an initializer. We could forward
+            // this to our initializer handler, but this would create a lot of construct expressions
+            // just for simple type casts, which we want to avoid, so we take a shortcut and do a
+            // direct unwrapping here.
+            val single =
+                (node.initializer as? ICPPASTConstructorInitializer)?.arguments?.singleOrNull()
+            cast.expression =
+                single?.let { handle(it) } ?: newProblemExpression("could not parse initializer")
+            cast
+        } else {
+            // Otherwise, we try to parse it as an initializer, which must either be an initializer
+            // list expression or a constructor initializer
+            val initializer = frontend.initializerHandler.handle(node.initializer)
+            if (initializer is InitializerListExpression) {
+                val construct = newConstructExpression(rawNode = node)
+                construct.arguments = initializer.initializers
+                construct
+            } else initializer ?: newProblemExpression("could not parse initializer")
         }
     }
 
@@ -98,9 +141,14 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             } else {
                 if (capture.isByReference) {
                     val valueDeclaration =
-                        frontend.scopeManager.resolveReference(
-                            newReference(capture?.identifier?.toString())
-                        )
+                        frontend.scopeManager
+                            .lookupSymbolByName(
+                                newName(capture.identifier?.toString() ?: ""),
+                                language = language,
+                            ) {
+                                it is ValueDeclaration
+                            }
+                            .singleOrNull() as? ValueDeclaration
                     valueDeclaration?.let { lambda.mutableVariables.add(it) }
                 }
             }
@@ -115,7 +163,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         val anonymousFunction =
             node.declarator?.let { frontend.declaratorHandler.handle(it) as? FunctionDeclaration }
                 ?: newFunctionDeclaration("lambda${lambda.hashCode()}")
-        anonymousFunction.type = FunctionType.computeType(anonymousFunction)
+        anonymousFunction.type = computeType(anonymousFunction)
 
         frontend.scopeManager.enterScope(anonymousFunction)
         anonymousFunction.body = frontend.statementHandler.handle(node.body)
@@ -127,7 +175,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     private fun handleCompoundStatementExpression(
-        ctx: CPPASTCompoundStatementExpression
+        ctx: IGNUASTCompoundStatementExpression
     ): Expression {
         return frontend.statementHandler.handle(ctx.compoundStatement) as Expression
     }
@@ -218,10 +266,11 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
 
             // we also need to "forward" our template parameters (if we have any) to the construct
             // expression since the construct expression will do the actual template instantiation
-            if (newExpression.templateParameters?.isNotEmpty() == true) {
-                newExpression.templateParameters?.let {
-                    addImplicitTemplateParametersToCall(it, initializer as ConstructExpression)
-                }
+            if (newExpression.templateParameters.isNotEmpty()) {
+                addImplicitTemplateParametersToCall(
+                    newExpression.templateParameters,
+                    initializer as ConstructExpression,
+                )
             }
 
             // our initializer, such as a construct expression, will have the non-pointer type
@@ -238,8 +287,8 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
      * @param template
      * @return List of Nodes containing the all the arguments the template was instantiated with.
      */
-    private fun getTemplateArguments(template: CPPASTTemplateId): List<Node> {
-        val templateArguments: MutableList<Node> = ArrayList()
+    private fun getTemplateArguments(template: CPPASTTemplateId): MutableList<AstNode> {
+        val templateArguments = mutableListOf<AstNode>()
         for (argument in template.templateArguments) {
             when (argument) {
                 is IASTTypeId -> {
@@ -257,6 +306,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 }
             }
         }
+
         return templateArguments
     }
 
@@ -268,7 +318,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             condition,
             if (ctx.positiveResultExpression != null) handle(ctx.positiveResultExpression)
             else condition,
-            handle(ctx.negativeResultExpression)
+            handle(ctx.negativeResultExpression),
         )
     }
 
@@ -277,7 +327,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         for (name in ctx.implicitDestructorNames) {
             log.debug("Implicit constructor name {}", name)
         }
-        deleteExpression.operand = handle(ctx.operand)
+        handle(ctx.operand)?.let { deleteExpression.operands.add(it) }
         return deleteExpression
     }
 
@@ -317,7 +367,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             base,
             unknownType(),
             if (ctx.isPointerDereference) "->" else ".",
-            rawNode = ctx
+            rawNode = ctx,
         )
     }
 
@@ -340,27 +390,24 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             IASTUnaryExpression.op_not -> operatorCode = "!"
             IASTUnaryExpression.op_sizeof -> operatorCode = "sizeof"
             IASTUnaryExpression.op_bracketedPrimary -> {
-                if (
-                    frontend.config.inferenceConfiguration.guessCastExpressions &&
-                        ctx.operand is IASTIdExpression
-                ) {
-                    // this can either be just a meaningless bracket or it can be a cast expression
-                    val typeName = (ctx.operand as IASTIdExpression).name.toString()
-                    if (frontend.typeManager.typeExists(typeName)) {
-                        val cast = newCastExpression(rawNode = ctx)
-                        cast.setCastOperator(0)
-                        cast.castType = frontend.typeOf((ctx.operand as IASTIdExpression).name)
-                        // The expression member can only be filled by the parent call
-                        // (handleFunctionCallExpression and handleBinaryExpression)
-                        cast.location = frontend.locationOf(ctx)
-                        return cast
+                // If this expression is NOT part of a call expression and contains a "name" or
+                // something similar, we want to keep the information that this is an expression
+                // wrapped in parentheses. The best way to do this is to create a unary expression
+                if (ctx.operand is IASTIdExpression && ctx.parent !is IASTFunctionCallExpression) {
+                    val op = newUnaryOperator("()", postfix = true, prefix = true, rawNode = ctx)
+                    if (input != null) {
+                        op.input = input
                     }
+                    return op
                 }
 
-                // otherwise, ignore this kind of expression and return the input directly
+                // In all other cases, e.g., if the parenthesis is nested or part of a function
+                // call, we just return the unwrapped expression, because in this case we do not
+                // need to information about the parenthesis.
                 return input as Expression
             }
-            IASTUnaryExpression.op_throw -> operatorCode = "throw"
+            IASTUnaryExpression.op_throw ->
+                return newThrowExpression(rawNode = ctx).apply { this.exception = input }
             IASTUnaryExpression.op_typeid -> operatorCode = "typeid"
             IASTUnaryExpression.op_alignOf -> operatorCode = "alignof"
             IASTUnaryExpression.op_sizeofParameterPack -> operatorCode = "sizeof..."
@@ -374,7 +421,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 operatorCode,
                 ctx.isPostfixOperator,
                 !ctx.isPostfixOperator,
-                rawNode = ctx
+                rawNode = ctx,
             )
         if (input != null) {
             unaryOperator.input = input
@@ -387,8 +434,6 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         val callExpression: CallExpression
         when {
             reference is MemberExpression -> {
-                val baseType = reference.base.type.root
-                assert(baseType !is SecondOrderType)
                 callExpression = newMemberCallExpression(reference, rawNode = ctx)
                 if (
                     (ctx.functionNameExpression as? IASTFieldReference)?.fieldName
@@ -433,14 +478,6 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     )
                     .forEach { callExpression.addTemplateParameter(it) }
             }
-            reference is CastExpression &&
-                frontend.config.inferenceConfiguration.guessCastExpressions -> {
-                // this really is a cast expression in disguise
-                reference.expression =
-                    ctx.arguments.firstOrNull()?.let { handle(it) }
-                        ?: newProblemExpression("could not parse argument for cast")
-                return reference
-            }
             else -> {
                 callExpression =
                     newCallExpression(reference, reference?.name, template = false, rawNode = ctx)
@@ -461,17 +498,45 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return callExpression
     }
 
-    private fun handleIdExpression(ctx: IASTIdExpression): Reference {
+    private fun handleIdExpression(ctx: IASTIdExpression): Expression {
+        val name = ctx.name.toString()
+
+        // In order to avoid many inferred/unresolved symbols, we want to make sure that we convert
+        // NULL into a proper null-literal, regardless whether headers are included or not.
+        if (name == "NULL") {
+            return if (language is CPPLanguage) {
+                newLiteral(null, objectType("std::nullptr_t"), rawNode = ctx)
+            } else {
+                newLiteral(0, unknownType(), rawNode = ctx)
+            }
+        }
+
+        // Handle pre-defined expressions
+        if (name == "__FUNCTION__" || name == "__func__") {
+            return newLiteral(
+                frontend.scopeManager.currentFunction?.name?.localName ?: "",
+                primitiveType("char").pointer(),
+                rawNode = ctx,
+            )
+        } else if (name == "__PRETTY_FUNCTION__") {
+            // This is not 100 % compatible with CLANG, but this is ok for now
+            return newLiteral(
+                frontend.scopeManager.currentFunction?.signature ?: "",
+                primitiveType("char").pointer(),
+                rawNode = ctx,
+            )
+        }
+
         // this expression could actually be a field / member expression, but somehow CDT only
         // recognizes them as a member expression if it has an explicit 'this'
         // TODO: handle this? convert the declared reference expression into a member expression?
-        return newReference(ctx.name.toString(), unknownType(), rawNode = ctx)
+        return newReference(name, unknownType(), rawNode = ctx)
     }
 
     private fun handleExpressionList(exprList: IASTExpressionList): ExpressionList {
         val expressionList = newExpressionList(rawNode = exprList)
         for (expr in exprList.expressions) {
-            handle(expr)?.let { expressionList.addExpression(it) }
+            handle(expr)?.let { expressionList.expressions += it }
         }
         return expressionList
     }
@@ -504,17 +569,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 handle(ctx.operand2)
             } else {
                 handle(ctx.initOperand2)
-            }
-                ?: newProblemExpression("could not parse rhs")
-
-        if (lhs is CastExpression && frontend.config.inferenceConfiguration.guessCastExpressions) {
-            // this really is a combination of a cast and a unary operator
-            val op = newUnaryOperator(operatorCode, postfix = true, prefix = false, rawNode = ctx)
-            op.input = rhs
-            op.location = frontend.locationOf(ctx.operand2)
-            lhs.expression = op
-            return lhs
-        }
+            } ?: newProblemExpression("could not parse rhs")
 
         binaryOperator.lhs = lhs
         binaryOperator.rhs = rhs
@@ -529,8 +584,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                 handle(ctx.operand2)
             } else {
                 handle(ctx.initOperand2)
-            }
-                ?: newProblemExpression("missing RHS")
+            } ?: newProblemExpression("missing RHS")
 
         val operatorCode = String(ASTStringUtil.getBinaryOperatorString(ctx))
         val assign = newAssignExpression(operatorCode, listOf(lhs), listOf(rhs), rawNode = ctx)
@@ -545,18 +599,145 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return when (ctx.kind) {
             lk_integer_constant -> handleIntegerLiteral(ctx)
             lk_float_constant -> handleFloatLiteral(ctx)
-            lk_char_constant -> newLiteral(ctx.value[1], primitiveType("char"), rawNode = ctx)
+            lk_char_constant -> handleCharLiteral(ctx)
             lk_string_literal ->
                 newLiteral(
                     String(ctx.value.slice(IntRange(1, ctx.value.size - 2)).toCharArray()),
                     primitiveType("char").array(),
-                    rawNode = ctx
+                    rawNode = ctx,
                 )
             lk_this -> handleThisLiteral(ctx)
             lk_true -> newLiteral(true, primitiveType("bool"), rawNode = ctx)
             lk_false -> newLiteral(false, primitiveType("bool"), rawNode = ctx)
             lk_nullptr -> newLiteral(null, objectType("nullptr_t"), rawNode = ctx)
             else -> newLiteral(String(ctx.value), unknownType(), rawNode = ctx)
+        }
+    }
+
+    var escapeMap =
+        mapOf(
+            'a' to Char(0x07),
+            'b' to Char(0x08),
+            'f' to Char(0x0c),
+            'n' to Char(0x0a),
+            'r' to Char(0x0d),
+            't' to Char(0x09),
+            'v' to Char(0x0b),
+            '\\' to Char(0x5c),
+            '\'' to Char(0x27),
+            '\"' to Char(0x22),
+            '?' to Char(0x3f),
+        )
+
+    private fun handleCharLiteral(ctx: IASTLiteralExpression): Expression {
+        var raw = String(ctx.value)
+        if (!raw.startsWith("'") || !raw.endsWith("'")) {
+            return newProblemExpression(
+                "character literal does not start or end with '",
+                rawNode = ctx,
+            )
+        }
+
+        raw = raw.trim('\'')
+
+        // Since C/C++ for some reason allows multi-character, we need to parse character by
+        // character and then see what the final type is
+        var i = 0
+        val chars = mutableListOf<Char>()
+        var escapeChars = ""
+        var radix = 10
+        var inEscape = false
+        var maxChars: Int? = null
+        while (i < raw.length) {
+            // Check, if we are in escape mode, then we need to gather the escape chars
+            if (inEscape) {
+                // Check for radix specifier
+                if (escapeChars.isEmpty() && raw[i] == 'x') {
+                    radix = 16
+                    maxChars =
+                        2 // it seems like most compilers only allow two hex digits here, so do we
+                    i++
+                    continue
+                }
+
+                // Check, if new escape char. Then finish this one and start a new one
+                if (raw[i] == '\\') {
+                    try {
+                        chars += Char(escapeChars.toInt(radix))
+                        // Restart, assuming its octal and wait for a new radix specifier
+                        escapeChars = ""
+                        inEscape = true
+                        maxChars = 3
+                        radix = 8
+
+                        // Go to the next digit
+                        i++
+                        continue
+                    } catch (ex: NumberFormatException) {
+                        return newProblemExpression("invalid number: ${ex.message}", rawNode = ctx)
+                    }
+                }
+
+                // Check for special escape (they are only one digit and we NOT in hex mode)
+                val specialEscape = escapeMap[raw[i]]
+                if (escapeChars.isEmpty() && radix != 16 && specialEscape != null) {
+                    chars += specialEscape
+                    escapeChars = ""
+                    inEscape = false
+                    maxChars = null
+                } else {
+                    // Otherwise, we need to collect digits (up to a certain max)
+                    escapeChars += raw[i]
+
+                    // There are multiple ways to end the sequence:
+                    // - If this is the last char of the whole string
+                    // - If max digits are reached
+                    // - If another escape character is there
+                    if (
+                        i == raw.length - 1 || (maxChars != null && escapeChars.length >= maxChars)
+                    ) {
+                        try {
+                            chars += Char(escapeChars.toInt(radix))
+                            escapeChars = ""
+                            inEscape = false
+                            maxChars = 0
+                        } catch (ex: NumberFormatException) {
+                            return newProblemExpression(
+                                "invalid number: ${ex.message}",
+                                rawNode = ctx,
+                            )
+                        }
+                    }
+                }
+            } else {
+                if (raw[i] == '\\') {
+                    // Switch into escape mode
+                    inEscape = true
+
+                    // If no other specifier is there, we can have a maximum of three digits
+                    maxChars = 3
+
+                    // Radix is octal
+                    radix = 8
+                } else {
+                    // Handle regular character
+                    chars += raw[i]
+                }
+            }
+            i++
+        }
+
+        val single = chars.singleOrNull()
+        if (single != null) {
+            return newLiteral(single, primitiveType("char"), rawNode = ctx)
+        } else {
+            // Somehow make an int out of, this is "implementation" specific. We follow the way
+            // clang does it
+            var intValue = 0
+            for ((n, c) in chars.reversed().withIndex()) {
+                intValue += (c.code * 256.0f.pow(n)).toInt()
+            }
+            return newLiteral(intValue, primitiveType("int"), rawNode = ctx)
         }
     }
 
@@ -603,7 +784,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                         ctx,
                         log,
                         "Unknown designated lhs {}",
-                        des.javaClass.toGenericString()
+                        des.javaClass.toGenericString(),
                     )
                     null
                 }
@@ -612,7 +793,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return newAssignExpression(
             lhs = listOfNotNull(lhs),
             rhs = listOfNotNull(rhs),
-            rawNode = ctx
+            rawNode = ctx,
         )
     }
 
@@ -670,7 +851,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                         ctx,
                         log,
                         "Unknown designated lhs {}",
-                        des.javaClass.toGenericString()
+                        des.javaClass.toGenericString(),
                     )
                     null
                 }
@@ -679,8 +860,26 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
         return newAssignExpression(
             lhs = listOfNotNull(lhs),
             rhs = listOfNotNull(rhs),
-            rawNode = ctx
+            rawNode = ctx,
         )
+    }
+
+    private fun handleTypeIdInitializerExpression(
+        ctx: CASTTypeIdInitializerExpression
+    ): ConstructExpression {
+        val type = frontend.typeOf(ctx.typeId)
+
+        val construct = newConstructExpression(type.name, rawNode = ctx)
+
+        // The only supported initializer is an initializer list
+        (ctx.initializer as? IASTInitializerList)?.let {
+            construct.arguments =
+                it.clauses
+                    .map { handle(it) ?: newProblemExpression("could not parse argument") }
+                    .toMutableList()
+        }
+
+        return construct
     }
 
     private fun handleIntegerLiteral(ctx: IASTLiteralExpression): Expression {
@@ -729,7 +928,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                                 ctx,
                                 log,
                                 "Integer literal {} is too large to be represented in a signed type, interpreting it as unsigned.",
-                                ctx
+                                ctx,
                             )
                             // keep it as BigInteger
                             bigValue
@@ -746,7 +945,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                             ctx,
                             log,
                             "Integer literal {} is too large to be represented in a signed type, interpreting it as unsigned.",
-                            ctx
+                            ctx,
                         )
                         // keep it as BigInteger
                         bigValue
@@ -762,14 +961,14 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
             // retrieve type based on stored Java number
             val type =
                 primitiveType(
-                    when {
+                    when (numberValue) {
                         // we follow the way clang/llvm handles this and this seems to always
                         // be an unsigned long long, except if it is explicitly specified as ul
                         // differentiate between long and long long
-                        numberValue is BigInteger && "ul" == suffix -> "unsigned long int"
-                        numberValue is BigInteger -> "unsigned long long int"
-                        numberValue is Long && "ll" == suffix -> "long long int"
-                        numberValue is Long -> "long int"
+                        is BigInteger if "ul" == suffix -> "unsigned long int"
+                        is BigInteger -> "unsigned long long int"
+                        is Long if "ll" == suffix -> "long long int"
+                        is Long -> "long int"
                         else -> "int"
                     }
                 )
@@ -791,7 +990,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
                     newLiteral(
                         strippedValue.toBigDecimal(),
                         primitiveType("long double"),
-                        rawNode = ctx
+                        rawNode = ctx,
                     )
                 else -> newLiteral(strippedValue.toDouble(), primitiveType("double"), rawNode = ctx)
             }
@@ -802,7 +1001,7 @@ class ExpressionHandler(lang: CXXLanguageFrontend) :
     }
 
     /**
-     * In C++, the "this" expression is also modelled as a literal. In our case however, we want to
+     * In C++, the "this" expression is also modeled as a literal. In our case however, we want to
      * return a [Reference], which is then later connected to the current method's
      * [MethodDeclaration.receiver].
      */

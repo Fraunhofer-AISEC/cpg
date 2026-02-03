@@ -35,7 +35,7 @@ import org.eclipse.cdt.internal.core.dom.parser.ASTNode
 
 abstract class CXXHandler<S : Node, T : IASTNode>(
     configConstructor: Supplier<S>,
-    lang: CXXLanguageFrontend
+    lang: CXXLanguageFrontend,
 ) : Handler<S, T, CXXLanguageFrontend>(configConstructor, lang) {
 
     /**
@@ -57,12 +57,6 @@ abstract class CXXHandler<S : Node, T : IASTNode>(
 
         val node = handleNode(ctx)
 
-        // The language frontend might set a location, which we should respect. Otherwise, we will
-        // set the location here.
-        if (node.location == null) {
-            frontend.setCodeAndLocation(node, ctx)
-        }
-
         frontend.process(ctx, node)
 
         this.lastNode = node
@@ -81,7 +75,7 @@ abstract class CXXHandler<S : Node, T : IASTNode>(
             frontend,
             node,
             log,
-            "Parsing of type $name is not supported (yet)"
+            "Parsing of type $name is not supported (yet)",
         )
 
         val cpgNode = this.configConstructor.get()

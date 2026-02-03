@@ -1,12 +1,20 @@
 rootProject.name = "cpg"
 
+plugins {
+    id("org.jetbrains.kotlinx.kover.aggregation") version "0.9.3"
+}
+
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
-include(":cpg-all")
 include(":cpg-core")
 include(":cpg-analysis")
 include(":cpg-neo4j")
-include(":cpg-console")
+include(":cpg-concepts")
+
+include(":codyze")
+include(":codyze-core")
+include(":codyze-compliance")
+include(":codyze-console")
 
 // this code block also exists in the root build.gradle.kts
 val enableJavaFrontend: Boolean by extra {
@@ -45,6 +53,18 @@ val enableRubyFrontend: Boolean by extra {
     val enableRubyFrontend: String? by settings
     enableRubyFrontend.toBoolean()
 }
+val enableJVMFrontend: Boolean by extra {
+    val enableJVMFrontend: String? by settings
+    enableJVMFrontend.toBoolean()
+}
+val enableINIFrontend: Boolean by extra {
+    val enableINIFrontend: String? by settings
+    enableINIFrontend.toBoolean()
+}
+val enableMCPModule: Boolean by extra {
+    val enableMCPModule: String? by settings
+    enableMCPModule.toBoolean()
+}
 
 if (enableJavaFrontend) include(":cpg-language-java")
 if (enableCXXFrontend) include(":cpg-language-cxx")
@@ -54,5 +74,12 @@ if (enablePythonFrontend) include(":cpg-language-python")
 if (enablePythonQiskitFrontend) include(":cpg-language-python-qiskit")
 if (enableTypeScriptFrontend) include(":cpg-language-typescript")
 if (enableOpenQasmFrontend) include(":cpg-language-openqasm")
-
 if (enableRubyFrontend) include(":cpg-language-ruby")
+if (enableJVMFrontend) include(":cpg-language-jvm")
+if (enableINIFrontend) include(":cpg-language-ini")
+if (enableMCPModule) include(":cpg-mcp")
+
+
+kover {
+    enableCoverage()
+}

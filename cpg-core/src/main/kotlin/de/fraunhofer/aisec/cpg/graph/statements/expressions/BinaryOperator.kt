@@ -26,11 +26,16 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
-import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
+import org.neo4j.ogm.annotation.Relationship
 
 /**
  * A binary operation expression, such as "a + b". It consists of a left hand expression (lhs), a
@@ -39,77 +44,46 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  * Note: For assignments, i.e., using an `=` or `+=`, etc. the [AssignExpression] MUST be used.
  */
 open class BinaryOperator :
-    Expression(), HasBase, HasOperatorCode, ArgumentHolder, HasType.TypeObserver {
+    Expression(), HasOverloadedOperation, ArgumentHolder, HasType.TypeObserver {
+
     /** The left-hand expression. */
-    @AST
-    var lhs: Expression = ProblemExpression("could not parse lhs")
-        set(value) {
-            disconnectOldLhs()
-            field = value
-            connectNewLhs(value)
-        }
+    @Relationship("LHS")
+    var lhsEdge =
+        astEdgeOf<Expression>(
+            of = ProblemExpression("could not parse lhs"),
+            onChanged = ::exchangeTypeObserverWithAccessPropagation,
+        )
+    var lhs by unwrapping(BinaryOperator::lhsEdge)
 
     /** The right-hand expression. */
-    @AST
-    var rhs: Expression = ProblemExpression("could not parse rhs")
-        set(value) {
-            disconnectOldRhs()
-            field = value
-            connectNewRhs(value)
-        }
+    @Relationship("RHS")
+    var rhsEdge =
+        astEdgeOf<Expression>(
+            of = ProblemExpression("could not parse rhs"),
+            onChanged = ::exchangeTypeObserverWithAccessPropagation,
+        )
+    var rhs by unwrapping(BinaryOperator::rhsEdge)
 
     /** The operator code. */
     override var operatorCode: String? = null
         set(value) {
             field = value
             if (
-                (operatorCode in (language?.compoundAssignmentOperators ?: setOf())) ||
-                    (operatorCode == "=")
+                (operatorCode in language.compoundAssignmentOperators) ||
+                    (operatorCode in language.simpleAssignmentOperators)
             ) {
                 throw TranslationException(
-                    "Creating a BinaryOperator with an assignment operator code is not allowed. The class AssignExpression should be used instead."
+                    "Creating a BinaryOperator with an assignment operator code is not allowed. The class AssignExpression must be used instead."
                 )
             }
         }
-
-    fun <T : Expression?> getLhsAs(clazz: Class<T>): T? {
-        return if (clazz.isInstance(lhs)) clazz.cast(lhs) else null
-    }
-
-    private fun connectNewLhs(lhs: Expression) {
-        lhs.registerTypeObserver(this)
-        if (lhs is Reference && "=" == operatorCode) {
-            // declared reference expr is the left-hand side of an assignment -> writing to the var
-            lhs.access = AccessValues.WRITE
-        } else if (
-            lhs is Reference && operatorCode in (language?.compoundAssignmentOperators ?: setOf())
-        ) {
-            // declared reference expr is the left-hand side of an assignment -> writing to the var
-            lhs.access = AccessValues.READWRITE
-        }
-    }
-
-    private fun disconnectOldLhs() {
-        lhs.unregisterTypeObserver(this)
-    }
-
-    fun <T : Expression?> getRhsAs(clazz: Class<T>): T? {
-        return if (clazz.isInstance(rhs)) clazz.cast(rhs) else null
-    }
-
-    private fun connectNewRhs(rhs: Expression) {
-        rhs.registerTypeObserver(this)
-    }
-
-    private fun disconnectOldRhs() {
-        rhs.unregisterTypeObserver(this)
-    }
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
             .append("lhs", lhs.name)
             .append("rhs", rhs.name)
             .append("operatorCode", operatorCode)
+            .append("location", location)
             .toString()
     }
 
@@ -122,20 +96,23 @@ open class BinaryOperator :
             this.type = newType
         } else {
             // Otherwise, we have a special language-specific function to deal with type propagation
-            val type = language?.propagateTypeOfBinaryOperation(this)
-            if (type != null) {
-                this.type = type
-            } else {
-                // If we don't know how to propagate the types of this particular binary operation,
-                // we just leave the type alone. We cannot take newType because it is just "half" of
-                // the operation (either from lhs or rhs) and would lead to very incorrect results.
-            }
+            val type =
+                language.propagateTypeOfBinaryOperation(this.operatorCode, lhs.type, rhs.type, this)
+            this.type = type
         }
     }
 
     override fun assignedTypeChanged(assignedTypes: Set<Type>, src: HasType) {
         // TODO: replicate something similar like propagateTypeOfBinaryOperation for assigned types
     }
+
+    /** The binary operator operators on the [lhs]. [rhs] is part of the [operatorArguments]. */
+    override val operatorArguments: List<Expression>
+        get() = listOf(rhs)
+
+    /** The binary operator operators on the [lhs]. [rhs] is part of the [operatorArguments]. */
+    override val operatorBase: Expression
+        get() = lhs
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {
@@ -172,7 +149,15 @@ open class BinaryOperator :
         }
     }
 
-    override val base: Expression?
+    override fun hasArgument(expression: Expression): Boolean {
+        return lhs == expression || rhs == expression
+    }
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.lhs.getStartingPrevEOG()
+    }
+
+    val base: Expression?
         get() {
             return if (operatorCode == ".*" || operatorCode == "->*") {
                 lhs

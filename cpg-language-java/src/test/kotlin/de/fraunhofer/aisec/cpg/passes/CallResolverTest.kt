@@ -25,17 +25,14 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.BaseTest
-import de.fraunhofer.aisec.cpg.TestUtils
-import de.fraunhofer.aisec.cpg.TestUtils.findByName
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniqueName
-import de.fraunhofer.aisec.cpg.TestUtils.findByUniquePredicate
+import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.*
 
@@ -71,14 +68,14 @@ class CallResolverTest : BaseTest() {
         intType: Type,
         stringType: Type,
         methods: Collection<FunctionDeclaration>,
-        calls: Collection<CallExpression>
+        calls: Collection<CallExpression>,
     ) {
         val signatures = listOf(listOf(), listOf(intType, intType), listOf(intType, stringType))
         for (signature in signatures) {
             for (call in calls.filter { it.signature == signature }) {
                 val target =
                     findByUniquePredicate(methods) { m: FunctionDeclaration ->
-                        m.hasSignature(signature)
+                        m.matchesSignature(signature) != IncompatibleSignature
                     }
                 assertEquals(listOf(target), call.invokes)
             }
@@ -90,7 +87,7 @@ class CallResolverTest : BaseTest() {
             calls.filter { c: CallExpression -> c.signature == inferenceSignature }) {
             val inferredTarget =
                 findByUniquePredicate(methods) { m: FunctionDeclaration ->
-                    m.hasSignature(inferenceSignature)
+                    m.matchesSignature(inferenceSignature) != IncompatibleSignature
                 }
             assertEquals(listOf(inferredTarget), inferredCall.invokes)
             assertTrue(inferredTarget.isInferred)
@@ -111,7 +108,7 @@ class CallResolverTest : BaseTest() {
         assertEquals<List<FunctionDeclaration>>(listOf(originalMethod), overridingMethod.overrides)
         assertEquals<List<FunctionDeclaration>>(
             listOf(overridingMethod),
-            originalMethod.overriddenBy
+            originalMethod.overriddenBy,
         )
     }
 
@@ -119,8 +116,13 @@ class CallResolverTest : BaseTest() {
     @Throws(Exception::class)
     fun testJava() {
         val result =
-            TestUtils.analyze("java", topLevel, true) { it.registerLanguage(JavaLanguage()) }
-        val tu = result.translationUnits.firstOrNull()
+            analyze("java", topLevel, true) {
+                it.registerLanguage<JavaLanguage>()
+                it.inferenceConfiguration(
+                    InferenceConfiguration.builder().inferRecords(false).build()
+                )
+            }
+        val tu = result.components.flatMap { it.translationUnits }.firstOrNull()
         assertNotNull(tu)
 
         val records = result.records

@@ -28,13 +28,15 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.function.Supplier
 
 abstract class GoHandler<ResultNode : Node?, HandlerNode : GoStandardLibrary.Ast.Node>(
     configConstructor: Supplier<ResultNode?>,
-    lang: GoLanguageFrontend
+    lang: GoLanguageFrontend,
 ) : Handler<ResultNode?, HandlerNode, GoLanguageFrontend>(configConstructor, lang) {
     /**
      * We intentionally override the logic of [Handler.handle] because we do not want the map-based
@@ -47,12 +49,6 @@ abstract class GoHandler<ResultNode : Node?, HandlerNode : GoStandardLibrary.Ast
         val node = handleNode(ctx)
         if (node == null) {
             return node
-        }
-
-        // The language frontend might set a location, which we should respect. Otherwise, we will
-        // set the location here.
-        if (node.location == null) {
-            frontend.setCodeAndLocation(node, ctx)
         }
 
         frontend.setComment(node, ctx)
@@ -74,7 +70,7 @@ abstract class GoHandler<ResultNode : Node?, HandlerNode : GoStandardLibrary.Ast
             frontend,
             node,
             log,
-            "Parsing of type $name is not supported (yet)"
+            "Parsing of type $name is not supported (yet)",
         )
 
         val cpgNode = this.configConstructor.get()
@@ -91,19 +87,43 @@ abstract class GoHandler<ResultNode : Node?, HandlerNode : GoStandardLibrary.Ast
      */
     val GoStandardLibrary.Ast.ImportSpec.importName: String
         get() {
-            val path = frontend.expressionHandler.handle(this.path) as? Literal<*>
-            val paths = (path?.value as? String)?.split("/") ?: listOf()
+            // We set the filename of the include declaration to the package path, i.e., its full
+            // path including any module identifiers. This way we can match the include declaration
+            // back to the namespace's path and name
+            val filename = path.value.removeSurrounding("\"").removeSurrounding("`")
 
-            // Return the last name in the path as the import name. However, if the last name is a
-            // module version (e.g., v5), then we need to return the second-to-last
-            var last = paths.lastOrNull()
-            last =
-                if (last?.startsWith("v") == true) {
-                    paths.getOrNull(paths.size - 2)
-                } else {
-                    last
-                }
+            // While it is convention that the respective Go package is named after the last path in
+            // the import name, this is purely a convention. We therefore need to find out the real
+            // package name. Currently, we do not support parallel parsing, so the order of imports
+            // might be suitable to look up the specific package in the scope manager. In the
+            // future, we might need a better solution.
+            val namespace =
+                frontend.scopeManager
+                    .filterScopes {
+                        it is NamespaceScope &&
+                            (it.astNode as? NamespaceDeclaration)?.path == filename
+                    }
+                    .firstOrNull()
+                    ?.astNode as? NamespaceDeclaration
 
-            return last ?: ""
+            if (namespace != null) {
+                // We can directly take the "real" namespace name then
+                return namespace.name.localName
+            } else {
+                val path = frontend.expressionHandler.handle(this.path) as? Literal<*>
+                val paths = (path?.value as? String)?.split("/") ?: listOf()
+
+                // Return the last name in the path as the import name. However, if the last name is
+                // a module version (e.g., v5), then we need to return the second-to-last
+                var last = paths.lastOrNull()
+                last =
+                    if (last != null && last.length >= 2 && last[0] == 'v' && last[1].isDigit()) {
+                        paths.getOrNull(paths.size - 2)
+                    } else {
+                        last
+                    }
+
+                return last ?: ""
+            }
         }
 }

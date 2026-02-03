@@ -25,13 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.*
-import kotlin.collections.ArrayList
 import org.neo4j.ogm.annotation.Relationship
 
 /** Node representing a declaration of a template class or struct */
@@ -42,21 +39,8 @@ class RecordTemplateDeclaration : TemplateDeclaration() {
      * expansion pass for each instantiation of the ClassTemplate there will be a realization
      */
     @Relationship(value = "REALIZATION", direction = Relationship.Direction.OUTGOING)
-    @AST
-    val realizationEdges: MutableList<PropertyEdge<RecordDeclaration>> = ArrayList()
-
-    override val realizations: List<Declaration> by
-        PropertyEdgeDelegate(RecordTemplateDeclaration::realizationEdges)
-
-    fun addRealization(realizedRecord: RecordDeclaration) {
-        val propertyEdge = PropertyEdge(this, realizedRecord)
-        propertyEdge.addProperty(Properties.INDEX, realizationEdges.size)
-        realizationEdges.add(propertyEdge)
-    }
-
-    fun removeRealization(realizedRecordDeclaration: RecordDeclaration) {
-        realizationEdges.removeIf { it.end == realizedRecordDeclaration }
-    }
+    val realizationEdges = astEdgesOf<RecordDeclaration>()
+    override val realizations by unwrapping(RecordTemplateDeclaration::realizationEdges)
 
     override fun addDeclaration(declaration: Declaration) {
         if (declaration is TypeParameterDeclaration || declaration is ParameterDeclaration) {

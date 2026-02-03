@@ -25,11 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.golang
 
-import de.fraunhofer.aisec.cpg.TestUtils.analyzeAndGetFirstTU
-import de.fraunhofer.aisec.cpg.assertLocalName
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.test.*
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -116,7 +115,7 @@ class StatementTest {
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("type_assert.go").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<GoLanguage>()
             }
@@ -140,7 +139,7 @@ class StatementTest {
         assertNotNull(vs)
         assertEquals(
             listOf("main.MyStruct", "main.MyStruct*", "main.MyInterface"),
-            vs.map { it.type.name.toString() }
+            vs.map { it.type.name.toString() },
         )
         vs.forEach {
             assertLocalName("v", it)

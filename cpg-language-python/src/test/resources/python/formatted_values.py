@@ -1,0 +1,5 @@
+a = f'Number: {42:.2f}'
+b = f'Hexadecimal: {255:#x}'
+c = f'String with conversion: {"Hello, world!"!r}'
+d = f'ASCII representation: {"50$"!a}'
+e = f'Combined: {42!s:10}'

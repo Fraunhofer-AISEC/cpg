@@ -24,3 +24,4 @@ the graph. These two stages are strictly separated one from each other.
 * [Languages and Language Frontends](./language)
 * [Scopes](./scopes)
 * [Passes](./passes)
+* [Symbol Resolution](./symbol-resolver.md)

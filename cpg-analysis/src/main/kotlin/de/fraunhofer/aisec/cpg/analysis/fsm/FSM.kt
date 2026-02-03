@@ -110,7 +110,7 @@ sealed class FSM(states: Set<State>) {
         state: State,
         name: Int? = null,
         isStart: Boolean? = null,
-        isAcceptingState: Boolean? = null
+        isAcceptingState: Boolean? = null,
     ): Boolean {
         if (name != null) {
             if (states.any { it.name == name }) return false
@@ -135,14 +135,14 @@ sealed class FSM(states: Set<State>) {
         state: State,
         name: Int? = null,
         isStart: Boolean? = null,
-        isAcceptingState: Boolean? = null
+        isAcceptingState: Boolean? = null,
     ) =
         check(
             changeStateProperty(
                 state = state,
                 name = name,
                 isStart = isStart,
-                isAcceptingState = isAcceptingState
+                isAcceptingState = isAcceptingState,
             )
         )
 
@@ -151,7 +151,7 @@ sealed class FSM(states: Set<State>) {
             otherFsm.checkedChangeStateProperty(
                 state,
                 name =
-                    state.name + maxOf(states.maxOf { it.name }, otherFsm.states.maxOf { it.name })
+                    state.name + maxOf(states.maxOf { it.name }, otherFsm.states.maxOf { it.name }),
             )
         }
     }

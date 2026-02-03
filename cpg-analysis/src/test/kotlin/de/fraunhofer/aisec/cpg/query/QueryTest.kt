@@ -25,14 +25,17 @@
  */
 package de.fraunhofer.aisec.cpg.query
 
-import de.fraunhofer.aisec.cpg.analysis.MultiValueEvaluator
-import de.fraunhofer.aisec.cpg.analysis.NumberSet
+import de.fraunhofer.aisec.cpg.evaluation.MultiValueEvaluator
+import de.fraunhofer.aisec.cpg.evaluation.NumberSet
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.testcases.Query
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -44,7 +47,7 @@ class QueryTest {
         val queryTreeResult =
             result.all<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { sizeof(it.arguments[0]) > sizeof(it.arguments[1]) }
+                { sizeof(it.arguments[0]) > sizeof(it.arguments[1]) },
             )
 
         assertFalse(queryTreeResult.first)
@@ -52,7 +55,7 @@ class QueryTest {
         val queryTreeResult2: QueryTree<Boolean> =
             result.allExtended<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { sizeof(it.arguments[0]) gt sizeof(it.arguments[1]) }
+                { sizeof(it.arguments[0]) gt sizeof(it.arguments[1]) },
             )
 
         assertFalse(queryTreeResult2.value)
@@ -74,7 +77,7 @@ class QueryTest {
         val queryTreeResult2 =
             result.allExtended<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { it.arguments[0].size gt it.arguments[1].size }
+                { it.arguments[0].size gt it.arguments[1].size },
             )
 
         assertFalse(queryTreeResult2.value)
@@ -87,8 +90,10 @@ class QueryTest {
         val queryTreeResult =
             result.allExtended<CallExpression>(
                 mustSatisfy = {
-                    (const("memcpy") eq it.name.localName) implies
-                        (lazy { it.arguments[0].size gt it.arguments[1].size })
+                    ("memcpy" eq it.name.localName) implies
+                        (lazy {
+                            it.arguments.getOrNull(0)?.size gt it.arguments.getOrNull(1)?.size
+                        })
                 }
             )
 
@@ -119,7 +124,7 @@ class QueryTest {
                                 (outer.arguments[0] as? Reference)?.refersTo
                         }
                     )
-                }
+                },
             )
 
         assertFalse(queryTreeResult2.value)
@@ -133,8 +138,8 @@ class QueryTest {
             result.all<CallExpression>({ it.name.localName == "free" }) { outer ->
                 !executionPath(outer) {
                         (it as? CallExpression)?.name?.localName == "free" &&
-                            ((it as? CallExpression)?.arguments?.getOrNull(0) as? Reference)
-                                ?.refersTo == (outer.arguments[0] as? Reference)?.refersTo
+                            (it.arguments[0] as? Reference)?.refersTo ==
+                                (outer.arguments[0] as? Reference)?.refersTo
                     }
                     .value
             }
@@ -148,11 +153,11 @@ class QueryTest {
                     not(
                         executionPath(outer) {
                             (it as? CallExpression)?.name?.localName == "free" &&
-                                ((it as? CallExpression)?.arguments?.getOrNull(0) as? Reference)
-                                    ?.refersTo == (outer.arguments[0] as? Reference)?.refersTo
+                                (it.arguments[0] as? Reference)?.refersTo ==
+                                    (outer.arguments[0] as? Reference)?.refersTo
                         }
                     )
-                }
+                },
             )
 
         assertFalse(queryTreeResult2.value)
@@ -165,14 +170,14 @@ class QueryTest {
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
-                it.arguments[2].intValue!! >= const(11)
+                it.arguments[2].intValue >= 11
             }
         assertTrue(queryTreeResult.first)
 
         val queryTreeResult2 =
             result.allExtended<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { it.arguments[2].intValue!! ge 11 }
+                { it.arguments[2].intValue ge 11 },
             )
 
         assertTrue(queryTreeResult2.value)
@@ -180,7 +185,7 @@ class QueryTest {
         val queryTreeResult3 =
             result.allExtended<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { it.arguments[2].intValue!! ge const(11) }
+                { it.arguments[2].intValue ge 11 },
             )
 
         assertTrue(queryTreeResult3.value)
@@ -192,14 +197,14 @@ class QueryTest {
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
-                it.arguments[2].intValue!! > const(11)
+                it.arguments[2].intValue > 11
             }
         assertFalse(queryTreeResult.first)
 
         val queryTreeResult2 =
             result.allExtended<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { it.arguments[2].intValue!! gt 11 }
+                { it.arguments[2].intValue gt 11 },
             )
 
         assertFalse(queryTreeResult2.value)
@@ -207,7 +212,7 @@ class QueryTest {
         val queryTreeResult3 =
             result.allExtended<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { it.arguments[2].intValue!! gt const(11) }
+                { it.arguments[2].intValue gt 11 },
             )
 
         assertFalse(queryTreeResult3.value)
@@ -219,14 +224,14 @@ class QueryTest {
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
-                it.arguments[2].intValue!! <= const(11)
+                it.arguments[2].intValue <= 11
             }
         assertTrue(queryTreeResult.first)
 
         val queryTreeResult2 =
             result.allExtended<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { it.arguments[2].intValue!! le 11 }
+                { it.arguments[2].intValue le 11 },
             )
 
         assertTrue(queryTreeResult2.value)
@@ -234,7 +239,7 @@ class QueryTest {
         val queryTreeResult3 =
             result.allExtended<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { it.arguments[2].intValue!! le const(11) }
+                { it.arguments[2].intValue le 11 },
             )
 
         assertTrue(queryTreeResult3.value)
@@ -246,14 +251,14 @@ class QueryTest {
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
-                it.arguments[2].intValue!! == const(11)
+                it.arguments[2].intValue?.value == 11
             }
         assertTrue(queryTreeResult.first)
 
         val queryTreeResult2 =
             result.allExtended<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { it.arguments[2].intValue!! eq 11 }
+                { it.arguments[2].intValue eq 11 },
             )
 
         assertTrue(queryTreeResult2.value)
@@ -261,7 +266,7 @@ class QueryTest {
         val queryTreeResult3 =
             result.allExtended<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { it.arguments[2].intValue!! eq const(11) }
+                { it.arguments[2].intValue eq 11 },
             )
 
         assertTrue(queryTreeResult3.value)
@@ -273,14 +278,14 @@ class QueryTest {
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
-                it.arguments[2].intValue!! < const(11)
+                it.arguments[2].intValue < 11
             }
         assertFalse(queryTreeResult.first)
 
         val queryTreeResult2 =
             result.allExtended<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { it.arguments[2].intValue!! lt 11 }
+                { it.arguments[2].intValue lt 11 },
             )
 
         assertFalse(queryTreeResult2.value)
@@ -288,7 +293,7 @@ class QueryTest {
         val queryTreeResult3 =
             result.allExtended<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { it.arguments[2].intValue!! lt const(11) }
+                { it.arguments[2].intValue lt 11 },
             )
 
         assertFalse(queryTreeResult3.value)
@@ -300,14 +305,14 @@ class QueryTest {
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
-                it.arguments[2].intValue!! != const(11)
+                it.arguments[2].intValue?.value != 11
             }
         assertFalse(queryTreeResult.first)
 
         val queryTreeResult2 =
             result.allExtended<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { it.arguments[2].intValue!! ne 11 }
+                { it.arguments[2].intValue ne 11 },
             )
 
         assertFalse(queryTreeResult2.value)
@@ -315,7 +320,7 @@ class QueryTest {
         val queryTreeResult3 =
             result.allExtended<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { it.arguments[2].intValue!! ne const(11) }
+                { it.arguments[2].intValue ne 11 },
             )
 
         assertFalse(queryTreeResult3.value)
@@ -327,14 +332,14 @@ class QueryTest {
 
         val queryTreeResult =
             result.all<CallExpression>({ it.name.localName == "memcpy" }) {
-                it.arguments[2].intValue!!.value in listOf(11, 2, 3)
+                it.arguments[2].intValue?.value in listOf(11, 2, 3)
             }
         assertTrue(queryTreeResult.first)
 
         val queryTreeResult2 =
             result.allExtended<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { it.arguments[2].intValue!! IN listOf(11, 2, 3) }
+                { it.arguments[2].intValue IN listOf(11, 2, 3) },
             )
 
         assertTrue(queryTreeResult2.value)
@@ -342,7 +347,7 @@ class QueryTest {
         val queryTreeResult3 =
             result.allExtended<CallExpression>(
                 { it.name.localName == "memcpy" },
-                { it.arguments[2].intValue!! IN const(listOf(11, 2, 3)) }
+                { it.arguments[2].intValue IN listOf(11, 2, 3) },
             )
 
         assertTrue(queryTreeResult3.value)
@@ -441,9 +446,6 @@ class QueryTest {
     @Test
     fun testOutOfBoundsQuery3() {
         val result = Query.getArray3()
-        val subscripts =
-            MultiValueEvaluator()
-                .evaluate(result.allChildren<SubscriptExpression>().first().subscriptExpression)
 
         val queryTreeResult =
             result.all<SubscriptExpression>(
@@ -451,9 +453,13 @@ class QueryTest {
                     max(it.subscriptExpression) <
                         min(
                             it.arrayExpression
-                                .followPrevDFGEdgesUntilHit { node -> node is NewArrayExpression }
+                                .followPrevFullDFGEdgesUntilHit { node ->
+                                    node is NewArrayExpression
+                                }
                                 .fulfilled
-                                .map { it2 -> (it2.last() as NewArrayExpression).dimensions[0] }
+                                .map { it2 ->
+                                    (it2.nodes.last() as NewArrayExpression).dimensions[0]
+                                }
                         ) && min(it.subscriptExpression) > 0
                 }
             )
@@ -465,9 +471,13 @@ class QueryTest {
                     (max(it.subscriptExpression) lt
                         min(
                             it.arrayExpression
-                                .followPrevDFGEdgesUntilHit { node -> node is NewArrayExpression }
+                                .followPrevFullDFGEdgesUntilHit { node ->
+                                    node is NewArrayExpression
+                                }
                                 .fulfilled
-                                .map { it2 -> (it2.last() as NewArrayExpression).dimensions[0] }
+                                .map { it2 ->
+                                    (it2.nodes.last() as NewArrayExpression).dimensions[0]
+                                }
                         )) and (min(it.subscriptExpression) ge 0)
                 }
             )
@@ -505,19 +515,19 @@ class QueryTest {
 
     @Test
     fun testDivisionBy0() {
-        val result = Query.getVulnerable()
+        val result = Query.getDivBy0()
 
         val queryTreeResult =
             result.all<BinaryOperator>(
                 { it.operatorCode == "/" },
-                { !(it.rhs.evaluate(MultiValueEvaluator()) as NumberSet).maybe(0) }
+                { !(it.rhs.evaluate(MultiValueEvaluator()) as NumberSet).maybe(0) },
             )
         assertFalse(queryTreeResult.first)
 
         val queryTreeResult2 =
             result.allExtended<BinaryOperator>(
                 { it.operatorCode == "/" },
-                { not((it.rhs.evaluate(MultiValueEvaluator()) as NumberSet).maybe(0)) }
+                { not((it.rhs.evaluate(MultiValueEvaluator()) as NumberSet).maybe(0)) },
             )
 
         assertFalse(queryTreeResult2.value)
@@ -535,7 +545,7 @@ class QueryTest {
                         max(it.value) <= maxSizeOfType(it.target.type) &&
                             min(it.value) >= minSizeOfType(it.target.type)
                     }
-                }
+                },
             )
         assertFalse(queryTreeResult.first)
 
@@ -546,8 +556,8 @@ class QueryTest {
                 { it.assignments.all { assign -> assign.target.type.isPrimitive } },
                 {
                     QueryTree(it.assignments.any {
-                        (max(it.value) le maxSizeOfType(it.target!!.type)) and
-                                (min(it.value) ge minSizeOfType(it.target!!.type))
+                        (max(it.value) le maxSizeOfType(it.target.type)) and
+                                (min(it.value) ge minSizeOfType(it.target.type))
                     })
                 }
             )
@@ -567,10 +577,10 @@ class QueryTest {
                     result
                         .all<FunctionDeclaration>(
                             { it.name.localName == "print" },
-                            { n2 -> dataFlow(n1, n2.parameters[0]).value }
+                            { n2 -> dataFlow(n1) { node -> node == n2.parameters[0] }.value },
                         )
                         .first
-                }
+                },
             )
 
         assertTrue(queryTreeResult.first)
@@ -582,9 +592,9 @@ class QueryTest {
                 { n1 ->
                     result.allExtended<FunctionDeclaration>(
                         { it.name.localName == "print" },
-                        { n2 -> dataFlow(n1, n2.parameters[0]) }
+                        { n2 -> dataFlow(n1) { node -> node == n2.parameters[0] } },
                     )
-                }
+                },
             )
 
         assertTrue(queryTreeResultExtended.value)
@@ -597,10 +607,10 @@ class QueryTest {
                     result
                         .all<FunctionDeclaration>(
                             { it.name.localName == "print" },
-                            { n2 -> dataFlow(n1 as Node, n2.parameters[0]).value }
+                            { n2 -> dataFlow(n1) { node -> node == n2.parameters[0] }.value },
                         )
                         .first
-                }
+                },
             )
 
         assertTrue(queryTreeResult2.first)
@@ -612,9 +622,9 @@ class QueryTest {
                 { n1 ->
                     result.allExtended<FunctionDeclaration>(
                         { it.name.localName == "print" },
-                        { n2 -> dataFlow(n1 as Node, n2.parameters[0]) }
+                        { n2 -> dataFlow(n1) { node -> node == n2.parameters[0] } },
                     )
-                }
+                },
             )
 
         assertTrue(queryTreeResult2Extended.value)
@@ -629,35 +639,13 @@ class QueryTest {
             result.allExtended<CallExpression>(
                 { it.name.localName == "highlyCriticalOperation" },
                 { n1 ->
-                    val loggingQueryForward =
-                        executionPath(n1) {
-                            (it as? CallExpression)?.name.toString() == "Logger.log"
-                        }
-                    val loggingQueryBackwards =
-                        executionPathBackwards(n1) {
-                            (it as? CallExpression)?.name.toString() == "Logger.log"
-                        }
-                    val allChildren = loggingQueryForward.children
-                    allChildren.addAll(loggingQueryBackwards.children)
-                    val allPaths =
-                        allChildren
-                            .map { (it.value as? List<*>) }
-                            .filter { it != null && it.last() is CallExpression }
-                    val allCalls = allPaths.map { it?.last() as CallExpression }
-                    val dataFlowPaths =
-                        allCalls.map {
-                            allNonLiteralsFromFlowTo(
-                                n1.arguments[0],
-                                it.arguments[1],
-                                allPaths as List<List<Node>>
-                            )
-                        }
-                    val dataFlowQuery =
-                        QueryTree(dataFlowPaths.all { it.value }, dataFlowPaths.toMutableList())
-
-                    return@allExtended (loggingQueryForward or loggingQueryBackwards) and
-                        dataFlowQuery
-                }
+                    n1.arguments[0].allNonLiteralsFlowTo(
+                        predicate = { (it as? CallExpression)?.name.toString() == "Logger.log" },
+                        allowOverwritingValue = false,
+                        scope = Interprocedural(),
+                        sensitivities = ContextSensitive + FieldSensitive,
+                    )
+                },
             )
 
         println(queryTreeResult.printNicely())
@@ -673,35 +661,13 @@ class QueryTest {
             result.allExtended<CallExpression>(
                 { it.name.localName == "highlyCriticalOperation" },
                 { n1 ->
-                    val loggingQueryForward =
-                        executionPath(n1) {
-                            (it as? CallExpression)?.name.toString() == "Logger.log"
-                        }
-                    val loggingQueryBackwards =
-                        executionPathBackwards(n1) {
-                            (it as? CallExpression)?.name.toString() == "Logger.log"
-                        }
-                    val allChildren = loggingQueryForward.children
-                    allChildren.addAll(loggingQueryBackwards.children)
-                    val allPaths =
-                        allChildren
-                            .map { (it.value as? List<*>) }
-                            .filter { it != null && it.last() is CallExpression }
-                    val allCalls = allPaths.map { it?.last() as CallExpression }
-                    val dataFlowPaths =
-                        allCalls.map {
-                            allNonLiteralsFromFlowTo(
-                                n1.arguments[0],
-                                it.arguments[1],
-                                allPaths as List<List<Node>>
-                            )
-                        }
-                    val dataFlowQuery =
-                        QueryTree(dataFlowPaths.all { it.value }, dataFlowPaths.toMutableList())
-
-                    return@allExtended (loggingQueryForward or loggingQueryBackwards) and
-                        dataFlowQuery
-                }
+                    n1.arguments[0].allNonLiteralsFlowTo(
+                        predicate = { (it as? CallExpression)?.name.toString() == "Logger.log" },
+                        allowOverwritingValue = false,
+                        scope = Interprocedural(),
+                        sensitivities = ContextSensitive + FieldSensitive,
+                    )
+                },
             )
 
         println(queryTreeResult.printNicely())
@@ -717,41 +683,52 @@ class QueryTest {
             result.allExtended<CallExpression>(
                 { it.name.localName == "highlyCriticalOperation" },
                 { n1 ->
-                    val loggingQueryForward =
-                        executionPath(
-                            n1,
-                            { (it as? CallExpression)?.name.toString() == "Logger.log" }
-                        )
-                    val loggingQueryBackwards =
-                        executionPathBackwards(
-                            n1,
-                            { (it as? CallExpression)?.name.toString() == "Logger.log" }
-                        )
-                    val allChildren = loggingQueryForward.children
-                    allChildren.addAll(loggingQueryBackwards.children)
-                    val allPaths =
-                        allChildren
-                            .map { (it.value as? List<*>) }
-                            .filter { it != null && it.last() is CallExpression }
-                    val allCalls = allPaths.map { it?.last() as CallExpression }
-                    val dataFlowPaths =
-                        allCalls.map {
-                            allNonLiteralsFromFlowTo(
-                                n1.arguments[0],
-                                it.arguments[1],
-                                allPaths as List<List<Node>>
-                            )
-                        }
-                    val dataFlowQuery =
-                        QueryTree(dataFlowPaths.all { it.value }, dataFlowPaths.toMutableList())
-
-                    return@allExtended (loggingQueryForward or loggingQueryBackwards) and
-                        dataFlowQuery
-                }
+                    n1.arguments[0].allNonLiteralsFlowTo(
+                        predicate = { (it as? CallExpression)?.name.toString() == "Logger.log" },
+                        allowOverwritingValue = false,
+                        scope = Interprocedural(),
+                        sensitivities = ContextSensitive + FieldSensitive + FilterUnreachableEOG,
+                    )
+                },
             )
 
         println(queryTreeResult.printNicely())
         assertFalse(queryTreeResult.value)
         assertEquals(1, queryTreeResult.children.size)
+    }
+
+    @Test
+    fun testNode() {
+        with(TestLanguageFrontend()) {
+            val lit1 = newLiteral(1)
+            val lit2 = newLiteral(2)
+
+            val queryTree1 = lit1.intValue
+            assertNotNull(queryTree1)
+            assertEquals(lit1, queryTree1.node)
+            val queryTree2 = lit2.intValue
+            assertNotNull(queryTree2)
+            assertEquals(lit2, queryTree2.node)
+
+            val queryTree3 = queryTree1 eq queryTree2
+            assertNotNull(queryTree3)
+            assertNull(queryTree3.node)
+
+            val tu = newTranslationUnitDeclaration("tu")
+            val func1 = newFunctionDeclaration("func1")
+            tu.declarations += func1
+            val func2 = newFunctionDeclaration("func2")
+            tu.declarations += func2
+            val func3 = newFunctionDeclaration("func3")
+            tu.declarations += func3
+
+            val queryTree4 =
+                tu.allExtended<FunctionDeclaration>(
+                    mustSatisfy = { QueryTree(true, operator = GenericQueryOperators.EVALUATE) }
+                )
+            assertNotNull(queryTree4)
+            assertEquals(tu, queryTree4.node)
+            assertEquals(listOf(func1, func2, func3), queryTree4.children.map { it.node })
+        }
     }
 }

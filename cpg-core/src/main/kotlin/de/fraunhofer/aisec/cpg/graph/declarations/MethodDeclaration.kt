@@ -25,9 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import org.neo4j.ogm.annotation.Relationship
 
 /**
  * A method declaration is a [FunctionDeclaration] that is part of to a specific [RecordDeclaration]
@@ -41,6 +43,7 @@ open class MethodDeclaration : FunctionDeclaration() {
      */
     open var recordDeclaration: RecordDeclaration? = null
 
+    @Relationship("RECEIVER") var receiverEdge = astOptionalEdgeOf<VariableDeclaration>()
     /**
      * The receiver variable of this method. In most cases, this variable is called `this`, but in
      * some languages, it is `self` (e.g. in Rust or Python) or can be freely named (e.g. in
@@ -70,5 +73,5 @@ open class MethodDeclaration : FunctionDeclaration() {
      * share the same name. The [SymbolResolver] will recognize this and treat the scoping aspect of
      * the super-call accordingly.
      */
-    @AST var receiver: VariableDeclaration? = null
+    var receiver by unwrapping(MethodDeclaration::receiverEdge)
 }

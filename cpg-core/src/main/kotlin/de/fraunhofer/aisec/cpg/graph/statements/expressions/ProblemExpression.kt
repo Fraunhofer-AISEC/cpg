@@ -35,7 +35,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
  */
 class ProblemExpression(
     override var problem: String = "",
-    override var problemType: ProblemNode.ProblemType = ProblemNode.ProblemType.TRANSLATION
+    override var problemType: ProblemNode.ProblemType = ProblemNode.ProblemType.TRANSLATION,
 ) : Expression(), ProblemNode {
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

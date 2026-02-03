@@ -26,8 +26,11 @@
 package de.fraunhofer.aisec.cpg.graph.types
 
 import de.fraunhofer.aisec.cpg.frontends.Language
-import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration.Companion.BRACKET_LEFT
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration.Companion.BRACKET_RIGHT
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration.Companion.COMMA
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration.Companion.WHITESPACE
 import de.fraunhofer.aisec.cpg.graph.unknownType
 
 /**
@@ -42,8 +45,8 @@ constructor(
     typeName: String = "",
     var parameters: List<Type> = listOf(),
     var returnTypes: List<Type> = listOf(),
-    language: Language<*>? = null
-) : Type(typeName, language) {
+    language: Language<*>,
+) : Type(typeName, language), HasSecondaryTypeEdge {
 
     override fun reference(pointer: PointerType.PointerOrigin?): Type {
         // TODO(oxisto): In the future, we actually could just remove the FunctionPointerType
@@ -59,6 +62,9 @@ constructor(
         return unknownType()
     }
 
+    override val secondaryTypes: List<Type>
+        get() = parameters + returnTypes
+
     companion object {
         /**
          * This helper function computes a [FunctionType] out of an existing [FunctionDeclaration].
@@ -66,17 +72,38 @@ constructor(
         @JvmStatic
         fun computeType(
             func: FunctionDeclaration,
+            returnTypes: List<Type> = func.returnTypes.toList(),
         ): FunctionType {
             val type =
                 FunctionType(
-                    func.signature,
+                    buildSignature(func, returnTypes),
                     func.parameters.map { it.type },
-                    func.returnTypes.toList(),
-                    func.language
+                    returnTypes,
+                    func.language,
                 )
 
-            val c = func.ctx ?: throw TranslationException("context not available")
-            return c.typeManager.registerType(type)
+            return type
         }
+
+        /**
+         * This helper function builds a function signature out of an existing [FunctionDeclaration]
+         * and potential return types.
+         *
+         * Its main use-case is to have a human-readable representation of the function type. For
+         * example `foo(Bar)string` for a function `foo` with parameter types `Bar` and return type
+         * `string`.
+         */
+        fun buildSignature(func: FunctionDeclaration, returnTypes: List<Type>): String =
+            func.name.localName +
+                func.parameters.joinToString(COMMA + WHITESPACE, BRACKET_LEFT, BRACKET_RIGHT) {
+                    it.type.typeName
+                } +
+                (if (returnTypes.size == 1) {
+                    returnTypes.first().typeName
+                } else {
+                    returnTypes.joinToString(COMMA + WHITESPACE, BRACKET_LEFT, BRACKET_RIGHT) {
+                        it.typeName
+                    }
+                })
     }
 }

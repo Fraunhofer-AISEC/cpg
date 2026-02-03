@@ -30,5 +30,5 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 class ProgramNode(
     location: PhysicalLocation,
     val version: VersionNode?,
-    val stmts: List<StatementNode>
+    val stmts: List<StatementNode>,
 ) : ASTNode(location)

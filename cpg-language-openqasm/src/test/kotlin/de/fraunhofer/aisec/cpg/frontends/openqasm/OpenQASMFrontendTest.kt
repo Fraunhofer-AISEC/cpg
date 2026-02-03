@@ -46,7 +46,7 @@ class OpenQASMFrontendTest : BaseTest() {
             TestUtils.analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("adder.qasm").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<OpenQasmLanguage>()
             }
@@ -60,7 +60,7 @@ class OpenQASMFrontendTest : BaseTest() {
             TestUtils.analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("plaquette_check.qasm").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<OpenQasmLanguage>()
             }
@@ -85,7 +85,7 @@ class OpenQASMFrontendTest : BaseTest() {
             TestUtils.analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("if.qasm").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<OpenQasmLanguage>()
             }
@@ -99,7 +99,7 @@ class OpenQASMFrontendTest : BaseTest() {
             TestUtils.analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("more_operations.qasm").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<OpenQasmLanguage>()
             }
@@ -113,7 +113,7 @@ class OpenQASMFrontendTest : BaseTest() {
             TestUtils.analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("rotation.qasm").toFile()),
                 topLevel,
-                true
+                true,
             ) {
                 it.registerLanguage<OpenQasmLanguage>()
             }

@@ -32,36 +32,39 @@ import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumCircuit
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumGate
 import de.fraunhofer.aisec.cpg.graph.quantumcpg.QuantumMeasure
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
-import de.fraunhofer.aisec.cpg.passes.order.DependsOn
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 
 // @DependsOn(QiskitPass::class) or @DependsOn(OpenQASMPass::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 class QuantumEOGPass(ctx: TranslationContext) : EvaluationOrderGraphPass(ctx) {
     private val nodeTracker = HashSet<Node>()
 
-    init {
-        map[QuantumMeasure::class.java] = { handleQuantumMeasure(it as QuantumMeasure) }
-        map[QuantumGate::class.java] = { handleQuantumGate(it as QuantumGate) }
-        map[QuantumCircuit::class.java] = { handleQuantumCircuit(it as QuantumCircuit) }
+    override fun handleEOG(node: Node?) {
+        when (node) {
+            is QuantumCircuit -> handleQuantumCircuit(node)
+            is QuantumGate -> handleQuantumGate(node)
+            is QuantumMeasure -> handleQuantumMeasure(node)
+            else -> super.handleEOG(node)
+        }
     }
 
     private fun handleQuantumCircuit(node: QuantumCircuit) {
         // Analyze the contained statements. Since we analyzed the operations in the statement order
-        // of the original source and we do not allow branching conditions of the underlying source
+        // of the original source, and we do not allow branching conditions of the underlying source
         // code, we can just iterate over the operations.
         for (child in node.statements) {
-            createEOG(child as Node)
+            handleEOG(child)
         }
 
-        // pushToEOG(node)
+        // attachToEOG(node)
     }
 
     private fun handleQuantumGate(node: QuantumGate) {
-        pushToEOG(node)
+        attachToEOG(node)
     }
 
     private fun handleQuantumMeasure(node: QuantumMeasure) {
-        pushToEOG(node)
+        attachToEOG(node)
     }
 
     override fun accept(tu: TranslationUnitDeclaration) {
@@ -69,7 +72,7 @@ class QuantumEOGPass(ctx: TranslationContext) : EvaluationOrderGraphPass(ctx) {
         val circuits = tu.additionalNodes.filterIsInstance<QuantumCircuit>()
 
         for (circuit in circuits) {
-            createEOG(circuit)
+            handleEOG(circuit)
         }
     }
 

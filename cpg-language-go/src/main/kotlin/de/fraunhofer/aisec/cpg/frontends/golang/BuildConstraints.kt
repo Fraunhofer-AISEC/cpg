@@ -131,7 +131,7 @@ fun interface BuildConstraintExpression {
  */
 class BuildConstraintUnaryExpression(
     val operatorCode: String,
-    val expr: BuildConstraintExpression
+    val expr: BuildConstraintExpression,
 ) : BuildConstraintExpression {
     override fun evaluate(tags: Set<String>): Boolean {
         if (operatorCode == "!") {
@@ -149,7 +149,7 @@ class BuildConstraintUnaryExpression(
 class BuildConstraintBinaryExpression(
     val operatorCode: String,
     val lhs: BuildConstraintExpression,
-    val rhs: BuildConstraintExpression
+    val rhs: BuildConstraintExpression,
 ) : BuildConstraintExpression {
     override fun evaluate(tags: Set<String>): Boolean {
         return when (operatorCode) {

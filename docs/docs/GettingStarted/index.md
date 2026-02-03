@@ -5,17 +5,19 @@ no_list: true
 weight: 2
 date: 2020-01-30
 description: >
-  In CLI mode, Codyze integrates into scripts and automated build processes.
+  Using the CPG library
 ---
 
 
 # Getting Started
 
-After [installing the library](./installation), it can be used in different ways:
+The CPG can be used in different ways:
 
-* [As a library for Kotlin/Java](./library)
-* [Via an interactive command line interface](./cli)
-* [With custom automated analyses using the Query API](./query)
+* [Using Codyze](./codyze.md)
+* [As a library for Kotlin/Java](./library.md)
+* [With custom automated analyses using the Query API](./query.md)
+* [Via neo4j](./neo4j.md)
 
-In all these cases, the [Shortcuts](./shortcuts) provide you a convenient way to
+
+In the first three cases, the [Shortcuts](./shortcuts) provide you a convenient way to
 quickly explore some of the most relevant information.

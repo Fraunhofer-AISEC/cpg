@@ -25,18 +25,15 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.AST
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 class EnumDeclaration : RecordDeclaration() {
     @Relationship(value = "ENTRIES", direction = Relationship.Direction.OUTGOING)
-    @AST
-    var entryEdges: MutableList<PropertyEdge<EnumConstantDeclaration>> = ArrayList()
-
-    var entries by PropertyEdgeDelegate(EnumDeclaration::entryEdges)
+    var entryEdges = astEdgesOf<EnumConstantDeclaration>()
+    var entries by unwrapping(EnumDeclaration::entryEdges)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

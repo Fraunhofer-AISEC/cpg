@@ -42,13 +42,13 @@ interface GoStandardLibrary : Library {
     }
 
     /**
-     * This class represents the Go go/token package and contains classes representing structs in
+     * This class represents the Go `go/token` package and contains classes representing structs in
      * this package.
      */
     class Token {}
 
     /**
-     * This class represents the Go go/parser package and contains classes representing structs in
+     * This class represents the Go `go/parser` package and contains classes representing structs in
      * this package.
      */
     object Parser {
@@ -59,17 +59,11 @@ interface GoStandardLibrary : Library {
 
     object Modfile {
         class File(p: Pointer? = Pointer.NULL) : GoObject(p) {
-            val module: Module
-                get() {
-                    return INSTANCE.modfileGetFileModule(this)
-                }
+            val module: Module by lazy { INSTANCE.modfileGetFileModule(this) }
         }
 
         class Module(p: Pointer? = Pointer.NULL) : GoObject(p) {
-            val mod: GoStandardLibrary.Module.Version
-                get() {
-                    return INSTANCE.modfileGetModuleMod(this)
-                }
+            val mod: GoStandardLibrary.Module.Version by lazy { INSTANCE.modfileGetModuleMod(this) }
         }
 
         fun parse(file: String, bytes: String): File {
@@ -80,10 +74,7 @@ interface GoStandardLibrary : Library {
     object Module {
 
         class Version(p: Pointer? = Pointer.NULL) : GoObject(p) {
-            val path: String
-                get() {
-                    return INSTANCE.moduleGetVersionPath(this)
-                }
+            val path: String by lazy { INSTANCE.moduleGetVersionPath(this) }
         }
     }
 
@@ -101,22 +92,15 @@ interface GoStandardLibrary : Library {
      */
     interface Ast {
         open class Node(p: Pointer? = Pointer.NULL) : GoObject(p) {
-            val pos: Int
-                get() {
-                    return INSTANCE.GetNodePos(this)
-                }
+            val pos: Int by lazy { INSTANCE.GetNodePos(this) }
 
-            val end: Int
-                get() {
-                    return INSTANCE.GetNodeEnd(this)
-                }
+            val end: Int by lazy { INSTANCE.GetNodeEnd(this) }
         }
 
         class FieldList(p: Pointer? = Pointer.NULL) : Node(p) {
-            val list: List<Field>
-                get() {
-                    return list(INSTANCE::GetNumFieldListList, INSTANCE::GetFieldListList)
-                }
+            val list: List<Field> by lazy {
+                list(INSTANCE::GetNumFieldListList, INSTANCE::GetFieldListList)
+            }
         }
 
         class Field(p: Pointer? = Pointer.NULL) : Node(p) {
@@ -149,34 +133,21 @@ interface GoStandardLibrary : Library {
         }
 
         class GenDecl(p: Pointer? = Pointer.NULL) : Decl(p) {
-            val specs: List<Spec>
-                get() {
-                    return list(INSTANCE::GetNumGenDeclSpecs, INSTANCE::GetGenDeclSpec)
-                }
+            val specs: List<Spec> by lazy {
+                list(INSTANCE::GetNumGenDeclSpecs, INSTANCE::GetGenDeclSpec)
+            }
 
-            val tok: Int
-                get() {
-                    return INSTANCE.GetGenDeclTok(this)
-                }
+            val tok: Int by lazy { INSTANCE.GetGenDeclTok(this) }
         }
 
         class FuncDecl(p: Pointer? = Pointer.NULL) : Decl(p) {
-            val recv: FieldList?
-                get() {
-                    return INSTANCE.GetFuncDeclRecv(this)
-                }
+            val recv: FieldList? by lazy { INSTANCE.GetFuncDeclRecv(this) }
 
             val type: FuncType by lazy { INSTANCE.GetFuncDeclType(this) }
 
-            val name: Ident
-                get() {
-                    return INSTANCE.GetFuncDeclName(this)
-                }
+            val name: Ident by lazy { INSTANCE.GetFuncDeclName(this) }
 
-            val body: BlockStmt?
-                get() {
-                    return INSTANCE.GetFuncDeclBody(this)
-                }
+            val body: BlockStmt? by lazy { INSTANCE.GetFuncDeclBody(this) }
         }
 
         open class Spec(p: Pointer? = Pointer.NULL) : Node(p) {
@@ -195,32 +166,17 @@ interface GoStandardLibrary : Library {
         }
 
         class TypeSpec(p: Pointer? = Pointer.NULL) : Spec(p) {
-            val name: Ident
-                get() {
-                    return INSTANCE.GetTypeSpecName(this)
-                }
+            val name: Ident by lazy { INSTANCE.GetTypeSpecName(this) }
 
-            val assign: Int
-                get() {
-                    return INSTANCE.GetTypeSpecAssign(this)
-                }
+            val assign: Int by lazy { INSTANCE.GetTypeSpecAssign(this) }
 
-            val type: Expr
-                get() {
-                    return INSTANCE.GetTypeSpecType(this)
-                }
+            val type: Expr by lazy { INSTANCE.GetTypeSpecType(this) }
         }
 
         class ImportSpec(p: Pointer? = Pointer.NULL) : Spec(p) {
-            val name: Ident?
-                get() {
-                    return INSTANCE.GetImportSpecName(this)
-                }
+            val name: Ident? by lazy { INSTANCE.GetImportSpecName(this) }
 
-            val path: BasicLit
-                get() {
-                    return INSTANCE.GetImportSpecPath(this)
-                }
+            val path: BasicLit by lazy { INSTANCE.GetImportSpecPath(this) }
         }
 
         class ValueSpec(p: Pointer? = Pointer.NULL) : Spec(p) {
@@ -228,10 +184,7 @@ interface GoStandardLibrary : Library {
                 list(INSTANCE::GetNumValueSpecNames, INSTANCE::GetValueSpecName)
             }
 
-            val type: Expr?
-                get() {
-                    return INSTANCE.GetValueSpecType(this)
-                }
+            val type: Expr? by lazy { INSTANCE.GetValueSpecType(this) }
 
             val values: List<Expr> by lazy {
                 list(INSTANCE::GetNumValueSpecValues, INSTANCE::GetValueSpecValue)
@@ -280,35 +233,20 @@ interface GoStandardLibrary : Library {
                 FLOAT(6),
                 IMAG(7),
                 CHAR(8),
-                STRING(9)
+                STRING(9),
             }
 
-            val value: String
-                get() {
-                    return INSTANCE.GetBasicLitValue(this)
-                }
+            val value: String by lazy { INSTANCE.GetBasicLitValue(this) }
 
-            val kind: Kind
-                get() {
-                    return Kind.entries.first { it.i == INSTANCE.GetBasicLitKind(this) }
-                }
+            val kind: Kind by lazy { Kind.entries.first { it.i == INSTANCE.GetBasicLitKind(this) } }
         }
 
         class BinaryExpr(p: Pointer? = Pointer.NULL) : Expr(p) {
-            val x: Expr
-                get() {
-                    return INSTANCE.GetBinaryExprX(this)
-                }
+            val x: Expr by lazy { INSTANCE.GetBinaryExprX(this) }
 
-            val opString: String
-                get() {
-                    return INSTANCE.GetBinaryExprOpString(this)
-                }
+            val opString: String by lazy { INSTANCE.GetBinaryExprOpString(this) }
 
-            val y: Expr
-                get() {
-                    return INSTANCE.GetBinaryExprY(this)
-                }
+            val y: Expr by lazy { INSTANCE.GetBinaryExprY(this) }
         }
 
         class CallExpr(p: Pointer? = Pointer.NULL) : Expr(p) {
@@ -316,41 +254,25 @@ interface GoStandardLibrary : Library {
                 list(INSTANCE::GetNumCallExprArgs, INSTANCE::GetCallExprArg)
             }
 
-            val `fun`: Expr
-                get() {
-                    return INSTANCE.GetCallExprFun(this)
-                }
+            val `fun`: Expr by lazy { INSTANCE.GetCallExprFun(this) }
         }
 
         class CompositeLit(p: Pointer? = Pointer.NULL) : Expr(p) {
-            val type: Expr?
-                get() {
-                    return INSTANCE.GetCompositeLitType(this)
-                }
+            val type: Expr? by lazy { INSTANCE.GetCompositeLitType(this) }
 
-            val elts: List<Expr>
-                get() {
-                    return list(INSTANCE::GetNumCompositeLitElts, INSTANCE::GetCompositeLitElt)
-                }
+            val elts: List<Expr> by lazy {
+                list(INSTANCE::GetNumCompositeLitElts, INSTANCE::GetCompositeLitElt)
+            }
         }
 
         class KeyValueExpr(p: Pointer? = Pointer.NULL) : Expr(p) {
-            val key: Expr
-                get() {
-                    return INSTANCE.GetKeyValueExprKey(this)
-                }
+            val key: Expr by lazy { INSTANCE.GetKeyValueExprKey(this) }
 
-            val value: Expr
-                get() {
-                    return INSTANCE.GetKeyValueExprValue(this)
-                }
+            val value: Expr by lazy { INSTANCE.GetKeyValueExprValue(this) }
         }
 
         class ParenExpr(p: Pointer? = Pointer.NULL) : Expr(p) {
-            val x: Expr
-                get() {
-                    return INSTANCE.GetParenExprX(this)
-                }
+            val x: Expr by lazy { INSTANCE.GetParenExprX(this) }
         }
 
         class FuncLit(p: Pointer? = Pointer.NULL) : Expr(p) {
@@ -364,15 +286,9 @@ interface GoStandardLibrary : Library {
         }
 
         class Ident(p: Pointer? = Pointer.NULL) : Expr(p) {
-            val isUnexported: Boolean
-                get() {
-                    return name.isNotEmpty() && name[0].isLowerCase()
-                }
+            val isUnexported: Boolean by lazy { name.isNotEmpty() && name[0].isLowerCase() }
 
-            val name: String
-                get() {
-                    return INSTANCE.GetIdentName(this)
-                }
+            val name: String by lazy { INSTANCE.GetIdentName(this) }
 
             override fun toString(): String {
                 return name
@@ -380,159 +296,83 @@ interface GoStandardLibrary : Library {
         }
 
         class IndexExpr(p: Pointer? = Pointer.NULL) : Expr(p) {
-            val x: Expr
-                get() {
-                    return INSTANCE.GetIndexExprX(this)
-                }
+            val x: Expr by lazy { INSTANCE.GetIndexExprX(this) }
 
-            val index: Expr
-                get() {
-                    return INSTANCE.GetIndexExprIndex(this)
-                }
+            val index: Expr by lazy { INSTANCE.GetIndexExprIndex(this) }
         }
 
         class IndexListExpr(p: Pointer? = Pointer.NULL) : Expr(p) {
-            val x: Expr
-                get() {
-                    return INSTANCE.GetIndexListExprX(this)
-                }
+            val x: Expr by lazy { INSTANCE.GetIndexListExprX(this) }
 
-            val indices: List<Expr>
-                get() {
-                    return list(
-                        INSTANCE::GetNumIndexListExprIndices,
-                        INSTANCE::GetIndexListExprIndex
-                    )
-                }
+            val indices: List<Expr> by lazy {
+                list(INSTANCE::GetNumIndexListExprIndices, INSTANCE::GetIndexListExprIndex)
+            }
         }
 
         class SelectorExpr(p: Pointer? = Pointer.NULL) : Expr(p) {
-            val x: Expr
-                get() {
-                    return INSTANCE.GetSelectorExprX(this)
-                }
+            val x: Expr by lazy { INSTANCE.GetSelectorExprX(this) }
 
-            val sel: Ident
-                get() {
-                    return INSTANCE.GetSelectorExprSel(this)
-                }
+            val sel: Ident by lazy { INSTANCE.GetSelectorExprSel(this) }
         }
 
         class StarExpr(p: Pointer? = Pointer.NULL) : Expr(p) {
-            val x: Expr
-                get() {
-                    return INSTANCE.GetStarExprX(this)
-                }
+            val x: Expr by lazy { INSTANCE.GetStarExprX(this) }
         }
 
         class SliceExpr(p: Pointer? = Pointer.NULL) : Expr(p) {
-            val x: Expr
-                get() {
-                    return INSTANCE.GetSliceExprX(this)
-                }
+            val x: Expr by lazy { INSTANCE.GetSliceExprX(this) }
 
-            val low: Expr?
-                get() {
-                    return INSTANCE.GetSliceExprLow(this)
-                }
+            val low: Expr? by lazy { INSTANCE.GetSliceExprLow(this) }
 
-            val high: Expr?
-                get() {
-                    return INSTANCE.GetSliceExprHigh(this)
-                }
+            val high: Expr? by lazy { INSTANCE.GetSliceExprHigh(this) }
 
-            val max: Expr?
-                get() {
-                    return INSTANCE.GetSliceExprMax(this)
-                }
+            val max: Expr? by lazy { INSTANCE.GetSliceExprMax(this) }
         }
 
         class TypeAssertExpr(p: Pointer? = Pointer.NULL) : Expr(p) {
-            val x: Expr
-                get() {
-                    return INSTANCE.GetTypeAssertExprX(this)
-                }
+            val x: Expr by lazy { INSTANCE.GetTypeAssertExprX(this) }
 
-            val type: Expr?
-                get() {
-                    return INSTANCE.GetTypeAssertExprType(this)
-                }
+            val type: Expr? by lazy { INSTANCE.GetTypeAssertExprType(this) }
         }
 
         class UnaryExpr(p: Pointer? = Pointer.NULL) : Expr(p) {
-            val opString: String
-                get() {
-                    return INSTANCE.GetUnaryExprOpString(this)
-                }
+            val opString: String by lazy { INSTANCE.GetUnaryExprOpString(this) }
 
-            val x: Expr
-                get() {
-                    return INSTANCE.GetUnaryExprX(this)
-                }
+            val x: Expr by lazy { INSTANCE.GetUnaryExprX(this) }
         }
 
         class ArrayType(p: Pointer? = Pointer.NULL) : Expr(p) {
-            val elt: Expr
-                get() {
-                    return INSTANCE.GetArrayTypeElt(this)
-                }
+            val elt: Expr by lazy { INSTANCE.GetArrayTypeElt(this) }
         }
 
         class ChanType(p: Pointer? = Pointer.NULL) : Expr(p) {
-            val value: Expr
-                get() {
-                    return INSTANCE.GetChanTypeValue(this)
-                }
+            val value: Expr by lazy { INSTANCE.GetChanTypeValue(this) }
         }
 
         class InterfaceType(p: Pointer? = Pointer.NULL) : Expr(p) {
-            val methods: FieldList
-                get() {
-                    return INSTANCE.GetInterfaceTypeMethods(this)
-                }
+            val methods: FieldList by lazy { INSTANCE.GetInterfaceTypeMethods(this) }
 
-            val incomplete: Boolean
-                get() {
-                    return INSTANCE.GetInterfaceTypeIncomplete(this)
-                }
+            val incomplete: Boolean by lazy { INSTANCE.GetInterfaceTypeIncomplete(this) }
         }
 
         class FuncType(p: Pointer? = Pointer.NULL) : Expr(p) {
-            val typeParams: FieldList?
-                get() {
-                    return INSTANCE.GetFuncTypeTypeParams(this)
-                }
+            val typeParams: FieldList? by lazy { INSTANCE.GetFuncTypeTypeParams(this) }
 
-            val params: FieldList
-                get() {
-                    return INSTANCE.GetFuncTypeParams(this)
-                }
+            val params: FieldList by lazy { INSTANCE.GetFuncTypeParams(this) }
 
             val results: FieldList? by lazy { INSTANCE.GetFuncTypeResults(this) }
         }
 
         class MapType(p: Pointer? = Pointer.NULL) : Expr(p) {
-            val key: Expr
-                get() {
-                    return INSTANCE.GetMapTypeKey(this)
-                }
+            val key: Expr by lazy { INSTANCE.GetMapTypeKey(this) }
 
-            val value: Expr
-                get() {
-                    return INSTANCE.GetMapTypeValue(this)
-                }
+            val value: Expr by lazy { INSTANCE.GetMapTypeValue(this) }
         }
 
         class StructType(p: Pointer? = Pointer.NULL) : Expr(p) {
-            val fields: FieldList
-                get() {
-                    return INSTANCE.GetStructTypeFields(this)
-                }
+            val fields: FieldList by lazy { INSTANCE.GetStructTypeFields(this) }
 
-            val incomplete: Boolean
-                get() {
-                    return INSTANCE.GetStructTypeIncomplete(this)
-                }
+            val incomplete: Boolean by lazy { INSTANCE.GetStructTypeIncomplete(this) }
         }
 
         open class Stmt(p: Pointer? = Pointer.NULL) : Node(p) {
@@ -565,33 +405,22 @@ interface GoStandardLibrary : Library {
         }
 
         class AssignStmt(p: Pointer? = Pointer.NULL) : Stmt(p) {
-            val lhs: List<Expr>
-                get() {
-                    return this.list(INSTANCE::GetNumAssignStmtLhs, INSTANCE::GetAssignStmtLhs)
-                }
+            val lhs: List<Expr> by lazy {
+                this.list(INSTANCE::GetNumAssignStmtLhs, INSTANCE::GetAssignStmtLhs)
+            }
 
-            val tok: Int
-                get() {
-                    return INSTANCE.GetAssignStmtTok(this)
-                }
+            val tok: Int by lazy { INSTANCE.GetAssignStmtTok(this) }
 
-            val rhs: List<Expr>
-                get() {
-                    return this.list(INSTANCE::GetNumAssignStmtRhs, INSTANCE::GetAssignStmtRhs)
-                }
+            val rhs: List<Expr> by lazy {
+                this.list(INSTANCE::GetNumAssignStmtRhs, INSTANCE::GetAssignStmtRhs)
+            }
         }
 
         class BranchStmt(p: Pointer? = Pointer.NULL) : Stmt(p) {
 
-            val tokString: String
-                get() {
-                    return INSTANCE.GetBranchStmtTokString(this)
-                }
+            val tokString: String by lazy { INSTANCE.GetBranchStmtTokString(this) }
 
-            val label: Ident?
-                get() {
-                    return INSTANCE.GetBranchStmtLabel(this)
-                }
+            val label: Ident? by lazy { INSTANCE.GetBranchStmtLabel(this) }
         }
 
         class BlockStmt(p: Pointer? = Pointer.NULL) : Stmt(p) {
@@ -611,192 +440,98 @@ interface GoStandardLibrary : Library {
         }
 
         class DeclStmt(p: Pointer? = Pointer.NULL) : Stmt(p) {
-            val decl: Decl
-                get() {
-                    return INSTANCE.GetDeclStmtDecl(this)
-                }
+            val decl: Decl by lazy { INSTANCE.GetDeclStmtDecl(this) }
         }
 
         class DeferStmt(p: Pointer? = Pointer.NULL) : Stmt(p) {
-            val call: Expr
-                get() {
-                    return INSTANCE.GetDeferStmtCall(this)
-                }
+            val call: Expr by lazy { INSTANCE.GetDeferStmtCall(this) }
         }
 
         class ExprStmt(p: Pointer? = Pointer.NULL) : Stmt(p) {
-            val x: Expr
-                get() {
-                    return INSTANCE.GetExprStmtX(this)
-                }
+            val x: Expr by lazy { INSTANCE.GetExprStmtX(this) }
         }
 
         class IfStmt(p: Pointer? = Pointer.NULL) : Stmt(p) {
-            val init: Stmt?
-                get() {
-                    return INSTANCE.GetIfStmtInit(this)
-                }
+            val init: Stmt? by lazy { INSTANCE.GetIfStmtInit(this) }
 
-            val cond: Expr
-                get() {
-                    return INSTANCE.GetIfStmtCond(this)
-                }
+            val cond: Expr by lazy { INSTANCE.GetIfStmtCond(this) }
 
-            val body: BlockStmt
-                get() {
-                    return INSTANCE.GetIfStmtBody(this)
-                }
+            val body: BlockStmt by lazy { INSTANCE.GetIfStmtBody(this) }
 
-            val `else`: Stmt?
-                get() {
-                    return INSTANCE.GetIfStmtElse(this)
-                }
+            val `else`: Stmt? by lazy { INSTANCE.GetIfStmtElse(this) }
         }
 
         class ForStmt(p: Pointer? = Pointer.NULL) : Stmt(p) {
-            val init: Stmt?
-                get() {
-                    return INSTANCE.GetForStmtInit(this)
-                }
+            val init: Stmt? by lazy { INSTANCE.GetForStmtInit(this) }
 
-            val cond: Expr?
-                get() {
-                    return INSTANCE.GetForStmtCond(this)
-                }
+            val cond: Expr? by lazy { INSTANCE.GetForStmtCond(this) }
 
-            val post: Stmt?
-                get() {
-                    return INSTANCE.GetForStmtPost(this)
-                }
+            val post: Stmt? by lazy { INSTANCE.GetForStmtPost(this) }
 
-            val body: BlockStmt?
-                get() {
-                    return INSTANCE.GetForStmtBody(this)
-                }
+            val body: BlockStmt? by lazy { INSTANCE.GetForStmtBody(this) }
         }
 
         class GoStmt(p: Pointer? = Pointer.NULL) : Stmt(p) {
-            val call: Expr
-                get() {
-                    return INSTANCE.GetGoStmtCall(this)
-                }
+            val call: Expr by lazy { INSTANCE.GetGoStmtCall(this) }
         }
 
         class IncDecStmt(p: Pointer? = Pointer.NULL) : Stmt(p) {
-            val tokString: String
-                get() {
-                    return INSTANCE.GetIncDecStmtTokString(this)
-                }
+            val tokString: String by lazy { INSTANCE.GetIncDecStmtTokString(this) }
 
-            val x: Expr
-                get() {
-                    return INSTANCE.GetIncDecStmtX(this)
-                }
+            val x: Expr by lazy { INSTANCE.GetIncDecStmtX(this) }
         }
 
         class LabeledStmt(p: Pointer? = Pointer.NULL) : Stmt(p) {
 
-            val label: Ident
-                get() {
-                    return INSTANCE.GetLabeledStmtLabel(this)
-                }
+            val label: Ident by lazy { INSTANCE.GetLabeledStmtLabel(this) }
 
-            val stmt: Stmt
-                get() {
-                    return INSTANCE.GetLabeledStmtStmt(this)
-                }
+            val stmt: Stmt by lazy { INSTANCE.GetLabeledStmtStmt(this) }
         }
 
         class RangeStmt(p: Pointer? = Pointer.NULL) : Stmt(p) {
-            val tokString: String
-                get() {
-                    return INSTANCE.GetRangeStmtTokString(this)
-                }
+            val tokString: String by lazy { INSTANCE.GetRangeStmtTokString(this) }
 
-            val key: Expr?
-                get() {
-                    return INSTANCE.GetRangeStmtKey(this)
-                }
+            val key: Expr? by lazy { INSTANCE.GetRangeStmtKey(this) }
 
-            val value: Expr?
-                get() {
-                    return INSTANCE.GetRangeStmtValue(this)
-                }
+            val value: Expr? by lazy { INSTANCE.GetRangeStmtValue(this) }
 
-            val x: Expr
-                get() {
-                    return INSTANCE.GetRangeStmtX(this)
-                }
+            val x: Expr by lazy { INSTANCE.GetRangeStmtX(this) }
 
-            val body: BlockStmt
-                get() {
-                    return INSTANCE.GetRangeStmtBody(this)
-                }
+            val body: BlockStmt by lazy { INSTANCE.GetRangeStmtBody(this) }
         }
 
         class ReturnStmt(p: Pointer? = Pointer.NULL) : Stmt(p) {
-            val results: List<Expr>
-                get() {
-                    return list(INSTANCE::GetNumReturnStmtResults, INSTANCE::GetReturnStmtResult)
-                }
+            val results: List<Expr> by lazy {
+                list(INSTANCE::GetNumReturnStmtResults, INSTANCE::GetReturnStmtResult)
+            }
         }
 
         class SendStmt(p: Pointer? = Pointer.NULL) : Stmt(p) {
-            val chan: Expr
-                get() {
-                    return INSTANCE.GetSendStmtChan(this)
-                }
+            val chan: Expr by lazy { INSTANCE.GetSendStmtChan(this) }
 
-            val value: Expr
-                get() {
-                    return INSTANCE.GetSendStmtValue(this)
-                }
+            val value: Expr by lazy { INSTANCE.GetSendStmtValue(this) }
         }
 
         class SwitchStmt(p: Pointer? = Pointer.NULL) : Stmt(p) {
-            val init: Stmt?
-                get() {
-                    return INSTANCE.GetSwitchStmtInit(this)
-                }
+            val init: Stmt? by lazy { INSTANCE.GetSwitchStmtInit(this) }
 
-            val tag: Expr?
-                get() {
-                    return INSTANCE.GetSwitchStmtTag(this)
-                }
+            val tag: Expr? by lazy { INSTANCE.GetSwitchStmtTag(this) }
 
-            val body: BlockStmt
-                get() {
-                    return INSTANCE.GetSwitchStmtBody(this)
-                }
+            val body: BlockStmt by lazy { INSTANCE.GetSwitchStmtBody(this) }
         }
 
         class TypeSwitchStmt(p: Pointer? = Pointer.NULL) : Stmt(p) {
-            val init: Stmt?
-                get() {
-                    return INSTANCE.GetTypeSwitchStmtInit(this)
-                }
+            val init: Stmt? by lazy { INSTANCE.GetTypeSwitchStmtInit(this) }
 
-            val assign: Stmt
-                get() {
-                    return INSTANCE.GetTypeSwitchStmtAssign(this)
-                }
+            val assign: Stmt by lazy { INSTANCE.GetTypeSwitchStmtAssign(this) }
 
-            val body: BlockStmt
-                get() {
-                    return INSTANCE.GetTypeSwitchStmtBody(this)
-                }
+            val body: BlockStmt by lazy { INSTANCE.GetTypeSwitchStmtBody(this) }
         }
 
         class Position(p: Pointer? = Pointer.NULL) : GoObject(p) {
-            val line: Int
-                get() {
-                    return INSTANCE.GetPositionLine(this)
-                }
+            val line: Int by lazy { INSTANCE.GetPositionLine(this) }
 
-            val column: Int
-                get() {
-                    return INSTANCE.GetPositionColumn(this)
-                }
+            val column: Int by lazy { INSTANCE.GetPositionColumn(this) }
         }
 
         class FileSet(p: Pointer? = Pointer.NULL) : GoObject(p) {
@@ -820,25 +555,17 @@ interface GoStandardLibrary : Library {
         }
 
         class File(p: Pointer? = Pointer.NULL) : Node(p) {
-            val comments: Pointer
-                get() {
-                    return INSTANCE.GetFileComments(this)
-                }
+            val comments: Pointer by lazy { INSTANCE.GetFileComments(this) }
 
-            val imports: List<ImportSpec>
-                get() {
-                    return list(INSTANCE::GetNumFileImports, INSTANCE::GetFileImport)
-                }
+            val imports: List<ImportSpec> by lazy {
+                list(INSTANCE::GetNumFileImports, INSTANCE::GetFileImport)
+            }
 
-            val decls: List<Decl>
-                get() {
-                    return this.list(INSTANCE::GetNumFileDecls, INSTANCE::GetFileDecl)
-                }
+            val decls: List<Decl> by lazy {
+                this.list(INSTANCE::GetNumFileDecls, INSTANCE::GetFileDecl)
+            }
 
-            val name: Ident
-                get() {
-                    return INSTANCE.GetFileName(this)
-                }
+            val name: Ident by lazy { INSTANCE.GetFileName(this) }
         }
     }
 
@@ -1115,9 +842,9 @@ interface GoStandardLibrary : Library {
                     }
 
                 val stream =
-                    GoLanguageFrontend::class.java.getResourceAsStream("/libcpgo-$arch$ext")
+                    GoLanguageFrontend::class.java.getResourceAsStream("/libgoast-$arch$ext")
 
-                val tmp = java.io.File.createTempFile("libcpgo", ext)
+                val tmp = java.io.File.createTempFile("libgoast", ext)
                 tmp.deleteOnExit()
                 val fos = FileOutputStream(tmp)
                 stream?.copyTo(FileOutputStream(tmp))
@@ -1125,9 +852,8 @@ interface GoStandardLibrary : Library {
                 fos.close()
                 stream?.close()
 
-                LanguageFrontend.log.info("Loading cpgo library from ${tmp.absoluteFile}")
+                LanguageFrontend.log.info("Loading libgoast library from ${tmp.absoluteFile}")
 
-                // System.load(tmp.absolutePath)
                 Native.load(tmp.absolutePath, GoStandardLibrary::class.java)
             } catch (ex: Exception) {
                 throw TranslationException(
@@ -1141,7 +867,7 @@ interface GoStandardLibrary : Library {
 // TODO: optimize to use iterators instead
 fun <T : PointerType, S : PointerType> T.list(
     numFunc: (T) -> Int,
-    itemFunc: (T, Int) -> S
+    itemFunc: (T, Int) -> S,
 ): MutableList<S> {
     val list = mutableListOf<S>()
     for (i in 0 until numFunc(this)) {

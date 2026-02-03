@@ -30,11 +30,20 @@ import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
 import org.neo4j.ogm.typeconversion.CompositeAttributeConverter
 
+interface CpgCompositeConverter<A> : CompositeAttributeConverter<A> {
+    /**
+     * Determines to which properties and their types the received value will be split in the neo4j
+     * representation. The type is the first element in the pair and the property name is the second
+     * one.
+     */
+    val graphSchema: List<Pair<String, String>>
+}
+
 /**
- * This class converts a [PhysicalLocation] into the the necessary composite attributes when
- * persisting a node into a Neo4J graph database.
+ * This class converts a [PhysicalLocation] into the necessary composite attributes when persisting
+ * a node into a Neo4J graph database.
  */
-class LocationConverter : CompositeAttributeConverter<PhysicalLocation?> {
+class LocationConverter : CpgCompositeConverter<PhysicalLocation?> {
     override fun toGraphProperties(value: PhysicalLocation?): Map<String, *> {
         val properties: MutableMap<String, Any> = HashMap()
         if (value != null) {
@@ -46,6 +55,16 @@ class LocationConverter : CompositeAttributeConverter<PhysicalLocation?> {
         }
         return properties
     }
+
+    override val graphSchema: List<Pair<String, String>>
+        get() =
+            listOf(
+                Pair("String", ARTIFACT),
+                Pair("int", START_LINE),
+                Pair("int", END_LINE),
+                Pair("int", START_COLUMN),
+                Pair("int", END_COLUMN),
+            )
 
     override fun toEntityAttribute(value: Map<String, *>?): PhysicalLocation? {
         return try {

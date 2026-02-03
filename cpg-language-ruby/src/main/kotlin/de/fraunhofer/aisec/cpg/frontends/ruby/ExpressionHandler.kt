@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.ruby
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import org.jruby.ast.*
 import org.jruby.ast.Node
@@ -76,8 +77,13 @@ class ExpressionHandler(lang: RubyLanguageFrontend) :
         frontend.scopeManager.enterScope(func)
 
         for (arg in node.argsNode.args) {
-            val param = frontend.declarationHandler.handle(arg)
+            val param = frontend.declarationHandler.handle(arg) as? ParameterDeclaration
+            if (param == null) {
+                continue
+            }
+
             frontend.scopeManager.addDeclaration(param)
+            func.parameters += param
         }
 
         func.body = frontend.statementHandler.handle(node.bodyNode)
@@ -94,8 +100,8 @@ class ExpressionHandler(lang: RubyLanguageFrontend) :
         val assign = newAssignExpression("=")
 
         // we need to build a reference out of the assignment node itself for our LHS
-        assign.lhs = listOf(handleINameNode(node))
-        assign.rhs = listOf(this.handle(node.valueNode))
+        assign.lhs = mutableListOf(handleINameNode(node))
+        assign.rhs = mutableListOf(this.handle(node.valueNode))
 
         return assign
     }
@@ -104,8 +110,8 @@ class ExpressionHandler(lang: RubyLanguageFrontend) :
         val assign = newAssignExpression("=")
 
         // we need to build a reference out of the assignment node itself for our LHS
-        assign.lhs = listOf(handleINameNode(node))
-        assign.rhs = listOf(this.handle(node.valueNode))
+        assign.lhs = mutableListOf(handleINameNode(node))
+        assign.rhs = mutableListOf(this.handle(node.valueNode))
 
         return assign
     }

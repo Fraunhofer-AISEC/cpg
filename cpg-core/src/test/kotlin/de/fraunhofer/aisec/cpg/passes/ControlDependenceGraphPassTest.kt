@@ -25,23 +25,21 @@
  */
 package de.fraunhofer.aisec.cpg.passes
 
-import de.fraunhofer.aisec.cpg.ScopeManager
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
-import de.fraunhofer.aisec.cpg.TranslationContext
-import de.fraunhofer.aisec.cpg.TypeManager
-import de.fraunhofer.aisec.cpg.frontends.TestLanguage
-import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithColon
+import de.fraunhofer.aisec.cpg.frontends.TestLanguageWithShortCircuit
+import de.fraunhofer.aisec.cpg.frontends.testFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.assertNotNull
 
 class ControlDependenceGraphPassTest {
-
     @Test
     fun testIfStatements() {
         val result = getIfTest()
@@ -108,24 +106,83 @@ class ControlDependenceGraphPassTest {
                 "1\n" == (it.arguments.firstOrNull() as? Literal<*>)?.value
             }
         assertNotNull(printAfterLoop)
-        assertEquals(2, printAfterLoop.prevCDG.size)
+        assertEquals(1, printAfterLoop.prevCDG.size)
         assertTrue(main in printAfterLoop.prevCDG)
+        assertFalse(forEachStmt in printAfterLoop.prevCDG)
+    }
+
+    @Test
+    fun testTimeoutEffective() {
+        val result = getTimeoutTest()
+        assertTrue { result.allChildren<Node>().flatMap { it.nextCDG }.isEmpty() }
+    }
+
+    @Test
+    fun testShortCircuit() {
+        val result = getShortCircuitTest()
+        assertNotNull(result)
+
+        val barCall = result.calls("bar").singleOrNull()
+        assertNotNull(barCall)
+        val fooCall = result.calls("foo").singleOrNull()
+        assertNotNull(fooCall)
+        val bazCall = result.calls("baz").singleOrNull()
+        assertNotNull(bazCall)
+        val quuxCall = result.calls("quux").singleOrNull()
+        assertNotNull(quuxCall)
         assertTrue(
-            forEachStmt in printAfterLoop.prevCDG
-        ) // TODO: Is this really correct or should it be filtered out in the pass?
+            barCall.prevCDG.contains(fooCall),
+            "Expected 'bar()' to be control dependent on 'foo()'",
+        ) // TODO: Once we update the ShortCircuitOperator to a better EOG description, this should
+        // test against the operator instead of foo().
+
+        assertTrue(
+            quuxCall.prevCDG.contains(bazCall),
+            "Expected 'quux()' to be control dependent on 'baz()'",
+        ) // TODO: Once we update the ShortCircuitOperator to a better EOG description, this should
+        // test against the operator instead of baz().
     }
 
     companion object {
-        fun testFrontend(config: TranslationConfiguration): TestLanguageFrontend {
-            val ctx = TranslationContext(config, ScopeManager(), TypeManager())
-            val language = config.languages.filterIsInstance<TestLanguage>().first()
-            return TestLanguageFrontend(language.namespaceDelimiter, language, ctx)
-        }
+
+        /**
+         * Test language with [HasShortCircuitOperators] to test short-circuit behavior in CDG.
+         *
+         * ```c
+         * int main() {
+         *   foo() && bar();
+         *   baz() || quux();
+         *   return 1;
+         * }
+         * ```
+         */
+        fun getShortCircuitTest() =
+            testFrontend(
+                    TranslationConfiguration.builder()
+                        .registerLanguage<TestLanguageWithShortCircuit>()
+                        .defaultPasses()
+                        .registerPass<ControlDependenceGraphPass>()
+                        .build()
+                )
+                .build {
+                    translationResult {
+                        translationUnit("if.cpp") {
+                            // The main method
+                            function("main", t("int")) {
+                                body {
+                                    call("foo") logicAnd call("bar")
+                                    call("baz") logicOr call("quux")
+                                    returnStmt { literal(1, t("int")) }
+                                }
+                            }
+                        }
+                    }
+                }
 
         fun getIfTest() =
             testFrontend(
                     TranslationConfiguration.builder()
-                        .registerLanguage(TestLanguage("::"))
+                        .registerLanguage<TestLanguageWithColon>()
                         .defaultPasses()
                         .registerPass<ControlDependenceGraphPass>()
                         .build()
@@ -161,7 +218,7 @@ class ControlDependenceGraphPassTest {
         fun getForEachTest() =
             testFrontend(
                     TranslationConfiguration.builder()
-                        .registerLanguage(TestLanguage("::"))
+                        .registerLanguage<TestLanguageWithColon>()
                         .defaultPasses()
                         .registerPass<ControlDependenceGraphPass>()
                         .build()
@@ -185,6 +242,45 @@ class ControlDependenceGraphPassTest {
                                     }
                                     call("printf") { literal("1\n", t("string")) }
 
+                                    returnStmt { ref("i") }
+                                }
+                            }
+                        }
+                    }
+                }
+
+        fun getTimeoutTest() =
+            testFrontend(
+                    TranslationConfiguration.builder()
+                        .registerLanguage<TestLanguageWithColon>()
+                        .defaultPasses()
+                        .registerPass<ControlDependenceGraphPass>()
+                        .configurePass<ControlDependenceGraphPass>(
+                            ControlDependenceGraphPass.Configuration(timeout = 0L)
+                        )
+                        .build()
+                )
+                .build {
+                    translationResult {
+                        translationUnit("if.cpp") {
+                            // The main method
+                            function("main", t("int")) {
+                                body {
+                                    declare { variable("i", t("int")) { literal(0, t("int")) } }
+                                    ifStmt {
+                                        condition { ref("i") lt literal(1, t("int")) }
+                                        thenStmt {
+                                            ref("i") assign literal(1, t("int"))
+                                            call("printf") { literal("0\n", t("string")) }
+                                        }
+                                    }
+                                    call("printf") { literal("1\n", t("string")) }
+                                    ifStmt {
+                                        condition { ref("i") gt literal(0, t("int")) }
+                                        thenStmt { ref("i") assign literal(2, t("int")) }
+                                        elseStmt { ref("i") assign literal(3, t("int")) }
+                                    }
+                                    call("printf") { literal("2\n", t("string")) }
                                     returnStmt { ref("i") }
                                 }
                             }

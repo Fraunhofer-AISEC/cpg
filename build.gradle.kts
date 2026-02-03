@@ -1,3 +1,6 @@
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.MavenPublishBaseExtension
+
 /*
  * Copyright (c) 2019-2021, Fraunhofer AISEC. All rights reserved.
  *
@@ -29,8 +32,7 @@
 //
 plugins {
     id("org.jetbrains.dokka")
-    id("org.sonarqube")
-    id("io.github.gradle-nexus.publish-plugin")
+    id("test-report-aggregation")
 }
 
 // this is needed for the plugins block
@@ -39,71 +41,35 @@ repositories {
 }
 
 allprojects {
-    plugins.apply("org.jetbrains.dokka")
-
     group = "de.fraunhofer.aisec"
+}
 
-    val dokkaPlugin by configurations
-    dependencies {
-        dokkaPlugin("org.jetbrains.dokka:versioning-plugin:1.9.0")
+// Configure Dokka for the multi-module cpg project
+dokka {
+    val tag = when (val configuredVersion = project.version.toString()) {
+        "", "unspecified" -> "main"
+        else -> configuredVersion
     }
-}
+    dokkaPublications.html {
+        outputDirectory.set(layout.buildDirectory.dir("dokkaCustomMultiModuleOutput/$tag"))
 
-// configure dokka for the multi-module cpg project
-// this works together with the dokka configuration in the common-conventions plugin
-tasks.dokkaHtmlMultiModule {
-    val configuredVersion = project.version.toString()
-    if(configuredVersion.isNotEmpty() && configuredVersion != "unspecified") {
-        generateDokkaWithVersionTag(this, configuredVersion)
-    } else {
-        generateDokkaWithVersionTag(this, "main")
+        // Collect documentation from all subprojects
+        subprojects.forEach {
+            dependencies {
+                dokka(project(":${it.name}"))
+            }
+        }
     }
-}
-
-/**
- * Takes the old dokka sites in build/dokkaCustomMultiModuleOutput/versions and generates a new site.
- * This new site contains the old ones, so copying the newly generated site to the gh page is enough.
- * Currently, the mkdocs plugin expects it in docs/dokka/latest. The tags in the dropdown will be
- * named based on what we configured here.
- */
-fun generateDokkaWithVersionTag(dokkaMultiModuleTask: org.jetbrains.dokka.gradle.AbstractDokkaParentTask, tag: String) {
-    val oldOutputPath = projectDir.resolve("previousDocs")
-    val id = "org.jetbrains.dokka.versioning.VersioningPlugin"
-    val config = """{ "version": "$tag", "olderVersionsDir":"${oldOutputPath.path}" }"""
-    val mapOf = mapOf(id to config)
-
-    dokkaMultiModuleTask.outputDirectory.set(file(layout.buildDirectory.asFile.get().resolve("dokkaCustomMultiModuleOutput").resolve(tag)))
-    dokkaMultiModuleTask.pluginsMapConfiguration.set(mapOf)
-}
-
-
-//
-// Configure sonarqube for the whole cpg project
-//
-sonarqube {
-    properties {
-        property("sonar.sourceEncoding", "UTF-8")
-        // The report part is either relative to the submodules or the main module. We want to specify our
-        // aggregated jacoco report here
-        property("sonar.coverage.jacoco.xmlReportPaths", "../cpg-all/build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml,cpg-all/build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml")
-    }
-}
-
-/**
- * Publishing to maven central
- */
-nexusPublishing {
-    repositories {
-        sonatype() {
-            val mavenCentralUsername: String? by project
-            val mavenCentralPassword: String? by project
-
-            username.set(mavenCentralUsername)
-            password.set(mavenCentralPassword)
+    pluginsConfiguration {
+        versioning {
+            version.set(tag)
         }
     }
 }
 
+dependencies {
+    testReportAggregation(project(":cpg-core"))
+}
 
 //
 // Load the properties that define which frontends to include
@@ -162,3 +128,21 @@ val enableRubyFrontend: Boolean by extra {
     enableRubyFrontend.toBoolean()
 }
 project.logger.lifecycle("Ruby frontend is ${if (enableRubyFrontend) "enabled" else "disabled"}")
+
+val enableJVMFrontend: Boolean by extra {
+    val enableJVMFrontend: String? by project
+    enableJVMFrontend.toBoolean()
+}
+project.logger.lifecycle("JVM frontend is ${if (enableJVMFrontend) "enabled" else "disabled"}")
+
+val enableINIFrontend: Boolean by extra {
+    val enableINIFrontend: String? by project
+    enableINIFrontend.toBoolean()
+}
+project.logger.lifecycle("INI frontend is ${if (enableINIFrontend) "enabled" else "disabled"}")
+
+val enableMCPModule: Boolean by extra {
+    val enableMCPModule: String? by project
+    enableMCPModule.toBoolean()
+}
+project.logger.lifecycle("MCP module is ${if (enableMCPModule) "enabled" else "disabled"}")

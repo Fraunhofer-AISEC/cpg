@@ -23,26 +23,23 @@
  *                    \______/ \__|       \______/
  *
  */
-plugins {
-    id("cpg.frontend-conventions")
-}
+plugins { id("cpg.frontend-conventions") }
 
-publishing {
-    publications {
-        named<MavenPublication>("cpg-language-python") {
-            pom {
-                artifactId = "cpg-language-python"
-                name.set("Code Property Graph - Python Frontend")
-                description.set("A Python language frontend for the CPG")
-            }
-        }
+mavenPublishing {
+    pom {
+        name.set("Code Property Graph - Python Frontend")
+        description.set("A Python language frontend for the CPG")
     }
 }
 
 dependencies {
     // jep for python support
-    api(libs.jep)
+    implementation(libs.jep)
+
+    // the cpg-analysis project helps to support a dynamically invoked language
+    implementation(projects.cpgAnalysis)
 
     // to evaluate some test cases
-    testImplementation(project(":cpg-analysis"))
+    testImplementation(projects.cpgAnalysis)
+    integrationTestImplementation(projects.cpgAnalysis)
 }

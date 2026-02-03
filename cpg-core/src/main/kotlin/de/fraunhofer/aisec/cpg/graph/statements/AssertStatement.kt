@@ -25,17 +25,22 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements
 
-import de.fraunhofer.aisec.cpg.graph.AST
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import java.util.Objects
+import org.neo4j.ogm.annotation.Relationship
 
 /** Represents an assert statement */
 class AssertStatement : Statement() {
+    @Relationship(value = "CONDITION") var conditionEdge = astOptionalEdgeOf<Expression>()
     /** The condition to be evaluated. */
-    @AST var condition: Expression? = null
+    var condition by unwrapping(AssertStatement::conditionEdge)
 
-    /** The _optional_ message that is shown, if the assert is evaluated as true */
-    @AST var message: Statement? = null
+    @Relationship(value = "MESSAGE") var messageEdge = astOptionalEdgeOf<Statement>()
+    /** The *optional* message that is shown, if the assert is evaluated as true */
+    var message by unwrapping(AssertStatement::messageEdge)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -44,4 +49,9 @@ class AssertStatement : Statement() {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), condition, message)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.condition?.getStartingPrevEOG()
+            ?: (this.prevEOG + (this.message?.getStartingPrevEOG() ?: setOf()))
+    }
 }

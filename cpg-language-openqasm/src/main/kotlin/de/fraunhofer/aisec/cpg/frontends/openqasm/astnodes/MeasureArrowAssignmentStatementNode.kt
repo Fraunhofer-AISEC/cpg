@@ -30,5 +30,5 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 class MeasureArrowAssignmentStatementNode(
     location: PhysicalLocation,
     val measureExpr: MeasureExpressionNode,
-    val indexedIdentifier: IndexedIdentifierNode?
+    val indexedIdentifier: IndexedIdentifierNode?,
 ) : StatementNode(location)

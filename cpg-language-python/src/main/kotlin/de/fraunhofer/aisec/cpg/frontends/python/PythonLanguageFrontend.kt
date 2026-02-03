@@ -25,56 +25,138 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.python
 
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.types.AutoType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.helpers.CommentMatcher
 import de.fraunhofer.aisec.cpg.passes.PythonAddDeclarationsPass
-import de.fraunhofer.aisec.cpg.passes.order.RegisterExtraPass
+import de.fraunhofer.aisec.cpg.passes.configuration.RegisterExtraPass
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.net.URI
+import java.nio.file.Path
 import jep.python.PyObject
-import kotlin.io.path.Path
 import kotlin.io.path.nameWithoutExtension
+import kotlin.io.path.pathString
 import kotlin.math.min
 
+/**
+ * The [LanguageFrontend] for Python. It uses the JEP library to interact with Python's AST.
+ *
+ * It requires the Python interpreter (and the JEP library) to be installed on the system. The
+ * frontend registers two additional passes.
+ *
+ * ## Adding dynamic variable declarations
+ *
+ * The [PythonAddDeclarationsPass] adds dynamic declarations to the CPG. Python does not have the
+ * concept of a "declaration", but rather values are assigned to variables and internally variable
+ * are represented by a dictionary. This pass adds a declaration for each variable that is assigned
+ * a value (on the first assignment).
+ */
 @RegisterExtraPass(PythonAddDeclarationsPass::class)
-class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: TranslationContext) :
-    LanguageFrontend<Python.AST, Python.AST?>(language, ctx) {
-    private val lineSeparator = '\n' // TODO
+@SupportsParallelParsing(false) // https://github.com/Fraunhofer-AISEC/cpg/issues/2026
+class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonLanguageFrontend>) :
+    LanguageFrontend<Python.AST.AST, Python.AST.AST?>(ctx, language) {
+    val lineSeparator = "\n" // TODO
+    private val tokenTypeIndex = 0
     private val jep = JepSingleton // configure Jep
 
-    // val declarationHandler = DeclarationHandler(this)
-    // val specificationHandler = SpecificationHandler(this)
-    private var statementHandler = StatementHandler(this)
+    internal val declarationHandler = DeclarationHandler(this)
+    internal var statementHandler = StatementHandler(this)
     internal var expressionHandler = ExpressionHandler(this)
 
     /**
-     * fileContent contains the whole file can be stored as a class field because the CPG creates a
+     * fileContent contains the whole file ca be stored as a class field because the CPG creates a
      * new [PythonLanguageFrontend] instance per file.
      */
     private lateinit var fileContent: String
     private lateinit var uri: URI
+    private var lastLineNumber: Int = -1
+    private var lastColumnLength: Int = -1
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
         fileContent = file.readText(Charsets.UTF_8)
         uri = file.toURI()
 
+        // Extract the file length for later usage
+        val fileAsLines = fileContent.lines()
+        lastLineNumber = fileAsLines.size
+        lastColumnLength = fileAsLines.lastOrNull()?.length ?: -1
+
         jep.getInterp().use {
             it.set("content", fileContent)
             it.set("filename", file.absolutePath)
             it.exec("import ast")
+            it.exec("import sys")
             it.exec("parsed = ast.parse(content, filename=filename, type_comments=True)")
 
             val pyAST = it.getValue("parsed") as PyObject
-            return pythonASTtoCPG(pyAST, file.name)
+
+            val tud = pythonASTtoCPG(pyAST, file.toPath())
+            populateSystemInformation(config, tud)
+
+            if (config.matchCommentsToNodes) {
+                it.exec("import tokenize")
+                it.exec("reader = tokenize.open(filename).readline")
+                it.exec("tokens = tokenize.generate_tokens(reader)")
+                it.exec("tokenList = list(tokens)")
+                // This constant has to be retrieved from the system as it was changed in different
+                // Python versions
+                it.exec("commentCode = tokenize.COMMENT")
+
+                val pyCommentCode =
+                    (it.getValue("commentCode") as? Long) ?: TODO("Cannot get comment of $it")
+                val pyTokens =
+                    (it.getValue("tokenList") as? ArrayList<*>) ?: TODO("Cannot get tokens of $it")
+                addCommentsToCPG(tud, pyTokens, pyCommentCode)
+            }
+
+            return tud
+        }
+    }
+
+    private fun addCommentsToCPG(
+        tud: TranslationUnitDeclaration,
+        pyTokens: ArrayList<*>,
+        pyCommentCode: Long,
+    ) {
+        val commentMatcher = CommentMatcher()
+        for (token in pyTokens) {
+            if (token !is List<*> || token.size != 5) {
+                TODO()
+            } else {
+                if (token[tokenTypeIndex] as Long != pyCommentCode) {
+                    continue
+                } else {
+                    val start = token[2] as List<*>
+                    val end = token[3] as List<*>
+                    val startLine = start[0] as Long
+                    val startCol = start[1] as Long
+                    val endLine = end[0] as Long
+                    val endCol = end[1] as Long
+
+                    commentMatcher.matchCommentToNode(
+                        token[1] as String,
+                        Region(
+                            startLine.toInt(),
+                            (startCol + 1).toInt(),
+                            endLine.toInt(),
+                            (endCol + 1).toInt(),
+                        ),
+                        tud,
+                    )
+                }
+            }
         }
     }
 
@@ -83,38 +165,65 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
      * present, we parse it, otherwise we assume that it is dynamically typed and thus return an
      * [AutoType].
      */
-    override fun typeOf(type: Python.AST?): Type {
-        when (type) {
+    override fun typeOf(type: Python.AST.AST?): Type {
+        return when (type) {
             null -> {
-                // No type information -> we return an autoType to infer things magically
-                return autoType()
+                // No type information -> we return a dynamic type to infer things magically
+                dynamicType()
             }
-            is Python.ASTName -> {
-                // We have some kind of name here; let's quickly check, if this is a primitive type
-                val id = type.id
-                if (id in language.primitiveTypeNames) {
-                    return primitiveType(id)
-                }
 
-                // Otherwise, this could already be a fully qualified type
-                val name =
-                    if (language.namespaceDelimiter in id) {
-                        // TODO: This might create problem with nested classes
-                        parseName(id)
-                    } else {
-                        // If it is not, we want place it in the current namespace
-                        scopeManager.currentNamespace.fqn(id)
+            is Python.AST.Name -> {
+                this.typeOf(type.id)
+            }
+
+            is Python.AST.Attribute -> {
+                var type = type
+                val names = mutableListOf<String>()
+
+                // Traverse nested attributes (e.g., `modules.a.Foobar`)
+                while (type is Python.AST.Attribute) {
+                    names.add(type.attr)
+                    val typeValue = type.value
+                    if (typeValue is Python.AST.Name) {
+                        names.add(typeValue.id)
+                        break
                     }
-
-                return objectType(name)
+                    type = type.value
+                }
+                if (names.isNotEmpty()) {
+                    // As the AST provides attributes from outermost to innermost,
+                    // we need to reconstruct the Name hierarchy in reverse order.
+                    val parsedNames =
+                        names.foldRight(null as Name?) { child, parent ->
+                            Name(localName = child, parent = parent)
+                        }
+                    objectType(parsedNames ?: return unknownType())
+                } else {
+                    unknownType()
+                }
             }
+
             else -> {
                 // The AST supplied us with some kind of type information, but we could not parse
-                // it, so we
-                // need to return the unknown type.
-                return unknownType()
+                // it, so we need to return the unknown type.
+                unknownType()
             }
         }
+    }
+
+    /** Resolves a [Type] based on its string identifier. */
+    fun typeOf(typeId: String): Type {
+        // Check if the typeId contains a namespace delimiter for qualified types
+        val name =
+            if (language.namespaceDelimiter in typeId) {
+                // TODO: This might create problem with nested classes
+                parseName(typeId)
+            } else {
+                // Unqualified name, resolved by the type resolver
+                typeId
+            }
+
+        return objectType(name)
     }
 
     /**
@@ -126,16 +235,21 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
      * 2) Delete extra code at the end of the last line that is not part of the provided location
      * 3) Remove trailing whitespaces / tabs
      */
-    override fun codeOf(astNode: Python.AST): String? {
-        val location = locationOf(astNode)
-        if (location != null) {
-            var lines = getRelevantLines(location)
-            lines = removeExtraAtEnd(location, lines)
-            lines = fixStartColumn(location, lines)
+    override fun codeOf(astNode: Python.AST.AST): String? {
+        return if (astNode is Python.AST.Module) {
+            fileContent
+        } else {
+            val location = locationOf(astNode)
+            if (location != null) {
+                var lines = getRelevantLines(location)
+                lines = removeExtraAtEnd(location, lines)
+                lines = fixStartColumn(location, lines)
 
-            return lines.joinToString(separator = lineSeparator.toString())
+                lines.joinToString(separator = lineSeparator)
+            } else {
+                null
+            }
         }
-        return null
     }
 
     private fun getRelevantLines(location: PhysicalLocation): MutableList<String> {
@@ -148,21 +262,13 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 
     private fun fixStartColumn(
         location: PhysicalLocation,
-        lines: MutableList<String>
+        lines: MutableList<String>,
     ): MutableList<String> {
         for (idx in lines.indices) {
-            val prefixLength = min(location.region.startColumn, lines[idx].length)
+            // -1 to equalize for +1 in sarif
+            val prefixLength = min(location.region.startColumn - 1, lines[idx].length)
             if (idx == 0) {
                 lines[idx] = lines[idx].substring(prefixLength)
-            } else {
-
-                for (j in 0..prefixLength - 1) {
-                    if (lines[idx][0] == ' ' || lines[idx][0] == '\t') {
-                        lines[idx] = lines[idx].substring(1)
-                    } else {
-                        break
-                    }
-                }
             }
         }
         return lines
@@ -170,61 +276,196 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
 
     private fun removeExtraAtEnd(
         location: PhysicalLocation,
-        lines: MutableList<String>
+        lines: MutableList<String>,
     ): MutableList<String> {
         val lastLineIdx = lines.lastIndex
         val lastLineLength = lines[lastLineIdx].length
         val locationEndColumn = location.region.endColumn
-        val toRemove = lastLineLength - locationEndColumn
+        val toRemove = lastLineLength - locationEndColumn + 1
         if (toRemove > 0) {
             lines[lastLineIdx] = lines[lastLineIdx].dropLast(toRemove)
         }
         return lines
     }
 
-    override fun locationOf(astNode: Python.AST): PhysicalLocation? {
-        return if (astNode is Python.WithPythonLocation) {
+    /**
+     * The [PhysicalLocation] of our [astNode] node. We default to `-1` for line/column numbers in
+     * case no location information is available.
+     */
+    override fun locationOf(astNode: Python.AST.AST): PhysicalLocation? {
+        return if (astNode is Python.AST.WithLocation) {
             PhysicalLocation(
                 uri,
                 Region(
-                    startLine = astNode.lineno,
-                    endLine = astNode.end_lineno,
-                    startColumn = astNode.col_offset,
-                    endColumn = astNode.end_col_offset,
-                )
+                    startLine = astNode.lineno ?: -1,
+                    endLine = astNode.end_lineno ?: -1,
+                    startColumn = astNode.col_offset?.plus(1) ?: -1,
+                    endColumn = astNode.end_col_offset?.plus(1) ?: -1,
+                ),
             )
         } else {
             null
         }
     }
 
-    override fun setComment(node: Node, astNode: Python.AST) {
+    override fun setComment(node: Node, astNode: Python.AST.AST) {
         // will be invoked by native function
     }
 
-    private fun pythonASTtoCPG(pyAST: PyObject, path: String): TranslationUnitDeclaration {
-        val pythonASTModule =
-            fromPython(pyAST) as? Python.ASTModule
-                ?: TODO() // could be one of ast.{Module,Interactive,Expression,FunctionType}
+    private fun pythonASTtoCPG(pyAST: PyObject, path: Path): TranslationUnitDeclaration {
+        val topLevel = ctx.currentComponent?.topLevel() ?: path.parent.toFile()
 
-        val tud = newTranslationUnitDeclaration(path, rawNode = pythonASTModule)
+        val pythonASTModule =
+            fromPython(pyAST) as? Python.AST.Module
+                ?: TODO(
+                    "Python ast of type ${fromPython(pyAST).javaClass} is not supported yet"
+                ) // could be one of ast.{Module,Interactive,Expression,FunctionType}
+
+        val tud =
+            newTranslationUnitDeclaration(path.toString(), rawNode = pythonASTModule).apply {
+                this.location =
+                    PhysicalLocation(
+                        uri = uri,
+                        region =
+                            Region(
+                                startLine = 1,
+                                startColumn = 1,
+                                endLine = lastLineNumber,
+                                endColumn = lastColumnLength,
+                            ),
+                    )
+            }
         scopeManager.resetToGlobal(tud)
 
-        val nsdName = Path(path).nameWithoutExtension
-        val nsd = newNamespaceDeclaration(nsdName, rawNode = pythonASTModule)
-        tud.addDeclaration(nsd)
+        // We need to resolve the path relative to the top level to get the full module identifier
+        // with packages. Note: in reality, only directories that have __init__.py file present are
+        // actually packages, but we skip this for now. Since we are dealing with potentially
+        // relative paths, we need to canonicalize both paths.
+        val relative =
+            path.toFile().canonicalFile.relativeToOrNull(topLevel.canonicalFile)?.toPath()
+        val module = path.nameWithoutExtension
+        val modulePaths = (relative?.parent?.pathString?.split("/") ?: listOf()) + module
 
-        scopeManager.enterScope(nsd)
-        for (stmt in pythonASTModule.body) {
-            nsd.statements += statementHandler.handle(stmt)
+        val lastNamespace =
+            modulePaths.fold(null) { previous: NamespaceDeclaration?, path ->
+                val fqn = previous?.name.fqn(path)
+
+                // The __init__ module is very special in Python. The symbols that are declared by
+                // __init__.py are available directly under the path of the package (not module) it
+                // lies in. For example, if the contents of the file foo/bar/__init__.py are
+                // available in the module foo.bar (under the assumption that both foo and bar are
+                // packages). We therefore do not want to create an additional __init__ namespace.
+                // However, in reality, the symbols are actually available in foo.bar as well as in
+                // foo.bar.__init__, although the latter is practically not used, and therefore we
+                // do not support it because major workarounds would be needed.
+                if (path == PythonLanguage.IDENTIFIER_INIT) {
+                    previous
+                } else {
+                    val nsd = newNamespaceDeclaration(fqn, rawNode = pythonASTModule)
+                    nsd.path = relative?.parent?.pathString + "/" + module
+                    scopeManager.addDeclaration(nsd)
+
+                    // Add the namespace to the parent namespace -- or the translation unit, if it
+                    // is the top one
+                    val holder = previous ?: tud
+                    holder.addDeclaration(nsd)
+
+                    scopeManager.enterScope(nsd)
+                    nsd
+                }
+            }
+
+        // THe parsed body is added to the identified namespace it belongs to, or in case such a
+        // namespace does not exist,
+        // e.g. __init__ at root level, the results of the translation are added to the translation
+        // unit.
+        (lastNamespace ?: tud).let {
+            for (stmt in pythonASTModule.body) {
+                when (stmt) {
+                    // In order to be as compatible as possible with existing languages, we try to
+                    // add declarations directly to the class
+                    is Python.AST.Def -> {
+                        val decl = declarationHandler.handle(stmt)
+                        scopeManager.addDeclaration(decl)
+                        it.addDeclaration(decl)
+                    }
+                    // All other statements are added to the (static) statements block of the
+                    // namespace.
+                    else -> it.statements += statementHandler.handle(stmt)
+                }
+            }
         }
-        scopeManager.leaveScope(nsd)
 
-        scopeManager.addDeclaration(nsd)
+        // Leave scopes in reverse order
+        tud.allChildren<NamespaceDeclaration>().reversed().forEach { scopeManager.leaveScope(it) }
 
         return tud
     }
+
+    fun operatorToString(op: Python.AST.BaseOperator) =
+        when (op) {
+            is Python.AST.Add -> "+"
+            is Python.AST.Sub -> "-"
+            is Python.AST.Mult -> "*"
+            is Python.AST.MatMult -> "*"
+            is Python.AST.Div -> "/"
+            is Python.AST.Mod -> "%"
+            is Python.AST.Pow -> "**"
+            is Python.AST.LShift -> "<<"
+            is Python.AST.RShift -> ">>"
+            is Python.AST.BitOr -> "|"
+            is Python.AST.BitXor -> "^"
+            is Python.AST.BitAnd -> "&"
+            is Python.AST.FloorDiv -> "//"
+        }
+
+    fun operatorUnaryToString(op: Python.AST.BaseUnaryOp) =
+        when (op) {
+            is Python.AST.Invert -> "~"
+            is Python.AST.Not -> "not"
+            is Python.AST.UAdd -> "+"
+            is Python.AST.USub -> "-"
+        }
 }
+
+/**
+ * Returns the version info from the [TranslationConfiguration] as [VersionInfo] or `null` if it was
+ * not specified.
+ */
+val TranslationConfiguration.versionInfo: VersionInfo?
+    get() {
+        // We need to populate the version info "in-order", to ensure that we do not
+        // set the micro version if minor and major are not set, i.e., there must not be a
+        // "gap" in the granularity of version numbers
+        return this.symbols["PYTHON_VERSION_MAJOR"]?.toLong()?.let { major ->
+            val minor = this.symbols["PYTHON_VERSION_MINOR"]?.toLong()
+            val micro = if (minor != null) this.symbols["PYTHON_VERSION_MICRO"]?.toLong() else null
+            VersionInfo(major, minor, micro)
+        }
+    }
+
+/**
+ * Populate system information from defined symbols that represent our environment. We add it as an
+ * overlay node to our [TranslationUnitDeclaration].
+ */
+fun populateSystemInformation(
+    config: TranslationConfiguration,
+    tu: TranslationUnitDeclaration,
+): SystemInformation {
+    val sysInfo =
+        SystemInformation(
+            platform = config.symbols["PYTHON_PLATFORM"],
+            versionInfo = config.versionInfo,
+        )
+    sysInfo.underlyingNode = tu
+    return sysInfo
+}
+
+/** Returns the system information overlay node from the [TranslationUnitDeclaration]. */
+val TranslationUnitDeclaration.sysInfo: SystemInformation?
+    get() {
+        return this.overlays.firstOrNull { it is SystemInformation } as? SystemInformation
+    }
 
 /**
  * This function maps Python's `ast` objects to out internal [Python] representation.
@@ -232,137 +473,142 @@ class PythonLanguageFrontend(language: Language<PythonLanguageFrontend>, ctx: Tr
  * @param pyObject the Python object
  * @return our Kotlin view of the Python `ast` object
  */
-fun fromPython(pyObject: Any?): Python.AST {
+fun fromPython(pyObject: Any?): Python.BaseObject {
     if (pyObject !is PyObject) {
         TODO("Expected a PyObject")
     } else {
+        var objectname =
+            pyObject.getAttr("__class__").toString().substringAfter("'").substringBeforeLast("'")
+        objectname = if (objectname.startsWith("_")) objectname.substringAfter("_") else objectname
+        return when (objectname) {
+            "ast.Module" -> Python.AST.Module(pyObject)
 
-        return when (pyObject.getAttr("__class__").toString()) {
-            "<class 'ast.Module'>" -> Python.ASTModule(pyObject)
-
-            // statements
-            "<class 'ast.FunctionDef'>" -> Python.ASTFunctionDef(pyObject)
-            "<class 'ast.AsyncFunctionDef'>" -> Python.ASTAsyncFunctionDef(pyObject)
-            "<class 'ast.ClassDef'>" -> Python.ASTClassDef(pyObject)
-            "<class 'ast.Return'>" -> Python.ASTReturn(pyObject)
-            "<class 'ast.Delete'>" -> Python.ASTDelete(pyObject)
-            "<class 'ast.Assign'>" -> Python.ASTAssign(pyObject)
-            "<class 'ast.AugAssign'>" -> Python.ASTAugAssign(pyObject)
-            "<class 'ast.AnnAssign'>" -> Python.ASTAnnAssign(pyObject)
-            "<class 'ast.For'>" -> Python.ASTFor(pyObject)
-            "<class 'ast.AsyncFor'>" -> Python.ASTAsyncFor(pyObject)
-            "<class 'ast.While'>" -> Python.ASTWhile(pyObject)
-            "<class 'ast.If'>" -> Python.ASTIf(pyObject)
-            "<class 'ast.With'>" -> Python.ASTWith(pyObject)
-            "<class 'ast.AsyncWith'>" -> Python.ASTAsyncWith(pyObject)
-            "<class 'ast.Match'>" -> Python.ASTMatch(pyObject)
-            "<class 'ast.Raise'>" -> Python.ASTRaise(pyObject)
-            "<class 'ast.Try'>" -> Python.ASTTry(pyObject)
-            "<class 'ast.TryStar'>" -> Python.ASTTryStar(pyObject)
-            "<class 'ast.Assert'>" -> Python.ASTAssert(pyObject)
-            "<class 'ast.Import'>" -> Python.ASTImport(pyObject)
-            "<class 'ast.ImportFrom'>" -> Python.ASTImportFrom(pyObject)
-            "<class 'ast.Global'>" -> Python.ASTGlobal(pyObject)
-            "<class 'ast.Nonlocal'>" -> Python.ASTNonlocal(pyObject)
-            "<class 'ast.Expr'>" -> Python.ASTExpr(pyObject)
-            "<class 'ast.Pass'>" -> Python.ASTPass(pyObject)
-            "<class 'ast.Break'>" -> Python.ASTBreak(pyObject)
-            "<class 'ast.Continue'>" -> Python.ASTContinue(pyObject)
+            // `ast.stmt`
+            "ast.FunctionDef" -> Python.AST.FunctionDef(pyObject)
+            "ast.AsyncFunctionDef" -> Python.AST.AsyncFunctionDef(pyObject)
+            "ast.ClassDef" -> Python.AST.ClassDef(pyObject)
+            "ast.Return" -> Python.AST.Return(pyObject)
+            "ast.Delete" -> Python.AST.Delete(pyObject)
+            "ast.Assign" -> Python.AST.Assign(pyObject)
+            "ast.AugAssign" -> Python.AST.AugAssign(pyObject)
+            "ast.AnnAssign" -> Python.AST.AnnAssign(pyObject)
+            "ast.For" -> Python.AST.For(pyObject)
+            "ast.AsyncFor" -> Python.AST.AsyncFor(pyObject)
+            "ast.While" -> Python.AST.While(pyObject)
+            "ast.If" -> Python.AST.If(pyObject)
+            "ast.With" -> Python.AST.With(pyObject)
+            "ast.AsyncWith" -> Python.AST.AsyncWith(pyObject)
+            "ast.Match" -> Python.AST.Match(pyObject)
+            "ast.Raise" -> Python.AST.Raise(pyObject)
+            "ast.Try" -> Python.AST.Try(pyObject)
+            "ast.TryStar" -> Python.AST.TryStar(pyObject)
+            "ast.Assert" -> Python.AST.Assert(pyObject)
+            "ast.Import" -> Python.AST.Import(pyObject)
+            "ast.ImportFrom" -> Python.AST.ImportFrom(pyObject)
+            "ast.Global" -> Python.AST.Global(pyObject)
+            "ast.Nonlocal" -> Python.AST.Nonlocal(pyObject)
+            "ast.Expr" -> Python.AST.Expr(pyObject)
+            "ast.Pass" -> Python.AST.Pass(pyObject)
+            "ast.Break" -> Python.AST.Break(pyObject)
+            "ast.Continue" -> Python.AST.Continue(pyObject)
 
             // `ast.expr`
-            "<class 'ast.BoolOp'>" -> Python.ASTBoolOp(pyObject)
-            "<class 'ast.NamedExpr'>" -> Python.ASTNamedExpr(pyObject)
-            "<class 'ast.BinOp'>" -> Python.ASTBinOp(pyObject)
-            "<class 'ast.UnaryOp'>" -> Python.ASTUnaryOp(pyObject)
-            "<class 'ast.Lambda'>" -> Python.ASTLambda(pyObject)
-            "<class 'ast.IfExp'>" -> Python.ASTIfExp(pyObject)
-            "<class 'ast.Dict'>" -> Python.ASTDict(pyObject)
-            "<class 'ast.Set'>" -> Python.ASTSet(pyObject)
-            "<class 'ast.ListComp'>" -> Python.ASTListComp(pyObject)
-            "<class 'ast.SetComp'>" -> Python.ASTSetComp(pyObject)
-            "<class 'ast.DictComp'>" -> Python.ASTDictComp(pyObject)
-            "<class 'ast.GeneratorExp'>" -> Python.ASTGeneratorExp(pyObject)
-            "<class 'ast.Await'>" -> Python.ASTAwait(pyObject)
-            "<class 'ast.Yield'>" -> Python.ASTYield(pyObject)
-            "<class 'ast.YieldFrom'>" -> Python.ASTYieldFrom(pyObject)
-            "<class 'ast.Compare'>" -> Python.ASTCompare(pyObject)
-            "<class 'ast.Call'>" -> Python.ASTCall(pyObject)
-            "<class 'ast.FormattedValue'>" -> Python.ASTFormattedValue(pyObject)
-            "<class 'ast.JoinedStr'>" -> Python.ASTJoinedStr(pyObject)
-            "<class 'ast.Constant'>" -> Python.ASTConstant(pyObject)
-            "<class 'ast.Attribute'>" -> Python.ASTAttribute(pyObject)
-            "<class 'ast.Subscript'>" -> Python.ASTSubscript(pyObject)
-            "<class 'ast.Starred'>" -> Python.ASTStarred(pyObject)
-            "<class 'ast.Name'>" -> Python.ASTName(pyObject)
-            "<class 'ast.List'>" -> Python.ASTList(pyObject)
-            "<class 'ast.Tuple'>" -> Python.ASTTuple(pyObject)
-            "<class 'ast.Slice'>" -> Python.ASTSlice(pyObject)
+            "ast.BoolOp" -> Python.AST.BoolOp(pyObject)
+            "ast.NamedExpr" -> Python.AST.NamedExpr(pyObject)
+            "ast.BinOp" -> Python.AST.BinOp(pyObject)
+            "ast.UnaryOp" -> Python.AST.UnaryOp(pyObject)
+            "ast.Lambda" -> Python.AST.Lambda(pyObject)
+            "ast.IfExp" -> Python.AST.IfExp(pyObject)
+            "ast.Dict" -> Python.AST.Dict(pyObject)
+            "ast.Set" -> Python.AST.Set(pyObject)
+            "ast.ListComp" -> Python.AST.ListComp(pyObject)
+            "ast.SetComp" -> Python.AST.SetComp(pyObject)
+            "ast.DictComp" -> Python.AST.DictComp(pyObject)
+            "ast.GeneratorExp" -> Python.AST.GeneratorExp(pyObject)
+            "ast.Await" -> Python.AST.Await(pyObject)
+            "ast.Yield" -> Python.AST.Yield(pyObject)
+            "ast.YieldFrom" -> Python.AST.YieldFrom(pyObject)
+            "ast.Compare" -> Python.AST.Compare(pyObject)
+            "ast.Call" -> Python.AST.Call(pyObject)
+            "ast.FormattedValue" -> Python.AST.FormattedValue(pyObject)
+            "ast.JoinedStr" -> Python.AST.JoinedStr(pyObject)
+            "ast.Constant" -> Python.AST.Constant(pyObject)
+            "ast.Attribute" -> Python.AST.Attribute(pyObject)
+            "ast.Subscript" -> Python.AST.Subscript(pyObject)
+            "ast.Starred" -> Python.AST.Starred(pyObject)
+            "ast.Name" -> Python.AST.Name(pyObject)
+            "ast.List" -> Python.AST.List(pyObject)
+            "ast.Tuple" -> Python.AST.Tuple(pyObject)
+            "ast.Slice" -> Python.AST.Slice(pyObject)
 
             // `ast.boolop`
-            "<class 'ast.And'>" -> Python.ASTAnd(pyObject)
-            "<class 'ast.Or'>" -> Python.ASTOr(pyObject)
+            "ast.And" -> Python.AST.And(pyObject)
+            "ast.Or" -> Python.AST.Or(pyObject)
 
             // `ast.cmpop`
-            "<class 'ast.Eq'>" -> Python.ASTEq(pyObject)
-            "<class 'ast.NotEq'>" -> Python.ASTNotEq(pyObject)
-            "<class 'ast.Lt'>" -> Python.ASTLt(pyObject)
-            "<class 'ast.LtE'>" -> Python.ASTLtE(pyObject)
-            "<class 'ast.Gt'>" -> Python.ASTGt(pyObject)
-            "<class 'ast.GtE'>" -> Python.ASTGtE(pyObject)
-            "<class 'ast.Is'>" -> Python.ASTIs(pyObject)
-            "<class 'ast.IsNot'>" -> Python.ASTIsNot(pyObject)
-            "<class 'ast.In'>" -> Python.ASTIn(pyObject)
-            "<class 'ast.NotInt'>" -> Python.ASTNotIn(pyObject)
+            "ast.Eq" -> Python.AST.Eq(pyObject)
+            "ast.NotEq" -> Python.AST.NotEq(pyObject)
+            "ast.Lt" -> Python.AST.Lt(pyObject)
+            "ast.LtE" -> Python.AST.LtE(pyObject)
+            "ast.Gt" -> Python.AST.Gt(pyObject)
+            "ast.GtE" -> Python.AST.GtE(pyObject)
+            "ast.Is" -> Python.AST.Is(pyObject)
+            "ast.IsNot" -> Python.AST.IsNot(pyObject)
+            "ast.In" -> Python.AST.In(pyObject)
+            "ast.NotIn" -> Python.AST.NotIn(pyObject)
 
             // `ast.expr_context`
-            "<class 'ast.Load'>" -> Python.ASTLoad(pyObject)
-            "<class 'ast.Store'>" -> Python.ASTStore(pyObject)
-            "<class 'ast.Del'>" -> Python.ASTDel(pyObject)
+            "ast.Load" -> Python.AST.Load(pyObject)
+            "ast.Store" -> Python.AST.Store(pyObject)
+            "ast.Del" -> Python.AST.Del(pyObject)
 
             // `ast.operator`
-            "<class 'ast.Add'>" -> Python.ASTAdd(pyObject)
-            "<class 'ast.Sub'>" -> Python.ASTSub(pyObject)
-            "<class 'ast.Mult'>" -> Python.ASTMult(pyObject)
-            "<class 'ast.MatMult'>" -> Python.ASTMatMult(pyObject)
-            "<class 'ast.Div'>" -> Python.ASTDiv(pyObject)
-            "<class 'ast.Mod'>" -> Python.ASTMod(pyObject)
-            "<class 'ast.Pow'>" -> Python.ASTPow(pyObject)
-            "<class 'ast.LShift'>" -> Python.ASTLShift(pyObject)
-            "<class 'ast.RShift'>" -> Python.ASTRShift(pyObject)
-            "<class 'ast.BitOr'>" -> Python.ASTBitOr(pyObject)
-            "<class 'ast.BitXor'>" -> Python.ASTBitXor(pyObject)
-            "<class 'ast.BitAnd'>" -> Python.ASTBitAnd(pyObject)
-            "<class 'ast.FloorDiv'>" -> Python.ASTFloorDiv(pyObject)
+            "ast.Add" -> Python.AST.Add(pyObject)
+            "ast.Sub" -> Python.AST.Sub(pyObject)
+            "ast.Mult" -> Python.AST.Mult(pyObject)
+            "ast.MatMult" -> Python.AST.MatMult(pyObject)
+            "ast.Div" -> Python.AST.Div(pyObject)
+            "ast.Mod" -> Python.AST.Mod(pyObject)
+            "ast.Pow" -> Python.AST.Pow(pyObject)
+            "ast.LShift" -> Python.AST.LShift(pyObject)
+            "ast.RShift" -> Python.AST.RShift(pyObject)
+            "ast.BitOr" -> Python.AST.BitOr(pyObject)
+            "ast.BitXor" -> Python.AST.BitXor(pyObject)
+            "ast.BitAnd" -> Python.AST.BitAnd(pyObject)
+            "ast.FloorDiv" -> Python.AST.FloorDiv(pyObject)
 
             // `ast.pattern`
-            "<class 'ast.MatchValue'>" -> Python.ASTMatchValue(pyObject)
-            "<class 'ast.MatchSingleton'>" -> Python.ASTMatchSingleton(pyObject)
-            "<class 'ast.MatchSequence'>" -> Python.ASTMatchSequence(pyObject)
-            "<class 'ast.MatchMapping'>" -> Python.ASTMatchMapping(pyObject)
-            "<class 'ast.MatchClass'>" -> Python.ASTMatchClass(pyObject)
-            "<class 'ast.MatchStar'>" -> Python.ASTMatchStar(pyObject)
-            "<class 'ast.MatchAs'>" -> Python.ASTMatchAs(pyObject)
-            "<class 'ast.MatchOr'>" -> Python.ASTMatchOr(pyObject)
+            "ast.MatchValue" -> Python.AST.MatchValue(pyObject)
+            "ast.MatchSingleton" -> Python.AST.MatchSingleton(pyObject)
+            "ast.MatchSequence" -> Python.AST.MatchSequence(pyObject)
+            "ast.MatchMapping" -> Python.AST.MatchMapping(pyObject)
+            "ast.MatchClass" -> Python.AST.MatchClass(pyObject)
+            "ast.MatchStar" -> Python.AST.MatchStar(pyObject)
+            "ast.MatchAs" -> Python.AST.MatchAs(pyObject)
+            "ast.MatchOr" -> Python.AST.MatchOr(pyObject)
 
             // `ast.unaryop`
-            "<class 'ast.Invert'>" -> Python.ASTInvert(pyObject)
-            "<class 'ast.Not'>" -> Python.ASTNot(pyObject)
-            "<class 'ast.UAdd'>" -> Python.ASTUAdd(pyObject)
-            "<class 'ast.USub'>" -> Python.ASTUSub(pyObject)
+            "ast.Invert" -> Python.AST.Invert(pyObject)
+            "ast.Not" -> Python.AST.Not(pyObject)
+            "ast.UAdd" -> Python.AST.UAdd(pyObject)
+            "ast.USub" -> Python.AST.USub(pyObject)
+
+            // `ast.excepthandler`
+            "ast.ExceptHandler" -> Python.AST.ExceptHandler(pyObject)
 
             // misc
-            "<class 'ast.alias'>" -> Python.ASTalias(pyObject)
-            "<class 'ast.arg'>" -> Python.ASTarg(pyObject)
-            "<class 'ast.arguments'>" -> Python.ASTarguments(pyObject)
-            "<class 'ast.comprehension'>" -> Python.ASTcomprehension(pyObject)
-            "<class 'ast.excepthandler'>" -> Python.ASTexcepthandler(pyObject)
-            "<class 'ast.keyword'>" -> Python.ASTkeyword(pyObject)
-            "<class 'ast.match_case'>" -> Python.ASTmatch_case(pyObject)
-            "<class 'ast.type_ignore'>" -> Python.ASTtype_ignore(pyObject)
-            "<class 'ast.withitem'>" -> Python.ASTwithitem(pyObject)
+            "ast.alias" -> Python.AST.alias(pyObject)
+            "ast.arg" -> Python.AST.arg(pyObject)
+            "ast.arguments" -> Python.AST.arguments(pyObject)
+            "ast.comprehension" -> Python.AST.comprehension(pyObject)
+            "ast.keyword" -> Python.AST.keyword(pyObject)
+            "ast.match_case" -> Python.AST.match_case(pyObject)
+            "ast.type_ignore" -> Python.AST.type_ignore(pyObject)
+            "ast.withitem" -> Python.AST.withitem(pyObject)
 
             // complex numbers
-            "<class 'complex'>" -> TODO()
+            "complex" -> Python.Complex(pyObject)
+            "ellipsis" -> Python.Ellipsis(pyObject)
             else -> {
                 TODO("Implement for ${pyObject.getAttr("__class__")}")
             }

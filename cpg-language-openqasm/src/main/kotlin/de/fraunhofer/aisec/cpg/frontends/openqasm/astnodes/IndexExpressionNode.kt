@@ -30,5 +30,5 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 class IndexExpressionNode(
     location: PhysicalLocation,
     val identifierNode: String,
-    val indexOperatorNode: IndexOperatorNode
+    val indexOperatorNode: IndexOperatorNode,
 ) : ExpressionNode(location)

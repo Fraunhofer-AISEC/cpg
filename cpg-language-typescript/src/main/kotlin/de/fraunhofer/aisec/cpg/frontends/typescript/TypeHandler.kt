@@ -29,15 +29,12 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.array
 import de.fraunhofer.aisec.cpg.graph.objectType
 import de.fraunhofer.aisec.cpg.graph.primitiveType
+import de.fraunhofer.aisec.cpg.graph.types.ProblemType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import de.fraunhofer.aisec.cpg.graph.unknownType
 
 class TypeHandler(frontend: TypeScriptLanguageFrontend) :
-    Handler<Type, TypeScriptNode, TypeScriptLanguageFrontend>(
-        { UnknownType.getUnknownType(frontend.language) },
-        frontend,
-    ) {
+    Handler<Type, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemType, frontend) {
 
     init {
         map.put(TypeScriptNode::class.java, ::handleNode)

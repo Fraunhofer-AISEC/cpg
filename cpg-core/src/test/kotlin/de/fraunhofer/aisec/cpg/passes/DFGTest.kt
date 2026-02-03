@@ -26,12 +26,12 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.GraphExamples
-import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.*
 
 class DFGTest {
@@ -124,23 +124,21 @@ class DFGTest {
     fun testDelayedAssignment() {
         val result = GraphExamples.getDelayedAssignmentAfterRHS()
 
-        val binaryOperatorAssignment =
-            TestUtils.findByUniqueName(result.allChildren<AssignExpression>(), "=")
+        val binaryOperatorAssignment = findByUniqueName(result.allChildren<AssignExpression>(), "=")
         assertNotNull(binaryOperatorAssignment)
 
-        val binaryOperatorAddition =
-            TestUtils.findByUniqueName(result.allChildren<BinaryOperator>(), "+")
+        val binaryOperatorAddition = findByUniqueName(result.allChildren<BinaryOperator>(), "+")
         assertNotNull(binaryOperatorAddition)
 
-        val varA = TestUtils.findByUniqueName(result.variables, "a")
+        val varA = findByUniqueName(result.variables, "a")
         assertNotNull(varA)
 
-        val varB = TestUtils.findByUniqueName(result.variables, "b")
+        val varB = findByUniqueName(result.variables, "b")
         assertNotNull(varB)
 
         val lhsA = binaryOperatorAssignment.lhs.first() as Reference
         val rhsA = binaryOperatorAddition.lhs as Reference
-        val b = TestUtils.findByUniqueName(result.refs, "b")
+        val b = findByUniqueName(result.refs, "b")
         assertNotNull(b)
 
         val literal0 = result.literals[{ it.value == 0 }]
@@ -180,10 +178,10 @@ class DFGTest {
     fun testCompoundOperatorDFG() {
         val result = GraphExamples.getCompoundOperator()
 
-        val rwCompoundOperator = TestUtils.findByUniqueName(result.allChildren(), "+=")
+        val rwCompoundOperator = findByUniqueName(result.allChildren(), "+=")
         assertNotNull(rwCompoundOperator)
 
-        val expression = TestUtils.findByUniqueName(result.refs, "i")
+        val expression = findByUniqueName(result.refs, "i")
         assertNotNull(expression)
 
         val prevDFGOperator = rwCompoundOperator.prevDFG
@@ -200,10 +198,10 @@ class DFGTest {
     fun testUnaryOperatorDFG() {
         val result = GraphExamples.getUnaryOperator()
 
-        val rwUnaryOperator = TestUtils.findByUniqueName(result.allChildren<UnaryOperator>(), "++")
+        val rwUnaryOperator = findByUniqueName(result.allChildren<UnaryOperator>(), "++")
         assertNotNull(rwUnaryOperator)
 
-        val expression = TestUtils.findByUniqueName(result.refs, "i")
+        val expression = findByUniqueName(result.refs, "i")
         assertNotNull(expression)
 
         val prevDFGOperator: Set<Node> = rwUnaryOperator.prevDFG
@@ -288,7 +286,7 @@ class DFGTest {
 
         assertEquals(2, returnFunction.prevDFG.size)
 
-        val allRealReturns = returnFunction.allChildren<ReturnStatement> { it.location != null }
+        val allRealReturns = returnFunction.allChildren<ReturnStatement> { !it.isImplicit }
         assertEquals(allRealReturns.toSet() as Set<Node>, returnFunction.prevDFG)
 
         assertEquals(1, allRealReturns[0].prevDFG.size)
@@ -394,12 +392,9 @@ class DFGTest {
         assertTrue(literal2.nextDFG.contains(a2))
         assertEquals(
             1,
-            a2.nextDFG.size
+            a2.nextDFG.size,
         ) // Outgoing DFG Edges only to the Reference in the assignment to b
-        assertEquals(
-            b.initializer!!,
-            a2.nextDFG.first(),
-        )
+        assertEquals(b.initializer!!, a2.nextDFG.first())
 
         val refersTo = a2.getRefersToAs(VariableDeclaration::class.java)
         assertNotNull(refersTo)
@@ -437,9 +432,9 @@ class DFGTest {
         assertNotNull(b)
 
         val ab = b.nextEOG[0] as Reference
-        val a10 = result.refs[{ TestUtils.compareLineFromLocationIfExists(it, true, 8) }]
-        val a11 = result.refs[{ TestUtils.compareLineFromLocationIfExists(it, true, 11) }]
-        val a12 = result.refs[{ TestUtils.compareLineFromLocationIfExists(it, true, 14) }]
+        val a10 = result.refs[{ compareLineFromLocationIfExists(it, true, 8) }]
+        val a11 = result.refs[{ compareLineFromLocationIfExists(it, true, 11) }]
+        val a12 = result.refs[{ compareLineFromLocationIfExists(it, true, 14) }]
         assertNotNull(a10)
         assertNotNull(a11)
         assertNotNull(a12)
@@ -489,10 +484,10 @@ class DFGTest {
     @Throws(Exception::class)
     fun testOutgoingDFGFromVariableDeclaration() {
         // TODO: IMHO this test is quite useless and can be merged into another one (e.g.
-        // testControlSensitiveDFGPassIfMerge).
+        //   testControlSensitiveDFGPassIfMerge).
         val result = GraphExamples.getBasicSlice()
 
-        val varA = TestUtils.findByUniqueName(result.variables, "a")
+        val varA = findByUniqueName(result.variables, "a")
         assertNotNull(varA)
         // The variable can flow to lines 19, 23, 24, 26, 31, 34 without modifications.
         assertEquals(6, varA.nextDFG.size)

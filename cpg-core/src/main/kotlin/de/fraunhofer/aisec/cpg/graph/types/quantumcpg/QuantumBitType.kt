@@ -32,5 +32,12 @@ import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 /** Instances of this class represent quantum bit types. */
 class QuantumBitType(
     typeName: CharSequence = "QuantumBit",
-    language: Language<out LanguageFrontend<*, *>>? = null,
-) : ObjectType() {}
+    language: Language<out LanguageFrontend<*, *>>,
+) :
+    ObjectType(
+        typeName = typeName,
+        generics = listOf(),
+        primitive = false,
+        mutable = false,
+        language = language,
+    )

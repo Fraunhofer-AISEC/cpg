@@ -26,9 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.DeclarationHolder
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
-import org.neo4j.ogm.annotation.Relationship
 
 /**
  * This represents a sequence of one or more declaration(s). The purpose of this node is primarily
@@ -37,30 +34,27 @@ import org.neo4j.ogm.annotation.Relationship
  * the translation unit. It should NOT end up in the final graph.
  */
 class DeclarationSequence : Declaration(), DeclarationHolder {
-    @Relationship(value = "CHILDREN", direction = Relationship.Direction.OUTGOING)
-    val childEdges: MutableList<PropertyEdge<Declaration>> = mutableListOf()
-
-    val children: List<Declaration> by PropertyEdgeDelegate(DeclarationSequence::childEdges)
+    val children = mutableListOf<Declaration>()
 
     override fun addDeclaration(declaration: Declaration) {
         if (declaration is DeclarationSequence) {
             for (declarationChild in declaration.children) {
-                addIfNotContains(childEdges, declarationChild)
+                addIfNotContains(children, declarationChild)
             }
         } else {
-            addIfNotContains(childEdges, declaration)
+            addIfNotContains(children, declaration)
         }
     }
 
-    fun asList(): List<Declaration> {
+    fun asMutableList(): MutableList<Declaration> {
         return children
     }
 
     val isSingle: Boolean
-        get() = childEdges.size == 1
+        get() = children.size == 1
 
     fun first(): Declaration {
-        return childEdges[0].end
+        return children.first()
     }
 
     operator fun plusAssign(declaration: Declaration) {

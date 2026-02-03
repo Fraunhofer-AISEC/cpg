@@ -23,28 +23,13 @@
  *                    \______/ \__|       \______/
  *
  */
-plugins {
-    id("cpg.frontend-conventions")
-}
+plugins { id("cpg.frontend-conventions") }
 
-publishing {
-    publications {
-        named<MavenPublication>("cpg-language-java") {
-            pom {
-                artifactId = "cpg-language-java"
-                name.set("Code Property Graph - Java Frontend")
-                description.set("A Java language frontend for the CPG")
-            }
-        }
+mavenPublishing {
+    pom {
+        name.set("Code Property Graph - Java Frontend")
+        description.set("A Java language frontend for the CPG")
     }
 }
 
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    kotlinOptions {
-        freeCompilerArgs = listOf("-Xcontext-receivers")
-    }
-}
-
-dependencies {
-    api(libs.javaparser)
-}
+dependencies { implementation(libs.javaparser) }

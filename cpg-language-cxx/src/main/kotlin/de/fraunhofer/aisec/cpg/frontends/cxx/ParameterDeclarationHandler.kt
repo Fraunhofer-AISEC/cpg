@@ -30,8 +30,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.newParameterDeclaration
 import java.util.function.Supplier
+import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier
 import org.eclipse.cdt.core.dom.ast.IASTParameterDeclaration
 import org.eclipse.cdt.internal.core.dom.parser.c.CASTParameterDeclaration
+import org.eclipse.cdt.internal.core.dom.parser.c.CASTSimpleDeclSpecifier
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTParameterDeclaration
 
 class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
@@ -42,17 +44,36 @@ class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
             is CPPASTParameterDeclaration -> handleParameterDeclaration(node)
             is CASTParameterDeclaration -> handleParameterDeclaration(node)
             else -> {
-                return handleNotSupported(node, node.javaClass.name)
+                handleNotSupported(node, node.javaClass.name)
             }
         }
     }
 
     private fun handleParameterDeclaration(ctx: IASTParameterDeclaration): ParameterDeclaration {
-        // Parse the type
-        val type = frontend.typeOf(ctx.declarator, ctx.declSpecifier)
+        var name = ctx.declarator.name.toString()
+        val specifier = ctx.declSpecifier
 
-        val paramVariableDeclaration =
-            newParameterDeclaration(ctx.declarator.name.toString(), type, false, rawNode = ctx)
+        // Parse the type. If we are running into the situation where the declSpecifier is
+        // "unspecified" and the name is not, then this is an unnamed parameter of an unknown type
+        // and CDT is not able to handle this correctly
+        val type =
+            if (
+                specifier is CASTSimpleDeclSpecifier &&
+                    specifier.type == IASTDeclSpecifier.sc_unspecified
+            ) {
+                name = ""
+                frontend.typeOf(ctx.declarator.name)
+            } else {
+                frontend.typeOf(ctx.declarator, ctx.declSpecifier)
+            }
+
+        val paramVariableDeclaration = newParameterDeclaration(name, type, false, rawNode = ctx)
+
+        // We cannot really model "const" as part of the type, but we can model it as part of the
+        // parameter, so we can use it later
+        if (ctx.declSpecifier.isConst) {
+            paramVariableDeclaration.modifiers += CONST
+        }
 
         // Add default values
         if (ctx.declarator.initializer != null) {

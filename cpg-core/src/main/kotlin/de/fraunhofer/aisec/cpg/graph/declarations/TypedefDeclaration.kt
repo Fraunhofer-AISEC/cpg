@@ -25,18 +25,19 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.types.UnknownType
+import de.fraunhofer.aisec.cpg.graph.unknownType
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
 
 /** Represents a type alias definition as found in C/C++: `typedef unsigned long ulong;` */
-class TypedefDeclaration : Declaration() {
+class TypedefDeclaration : Declaration() /*, DeclaresType*/, HasSecondaryTypeEdge {
     /** The already existing type that is to be aliased */
-    var type: Type = UnknownType.getUnknownType(null)
+    var type: Type = unknownType()
 
     /** The newly created alias to be defined */
-    var alias: Type = UnknownType.getUnknownType(null)
+    var alias: Type = unknownType()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -52,4 +53,10 @@ class TypedefDeclaration : Declaration() {
             .append("alias", alias)
             .toString()
     }
+
+    override val secondaryTypes: List<Type>
+        get() = listOf(alias)
+
+    /*override val declaredType: Type
+    get() = alias*/
 }

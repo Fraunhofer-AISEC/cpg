@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
-import de.fraunhofer.aisec.cpg.TestUtils
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
+import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.io.path.Path
 import kotlin.test.assertContains
@@ -40,7 +40,7 @@ class BenchmarkCXXTest {
     fun testGetBenchmarkResult() {
         val file = File("src/test/resources/cxx/foreachstmt.cpp")
         val tr =
-            TestUtils.analyze(listOf(file), file.parentFile.toPath(), true) {
+            analyze(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
 
@@ -64,7 +64,7 @@ class BenchmarkCXXTest {
     fun testPrintBenchmark() {
         val file = File("src/test/resources/cxx/foreachstmt.cpp")
         val tr =
-            TestUtils.analyze(listOf(file), file.parentFile.toPath(), true) {
+            analyze(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
 

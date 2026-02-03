@@ -25,9 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.graph.AST
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
+import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.*
+import org.neo4j.ogm.annotation.Relationship
 
 /**
  * Represents a key / value pair, often found in languages that allow associative arrays or objects,
@@ -38,19 +41,22 @@ import java.util.*
  */
 class KeyValueExpression : Expression(), ArgumentHolder {
 
+    @Relationship("KEY") var keyEdge = astEdgeOf<Expression>(ProblemExpression("missing key"))
     /**
      * The key of this pair. It is usually a literal, but some languages even allow references to
      * variables as a key.
      */
-    @AST var key: Expression? = null
+    var key by unwrapping(KeyValueExpression::keyEdge)
+
+    @Relationship("VALUE") var valueEdge = astEdgeOf<Expression>(ProblemExpression("missing value"))
 
     /** The value of this pair. It can be any expression */
-    @AST var value: Expression? = null
+    var value by unwrapping(KeyValueExpression::valueEdge)
 
     override fun addArgument(expression: Expression) {
-        if (key == null) {
+        if (key is ProblemExpression) {
             key = expression
-        } else if (value == null) {
+        } else if (value is ProblemExpression) {
             value = expression
         }
     }
@@ -67,6 +73,10 @@ class KeyValueExpression : Expression(), ArgumentHolder {
         return false
     }
 
+    override fun hasArgument(expression: Expression): Boolean {
+        return key == expression || value == expression
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is KeyValueExpression) return false
@@ -74,4 +84,8 @@ class KeyValueExpression : Expression(), ArgumentHolder {
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), key, value)
+
+    override fun getStartingPrevEOG(): Collection<Node> {
+        return this.key.getStartingPrevEOG()
+    }
 }

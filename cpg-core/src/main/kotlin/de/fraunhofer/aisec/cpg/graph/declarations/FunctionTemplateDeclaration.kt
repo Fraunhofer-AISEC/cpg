@@ -25,10 +25,9 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.edge.Properties
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
@@ -40,23 +39,11 @@ class FunctionTemplateDeclaration : TemplateDeclaration() {
      * expansion pass for each instantiation of the FunctionTemplate there will be a realization
      */
     @Relationship(value = "REALIZATION", direction = Relationship.Direction.OUTGOING)
-    private val realizationEdges: MutableList<PropertyEdge<FunctionDeclaration>> = ArrayList()
-
-    val realization: List<FunctionDeclaration> by
-        PropertyEdgeDelegate(FunctionTemplateDeclaration::realizationEdges)
+    val realizationEdges = astEdgesOf<FunctionDeclaration>()
+    val realization by unwrapping(FunctionTemplateDeclaration::realizationEdges)
 
     override val realizations: List<Declaration>
         get() = ArrayList<Declaration>(realization)
-
-    fun addRealization(realizedFunction: FunctionDeclaration) {
-        val propertyEdge = PropertyEdge(this, realizedFunction)
-        propertyEdge.addProperty(Properties.INDEX, realizationEdges.size)
-        realizationEdges.add(propertyEdge)
-    }
-
-    fun removeRealization(realizedFunction: FunctionDeclaration?) {
-        realizationEdges.removeIf { it.end == realizedFunction }
-    }
 
     override fun addDeclaration(declaration: Declaration) {
         if (declaration is TypeParameterDeclaration || declaration is ParameterDeclaration) {

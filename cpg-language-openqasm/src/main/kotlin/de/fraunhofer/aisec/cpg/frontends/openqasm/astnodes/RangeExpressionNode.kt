@@ -31,5 +31,5 @@ class RangeExpressionNode(
     location: PhysicalLocation,
     val firstExpr: ExpressionNode?,
     val secondExpr: ExpressionNode?,
-    val thirdExpr: ExpressionNode?
+    val thirdExpr: ExpressionNode?,
 ) : ExpressionNode(location)

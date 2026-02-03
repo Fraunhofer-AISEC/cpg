@@ -41,9 +41,9 @@ import de.fraunhofer.aisec.cpg.graph.types.quantumcpg.ClassicBitType
 import de.fraunhofer.aisec.cpg.graph.types.quantumcpg.QuantumBitType
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.*
-import de.fraunhofer.aisec.cpg.passes.order.DependsOn
-import de.fraunhofer.aisec.cpg.passes.order.ExecuteBefore
-import de.fraunhofer.aisec.cpg.passes.order.RequiredFrontend
+import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
+import de.fraunhofer.aisec.cpg.passes.configuration.RequiredFrontend
 import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumDFGPass
 import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumEOGPass
 
@@ -66,7 +66,7 @@ class OpenQASMPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
             newQuantumCircuit(
                 flatAST[0] as? TranslationUnitDeclaration ?: TODO(),
                 quBits.size,
-                cBits.size
+                cBits.size,
             )
         p0.additionalNodes.add(quantumCircuit)
 
@@ -163,7 +163,7 @@ class OpenQASMPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
                                 expr,
                                 quantumCircuit,
                                 expr.arguments[0],
-                                quBitRef
+                                quBitRef,
                             )
                     }
                 }
@@ -177,7 +177,7 @@ class OpenQASMPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
                                 expr,
                                 quantumCircuit,
                                 expr.arguments[0],
-                                quBitRef
+                                quBitRef,
                             )
                     }
                 }
@@ -191,7 +191,7 @@ class OpenQASMPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
                                 expr,
                                 quantumCircuit,
                                 expr.arguments[0],
-                                quBitRef
+                                quBitRef,
                             )
                     }
                 }
@@ -234,7 +234,7 @@ class OpenQASMPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
                                         quantumCircuit,
                                         it0,
                                         it1,
-                                        it2
+                                        it2,
                                     )
                                 }
                             }
@@ -259,7 +259,7 @@ class OpenQASMPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
                                 expr,
                                 quantumCircuit,
                                 newQuantumBitRef(expr, quantumCircuit, it),
-                                newClassicBitRef(expr, quantumCircuit, classicBit)
+                                newClassicBitRef(expr, quantumCircuit, classicBit),
                             )
                     }
                 }

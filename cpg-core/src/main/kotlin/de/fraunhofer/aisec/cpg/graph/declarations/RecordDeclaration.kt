@@ -25,58 +25,81 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdge.Companion.propertyEqualsList
-import de.fraunhofer.aisec.cpg.graph.edge.PropertyEdgeDelegate
+import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
+import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
+import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
+import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 import org.neo4j.ogm.annotation.Transient
 
 /** Represents a C++ union/struct/class or Java class */
-open class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder, EOGStarterHolder {
+open class RecordDeclaration :
+    Declaration(),
+    DeclarationHolder,
+    StatementHolder,
+    EOGStarterHolder,
+    DeclaresType,
+    HasSecondaryTypeEdge {
     /** The kind, i.e. struct, class, union or enum. */
     var kind: String? = null
 
+    /**
+     * The [FieldDeclaration]s that are directly contained in this record declaration's AST
+     * structure. This does not include any fields that might be declared in a base class or
+     * interface or fields that are declared outside the AST structure.
+     */
     @Relationship(value = "FIELDS", direction = Relationship.Direction.OUTGOING)
-    @AST
-    var fieldEdges: MutableList<PropertyEdge<FieldDeclaration>> = ArrayList()
+    var fieldEdges = astEdgesOf<FieldDeclaration>()
+    /** Virtual property to directly access the nodes in [fieldEdges]. */
+    var fields by unwrapping(RecordDeclaration::fieldEdges)
 
-    var fields by PropertyEdgeDelegate(RecordDeclaration::fieldEdges)
-
+    /**
+     * The [MethodDeclaration]s that are directly contained in this record declaration's AST
+     * structure. This does not include any methods that might be declared in a base class or
+     * interface or methods that are declared outside the AST structure.
+     */
     @Relationship(value = "METHODS", direction = Relationship.Direction.OUTGOING)
-    @AST
-    var methodEdges: MutableList<PropertyEdge<MethodDeclaration>> = ArrayList()
+    var methodEdges = astEdgesOf<MethodDeclaration>()
+    /** Virtual property to directly access the nodes in [methods]. */
+    var methods by unwrapping(RecordDeclaration::methodEdges)
 
-    var methods by PropertyEdgeDelegate(RecordDeclaration::methodEdges)
-
+    /**
+     * The [ConstructorDeclaration]s that are directly contained in this record declaration's AST
+     * structure. This does not include any constructors that might be declared in a base class or
+     * interface or constructors that are declared outside the AST structure.
+     */
     @Relationship(value = "CONSTRUCTORS", direction = Relationship.Direction.OUTGOING)
-    @AST
-    var constructorEdges: MutableList<PropertyEdge<ConstructorDeclaration>> = ArrayList()
+    var constructorEdges = astEdgesOf<ConstructorDeclaration>()
+    /** Virtual property to directly access the nodes in [constructors]. */
+    var constructors by unwrapping(RecordDeclaration::constructorEdges)
 
-    var constructors by PropertyEdgeDelegate(RecordDeclaration::constructorEdges)
-
+    /**
+     * The [RecordDeclaration]s that are directly contained in this record declaration's AST
+     * structure. This does not include any records that might be declared in a base class or
+     * interface or records that are declared outside the AST structure.
+     */
     @Relationship(value = "RECORDS", direction = Relationship.Direction.OUTGOING)
-    @AST
-    var recordEdges: MutableList<PropertyEdge<RecordDeclaration>> = ArrayList()
-
-    var records by PropertyEdgeDelegate(RecordDeclaration::recordEdges)
+    var recordEdges = astEdgesOf<RecordDeclaration>()
+    /** Virtual property to directly access the nodes in [recordEdges]. */
+    var records by unwrapping(RecordDeclaration::recordEdges)
 
     @Relationship(value = "TEMPLATES", direction = Relationship.Direction.OUTGOING)
-    @AST
-    var templateEdges: MutableList<PropertyEdge<TemplateDeclaration>> = ArrayList()
-
-    var templates by PropertyEdgeDelegate(RecordDeclaration::templateEdges)
+    var templateEdges = astEdgesOf<TemplateDeclaration>()
+    var templates by unwrapping(RecordDeclaration::templateEdges)
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
-    @AST
-    override var statementEdges: MutableList<PropertyEdge<Statement>> = ArrayList()
-
-    override var statements by PropertyEdgeDelegate(RecordDeclaration::statementEdges)
+    override var statementEdges = astEdgesOf<Statement>()
+    override var statements by unwrapping(RecordDeclaration::statementEdges)
 
     @Transient var superClasses: MutableList<Type> = ArrayList()
 
@@ -98,38 +121,7 @@ open class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder
 
     @Relationship var staticImports: MutableSet<ValueDeclaration> = HashSet()
 
-    fun addField(fieldDeclaration: FieldDeclaration) {
-        addIfNotContains(fieldEdges, fieldDeclaration)
-    }
-
-    fun removeField(fieldDeclaration: FieldDeclaration) {
-        fieldEdges.removeIf { it.end == fieldDeclaration }
-    }
-
-    fun addMethod(methodDeclaration: MethodDeclaration) {
-        addIfNotContains(methodEdges, methodDeclaration)
-    }
-
-    fun removeMethod(methodDeclaration: MethodDeclaration?) {
-        methodEdges.removeIf { it.end == methodDeclaration }
-    }
-
-    fun addConstructor(constructorDeclaration: ConstructorDeclaration) {
-        addIfNotContains(constructorEdges, constructorDeclaration)
-    }
-
-    fun removeConstructor(constructorDeclaration: ConstructorDeclaration?) {
-        constructorEdges.removeIf { it.end == constructorDeclaration }
-    }
-
-    fun removeRecord(recordDeclaration: RecordDeclaration) {
-        recordEdges.removeIf { it.end == recordDeclaration }
-    }
-
-    fun removeTemplate(templateDeclaration: TemplateDeclaration?) {
-        templateEdges.removeIf { it.end == templateDeclaration }
-    }
-
+    @DoNotPersist
     override val declarations: List<Declaration>
         get() {
             val list = ArrayList<Declaration>()
@@ -172,6 +164,7 @@ open class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder
             .toString()
     }
 
+    @DoNotPersist
     override val eogStarters: List<Node>
         get() {
             val list = mutableListOf<Node>()
@@ -182,6 +175,8 @@ open class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder
 
             return list
         }
+
+    override var firstBasicBlock: BasicBlock? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -218,15 +213,23 @@ open class RecordDeclaration : Declaration(), DeclarationHolder, StatementHolder
      *
      * @return the type
      */
-    fun toType(): Type {
+    fun toType(): ObjectType {
         val type = objectType(name)
         if (type is ObjectType) {
-            // as a shortcut, directly set the record declaration. This will be otherwise done
+            // As a shortcut, directly set the record declaration. This will be otherwise done
             // later by a pass, but for some frontends we need this immediately, so we set
             // this here.
             type.recordDeclaration = this
+            type.superTypes.addAll(this.superTypes)
+            return type
+        } else {
+            throw TranslationException("Cannot create type for $this, as it is not an ObjectType")
         }
-        type.superTypes.addAll(this.superTypes)
-        return type
     }
+
+    override val declaredType: Type
+        get() = toType()
+
+    override val secondaryTypes: List<Type>
+        get() = superTypes
 }

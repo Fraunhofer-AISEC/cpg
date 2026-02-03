@@ -31,5 +31,5 @@ class IfStatementNode(
     location: PhysicalLocation,
     val condition: ExpressionNode,
     val thenBody: ASTNode,
-    val elseBody: ASTNode?
+    val elseBody: ASTNode?,
 ) : StatementNode(location)

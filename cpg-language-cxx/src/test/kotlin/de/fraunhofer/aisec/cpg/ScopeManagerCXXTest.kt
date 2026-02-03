@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.cxx.CXXLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -48,18 +49,14 @@ internal class ScopeManagerTest : BaseTest() {
     @Test
     @Throws(TranslationException::class)
     fun testReplaceNode() {
-        val scopeManager = ScopeManager()
-        val frontend =
-            CXXLanguageFrontend(
-                CPPLanguage(),
-                TranslationContext(config, scopeManager, TypeManager())
-            )
+        val ctx = TranslationContext(config)
+        val frontend = CXXLanguageFrontend(ctx, CPPLanguage())
         val tu = frontend.parse(File("src/test/resources/cxx/recordstmt.cpp"))
         val methods = tu.allChildren<MethodDeclaration>().filter { it !is ConstructorDeclaration }
         assertFalse(methods.isEmpty())
 
         methods.forEach {
-            val scope = scopeManager.lookupScope(it)
+            val scope = ctx.scopeManager.lookupScope(it)
             assertSame(it, scope!!.astNode)
         }
 
@@ -70,7 +67,7 @@ internal class ScopeManagerTest : BaseTest() {
         // this is necessary, since the constructor was probably created as a function declaration
         // which later gets 'upgraded' to a constructor declaration.
         constructors.forEach {
-            val scope = scopeManager.lookupScope(it)
+            val scope = ctx.scopeManager.lookupScope(it)
             assertSame(it, scope!!.astNode)
         }
     }
