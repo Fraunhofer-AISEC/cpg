@@ -94,6 +94,11 @@ class TranslationResult(
     /** A free-for-use HashMap where passes can store whatever they want. */
     val scratch: MutableMap<String, Any> = ConcurrentHashMap()
 
+    /**
+     * A free-for-use collection of unique nodes. Nodes stored here will be exported to Neo4j, too.
+     */
+    val additionalNodes = mutableSetOf<Node>()
+
     override val benchmarks: MutableSet<MeasurementHolder> = LinkedHashSet()
 
     val isCancelled: Boolean

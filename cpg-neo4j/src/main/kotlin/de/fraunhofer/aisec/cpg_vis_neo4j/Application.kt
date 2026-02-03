@@ -312,9 +312,7 @@ class Application : Callable<Int> {
         val entityGraphMapper = EntityGraphMapper(meta, con)
 
         translationResult.components.map { entityGraphMapper.map(it, depth) }
-        for (tud in translationResult.translationUnits) {
-            tud.additionalNodes.map { entityGraphMapper.map(it, depth) }
-        }
+        translationResult.additionalNodes.map { entityGraphMapper.map(it, depth) }
 
         val compiler = entityGraphMapper.compileContext().compiler
 
