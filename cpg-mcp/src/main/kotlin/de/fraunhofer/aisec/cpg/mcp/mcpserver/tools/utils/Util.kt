@@ -39,7 +39,10 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
+import io.modelcontextprotocol.kotlin.sdk.types.ReadResourceRequest
+import io.modelcontextprotocol.kotlin.sdk.types.ReadResourceResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
+import io.modelcontextprotocol.kotlin.sdk.types.TextResourceContents
 import java.util.function.BiFunction
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -112,6 +115,36 @@ fun CallToolRequest.runOnCpg(
         CallToolResult(
             content =
                 listOf(TextContent("Error executing query: ${e.message ?: e::class.simpleName}"))
+        )
+    }
+}
+
+fun ReadResourceRequest.runOnCpg(
+    uri: String,
+    query: BiFunction<TranslationResult, ReadResourceRequest, ReadResourceResult>,
+): ReadResourceResult {
+    return try {
+        val result =
+            globalAnalysisResult
+                ?: return ReadResourceResult(
+                    contents =
+                        listOf(
+                            TextResourceContents(
+                                "No analysis result available. Please analyze your code first using cpg_analyze.",
+                                uri = uri,
+                            )
+                        )
+                )
+        query.apply(result, this)
+    } catch (e: Exception) {
+        ReadResourceResult(
+            contents =
+                listOf(
+                    TextResourceContents(
+                        "Error executing query: ${e.message ?: e::class.simpleName}",
+                        uri = uri,
+                    )
+                )
         )
     }
 }

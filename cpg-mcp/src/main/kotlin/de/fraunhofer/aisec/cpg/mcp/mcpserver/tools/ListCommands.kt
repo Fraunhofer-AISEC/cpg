@@ -40,7 +40,10 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
+import io.modelcontextprotocol.kotlin.sdk.types.ReadResourceRequest
+import io.modelcontextprotocol.kotlin.sdk.types.ReadResourceResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
+import io.modelcontextprotocol.kotlin.sdk.types.TextResourceContents
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -63,6 +66,31 @@ fun Server.listFunctions() {
         }
     }
 }
+
+fun Server.functions() {
+    val uri = "cpg://functions"
+    this.addResource(uri, "functions", "List of all function declarations in the CPG") {
+        request: ReadResourceRequest ->
+        request.runOnCpg(uri) { result: TranslationResult, _ ->
+            ReadResourceResult(
+                contents =
+                    result.functions.map {
+                        TextResourceContents(it.toJson(), "cpg://function/${it.id}")
+                    }
+            )
+        }
+    }
+}
+
+/*fun Server.functionById() {
+    val uri = "cpg://function/{id}"
+    ResourceTemplate(
+        uriTemplate = uri,
+        name = "functionById",
+        description = "Get function declaration by ID and show the function body",
+        mimeType = "application/json",
+    )
+}*/
 
 fun Server.listRecords() {
     val toolDescription =
