@@ -574,6 +574,33 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
           }*/
     }
 
+    /** Adds the DFG edges to a previously unresolved [CallExpression]. */
+    // TODO: This should be handled by the PointsToPass
+    fun handlePreviouslyUnresolvedCallExpression(
+        call: CallExpression,
+        inferDfgForUnresolvedSymbols: Boolean,
+    ) {
+        // Remove existing DFG edges since they are no longer valid (e.g. after updating the
+        // CallExpression with the invokes edges to the called functions)
+        call.prevDFGEdges.clear()
+
+        if (call.invokes.isEmpty() && inferDfgForUnresolvedSymbols) {
+            // Unresolved call expression
+            handleUnresolvedCalls(call, call)
+        } else if (call.invokes.isNotEmpty()) {
+            call.invokes.forEach {
+                Util.attachCallParameters(it, call)
+                call.prevDFGEdges.addContextSensitive(
+                    it,
+                    callingContext = CallingContextOut(mutableListOf(call)),
+                )
+                if (it.isInferred) {
+                    callsInferredFunctions.add(call)
+                }
+            }
+        }
+    }
+
     /**
      * Adds DFG edges for unresolved function calls as follows:
      * - from base (if available) to the CallExpression

@@ -212,7 +212,7 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         // We have to update the dfg edges because this call could now be resolved (which was not
         // the case before).
-        DFGPass(ctx).handleCallExpression(call, inferDfgForUnresolvedCalls)
+        DFGPass(ctx).handlePreviouslyUnresolvedCallExpression(call, inferDfgForUnresolvedCalls)
     }
 
     override fun cleanup() {
