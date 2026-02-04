@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.ctx
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runPassForNode
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.passes.ResolveMemberExpressionAmbiguityPass
 import de.fraunhofer.aisec.cpg.passes.TranslationUnitPass
 import kotlin.test.Test

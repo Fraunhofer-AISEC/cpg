@@ -29,8 +29,7 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.configureServer
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.ctx
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import io.modelcontextprotocol.kotlin.sdk.*
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.CpgAnalyzePayload
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import kotlin.test.Test
 import kotlin.test.assertEquals
