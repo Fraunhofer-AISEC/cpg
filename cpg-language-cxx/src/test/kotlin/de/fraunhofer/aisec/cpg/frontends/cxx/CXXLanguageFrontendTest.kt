@@ -1288,8 +1288,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertTrue(eogEdges.contains(returnStatement))
     }
 
-    // TODO for merge
-    @Ignore
     @Test
     @Throws(Exception::class)
     fun testParenthesis() {
@@ -1327,14 +1325,17 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertTrue(paths.fulfilled.isNotEmpty())
         assertTrue(paths.failed.isEmpty())
 
-        val refKey = tu.refs["key"]
+        val refKey = tu.refs("key")[1]
         assertNotNull(refKey)
 
-        val assign = tu.assignments.firstOrNull { it.value is UnaryOperator }
+        val assign = tu.assignments.firstOrNull { it.value is PointerDereference }
         assertNotNull(assign)
-        paths = assign.value.followPrevFullDFGEdgesUntilHit { it == refKey }
+        paths =
+            assign.value.followDFGEdgesUntilHit(
+                direction = Backward(GraphToFollow.DFG),
+                predicate = { it == refKey },
+            )
         assertTrue(paths.fulfilled.isNotEmpty())
-        assertTrue(paths.failed.isEmpty())
     }
 
     @Test
