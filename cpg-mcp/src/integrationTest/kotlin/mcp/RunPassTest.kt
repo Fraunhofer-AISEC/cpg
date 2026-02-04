@@ -31,8 +31,8 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addListPasses
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addRunPass
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.ctx
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalysisResult
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.PassInfo
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.CpgAnalysisResult
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.PassInfo
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest

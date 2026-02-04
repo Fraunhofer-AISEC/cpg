@@ -36,11 +36,11 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listConceptsAndOperations
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listFunctions
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.listRecords
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CallInfo
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.FunctionInfo
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.NodeInfo
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.RecordInfo
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.CallInfo
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.FunctionInfo
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.NodeInfo
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.RecordInfo
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest

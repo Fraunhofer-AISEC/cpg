@@ -64,40 +64,22 @@ import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.cpgDescription
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalysisResult
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgRunPassPayload
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.PassInfo
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.runOnCpg
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toNodeInfo
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.CpgAnalysisResult
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.CpgRunPassPayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.listPasses
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.runOnCpg
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.toNodeInfo
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.toObject
 import de.fraunhofer.aisec.cpg.mcp.setupTranslationConfiguration
-import de.fraunhofer.aisec.cpg.passes.BasicBlockCollectorPass
 import de.fraunhofer.aisec.cpg.passes.ComponentPass
-import de.fraunhofer.aisec.cpg.passes.ControlDependenceGraphPass
-import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
-import de.fraunhofer.aisec.cpg.passes.DFGPass
-import de.fraunhofer.aisec.cpg.passes.DynamicInvokeResolver
 import de.fraunhofer.aisec.cpg.passes.EOGStarterPass
-import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
-import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.passes.Pass
-import de.fraunhofer.aisec.cpg.passes.PrepareSerialization
-import de.fraunhofer.aisec.cpg.passes.ProgramDependenceGraphPass
-import de.fraunhofer.aisec.cpg.passes.ResolveCallExpressionAmbiguityPass
-import de.fraunhofer.aisec.cpg.passes.ResolveMemberExpressionAmbiguityPass
-import de.fraunhofer.aisec.cpg.passes.SccPass
-import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.TranslationResultPass
 import de.fraunhofer.aisec.cpg.passes.TranslationUnitPass
-import de.fraunhofer.aisec.cpg.passes.TypeHierarchyResolver
-import de.fraunhofer.aisec.cpg.passes.TypeResolver
-import de.fraunhofer.aisec.cpg.passes.briefDescription
 import de.fraunhofer.aisec.cpg.passes.configuration.PassOrderingHelper
 import de.fraunhofer.aisec.cpg.passes.configuration.ReplacePass
 import de.fraunhofer.aisec.cpg.passes.consumeTargets
-import de.fraunhofer.aisec.cpg.passes.hardDependencies
-import de.fraunhofer.aisec.cpg.passes.softDependencies
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
@@ -296,93 +278,7 @@ fun Server.addListPasses() {
         inputSchema = ToolSchema(properties = buildJsonObject {}, required = listOf()),
     ) { _ ->
         try {
-            fun passToInfo(pass: KClass<out Pass<*>>): PassInfo {
-                return PassInfo(
-                    fqn = pass.qualifiedName.toString(),
-                    description = pass.briefDescription,
-                    requiredNodeType =
-                        pass.supertypes.fold("") { old, it ->
-                            old +
-                                when (it.classifier) {
-                                    EOGStarterPass::class ->
-                                        EOGStarterHolder::class.qualifiedName.toString()
-                                    TranslationUnitPass::class ->
-                                        TranslationUnitDeclaration::class.qualifiedName.toString()
-                                    TranslationResultPass::class ->
-                                        TranslationResult::class.qualifiedName.toString()
-                                    ComponentPass::class ->
-                                        Component::class.qualifiedName.toString()
-                                    else -> ""
-                                }
-                        },
-                    dependsOn = pass.hardDependencies.map { it.qualifiedName.toString() },
-                    softDependencies = pass.softDependencies.map { it.qualifiedName.toString() },
-                )
-            }
-
-            fun optionalPassToInfo(passName: String): PassInfo? {
-                return try {
-                    (Class.forName(passName).kotlin as? KClass<out Pass<*>>)?.let { passToInfo(it) }
-                } catch (_: ClassNotFoundException) {
-                    null
-                }
-            }
-
-            val passesList =
-                mutableListOf(
-                    passToInfo(PrepareSerialization::class),
-                    passToInfo(DynamicInvokeResolver::class),
-                    passToInfo(ImportResolver::class),
-                    passToInfo(SymbolResolver::class),
-                    passToInfo(EvaluationOrderGraphPass::class),
-                    passToInfo(DFGPass::class),
-                    passToInfo(ControlFlowSensitiveDFGPass::class),
-                    passToInfo(ControlDependenceGraphPass::class),
-                    passToInfo(ProgramDependenceGraphPass::class),
-                    passToInfo(TypeResolver::class),
-                    passToInfo(TypeHierarchyResolver::class),
-                    passToInfo(ResolveMemberExpressionAmbiguityPass::class),
-                    passToInfo(ResolveCallExpressionAmbiguityPass::class),
-                    passToInfo(SccPass::class),
-                    passToInfo(BasicBlockCollectorPass::class),
-                )
-
-            // Python-specific passes are added only if Python language is available
-            optionalPassToInfo(
-                    "de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass"
-                )
-                ?.let { passesList += it }
-            optionalPassToInfo("de.fraunhofer.aisec.cpg.passes.PythonAddDeclarationsPass")?.let {
-                passesList += it
-            }
-
-            // C-specific pass is added only if C language is available
-            optionalPassToInfo("de.fraunhofer.aisec.cpg.passes.CXXExtraPass")?.let {
-                passesList += it
-            }
-
-            // LLVM-specific pass is added only if LLVM language is available
-            optionalPassToInfo("de.fraunhofer.aisec.cpg.passes.CompressLLVMPass")?.let {
-                passesList += it
-            }
-
-            // Java-specific pass is added only if Java language is available
-            optionalPassToInfo("de.fraunhofer.aisec.cpg.passes.JavaExternalTypeHierarchyResolver")
-                ?.let { passesList += it }
-            optionalPassToInfo("de.fraunhofer.aisec.cpg.passes.JavaExtraPass")?.let {
-                passesList += it
-            }
-            optionalPassToInfo("de.fraunhofer.aisec.cpg.passes.JavaImportResolver")?.let {
-                passesList += it
-            }
-
-            // Go-specific pass is added only if Go language is available
-            optionalPassToInfo("de.fraunhofer.aisec.cpg.passes.GoExtraPass")?.let {
-                passesList += it
-            }
-            optionalPassToInfo("de.fraunhofer.aisec.cpg.passes.GoEvaluationOrderGraphPass")?.let {
-                passesList += it
-            }
+            val passesList = listPasses()
 
             CallToolResult(
                 content = passesList.map { passInfo -> TextContent(Json.encodeToString(passInfo)) }
