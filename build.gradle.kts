@@ -99,8 +99,14 @@ val enablePythonFrontend: Boolean by extra {
 }
 project.logger.lifecycle("Python frontend is ${if (enablePythonFrontend) "enabled" else "disabled"}")
 
-val enableLLVMFrontend: Boolean by extra {
-    val enableLLVMFrontend: String? by project
+val enablePythonQiskitFrontend by extra {
+    val enablePythonQiskitFrontend: String by project
+    enablePythonQiskitFrontend.toBoolean()
+}
+project.logger.lifecycle("Python Qiskit is ${if (enablePythonQiskitFrontend) "enabled" else "disabled"}")
+
+val enableLLVMFrontend by extra {
+    val enableLLVMFrontend: String by project
     enableLLVMFrontend.toBoolean()
 }
 project.logger.lifecycle("LLVM frontend is ${if (enableLLVMFrontend) "enabled" else "disabled"}")
@@ -110,6 +116,12 @@ val enableTypeScriptFrontend: Boolean by extra {
     enableTypeScriptFrontend.toBoolean()
 }
 project.logger.lifecycle("TypeScript frontend is ${if (enableTypeScriptFrontend) "enabled" else "disabled"}")
+
+val enableOpenQasmFrontend by extra {
+    val enableOpenQasmFrontend: String by project
+    enableOpenQasmFrontend.toBoolean()
+}
+project.logger.lifecycle("OpenQASM frontend is ${if (enableOpenQasmFrontend) "enabled" else "disabled"}")
 
 val enableRubyFrontend: Boolean by extra {
     val enableRubyFrontend: String? by project

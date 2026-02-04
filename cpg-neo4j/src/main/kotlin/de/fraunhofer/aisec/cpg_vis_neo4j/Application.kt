@@ -30,7 +30,11 @@ import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.*
+import de.fraunhofer.aisec.cpg.passes.DFGConnectionPass
+import de.fraunhofer.aisec.cpg.passes.QiskitPass
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
+import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumDFGPass
+import de.fraunhofer.aisec.cpg.passes.quantumcpg.QuantumEOGPass
 import de.fraunhofer.aisec.cpg.persistence.Neo4jConnectionDefaults
 import de.fraunhofer.aisec.cpg.persistence.pushToNeo4j
 import java.io.File
@@ -426,11 +430,16 @@ class Application : Callable<Int> {
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.jvm.JVMLanguage")
                 .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage")
+                .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.openqasm.OpenQasmLanguage")
                 .loadIncludes(loadIncludes)
                 .exclusionPatterns(*exclusionPatterns.toTypedArray())
                 .addIncludesToGraph(loadIncludes)
                 .debugParser(DEBUG_PARSER)
                 .useUnityBuild(useUnityBuild)
+                .registerPass<QiskitPass>()
+                .registerPass<QuantumEOGPass>()
+                .registerPass<QuantumDFGPass>()
+                .registerPass<DFGConnectionPass>()
                 .useParallelPasses(false)
 
         topLevel?.let { translationConfiguration.topLevel(it) }

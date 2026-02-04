@@ -39,7 +39,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents a condition control flow statement, usually indicating by `If`. */
-class IfStatement : Statement(), BranchingNode, ArgumentHolder {
+open class IfStatement : Statement(), BranchingNode, ArgumentHolder {
     @Relationship(value = "INITIALIZER_STATEMENT")
     var initializerStatementEdge = astOptionalEdgeOf<Statement>()
     /** C++ initializer statement. */
