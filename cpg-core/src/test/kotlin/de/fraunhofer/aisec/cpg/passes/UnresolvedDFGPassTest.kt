@@ -35,7 +35,6 @@ import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -90,8 +89,6 @@ class UnresolvedDFGPassTest {
         assertTrue(knownCall.prevDFG.firstOrNull() is MethodDeclaration)
     }
 
-    // TODO for merge
-    @Ignore
     @Test
     fun testUnresolvedCallsWithInference() {
         // For calls with an inferred function declaration, we connect the arguments with the
@@ -117,7 +114,7 @@ class UnresolvedDFGPassTest {
 
         // Flow from base and argument to return value
         val callWithParam = result.calls { it.name.localName == "get" }[1]
-        assertEquals(1, callWithParam.prevDFG.size)
+        assertEquals(1, callWithParam.prevFullDFG.size)
         // Check if it's the "get" method.
         val getMethod2 = callWithParam.prevDFG.singleOrNull { it.name.localName == "get" }
         assertNotNull(getMethod2)
