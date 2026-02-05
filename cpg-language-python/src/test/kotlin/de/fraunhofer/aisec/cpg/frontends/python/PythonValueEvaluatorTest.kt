@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
-import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.passes.PythonUnreachableEOGPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.UnreachableEOGPass
@@ -137,7 +137,7 @@ class PythonValueEvaluatorTest {
         val result =
             analyze(listOf(topLevel.resolve("arithmetic.py")), topLevel.toPath(), true) {
                 it.registerLanguage<PythonLanguage>()
-                it.registerPass<ControlFlowSensitiveDFGPass>()
+                it.registerPass<PointsToPass>()
             }
         assertNotNull(result)
 
