@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,9 +33,9 @@ import kotlin.Int
 
 public open class RegisterHttpEndpoint(
     public val httpEndpoint: HttpEndpoint?,
-    linkedConcept: HttpRequestHandler,
+    operatesOn: HttpRequestHandler,
     underlyingNode: Node? = null,
-) : HttpRequestHandlerOperation(linkedConcept, underlyingNode) {
+) : HttpRequestHandlerOperation(operatesOn, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is RegisterHttpEndpoint &&
             super.equals(other) &&

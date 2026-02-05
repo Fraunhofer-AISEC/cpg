@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,13 +36,12 @@ import kotlin.String
 import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
-/** usedByMultiple: In which resources the credential is being used */
 public open class Credential(
     public val enabled: Boolean?,
     public val expirationDate: ZonedDateTime?,
     public val isManaged: Boolean?,
     public val notBeforeDate: ZonedDateTime?,
-    public val usedByMultiple: Infrastructure?,
+    public val infrastructures: Infrastructure?,
     internetAccessibleEndpoint: Boolean?,
     geoLocation: GeoLocation?,
     loggings: MutableList<Logging?>,
@@ -83,7 +82,7 @@ public open class Credential(
             other.expirationDate == this.expirationDate &&
             other.isManaged == this.isManaged &&
             other.notBeforeDate == this.notBeforeDate &&
-            other.usedByMultiple == this.usedByMultiple
+            other.infrastructures == this.infrastructures
 
     override fun hashCode(): Int =
         Objects.hash(
@@ -92,6 +91,6 @@ public open class Credential(
             expirationDate,
             isManaged,
             notBeforeDate,
-            usedByMultiple,
+            infrastructures,
         )
 }

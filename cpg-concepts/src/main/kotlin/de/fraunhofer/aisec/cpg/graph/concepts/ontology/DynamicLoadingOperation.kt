@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,9 +34,9 @@ import kotlin.Int
 /** Represents an operation used by the [DynamicLoading] concept. */
 public open class DynamicLoadingOperation(
     public val operatingSystemArchitecture: OperatingSystemArchitecture?,
-    linkedConcept: Memory,
+    operatesOn: Memory,
     underlyingNode: Node? = null,
-) : MemoryOperation(linkedConcept, underlyingNode) {
+) : MemoryOperation(operatesOn, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is DynamicLoadingOperation &&
             super.equals(other) &&

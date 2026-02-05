@@ -30,11 +30,19 @@ import java.util.Objects
 import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
+import kotlin.String
 
-public open class Immutability(public val enabled: Boolean?, underlyingNode: Node? = null) :
-    Integrity(underlyingNode) {
+public open class HashOperation(
+    public val algorithm: String?,
+    public val usesSalt: Boolean?,
+    operatesOn: Confidentiality,
+    underlyingNode: Node? = null,
+) : CryptographicOperation(operatesOn, underlyingNode) {
     override fun equals(other: Any?): Boolean =
-        other is Immutability && super.equals(other) && other.enabled == this.enabled
+        other is HashOperation &&
+            super.equals(other) &&
+            other.algorithm == this.algorithm &&
+            other.usesSalt == this.usesSalt
 
-    override fun hashCode(): Int = Objects.hash(super.hashCode(), enabled)
+    override fun hashCode(): Int = Objects.hash(super.hashCode(), algorithm, usesSalt)
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,16 +33,12 @@ import kotlin.Boolean
 import kotlin.Int
 
 public open class InputValidationOperation(
-    public val input: Input?,
-    public val output: Output?,
-    linkedConcept: Input,
+    operatesOn: Input,
+    operatesOn: Output,
     underlyingNode: Node? = null,
-) : Operation(linkedConcept, underlyingNode) {
+) : Operation(operatesOn, underlyingNode) {
     override fun equals(other: Any?): Boolean =
-        other is InputValidationOperation &&
-            super.equals(other) &&
-            other.input == this.input &&
-            other.output == this.output
+        other is InputValidationOperation && super.equals(other)
 
-    override fun hashCode(): Int = Objects.hash(super.hashCode(), input, output)
+    override fun hashCode(): Int = Objects.hash(super.hashCode())
 }

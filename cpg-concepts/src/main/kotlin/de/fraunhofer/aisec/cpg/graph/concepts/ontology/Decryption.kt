@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,9 +35,9 @@ import kotlin.String
 public open class Decryption(
     public val algorithm: String?,
     public val secret: Secret?,
-    linkedConcept: Cipher,
+    operatesOn: Cipher,
     underlyingNode: Node? = null,
-) : CipherOperation(linkedConcept, underlyingNode) {
+) : CipherOperation(operatesOn, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is Decryption &&
             super.equals(other) &&

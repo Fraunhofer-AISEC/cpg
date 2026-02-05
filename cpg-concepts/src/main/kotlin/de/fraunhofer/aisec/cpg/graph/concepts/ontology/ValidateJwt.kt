@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,8 +32,8 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** Represents an operation to check the validity of a JWT token. */
-public open class ValidateJwt(linkedConcept: Authenticity, underlyingNode: Node? = null) :
-    AuthenticationOperation(linkedConcept, underlyingNode) {
+public open class ValidateJwt(operatesOn: Authenticity, underlyingNode: Node? = null) :
+    AuthenticationOperation(operatesOn, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is ValidateJwt && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

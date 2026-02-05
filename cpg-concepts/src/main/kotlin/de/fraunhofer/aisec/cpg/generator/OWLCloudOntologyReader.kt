@@ -626,14 +626,17 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
                         decapitalizeString(formatString(getClassName(superClass, ontology)))
                         property.propertyType = formatString(getClassName(superClass, ontology))
                     }
-                    "linkedConcept",
+                    "operatesOn",
                     "leftPrincipal",
                     "rightPrincipal",
+                    "usedBy",
+                    "uses",
                     "protects" -> {
                         property.propertyName = classRelationshipPropertyName
                         property.propertyType = formatString(getClassName(superClass, ontology))
                     }
                     "hasMultiple",
+                    "usedByMultiple",
                     "offersMultiple" -> {
                         property.propertyName =
                             getPlural(
@@ -704,19 +707,22 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
                 val property: PropertySource<JavaClassSource?>? =
                     when (classRelationshipPropertyName) {
                         "has",
+                        "operatesOn",
                         "offers" ->
                             javaClass.addProperty(
                                 formatString(getClassName(superClass, ontology)),
                                 decapitalizeString(formatString(getClassName(superClass, ontology))),
                             )
+                        "uses",
+                        "usedBy",
                         "leftPrincipal",
                         "rightPrincipal",
-                        "linkedConcept",
                         "protects" ->
                             javaClass.addProperty(
                                 formatString(getClassName(superClass, ontology)),
                                 classRelationshipPropertyName,
                             )
+                        "usedByMultiple",
                         "hasMultiple",
                         "offersMultiple" ->
                             javaClass.addProperty(
@@ -1048,6 +1054,7 @@ class OWLCloudOntologyReader(filepath: String, private val resourceNameFromOwlFi
                 }
             }
         }
+        println("No annotation object (label) was found for class object property with ${nce}")
         return ""
     }
 

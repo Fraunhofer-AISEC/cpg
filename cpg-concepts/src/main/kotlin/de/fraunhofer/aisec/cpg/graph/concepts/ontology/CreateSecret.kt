@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,8 +31,8 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
 
-public open class CreateSecret(linkedConcept: Secret, underlyingNode: Node? = null) :
-    SecretOperation(linkedConcept, underlyingNode) {
+public open class CreateSecret(operatesOn: Secret, underlyingNode: Node? = null) :
+    SecretOperation(operatesOn, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is CreateSecret && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

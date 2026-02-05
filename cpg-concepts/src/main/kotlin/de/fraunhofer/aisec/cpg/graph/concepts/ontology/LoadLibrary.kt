@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,9 +39,9 @@ import kotlin.collections.MutableList
 public open class LoadLibrary(
     public val entryPoints: MutableList<EntryPoint?>,
     operatingSystemArchitecture: OperatingSystemArchitecture?,
-    linkedConcept: Memory,
+    operatesOn: Memory,
     underlyingNode: Node? = null,
-) : DynamicLoadingOperation(operatingSystemArchitecture, linkedConcept, underlyingNode) {
+) : DynamicLoadingOperation(operatingSystemArchitecture, operatesOn, underlyingNode) {
     override fun equals(other: Any?): Boolean =
         other is LoadLibrary && super.equals(other) && other.entryPoints == this.entryPoints
 
