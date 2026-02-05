@@ -72,6 +72,11 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
          * function (or whatever is starting the EOG). If `null`, no time limit is enforced.
          */
         var timeout: Long? = null,
+        /**
+         * If set to true, CDG edges will be drawn even if the analysis did not finish correctly,
+         * e.g., due to a timeout.
+         */
+        var drawIncompleteCDG: Boolean = false,
     ) : PassConfiguration()
 
     override fun cleanup() {
@@ -137,6 +142,7 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
 
         log.trace("Iterating EOG of {}", firstBasicBlock)
         var finalState: PrevEOGStateElement
+        var timeouted = false
         finalState = runBlocking {
             val (state, timeout) =
                 prevEOGState.iterateEOG(
@@ -150,7 +156,13 @@ open class ControlDependenceGraphPass(ctx: TranslationContext) : EOGStarterPass(
                     "Timeout while computing CDG for {}, skipping CDG generation",
                     startNode.name,
                 )
+            timeouted = timeout
             state
+        }
+
+        if (passConfig<Configuration>()?.drawIncompleteCDG == false && timeouted) {
+            log.info("Skipping CDG generation for {} due to timeout.", startNode.name)
+            return
         }
 
         log.trace("Done iterating EOG for {}. Generating the edges now.", startNode.name)
