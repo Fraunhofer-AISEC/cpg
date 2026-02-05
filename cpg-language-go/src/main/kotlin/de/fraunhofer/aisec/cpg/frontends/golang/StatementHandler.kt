@@ -44,7 +44,7 @@ class StatementHandler(frontend: GoLanguageFrontend) :
             is GoStandardLibrary.Ast.DeclStmt -> handleDeclStmt(node)
             is GoStandardLibrary.Ast.DeferStmt -> handleDeferStmt(node)
             is GoStandardLibrary.Ast.ExprStmt -> {
-                return frontend.expressionHandler.handle(node.x)
+                frontend.expressionHandler.handle(node.x)
             }
             is GoStandardLibrary.Ast.ForStmt -> handleForStmt(node)
             is GoStandardLibrary.Ast.GoStmt -> handleGoStmt(node)

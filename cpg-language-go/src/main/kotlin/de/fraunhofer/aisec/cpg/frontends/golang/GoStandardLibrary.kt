@@ -45,7 +45,7 @@ interface GoStandardLibrary : Library {
      * This class represents the Go `go/token` package and contains classes representing structs in
      * this package.
      */
-    class Token {}
+    class Token
 
     /**
      * This class represents the Go `go/parser` package and contains classes representing structs in
