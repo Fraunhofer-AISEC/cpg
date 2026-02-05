@@ -1472,8 +1472,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         }
     }
 
-    // TODO for merge
-    @Ignore
     @Test
     @Throws(Exception::class)
     fun testFunctionPointerToClassMethodSimple() {
@@ -1542,8 +1540,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertRefersTo(callee.rhs, singleParam)
     }
 
-    // TODO for merge
-    @Ignore
     @Test
     @Throws(Exception::class)
     fun testFunctionPointerCallWithCDFG() {
@@ -1557,7 +1553,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerPass<DFGPass>()
                 it.registerPass<EvaluationOrderGraphPass>() // creates EOG
                 it.registerPass<TypeResolver>()
-                it.registerPass<ControlFlowSensitiveDFGPass>()
+                it.registerPass<PointsToPass>()
                 it.registerPass<DynamicInvokeResolver>()
             }
 
@@ -1570,11 +1566,12 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         // We do not want any inferred functions
         assertTrue(tu.functions.none { it.isInferred })
 
-        val noParamPointerCall = tu.calls("no_param").firstOrNull { it.callee is UnaryOperator }
+        val noParamPointerCall =
+            tu.calls("no_param").firstOrNull { it.callee is PointerDereference }
         assertInvokes(assertNotNull(noParamPointerCall), target)
 
         val noParamNoInitPointerCall =
-            tu.calls("no_param_uninitialized").firstOrNull { it.callee is UnaryOperator }
+            tu.calls("no_param_uninitialized").firstOrNull { it.callee is PointerDereference }
         assertInvokes(assertNotNull(noParamNoInitPointerCall), target)
 
         val noParamCall = tu.calls("no_param").firstOrNull { it.callee is Reference }
@@ -1588,8 +1585,6 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertInvokes(assertNotNull(targetCall), target)
     }
 
-    // TODO for merge
-    @Ignore
     @Test
     @Throws(Exception::class)
     fun testFunctionPointerCallWithNormalDFG() {
@@ -1604,7 +1599,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
                 it.registerPass<EvaluationOrderGraphPass>() // creates EOG
                 it.registerPass<TypeResolver>()
                 it.registerPass<DynamicInvokeResolver>()
-                it.registerPass<ControlFlowSensitiveDFGPass>()
+                it.registerPass<PointsToPass>()
             }
 
         val target = tu.functions["target"]
