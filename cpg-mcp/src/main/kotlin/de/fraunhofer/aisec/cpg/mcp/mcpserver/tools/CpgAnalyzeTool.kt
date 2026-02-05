@@ -68,9 +68,10 @@ import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgRunPassPayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.PassInfo
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.runOnCpg
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toNodeInfo
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toSchema
 import de.fraunhofer.aisec.cpg.mcp.setupTranslationConfiguration
 import de.fraunhofer.aisec.cpg.passes.BasicBlockCollectorPass
 import de.fraunhofer.aisec.cpg.passes.ComponentPass
@@ -99,7 +100,6 @@ import de.fraunhofer.aisec.cpg.passes.consumeTargets
 import de.fraunhofer.aisec.cpg.passes.hardDependencies
 import de.fraunhofer.aisec.cpg.passes.softDependencies
 import io.modelcontextprotocol.kotlin.sdk.server.Server
-import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
@@ -112,8 +112,6 @@ import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.typeOf
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonObject
 
 var globalAnalysisResult: TranslationResult? = null
 
@@ -134,28 +132,12 @@ val toolDescription =
     """
         .trimIndent()
 
-val inputSchema =
-    ToolSchema(
-        properties =
-            buildJsonObject {
-                putJsonObject("content") {
-                    put("type", "string")
-                    put("description", "Source code content to analyze")
-                }
-                putJsonObject("extension") {
-                    put("type", "string")
-                    put(
-                        "description",
-                        "File extension for language detection (e.g., 'py', 'java', 'cpp')",
-                    )
-                }
-            },
-        required = listOf(),
-    )
-
 fun Server.addCpgAnalyzeTool() {
-    this.addTool(name = "cpg_analyze", description = toolDescription, inputSchema = inputSchema) {
-        request ->
+    this.addTool(
+        name = "cpg_analyze",
+        description = toolDescription,
+        inputSchema = CpgAnalyzePayload::class.toSchema(),
+    ) { request ->
         try {
             val payload = request.arguments?.toObject<CpgAnalyzePayload>()
             val analysisResult = runCpgAnalyze(payload, runPasses = true, cleanup = true)
@@ -271,7 +253,7 @@ fun Server.addCpgTranslate() {
         - "Analyze this uploaded file"
     """
                 .trimIndent(),
-        inputSchema = inputSchema,
+        inputSchema = CpgAnalyzePayload::class.toSchema(),
     ) { request ->
         try {
             val payload = request.arguments?.toObject<CpgAnalyzePayload>()
@@ -404,115 +386,85 @@ val nodeToPass = IdentityHashMap<Node, MutableSet<KClass<out Pass<*>>>>()
  * AST. The tool further takes care of dependencies between the passes.
  */
 fun Server.addRunPass() {
-    this.addTool(
+    this.addTool<CpgRunPassPayload>(
         name = "cpg_run_pass",
         description =
             """Runs a given Pass on a specified Node. If the given node does not meet the type of node the pass operates on, the tool looks for the next matching node. It also triggers passes that the specified pass depends on, if they have not been run yet on the given node."""
                 .trimIndent(),
-        inputSchema =
-            ToolSchema(
-                properties =
-                    buildJsonObject {
-                        putJsonObject("passName") {
-                            put("type", "string")
-                            put("description", "The FQN of the pass to run")
-                        }
-                        putJsonObject("nodeId") {
-                            put("type", "string")
-                            put("description", "The ID of the node on which the pass should be ran")
-                        }
-                    },
-                required = listOf("passName", "nodeId"),
-            ),
-    ) { request ->
-        request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
-            val payload =
-                request.arguments?.toObject<CpgRunPassPayload>()
-                    ?: return@runOnCpg CallToolResult(
-                        content =
-                            listOf(TextContent("Invalid or missing payload for run_pass tool."))
-                    )
-            val passClass =
-                try {
-                    (Class.forName(payload.passName).kotlin as? KClass<out Pass<*>>)
-                        ?: return@runOnCpg CallToolResult(
-                            content =
-                                listOf(TextContent("Could not find the pass ${payload.passName}."))
-                        )
-                } catch (_: ClassNotFoundException) {
-                    return@runOnCpg CallToolResult(
+    ) { result: TranslationResult, payload: CpgRunPassPayload ->
+        val passClass =
+            try {
+                (Class.forName(payload.passName).kotlin as? KClass<out Pass<*>>)
+                    ?: return@addTool CallToolResult(
                         content =
                             listOf(TextContent("Could not find the pass ${payload.passName}."))
                     )
-                }
-
-            val nodes = result.nodes.filter { it.id.toString() == payload.nodeId }
-
-            if (nodes.isEmpty())
-                return@runOnCpg CallToolResult(
-                    content =
-                        listOf(
-                            TextContent("Could not find any node with the ID ${payload.nodeId}.")
-                        )
+            } catch (_: ClassNotFoundException) {
+                return@addTool CallToolResult(
+                    content = listOf(TextContent("Could not find the pass ${payload.passName}."))
                 )
-            val executedPasses = mutableListOf<TextContent>()
-            // Check if all required passes have been run before executing this pass.
-            val orderingHelper = PassOrderingHelper(listOf(passClass))
-            val orderedPassesToExecute =
-                try {
-                    orderingHelper.order().flatten()
-                } catch (_: ConfigurationException) {
-                    // There was an exception while ordering the passes (e.g., cyclic dependency).
-                    // We just add the requested pass and hope that the AI knows what it is doing.
-                    // Note: We do not log this error because it has led to problems with the MCP
-                    // server via stdio in the past.
-                    listOf(passClass)
-                }
-
-            for (node in nodes) {
-                for (passToExecute in orderedPassesToExecute) {
-                    // Check if pass has already been executed for the respective node
-                    if (passToExecute !in nodeToPass.computeIfAbsent(node) { mutableSetOf() }) {
-                        // Execute the pass for the node
-                        ctx?.let { ctx ->
-                            val passResult = runPassForNode(node, passToExecute, ctx)
-                            if (passResult.success) {
-                                executedPasses.add(TextContent(passResult.message))
-                            } else {
-                                // Return if there was an error during pass execution
-                                return@runOnCpg CallToolResult(
-                                    content =
-                                        listOf(
-                                            TextContent(passResult.message),
-                                            *executedPasses.toTypedArray(),
-                                        )
-                                )
-                            }
-                            // Mark pass as executed
-                            nodeToPass[node]?.add(passToExecute)
-                        }
-                            ?: return@runOnCpg CallToolResult(
-                                content =
-                                    listOf(
-                                        TextContent(
-                                            "Cannot run run_pass without translation context."
-                                        )
-                                    )
-                            )
-                    }
-                }
             }
 
-            CallToolResult(
+        val nodes = result.nodes.filter { it.id.toString() == payload.nodeId }
+
+        if (nodes.isEmpty())
+            return@addTool CallToolResult(
                 content =
-                    listOf(
-                        TextContent(
-                            "Successfully ran ${payload.passName} on node ${payload.nodeId}."
-                        ),
-                        *executedPasses.toTypedArray(),
-                    )
+                    listOf(TextContent("Could not find any node with the ID ${payload.nodeId}."))
             )
+        val executedPasses = mutableListOf<TextContent>()
+        // Check if all required passes have been run before executing this pass.
+        val orderingHelper = PassOrderingHelper(listOf(passClass))
+        val orderedPassesToExecute =
+            try {
+                orderingHelper.order().flatten()
+            } catch (_: ConfigurationException) {
+                // There was an exception while ordering the passes (e.g., cyclic dependency).
+                // We just add the requested pass and hope that the AI knows what it is doing.
+                // Note: We do not log this error because it has led to problems with the MCP
+                // server via stdio in the past.
+                listOf(passClass)
+            }
+
+        for (node in nodes) {
+            for (passToExecute in orderedPassesToExecute) {
+                // Check if pass has already been executed for the respective node
+                if (passToExecute !in nodeToPass.computeIfAbsent(node) { mutableSetOf() }) {
+                    // Execute the pass for the node
+                    ctx?.let { ctx ->
+                        val passResult = runPassForNode(node, passToExecute, ctx)
+                        if (passResult.success) {
+                            executedPasses.add(TextContent(passResult.message))
+                        } else {
+                            // Return if there was an error during pass execution
+                            return@addTool CallToolResult(
+                                content =
+                                    listOf(
+                                        TextContent(passResult.message),
+                                        *executedPasses.toTypedArray(),
+                                    )
+                            )
+                        }
+                        // Mark pass as executed
+                        nodeToPass[node]?.add(passToExecute)
+                    }
+                        ?: return@addTool CallToolResult(
+                            content =
+                                listOf(
+                                    TextContent("Cannot run run_pass without translation context.")
+                                )
+                        )
+                }
+            }
         }
+
+        CallToolResult(
+            content =
+                listOf(
+                    TextContent("Successfully ran ${payload.passName} on node ${payload.nodeId}."),
+                    *executedPasses.toTypedArray(),
+                )
+        )
     }
 }
 
