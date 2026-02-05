@@ -104,6 +104,8 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     private lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
 
+    // Note: Code analysis suggests that this property is non-nullable, but there is a complex
+    // reason, why it has to be nullable.
     override val scope: Scope?
         get() = scopeManager.currentScope
 
@@ -246,7 +248,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 type
             }
 
-        // The type of a "inner" composite literal can be omitted if the outer one is creating
+        // The type of an "inner" composite literal can be omitted if the outer one is creating
         // an array type. In this case, we need to set the type manually because the type for
         // the "inner" one is empty.
         // Example code:
@@ -261,28 +263,34 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // }
         if (type is PointerType && type.isArray) {
             for (init in node.initializers) {
-                if (init is InitializerListExpression) {
-                    init.type = type.elementType
-                } else if (init is KeyValueExpression && init.value is InitializerListExpression) {
-                    init.value?.type = type.elementType
-                } else if (init is KeyValueExpression && init.key is InitializerListExpression) {
-                    init.key?.type = type.elementType
+                when (init) {
+                    is InitializerListExpression -> {
+                        init.type = type.elementType
+                    }
+
+                    is KeyValueExpression if init.value is InitializerListExpression -> {
+                        init.value.type = type.elementType
+                    }
+
+                    is KeyValueExpression if init.key is InitializerListExpression -> {
+                        init.key.type = type.elementType
+                    }
                 }
             }
         } else if (type?.isMap == true) {
             for (init in node.initializers) {
                 if (init is KeyValueExpression) {
                     if (init.key is InitializerListExpression) {
-                        init.key?.type = (type as ObjectType).generics.getOrNull(0) ?: unknownType()
+                        init.key.type = (type as ObjectType).generics.getOrNull(0) ?: unknownType()
                     } else if (init.value is InitializerListExpression) {
-                        init.value?.type =
+                        init.value.type =
                             (type as ObjectType).generics.getOrNull(1) ?: unknownType()
                     }
                 }
             }
         }
 
-        // Afterwards, we are not interested in arrays and maps, but only the "inner" single-object
+        // Afterward, we are not interested in arrays and maps, but only the "inner" single-object
         // expressions
         if (
             type is UnknownType ||

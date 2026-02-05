@@ -221,7 +221,7 @@ class GoLanguageFrontendTest : BaseTest() {
 
         val n = p.variables["n"]
         assertNotNull(n)
-        with(tu) { assertEquals(tu.primitiveType("int").pointer(), n.type) }
+        assertEquals(tu.primitiveType("int").pointer(), n.type)
 
         val nil = n.initializer as? Literal<*>
         assertNotNull(nil)

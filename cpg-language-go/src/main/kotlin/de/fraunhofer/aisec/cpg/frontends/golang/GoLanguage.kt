@@ -207,7 +207,7 @@ class GoLanguage :
             }
         }
 
-        // We additionally want to emulate the behaviour of Go's interface system here
+        // We additionally want to emulate the behavior of Go's interface system here
         if (targetType.isInterface) {
             var b: CastResult = DirectMatch
             val target = (type.root as? ObjectType)?.recordDeclaration
