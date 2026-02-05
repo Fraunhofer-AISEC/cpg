@@ -1098,6 +1098,23 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val innerConcurrencyCounter =
             calculateInnerConcurrencyCounter(callExpression.arguments.size)
 
+        if (callExpression is MemberCallExpression && functionDeclaration is MethodDeclaration) {
+            val base = callExpression.base
+            val receiver = functionDeclaration.receiver
+            if (base != null && receiver != null) {
+                doubleState =
+                    lattice.push(
+                        doubleState,
+                        receiver,
+                        GeneralStateEntryElement(
+                            PowersetLattice.Element(),
+                            PowersetLattice.Element(),
+                            PowersetLattice.Element(NodeWithPropertiesKey(base, emptySet())),
+                        ),
+                    )
+            }
+        }
+
         // We use caches to avoid double work
         val getNestedValuesCache =
             ConcurrentHashMap<
