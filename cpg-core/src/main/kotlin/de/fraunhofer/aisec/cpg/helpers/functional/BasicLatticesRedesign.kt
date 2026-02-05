@@ -1239,6 +1239,7 @@ open class MapLattice<K, V : Lattice.Element>(val innerLattice: Lattice<V>) :
                     someGreater = true // key is missing in other, so this is greater
                 }
             }
+            @Suppress("KotlinConstantConditions")
             return if (!someGreater && !someLesser) {
                 // All entries are the same, so the maps are equal
                 Order.EQUAL
