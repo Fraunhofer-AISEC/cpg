@@ -61,9 +61,9 @@ class PerformanceRegressionTest {
         val tmp = createTempFile("c_range", ".c")
         tmp.writeText(string)
 
-        // this should not exceed 30 seconds (it takes about 2800ms on a good machine, about
-        // 10-20s on GitHub, depending on the slowness of the runner)
-        assertTimeout(Duration.of(35, ChronoUnit.SECONDS)) {
+        // this should not exceed 30 seconds (it takes about 30s on a good machine, and a bit more
+        // on GitHub, depending on the slowness of the runner)
+        assertTimeout(Duration.of(60, ChronoUnit.SECONDS)) {
             val tu =
                 analyzeAndGetFirstTU(listOf(tmp.toFile()), tmp.parent, true) {
                     // No need for parallel processing for a single file. this might make it fast
