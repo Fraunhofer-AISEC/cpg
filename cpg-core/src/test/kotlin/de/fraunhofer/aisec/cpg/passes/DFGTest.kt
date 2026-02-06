@@ -35,7 +35,7 @@ import de.fraunhofer.aisec.cpg.test.*
 import kotlin.test.*
 
 class DFGTest {
-    // Test DFGPass and ControlFlowSensitiveDFGPass
+    // Test DFGPass and PointsToPass
 
     /**
      * To test assignments of different value in an expression that then has a joinPoint. a = a == b
@@ -274,8 +274,7 @@ class DFGTest {
     }
 
     /**
-     * Tests if the last artificial (implicit) return statement is removed by the
-     * [ControlFlowSensitiveDFGPass].
+     * Tests if the last artificial (implicit) return statement is removed by the [PointsToPass].
      */
     @Test
     fun testReturnStatement() {
@@ -353,8 +352,8 @@ class DFGTest {
     }
 
     /**
-     * Tests the ControlFlowSensitiveDFGPass and checks if an assignment located within one block
-     * clears the values from the map and includes only the new (assigned) value.
+     * Tests the PointsToPass and checks if an assignment located within one block clears the values
+     * from the map and includes only the new (assigned) value.
      *
      * @throws Exception Any exception that happens during the analysis process
      */

@@ -137,6 +137,7 @@ class BasicBlockCollectorPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 // If the currentStartNode splits up into multiple paths, the next nodes start a new
                 // basic block. We already generate this here. But currentStartNode is still part of
                 // the current basic block, so we add it before this if statement.
+                // basicBlock.outgoingEOGEdges.addAll(nextRelevantEOGEdges)
                 worklist.addAll(
                     nextRelevantEOGEdges.mapNotNull {
                         if (it.end.basicBlock.isNotEmpty()) {

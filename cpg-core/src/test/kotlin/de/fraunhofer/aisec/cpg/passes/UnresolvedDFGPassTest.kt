@@ -41,6 +41,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class UnresolvedDFGPassTest {
+
     @Test
     fun testUnresolvedCalls() {
         val result = getDfgUnresolvedCalls(true, false)
@@ -113,7 +114,7 @@ class UnresolvedDFGPassTest {
 
         // Flow from base and argument to return value
         val callWithParam = result.calls { it.name.localName == "get" }[1]
-        assertEquals(1, callWithParam.prevDFG.size)
+        assertEquals(1, callWithParam.prevFullDFG.size)
         // Check if it's the "get" method.
         val getMethod2 = callWithParam.prevDFG.singleOrNull { it.name.localName == "get" }
         assertNotNull(getMethod2)

@@ -527,6 +527,20 @@ infix fun QueryTree<Boolean>.and(
     )
 }
 
+/** Performs a logical and (&&) operation between the values of two [QueryTree]s. */
+infix fun QueryTree<Boolean>.and(
+    other: Lazy<QueryTree<Boolean>>
+): BinaryOperationResult<Boolean, Boolean> {
+    return BinaryOperationResult(
+        this.value && other.value.value,
+        lhs = this,
+        rhs = if (!this.value) null else other.value,
+        stringRepresentation =
+            if (!this.value) "${this.value}" else "${this.value} && ${other.value.value}",
+        operator = BinaryOperators.AND,
+    )
+}
+
 /**
  * Performs a logical or (||) operation between the values and creates and returns a
  * [BinaryOperationResult].

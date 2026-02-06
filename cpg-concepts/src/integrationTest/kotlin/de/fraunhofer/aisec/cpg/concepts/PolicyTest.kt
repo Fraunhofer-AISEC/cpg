@@ -57,6 +57,7 @@ import kotlin.test.assertTrue
 import org.junit.jupiter.api.Assertions.assertFalse
 
 class PolicyTest {
+
     @Test
     fun testPolicy() {
         val topLevel = Path("src/integrationTest/resources/python")

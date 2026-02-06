@@ -41,12 +41,15 @@ import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Order
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
+import kotlinx.coroutines.runBlocking
 
 /**
  * A [Pass] which uses a simple logic to determine constant values and mark unreachable code regions
  * by setting the [EvaluationOrder.unreachable] property to true.
  */
-@DependsOn(ControlFlowSensitiveDFGPass::class)
+@DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
+@DependsOn(PointsToPass::class, softDependency = true)
+@DependsOn(DFGPass::class, softDependency = true)
 @Description("A pass which marks unreachable EOG edges.")
 open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
@@ -76,15 +79,14 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         }
 
         val nextEog = node.nextEOGEdges.toList()
-        val finalStateNew =
-            unreachabilityState.iterateEOG(nextEog, startState, ::transfer)
-                ?: run {
-                    log.warn(
-                        "Could not compute unreachability of EOG edges for {}, reached a timeout",
-                        node.name,
-                    )
-                    return@handle
-                }
+        val (finalStateNew, timeout) =
+            runBlocking { unreachabilityState.iterateEOG(nextEog, startState, ::transfer) }
+        if (timeout) {
+            log.warn(
+                "Could not compute unreachability of EOG edges for {}, reached a timeout",
+                node.name,
+            )
+        }
 
         for ((key, value) in finalStateNew) {
             if (value.reachability == Reachability.UNREACHABLE) {
@@ -108,7 +110,7 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
      *
      * Returns the updated state and true because we always expect an update of the state.
      */
-    fun transfer(
+    suspend fun transfer(
         lattice: Lattice<UnreachabilityStateElement>,
         currentEdge: EvaluationOrder,
         currentState: UnreachabilityStateElement,
@@ -276,7 +278,7 @@ enum class Reachability {
 class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
     class Element(var reachability: Reachability) : Lattice.Element {
         override fun equals(other: Any?): Boolean {
-            return other is Element && this.compare(other) == Order.EQUAL
+            return other is Element && this@Element.compare(other) == Order.EQUAL
         }
 
         override fun compare(other: Lattice.Element): Order {
@@ -302,7 +304,7 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
     }
 
     override var elements =
-        setOf(
+        concurrentIdentitySetOf(
             Element(Reachability.BOTTOM),
             Element(Reachability.UNREACHABLE),
             Element(Reachability.REACHABLE),
@@ -311,9 +313,16 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
     override val bottom: Element
         get() = Element(Reachability.BOTTOM)
 
-    override fun lub(one: Element, two: Element, allowModify: Boolean, widen: Boolean): Element {
+    override suspend fun lub(
+        one: Element,
+        two: Element,
+        allowModify: Boolean,
+        widen: Boolean,
+        concurrencyCounter: Int,
+    ): Element {
         return if (allowModify) {
-            when (compare(one, two)) {
+            val ret = compare(one, two)
+            when (ret) {
                 Order.EQUAL -> one
                 Order.GREATER -> one
                 Order.LESSER -> {
@@ -328,7 +337,7 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
         } else Element(maxOf(one.reachability, two.reachability))
     }
 
-    override fun glb(one: Element, two: Element): Element {
+    override suspend fun glb(one: Element, two: Element): Element {
         return Element(minOf(one.reachability, two.reachability))
     }
 
@@ -351,9 +360,11 @@ fun UnreachabilityState.push(
     newEdge: EvaluationOrder,
     newReachability: Reachability,
 ): UnreachabilityStateElement {
-    return this.lub(
-        currentState,
-        UnreachabilityStateElement(newEdge to ReachabilityLattice.Element(newReachability)),
-        true,
-    )
+    return runBlocking {
+        this@push.lub(
+            currentState,
+            UnreachabilityStateElement(newEdge to ReachabilityLattice.Element(newReachability)),
+            true,
+        )
+    }
 }

@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -39,15 +40,20 @@ import org.slf4j.LoggerFactory
 class MultiValueEvaluator : ValueEvaluator() {
     companion object {
         const val MAX_DEPTH: Int = 20
+        /** Cache calculated values so that we don't have to calculate them each time */
+        private val valuesCache = ConcurrentHashMap<Int, Any>()
     }
 
     override val log: Logger
         get() = LoggerFactory.getLogger(MultiValueEvaluator::class.java)
 
-    override fun evaluate(node: Any?): Any? {
+    override fun evaluate(node: Any?, useCache: Boolean): Any? {
         clearPath()
 
-        val result = evaluateInternal(node as? Node, 0)
+        val result =
+            if (useCache)
+                valuesCache.getOrPut(node.hashCode()) { evaluateInternal(node as? Node, 0) }
+            else evaluateInternal(node as? Node, 0)
         return if (result is Collection<*> && result.all { r -> r is Number }) {
             ConcreteNumberSet(result.map { r -> (r as Number).toLong() }.toMutableSet())
         } else {
@@ -201,8 +207,6 @@ class MultiValueEvaluator : ValueEvaluator() {
                     }
                 }
             }
-            "*" -> evaluateInternal(expr.input, depth + 1)
-            "&" -> evaluateInternal(expr.input, depth + 1)
             else -> super.handleUnaryOp(expr, depth)
         }
     }

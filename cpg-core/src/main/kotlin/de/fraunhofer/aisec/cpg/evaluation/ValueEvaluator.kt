@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.Util
+import java.util.concurrent.ConcurrentHashMap
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -72,11 +73,18 @@ open class ValueEvaluator(
     /** This property contains the path of the latest execution of [evaluateInternal]. */
     val path: MutableList<Node> = mutableListOf()
 
-    open fun evaluate(node: Any?): Any? {
+    /** Cache calculated values so that we don't have to calculate them each time */
+    companion object {
+        private val valuesCache = ConcurrentHashMap<Int, Any>()
+    }
+
+    open fun evaluate(node: Any?, useCache: Boolean = false): Any? {
         if (node !is Node) return node
         clearPath()
 
-        return evaluateInternal(node, 0)
+        // Check if we have the value for [node.hashCode] in the cache. If not, evaluate it
+        return if (useCache) valuesCache.getOrPut(node.hashCode()) { evaluateInternal(node, 0) }
+        else evaluateInternal(node, 0)
     }
 
     /**
@@ -456,9 +464,9 @@ open class ValueEvaluator(
         // references.
         val prevDFG =
             if (node is Reference) {
-                filterSelfReferences(node, node.prevDFG.toList())
+                filterSelfReferences(node, node.prevFullDFG.toList())
             } else {
-                node.prevDFG
+                node.prevFullDFG
             }
 
         return if (prevDFG.size == 1) {

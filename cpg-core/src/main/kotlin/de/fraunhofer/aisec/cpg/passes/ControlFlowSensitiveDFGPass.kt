@@ -30,12 +30,11 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
-import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
-import de.fraunhofer.aisec.cpg.graph.statements.Statement
+import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.*
+import de.fraunhofer.aisec.cpg.helpers.LatticeElement
+import de.fraunhofer.aisec.cpg.helpers.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
@@ -66,6 +65,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
          * function (or whatever is starting the EOG). If `null`, no time limit is enforced.
          */
         var timeout: Long? = null,
+        val parallel: Boolean = true,
     ) : PassConfiguration()
 
     override fun cleanup() {
@@ -86,9 +86,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         // These are EOGStarterHolders but do not have an EOG which means, they will just cause
         // problems. Again, if we delete information/edges, we will never be able to recover them.
         if (node is FunctionTemplateDeclaration) return
+
         // Calculate the complexity of the function and see, if it exceeds our threshold
         val max = passConfig<Configuration>()?.maxComplexity
-        val c = (node as? FunctionDeclaration)?.body?.cyclomaticComplexity ?: 0
+        val c = (node as? FunctionDeclaration)?.body?.cyclomaticComplexity() ?: 0
         if (max != null && c > max) {
             log.info(
                 "Ignoring function ${node.name} because its complexity (${c}) is greater than the configured maximum (${max})"
@@ -137,10 +138,11 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             )
                 as? DFGPassState ?: return
 
-        for (node in allNodesWithEdgesToRemove) {
-            node.prevDFGEdges.removeAll(edgesToRemove)
-            node.nextDFGEdges.removeAll(edgesToRemove)
-        }
+        // Commented out because the DFG pass here doesn't create the over-approximations.
+        // for (node in allNodesWithEdgesToRemove) {
+        //    node.prevDFGEdges.removeAll(edgesToRemove)
+        //    node.nextDFGEdges.removeAll(edgesToRemove)
+        // }
 
         removeUnreachableImplicitReturnStatement(
             node,
@@ -156,13 +158,13 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // use the defaults (no calling context => null and FullGranularity).
                 var callingContext: CallingContext? = null
                 var granularity: Granularity = FullDataflowGranularity
-                edgePropertiesMap[Pair(it, key)]?.let {
+                edgePropertiesMap[Triple(it, key, true)]?.let {
                     callingContext = it.filterIsInstance<CallingContext>().singleOrNull()
                     granularity =
                         it.filterIsInstance<Granularity>().singleOrNull() ?: FullDataflowGranularity
                 }
 
-                if ((it is VariableDeclaration || it is ParameterDeclaration) && key == it) {
+                /*if ((it is VariableDeclaration || it is ParameterDeclaration) && key == it) {
                     // Nothing to do
                 } else if (callingContext != null) {
                     key.prevDFGEdges.addContextSensitive(
@@ -170,23 +172,30 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                         callingContext = callingContext,
                         granularity = granularity,
                     )
+                } else if (edgePropertyMapElement is PointerDataflowGranularity) {
+                    key.prevDFGEdges +=
+                        Dataflow(start = it, end = key, granularity = edgePropertyMapElement)
                 } else {
                     key.prevDFGEdges.add(it) { this.granularity = granularity }
-                }
+                }*/
             }
         }
     }
 
     /**
-     * Checks if there's an entry in [edgePropertiesMap] with key `(x, null)` where `x` is in [from]
-     * and, if so, adds an entry with key `(x, to)` and the same value
+     * Checks if there's an entry in [edgePropertiesMap] with key `(x, null, <any>)` where `x` is in
+     * [from] and, if so, adds an entry with key `(x, to, true)` and the same value
      */
-    protected fun findAndSetProperties(from: Set<Node>, to: Node) {
+    protected open fun findAndSetProperties(from: Set<Node>, to: Node) {
         edgePropertiesMap
+            // TODO: What's the purpose of these two filters? One of them is unnecessary.
+            .filter { entry ->
+                entry.key.first in from && (to as? Reference)?.refersTo == entry.key.second
+            }
             .filter { it.key.first in from && it.key.second == null }
             .forEach {
                 edgePropertiesMap
-                    .computeIfAbsent(Pair(it.key.first, to)) { mutableSetOf() }
+                    .computeIfAbsent(Triple(it.key.first, to, true)) { mutableSetOf() }
                     .addAll(it.value)
             }
     }
@@ -228,17 +237,11 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             // Clear only prev DFG inside this function!
             varDecl.prevDFGEdges
                 .filter { it.start in allChildrenOfFunction }
-                .forEach {
-                    edgesToRemove.add(it)
-                    // varDecl.prevDFGEdges.remove(it)
-                }
+                .forEach { edgesToRemove.add(it) }
             // Clear only next DFG inside this function!
             varDecl.nextDFGEdges
                 .filter { it.end in allChildrenOfFunction }
-                .forEach {
-                    edgesToRemove.add(it)
-                    // varDecl.nextDFGEdges.remove(it)
-                }
+                .forEach { edgesToRemove.add(it) }
             if (
                 varDecl.prevDFGEdges.all { it in edgesToRemove } and
                     varDecl.nextDFGEdges.all { it in edgesToRemove }
@@ -262,6 +265,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         state: State<Node, Set<Node>>,
         worklist: Worklist<Edge<Node>, Node, Set<Node>>,
     ): State<Node, Set<Node>> {
+        log.debug("In transfer")
         // We will set this if we write to a variable
         val writtenDeclaration: Declaration?
         val currentNode = currentEdge.end
@@ -289,7 +293,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     doubleState.push(variable, PowersetLattice(identitySetOf(currentNode)))
 
                     edgePropertiesMap
-                        .computeIfAbsent(Pair(currentNode, variable)) { mutableSetOf() }
+                        .computeIfAbsent(Triple(currentNode, variable, true)) { mutableSetOf() }
                         .add(indexed(idx))
                 }
             } else {
@@ -319,25 +323,50 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             // The rhs can be anything. The rhs flows to the respective lhs. To identify the
             // correct mapping, we use the "assignments" property which already searches for us.
             currentNode.assignments.forEach { assignment ->
-                // Sometimes, we have a InitializerListExpression on the lhs which is not good at
-                // all...
-                if (assignment.target is InitializerListExpression) {
-                    assignment.target.initializers.forEachIndexed { idx, initializer ->
-                        (initializer as? Reference)?.let { ref ->
-                            ref.refersTo?.let {
-                                doubleState.declarationsState[it] =
-                                    PowersetLattice(identitySetOf(ref))
+                // This was the last write to the respective declaration.
+                val declPair: Pair<Declaration, Node?>? =
+                    if (assignment.target is Declaration)
+                        Pair(assignment.target as Declaration, assignment.target)
+                    else {
+                        val unwrappedTarget = (assignment.target as? Expression).unwrapReference()
+                        if (unwrappedTarget is Reference) {
+                            if (assignment.target is SubscriptExpression) {
+                                val subscriptExpression = assignment.target as? SubscriptExpression
+                                val unwrappedBufTarget =
+                                    subscriptExpression?.arrayExpression?.unwrapReference()
+                                if (unwrappedBufTarget is Reference) {
+                                    unwrappedBufTarget.refersTo?.let { Pair(it, assignment.target) }
+                                } else null
+                            } else if (unwrappedTarget?.refersTo == null) {
+                                null
+                            } else {
+                                Pair(unwrappedTarget.refersTo!!, unwrappedTarget)
+                            }
+                        } else null
+                    }
+                declPair?.let { (decl, target) ->
+                    if (target != null) {
+                        doubleState.declarationsState[decl] = PowersetLattice(identitySetOf(target))
+                    }
+                    // Sometimes, we have a InitializerListExpression on the lhs which is not good
+                    // at
+                    // all...
+                    if (target is InitializerListExpression) {
+                        target.initializers.forEachIndexed { idx, initializer ->
+                            (initializer as? Reference)?.let { ref ->
+                                ref.refersTo?.let {
+                                    doubleState.declarationsState[it] =
+                                        PowersetLattice(identitySetOf(ref))
+                                }
                             }
                         }
-                    }
-                } else {
-                    // This was the last write to the respective declaration.
-                    (assignment.target as? Declaration
-                            ?: (assignment.target as? Reference)?.refersTo)
-                        ?.let {
+                    } else {
+                        // This was the last write to the respective declaration.
+                        (target as? Declaration ?: (target as? Reference)?.refersTo)?.let {
                             doubleState.declarationsState[it] =
-                                PowersetLattice(identitySetOf(assignment.target as Node))
+                                PowersetLattice(identitySetOf(target as Node))
                         }
+                    }
                 }
             }
         } else if (isIncOrDec(currentNode)) {
@@ -363,23 +392,27 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
             // The write operation goes to the variable in the lhs
             val lhs = currentNode.lhs.singleOrNull()
-            writtenDeclaration = (lhs as? Reference)?.refersTo
+            val lhsref = lhs.unwrapReference()
+            if (lhsref is Reference) {
+                writtenDeclaration = lhsref.refersTo
 
-            if (writtenDeclaration != null) {
-                val prev = doubleState.declarationsState[writtenDeclaration]
-                findAndSetProperties(prev?.elements ?: setOf(), currentNode)
-                // Data flows from the last writes to the lhs variable to this node
-                state.push(lhs, prev)
+                if (writtenDeclaration != null && lhs != null) {
+                    val prev = doubleState.declarationsState[writtenDeclaration]
+                    findAndSetProperties(prev?.elements ?: setOf(), currentNode)
+                    // Data flows from the last writes to the lhs variable to this node
+                    state.push(lhs, prev)
 
-                // The whole current node is the place of the last update, not (only) the lhs!
-                doubleState.declarationsState[writtenDeclaration] =
-                    PowersetLattice(identitySetOf(lhs))
+                    // The whole current node is the place of the last update, not (only) the lhs!
+                    doubleState.declarationsState[writtenDeclaration] =
+                        PowersetLattice(identitySetOf(lhs))
+                }
             }
         } else if (
             (currentNode as? Reference)?.access == AccessValues.READ &&
                 (currentNode.refersTo is VariableDeclaration ||
                     currentNode.refersTo is ParameterDeclaration) &&
-                currentNode.refersTo !is FieldDeclaration
+                currentNode.refersTo !is FieldDeclaration &&
+                (currentNode.refersTo as? VariableDeclaration)?.isGlobal != true
         ) {
             // We can only find a change if there's a state for the variable
             doubleState.declarationsState[currentNode.refersTo]?.let {
@@ -403,6 +436,29 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 // the other steps
                 state.push(currentNode, it)
             }
+        } else if (
+            (currentNode as? Reference)?.access == AccessValues.READWRITE &&
+                !currentNode.dfgHandlerHint
+        ) {
+            /* This branch collects all READWRITE accesses which are not handled separately as compoundAssignment or inc/dec unary operation. This could for example be a pointer passed to an unknown function which is modified in this function but other things are also possible. */
+            // We can only find a change if there's a state for the variable
+            doubleState.declarationsState[currentNode.refersTo]?.let {
+                // We only read the variable => Get previous write which have been collected in
+                // the other steps
+                state.push(currentNode, it)
+            }
+            // We read and write to the variable => Update the declarationState accordingly because
+            // there was probably some other kind of DFG edge into the reference
+            doubleState.declarationsState[currentNode.refersTo] =
+                PowersetLattice(identitySetOf(currentNode))
+        } else if (
+            (currentNode as? Reference)?.access == AccessValues.WRITE && !currentNode.dfgHandlerHint
+        ) {
+            /* Also here, we want/have to filter out variables in ForEachStatements because this must be handled separately.  */
+            // We write to the variable => Update the declarationState accordingly because
+            // there was probably some other kind of DFG edge into the reference
+            doubleState.declarationsState[currentNode.refersTo] =
+                PowersetLattice(identitySetOf(currentNode))
         } else if (currentNode is ComprehensionExpression) {
             handleComprehensionExpression(currentNode, doubleState)
         } else if (currentNode is ForEachStatement && currentNode.variable != null) {
@@ -423,7 +479,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                             null
                         }
                     }
-                    else -> currentNode.variable
+                    else -> variable
                 }
 
             // We wrote something to this variable declaration
@@ -496,9 +552,12 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                             }
                         doubleState.declarationsState[arg?.refersTo] =
                             PowersetLattice(identitySetOf(param))
-                        edgePropertiesMap.computeIfAbsent(Pair(param, null)) {
-                            mutableSetOf<Any>()
-                        } += CallingContextOut(currentNode)
+
+                        if (arg != null) {
+                            edgePropertiesMap[Triple(param, arg.refersTo, false)]?.add(
+                                CallingContextOut(mutableListOf(currentNode))
+                            )
+                        }
                     }
                 }
             } else {
@@ -638,10 +697,11 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      * state. This is for example the case to identify if the resulting edge will receive a
      * context-sensitivity label (i.e., if the node used as key is somehow inside the called
      * function and the next usage happens inside the function under analysis right now). The key of
-     * an entry works as follows: The 1st item in the pair is the prevDFG of the 2nd item. If the
-     * 2nd item is null, it's obviously not relevant. Ultimately, it will be 2nd -prevDFG-> 1st.
+     * an entry works as follows: The 1st item in the triple is the prevDFG of the 2nd item. If the
+     * 2nd item is null, it's obviously not relevant. Ultimately, it will be 2nd -prevDFG-> 1st. If
+     * the third item is false, we also don't consider it.
      */
-    val edgePropertiesMap = mutableMapOf<Pair<Node, Node?>, MutableSet<Any>>()
+    val edgePropertiesMap = mutableMapOf<Triple<Node, Node?, Boolean>, MutableSet<Any>>()
 
     /**
      * Checks if the node performs an operation and an assignment at the same time e.g. with the
@@ -689,16 +749,17 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      */
     protected class DFGPassState<V>(
         /**
-         * A mapping of a [Node] to its [LatticeElement]. The keys of this state will later get the
-         * DFG edges from the value!
+         * A mapping of a [Node] to its
+         * [de.fraunhofer.aisec.cpg.helpers.functional.Lattice.Element]. The keys of this state will
+         * later get the DFG edges from the value!
          */
         var generalState: State<Node, V> = State(),
         /**
          * It's main purpose is to store the most recent mapping of a [Declaration] to its
-         * [LatticeElement]. However, it is also used to figure out if we have to continue with the
-         * iteration (something in the declarationState has changed) which is why we store all nodes
-         * here. However, since we never use them except from determining if we changed something,
-         * it won't affect the result.
+         * [de.fraunhofer.aisec.cpg.helpers.functional.Lattice.Element]. However, it is also used to
+         * figure out if we have to continue with the iteration (something in the declarationState
+         * has changed) which is why we store all nodes here. However, since we never use them
+         * except from determining if we changed something, it won't affect the result.
          */
         var declarationsState: State<Any?, V> = State(),
 
@@ -743,10 +804,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         }
 
         /** Pushes the [newNode] and its [newLatticeElement] to the [declarationsState]. */
-        fun pushToDeclarationsState(
-            newNode: Declaration,
-            newLatticeElement: LatticeElement<V>?,
-        ): Boolean {
+        fun pushToDeclarationsState(newNode: Node, newLatticeElement: LatticeElement<V>?): Boolean {
             return declarationsState.push(newNode, newLatticeElement)
         }
     }
@@ -796,6 +854,7 @@ fun Node.objectIdentifier(): Int? {
         is SubscriptExpression -> this.objectIdentifier()
         is MemberExpression -> this.objectIdentifier()
         is Reference -> this.objectIdentifier()
+        is UnaryOperator -> this.objectIdentifier()
         is Declaration -> this.hashCode()
         is Literal<*> -> this.value.hashCode()
         else -> null
@@ -831,4 +890,19 @@ fun MemberExpression.objectIdentifier(): Int? {
 /** Implements [Node.objectIdentifier] for a [Reference]. */
 fun Reference.objectIdentifier(): Int? {
     return this.refersTo?.hashCode()
+}
+
+/** Implements [Node.objectIdentifier] for a [UnaryOperator]. */
+fun UnaryOperator.objectIdentifier(): Int? {
+    val op = this.operatorCode
+    return if (op == null) {
+        null
+    } else {
+        val inputIdentifier = input.objectIdentifier()
+        if (inputIdentifier != null) {
+            op.hashCode() + inputIdentifier
+        } else {
+            null
+        }
+    }
 }

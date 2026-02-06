@@ -49,6 +49,7 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionPointerType
 import de.fraunhofer.aisec.cpg.passes.ControlFlowSensitiveDFGPass
 import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.passes.DynamicInvokeResolver
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
 import de.fraunhofer.aisec.cpg.passes.concepts.flows.cxx.CXXEntryPointsPass
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -57,7 +58,8 @@ import kotlin.io.path.Path
 import kotlin.io.path.nameWithoutExtension
 
 /** A pass that fills the [DynamicLoading] concept into the CPG. */
-@DependsOn(ControlFlowSensitiveDFGPass::class)
+@DependsOn(ControlFlowSensitiveDFGPass::class, true)
+@DependsOn(PointsToPass::class, true)
 @DependsOn(CXXEntryPointsPass::class)
 @ExecuteBefore(DynamicInvokeResolver::class)
 @Description(
@@ -145,7 +147,10 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
             // We can help the dynamic invoke resolver by adding a DFG path from the declaration to
             // the "return value" of dlsym
             candidates?.forEach {
-                call.prevDFGEdges.addContextSensitive(it, callingContext = CallingContextOut(call))
+                call.prevDFGEdges.addContextSensitive(
+                    it,
+                    callingContext = CallingContextOut(mutableListOf(call)),
+                )
             }
         }
         return listOf()
