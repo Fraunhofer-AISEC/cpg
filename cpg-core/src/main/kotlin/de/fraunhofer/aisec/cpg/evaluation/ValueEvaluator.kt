@@ -464,9 +464,9 @@ open class ValueEvaluator(
         // references.
         val prevDFG =
             if (node is Reference) {
-                filterSelfReferences(node, node.prevDFG.toList())
+                filterSelfReferences(node, node.prevFullDFG.toList())
             } else {
-                node.prevDFG
+                node.prevFullDFG
             }
 
         return if (prevDFG.size == 1) {
