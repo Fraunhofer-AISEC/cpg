@@ -130,7 +130,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is MemberExpression -> handleMemberExpression(node)
             is ExpressionList -> handleExpressionList(node)
             is NewExpression -> handleNewExpression(node)
-            is InitializerListExpression -> handleInitializerListExpression(node)
+            // is InitializerListExpression -> handleInitializerListExpression(node)
             is KeyValueExpression -> handleKeyValueExpression(node)
             is LambdaExpression -> handleLambdaExpression(node)
             is UnaryOperator -> handleUnaryOperator(node)
