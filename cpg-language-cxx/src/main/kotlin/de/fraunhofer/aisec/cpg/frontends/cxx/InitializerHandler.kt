@@ -80,10 +80,7 @@ class InitializerHandler(lang: CXXLanguageFrontend) :
         val expression = newInitializerListExpression(targetType, rawNode = ctx)
 
         for (clause in ctx.clauses) {
-            frontend.expressionHandler.handle(clause)?.let {
-                expression.initializerEdges.add(it)
-                expression.prevDFGEdges += it
-            }
+            frontend.expressionHandler.handle(clause)?.let { expression.initializerEdges.add(it) }
         }
 
         return expression
