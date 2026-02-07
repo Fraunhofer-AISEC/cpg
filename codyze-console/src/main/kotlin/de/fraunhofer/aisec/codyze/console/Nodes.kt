@@ -302,6 +302,8 @@ data class ConceptRequestJSON(
     }
 }
 
+@Serializable data class ExecuteQueryRequestJSON(val scriptCode: String)
+
 /** Converts a [AnalysisResult] into its JSON representation. */
 fun AnalysisResult.toJSON(): AnalysisResultJSON =
     with(translationResult) {
