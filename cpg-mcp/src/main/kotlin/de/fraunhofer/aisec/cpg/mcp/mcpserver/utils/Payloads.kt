@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils
+package de.fraunhofer.aisec.cpg.mcp.mcpserver.utils
 
 import kotlinx.serialization.Serializable
 

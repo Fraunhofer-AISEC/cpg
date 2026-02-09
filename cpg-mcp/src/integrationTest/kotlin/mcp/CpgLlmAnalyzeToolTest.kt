@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.mcp
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.addCpgLlmAnalyzeTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.runCpgAnalyze
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.CpgAnalyzePayload
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest

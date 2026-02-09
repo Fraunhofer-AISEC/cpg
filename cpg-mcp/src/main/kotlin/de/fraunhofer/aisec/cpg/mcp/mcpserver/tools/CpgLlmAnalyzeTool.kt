@@ -26,10 +26,10 @@
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.cpgDescription
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgLlmAnalyzePayload
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableConcepts
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableOperations
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.CpgLlmAnalyzePayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.getAvailableConcepts
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.getAvailableOperations
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.toObject
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent

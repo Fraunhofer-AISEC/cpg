@@ -30,11 +30,11 @@ import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.conceptBuildHelper
 import de.fraunhofer.aisec.cpg.graph.concepts.operationBuildHelper
 import de.fraunhofer.aisec.cpg.graph.nodes
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgApplyConceptsPayload
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableConcepts
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableOperations
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.runOnCpg
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.CpgApplyConceptsPayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.getAvailableConcepts
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.getAvailableOperations
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.runOnCpg
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.utils.toObject
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
