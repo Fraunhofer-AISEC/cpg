@@ -875,45 +875,49 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                                     is ParameterMemoryValue
                                                             )
                                                                 node.parameters.singleOrNull {
-                                                                    it.name ==
+                                                                    it.name.localName ==
                                                                         sourceParamValue.name.parent
+                                                                            ?.localName
                                                                 }
                                                             else
                                                                 sourceParamValue
                                                                     as? ParameterDeclaration
-                                                        if (matchingDeclarations == null) TODO()
-                                                        node.functionSummary
-                                                            .computeIfAbsent(param) {
-                                                                ConcurrentHashMap.newKeySet()
-                                                            }
-                                                            .add(
-                                                                FSEntry(
-                                                                    dstValueDepth,
-                                                                    matchingDeclarations,
-                                                                    stringToDepth(
-                                                                        sourceParamValue.name
-                                                                            .localName
-                                                                    ),
-                                                                    subAccessName,
-                                                                    mutableSetOf(
-                                                                        NodeWithPropertiesKey(
-                                                                            matchingDeclarations,
-                                                                            // Add the parameter
-                                                                            // index to indicate to
-                                                                            // the calculatePrevDFGs
-                                                                            // function that we
-                                                                            // need to replace the
-                                                                            // value of the call
-                                                                            // argument
-                                                                            equalLinkedHashSetOf(
-                                                                                matchingDeclarations
-                                                                                    .argumentIndex
-                                                                            ),
-                                                                        )
-                                                                    ),
-                                                                    equalLinkedHashSetOf(true),
+                                                        if (matchingDeclarations != null) {
+                                                            node.functionSummary
+                                                                .computeIfAbsent(param) {
+                                                                    ConcurrentHashMap.newKeySet()
+                                                                }
+                                                                .add(
+                                                                    FSEntry(
+                                                                        dstValueDepth,
+                                                                        matchingDeclarations,
+                                                                        stringToDepth(
+                                                                            sourceParamValue.name
+                                                                                .localName
+                                                                        ),
+                                                                        subAccessName,
+                                                                        mutableSetOf(
+                                                                            NodeWithPropertiesKey(
+                                                                                matchingDeclarations,
+                                                                                // Add the parameter
+                                                                                // index to indicate
+                                                                                // to the
+                                                                                // calculatePrevDFGs
+                                                                                // function that we
+                                                                                // need to replace
+                                                                                // the
+                                                                                // value of the call
+                                                                                // argument
+                                                                                equalLinkedHashSetOf(
+                                                                                    matchingDeclarations
+                                                                                        .argumentIndex
+                                                                                ),
+                                                                            )
+                                                                        ),
+                                                                        equalLinkedHashSetOf(true),
+                                                                    )
                                                                 )
-                                                            )
+                                                        }
                                                     }
                                             }
                                         }
@@ -982,8 +986,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             )
         doubleState =
             when (currentNode) {
-                is FunctionDeclaration ->
-                    initializeParameters(lattice, currentNode.parameters, doubleState)
+                is FunctionDeclaration -> initializeParameters(lattice, currentNode, doubleState)
                 is Literal<*> -> {
                     // Literals don't have any prevDFG edges, so we skip those
                     doubleState
@@ -2337,13 +2340,13 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     /** Create ParameterMemoryValues up to depth `depth` */
     private suspend fun initializeParameters(
         lattice: PointsToState,
-        parameters: MutableList<ParameterDeclaration>,
+        function: FunctionDeclaration,
         doubleState: PointsToState.Element,
         // Until which depth do we create ParameterMemoryValues
         depth: Int = 2,
     ): PointsToState.Element {
         var doubleState = doubleState
-        parameters
+        function.parameters
             .filter { it.memoryValues.filterIsInstance<ParameterMemoryValue>().isEmpty() }
             .forEach { param ->
                 // In the first step, we have a triangle of ParameterDeclaration, the
@@ -2372,7 +2375,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     else 0
                 for (i in 0..paramDepth) {
                     val pmvName = "deref".repeat(i) + "value"
-                    val pmv = ParameterMemoryValue(Name(pmvName, param.name))
+                    val pmv =
+                        ParameterMemoryValue(
+                            Name(pmvName, Name(param.name.localName, function.name))
+                        )
 
                     // In the first step, we link the ParameterDeclaration to the PMV to be
                     // able to
