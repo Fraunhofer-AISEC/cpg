@@ -141,7 +141,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is ThrowExpression -> handleThrowExpression(node)
             // Declarations
             is FieldDeclaration -> handleFieldDeclaration(node)
-            is FunctionDeclaration -> handleFunctionDeclaration(node, functionSummaries)
+            is FunctionDeclaration ->
+                handleFunctionDeclaration(node, functionSummaries, inferDfgForUnresolvedSymbols)
             is TupleDeclaration -> handleTupleDeclaration(node)
             is VariableDeclaration -> handleVariableDeclaration(node)
         }
@@ -258,6 +259,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     protected fun handleFunctionDeclaration(
         node: FunctionDeclaration,
         functionSummaries: DFGFunctionSummaries,
+        inferDfgForUnresolvedSymbols: Boolean,
     ) {
         if (node.isInferred) {
             val summaryExists = with(functionSummaries) { addFlowsToFunctionDeclaration(node) }
@@ -270,6 +272,24 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 // If it's a method with a receiver, we connect that one too.
                 if (node is MethodDeclaration) {
                     node.receiver?.let { node.prevDFGEdges += it }
+                }
+
+                // For inferred constructors, we also try to connect parameters to fields of the
+                // record.
+                if (inferDfgForUnresolvedSymbols && node is ConstructorDeclaration) {
+                    val record = node.recordDeclaration ?: return
+                    val fields = record.fields
+
+                    for (param in node.parameters) {
+                        val matchingField =
+                            fields.firstOrNull { it.name.localName == param.name.localName }
+                        if (matchingField != null) {
+                            param.nextDFGEdges += matchingField
+                        }
+                    }
+                    fields.forEach { field ->
+                        field.nextDFGEdges.add(node) { granularity = partial(field.name.localName) }
+                    }
                 }
             }
         } else {

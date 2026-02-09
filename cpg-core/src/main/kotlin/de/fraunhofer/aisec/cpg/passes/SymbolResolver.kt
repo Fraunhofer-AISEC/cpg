@@ -722,10 +722,12 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
                 ) != IncompatibleSignature
             }
 
+        val argumentNames = constructExpression.argumentEdges.map { edge -> edge.name }
+
         return constructorCandidate
             ?: recordDeclaration
                 .startInference(ctx)
-                ?.createInferredConstructor(constructExpression.signature)
+                ?.createInferredConstructor(constructExpression.signature, argumentNames)
     }
 
     companion object {

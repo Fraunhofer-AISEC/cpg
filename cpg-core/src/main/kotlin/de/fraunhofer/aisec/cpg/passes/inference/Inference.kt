@@ -173,11 +173,14 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             )
     }
 
-    fun createInferredConstructor(signature: List<Type?>): ConstructorDeclaration {
+    fun createInferredConstructor(
+        signature: List<Type?>,
+        argumentNames: List<String?> = emptyList(),
+    ): ConstructorDeclaration {
         return inferInScopeOf(start) {
             val record = start as? RecordDeclaration
             val inferred = newConstructorDeclaration(start.name.localName, record)
-            createInferredParameters(inferred, signature)
+            createInferredParameters(inferred, signature, argumentNames)
 
             scopeManager.addDeclaration(inferred)
             record?.constructors += inferred
@@ -210,9 +213,14 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
 
     /**
      * This function creates a [ParameterDeclaration] for each parameter in the [function]'s
-     * [signature].
+     * [signature]. If [argumentNames] are provided, those names will be used for the parameters
+     * instead of generating names from the types.
      */
-    private fun createInferredParameters(function: FunctionDeclaration, signature: List<Type?>) {
+    private fun createInferredParameters(
+        function: FunctionDeclaration,
+        signature: List<Type?>,
+        argumentNames: List<String?> = emptyList(),
+    ) {
         // To save some unnecessary scopes, we only want to "enter" the function if it is necessary,
         // e.g., if we need to create parameters
         if (signature.isNotEmpty()) {
@@ -220,7 +228,8 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
 
             for (i in signature.indices) {
                 val targetType = signature[i] ?: UnknownType.getUnknownType(function.language)
-                val paramName = generateParamName(i, targetType)
+                // Use the argument name if available, otherwise generate a name from the type
+                val paramName = argumentNames.getOrNull(i) ?: generateParamName(i, targetType)
                 val param = newParameterDeclaration(paramName, targetType, false)
                 param.argumentIndex = i
 
