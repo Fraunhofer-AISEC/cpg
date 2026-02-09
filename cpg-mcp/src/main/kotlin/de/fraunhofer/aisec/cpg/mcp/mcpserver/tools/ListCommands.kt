@@ -119,9 +119,6 @@ fun Server.listCallsTo() {
         Example prompts:
         - "Show me all calls to the function 'encrypt'"
         - "Where is the 'authenticate' function called?"
-
-        Parameters:
-        - name: The local name of the function or method whose calls should be listed.
         """
             .trimIndent()
 
@@ -134,11 +131,7 @@ fun Server.listCallsTo() {
 
 fun Server.getAllArgs() {
     val toolDescription =
-        """This tool lists all arguments passed to the method/function call with the specified ID.
-
-        Parameters:
-        - id: ID of the method/function call whose arguments should be listed.
-        """
+        """This tool lists all arguments passed to the method/function call with the specified ID."""
             .trimIndent()
 
     this.addTool<CpgIdPayload>(name = "cpg_list_call_args", description = toolDescription) {
@@ -158,12 +151,7 @@ fun Server.getArgByIndexOrName() {
     val toolDescription =
         """This tool lists an argument passed to the method/function call with the specified ID either by name or by index.
 
-        Parameters:
-        - id: ID of the method/function call whose arguments should be listed.
-        - argName: Name of the argument to retrieve (optional).
-        - index: Index of the argument to retrieve (optional). The first argument is at index 0. We do not support the base/receiver of a method call here.
-        
-        If both argName and index are provided, the name takes precedence. At least one of argName or index must be provided.
+        If both arguments, argName and index, are provided, the name takes precedence. At least one of argName or index must be provided.
         """
             .trimIndent()
 

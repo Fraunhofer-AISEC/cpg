@@ -38,10 +38,10 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.query.QueryTree
-import io.modelcontextprotocol.kotlin.sdk.ToolAnnotations
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
+import io.modelcontextprotocol.kotlin.sdk.types.ToolAnnotations
 import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import java.util.function.BiFunction
 import kotlin.reflect.KClass
@@ -55,10 +55,20 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
+/**
+ * Registers a [io.modelcontextprotocol.kotlin.sdk.types.Tool] to the MCP [Server]. The tool's input
+ * schema is automatically generated from the reified type parameter [T] using reflection. The
+ * handler function receives the deserialized input of type [T] and the current [TranslationResult],
+ * and must return a [CallToolResult] with the output content. The [description] of the tool is
+ * automatically extended with parameter information from the schema, so do NOT add this information
+ * to the description yourself
+ */
 inline fun <reified T> Server.addTool(
     name: String,
     description: String,
@@ -69,10 +79,17 @@ inline fun <reified T> Server.addTool(
     noinline handler: (TranslationResult, T) -> CallToolResult,
 ) {
     val inputSchema = T::class.toSchema()
-    // TODO: Extend the description with parameter information from the schema.
+    val parameters =
+        inputSchema.properties
+            ?.map { (k, v) ->
+                val type = v.jsonObject["type"]?.jsonPrimitive?.content ?: "unknown"
+                val description = v.jsonObject["description"]?.jsonPrimitive?.content ?: ""
+                "- $k: $description"
+            }
+            ?.joinToString(separator = "\n", prefix = "$description\n\nParameters:\n") { it }
     this.addTool(
         name,
-        description,
+        description + parameters,
         inputSchema = inputSchema,
         title = title,
         outputSchema = outputSchema,
@@ -115,6 +132,8 @@ fun KType.toSchemaType(
         Long::class -> "integer" to null
         Float::class,
         Double::class -> "number" to null
+        Boolean::class -> "boolean" to null
+        Set::class,
         List::class ->
             "array" to
                 {

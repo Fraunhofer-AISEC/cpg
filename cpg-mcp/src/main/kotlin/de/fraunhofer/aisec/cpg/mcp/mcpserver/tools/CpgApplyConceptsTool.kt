@@ -93,12 +93,6 @@ fun Server.addCpgApplyConceptsTool() {
             Example usage:
             - "Apply concepts to the nodes you identified"
             - "Tag the node with identifier <nodeId> with concept <overlay>"
-            
-            Parameters:
-            - assignments: List of overlay assignments to perform
-              Each assignment contains:
-              - nodeId: ID of the node to apply overlay to
-              - overlay: Fully qualified name of concept or operation class
               
             Available concepts:
             ${availableConcepts.joinToString("\n") { "- ${it.name}" }}

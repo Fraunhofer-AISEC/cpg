@@ -56,11 +56,7 @@ fun Server.addCpgDataflowTool() {
         
         Example usage:
         - Is there a data flow from sensitive data to HTTP Request?
-        - Track file reads to network calls
-        
-        Parameters:
-        - from: Source concept type (e.g., 'ReadData', 'Data', 'Authentication')
-        - to: Target concept type (e.g., 'HttpRequest', 'CallExpression')
+        - Track file reads to network calls     
     """
             .trimIndent()
 
