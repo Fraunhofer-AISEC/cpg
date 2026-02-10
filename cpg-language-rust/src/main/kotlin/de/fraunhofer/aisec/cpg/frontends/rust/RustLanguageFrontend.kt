@@ -45,6 +45,8 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
     private lateinit var content: String
     private lateinit var uri: URI
 
+    internal val declarationHandler = DeclarationHandler(this)
+
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
         content = file.readText()
@@ -59,7 +61,17 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
         val tud = newTranslationUnitDeclaration(file.absolutePath, rawNode = rootNode)
         tud.location = locationOf(rootNode)
 
-        // TODO: Implement traversal
+        scopeManager.resetToGlobal(tud)
+
+        for (i in 0 until rootNode.childCount) {
+            val child = rootNode.getChild(i)
+            if (child.isNamed) {
+                val decl = declarationHandler.handle(child)
+                if (decl != null) {
+                    tud.addDeclaration(decl)
+                }
+            }
+        }
 
         return tud
     }

@@ -25,25 +25,27 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.rust
 
-import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.test.BaseTest
-import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
-import java.nio.file.Path
-import kotlin.test.*
+import de.fraunhofer.aisec.cpg.frontends.Handler
+import de.fraunhofer.aisec.cpg.graph.Node
+import java.util.function.Supplier
+import org.treesitter.TSNode
 
-class RustFrontendTest : BaseTest() {
+abstract class RustHandler<ResultNode : Node, HandlerNode : TSNode>(
+    configConstructor: Supplier<ResultNode>,
+    lang: RustLanguageFrontend,
+) : Handler<ResultNode, HandlerNode, RustLanguageFrontend>(configConstructor, lang) {
+    /**
+     * We intentionally override the logic of [Handler.handle] because we do not want the map-based
+     * logic, but rather want to make use of the Kotlin-when syntax.
+     */
+    override fun handle(ctx: HandlerNode): ResultNode {
+        val node = handleNode(ctx)
 
-    @Test
-    fun testHelloWorld() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
-        val tu =
-            analyzeAndGetFirstTU(listOf(topLevel.resolve("main.rs").toFile()), topLevel, true) {
-                it.registerLanguage<RustLanguage>()
-            }
-        assertNotNull(tu)
+        frontend.setComment(node, ctx)
+        frontend.process(ctx, node)
 
-        val main = tu.functions["main"]
-        assertNotNull(main)
-        assertEquals("main", main.name.localName)
+        return node
     }
+
+    abstract fun handleNode(node: HandlerNode): ResultNode
 }

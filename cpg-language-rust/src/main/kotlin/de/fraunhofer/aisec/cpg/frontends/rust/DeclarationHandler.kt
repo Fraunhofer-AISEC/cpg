@@ -26,24 +26,33 @@
 package de.fraunhofer.aisec.cpg.frontends.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.test.BaseTest
-import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
-import java.nio.file.Path
-import kotlin.test.*
+import de.fraunhofer.aisec.cpg.graph.declarations.*
+import org.treesitter.TSNode
 
-class RustFrontendTest : BaseTest() {
+class DeclarationHandler(frontend: RustLanguageFrontend) :
+    RustHandler<Declaration, TSNode>(::ProblemDeclaration, frontend) {
 
-    @Test
-    fun testHelloWorld() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
-        val tu =
-            analyzeAndGetFirstTU(listOf(topLevel.resolve("main.rs").toFile()), topLevel, true) {
-                it.registerLanguage<RustLanguage>()
+    override fun handleNode(node: TSNode): Declaration {
+        return when (node.type) {
+            "function_item" -> handleFunctionItem(node)
+            else -> {
+                ProblemDeclaration("Unknown declaration type: ${node.type}")
             }
-        assertNotNull(tu)
+        }
+    }
 
-        val main = tu.functions["main"]
-        assertNotNull(main)
-        assertEquals("main", main.name.localName)
+    private fun handleFunctionItem(node: TSNode): FunctionDeclaration {
+        val nameNode = node.getChildByFieldName("name")
+        val name = nameNode.let { frontend.codeOf(it) } ?: ""
+
+        val func = newFunctionDeclaration(name, rawNode = node)
+        frontend.scopeManager.enterScope(func)
+
+        // TODO: Handle parameters
+        // TODO: Handle return type
+        // TODO: Handle body
+
+        frontend.scopeManager.leaveScope(func)
+        return func
     }
 }
