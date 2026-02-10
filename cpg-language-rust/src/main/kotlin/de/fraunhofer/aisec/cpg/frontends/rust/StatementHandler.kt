@@ -32,6 +32,10 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import org.treesitter.TSNode
 
+/**
+ * A [Handler] that translates Rust statements into CPG [Statement] nodes. It currently supports
+ * blocks, let declarations, return statements, and if expressions.
+ */
 class StatementHandler(frontend: RustLanguageFrontend) :
     RustHandler<Statement, TSNode>(::ProblemExpression, frontend) {
 
@@ -84,6 +88,11 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             }
 
         val variable = newVariableDeclaration(name, rawNode = node)
+
+        val typeNode = node.getChildByFieldName("type")
+        if (typeNode != null) {
+            variable.type = frontend.typeOf(typeNode)
+        }
 
         val valueNode = node.getChildByFieldName("value")
         if (valueNode != null) {
@@ -186,7 +195,11 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
     private fun handleExpressionStatement(node: TSNode): Statement {
         val child = node.getNamedChild(0) ?: return newEmptyStatement(rawNode = node)
-        return if (child.type == "if_expression" || child.type == "block") {
+        return if (
+            child.type == "if_expression" ||
+                child.type == "block" ||
+                child.type == "return_expression"
+        ) {
             handle(child)
         } else {
             frontend.expressionHandler.handle(child)

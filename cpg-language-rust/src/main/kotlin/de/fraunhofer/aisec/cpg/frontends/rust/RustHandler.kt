@@ -30,6 +30,10 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import java.util.function.Supplier
 import org.treesitter.TSNode
 
+/**
+ * An abstract base class for handlers in the Rust frontend. It provides a common [handle] method
+ * that takes care of null-node checks, comment assignment, and metadata processing.
+ */
 abstract class RustHandler<ResultNode : Node, HandlerNode : TSNode>(
     configConstructor: Supplier<ResultNode>,
     lang: RustLanguageFrontend,

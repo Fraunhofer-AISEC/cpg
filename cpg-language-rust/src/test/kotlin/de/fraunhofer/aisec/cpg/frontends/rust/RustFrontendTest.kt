@@ -33,7 +33,6 @@ import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import java.nio.file.Path
 import kotlin.test.*
-import org.treesitter.*
 
 class RustFrontendTest : BaseTest() {
 
@@ -210,5 +209,24 @@ class RustFrontendTest : BaseTest() {
         assertNotNull(block)
         // 3 arms, each with CaseStatement, value, and break = 9 statements
         assertEquals(9, block.statements.size)
+    }
+
+    @Test
+    fun testCoverage() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("coverage.rs").toFile()), topLevel, true) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+
+        val myMod = tu.namespaces["my_mod"]
+        assertNotNull(myMod)
+
+        val innerFunc = myMod.functions["inner_func"]
+        assertNotNull(innerFunc)
+        val returnStmt = (innerFunc.body as? Block)?.statements?.get(0) as? ReturnStatement
+        assertNotNull(returnStmt)
+        assertNotNull(returnStmt.returnValue)
     }
 }

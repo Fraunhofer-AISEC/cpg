@@ -30,6 +30,10 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import org.treesitter.TSNode
 
+/**
+ * A [Handler] that translates Rust type nodes into CPG [Type] nodes. It supports primitive types,
+ * references, arrays, and type aliases.
+ */
 class TypeHandler(frontend: RustLanguageFrontend) :
     RustHandler<Type, TSNode>({ UnknownType.getUnknownType(null) }, frontend) {
 

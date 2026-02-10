@@ -30,6 +30,10 @@ import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import org.treesitter.TSNode
 
+/**
+ * A [Handler] that translates Rust expressions into CPG [Expression] nodes. It currently supports
+ * literals, binary and unary operations, function calls, assignments, and match expressions.
+ */
 class ExpressionHandler(frontend: RustLanguageFrontend) :
     RustHandler<Statement, TSNode>(::ProblemExpression, frontend) {
 
@@ -50,6 +54,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             "tuple_expression" -> handleTupleExpression(node)
             "array_expression" -> handleArrayExpression(node)
             "match_expression" -> handleMatchExpression(node)
+            "macro_invocation" -> handleMacroInvocation(node)
             "parenthesized_expression" -> {
                 val child = node.getNamedChild(0)
                 if (child != null) handle(child)
@@ -268,5 +273,16 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         switch.statement = block
 
         return switch
+    }
+
+    private fun handleMacroInvocation(node: TSNode): Expression {
+        val macroNode = node.getChildByFieldName("macro")
+        val name = macroNode?.let { frontend.codeOf(it) } ?: ""
+
+        // Treat macro call as a CallExpression for now
+        val call =
+            newCallExpression(newReference(name, rawNode = macroNode), fqn = name, rawNode = node)
+
+        return call
     }
 }

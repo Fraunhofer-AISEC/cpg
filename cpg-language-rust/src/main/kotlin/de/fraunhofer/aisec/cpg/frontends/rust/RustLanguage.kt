@@ -29,7 +29,11 @@ import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
 
-/** The Rust language. */
+/**
+ * The [Language] definition for Rust. It currently supports basic types and operators.
+ *
+ * More information can be found in the [Rust Reference](https://doc.rust-lang.org/reference/).
+ */
 class RustLanguage :
     Language<RustLanguageFrontend>(), HasShortCircuitOperators, HasDefaultArguments {
     override val fileExtensions = listOf("rs")

@@ -30,6 +30,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import org.treesitter.TSNode
 
+/**
+ * A [Handler] that translates Rust declarations (items) into CPG [Declaration] nodes. It currently
+ * supports functions, structs, enums, impl blocks, and modules.
+ */
 class DeclarationHandler(frontend: RustLanguageFrontend) :
     RustHandler<Declaration, TSNode>(::ProblemDeclaration, frontend) {
 
@@ -40,6 +44,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             "enum_item" -> handleEnumItem(node)
             "impl_item" -> handleImplItem(node)
             "mod_item" -> handleModItem(node)
+            "type_item" -> handleTypeItem(node)
             else -> {
                 ProblemDeclaration("Unknown declaration type: ${node.type}")
             }
@@ -69,6 +74,11 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         val parameters = node.getChildByFieldName("parameters")
         if (parameters != null) {
             handleParameters(parameters, func)
+        }
+
+        val returnTypeNode = node.getChildByFieldName("return_type")
+        if (returnTypeNode != null) {
+            func.returnTypes = listOf(frontend.typeOf(returnTypeNode))
         }
 
         val body = node.getChildByFieldName("body")
@@ -215,5 +225,18 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
         frontend.scopeManager.leaveScope(mod)
         return mod
+    }
+
+    private fun handleTypeItem(node: TSNode): Declaration {
+        val nameNode = node.getChildByFieldName("name")
+        val name = nameNode?.let { frontend.codeOf(it) } ?: ""
+        val typeNode = node.getChildByFieldName("type")
+
+        val targetType = frontend.typeOf(typeNode)
+        val aliasType = objectType(name)
+
+        val decl = newTypedefDeclaration(targetType, aliasType, rawNode = node)
+        frontend.scopeManager.addDeclaration(decl)
+        return decl
     }
 }

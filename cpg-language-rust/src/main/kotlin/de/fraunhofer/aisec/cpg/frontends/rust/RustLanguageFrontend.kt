@@ -38,7 +38,11 @@ import java.io.File
 import java.net.URI
 import org.treesitter.*
 
-/** A [LanguageFrontend] for Rust using Tree-sitter. */
+/**
+ * A [LanguageFrontend] for Rust using Tree-sitter. It utilizes the `tree-sitter-rust` grammar via
+ * the `io.github.bonede:tree-sitter-ng` bindings to translate Rust source code into the common CPG
+ * representation.
+ */
 class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLanguageFrontend>) :
     LanguageFrontend<TSNode, TSNode?>(ctx, language) {
 
