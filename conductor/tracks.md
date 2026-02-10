@@ -4,5 +4,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [~] **Track: Implement experimental Rust language frontend (`cpg-language-rust`) using Tree-sitter**
+- [x] **Track: Implement experimental Rust language frontend (`cpg-language-rust`) using Tree-sitter**
   *Link: [./tracks/rust_frontend_20260210/](./tracks/rust_frontend_20260210/)*
