@@ -66,4 +66,6 @@ abstract class AstNode : Node() {
         // Disconnect all AST children first
         astChildren.forEach { it.disconnectFromGraph() }
     }
+
+    val idAst: String by lazy { astParent?.let { it.idAst + "/" } + name.toString() }
 }
