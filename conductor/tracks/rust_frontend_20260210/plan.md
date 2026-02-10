@@ -15,7 +15,7 @@
     - [ ] Implement a basic test to verify that `tree-sitter-rust` can successfully parse a simple "Hello, World!" Rust file.
 - [x] Task: Conductor - User Manual Verification 'Tree-sitter Integration' (Protocol in workflow.md)
 
-## Phase 3: Basic AST Translation (Structure & Functions)
+## Phase 3: Basic AST Translation (Structure & Functions) [checkpoint: 41e0be3]
 - [x] Task: Implement `RustLanguageFrontend` class (e01f55e)
     - [ ] Create the main class extending `LanguageFrontend`.
     - [ ] Implement the `parse()` method to trigger Tree-sitter parsing.
