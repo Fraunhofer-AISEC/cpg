@@ -56,6 +56,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             "match_expression" -> handleMatchExpression(node)
             "macro_invocation" -> handleMacroInvocation(node)
             "let_condition" -> handleLetCondition(node)
+            "break_expression" -> handleBreakExpression(node)
+            "continue_expression" -> handleContinueExpression(node)
             "parenthesized_expression" -> {
                 val child = node.getNamedChild(0)
                 if (child != null) handle(child)
@@ -341,5 +343,45 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         op.lhs = lhs
         op.rhs = rhs
         return op
+    }
+
+    private fun handleBreakExpression(node: TSNode): Statement {
+        val breakStmt = newBreakStatement(rawNode = node)
+        var label = node.getChildByFieldName("label")
+        if (label == null || label.isNull) {
+            for (i in 0 until node.childCount) {
+                val c = node.getChild(i)
+                if (c.type == "loop_label" || c.type == "label") {
+                    label = c
+                    break
+                }
+            }
+        }
+
+        if (label != null && !label.isNull) {
+            val code = frontend.codeOf(label) ?: ""
+            breakStmt.label = code.removePrefix("'")
+        }
+        return breakStmt
+    }
+
+    private fun handleContinueExpression(node: TSNode): Statement {
+        val continueStmt = newContinueStatement(rawNode = node)
+        var label = node.getChildByFieldName("label")
+        if (label == null || label.isNull) {
+            for (i in 0 until node.childCount) {
+                val c = node.getChild(i)
+                if (c.type == "loop_label" || c.type == "label") {
+                    label = c
+                    break
+                }
+            }
+        }
+
+        if (label != null && !label.isNull) {
+            val code = frontend.codeOf(label) ?: ""
+            continueStmt.label = code.removePrefix("'")
+        }
+        return continueStmt
     }
 }

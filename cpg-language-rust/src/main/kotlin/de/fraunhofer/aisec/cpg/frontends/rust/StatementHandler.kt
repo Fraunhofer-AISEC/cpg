@@ -47,6 +47,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             "return_expression" -> handleReturnExpression(node)
             "if_expression" -> handleIfExpression(node)
             "while_expression" -> handleWhileExpression(node)
+            "loop_expression" -> handleLoopExpression(node)
             "expression_statement" -> handleExpressionStatement(node)
             else -> {
                 newProblemExpression("Unknown statement type: ${node.type}", rawNode = node)
@@ -245,7 +246,58 @@ class StatementHandler(frontend: RustLanguageFrontend) :
                 }
         }
 
-        return whileStmt
+        var label = node.getChildByFieldName("label")
+        if (label == null || label.isNull) {
+            for (i in 0 until node.childCount) {
+                val child = node.getChild(i)
+                if (child.type == "loop_label" || child.type == "label") {
+                    label = child
+                    break
+                }
+            }
+        }
+
+        return if (label != null && !label.isNull) {
+            val labelStmt = newLabelStatement(rawNode = node)
+            val code = frontend.codeOf(label) ?: ""
+            labelStmt.label = code.removePrefix("'")
+            labelStmt.subStatement = whileStmt
+            labelStmt
+        } else {
+            whileStmt
+        }
+    }
+
+    private fun handleLoopExpression(node: TSNode): Statement {
+        val loop = newWhileStatement(rawNode = node)
+        // Infinite loop: while(true)
+        loop.condition = newLiteral(true, primitiveType("bool"), rawNode = node).implicit()
+
+        val body = node.getChildByFieldName("body")
+        if (body != null && !body.isNull) {
+            loop.statement = handle(body)
+        }
+
+        var label = node.getChildByFieldName("label")
+        if (label == null || label.isNull) {
+            for (i in 0 until node.childCount) {
+                val child = node.getChild(i)
+                if (child.type == "loop_label" || child.type == "label") {
+                    label = child
+                    break
+                }
+            }
+        }
+
+        return if (label != null && !label.isNull) {
+            val labelStmt = newLabelStatement(rawNode = node)
+            val code = frontend.codeOf(label) ?: ""
+            labelStmt.label = code.removePrefix("'")
+            labelStmt.subStatement = loop
+            labelStmt
+        } else {
+            loop
+        }
     }
 
     internal fun handleBlockWithBindings(node: TSNode, bindings: List<VariableDeclaration>): Block {
@@ -332,7 +384,8 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             child.type == "if_expression" ||
                 child.type == "block" ||
                 child.type == "return_expression" ||
-                child.type == "while_expression"
+                child.type == "while_expression" ||
+                child.type == "loop_expression"
         ) {
             handle(child)
         } else {

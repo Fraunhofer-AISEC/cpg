@@ -27,9 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.WhileStatement
+import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
@@ -115,13 +113,59 @@ class RustControlFlowTest : BaseTest() {
         assertEquals("x", xVar?.name?.localName)
 
         // Statement 1: let y = x
-        val declStmt = loopBody.statements[1] as? DeclarationStatement
-        assertNotNull(declStmt)
-        val y = declStmt.declarations[0] as? VariableDeclaration
+        val declStmtLocal = loopBody.statements[1] as? DeclarationStatement
+        assertNotNull(declStmtLocal)
+        val y = declStmtLocal.declarations[0] as? VariableDeclaration
         assertEquals("y", y?.name?.localName)
 
         val init = y?.initializer
         assertNotNull(init)
         assertEquals("x", init.name.localName)
     }
-}
+
+    @Test
+    fun testLoopLabels() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("loop_labels.rs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+
+        val func = tu.functions["loop_labels"]
+        assertNotNull(func)
+        val body = func.body as? Block
+        assertNotNull(body)
+
+                // Outer loop (loop { ... })
+                // Mapped to LabelStatement -> WhileStatement
+                val outerLabel = body.statements[0] as? LabelStatement
+                assertNotNull(outerLabel, "Expected outer to be LabelStatement")
+                assertEquals("outer", outerLabel.label)
+        
+                val outerLoop = outerLabel.subStatement as? WhileStatement
+                assertNotNull(outerLoop, "Expected outer loop to be WhileStatement")
+        
+                val innerBlock = outerLoop.statement as? Block
+                assertNotNull(innerBlock)
+        
+                // Inner loop (while true { ... })
+                val innerLabel = innerBlock.statements[0] as? LabelStatement
+                assertNotNull(innerLabel, "Expected inner to be LabelStatement")
+                assertEquals("inner", innerLabel.label)
+        
+                val innerLoop = innerLabel.subStatement as? WhileStatement
+                assertNotNull(innerLoop, "Expected inner loop to be WhileStatement")
+        
+                val innerBody = innerLoop.statement as? Block
+                assertNotNull(innerBody, "Expected inner body to be Block")
+        
+                val breakStmt = innerBody.statements[0] as? BreakStatement
+                assertNotNull(breakStmt, "Expected break statement")
+                assertEquals("outer", breakStmt.label)
+            }
+        }
