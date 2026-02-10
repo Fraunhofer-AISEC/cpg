@@ -118,11 +118,21 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
             is RsType.ImplTraitType -> unknownType()
             is RsType.NeverType -> unknownType()
             is RsType.ParenType -> typeOf(type.v1.ty.first())
-            is RsType.PathType -> unknownType()
+            is RsType.PathType -> typeFromPath(type)
             is RsType.PtrType -> typeOf(type.v1.ty.first()).pointer()
             is RsType.RefType -> typeOf(type.v1.ty.first()).ref()
             is RsType.SliceType -> unknownType()
         }
+    }
+
+    fun typeFromPath(typePath: RsType.PathType): Type {
+        typePath.v1.path?.segment?.nameRef?.let {
+            language.builtInTypes[it.text]?.let {
+                return it
+            }
+            return objectType(parseName(it.text))
+        }
+        return unknownType()
     }
 
     /** Resolves a [Type] based on its string identifier. */

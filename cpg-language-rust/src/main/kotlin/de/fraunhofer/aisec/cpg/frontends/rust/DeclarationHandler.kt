@@ -75,6 +75,8 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                     }
             } ?: newFunctionDeclaration(name, rawNode = raw)
 
+        fn.retType?.let { function.type = frontend.typeOf(it) }
+
         frontend.scopeManager.enterScope(function)
         for (param in fn.paramList?.params ?: listOf()) {
             function.parameters += handleParameterDeclaration(param) as ParameterDeclaration
