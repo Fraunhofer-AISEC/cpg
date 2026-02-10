@@ -36,13 +36,166 @@ import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
+import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.query.QueryTree
-import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
+import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
+import io.modelcontextprotocol.kotlin.sdk.types.ToolAnnotations
+import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import java.util.function.BiFunction
+import kotlin.reflect.KClass
+import kotlin.reflect.KType
+import kotlin.reflect.KTypeParameter
+import kotlin.reflect.KTypeProjection
+import kotlin.reflect.full.findAnnotations
+import kotlin.reflect.full.memberProperties
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonObjectBuilder
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
+
+/**
+ * Registers a [io.modelcontextprotocol.kotlin.sdk.types.Tool] to the MCP [Server]. The tool's input
+ * schema is automatically generated from the reified type parameter [T] using reflection. The
+ * handler function receives the deserialized input of type [T] and the current [TranslationResult],
+ * and must return a [CallToolResult] with the output content. The [description] of the tool is
+ * automatically extended with parameter information from the schema, so do NOT add this information
+ * to the description yourself
+ */
+inline fun <reified T> Server.addTool(
+    name: String,
+    description: String,
+    title: String? = null,
+    outputSchema: ToolSchema? = null,
+    toolAnnotations: ToolAnnotations? = null,
+    meta: JsonObject? = null,
+    noinline handler: (TranslationResult, T) -> CallToolResult,
+) {
+    val inputSchema = T::class.toSchema()
+    val parameters =
+        inputSchema.properties
+            ?.map { (k, v) ->
+                val type = v.jsonObject["type"]?.jsonPrimitive?.content ?: "unknown"
+                val description = v.jsonObject["description"]?.jsonPrimitive?.content ?: ""
+                "- $k: $description"
+            }
+            ?.joinToString(separator = "\n", prefix = "$description\n\nParameters:\n") { it }
+    this.addTool(
+        name,
+        description + parameters,
+        inputSchema = inputSchema,
+        title = title,
+        outputSchema = outputSchema,
+        toolAnnotations = toolAnnotations,
+        meta = meta,
+    ) { request ->
+        try {
+            val payload =
+                request.arguments?.toObject<T>()
+                    ?: return@addTool CallToolResult(
+                        content =
+                            listOf(
+                                TextContent(
+                                    "Invalid or missing payload for cpg_list_calls_to tool."
+                                )
+                            )
+                    )
+            payload.runOnCpg(handler)
+        } catch (e: Exception) {
+            CallToolResult(
+                content =
+                    listOf(
+                        TextContent("Error executing query: ${e.message ?: e::class.simpleName}")
+                    )
+            )
+        }
+    }
+}
+
+fun KType.toSchemaType(
+    typeProjections: Map<KTypeParameter, KTypeProjection?>? = null
+): Pair<String, (JsonObjectBuilder.() -> Unit)?> {
+    typeProjections?.get(this.classifier)?.let {
+        return it.type?.toSchemaType(typeProjections) ?: ("object" to null)
+    }
+
+    return when (val classifier = this.classifier) {
+        String::class -> "string" to null
+        Int::class,
+        Long::class -> "integer" to null
+        Float::class,
+        Double::class -> "number" to null
+        Boolean::class -> "boolean" to null
+        Set::class,
+        List::class ->
+            "array" to
+                {
+                    this@toSchemaType.arguments.singleOrNull()?.type?.let { itemType ->
+                        putJsonObject("items") {
+                            val (type, modifier) = itemType.toSchemaType()
+                            put("type", type)
+                            modifier?.invoke(this)
+                        }
+                    }
+                }
+        else ->
+            "object" to
+                {
+                    (classifier as? KClass<*>)?.let { kClass ->
+                        this.put("properties", kClass.toSchemaJson(this@toSchemaType.arguments))
+                        putJsonArray("required") {
+                            kClass.memberProperties.forEach { property ->
+                                if (!property.returnType.isMarkedNullable) {
+                                    add(property.name)
+                                }
+                            }
+                        }
+                    }
+                }
+    }
+}
+
+fun KClass<*>.toSchemaJson(typeProjections: List<KTypeProjection>? = null): JsonObject {
+    // Get properties of the KClass, their types and descriptions to build the schema
+    return buildJsonObject {
+        this@toSchemaJson.memberProperties.forEach { property ->
+            val propertyName = property.name
+            val paramToProjection =
+                this@toSchemaJson.typeParameters
+                    .mapIndexed { index, p -> p to typeProjections?.get(index) }
+                    .toMap()
+            val (propertyType, modifier) = property.returnType.toSchemaType(paramToProjection)
+            val description = property.findAnnotations<Description>().firstOrNull()
+            putJsonObject(propertyName) {
+                put("type", propertyType)
+                description?.let { put("description", it.briefDescription) }
+                modifier?.invoke(this)
+            }
+        }
+    }
+}
+
+fun KClass<*>.toSchema(): ToolSchema {
+    val required = mutableListOf<String>()
+    // Get properties of the KClass, their types and descriptions to build the schema
+    val properties = this.toSchemaJson()
+
+    // Check which properties are nullable
+    this@toSchema.memberProperties.forEach { property ->
+        if (!property.returnType.isMarkedNullable) {
+            required.add(property.name)
+        }
+    }
+
+    return ToolSchema(properties = properties, required = required)
+}
 
 fun Node.toNodeInfo(): NodeInfo {
     return NodeInfo(this)
@@ -93,8 +246,8 @@ fun getAvailableOperations(): List<Class<out Operation>> {
 
 inline fun <reified T> JsonObject.toObject() = Json.decodeFromString<T>(Json.encodeToString(this))
 
-fun CallToolRequest.runOnCpg(
-    query: BiFunction<TranslationResult, CallToolRequest, CallToolResult>
+inline fun <reified T> T.runOnCpg(
+    query: BiFunction<TranslationResult, T, CallToolResult>
 ): CallToolResult {
     return try {
         val result =

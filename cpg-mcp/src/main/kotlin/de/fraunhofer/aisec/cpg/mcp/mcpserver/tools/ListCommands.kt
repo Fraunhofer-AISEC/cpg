@@ -34,17 +34,12 @@ import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgCallArgumentByNameOrIndexPayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgIdPayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgNamePayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.runOnCpg
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toJson
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
 import io.modelcontextprotocol.kotlin.sdk.server.Server
-import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
-import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonObject
 
 fun Server.listFunctions() {
     val toolDescription =
@@ -88,7 +83,7 @@ fun Server.listConceptsAndOperations() {
 
     this.addTool(name = "cpg_list_concepts_and_operations", description = toolDescription) { request
         ->
-        request.runOnCpg { result: TranslationResult, _: CallToolRequest ->
+        request.runOnCpg { result: TranslationResult, _ ->
             val concepts =
                 result.allChildrenWithOverlays<Concept>().map { TextContent(it.toJson()) }
             val operations =
@@ -124,98 +119,31 @@ fun Server.listCallsTo() {
         Example prompts:
         - "Show me all calls to the function 'encrypt'"
         - "Where is the 'authenticate' function called?"
-
-        Parameters:
-        - name: The local name of the function or method whose calls should be listed.
         """
             .trimIndent()
 
-    val inputSchema =
-        ToolSchema(
-            properties =
-                buildJsonObject {
-                    putJsonObject("name") {
-                        put("type", "string")
-                        put(
-                            "description",
-                            "The local name of the function or method whose calls should be listed.",
-                        )
-                    }
-                },
-            required = listOf("name"),
-        )
-
-    this.addTool(
-        name = "cpg_list_calls_to",
-        description = toolDescription,
-        inputSchema = inputSchema,
-    ) { request ->
-        request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
-            val payload =
-                request.arguments?.toObject<CpgNamePayload>()
-                    ?: return@runOnCpg CallToolResult(
-                        content =
-                            listOf(
-                                TextContent(
-                                    "Invalid or missing payload for cpg_list_calls_to tool."
-                                )
-                            )
-                    )
-
-            CallToolResult(content = result.calls(payload.name).map { TextContent(it.toJson()) })
-        }
+    this.addTool<CpgNamePayload>(name = "cpg_list_calls_to", description = toolDescription) {
+        result: TranslationResult,
+        payload: CpgNamePayload ->
+        CallToolResult(content = result.calls(payload.name).map { TextContent(it.toJson()) })
     }
 }
 
 fun Server.getAllArgs() {
     val toolDescription =
-        """This tool lists all arguments passed to the method/function call with the specified ID.
-
-        Parameters:
-        - id: ID of the method/function call whose arguments should be listed.
-        """
+        """This tool lists all arguments passed to the method/function call with the specified ID."""
             .trimIndent()
 
-    val inputSchema =
-        ToolSchema(
-            properties =
-                buildJsonObject {
-                    putJsonObject("id") {
-                        put("type", "string")
-                        put(
-                            "description",
-                            "ID of the method/function call whose arguments should be listed.",
-                        )
-                    }
-                },
-            required = listOf("id"),
+    this.addTool<CpgIdPayload>(name = "cpg_list_call_args", description = toolDescription) {
+        result: TranslationResult,
+        payload: CpgIdPayload ->
+        CallToolResult(
+            content =
+                result.calls
+                    .single { it.id.toString() == payload.id }
+                    .arguments
+                    .map { TextContent(it.toJson()) }
         )
-
-    this.addTool(
-        name = "cpg_list_call_args",
-        description = toolDescription,
-        inputSchema = inputSchema,
-    ) { request ->
-        request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
-            val payload =
-                request.arguments?.toObject<CpgIdPayload>()
-                    ?: return@runOnCpg CallToolResult(
-                        content =
-                            listOf(
-                                TextContent(
-                                    "Invalid or missing payload for cpg_list_call_args tool."
-                                )
-                            )
-                    )
-
-            CallToolResult(
-                content =
-                    result.calls
-                        .single { it.id.toString() == payload.id }
-                        .arguments
-                        .map { TextContent(it.toJson()) }
-            )
-        }
     }
 }
 
@@ -223,75 +151,27 @@ fun Server.getArgByIndexOrName() {
     val toolDescription =
         """This tool lists an argument passed to the method/function call with the specified ID either by name or by index.
 
-        Parameters:
-        - id: ID of the method/function call whose arguments should be listed.
-        - argName: Name of the argument to retrieve (optional).
-        - index: Index of the argument to retrieve (optional). The first argument is at index 0. We do not support the base/receiver of a method call here.
-        
-        If both argName and index are provided, the name takes precedence. At least one of argName or index must be provided.
+        If both arguments, argName and index, are provided, the name takes precedence. At least one of argName or index must be provided.
         """
             .trimIndent()
 
-    val inputSchema =
-        ToolSchema(
-            properties =
-                buildJsonObject {
-                    putJsonObject("nodeId") {
-                        put("type", "string")
-                        put(
-                            "description",
-                            "ID of the method/function call whose arguments should be listed.",
-                        )
-                    }
-                    putJsonObject("argName") {
-                        put("type", "string")
-                        put(
-                            "description",
-                            "The name of the argument (if arguments can be passed by name).",
-                        )
-                    }
-                    putJsonObject("index") {
-                        put("type", "integer")
-                        put(
-                            "description",
-                            "The index/position of the argument. The first argument is at index 0. We do not support the base/receiver of a method call here.",
-                        )
-                    }
-                },
-            required = listOf("nodeId"),
-        )
-
-    this.addTool(
+    this.addTool<CpgCallArgumentByNameOrIndexPayload>(
         name = "cpg_list_call_arg_by_name_or_index",
         description = toolDescription,
-        inputSchema = inputSchema,
-    ) { request ->
-        request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
-            val payload =
-                request.arguments?.toObject<CpgCallArgumentByNameOrIndexPayload>()
-                    ?: return@runOnCpg CallToolResult(
-                        content =
-                            listOf(
-                                TextContent(
-                                    "Invalid or missing payload for cpg_list_call_arg_by_name_or_index tool."
-                                )
+    ) { result: TranslationResult, payload: CpgCallArgumentByNameOrIndexPayload ->
+        CallToolResult(
+            content =
+                listOf(
+                    TextContent(
+                        result.calls
+                            .single { it.id.toString() == payload.nodeId }
+                            .argumentByNameOrPosition(
+                                name = payload.argumentName,
+                                position = payload.index,
                             )
+                            ?.toJson() ?: "No argument found with the given name or index."
                     )
-
-            CallToolResult(
-                content =
-                    listOf(
-                        TextContent(
-                            result.calls
-                                .single { it.id.toString() == payload.nodeId }
-                                .argumentByNameOrPosition(
-                                    name = payload.argumentName,
-                                    position = payload.index,
-                                )
-                                ?.toJson() ?: "No argument found with the given name or index."
-                        )
-                    )
-            )
-        }
+                )
+        )
     }
 }
