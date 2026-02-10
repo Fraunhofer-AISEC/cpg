@@ -43,6 +43,7 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentIdentityHashMap
 import de.fraunhofer.aisec.cpg.helpers.functional.EqualLinkedHashSet
 import de.fraunhofer.aisec.cpg.helpers.functional.equalLinkedHashSetOf
 import de.fraunhofer.aisec.cpg.passes.PointsToPass.NodeWithPropertiesKey
@@ -144,7 +145,7 @@ open class FunctionDeclaration :
                 isDummy == other.isDummy
     }
 
-    var functionSummary = ConcurrentHashMap<Node, MutableSet<FSEntry>>()
+    var functionSummary = ConcurrentIdentityHashMap<Node, MutableSet<FSEntry>>()
 
     /** Returns true, if this function has a [body] statement. */
     fun hasBody(): Boolean {

@@ -44,6 +44,7 @@ import de.fraunhofer.aisec.cpg.helpers.concurrentIdentitySetOf
 import de.fraunhofer.aisec.cpg.helpers.functional.*
 import de.fraunhofer.aisec.cpg.helpers.functional.TripleLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.TupleLattice.Element
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.helpers.toConcurrentIdentitySet
 import de.fraunhofer.aisec.cpg.passes.PointsToPass.NodeWithPropertiesKey
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
@@ -64,7 +65,7 @@ import kotlinx.coroutines.*
 val nodesCreatingUnknownValues = ConcurrentHashMap<Pair<Node, Name>, MemoryAddress>()
 var totalFunctionDeclarationCount = 0
 var analyzedFunctionDeclarationCount = 0
-val nodeVisitedCounterMap = ConcurrentHashMap<Node, Int>()
+val nodeVisitedCounterMap = ConcurrentIdentityHashMap<Node, Int>()
 
 typealias GeneralStateEntry =
     TripleLattice<
@@ -263,7 +264,7 @@ fun stringToDepth(name: String): Int {
 }
 
 /** clear dummys from a FunctionSummary */
-fun clearFSDummies(functionSummary: MutableMap<Node, MutableSet<FunctionDeclaration.FSEntry>>) {
+fun clearFSDummies(functionSummary: ConcurrentIdentityHashMap<Node, MutableSet<FSEntry>>) {
     // Do not clear the dummies for which we don't have bodies, only the "obvious" dummies we
     // created for recursive functions
     functionSummary
@@ -588,10 +589,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 functionDeclaration.receiver?.let {
                     prevDFGs.add(NodeWithPropertiesKey(it, equalLinkedHashSetOf<Any>()))
                 }
-            val rets = mutableSetOf<Node>()
+            val rets = identitySetOf<Node>()
             if (functionDeclaration.returns.isNotEmpty()) rets.addAll(functionDeclaration.returns)
             else rets.add(functionDeclaration)
-            rets.forEach { ret -> functionDeclaration.functionSummary[ret] = newEntries }
+            rets.forEach { ret -> functionDeclaration.functionSummary.put(ret, newEntries) }
             // draw a DFG-Edge from all parameters to the FunctionDeclaration
             doubleState =
                 lattice.push(
@@ -734,7 +735,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 /* Filter the PMVs from this parameter*/
                                 !(it.value is ParameterMemoryValue &&
                                     it.value.name.localName.contains("derefvalue") &&
-                                    it.value.name.parent == param.name)
+                                    it.value.name.parent?.localName == param.name.localName)
                                 /* Filter the unknownMemoryValues that weren't written to*/
                                 && !(it.value is UnknownMemoryValue && it.lastWrites.isEmpty())
                             }
@@ -931,7 +932,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
         // If we don't have anything to summarize, we add a dummy entry to the functionSummary
         if (node.functionSummary.isEmpty()) {
-            node.functionSummary[newLiteral("dummy")] = ConcurrentHashMap.newKeySet<FSEntry>()
+            node.functionSummary.put(newLiteral("dummy"), ConcurrentHashMap.newKeySet<FSEntry>())
         }
     }
 
@@ -1141,8 +1142,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 PowersetLattice.Element<Pair<Node, Boolean>>,
             >()
         val getLastWritesCache =
-            ConcurrentHashMap<Node, PowersetLattice.Element<PointsToPass.NodeWithPropertiesKey>>()
-        val getValuesCache = ConcurrentHashMap<Node, PowersetLattice.Element<Pair<Node, Boolean>>>()
+            ConcurrentIdentityHashMap<Node, PowersetLattice.Element<NodeWithPropertiesKey>>()
 
         callExpression.arguments.forEach { arg ->
             launch(Dispatchers.Default) {
@@ -1579,8 +1579,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     log.error(
                         "Cannot calculate functionSummary for ${invoke.name.localName} as it's recursively called. callChain: ${functionSummaryAnalysisChain.map{it.name.localName}}"
                     )
-                    invoke.functionSummary[newLiteral("dummy")] =
-                        ConcurrentHashMap.newKeySet<FSEntry>()
+                    invoke.functionSummary.put(
+                        newLiteral("dummy"),
+                        ConcurrentHashMap.newKeySet<FSEntry>(),
+                    )
                     return null
                 }
             } else {
@@ -1590,10 +1592,10 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 log.info("Creating dummy function summary")
                 val newValues = ConcurrentHashMap.newKeySet<FSEntry>()
                 invoke.parameters.map { newValues.add(FSEntry(0, it, 1, "")) }
-                val entries = mutableSetOf<Node>()
+                val entries = identitySetOf<Node>()
                 if (invoke.returns.isNotEmpty()) entries.addAll(invoke.returns)
                 else entries.add(invoke)
-                entries.forEach { entry -> invoke.functionSummary[entry] = newValues }
+                entries.forEach { entry -> invoke.functionSummary.put(entry, newValues) }
                 log.info("Finished creating dummy function summary")
             }
         }
@@ -1808,7 +1810,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 // dereference it, and then add it to the sources
                 currentNode.invokes
                     .flatMap { it.parameters }
-                    .filterTo(concurrentIdentitySetOf()) { it.name == srcNode.name.parent }
+                    .filterTo(concurrentIdentitySetOf()) {
+                        it.name.localName == srcNode.name.parent?.localName
+                    }
                     .forEach {
                         if (it.argumentIndex < currentNode.arguments.size) {
                             val arg = currentNode.arguments[it.argumentIndex]
@@ -2876,12 +2880,12 @@ fun PointsToState.Element.getLastWrites(
 }
 
 fun PointsToState.Element.getCachedLastWrites(
-    cache: MutableMap<Node, PowersetLattice.Element<PointsToPass.NodeWithPropertiesKey>>,
+    cache: ConcurrentIdentityHashMap<Node, PowersetLattice.Element<NodeWithPropertiesKey>>,
     node: Node,
-): PowersetLattice.Element<PointsToPass.NodeWithPropertiesKey> {
+): PowersetLattice.Element<NodeWithPropertiesKey> {
     // We cache some results. Cache is coming from the caller, it knows better when to refresh the
     // cache.
-    return cache.getOrPut(node) { this.getLastWrites(node) }
+    return cache.computeIfAbsent(node) { this.getLastWrites(node) }
 }
 
 fun PointsToState.Element.getValues(
@@ -3020,15 +3024,6 @@ fun PointsToState.Element.getValues(
         }
         else -> PowersetLattice.Element(Pair(node, false))
     }
-}
-
-fun PointsToState.Element.getCachedValues(
-    cache: MutableMap<Node, PowersetLattice.Element<Pair<Node, Boolean>>>,
-    node: Node,
-): PowersetLattice.Element<Pair<Node, Boolean>> {
-    // We cache some results. Cache is coming from the caller, it knows better when to refresh the
-    // cache.
-    return cache.getOrPut(node) { this.getValues(node, node) }
 }
 
 fun PointsToState.Element.getAddresses(node: Node, startNode: Node): ConcurrentIdentitySet<Node> {
