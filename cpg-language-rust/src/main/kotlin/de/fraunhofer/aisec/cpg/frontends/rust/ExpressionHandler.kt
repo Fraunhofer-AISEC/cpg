@@ -251,16 +251,41 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                 if (arm.type == "match_arm") {
                     val pattern = arm.getChildByFieldName("pattern")
                     val armValue = arm.getChildByFieldName("value")
+                    val guardNode = arm.getChildByFieldName("guard")
+
+                    // Extract bindings from pattern
+                    val bindings = frontend.statementHandler.extractBindings(pattern)
+
+                    // Enter implicit scope for the arm (to support guard resolution)
+                    val armScope = newBlock()
+                    frontend.scopeManager.enterScope(armScope)
+                    bindings.forEach { frontend.scopeManager.addDeclaration(it) }
 
                     val case = newCaseStatement(rawNode = arm)
-                    if (pattern != null) case.caseExpression = handle(pattern) as? Expression
+                    var caseExpr = if (pattern != null) handle(pattern) as? Expression else null
+
+                    if (guardNode != null) {
+                        val condition = guardNode.getChildByFieldName("condition")
+                        if (condition != null) {
+                            val guardExpr = handle(condition) as? Expression
+                            if (caseExpr != null && guardExpr != null) {
+                                val op = newBinaryOperator("if", rawNode = guardNode)
+                                op.lhs = caseExpr
+                                op.rhs = guardExpr
+                                caseExpr = op
+                            }
+                        }
+                    }
+
+                    case.caseExpression = caseExpr
                     block.statements += case
 
                     val stmt =
-                        if (armValue?.type == "block") {
-                            frontend.statementHandler.handle(armValue)
-                        } else if (armValue != null) {
-                            handle(armValue)
+                        if (armValue != null) {
+                            // handleBlockWithBindings will inject the declarations into the body
+                            // block
+                            // This ensures they are part of the AST
+                            frontend.statementHandler.handleBlockWithBindings(armValue, bindings)
                         } else {
                             newEmptyStatement().implicit()
                         }
@@ -268,6 +293,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
                     // Add implicit break
                     block.statements += newBreakStatement().implicit()
+
+                    frontend.scopeManager.leaveScope(armScope)
                 }
             }
         }

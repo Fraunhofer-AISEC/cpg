@@ -248,7 +248,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         return whileStmt
     }
 
-    private fun handleBlockWithBindings(node: TSNode, bindings: List<VariableDeclaration>): Block {
+    internal fun handleBlockWithBindings(node: TSNode, bindings: List<VariableDeclaration>): Block {
         val block = newBlock(rawNode = node)
         frontend.scopeManager.enterScope(block)
 
@@ -275,7 +275,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         return block
     }
 
-    private fun extractBindings(pattern: TSNode?): List<VariableDeclaration> {
+    internal fun extractBindings(pattern: TSNode?): List<VariableDeclaration> {
         val vars = mutableListOf<VariableDeclaration>()
         if (pattern == null) return vars
 
