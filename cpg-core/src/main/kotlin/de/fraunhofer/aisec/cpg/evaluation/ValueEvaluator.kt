@@ -481,7 +481,7 @@ open class ValueEvaluator(
             cannotEvaluate(node, this)
         } else {
             // No previous DFG node
-            log.warn("We cannot evaluate {}: It has no previous DFG edges.", node)
+            //            log.warn("We cannot evaluate {}: It has no previous DFG edges.", node)
             cannotEvaluate(node, this)
         }
     }
