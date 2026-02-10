@@ -64,14 +64,20 @@ class RustControlFlowTest : BaseTest() {
         val thenBlock = ifStmt.thenStatement as? Block
         assertNotNull(thenBlock)
 
-        val declStmt = thenBlock.statements[0] as? DeclarationStatement
+        // Statement 0: Binding for x
+        val declX = thenBlock.statements[0] as? DeclarationStatement
+        assertNotNull(declX)
+        val xVar = declX.declarations[0] as? VariableDeclaration
+        assertEquals("x", xVar?.name?.localName)
+
+        // Statement 1: let y = x
+        val declStmt = thenBlock.statements[1] as? DeclarationStatement
         assertNotNull(declStmt)
         val y = declStmt.declarations[0] as? VariableDeclaration
         assertEquals("y", y?.name?.localName)
 
         val init = y?.initializer
         assertNotNull(init)
-        // We expect 'x' to be available here
         assertEquals("x", init.name.localName)
     }
 
@@ -102,7 +108,14 @@ class RustControlFlowTest : BaseTest() {
         val loopBody = whileStmt.statement as? Block
         assertNotNull(loopBody)
 
-        val declStmt = loopBody.statements[0] as? DeclarationStatement
+        // Statement 0: Binding for x
+        val declX = loopBody.statements[0] as? DeclarationStatement
+        assertNotNull(declX)
+        val xVar = declX.declarations[0] as? VariableDeclaration
+        assertEquals("x", xVar?.name?.localName)
+
+        // Statement 1: let y = x
+        val declStmt = loopBody.statements[1] as? DeclarationStatement
         assertNotNull(declStmt)
         val y = declStmt.declarations[0] as? VariableDeclaration
         assertEquals("y", y?.name?.localName)

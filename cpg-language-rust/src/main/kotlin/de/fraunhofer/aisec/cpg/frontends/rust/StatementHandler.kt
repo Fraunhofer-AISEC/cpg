@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -45,6 +46,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             "let_declaration" -> handleLetDeclaration(node)
             "return_expression" -> handleReturnExpression(node)
             "if_expression" -> handleIfExpression(node)
+            "while_expression" -> handleWhileExpression(node)
             "expression_statement" -> handleExpressionStatement(node)
             else -> {
                 newProblemExpression("Unknown statement type: ${node.type}", rawNode = node)
@@ -133,7 +135,9 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     private fun handleIfExpression(node: TSNode): IfStatement {
         val ifStmt = newIfStatement(rawNode = node)
 
-        val condition = node.getChildByFieldName("condition")
+        var condition = node.getChildByFieldName("condition")
+        if (condition != null && condition.isNull) condition = null
+
         if (condition != null) {
             ifStmt.condition = frontend.expressionHandler.handle(condition) as? Expression
         } else {
@@ -141,33 +145,53 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             for (i in 0 until node.childCount) {
                 val child = node.getChild(i)
                 if (
-                    child.isNamed &&
+                    !child.isNull &&
+                        child.isNamed &&
                         child.type != "if" &&
                         child.type != "block" &&
                         child.type != "else_clause"
                 ) {
                     ifStmt.condition = frontend.expressionHandler.handle(child) as? Expression
+                    condition = child
                     break
                 }
             }
         }
 
+        // Check for bindings (if let)
+        val bindings =
+            if (condition != null && condition.type == "let_condition") {
+                extractBindings(condition.getChildByFieldName("pattern"))
+            } else {
+                emptyList<VariableDeclaration>()
+            }
+
         val consequence = node.getChildByFieldName("consequence")
-        if (consequence != null) {
-            ifStmt.thenStatement = handle(consequence)
+        if (consequence != null && !consequence.isNull) {
+            ifStmt.thenStatement =
+                if (bindings.isNotEmpty()) {
+                    handleBlockWithBindings(consequence, bindings)
+                } else {
+                    handle(consequence)
+                }
         } else {
             // Fallback: the block is usually the consequence
             for (i in 0 until node.childCount) {
                 val child = node.getChild(i)
-                if (child.type == "block") {
-                    ifStmt.thenStatement = handle(child)
+                if (!child.isNull && child.type == "block") {
+                    ifStmt.thenStatement =
+                        if (bindings.isNotEmpty()) {
+                            handleBlockWithBindings(child, bindings)
+                        } else {
+                            handle(child)
+                        }
                     break
                 }
             }
         }
 
         val alternative = node.getChildByFieldName("alternative")
-        if (alternative != null) {
+        if (alternative != null && !alternative.isNull) {
             // Alternative can be another if_expression or a block
             // In Rust Tree-sitter, alternative is often an 'else_clause' node
             val elseNode =
@@ -176,7 +200,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
                     var found: TSNode? = null
                     for (j in 0 until alternative.childCount) {
                         val c = alternative.getChild(j)
-                        if (c.isNamed && c.type != "else") {
+                        if (!c.isNull && c.isNamed && c.type != "else") {
                             found = c
                             break
                         }
@@ -193,12 +217,122 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         return ifStmt
     }
 
+    private fun handleWhileExpression(node: TSNode): Statement {
+        val whileStmt = newWhileStatement(rawNode = node)
+
+        var condition = node.getChildByFieldName("condition")
+        if (condition != null && condition.isNull) condition = null
+
+        if (condition != null) {
+            whileStmt.condition = frontend.expressionHandler.handle(condition) as? Expression
+        }
+
+        // Check for bindings (while let)
+        val bindings =
+            if (condition != null && condition.type == "let_condition") {
+                extractBindings(condition.getChildByFieldName("pattern"))
+            } else {
+                emptyList<VariableDeclaration>()
+            }
+
+        val body = node.getChildByFieldName("body")
+        if (body != null && !body.isNull) {
+            whileStmt.statement =
+                if (bindings.isNotEmpty()) {
+                    handleBlockWithBindings(body, bindings)
+                } else {
+                    handle(body)
+                }
+        }
+
+        return whileStmt
+    }
+
+    private fun handleBlockWithBindings(node: TSNode, bindings: List<VariableDeclaration>): Block {
+        val block = newBlock(rawNode = node)
+        frontend.scopeManager.enterScope(block)
+
+        bindings.forEach {
+            frontend.scopeManager.addDeclaration(it)
+            val decl = newDeclarationStatement(rawNode = null)
+            decl.location = it.location
+            decl.addDeclaration(it)
+            block.statements.add(decl)
+        }
+
+        if (node.type == "block") {
+            for (i in 0 until node.childCount) {
+                val child = node.getChild(i)
+                if (child.isNamed && child.type != "{" && child.type != "}") {
+                    block.statements += handle(child)
+                }
+            }
+        } else {
+            block.statements += handle(node)
+        }
+
+        frontend.scopeManager.leaveScope(block)
+        return block
+    }
+
+    private fun extractBindings(pattern: TSNode?): List<VariableDeclaration> {
+        val vars = mutableListOf<VariableDeclaration>()
+        if (pattern == null) return vars
+
+        when (pattern.type) {
+            "identifier" -> {
+                val name = frontend.codeOf(pattern) ?: ""
+                vars += newVariableDeclaration(name, rawNode = pattern)
+            }
+            "tuple_struct_pattern" -> {
+                val typeChild = pattern.getChildByFieldName("type")
+                for (i in 0 until pattern.childCount) {
+                    val child = pattern.getChild(i)
+                    // Skip the type name (child field "type")
+                    val isType =
+                        if (typeChild != null && !typeChild.isNull) {
+                            child.startByte == typeChild.startByte &&
+                                child.endByte == typeChild.endByte
+                        } else {
+                            false
+                        }
+
+                    if (!isType && child.isNamed) {
+                        vars += extractBindings(child)
+                    }
+                }
+            }
+            "tuple_pattern" -> {
+                for (i in 0 until pattern.childCount) {
+                    val child = pattern.getChild(i)
+                    if (child.isNamed && child.type != "(" && child.type != ")") {
+                        vars += extractBindings(child)
+                    }
+                }
+            }
+            else -> {
+                // Generic fallback for other patterns (struct_pattern, etc.)
+                // This might over-capture (e.g. enum variant names) if not careful,
+                // but strictly pattern matching usually only binds variables or matches consts.
+                // Assuming lowercase = var, uppercase = const/type is a heuristic we might need
+                // later.
+                // For now, recurse.
+                for (i in 0 until pattern.childCount) {
+                    val child = pattern.getChild(i)
+                    if (child.isNamed) vars += extractBindings(child)
+                }
+            }
+        }
+        return vars
+    }
+
     private fun handleExpressionStatement(node: TSNode): Statement {
         val child = node.getNamedChild(0) ?: return newEmptyStatement(rawNode = node)
         return if (
             child.type == "if_expression" ||
                 child.type == "block" ||
-                child.type == "return_expression"
+                child.type == "return_expression" ||
+                child.type == "while_expression"
         ) {
             handle(child)
         } else {

@@ -55,6 +55,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             "array_expression" -> handleArrayExpression(node)
             "match_expression" -> handleMatchExpression(node)
             "macro_invocation" -> handleMacroInvocation(node)
+            "let_condition" -> handleLetCondition(node)
             "parenthesized_expression" -> {
                 val child = node.getNamedChild(0)
                 if (child != null) handle(child)
@@ -284,5 +285,34 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             newCallExpression(newReference(name, rawNode = macroNode), fqn = name, rawNode = node)
 
         return call
+    }
+
+    private fun handleLetCondition(node: TSNode): Expression {
+        val pattern = node.getChildByFieldName("pattern")
+        val value = node.getChildByFieldName("value")
+
+        val lhs =
+            if (pattern != null) {
+                // For now, treat pattern as an expression (e.g. Reference or specialized node)
+                // We might need a PatternHandler later, but ExpressionHandler can handle basic
+                // patterns usually
+                handle(pattern) as? Expression
+                    ?: newProblemExpression("Invalid pattern", rawNode = pattern)
+            } else {
+                newProblemExpression("Missing pattern", rawNode = node)
+            }
+
+        val rhs =
+            if (value != null) {
+                handle(value) as? Expression
+                    ?: newProblemExpression("Invalid value", rawNode = value)
+            } else {
+                newProblemExpression("Missing value", rawNode = node)
+            }
+
+        val op = newBinaryOperator("let", rawNode = node)
+        op.lhs = lhs
+        op.rhs = rhs
+        return op
     }
 }
