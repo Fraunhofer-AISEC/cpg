@@ -9,5 +9,6 @@ mavenPublishing {
 
 dependencies {
     implementation(libs.treesitter)
+    implementation(libs.treesitter.rust)
     testImplementation(project(":cpg-analysis"))
 }
