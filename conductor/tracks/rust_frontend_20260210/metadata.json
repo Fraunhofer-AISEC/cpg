@@ -1,8 +1,0 @@
-{
-  "track_id": "rust_frontend_20260210",
-  "type": "feature",
-  "status": "new",
-  "created_at": "2026-02-10T00:00:00Z",
-  "updated_at": "2026-02-10T00:00:00Z",
-  "description": "Implement experimental Rust language frontend (cpg-language-rust) using Tree-sitter"
-}
