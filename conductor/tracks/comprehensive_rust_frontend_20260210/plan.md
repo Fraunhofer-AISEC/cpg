@@ -5,7 +5,7 @@
     - [ ] Update `StatementHandler` to handle `if let` expressions as a combination of a conditional check and a declaration.
     - [ ] Update `StatementHandler` to handle `while let` loops.
     - [ ] Test with `if let Some(x) = opt` and `while let Ok(x) = iter.next()`.
-- [~] Task: Support Match Guards
+- [x] Task: Support Match Guards 468f881
     - [ ] Extend `ExpressionHandler` or `StatementHandler` to parse match arms with `if` guards.
     - [ ] Map the guard condition to the CFG correctly (must be true for the arm to execute).
     - [ ] Test with pattern matching including guards.
