@@ -29,8 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import java.nio.file.Path
@@ -85,5 +84,83 @@ class RustFrontendTest : BaseTest() {
         assertNotNull(ifStmt.condition)
         assertNotNull(ifStmt.thenStatement)
         assertNotNull(ifStmt.elseStatement)
+    }
+
+    @Test
+    fun testExpressions() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("expressions.rs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+
+        val main = tu.functions["main"]
+        assertNotNull(main)
+        val body = main.body as? Block
+        assertNotNull(body)
+
+        // a = 1 + 2
+        val letA = body.statements[0] as? DeclarationStatement
+        assertNotNull(letA)
+        assertFalse(letA.declarations.isEmpty(), "Declarations in letA should not be empty")
+        val a = letA.declarations[0] as? VariableDeclaration
+        assertNotNull(a)
+        assertIs<BinaryOperator>(a.initializer)
+
+        // b = !true
+        val letB = body.statements[1] as? DeclarationStatement
+        assertNotNull(letB)
+        assertFalse(letB.declarations.isEmpty(), "Declarations in letB should not be empty")
+        val b = letB.declarations[0] as? VariableDeclaration
+        assertNotNull(b)
+        assertIs<UnaryOperator>(b.initializer)
+
+        // c = (1, 2)
+        val letC = body.statements[2] as? DeclarationStatement
+        assertNotNull(letC)
+        assertFalse(letC.declarations.isEmpty(), "Declarations in letC should not be empty")
+        val c = letC.declarations[0] as? VariableDeclaration
+        assertNotNull(c)
+        assertIs<InitializerListExpression>(c.initializer)
+
+        // d = [1, 2, 3]
+        val letD = body.statements[3] as? DeclarationStatement
+        assertNotNull(letD)
+        assertFalse(letD.declarations.isEmpty(), "Declarations in letD should not be empty")
+        val d = letD.declarations[0] as? VariableDeclaration
+        assertNotNull(d)
+        assertIs<InitializerListExpression>(d.initializer)
+
+        // x = 2
+        val assignX = body.statements[5] as? AssignExpression
+        assertNotNull(assignX)
+        assertEquals("=", assignX.operatorCode)
+
+        // x += 1
+        val compoundX = body.statements[6] as? AssignExpression
+        assertNotNull(compoundX)
+        assertEquals("+=", compoundX.operatorCode)
+    }
+
+    @Test
+    fun testTypes() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("types.rs").toFile()), topLevel, true) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+
+        val foo = tu.functions["foo"]
+        assertNotNull(foo)
+
+        assertEquals("i32", foo.parameters[0].type.name.localName)
+        assertTrue(foo.parameters[1].type.name.toString().contains("str"))
+        assertEquals("Vec", foo.parameters[2].type.name.localName)
     }
 }

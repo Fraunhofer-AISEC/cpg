@@ -49,7 +49,24 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                         rawNode = node,
                     )
             }
-            "block" -> frontend.statementHandler.handleBlock(node)
+            "block" -> {
+                val stmt = frontend.statementHandler.handleBlock(node)
+                stmt as? Expression
+                    ?: newProblemExpression(
+                        "Could not translate block to Expression",
+                        rawNode = node,
+                    )
+            }
+            "unary_expression" -> handleUnaryExpression(node)
+            "assignment_expression" -> handleAssignmentExpression(node)
+            "compound_assignment_expr" -> handleCompoundAssignmentExpression(node)
+            "tuple_expression" -> handleTupleExpression(node)
+            "array_expression" -> handleArrayExpression(node)
+            "parenthesized_expression" -> {
+                val child = node.getNamedChild(0)
+                if (child != null) handle(child)
+                else newProblemExpression("Empty parenthesized expression", rawNode = node)
+            }
             else -> {
                 newProblemExpression("Unknown expression type: ${node.type}", rawNode = node)
             }
@@ -91,6 +108,76 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         if (right != null) op.rhs = handle(right)
 
         return op
+    }
+
+    private fun handleUnaryExpression(node: TSNode): UnaryOperator {
+        val operator = node.getChild(0) // Usually anonymous
+        val operand = node.getChildByFieldName("operand") ?: node.getNamedChild(0)
+
+        val opCode = operator.let { frontend.codeOf(it) } ?: ""
+        val op = newUnaryOperator(opCode, postfix = false, prefix = true, rawNode = node)
+        if (operand != null) op.input = handle(operand)
+        return op
+    }
+
+    private fun handleAssignmentExpression(node: TSNode): AssignExpression {
+        val left = node.getChildByFieldName("left")
+        val right = node.getChildByFieldName("right")
+
+        val lhs = left?.let { handle(it) } ?: newProblemExpression("Missing LHS in assignment")
+        val rhs = right?.let { handle(it) } ?: newProblemExpression("Missing RHS in assignment")
+
+        return newAssignExpression(
+            operatorCode = "=",
+            lhs = listOf(lhs),
+            rhs = listOf(rhs),
+            rawNode = node,
+        )
+    }
+
+    private fun handleCompoundAssignmentExpression(node: TSNode): AssignExpression {
+        val left = node.getChildByFieldName("left")
+        val operator = node.getChildByFieldName("operator")
+        val right = node.getChildByFieldName("right")
+
+        val lhs = left?.let { handle(it) } ?: newProblemExpression("Missing LHS in assignment")
+        val rhs = right?.let { handle(it) } ?: newProblemExpression("Missing RHS in assignment")
+        val opCode = operator?.let { frontend.codeOf(it) } ?: ""
+
+        return newAssignExpression(
+            operatorCode = opCode,
+            lhs = listOf(lhs),
+            rhs = listOf(rhs),
+            rawNode = node,
+        )
+    }
+
+    private fun handleTupleExpression(node: TSNode): InitializerListExpression {
+        val ile = newInitializerListExpression(rawNode = node)
+        ile.type = objectType("tuple")
+        val list = mutableListOf<Expression>()
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child.isNamed) {
+                list += handle(child)
+            }
+        }
+        ile.initializers = list
+        return ile
+    }
+
+    private fun handleArrayExpression(node: TSNode): InitializerListExpression {
+        val ile = newInitializerListExpression(rawNode = node)
+        ile.type = objectType("array")
+        val list = mutableListOf<Expression>()
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child.isNamed) {
+                list += handle(child)
+            }
+        }
+        ile.initializers = list
+        return ile
     }
 
     private fun handleCallExpression(node: TSNode): Expression {

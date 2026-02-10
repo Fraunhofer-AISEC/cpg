@@ -48,6 +48,7 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
     internal val declarationHandler = DeclarationHandler(this)
     internal val statementHandler = StatementHandler(this)
     internal val expressionHandler = ExpressionHandler(this)
+    internal val typeHandler = TypeHandler(this)
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
@@ -79,16 +80,16 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
     }
 
     override fun typeOf(type: TSNode?): Type {
-        if (type == null) return unknownType()
-        val code = codeOf(type) ?: return unknownType()
-        return objectType(code)
+        return if (type != null) typeHandler.handle(type) else unknownType()
     }
 
     override fun codeOf(astNode: TSNode): String? {
+        if (astNode.isNull()) return null
         return content.substring(astNode.startByte, astNode.endByte)
     }
 
     override fun locationOf(astNode: TSNode): PhysicalLocation? {
+        if (astNode.isNull()) return null
         val startPoint = astNode.startPoint
         val endPoint = astNode.endPoint
 

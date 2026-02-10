@@ -65,14 +65,40 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     private fun handleLetDeclaration(node: TSNode): DeclarationStatement {
         val declStmt = newDeclarationStatement(rawNode = node)
 
-        val pattern = node.getChildByFieldName("pattern")
-        val name = pattern?.let { frontend.codeOf(it) } ?: ""
+        val patternNode = node.getChildByFieldName("pattern")
+        val name =
+            if (patternNode != null) {
+                frontend.codeOf(patternNode) ?: ""
+            } else {
+                // Fallback: first identifier
+                var foundName = ""
+                for (i in 0 until node.childCount) {
+                    val child = node.getChild(i)
+                    if (child.isNamed && child.type == "identifier") {
+                        foundName = frontend.codeOf(child) ?: ""
+                        break
+                    }
+                }
+                foundName
+            }
 
         val variable = newVariableDeclaration(name, rawNode = node)
 
-        val value = node.getChildByFieldName("value")
-        if (value != null) {
-            variable.initializer = frontend.expressionHandler.handle(value)
+        val valueNode = node.getChildByFieldName("value")
+        if (valueNode != null) {
+            variable.initializer = frontend.expressionHandler.handle(valueNode)
+        } else {
+            // Fallback: search for a node after '='
+            var foundEqual = false
+            for (i in 0 until node.childCount) {
+                val child = node.getChild(i)
+                if (child.type == "=") {
+                    foundEqual = true
+                } else if (foundEqual && child.isNamed && child.type != ";") {
+                    variable.initializer = frontend.expressionHandler.handle(child)
+                    break
+                }
+            }
         }
 
         frontend.scopeManager.addDeclaration(variable)

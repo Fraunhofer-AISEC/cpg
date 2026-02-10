@@ -39,6 +39,11 @@ abstract class RustHandler<ResultNode : Node, HandlerNode : TSNode>(
      * logic, but rather want to make use of the Kotlin-when syntax.
      */
     override fun handle(ctx: HandlerNode): ResultNode {
+        if (ctx.isNull()) {
+            val node = configConstructor.get()
+            frontend.process(ctx, node)
+            return node
+        }
         val node = handleNode(ctx)
 
         frontend.setComment(node, ctx)
