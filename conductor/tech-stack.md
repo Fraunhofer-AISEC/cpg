@@ -9,7 +9,7 @@
 - **C/C++:** Eclipse CDT (Used for its forgiving parsing capabilities for C and C++).
 - **Java:** JavaParser (Selected for its ability to handle incomplete or semantically incorrect Java source code).
 - **LLVM IR:** javacpp (Provides the interface to the native LLVM libraries for parsing LLVM Intermediate Representation).
-- **Experimental Frontends:** Golang, Python, TypeScript, Ruby, JVM, INI.
+- **Experimental Frontends:** Golang, Python, TypeScript, Ruby, JVM, INI, Rust.
 
 ## Graph Representation & Analysis
 - **Internal Model:** Custom Code Property Graph (CPG) implementation consisting of AST, CFG, and DFG.

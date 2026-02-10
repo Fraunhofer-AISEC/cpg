@@ -33,6 +33,9 @@ import org.treesitter.TSNode
 /**
  * A [Handler] that translates Rust declarations (items) into CPG [Declaration] nodes. It currently
  * supports functions, structs, enums, impl blocks, and modules.
+ *
+ * It also handles generic type parameters for functions and structs by wrapping them in
+ * [FunctionTemplateDeclaration] or [RecordTemplateDeclaration] nodes.
  */
 class DeclarationHandler(frontend: RustLanguageFrontend) :
     RustHandler<Declaration, TSNode>(::ProblemDeclaration, frontend) {
