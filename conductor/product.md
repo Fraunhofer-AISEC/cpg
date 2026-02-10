@@ -1,5 +1,5 @@
 # Initial Concept
-The Code Property Graph (CPG) is a simple library to extract a *code property graph* out of source code. It supports multiple passes that can extend the analysis after the graph is constructed. It currently supports C/C++ (C17), Java (Java 13) and has experimental support for Golang, Python and TypeScript. Furthermore, it has support for the LLVM IR.
+The Code Property Graph (CPG) is a simple library to extract a *code property graph* out of source code. It supports multiple passes that can extend the analysis after the graph is constructed. It currently supports C/C++ (C17), Java (Java 13) and has experimental support for Golang, Python, TypeScript and Rust. Furthermore, it has support for the LLVM IR.
 
 # Product Definition
 
@@ -12,7 +12,7 @@ To provide a unified, searchable, and extensible representation of source code t
 - **Compiler & Tools Engineers:** To build program analysis tools on top of a "forgiving" and language-agnostic graph representation.
 
 ## Core Value Proposition
-- **Multi-Language Support:** Analyzes C/C++, Java, Go, Python, and TypeScript using a unified graph model.
+- **Multi-Language Support:** Analyzes C/C++, Java, Go, Python, TypeScript, and Rust using a unified graph model.
 - **Forgiving Parsing:** Handles incomplete or semantically incorrect code, making it ideal for real-world analysis where full build environments are often unavailable.
 - **Extensible Analysis:** A modular "Pass" system allows users to implement custom analysis logic (e.g., call graph construction, data flow analysis) on top of the base graph.
 - **Graph Database Integration:** Seamlessly exports to Neo4j and other graph databases to leverage powerful query languages like Cypher for code exploration.
