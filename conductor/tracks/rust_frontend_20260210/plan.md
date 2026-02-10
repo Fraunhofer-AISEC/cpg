@@ -16,7 +16,7 @@
 - [x] Task: Conductor - User Manual Verification 'Tree-sitter Integration' (Protocol in workflow.md)
 
 ## Phase 3: Basic AST Translation (Structure & Functions)
-- [ ] Task: Implement `RustLanguageFrontend` class
+- [x] Task: Implement `RustLanguageFrontend` class (e01f55e)
     - [ ] Create the main class extending `LanguageFrontend`.
     - [ ] Implement the `parse()` method to trigger Tree-sitter parsing.
 - [ ] Task: Implement `RustHandler` and `DeclarationHandler`
