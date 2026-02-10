@@ -29,6 +29,8 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import java.nio.file.Path
@@ -141,31 +143,62 @@ class RustControlFlowTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-                // Outer loop (loop { ... })
-                // Mapped to LabelStatement -> WhileStatement
-                val outerLabel = body.statements[0] as? LabelStatement
-                assertNotNull(outerLabel, "Expected outer to be LabelStatement")
-                assertEquals("outer", outerLabel.label)
-        
-                val outerLoop = outerLabel.subStatement as? WhileStatement
-                assertNotNull(outerLoop, "Expected outer loop to be WhileStatement")
-        
-                val innerBlock = outerLoop.statement as? Block
-                assertNotNull(innerBlock)
-        
-                // Inner loop (while true { ... })
-                val innerLabel = innerBlock.statements[0] as? LabelStatement
-                assertNotNull(innerLabel, "Expected inner to be LabelStatement")
-                assertEquals("inner", innerLabel.label)
-        
-                val innerLoop = innerLabel.subStatement as? WhileStatement
-                assertNotNull(innerLoop, "Expected inner loop to be WhileStatement")
-        
-                val innerBody = innerLoop.statement as? Block
-                assertNotNull(innerBody, "Expected inner body to be Block")
-        
-                val breakStmt = innerBody.statements[0] as? BreakStatement
-                assertNotNull(breakStmt, "Expected break statement")
-                assertEquals("outer", breakStmt.label)
+        // Outer loop (loop { ... })
+        // Mapped to LabelStatement -> WhileStatement
+        val outerLabel = body.statements[0] as? LabelStatement
+        assertNotNull(outerLabel, "Expected outer to be LabelStatement")
+        assertEquals("outer", outerLabel.label)
+
+        val outerLoop = outerLabel.subStatement as? WhileStatement
+        assertNotNull(outerLoop, "Expected outer loop to be WhileStatement")
+
+        val innerBlock = outerLoop.statement as? Block
+        assertNotNull(innerBlock)
+
+        // Inner loop (while true { ... })
+        val innerLabel = innerBlock.statements[0] as? LabelStatement
+        assertNotNull(innerLabel, "Expected inner to be LabelStatement")
+        assertEquals("inner", innerLabel.label)
+
+        val innerLoop = innerLabel.subStatement as? WhileStatement
+        assertNotNull(innerLoop, "Expected inner loop to be WhileStatement")
+
+        val innerBody = innerLoop.statement as? Block
+        assertNotNull(innerBody, "Expected inner body to be Block")
+
+        val breakStmt = innerBody.statements[0] as? BreakStatement
+        assertNotNull(breakStmt, "Expected break statement")
+        assertEquals("outer", breakStmt.label)
+    }
+
+    @Test
+    fun testAsync() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("async.rs").toFile()), topLevel, true) {
+                it.registerLanguage<RustLanguage>()
             }
-        }
+        assertNotNull(tu)
+
+        val asyncFn = tu.functions["async_fn"]
+        assertNotNull(asyncFn)
+        assertTrue(asyncFn.annotations.any { it.name.localName == "Async" })
+
+        val caller = tu.functions["caller"]
+        assertNotNull(caller)
+        assertTrue(caller.annotations.any { it.name.localName == "Async" })
+
+        val body = caller.body as? Block
+        assertNotNull(body)
+
+        val expr = body.statements[0]
+        val awaitExpr = expr as? UnaryOperator
+        assertNotNull(awaitExpr)
+        assertEquals("await", awaitExpr.operatorCode)
+        assertTrue(awaitExpr.isPostfix)
+
+        val call = awaitExpr.input as? CallExpression
+        assertNotNull(call)
+        assertEquals("async_fn", call.name.localName)
+    }
+}

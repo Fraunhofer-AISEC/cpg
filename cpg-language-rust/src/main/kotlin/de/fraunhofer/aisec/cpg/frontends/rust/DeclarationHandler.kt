@@ -73,6 +73,25 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                 newFunctionDeclaration(name, rawNode = node)
             }
 
+        // Check for async modifier
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child.type == "function_modifiers") {
+                for (j in 0 until child.childCount) {
+                    val modifier = child.getChild(j)
+                    if (modifier.type == "async") {
+                        val annotation = newAnnotation("Async", rawNode = modifier)
+                        func.annotations += annotation
+                        break
+                    }
+                }
+            } else if (child.type == "async") {
+                val annotation = newAnnotation("Async", rawNode = child)
+                func.annotations += annotation
+                break
+            }
+        }
+
         val typeParameters = node.getChildByFieldName("type_parameters")
         val template =
             if (typeParameters != null && !typeParameters.isNull) {

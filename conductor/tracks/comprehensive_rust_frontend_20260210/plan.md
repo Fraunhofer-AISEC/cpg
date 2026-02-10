@@ -13,7 +13,7 @@
     - [ ] Update `StatementHandler` to capture labels on loops (`'label: loop { ... }`).
     - [ ] Update `break` and `continue` handling to resolve labelled targets.
     - [ ] Test nested loops with labelled breaks.
-- [ ] Task: Support Async/Await
+- [~] Task: Support Async/Await
     - [ ] Handle `async fn` declarations (mark function as async).
     - [ ] Handle `.await` expressions (model as a specific unary operator or call).
     - [ ] Test basic async function definition and execution.

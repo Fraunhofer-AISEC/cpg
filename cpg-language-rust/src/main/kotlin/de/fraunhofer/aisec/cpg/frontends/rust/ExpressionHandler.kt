@@ -58,6 +58,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             "let_condition" -> handleLetCondition(node)
             "break_expression" -> handleBreakExpression(node)
             "continue_expression" -> handleContinueExpression(node)
+            "await_expression" -> handleAwaitExpression(node)
             "parenthesized_expression" -> {
                 val child = node.getNamedChild(0)
                 if (child != null) handle(child)
@@ -383,5 +384,24 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             continueStmt.label = code.removePrefix("'")
         }
         return continueStmt
+    }
+
+    private fun handleAwaitExpression(node: TSNode): Expression {
+        var expr = node.getChildByFieldName("expression")
+        if (expr == null || expr.isNull) {
+            if (node.childCount > 0) {
+                expr = node.getChild(0)
+            }
+        }
+
+        val op = newUnaryOperator("await", postfix = true, prefix = false, rawNode = node)
+        if (expr != null && !expr.isNull) {
+            op.input =
+                handle(expr) as? Expression
+                    ?: newProblemExpression("Invalid await operand", rawNode = expr)
+        } else {
+            op.input = newProblemExpression("Missing await operand", rawNode = node)
+        }
+        return op
     }
 }
