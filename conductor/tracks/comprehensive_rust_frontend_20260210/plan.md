@@ -20,7 +20,7 @@
 - [x] Task: Conductor - User Manual Verification 'Advanced Control Flow & Pattern Matching' (Protocol in workflow.md) 178f4f4
 
 ## Phase 2: Traits & Generics (Generic Graph)
-- [ ] Task: Enhanced Trait Support
+- [~] Task: Enhanced Trait Support
     - [ ] Update `DeclarationHandler` to parse `trait` definitions fully, including default methods.
     - [ ] Handle `impl Trait for Type` blocks, linking implementation methods to the trait definition.
     - [ ] Test basic trait definition and implementation.

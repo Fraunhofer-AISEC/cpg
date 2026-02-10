@@ -46,6 +46,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             "struct_item" -> handleStructItem(node)
             "enum_item" -> handleEnumItem(node)
             "impl_item" -> handleImplItem(node)
+            "trait_item" -> handleTraitItem(node)
             "mod_item" -> handleModItem(node)
             "type_item" -> handleTypeItem(node)
             else -> {
@@ -191,7 +192,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         frontend.scopeManager.enterScope(record)
 
         val body = node.getChildByFieldName("body")
-        if (body != null) {
+        if (body != null && !body.isNull) {
             for (i in 0 until body.childCount) {
                 val child = body.getChild(i)
                 if (child.type == "field_declaration") {
@@ -217,6 +218,93 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             return template
         }
         return record
+    }
+
+    private fun handleTraitItem(node: TSNode): Declaration {
+        val nameNode = node.getChildByFieldName("name")
+        val name = nameNode?.let { frontend.codeOf(it) } ?: ""
+
+        val record = newRecordDeclaration(name, "trait", rawNode = node)
+
+        val typeParameters = node.getChildByFieldName("type_parameters")
+        val template =
+            if (typeParameters != null && !typeParameters.isNull) {
+                val t = newRecordTemplateDeclaration(name, rawNode = node)
+                t.addDeclaration(record)
+                frontend.scopeManager.addDeclaration(t)
+                frontend.scopeManager.enterScope(t)
+                handleTypeParameters(typeParameters, t)
+                t
+            } else {
+                frontend.scopeManager.addDeclaration(record)
+                null
+            }
+
+        frontend.scopeManager.enterScope(record)
+
+        val body = node.getChildByFieldName("body")
+        if (body != null) {
+            for (i in 0 until body.childCount) {
+                val child = body.getChild(i)
+                if (child.isNamed) {
+                    when (child.type) {
+                        "function_item" -> {
+                            val decl = handleFunctionItem(child)
+                            if (decl is FunctionDeclaration) {
+                                record.addDeclaration(decl)
+                            } else if (decl is FunctionTemplateDeclaration) {
+                                record.addDeclaration(decl)
+                            }
+                        }
+                        "function_signature_item" -> {
+                            val decl = handleFunctionSignatureItem(child)
+                            record.addDeclaration(decl)
+                        }
+                    }
+                }
+            }
+        }
+
+        frontend.scopeManager.leaveScope(record)
+        if (template != null) {
+            frontend.scopeManager.leaveScope(template)
+            return template
+        }
+        return record
+    }
+
+    private fun handleFunctionSignatureItem(node: TSNode): MethodDeclaration {
+        val nameNode = node.getChildByFieldName("name")
+        val name = nameNode?.let { frontend.codeOf(it) } ?: ""
+
+        val recordDeclaration =
+            (frontend.scopeManager.currentScope as? RecordScope)?.astNode as? RecordDeclaration
+
+        val func =
+            newMethodDeclaration(
+                name,
+                isStatic = false,
+                recordDeclaration = recordDeclaration,
+                rawNode = node,
+            )
+
+        frontend.scopeManager.enterScope(func)
+
+        val parameters = node.getChildByFieldName("parameters")
+        if (parameters != null) {
+            handleParameters(parameters, func)
+        }
+
+        val returnTypeNode = node.getChildByFieldName("return_type")
+        if (returnTypeNode != null) {
+            func.returnTypes = listOf(frontend.typeOf(returnTypeNode))
+        }
+
+        // Signature has no body
+        frontend.scopeManager.leaveScope(func)
+        frontend.scopeManager.addDeclaration(func)
+
+        return func
     }
 
     private fun handleEnumItem(node: TSNode): RecordDeclaration {
@@ -249,6 +337,8 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
     private fun handleImplItem(node: TSNode): Declaration {
         val typeNode = node.getChildByFieldName("type")
+        val traitNode = node.getChildByFieldName("trait")
+
         val typeNameString = typeNode?.let { frontend.codeOf(it) } ?: ""
         val typeName = Name(typeNameString, null, language.namespaceDelimiter)
 
@@ -259,6 +349,11 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         if (record == null) {
             record = newRecordDeclaration(typeNameString, "struct", rawNode = node)
             frontend.scopeManager.addDeclaration(record)
+        }
+
+        if (traitNode != null && !traitNode.isNull) {
+            val traitNameString = frontend.codeOf(traitNode) ?: ""
+            record.implementedInterfaces += objectType(traitNameString)
         }
 
         frontend.scopeManager.enterScope(record)
