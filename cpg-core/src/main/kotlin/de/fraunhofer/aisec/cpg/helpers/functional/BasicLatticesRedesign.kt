@@ -454,7 +454,6 @@ interface Lattice<T : Lattice.Element> {
                     mergePointsEdgesMap.removeCandidate()
                 }
 
-            //            println("+++ ${nextEdge.start} ++ ${nextEdge.end}")
             // Compute the effects of "nextEdge" on the state by applying the transformation to
             // its state.
             val nextGlobal = globalState[nextEdge] ?: continue

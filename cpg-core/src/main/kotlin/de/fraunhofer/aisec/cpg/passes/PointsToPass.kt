@@ -1340,7 +1340,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         doubleState: PointsToState.Element,
     ): PointsToState.Element {
         var doubleState = doubleState
-        val mapDstToSrc = ConcurrentHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>()
+        val mapDstToSrc = ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>()
 
         // The toIdentitySet avoids having the same elements multiple times
         val invokes = currentNode.invokes.toConcurrentIdentitySet()
@@ -1430,7 +1430,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
 
     suspend fun writeEntry(
         doubleState: PointsToState.Element,
-        mapDstToSrc: ConcurrentHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>,
+        mapDstToSrc: ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>,
         dstValueDepth: Int,
         subAccessName: String,
         argument: Expression,
@@ -1441,7 +1441,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         srcNode: Any?,
         srcValueDepth: Int,
         param: Node,
-    ): MutableMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>> {
+    ): ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>> {
         val shortFS = properties.any { it == true }
         val (destinationAddresses, destinations) =
             calculateCallExpressionDestinations(
@@ -1627,7 +1627,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         lattice: PointsToState,
         doubleState: PointsToState.Element,
         dstAddr: Node,
-        values: MutableSet<MapDstToSrcEntry>,
+        values: ConcurrentIdentitySet<MapDstToSrcEntry>,
         callingContext: CallingContextOut,
     ): PointsToState.Element = coroutineScope {
         // A triple: the sourceNode, a flag if this is a shortFS, and a flag if this is a
@@ -1723,7 +1723,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
      */
     private suspend fun addEntryToMap(
         doubleState: PointsToState.Element,
-        mapDstToSrc: ConcurrentHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>,
+        mapDstToSrc: ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>,
         destinationAddresses: ConcurrentIdentitySet<Node?>,
         destinations: ConcurrentIdentitySet<Node>,
         srcNode: Node?,
@@ -1733,7 +1733,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         propertySet: EqualLinkedHashSet<Any>,
         currentNode: CallExpression,
         lastWrites: MutableSet<NodeWithPropertiesKey>,
-    ): MutableMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>> {
+    ): ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>> {
         var doubleState = doubleState
         when (srcNode) {
             is ParameterDeclaration -> {
@@ -1911,7 +1911,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
     /** Returns a Pair of destination (for the general State) and destinationAddresses */
     private fun calculateCallExpressionDestinations(
         doubleState: PointsToState.Element,
-        mapDstToSrc: ConcurrentHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>,
+        mapDstToSrc: ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>,
         dstValueDepth: Int,
         subAccessName: String,
         argument: Node,
