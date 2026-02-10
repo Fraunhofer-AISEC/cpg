@@ -47,13 +47,13 @@
 - [x] Task: Conductor - User Manual Verification 'Expressions & Types' (Protocol in workflow.md)
 
 ## Phase 6: Rust Specifics (Structs, Enums, Traits)
-- [ ] Task: Support Compound Types
-    - [ ] Map `struct` definitions to `RecordDeclaration`.
-    - [ ] Map `enum` definitions.
-    - [ ] Support `impl` blocks (associating methods with structs).
-- [ ] Task: Support Matching
-    - [ ] Map `match` expressions to appropriate CPG control flow structures (likely `SwitchStatement` or equivalent).
-- [ ] Task: Conductor - User Manual Verification 'Rust Specifics (Structs, Enums, Traits)' (Protocol in workflow.md)
+- [x] Task: Support Compound Types (18ca831)
+    - [x] Map `struct` definitions to `RecordDeclaration`.
+    - [x] Map `enum` definitions.
+    - [x] Support `impl` blocks (associating methods with structs).
+- [x] Task: Support Matching (18ca831)
+    - [x] Map `match` expressions to appropriate CPG control flow structures (likely `SwitchStatement` or equivalent).
+- [x] Task: Conductor - User Manual Verification 'Rust Specifics (Structs, Enums, Traits)' (Protocol in workflow.md)
 
 ## Phase 7: Final Polish & Verification
 - [ ] Task: Comprehensive Testing
