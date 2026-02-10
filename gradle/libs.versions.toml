@@ -14,6 +14,7 @@ sarif4k = "0.6.0"
 ktor = "3.4.0"
 node = "22.14.0"
 deno-plugin = "0.1.5"
+treesitter = "0.24.0"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin"}
@@ -89,6 +90,7 @@ sootup-apk = { module = "org.soot-oss:sootup.apk.frontend", version.ref = "sootu
 sootup-jimple = { module = "org.soot-oss:sootup.jimple.frontend", version.ref = "sootup" }
 
 dex2jar = {module = "de.femtopedia.dex2jar:dex2jar", version="2.4.22" }
+treesitter = { module = "org.treesitter:treesitter-java", version.ref = "treesitter" }
 
 [bundles]
 log4j = ["log4j-impl", "log4j-core"]
