@@ -10,7 +10,7 @@
 - [x] Task: Conductor - User Manual Verification 'Module Setup & Infrastructure' (Protocol in workflow.md)
 
 ## Phase 2: Tree-sitter Integration
-- [ ] Task: Integrate `tree-sitter-rust`
+- [x] Task: Integrate `tree-sitter-rust` (e01f55e)
     - [ ] Research and select the appropriate Java/Kotlin binding for Tree-sitter (e.g., existing project bindings or a new wrapper).
     - [ ] Implement a basic test to verify that `tree-sitter-rust` can successfully parse a simple "Hello, World!" Rust file.
 - [ ] Task: Conductor - User Manual Verification 'Tree-sitter Integration' (Protocol in workflow.md)
