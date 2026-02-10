@@ -46,7 +46,7 @@
     - [x] Write tests: Verify DFG for variable assignments and usage.
 - [x] Task: Conductor - User Manual Verification 'Expressions & Types' (Protocol in workflow.md)
 
-## Phase 6: Rust Specifics (Structs, Enums, Traits)
+## Phase 6: Rust Specifics (Structs, Enums, Traits) [checkpoint: 7bbe316]
 - [x] Task: Support Compound Types (18ca831)
     - [x] Map `struct` definitions to `RecordDeclaration`.
     - [x] Map `enum` definitions.
