@@ -9,7 +9,7 @@
     - [ ] Add configuration flag to `gradle.properties` (e.g., `enableRustFrontend`) and `configure_frontends.sh`.
 - [x] Task: Conductor - User Manual Verification 'Module Setup & Infrastructure' (Protocol in workflow.md)
 
-## Phase 2: Tree-sitter Integration
+## Phase 2: Tree-sitter Integration [checkpoint: 69772dd]
 - [x] Task: Integrate `tree-sitter-rust` (e01f55e)
     - [ ] Research and select the appropriate Java/Kotlin binding for Tree-sitter (e.g., existing project bindings or a new wrapper).
     - [ ] Implement a basic test to verify that `tree-sitter-rust` can successfully parse a simple "Hello, World!" Rust file.
