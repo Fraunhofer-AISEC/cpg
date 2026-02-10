@@ -19,12 +19,12 @@
 - [x] Task: Implement `RustLanguageFrontend` class (e01f55e)
     - [ ] Create the main class extending `LanguageFrontend`.
     - [ ] Implement the `parse()` method to trigger Tree-sitter parsing.
-- [ ] Task: Implement `RustHandler` and `DeclarationHandler`
+- [x] Task: Implement `RustHandler` and `DeclarationHandler` (62c192f)
     - [ ] Create `RustHandler` to dispatch Tree-sitter nodes to specific handlers.
     - [ ] Implement `DeclarationHandler` to handle `TranslationUnit` (file root).
     - [ ] Implement support for basic function declarations (`fn main() {}`).
     - [ ] Write tests: Verify that a file with an empty function produces the correct `TranslationUnitDeclaration` and `FunctionDeclaration` nodes.
-- [ ] Task: Conductor - User Manual Verification 'Basic AST Translation (Structure & Functions)' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Basic AST Translation (Structure & Functions)' (Protocol in workflow.md)
 
 ## Phase 4: Statements & Control Flow
 - [ ] Task: Implement `StatementHandler`
