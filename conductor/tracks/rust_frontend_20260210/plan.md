@@ -7,7 +7,7 @@
     - [ ] Register the new module in the root `settings.gradle.kts`.
     - [ ] Update root `build.gradle.kts` to handle the new module (e.g., in documentation or distribution tasks).
     - [ ] Add configuration flag to `gradle.properties` (e.g., `enableRustFrontend`) and `configure_frontends.sh`.
-- [ ] Task: Conductor - User Manual Verification 'Module Setup & Infrastructure' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Module Setup & Infrastructure' (Protocol in workflow.md)
 
 ## Phase 2: Tree-sitter Integration
 - [ ] Task: Integrate `tree-sitter-rust`
