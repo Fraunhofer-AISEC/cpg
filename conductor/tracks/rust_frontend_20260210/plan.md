@@ -26,7 +26,7 @@
     - [ ] Write tests: Verify that a file with an empty function produces the correct `TranslationUnitDeclaration` and `FunctionDeclaration` nodes.
 - [x] Task: Conductor - User Manual Verification 'Basic AST Translation (Structure & Functions)' (Protocol in workflow.md)
 
-## Phase 4: Statements & Control Flow
+## Phase 4: Statements & Control Flow [checkpoint: 239e02a]
 - [x] Task: Implement `StatementHandler` (51d07a7)
     - [ ] Support block statements `{ ... }`.
     - [ ] Support variable declarations (`let x = ...`).
