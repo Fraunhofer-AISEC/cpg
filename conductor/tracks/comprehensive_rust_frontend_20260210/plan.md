@@ -9,7 +9,7 @@
     - [ ] Extend `ExpressionHandler` or `StatementHandler` to parse match arms with `if` guards.
     - [ ] Map the guard condition to the CFG correctly (must be true for the arm to execute).
     - [ ] Test with pattern matching including guards.
-- [~] Task: Support Loop Labels
+- [x] Task: Support Loop Labels 228bbae
     - [ ] Update `StatementHandler` to capture labels on loops (`'label: loop { ... }`).
     - [ ] Update `break` and `continue` handling to resolve labelled targets.
     - [ ] Test nested loops with labelled breaks.
