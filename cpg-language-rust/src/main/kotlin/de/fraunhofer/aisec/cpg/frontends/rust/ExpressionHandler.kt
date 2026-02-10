@@ -254,7 +254,15 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                 if (arm.type == "match_arm") {
                     val pattern = arm.getChildByFieldName("pattern")
                     val armValue = arm.getChildByFieldName("value")
-                    val guardNode = arm.getChildByFieldName("guard")
+
+                    var guardNode: TSNode? = null
+                    for (k in 0 until arm.childCount) {
+                        val c = arm.getChild(k)
+                        if (c.type == "if_clause") {
+                            guardNode = c
+                            break
+                        }
+                    }
 
                     // Extract bindings from pattern
                     val bindings = frontend.statementHandler.extractBindings(pattern)
