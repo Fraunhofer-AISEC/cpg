@@ -27,13 +27,13 @@
 - [x] Task: Conductor - User Manual Verification 'Basic AST Translation (Structure & Functions)' (Protocol in workflow.md)
 
 ## Phase 4: Statements & Control Flow
-- [ ] Task: Implement `StatementHandler`
+- [x] Task: Implement `StatementHandler` (51d07a7)
     - [ ] Support block statements `{ ... }`.
     - [ ] Support variable declarations (`let x = ...`).
     - [ ] Support `return` statements.
     - [ ] Support `if/else` expressions (Rust treats these as expressions, but CPG might view them as statements/expressions depending on context).
     - [ ] Write tests: Verify CFG construction for basic blocks and conditionals.
-- [ ] Task: Conductor - User Manual Verification 'Statements & Control Flow' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Statements & Control Flow' (Protocol in workflow.md)
 
 ## Phase 5: Expressions & Types
 - [ ] Task: Implement `ExpressionHandler`
