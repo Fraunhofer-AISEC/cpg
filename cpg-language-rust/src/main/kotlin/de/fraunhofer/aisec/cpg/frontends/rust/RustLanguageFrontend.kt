@@ -46,6 +46,8 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
     private lateinit var uri: URI
 
     internal val declarationHandler = DeclarationHandler(this)
+    internal val statementHandler = StatementHandler(this)
+    internal val expressionHandler = ExpressionHandler(this)
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
@@ -77,7 +79,9 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
     }
 
     override fun typeOf(type: TSNode?): Type {
-        return unknownType()
+        if (type == null) return unknownType()
+        val code = codeOf(type) ?: return unknownType()
+        return objectType(code)
     }
 
     override fun codeOf(astNode: TSNode): String? {

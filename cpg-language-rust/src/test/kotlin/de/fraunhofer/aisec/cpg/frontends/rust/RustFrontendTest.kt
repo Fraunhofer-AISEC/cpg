@@ -26,6 +26,11 @@
 package de.fraunhofer.aisec.cpg.frontends.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
+import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import java.nio.file.Path
@@ -45,5 +50,40 @@ class RustFrontendTest : BaseTest() {
         val main = tu.functions["main"]
         assertNotNull(main)
         assertEquals("main", main.name.localName)
+
+        val body = main.body as? Block
+        assertNotNull(body)
+
+        val letX = body.statements[0] as? DeclarationStatement
+        assertNotNull(letX)
+        val x = letX.declarations[0] as? VariableDeclaration
+        assertNotNull(x)
+        assertEquals("x", x.name.localName)
+
+        val init = x.initializer as? Literal<*>
+        assertNotNull(init)
+        assertEquals(1L, init.value)
+    }
+
+    @Test
+    fun testIf() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("if.rs").toFile()), topLevel, true) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+
+        val foo = tu.functions["foo"]
+        assertNotNull(foo)
+
+        val body = foo.body as? Block
+        assertNotNull(body)
+
+        val ifStmt = body.statements[0] as? IfStatement
+        assertNotNull(ifStmt)
+        assertNotNull(ifStmt.condition)
+        assertNotNull(ifStmt.thenStatement)
+        assertNotNull(ifStmt.elseStatement)
     }
 }

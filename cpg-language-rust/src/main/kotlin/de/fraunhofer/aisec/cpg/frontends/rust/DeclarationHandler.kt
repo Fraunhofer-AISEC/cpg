@@ -48,11 +48,33 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         val func = newFunctionDeclaration(name, rawNode = node)
         frontend.scopeManager.enterScope(func)
 
-        // TODO: Handle parameters
-        // TODO: Handle return type
-        // TODO: Handle body
+        val parameters = node.getChildByFieldName("parameters")
+        if (parameters != null) {
+            handleParameters(parameters, func)
+        }
+
+        val body = node.getChildByFieldName("body")
+        if (body != null) {
+            func.body = frontend.statementHandler.handle(body)
+        }
 
         frontend.scopeManager.leaveScope(func)
         return func
+    }
+
+    private fun handleParameters(node: TSNode, func: FunctionDeclaration) {
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child.type == "parameter") {
+                val pattern = child.getChildByFieldName("pattern")
+                val name = pattern?.let { frontend.codeOf(it) } ?: ""
+                val typeNode = child.getChildByFieldName("type")
+
+                val param =
+                    newParameterDeclaration(name, frontend.typeOf(typeNode), rawNode = child)
+                frontend.scopeManager.addDeclaration(param)
+                func.parameters += param
+            }
+        }
     }
 }
