@@ -1,23 +1,23 @@
 # Implementation Plan - Comprehensive Rust Frontend
 
-## Phase 1: Advanced Control Flow & Pattern Matching
+## Phase 1: Advanced Control Flow & Pattern Matching [checkpoint: 178f4f4]
 - [x] Task: Support `if let` and `while let` constructs 928d3f1
-    - [ ] Update `StatementHandler` to handle `if let` expressions as a combination of a conditional check and a declaration.
-    - [ ] Update `StatementHandler` to handle `while let` loops.
-    - [ ] Test with `if let Some(x) = opt` and `while let Ok(x) = iter.next()`.
+    - [x] Update `StatementHandler` to handle `if let` expressions as a combination of a conditional check and a declaration.
+    - [x] Update `StatementHandler` to handle `while let` loops.
+    - [x] Test with `if let Some(x) = opt` and `while let Ok(x) = iter.next()`.
 - [x] Task: Support Match Guards 468f881
-    - [ ] Extend `ExpressionHandler` or `StatementHandler` to parse match arms with `if` guards.
-    - [ ] Map the guard condition to the CFG correctly (must be true for the arm to execute).
-    - [ ] Test with pattern matching including guards.
+    - [x] Extend `ExpressionHandler` or `StatementHandler` to parse match arms with `if` guards.
+    - [x] Map the guard condition to the CFG correctly (must be true for the arm to execute).
+    - [x] Test with pattern matching including guards.
 - [x] Task: Support Loop Labels 228bbae
-    - [ ] Update `StatementHandler` to capture labels on loops (`'label: loop { ... }`).
-    - [ ] Update `break` and `continue` handling to resolve labelled targets.
-    - [ ] Test nested loops with labelled breaks.
+    - [x] Update `StatementHandler` to capture labels on loops (`'label: loop { ... }`).
+    - [x] Update `break` and `continue` handling to resolve labelled targets.
+    - [x] Test nested loops with labelled breaks.
 - [x] Task: Support Async/Await 0660e29
-    - [ ] Handle `async fn` declarations (mark function as async).
-    - [ ] Handle `.await` expressions (model as a specific unary operator or call).
-    - [ ] Test basic async function definition and execution.
-- [ ] Task: Conductor - User Manual Verification 'Advanced Control Flow & Pattern Matching' (Protocol in workflow.md)
+    - [x] Handle `async fn` declarations (mark function as async).
+    - [x] Handle `.await` expressions (model as a specific unary operator or call).
+    - [x] Test basic async function definition and execution.
+- [x] Task: Conductor - User Manual Verification 'Advanced Control Flow & Pattern Matching' (Protocol in workflow.md) 178f4f4
 
 ## Phase 2: Traits & Generics (Generic Graph)
 - [ ] Task: Enhanced Trait Support
