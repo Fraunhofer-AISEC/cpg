@@ -35,7 +35,7 @@
     - [ ] Write tests: Verify CFG construction for basic blocks and conditionals.
 - [x] Task: Conductor - User Manual Verification 'Statements & Control Flow' (Protocol in workflow.md)
 
-## Phase 5: Expressions & Types
+## Phase 5: Expressions & Types [checkpoint: 1f2bb3b]
 - [x] Task: Implement `ExpressionHandler` (6ba4cd6)
     - [x] Support literals (integers, strings, booleans).
     - [x] Support binary operations (`+`, `-`, `*`, etc.).
