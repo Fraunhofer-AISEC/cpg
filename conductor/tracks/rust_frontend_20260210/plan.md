@@ -1,6 +1,6 @@
 # Implementation Plan - Rust Frontend
 
-## Phase 1: Module Setup & Infrastructure
+## Phase 1: Module Setup & Infrastructure [checkpoint: ca8bfad]
 - [x] Task: Create `cpg-language-rust` module structure (cacf7e1)
     - [ ] Create directory structure `cpg-language-rust/src/main/kotlin`, `cpg-language-rust/src/test/kotlin`, etc.
     - [ ] Create `build.gradle.kts` for the module with necessary dependencies (including tree-sitter bindings).
