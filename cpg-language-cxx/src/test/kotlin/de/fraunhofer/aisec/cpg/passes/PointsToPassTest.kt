@@ -1586,7 +1586,7 @@ class PointsToPassTest {
         assertEquals(1, local30Line165.fullMemoryValues.size)
         assertTrue(local30Line165.fullMemoryValues.first() is ParameterMemoryValue)
         assertEquals(
-            "param_1.derefvalue",
+            "sgx_ecall_key_to_out.param_1.derefvalue",
             local30Line165.fullMemoryValues.firstOrNull()?.name.toString(),
         )
 
@@ -1594,7 +1594,7 @@ class PointsToPassTest {
         assertEquals(1, local18Line165.fullMemoryValues.size)
         assertTrue(local18Line165.fullMemoryValues.first() is ParameterMemoryValue)
         assertEquals(
-            "param_1.derefvalue",
+            "sgx_ecall_key_to_out.param_1.derefvalue",
             local18Line165.fullMemoryValues.firstOrNull()?.name.toString(),
         )
 
