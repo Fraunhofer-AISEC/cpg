@@ -36,15 +36,15 @@
 - [x] Task: Conductor - User Manual Verification 'Statements & Control Flow' (Protocol in workflow.md)
 
 ## Phase 5: Expressions & Types
-- [ ] Task: Implement `ExpressionHandler`
-    - [ ] Support literals (integers, strings, booleans).
-    - [ ] Support binary operations (`+`, `-`, `*`, etc.).
-    - [ ] Support function calls.
-- [ ] Task: Implement `TypeHandler`
-    - [ ] Map basic Rust types (`i32`, `bool`, `String`, `&str`) to CPG types.
-    - [ ] Handle type inference where explicit types are missing (basic cases).
-    - [ ] Write tests: Verify DFG for variable assignments and usage.
-- [ ] Task: Conductor - User Manual Verification 'Expressions & Types' (Protocol in workflow.md)
+- [x] Task: Implement `ExpressionHandler` (6ba4cd6)
+    - [x] Support literals (integers, strings, booleans).
+    - [x] Support binary operations (`+`, `-`, `*`, etc.).
+    - [x] Support function calls.
+- [x] Task: Implement `TypeHandler` (6ba4cd6)
+    - [x] Map basic Rust types (`i32`, `bool`, `String`, `&str`) to CPG types.
+    - [x] Handle type inference where explicit types are missing (basic cases).
+    - [x] Write tests: Verify DFG for variable assignments and usage.
+- [x] Task: Conductor - User Manual Verification 'Expressions & Types' (Protocol in workflow.md)
 
 ## Phase 6: Rust Specifics (Structs, Enums, Traits)
 - [ ] Task: Support Compound Types
