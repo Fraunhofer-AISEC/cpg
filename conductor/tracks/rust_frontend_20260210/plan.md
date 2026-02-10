@@ -59,7 +59,7 @@
 - [x] Task: Comprehensive Testing (4fe269a)
     - [x] Expand test suite to cover >90% of the new module.
     - [x] Run integration tests with larger Rust samples.
-- [~] Task: Documentation
-    - [ ] Add KDoc for all new classes.
-    - [ ] Update project `README.md` or `tech-stack.md` to list Rust as an experimental frontend.
-- [ ] Task: Conductor - User Manual Verification 'Final Polish & Verification' (Protocol in workflow.md)
+- [x] Task: Documentation (6687e79)
+    - [x] Add KDoc for all new classes.
+    - [x] Update project `README.md` or `tech-stack.md` to list Rust as an experimental frontend.
+- [x] Task: Conductor - User Manual Verification 'Final Polish & Verification' (Protocol in workflow.md)
