@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.test.BaseTest
@@ -228,5 +228,39 @@ class RustFrontendTest : BaseTest() {
         val returnStmt = (innerFunc.body as? Block)?.statements?.get(0) as? ReturnStatement
         assertNotNull(returnStmt)
         assertNotNull(returnStmt.returnValue)
+    }
+
+    @Test
+    fun testComplex1() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("complex_1.rs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+
+        val main = tu.functions["main"]
+        assertNotNull(main)
+
+        val point = tu.records["Point"]
+        assertNotNull(point)
+        assertEquals(2, point.methods.size)
+
+        val genericId =
+            tu.declarations.filterIsInstance<FunctionTemplateDeclaration>().firstOrNull {
+                it.name.localName == "generic_id"
+            }
+        assertNotNull(genericId, "Should find a FunctionTemplateDeclaration named generic_id")
+        // Check if we handled the generic parameter T
+        assertEquals(1, genericId.parameters.size, "Should have 1 parameter (T)")
+        assertEquals("T", genericId.parameters[0].name.localName)
+
+        val func = genericId.realization[0]
+        assertNotNull(func)
+        assertEquals("generic_id", func.name.localName)
     }
 }

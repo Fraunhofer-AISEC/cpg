@@ -51,7 +51,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         }
     }
 
-    private fun handleFunctionItem(node: TSNode): FunctionDeclaration {
+    private fun handleFunctionItem(node: TSNode): Declaration {
         val nameNode = node.getChildByFieldName("name")
         val name = nameNode?.let { frontend.codeOf(it) } ?: ""
 
@@ -69,6 +69,21 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             } else {
                 newFunctionDeclaration(name, rawNode = node)
             }
+
+        val typeParameters = node.getChildByFieldName("type_parameters")
+        val template =
+            if (typeParameters != null && !typeParameters.isNull) {
+                val t = newFunctionTemplateDeclaration(name, rawNode = node)
+                t.addDeclaration(func)
+                frontend.scopeManager.addDeclaration(t)
+                frontend.scopeManager.enterScope(t)
+                handleTypeParameters(typeParameters, t)
+                t
+            } else {
+                frontend.scopeManager.addDeclaration(func)
+                null
+            }
+
         frontend.scopeManager.enterScope(func)
 
         val parameters = node.getChildByFieldName("parameters")
@@ -87,7 +102,30 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         }
 
         frontend.scopeManager.leaveScope(func)
+        if (template != null) {
+            frontend.scopeManager.leaveScope(template)
+            return template
+        }
+
         return func
+    }
+
+    private fun handleTypeParameters(node: TSNode, template: TemplateDeclaration) {
+        if (node.isNull) return
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (
+                child.type == "type_parameter" ||
+                    child.type == "constrained_type_parameter" ||
+                    child.type == "type_identifier"
+            ) {
+                val nameNode = child.getChildByFieldName("name")
+                val name = nameNode?.let { frontend.codeOf(it) } ?: frontend.codeOf(child)
+                val typeParam = newTypeParameterDeclaration(name, rawNode = child)
+                template.addDeclaration(typeParam)
+                frontend.scopeManager.addDeclaration(typeParam)
+            }
+        }
     }
 
     private fun handleParameters(node: TSNode, func: FunctionDeclaration) {
@@ -108,12 +146,26 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         }
     }
 
-    private fun handleStructItem(node: TSNode): RecordDeclaration {
+    private fun handleStructItem(node: TSNode): Declaration {
         val nameNode = node.getChildByFieldName("name")
         val name = nameNode?.let { frontend.codeOf(it) } ?: ""
 
         val record = newRecordDeclaration(name, "struct", rawNode = node)
-        frontend.scopeManager.addDeclaration(record)
+
+        val typeParameters = node.getChildByFieldName("type_parameters")
+        val template =
+            if (typeParameters != null && !typeParameters.isNull) {
+                val t = newRecordTemplateDeclaration(name, rawNode = node)
+                t.addDeclaration(record)
+                frontend.scopeManager.addDeclaration(t)
+                frontend.scopeManager.enterScope(t)
+                handleTypeParameters(typeParameters, t)
+                t
+            } else {
+                frontend.scopeManager.addDeclaration(record)
+                null
+            }
+
         frontend.scopeManager.enterScope(record)
 
         val body = node.getChildByFieldName("body")
@@ -138,6 +190,10 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         }
 
         frontend.scopeManager.leaveScope(record)
+        if (template != null) {
+            frontend.scopeManager.leaveScope(template)
+            return template
+        }
         return record
     }
 
@@ -236,7 +292,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         val aliasType = objectType(name)
 
         val decl = newTypedefDeclaration(targetType, aliasType, rawNode = node)
-        frontend.scopeManager.addDeclaration(decl)
+        frontend.scopeManager.addTypedef(decl)
         return decl
     }
 }
