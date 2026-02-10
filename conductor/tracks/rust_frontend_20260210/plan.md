@@ -56,10 +56,10 @@
 - [x] Task: Conductor - User Manual Verification 'Rust Specifics (Structs, Enums, Traits)' (Protocol in workflow.md)
 
 ## Phase 7: Final Polish & Verification
-- [ ] Task: Comprehensive Testing
-    - [ ] Expand test suite to cover >90% of the new module.
-    - [ ] Run integration tests with larger Rust samples.
-- [ ] Task: Documentation
+- [x] Task: Comprehensive Testing (4fe269a)
+    - [x] Expand test suite to cover >90% of the new module.
+    - [x] Run integration tests with larger Rust samples.
+- [~] Task: Documentation
     - [ ] Add KDoc for all new classes.
     - [ ] Update project `README.md` or `tech-stack.md` to list Rust as an experimental frontend.
 - [ ] Task: Conductor - User Manual Verification 'Final Polish & Verification' (Protocol in workflow.md)
