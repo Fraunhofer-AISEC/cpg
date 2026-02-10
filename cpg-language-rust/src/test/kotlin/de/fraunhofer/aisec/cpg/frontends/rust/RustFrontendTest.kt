@@ -27,13 +27,13 @@ package de.fraunhofer.aisec.cpg.frontends.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
-import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
+import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import java.nio.file.Path
 import kotlin.test.*
+import org.treesitter.*
 
 class RustFrontendTest : BaseTest() {
 
@@ -162,5 +162,53 @@ class RustFrontendTest : BaseTest() {
         assertEquals("i32", foo.parameters[0].type.name.localName)
         assertTrue(foo.parameters[1].type.name.toString().contains("str"))
         assertEquals("Vec", foo.parameters[2].type.name.localName)
+    }
+
+    @Test
+    fun testStructs() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("structs.rs").toFile()), topLevel, true) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+
+        val myStruct = tu.records["MyStruct"]
+        assertNotNull(myStruct)
+        assertEquals("struct", myStruct.kind)
+        assertEquals(2, myStruct.fields.size)
+        assertEquals("field1", myStruct.fields[0].name.localName)
+
+        val myMethod = myStruct.methods["my_method"]
+        assertNotNull(myMethod)
+        assertEquals(myStruct, myMethod.recordDeclaration)
+
+        val myEnum = tu.records["MyEnum"]
+        assertNotNull(myEnum)
+        assertEquals("enum", myEnum.kind)
+    }
+
+    @Test
+    fun testMatch() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("match.rs").toFile()), topLevel, true) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+
+        val foo = tu.functions["foo"]
+        assertNotNull(foo)
+        val body = foo.body as? Block
+        assertNotNull(body)
+
+        val match = body.statements[0] as? SwitchStatement
+        assertNotNull(match)
+        assertEquals("x", match.selector?.name?.localName)
+
+        val block = match.statement as? Block
+        assertNotNull(block)
+        // 3 arms, each with CaseStatement, value, and break = 9 statements
+        assertEquals(9, block.statements.size)
     }
 }

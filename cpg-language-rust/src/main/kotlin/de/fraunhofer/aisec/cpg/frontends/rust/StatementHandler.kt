@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.rust
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ProblemExpression
 import org.treesitter.TSNode
 
@@ -86,7 +87,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
         val valueNode = node.getChildByFieldName("value")
         if (valueNode != null) {
-            variable.initializer = frontend.expressionHandler.handle(valueNode)
+            variable.initializer = frontend.expressionHandler.handle(valueNode) as? Expression
         } else {
             // Fallback: search for a node after '='
             var foundEqual = false
@@ -95,7 +96,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
                 if (child.type == "=") {
                     foundEqual = true
                 } else if (foundEqual && child.isNamed && child.type != ";") {
-                    variable.initializer = frontend.expressionHandler.handle(child)
+                    variable.initializer = frontend.expressionHandler.handle(child) as? Expression
                     break
                 }
             }
@@ -113,7 +114,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         for (i in 0 until node.childCount) {
             val child = node.getChild(i)
             if (child.isNamed && child.type != "return") {
-                ret.returnValue = frontend.expressionHandler.handle(child)
+                ret.returnValue = frontend.expressionHandler.handle(child) as? Expression
                 break
             }
         }
@@ -125,7 +126,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
         val condition = node.getChildByFieldName("condition")
         if (condition != null) {
-            ifStmt.condition = frontend.expressionHandler.handle(condition)
+            ifStmt.condition = frontend.expressionHandler.handle(condition) as? Expression
         } else {
             // Fallback: search for a named child that isn't 'if' or '{' or 'block'
             for (i in 0 until node.childCount) {
@@ -136,7 +137,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
                         child.type != "block" &&
                         child.type != "else_clause"
                 ) {
-                    ifStmt.condition = frontend.expressionHandler.handle(child)
+                    ifStmt.condition = frontend.expressionHandler.handle(child) as? Expression
                     break
                 }
             }

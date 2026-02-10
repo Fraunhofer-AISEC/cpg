@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import org.treesitter.TSNode
 
 class DeclarationHandler(frontend: RustLanguageFrontend) :
@@ -35,6 +36,10 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     override fun handleNode(node: TSNode): Declaration {
         return when (node.type) {
             "function_item" -> handleFunctionItem(node)
+            "struct_item" -> handleStructItem(node)
+            "enum_item" -> handleEnumItem(node)
+            "impl_item" -> handleImplItem(node)
+            "mod_item" -> handleModItem(node)
             else -> {
                 ProblemDeclaration("Unknown declaration type: ${node.type}")
             }
@@ -43,9 +48,22 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
     private fun handleFunctionItem(node: TSNode): FunctionDeclaration {
         val nameNode = node.getChildByFieldName("name")
-        val name = nameNode.let { frontend.codeOf(it) } ?: ""
+        val name = nameNode?.let { frontend.codeOf(it) } ?: ""
 
-        val func = newFunctionDeclaration(name, rawNode = node)
+        val recordDeclaration =
+            (frontend.scopeManager.currentScope as? RecordScope)?.astNode as? RecordDeclaration
+
+        val func =
+            if (recordDeclaration != null) {
+                newMethodDeclaration(
+                    name,
+                    isStatic = false,
+                    recordDeclaration = recordDeclaration,
+                    rawNode = node,
+                )
+            } else {
+                newFunctionDeclaration(name, rawNode = node)
+            }
         frontend.scopeManager.enterScope(func)
 
         val parameters = node.getChildByFieldName("parameters")
@@ -74,7 +92,128 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                     newParameterDeclaration(name, frontend.typeOf(typeNode), rawNode = child)
                 frontend.scopeManager.addDeclaration(param)
                 func.parameters += param
+            } else if (child.type == "self_parameter") {
+                // TODO: Handle self parameter
             }
         }
+    }
+
+    private fun handleStructItem(node: TSNode): RecordDeclaration {
+        val nameNode = node.getChildByFieldName("name")
+        val name = nameNode?.let { frontend.codeOf(it) } ?: ""
+
+        val record = newRecordDeclaration(name, "struct", rawNode = node)
+        frontend.scopeManager.addDeclaration(record)
+        frontend.scopeManager.enterScope(record)
+
+        val body = node.getChildByFieldName("body")
+        if (body != null) {
+            for (i in 0 until body.childCount) {
+                val child = body.getChild(i)
+                if (child.type == "field_declaration") {
+                    val fieldNameNode = child.getChildByFieldName("name")
+                    val fieldName = fieldNameNode?.let { frontend.codeOf(it) } ?: ""
+                    val fieldTypeNode = child.getChildByFieldName("type")
+
+                    val field =
+                        newFieldDeclaration(
+                            fieldName,
+                            frontend.typeOf(fieldTypeNode),
+                            rawNode = child,
+                        )
+                    frontend.scopeManager.addDeclaration(field)
+                    record.addDeclaration(field)
+                }
+            }
+        }
+
+        frontend.scopeManager.leaveScope(record)
+        return record
+    }
+
+    private fun handleEnumItem(node: TSNode): RecordDeclaration {
+        val nameNode = node.getChildByFieldName("name")
+        val name = nameNode?.let { frontend.codeOf(it) } ?: ""
+
+        val record = newRecordDeclaration(name, "enum", rawNode = node)
+        frontend.scopeManager.addDeclaration(record)
+        frontend.scopeManager.enterScope(record)
+
+        val body = node.getChildByFieldName("body")
+        if (body != null) {
+            for (i in 0 until body.childCount) {
+                val child = body.getChild(i)
+                if (child.type == "enum_variant") {
+                    val variantNameNode = child.getChildByFieldName("name")
+                    val variantName = variantNameNode?.let { frontend.codeOf(it) } ?: ""
+
+                    // For now, treat enum variants as fields or special declarations
+                    val field = newFieldDeclaration(variantName, record.toType(), rawNode = child)
+                    frontend.scopeManager.addDeclaration(field)
+                    record.addDeclaration(field)
+                }
+            }
+        }
+
+        frontend.scopeManager.leaveScope(record)
+        return record
+    }
+
+    private fun handleImplItem(node: TSNode): Declaration {
+        val typeNode = node.getChildByFieldName("type")
+        val typeNameString = typeNode?.let { frontend.codeOf(it) } ?: ""
+        val typeName = Name(typeNameString, null, language.namespaceDelimiter)
+
+        // Try to find an existing record in the current scope
+        val existing = frontend.scopeManager.lookupSymbolByName(typeName, language)
+        var record = existing.firstOrNull { it is RecordDeclaration } as? RecordDeclaration
+
+        if (record == null) {
+            record = newRecordDeclaration(typeNameString, "struct", rawNode = node)
+            frontend.scopeManager.addDeclaration(record)
+        }
+
+        frontend.scopeManager.enterScope(record)
+
+        val body = node.getChildByFieldName("body")
+        if (body != null) {
+            for (i in 0 until body.childCount) {
+                val child = body.getChild(i)
+                if (child.isNamed) {
+                    val decl = handle(child)
+                    if (decl != null) {
+                        record.addDeclaration(decl)
+                    }
+                }
+            }
+        }
+
+        frontend.scopeManager.leaveScope(record)
+        return record
+    }
+
+    private fun handleModItem(node: TSNode): NamespaceDeclaration {
+        val nameNode = node.getChildByFieldName("name")
+        val name = nameNode?.let { frontend.codeOf(it) } ?: ""
+
+        val mod = newNamespaceDeclaration(name, rawNode = node)
+        frontend.scopeManager.addDeclaration(mod)
+        frontend.scopeManager.enterScope(mod)
+
+        val body = node.getChildByFieldName("body")
+        if (body != null) {
+            for (i in 0 until body.childCount) {
+                val child = body.getChild(i)
+                if (child.isNamed) {
+                    val decl = handle(child)
+                    if (decl != null) {
+                        mod.addDeclaration(decl)
+                    }
+                }
+            }
+        }
+
+        frontend.scopeManager.leaveScope(mod)
+        return mod
     }
 }

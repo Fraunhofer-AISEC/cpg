@@ -26,13 +26,14 @@
 package de.fraunhofer.aisec.cpg.frontends.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import org.treesitter.TSNode
 
 class ExpressionHandler(frontend: RustLanguageFrontend) :
-    RustHandler<Expression, TSNode>(::ProblemExpression, frontend) {
+    RustHandler<Statement, TSNode>(::ProblemExpression, frontend) {
 
-    override fun handleNode(node: TSNode): Expression {
+    override fun handleNode(node: TSNode): Statement {
         return when (node.type) {
             "integer_literal" -> handleIntegerLiteral(node)
             "string_literal" -> handleStringLiteral(node)
@@ -41,27 +42,14 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             "binary_expression" -> handleBinaryExpression(node)
             "call_expression" -> handleCallExpression(node)
             "field_expression" -> handleFieldExpression(node)
-            "if_expression" -> {
-                val stmt = frontend.statementHandler.handleNode(node)
-                (stmt as? Expression)
-                    ?: newProblemExpression(
-                        "Could not translate if_expression to Expression",
-                        rawNode = node,
-                    )
-            }
-            "block" -> {
-                val stmt = frontend.statementHandler.handleBlock(node)
-                stmt as? Expression
-                    ?: newProblemExpression(
-                        "Could not translate block to Expression",
-                        rawNode = node,
-                    )
-            }
+            "if_expression" -> frontend.statementHandler.handleNode(node)
+            "block" -> frontend.statementHandler.handleBlock(node)
             "unary_expression" -> handleUnaryExpression(node)
             "assignment_expression" -> handleAssignmentExpression(node)
             "compound_assignment_expr" -> handleCompoundAssignmentExpression(node)
             "tuple_expression" -> handleTupleExpression(node)
             "array_expression" -> handleArrayExpression(node)
+            "match_expression" -> handleMatchExpression(node)
             "parenthesized_expression" -> {
                 val child = node.getNamedChild(0)
                 if (child != null) handle(child)
@@ -104,8 +92,10 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         val operator = node.getChildByFieldName("operator")
 
         val op = newBinaryOperator(operator?.let { frontend.codeOf(it) } ?: "", rawNode = node)
-        if (left != null) op.lhs = handle(left)
-        if (right != null) op.rhs = handle(right)
+        if (left != null)
+            op.lhs = handle(left) as? Expression ?: newProblemExpression("LHS not an expression")
+        if (right != null)
+            op.rhs = handle(right) as? Expression ?: newProblemExpression("RHS not an expression")
 
         return op
     }
@@ -116,16 +106,22 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
         val opCode = operator.let { frontend.codeOf(it) } ?: ""
         val op = newUnaryOperator(opCode, postfix = false, prefix = true, rawNode = node)
-        if (operand != null) op.input = handle(operand)
+        if (operand != null)
+            op.input =
+                handle(operand) as? Expression ?: newProblemExpression("Operand not an expression")
         return op
     }
 
-    private fun handleAssignmentExpression(node: TSNode): AssignExpression {
+    private fun handleAssignmentExpression(node: TSNode): Statement {
         val left = node.getChildByFieldName("left")
         val right = node.getChildByFieldName("right")
 
-        val lhs = left?.let { handle(it) } ?: newProblemExpression("Missing LHS in assignment")
-        val rhs = right?.let { handle(it) } ?: newProblemExpression("Missing RHS in assignment")
+        val lhs =
+            handle(left ?: return newProblemExpression("Missing LHS in assignment")) as? Expression
+                ?: return newProblemExpression("LHS not an expression")
+        val rhs =
+            handle(right ?: return newProblemExpression("Missing RHS in assignment")) as? Expression
+                ?: return newProblemExpression("RHS not an expression")
 
         return newAssignExpression(
             operatorCode = "=",
@@ -135,13 +131,17 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         )
     }
 
-    private fun handleCompoundAssignmentExpression(node: TSNode): AssignExpression {
+    private fun handleCompoundAssignmentExpression(node: TSNode): Statement {
         val left = node.getChildByFieldName("left")
         val operator = node.getChildByFieldName("operator")
         val right = node.getChildByFieldName("right")
 
-        val lhs = left?.let { handle(it) } ?: newProblemExpression("Missing LHS in assignment")
-        val rhs = right?.let { handle(it) } ?: newProblemExpression("Missing RHS in assignment")
+        val lhs =
+            handle(left ?: return newProblemExpression("Missing LHS in assignment")) as? Expression
+                ?: return newProblemExpression("LHS not an expression")
+        val rhs =
+            handle(right ?: return newProblemExpression("Missing RHS in assignment")) as? Expression
+                ?: return newProblemExpression("RHS not an expression")
         val opCode = operator?.let { frontend.codeOf(it) } ?: ""
 
         return newAssignExpression(
@@ -159,7 +159,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         for (i in 0 until node.childCount) {
             val child = node.getChild(i)
             if (child.isNamed) {
-                list += handle(child)
+                val expr = handle(child) as? Expression
+                if (expr != null) list += expr
             }
         }
         ile.initializers = list
@@ -173,7 +174,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         for (i in 0 until node.childCount) {
             val child = node.getChild(i)
             if (child.isNamed) {
-                list += handle(child)
+                val expr = handle(child) as? Expression
+                if (expr != null) list += expr
             }
         }
         ile.initializers = list
@@ -185,8 +187,10 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         val arguments = node.getChildByFieldName("arguments")
 
         val callee =
-            function?.let { handle(it) }
-                ?: newProblemExpression("Missing function in call", rawNode = node)
+            handle(
+                function ?: return newProblemExpression("Missing function in call", rawNode = node)
+            )
+                as? Expression ?: newProblemExpression("Missing function in call", rawNode = node)
 
         val call =
             if (callee is MemberExpression) {
@@ -199,7 +203,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             for (i in 0 until arguments.childCount) {
                 val arg = arguments.getChild(i)
                 if (arg.isNamed) {
-                    call.addArgument(handle(arg))
+                    val expr = handle(arg) as? Expression
+                    if (expr != null) call.addArgument(expr)
                 }
             }
         }
@@ -207,15 +212,61 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return call
     }
 
-    private fun handleFieldExpression(node: TSNode): MemberExpression {
+    private fun handleFieldExpression(node: TSNode): Statement {
         val value = node.getChildByFieldName("value")
         val field = node.getChildByFieldName("field")
 
         val base =
-            value?.let { handle(it) }
-                ?: newProblemExpression("Missing value in field expression", rawNode = node)
+            handle(
+                value
+                    ?: return newProblemExpression(
+                        "Missing value in field expression",
+                        rawNode = node,
+                    )
+            )
+                as? Expression
+                ?: return newProblemExpression("Missing value in field expression", rawNode = node)
         val name = field?.let { frontend.codeOf(it) } ?: ""
 
         return newMemberExpression(name, base, rawNode = node)
+    }
+
+    private fun handleMatchExpression(node: TSNode): Statement {
+        val value = node.getChildByFieldName("value")
+        val body = node.getChildByFieldName("body")
+
+        val switch = newSwitchStatement(rawNode = node)
+        if (value != null) switch.selector = handle(value) as? Expression
+
+        val block = newBlock().implicit()
+        if (body != null) {
+            for (i in 0 until body.childCount) {
+                val arm = body.getChild(i)
+                if (arm.type == "match_arm") {
+                    val pattern = arm.getChildByFieldName("pattern")
+                    val armValue = arm.getChildByFieldName("value")
+
+                    val case = newCaseStatement(rawNode = arm)
+                    if (pattern != null) case.caseExpression = handle(pattern) as? Expression
+                    block.statements += case
+
+                    val stmt =
+                        if (armValue?.type == "block") {
+                            frontend.statementHandler.handle(armValue)
+                        } else if (armValue != null) {
+                            handle(armValue)
+                        } else {
+                            newEmptyStatement().implicit()
+                        }
+                    block.statements += stmt
+
+                    // Add implicit break
+                    block.statements += newBreakStatement().implicit()
+                }
+            }
+        }
+        switch.statement = block
+
+        return switch
     }
 }
