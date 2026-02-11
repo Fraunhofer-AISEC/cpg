@@ -55,7 +55,7 @@ class RustControlFlowTest : BaseTest() {
         val body = ifLetFunc.body as? Block
         assertNotNull(body)
 
-        val ifStmt = body.statements[1] as? IfStatement
+        val ifStmt = body.statements.getOrNull(1) as? IfStatement
         assertNotNull(ifStmt, "Expected second statement to be IfStatement")
 
         assertNotNull(ifStmt.condition)
@@ -65,13 +65,13 @@ class RustControlFlowTest : BaseTest() {
         assertNotNull(thenBlock)
 
         // Statement 0: Binding for x
-        val declX = thenBlock.statements[0] as? DeclarationStatement
+        val declX = thenBlock.statements.getOrNull(0) as? DeclarationStatement
         assertNotNull(declX)
         val xVar = declX.declarations[0] as? VariableDeclaration
         assertEquals("x", xVar?.name?.localName)
 
         // Statement 1: let y = x
-        val declStmt = thenBlock.statements[1] as? DeclarationStatement
+        val declStmt = thenBlock.statements.getOrNull(1) as? DeclarationStatement
         assertNotNull(declStmt)
         val y = declStmt.declarations[0] as? VariableDeclaration
         assertEquals("y", y?.name?.localName)
@@ -99,7 +99,7 @@ class RustControlFlowTest : BaseTest() {
         val body = whileLetFunc.body as? Block
         assertNotNull(body)
 
-        val whileStmt = body.statements[1] as? WhileStatement
+        val whileStmt = body.statements.getOrNull(1) as? WhileStatement
         assertNotNull(whileStmt, "Expected second statement to be WhileStatement")
 
         assertNotNull(whileStmt.condition)
@@ -109,13 +109,13 @@ class RustControlFlowTest : BaseTest() {
         assertNotNull(loopBody)
 
         // Statement 0: Binding for x
-        val declX = loopBody.statements[0] as? DeclarationStatement
+        val declX = loopBody.statements.getOrNull(0) as? DeclarationStatement
         assertNotNull(declX)
         val xVar = declX.declarations[0] as? VariableDeclaration
         assertEquals("x", xVar?.name?.localName)
 
         // Statement 1: let y = x
-        val declStmtLocal = loopBody.statements[1] as? DeclarationStatement
+        val declStmtLocal = loopBody.statements.getOrNull(1) as? DeclarationStatement
         assertNotNull(declStmtLocal)
         val y = declStmtLocal.declarations[0] as? VariableDeclaration
         assertEquals("y", y?.name?.localName)
@@ -145,7 +145,7 @@ class RustControlFlowTest : BaseTest() {
 
         // Outer loop (loop { ... })
         // Mapped to LabelStatement -> WhileStatement
-        val outerLabel = body.statements[0] as? LabelStatement
+        val outerLabel = body.statements.getOrNull(0) as? LabelStatement
         assertNotNull(outerLabel, "Expected outer to be LabelStatement")
         assertEquals("outer", outerLabel.label)
 
@@ -156,7 +156,7 @@ class RustControlFlowTest : BaseTest() {
         assertNotNull(innerBlock)
 
         // Inner loop (while true { ... })
-        val innerLabel = innerBlock.statements[0] as? LabelStatement
+        val innerLabel = innerBlock.statements.getOrNull(0) as? LabelStatement
         assertNotNull(innerLabel, "Expected inner to be LabelStatement")
         assertEquals("inner", innerLabel.label)
 
@@ -166,7 +166,7 @@ class RustControlFlowTest : BaseTest() {
         val innerBody = innerLoop.statement as? Block
         assertNotNull(innerBody, "Expected inner body to be Block")
 
-        val breakStmt = innerBody.statements[0] as? BreakStatement
+        val breakStmt = innerBody.statements.getOrNull(0) as? BreakStatement
         assertNotNull(breakStmt, "Expected break statement")
         assertEquals("outer", breakStmt.label)
     }
@@ -191,7 +191,7 @@ class RustControlFlowTest : BaseTest() {
         val body = caller.body as? Block
         assertNotNull(body)
 
-        val expr = body.statements[0]
+        val expr = body.statements.getOrNull(0)
         val awaitExpr = expr as? UnaryOperator
         assertNotNull(awaitExpr)
         assertEquals("await", awaitExpr.operatorCode)

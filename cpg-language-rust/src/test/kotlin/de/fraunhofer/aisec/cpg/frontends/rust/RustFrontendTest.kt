@@ -52,7 +52,7 @@ class RustFrontendTest : BaseTest() {
         val body = main.body as? Block
         assertNotNull(body)
 
-        val letX = body.statements[0] as? DeclarationStatement
+        val letX = body.statements.getOrNull(0) as? DeclarationStatement
         assertNotNull(letX)
         val x = letX.declarations[0] as? VariableDeclaration
         assertNotNull(x)
@@ -78,7 +78,7 @@ class RustFrontendTest : BaseTest() {
         val body = foo.body as? Block
         assertNotNull(body)
 
-        val ifStmt = body.statements[0] as? IfStatement
+        val ifStmt = body.statements.getOrNull(0) as? IfStatement
         assertNotNull(ifStmt)
         assertNotNull(ifStmt.condition)
         assertNotNull(ifStmt.thenStatement)
@@ -104,7 +104,7 @@ class RustFrontendTest : BaseTest() {
         assertNotNull(body)
 
         // a = 1 + 2
-        val letA = body.statements[0] as? DeclarationStatement
+        val letA = body.statements.getOrNull(0) as? DeclarationStatement
         assertNotNull(letA)
         assertFalse(letA.declarations.isEmpty(), "Declarations in letA should not be empty")
         val a = letA.declarations[0] as? VariableDeclaration
@@ -112,7 +112,7 @@ class RustFrontendTest : BaseTest() {
         assertIs<BinaryOperator>(a.initializer)
 
         // b = !true
-        val letB = body.statements[1] as? DeclarationStatement
+        val letB = body.statements.getOrNull(1) as? DeclarationStatement
         assertNotNull(letB)
         assertFalse(letB.declarations.isEmpty(), "Declarations in letB should not be empty")
         val b = letB.declarations[0] as? VariableDeclaration
@@ -120,7 +120,7 @@ class RustFrontendTest : BaseTest() {
         assertIs<UnaryOperator>(b.initializer)
 
         // c = (1, 2)
-        val letC = body.statements[2] as? DeclarationStatement
+        val letC = body.statements.getOrNull(2) as? DeclarationStatement
         assertNotNull(letC)
         assertFalse(letC.declarations.isEmpty(), "Declarations in letC should not be empty")
         val c = letC.declarations[0] as? VariableDeclaration
@@ -128,7 +128,7 @@ class RustFrontendTest : BaseTest() {
         assertIs<InitializerListExpression>(c.initializer)
 
         // d = [1, 2, 3]
-        val letD = body.statements[3] as? DeclarationStatement
+        val letD = body.statements.getOrNull(3) as? DeclarationStatement
         assertNotNull(letD)
         assertFalse(letD.declarations.isEmpty(), "Declarations in letD should not be empty")
         val d = letD.declarations[0] as? VariableDeclaration
@@ -136,12 +136,12 @@ class RustFrontendTest : BaseTest() {
         assertIs<InitializerListExpression>(d.initializer)
 
         // x = 2
-        val assignX = body.statements[5] as? AssignExpression
+        val assignX = body.statements.getOrNull(5) as? AssignExpression
         assertNotNull(assignX)
         assertEquals("=", assignX.operatorCode)
 
         // x += 1
-        val compoundX = body.statements[6] as? AssignExpression
+        val compoundX = body.statements.getOrNull(6) as? AssignExpression
         assertNotNull(compoundX)
         assertEquals("+=", compoundX.operatorCode)
     }
@@ -201,7 +201,7 @@ class RustFrontendTest : BaseTest() {
         val body = foo.body as? Block
         assertNotNull(body)
 
-        val match = body.statements[0] as? SwitchStatement
+        val match = body.statements.getOrNull(0) as? SwitchStatement
         assertNotNull(match)
         assertEquals("x", match.selector?.name?.localName)
 

@@ -48,6 +48,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             "if_expression" -> handleIfExpression(node)
             "while_expression" -> handleWhileExpression(node)
             "loop_expression" -> handleLoopExpression(node)
+            "for_expression" -> handleForExpression(node)
             "expression_statement" -> handleExpressionStatement(node)
             else -> {
                 newProblemExpression("Unknown statement type: ${node.type}", rawNode = node)
@@ -327,6 +328,58 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         }
     }
 
+    private fun handleForExpression(node: TSNode): Statement {
+        val forEach = newForEachStatement(rawNode = node)
+        frontend.scopeManager.enterScope(forEach)
+
+        // Pattern is the loop variable (e.g., "x" in "for x in items")
+        val pattern = node.getChildByFieldName("pattern")
+        if (pattern != null && !pattern.isNull) {
+            val declStmt = newDeclarationStatement(rawNode = pattern)
+            val name = frontend.codeOf(pattern) ?: ""
+            val variable = newVariableDeclaration(name, rawNode = pattern)
+            frontend.scopeManager.addDeclaration(variable)
+            declStmt.addDeclaration(variable)
+            forEach.variable = declStmt
+        }
+
+        // Value is the iterable expression (e.g., "items" in "for x in items")
+        val value = node.getChildByFieldName("value")
+        if (value != null && !value.isNull) {
+            forEach.iterable = frontend.expressionHandler.handle(value) as? Expression
+        }
+
+        // Body is the loop block
+        val body = node.getChildByFieldName("body")
+        if (body != null && !body.isNull) {
+            forEach.statement = handle(body)
+        }
+
+        frontend.scopeManager.leaveScope(forEach)
+
+        // Check for loop label
+        var label: TSNode? = node.getChildByFieldName("label")
+        if (label == null || label.isNull) {
+            for (i in 0 until node.childCount) {
+                val child = node.getChild(i)
+                if (child.type == "loop_label" || child.type == "label") {
+                    label = child
+                    break
+                }
+            }
+        }
+
+        return if (label != null && !label.isNull) {
+            val labelStmt = newLabelStatement(rawNode = node)
+            val code = frontend.codeOf(label) ?: ""
+            labelStmt.label = code.removePrefix("'")
+            labelStmt.subStatement = forEach
+            labelStmt
+        } else {
+            forEach
+        }
+    }
+
     internal fun handleBlockWithBindings(node: TSNode, bindings: List<VariableDeclaration>): Block {
         val block = newBlock(rawNode = node)
         frontend.scopeManager.enterScope(block)
@@ -412,7 +465,8 @@ class StatementHandler(frontend: RustLanguageFrontend) :
                 child.type == "block" ||
                 child.type == "return_expression" ||
                 child.type == "while_expression" ||
-                child.type == "loop_expression"
+                child.type == "loop_expression" ||
+                child.type == "for_expression"
         ) {
             handle(child)
         } else {

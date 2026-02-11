@@ -59,6 +59,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             "break_expression" -> handleBreakExpression(node)
             "continue_expression" -> handleContinueExpression(node)
             "await_expression" -> handleAwaitExpression(node)
+            "reference_expression" -> handleReferenceExpression(node)
             "parenthesized_expression" -> {
                 val child = node.getNamedChild(0)
                 if (child != null) handle(child)
@@ -409,6 +410,29 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                     ?: newProblemExpression("Invalid await operand", rawNode = expr)
         } else {
             op.input = newProblemExpression("Missing await operand", rawNode = node)
+        }
+        return op
+    }
+
+    private fun handleReferenceExpression(node: TSNode): Expression {
+        val value = node.getChildByFieldName("value")
+
+        // Check for mutable reference (&mut x)
+        var isMut = false
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child.type == "mutable_specifier") {
+                isMut = true
+                break
+            }
+        }
+
+        val opCode = if (isMut) "&mut" else "&"
+        val op = newUnaryOperator(opCode, postfix = false, prefix = true, rawNode = node)
+        if (value != null && !value.isNull) {
+            op.input =
+                handle(value) as? Expression
+                    ?: newProblemExpression("Invalid reference operand", rawNode = value)
         }
         return op
     }
