@@ -72,9 +72,14 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleLetDeclaration(node: TSNode): DeclarationStatement {
-        val declStmt = newDeclarationStatement(rawNode = node)
-
         val patternNode = node.getChildByFieldName("pattern")
+
+        // Handle tuple destructuring: let (a, b) = ...
+        if (patternNode != null && patternNode.type == "tuple_pattern") {
+            return handleTupleLetDeclaration(node, patternNode)
+        }
+
+        val declStmt = newDeclarationStatement(rawNode = node)
 
         // Check for `mut` keyword in the pattern
         var isMutable = false
@@ -145,6 +150,39 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         frontend.scopeManager.addDeclaration(variable)
         declStmt.addDeclaration(variable)
 
+        return declStmt
+    }
+
+    private fun handleTupleLetDeclaration(node: TSNode, patternNode: TSNode): DeclarationStatement {
+        val declStmt = newDeclarationStatement(rawNode = node)
+
+        // Create a VariableDeclaration for each element in the tuple pattern
+        val elements = mutableListOf<VariableDeclaration>()
+        for (i in 0 until patternNode.childCount) {
+            val child = patternNode.getChild(i)
+            if (child.isNamed) {
+                val name = frontend.codeOf(child) ?: ""
+                val variable = newVariableDeclaration(name, rawNode = child)
+                elements += variable
+            }
+        }
+
+        // Parse the initializer
+        val valueNode = node.getChildByFieldName("value")
+        val initializer =
+            if (valueNode != null) {
+                frontend.expressionHandler.handle(valueNode) as? Expression
+            } else {
+                null
+            }
+
+        val tuple = newTupleDeclaration(elements, initializer, rawNode = node)
+
+        // Add tuple and all elements to scope
+        frontend.scopeManager.addDeclaration(tuple)
+        elements.forEach { frontend.scopeManager.addDeclaration(it) }
+
+        declStmt.addDeclaration(tuple)
         return declStmt
     }
 

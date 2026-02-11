@@ -48,6 +48,10 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             "call_expression" -> handleCallExpression(node)
             "field_expression" -> handleFieldExpression(node)
             "if_expression" -> frontend.statementHandler.handleNode(node)
+            "return_expression" -> frontend.statementHandler.handleNode(node)
+            "while_expression" -> frontend.statementHandler.handleNode(node)
+            "loop_expression" -> frontend.statementHandler.handleNode(node)
+            "for_expression" -> frontend.statementHandler.handleNode(node)
             "block" -> frontend.statementHandler.handleBlock(node)
             "unary_expression" -> handleUnaryExpression(node)
             "assignment_expression" -> handleAssignmentExpression(node)
@@ -72,6 +76,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             "float_literal" -> handleFloatLiteral(node)
             "char_literal" -> handleCharLiteral(node)
             "scoped_identifier" -> handleScopedIdentifier(node)
+            "generic_function" -> handleGenericFunctionReference(node)
             "unsafe_block" -> handleUnsafeBlock(node)
             "async_block" -> handleAsyncBlock(node)
             "tuple_index_expression" -> handleTupleIndexExpression(node)
@@ -99,8 +104,20 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     private fun handleStringLiteral(node: TSNode): Literal<String> {
         val code = frontend.codeOf(node) ?: ""
-        val value = code.trim('"')
-        return newLiteral(value, primitiveType("str"), rawNode = node)
+        return when {
+            code.startsWith("b\"") -> {
+                val value = code.removePrefix("b\"").removeSuffix("\"")
+                newLiteral(value, objectType("&[u8]"), rawNode = node)
+            }
+            code.startsWith("c\"") -> {
+                val value = code.removePrefix("c\"").removeSuffix("\"")
+                newLiteral(value, objectType("&CStr"), rawNode = node)
+            }
+            else -> {
+                val value = code.trim('"')
+                newLiteral(value, primitiveType("str"), rawNode = node)
+            }
+        }
     }
 
     private fun handleBooleanLiteral(node: TSNode): Literal<Boolean> {
@@ -211,14 +228,20 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleCallExpression(node: TSNode): Expression {
-        val function = node.getChildByFieldName("function")
+        val function =
+            node.getChildByFieldName("function")
+                ?: return newProblemExpression("Missing function in call", rawNode = node)
         val arguments = node.getChildByFieldName("arguments")
 
+        // Detect turbofish / generic function call: identity::<i32>(42)
+        // Tree-sitter AST: call_expression > function: generic_function
+        if (function.type == "generic_function") {
+            return handleGenericCallExpression(node, function, arguments)
+        }
+
         val callee =
-            handle(
-                function ?: return newProblemExpression("Missing function in call", rawNode = node)
-            )
-                as? Expression ?: newProblemExpression("Missing function in call", rawNode = node)
+            handle(function) as? Expression
+                ?: newProblemExpression("Missing function in call", rawNode = node)
 
         val call =
             if (callee is MemberExpression) {
@@ -227,6 +250,52 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                 newCallExpression(callee, rawNode = node)
             }
 
+        if (arguments != null) {
+            for (i in 0 until arguments.childCount) {
+                val arg = arguments.getChild(i)
+                if (arg.isNamed) {
+                    val expr = handle(arg) as? Expression
+                    if (expr != null) call.addArgument(expr)
+                }
+            }
+        }
+
+        return call
+    }
+
+    private fun handleGenericCallExpression(
+        node: TSNode,
+        genericFunction: TSNode,
+        arguments: TSNode?,
+    ): Expression {
+        // generic_function has children: function (identifier/scoped_identifier) + type_arguments
+        val innerFunction = genericFunction.getChildByFieldName("function")
+        val typeArguments = genericFunction.getChildByFieldName("type_arguments")
+
+        val callee =
+            if (innerFunction != null && !innerFunction.isNull) {
+                handle(innerFunction) as? Expression
+                    ?: newProblemExpression("Invalid generic function", rawNode = genericFunction)
+            } else {
+                newProblemExpression("Missing function in generic call", rawNode = genericFunction)
+            }
+
+        val call = newCallExpression(callee, template = true, rawNode = node)
+
+        // Add type arguments as template parameters
+        if (typeArguments != null && !typeArguments.isNull) {
+            for (i in 0 until typeArguments.childCount) {
+                val typeArg = typeArguments.getChild(i)
+                if (typeArg.isNamed) {
+                    val typeName = frontend.codeOf(typeArg) ?: ""
+                    val type = frontend.typeHandler.handle(typeArg)
+                    val typeExpr = newTypeExpression(typeName, type, rawNode = typeArg)
+                    call.addTemplateParameter(typeExpr)
+                }
+            }
+        }
+
+        // Add arguments
         if (arguments != null) {
             for (i in 0 until arguments.childCount) {
                 val arg = arguments.getChild(i)
@@ -777,5 +846,14 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         val delimiter = "#".repeat(hashes) + "\""
         val value = withoutR.removePrefix(delimiter).removeSuffix("\"" + "#".repeat(hashes))
         return newLiteral(value, primitiveType("str"), rawNode = node)
+    }
+
+    private fun handleGenericFunctionReference(node: TSNode): Expression {
+        // Fallback for generic_function outside of a call context
+        val innerFunction = node.getChildByFieldName("function")
+        val name =
+            if (innerFunction != null && !innerFunction.isNull) frontend.codeOf(innerFunction) ?: ""
+            else frontend.codeOf(node) ?: ""
+        return newReference(name, rawNode = node)
     }
 }

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
@@ -172,5 +173,90 @@ class RustExpressionsTest : BaseTest() {
 
         val memberExprs = body.allChildren<MemberExpression>()
         assertTrue(memberExprs.any { it.name.localName == "0" }, "Should have tuple.0 access")
+    }
+
+    @Test
+    fun testByteAndCStringLiterals() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("string_literals.rs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+
+        val func = tu.functions["test_byte_string"]
+        assertNotNull(func)
+        val body = func.body as? Block
+        assertNotNull(body)
+
+        val literals = body.allChildren<Literal<String>>()
+        val byteLit = literals.firstOrNull { it.value == "hello bytes" }
+        assertNotNull(byteLit, "Should have byte string literal")
+        assertEquals("&[u8]", byteLit.type.name.localName)
+
+        val cLit = literals.firstOrNull { it.value == "hello cstr" }
+        assertNotNull(cLit, "Should have C string literal")
+        assertEquals("&CStr", cLit.type.name.localName)
+    }
+
+    @Test
+    fun testReturnInExpression() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("return_expr.rs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+
+        val func = tu.functions["classify"]
+        assertNotNull(func)
+        val body = func.body as? Block
+        assertNotNull(body)
+
+        // The return inside a match arm should produce a ReturnStatement, not a ProblemExpression
+        val problems = body.allChildren<ProblemExpression>()
+        assertTrue(
+            problems.none { it.problem.contains("return_expression") },
+            "return_expression should not produce a ProblemExpression",
+        )
+
+        val returns = body.allChildren<ReturnStatement>()
+        assertTrue(returns.isNotEmpty(), "Should have a ReturnStatement from match arm")
+    }
+
+    @Test
+    fun testTurbofish() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("turbofish.rs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+
+        val func = tu.functions["test_turbofish"]
+        assertNotNull(func)
+        val body = func.body as? Block
+        assertNotNull(body)
+
+        val calls = body.allChildren<CallExpression>()
+        val turbofishCall = calls.firstOrNull { it.template }
+        assertNotNull(turbofishCall, "Should have a template call (turbofish)")
+        assertEquals(1, turbofishCall.templateArguments.size, "Should have one type argument")
+
+        val typeArg = turbofishCall.templateArguments.first()
+        assertIs<TypeExpression>(typeArg)
+        assertEquals("i32", typeArg.name.localName)
     }
 }

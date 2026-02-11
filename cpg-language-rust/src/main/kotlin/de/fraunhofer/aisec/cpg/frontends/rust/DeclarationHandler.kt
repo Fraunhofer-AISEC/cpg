@@ -463,13 +463,14 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         return func
     }
 
-    private fun handleEnumItem(node: TSNode): RecordDeclaration {
+    private fun handleEnumItem(node: TSNode): EnumDeclaration {
         val nameNode = node.getChildByFieldName("name")
         val name = nameNode?.let { frontend.codeOf(it) } ?: ""
 
-        val record = newRecordDeclaration(name, "enum", rawNode = node)
-        frontend.scopeManager.addDeclaration(record)
-        frontend.scopeManager.enterScope(record)
+        val enumDecl = newEnumDeclaration(name, rawNode = node)
+        enumDecl.kind = "enum"
+        frontend.scopeManager.addDeclaration(enumDecl)
+        frontend.scopeManager.enterScope(enumDecl)
 
         val body = node.getChildByFieldName("body")
         if (body != null) {
@@ -479,16 +480,16 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                     val variantNameNode = child.getChildByFieldName("name")
                     val variantName = variantNameNode?.let { frontend.codeOf(it) } ?: ""
 
-                    // For now, treat enum variants as fields or special declarations
-                    val field = newFieldDeclaration(variantName, record.toType(), rawNode = child)
-                    frontend.scopeManager.addDeclaration(field)
-                    record.addDeclaration(field)
+                    val entry = newEnumConstantDeclaration(variantName, rawNode = child)
+                    entry.type = enumDecl.toType()
+                    frontend.scopeManager.addDeclaration(entry)
+                    enumDecl.entries += entry
                 }
             }
         }
 
-        frontend.scopeManager.leaveScope(record)
-        return record
+        frontend.scopeManager.leaveScope(enumDecl)
+        return enumDecl
     }
 
     private fun handleImplItem(node: TSNode): Declaration {
