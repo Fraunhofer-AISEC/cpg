@@ -70,17 +70,44 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
 
         scopeManager.resetToGlobal(tud)
 
-        for (i in 0 until rootNode.childCount) {
-            val child = rootNode.getChild(i)
-            if (child.isNamed) {
-                val decl = declarationHandler.handle(child)
-                if (decl != null) {
-                    tud.addDeclaration(decl)
-                }
-            }
-        }
+        handleChildren(rootNode, tud)
 
         return tud
+    }
+
+    internal fun handleChildren(parent: TSNode, tud: TranslationUnitDeclaration) {
+        val pendingAnnotations = mutableListOf<de.fraunhofer.aisec.cpg.graph.Annotation>()
+
+        for (i in 0 until parent.childCount) {
+            val child = parent.getChild(i)
+            if (!child.isNamed) continue
+
+            if (child.type == "attribute_item") {
+                pendingAnnotations += parseAttribute(child)
+                continue
+            }
+
+            val decl = declarationHandler.handle(child)
+            if (pendingAnnotations.isNotEmpty()) {
+                decl.annotations += pendingAnnotations
+                pendingAnnotations.clear()
+            }
+            tud.addDeclaration(decl)
+        }
+    }
+
+    internal fun parseAttribute(node: TSNode): de.fraunhofer.aisec.cpg.graph.Annotation {
+        // attribute_item has children: #, [, attribute, ]
+        // The "attribute" child contains the actual content like "derive(Clone, Debug)"
+        var attrContent = ""
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child.type == "attribute") {
+                attrContent = codeOf(child) ?: ""
+                break
+            }
+        }
+        return newAnnotation(attrContent, rawNode = node)
     }
 
     override fun typeOf(type: TSNode?): Type {

@@ -74,23 +74,50 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         val declStmt = newDeclarationStatement(rawNode = node)
 
         val patternNode = node.getChildByFieldName("pattern")
-        val name =
-            if (patternNode != null) {
-                frontend.codeOf(patternNode) ?: ""
-            } else {
-                // Fallback: first identifier
-                var foundName = ""
-                for (i in 0 until node.childCount) {
-                    val child = node.getChild(i)
-                    if (child.isNamed && child.type == "identifier") {
-                        foundName = frontend.codeOf(child) ?: ""
-                        break
-                    }
-                }
-                foundName
-            }
 
-        val variable = newVariableDeclaration(name, rawNode = node)
+        // Check for `mut` keyword in the pattern
+        var isMutable = false
+        var actualName = ""
+        if (patternNode != null) {
+            if (patternNode.type == "mut_pattern") {
+                isMutable = true
+                // The actual identifier is a child of mut_pattern
+                val innerPattern =
+                    patternNode.getNamedChild(0) ?: patternNode.getChildByFieldName("pattern")
+                actualName =
+                    if (innerPattern != null && !innerPattern.isNull) {
+                        frontend.codeOf(innerPattern) ?: ""
+                    } else {
+                        // Fallback: use full code minus "mut "
+                        (frontend.codeOf(patternNode) ?: "").removePrefix("mut ").trim()
+                    }
+            } else {
+                actualName = frontend.codeOf(patternNode) ?: ""
+            }
+        } else {
+            // Fallback: first identifier
+            for (i in 0 until node.childCount) {
+                val child = node.getChild(i)
+                if (child.isNamed && child.type == "identifier") {
+                    actualName = frontend.codeOf(child) ?: ""
+                    break
+                }
+            }
+        }
+
+        // Also check for a standalone "mutable_specifier" child of the let_declaration
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child.type == "mutable_specifier") {
+                isMutable = true
+                break
+            }
+        }
+
+        val variable = newVariableDeclaration(actualName, rawNode = node)
+        if (isMutable) {
+            variable.annotations += newAnnotation("mut", rawNode = node)
+        }
 
         val typeNode = node.getChildByFieldName("type")
         if (typeNode != null) {

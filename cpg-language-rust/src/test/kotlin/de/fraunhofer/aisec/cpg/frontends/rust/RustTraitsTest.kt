@@ -61,9 +61,48 @@ class RustTraitsTest : BaseTest() {
         val implMethod = myStruct.methods["required_method"]
         assertNotNull(implMethod)
         assertEquals(myStruct, implMethod.recordDeclaration)
-
-        // In Rust, we want to link implementations to their traits if possible.
-        // For now, let's just ensure the method is there and has a body.
         assertTrue(implMethod.hasBody())
+
+        val genericFooTemplate =
+            tu.declarations.filterIsInstance<FunctionTemplateDeclaration>().first {
+                it.name.localName == "generic_foo"
+            }
+        val tParam = genericFooTemplate.parameters[0] as? TypeParameterDeclaration
+        assertNotNull(tParam)
+        assertEquals("T", tParam.name.localName)
+
+        // Check bounds on the ParameterizedType
+        val tType = tParam.type
+        assertTrue(tType.superTypes.any { it.name.localName == "Clone" })
+        assertTrue(tType.superTypes.any { it.name.localName == "MyTrait" })
+    }
+
+    @Test
+    fun testAssociatedTypes() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("traits.rs").toFile()), topLevel, true) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+
+        // The Iterator trait should parse successfully with an associated type
+        val iteratorTrait = tu.records["Iterator"]
+        assertNotNull(iteratorTrait)
+        assertEquals("trait", iteratorTrait.kind)
+
+        // Iterator should have a "next" method signature
+        val nextMethod = iteratorTrait.methods["next"]
+        assertNotNull(nextMethod)
+
+        // The Counter struct should implement Iterator
+        val counter = tu.records["Counter"]
+        assertNotNull(counter)
+        assertTrue(counter.implementedInterfaces.any { it.name.localName == "Iterator" })
+
+        // Counter should have a "next" method implementation
+        val counterNext = counter.methods["next"]
+        assertNotNull(counterNext)
+        assertTrue(counterNext.hasBody())
     }
 }

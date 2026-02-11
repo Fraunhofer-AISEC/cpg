@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.rust
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.treesitter.TSNode
 
 /**
@@ -49,6 +50,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             "trait_item" -> handleTraitItem(node)
             "mod_item" -> handleModItem(node)
             "type_item" -> handleTypeItem(node)
+            "macro_definition" -> handleMacroDefinition(node)
             else -> {
                 ProblemDeclaration("Unknown declaration type: ${node.type}")
             }
@@ -119,6 +121,21 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             func.returnTypes = listOf(frontend.typeOf(returnTypeNode))
         }
 
+        var whereClause = node.getChildByFieldName("where_clause")
+        if (whereClause == null || whereClause.isNull) {
+            // Fallback: search for where_clause child by type
+            for (i in 0 until node.childCount) {
+                val c = node.getChild(i)
+                if (c.type == "where_clause") {
+                    whereClause = c
+                    break
+                }
+            }
+        }
+        if (whereClause != null && !whereClause.isNull) {
+            handleWhereClause(whereClause)
+        }
+
         val body = node.getChildByFieldName("body")
         if (body != null) {
             func.body = frontend.statementHandler.handle(body)
@@ -133,20 +150,79 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         return func
     }
 
+    private fun handleWhereClause(node: TSNode) {
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child.type == "where_predicate") {
+                val left = child.getChildByFieldName("left")
+                val bounds = child.getChildByFieldName("bounds")
+                if (left != null && bounds != null && !left.isNull && !bounds.isNull) {
+                    val typeName = frontend.codeOf(left) ?: ""
+                    // Look up existing TypeParameterDeclaration to add bounds to its type
+                    val lookupName = Name(typeName, null, language.namespaceDelimiter)
+                    val typeParamDecl =
+                        frontend.scopeManager
+                            .lookupSymbolByName(lookupName, language)
+                            .filterIsInstance<TypeParameterDeclaration>()
+                            .firstOrNull()
+
+                    val type = typeParamDecl?.type ?: frontend.typeHandler.handle(left)
+                    parseTraitBounds(bounds, type)
+                }
+            }
+        }
+    }
+
     private fun handleTypeParameters(node: TSNode, template: TemplateDeclaration) {
         if (node.isNull) return
         for (i in 0 until node.childCount) {
             val child = node.getChild(i)
+            // Handle lifetime parameters (e.g., 'a in <'a, T>)
+            if (child.type == "lifetime") {
+                val name = frontend.codeOf(child) ?: ""
+                val typeParam = newTypeParameterDeclaration(name, rawNode = child)
+                template.addDeclaration(typeParam)
+                frontend.scopeManager.addDeclaration(typeParam)
+                continue
+            }
             if (
                 child.type == "type_parameter" ||
                     child.type == "constrained_type_parameter" ||
                     child.type == "type_identifier"
             ) {
-                val nameNode = child.getChildByFieldName("name")
-                val name = nameNode?.let { frontend.codeOf(it) } ?: frontend.codeOf(child)
+                // tree-sitter returns non-Java-null TSNode for missing fields,
+                // so we must check isNull explicitly
+                var nameNode = child.getChildByFieldName("left")
+                if (nameNode == null || nameNode.isNull) {
+                    nameNode = child.getChildByFieldName("name")
+                }
+                val name =
+                    if (nameNode != null && !nameNode.isNull) frontend.codeOf(nameNode)
+                    else frontend.codeOf(child) ?: ""
                 val typeParam = newTypeParameterDeclaration(name, rawNode = child)
+
+                if (child.type == "constrained_type_parameter") {
+                    val boundsNode = child.getChildByFieldName("bounds")
+                    if (boundsNode != null && !boundsNode.isNull) {
+                        parseTraitBounds(boundsNode, typeParam.type)
+                    }
+                }
+
                 template.addDeclaration(typeParam)
                 frontend.scopeManager.addDeclaration(typeParam)
+            }
+        }
+    }
+
+    private fun parseTraitBounds(node: TSNode, type: Type) {
+        // Rust trait bounds can be a single trait or a list separated by +
+        // In tree-sitter-rust, trait_bounds contains several children
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child.isNamed) {
+                // It's likely a type_identifier or a path
+                val boundType = frontend.typeHandler.handle(child)
+                type.superTypes.add(boundType)
             }
         }
     }
@@ -156,16 +232,55 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             val child = node.getChild(i)
             if (child.type == "parameter") {
                 val pattern = child.getChildByFieldName("pattern")
-                val name = pattern?.let { frontend.codeOf(it) } ?: ""
+                var name = pattern?.let { frontend.codeOf(it) } ?: ""
                 val typeNode = child.getChildByFieldName("type")
+
+                // Check for mut keyword in pattern
+                val isMut = pattern != null && !pattern.isNull && pattern.type == "mut_pattern"
+                if (isMut) {
+                    val inner = pattern.getNamedChild(0)
+                    if (inner != null && !inner.isNull) {
+                        name = frontend.codeOf(inner) ?: ""
+                    } else {
+                        name = name.removePrefix("mut ").trim()
+                    }
+                }
 
                 val param =
                     newParameterDeclaration(name, frontend.typeOf(typeNode), rawNode = child)
+                if (isMut) {
+                    param.modifiers += "mut"
+                }
                 frontend.scopeManager.addDeclaration(param)
                 func.parameters += param
             } else if (child.type == "self_parameter") {
-                // TODO: Handle self parameter
+                handleSelfParameter(child, func)
             }
+        }
+    }
+
+    private fun handleSelfParameter(node: TSNode, func: FunctionDeclaration) {
+        val recordDeclaration =
+            (frontend.scopeManager.currentScope as? RecordScope)?.astNode as? RecordDeclaration
+                ?: return
+
+        if (func is MethodDeclaration) {
+            val selfType = recordDeclaration.toType()
+            // Check if it's &self, &mut self, or self
+            var isMut = false
+            var isRef = false
+            for (i in 0 until node.childCount) {
+                val child = node.getChild(i)
+                if (child.type == "&") isRef = true
+                if (child.type == "mutable_specifier") isMut = true
+            }
+            val paramType = if (isRef) selfType.ref() else selfType
+            val selfVar = newVariableDeclaration("self", rawNode = node)
+            selfVar.type = paramType
+            if (isMut) {
+                selfVar.annotations += newAnnotation("mut", rawNode = node)
+            }
+            func.receiver = selfVar
         }
     }
 
@@ -243,22 +358,21 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         frontend.scopeManager.enterScope(record)
 
         val body = node.getChildByFieldName("body")
-        if (body != null) {
+        if (body != null && !body.isNull) {
             for (i in 0 until body.childCount) {
                 val child = body.getChild(i)
                 if (child.isNamed) {
                     when (child.type) {
                         "function_item" -> {
                             val decl = handleFunctionItem(child)
-                            if (decl is FunctionDeclaration) {
-                                record.addDeclaration(decl)
-                            } else if (decl is FunctionTemplateDeclaration) {
-                                record.addDeclaration(decl)
-                            }
+                            record.addDeclaration(decl)
                         }
                         "function_signature_item" -> {
                             val decl = handleFunctionSignatureItem(child)
                             record.addDeclaration(decl)
+                        }
+                        "associated_type" -> {
+                            handleAssociatedType(child)
                         }
                     }
                 }
@@ -363,10 +477,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             for (i in 0 until body.childCount) {
                 val child = body.getChild(i)
                 if (child.isNamed) {
-                    val decl = handle(child)
-                    if (decl != null) {
-                        record.addDeclaration(decl)
-                    }
+                    record.addDeclaration(handle(child))
                 }
             }
         }
@@ -388,10 +499,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             for (i in 0 until body.childCount) {
                 val child = body.getChild(i)
                 if (child.isNamed) {
-                    val decl = handle(child)
-                    if (decl != null) {
-                        mod.addDeclaration(decl)
-                    }
+                    mod.addDeclaration(handle(child))
                 }
             }
         }
@@ -411,5 +519,39 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         val decl = newTypedefDeclaration(targetType, aliasType, rawNode = node)
         frontend.scopeManager.addTypedef(decl)
         return decl
+    }
+
+    private fun handleAssociatedType(node: TSNode): Declaration {
+        val nameNode = node.getChildByFieldName("name")
+        val name = nameNode?.let { frontend.codeOf(it) } ?: ""
+
+        // Associated types in traits have no concrete type yet (just a declaration).
+        // Model as a TypedefDeclaration with unknown target type.
+        val aliasType = objectType(name)
+        val targetType = unknownType()
+
+        val decl = newTypedefDeclaration(targetType, aliasType, rawNode = node)
+
+        // Parse optional trait bounds on the associated type
+        val boundsNode = node.getChildByFieldName("bounds")
+        if (boundsNode != null && !boundsNode.isNull) {
+            parseTraitBounds(boundsNode, aliasType)
+        }
+
+        frontend.scopeManager.addTypedef(decl)
+        return decl
+    }
+
+    private fun handleMacroDefinition(node: TSNode): Declaration {
+        val nameNode = node.getChildByFieldName("name")
+        val name = nameNode?.let { frontend.codeOf(it) } ?: ""
+
+        // Model macro_rules! definitions as FunctionDeclarations.
+        // The macro body is opaque (token trees), so we just capture the declaration.
+        val func = newFunctionDeclaration(name, rawNode = node)
+        val annotation = newAnnotation("macro_rules", rawNode = node)
+        func.annotations += annotation
+        frontend.scopeManager.addDeclaration(func)
+        return func
     }
 }

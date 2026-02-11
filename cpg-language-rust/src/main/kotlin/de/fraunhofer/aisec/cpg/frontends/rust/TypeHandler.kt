@@ -60,8 +60,21 @@ class TypeHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleReferenceType(node: TSNode): Type {
-        val typeNode = node.getChildByFieldName("type") ?: node.getNamedChild(0)
-        val type = if (typeNode != null) handle(typeNode) else unknownType()
+        // reference_type children: &, optional lifetime, optional mutable_specifier, type
+        var typeNode = node.getChildByFieldName("type")
+        if (typeNode == null || typeNode.isNull) {
+            // Fallback: find the last named child that isn't a lifetime or mutable_specifier
+            for (i in node.childCount - 1 downTo 0) {
+                val child = node.getChild(i)
+                if (
+                    child.isNamed && child.type != "lifetime" && child.type != "mutable_specifier"
+                ) {
+                    typeNode = child
+                    break
+                }
+            }
+        }
+        val type = if (typeNode != null && !typeNode.isNull) handle(typeNode) else unknownType()
         return type.ref()
     }
 
