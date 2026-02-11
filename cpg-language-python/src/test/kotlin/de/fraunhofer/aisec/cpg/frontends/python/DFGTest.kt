@@ -208,8 +208,6 @@ class DFGTest {
         checkCallFlowsToTupleElements(body, "returnTuple")
     }
 
-    // TODO for merge
-    @Ignore
     @Test
     fun testFollowFunctions() {
         val topLevel = Path.of("src", "test", "resources", "python")
