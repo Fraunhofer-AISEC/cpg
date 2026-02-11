@@ -46,18 +46,10 @@ class RustLanguage :
     Language<RustLanguageFrontend>(),
     HasShortCircuitOperators,
     HasOperatorOverloading,
-    HasFunctionStyleConstruction
-    // ! HasDefaultArguments
-    // HasMemberExpressionAmbiguity,
-    // HasBuiltins,
-
-{
+    HasFunctionStyleConstruction {
     override val fileExtensions = listOf("rs")
     override val namespaceDelimiter = "::"
     @Convert(value = SimpleNameConverter::class)
-    // override val builtinsNamespace: Name = Name("")
-    // override val builtinsFileCandidates = nameToLanguageFiles(builtinsNamespace)
-
     @Transient
     override val frontend: KClass<out RustLanguageFrontend> = RustLanguageFrontend::class
     override val conjunctiveOperators = listOf("&&")
@@ -192,7 +184,7 @@ class RustLanguage :
 
     @DoNotPersist
     override val evaluator: ValueEvaluator
-        get() = ValueEvaluator() // Todo
+        get() = ValueEvaluator()
 
     override fun propagateTypeOfBinaryOperation(
         operatorCode: String?,
@@ -202,7 +194,6 @@ class RustLanguage :
     ): Type {
         when {
             operatorCode == "+" && lhsType is StringType && rhsType is StringType -> {
-
                 return builtInTypes.get("String") as Type
             }
             else ->
@@ -210,7 +201,6 @@ class RustLanguage :
         }
     }
 
-    /** Todo this is probably not possible */
     override fun tryCast(
         type: Type,
         targetType: Type,
@@ -219,8 +209,7 @@ class RustLanguage :
     ): CastResult {
 
         if (targetHint is ParameterDeclaration) {
-            // However, if we find type hints, we at least want to issue a warning if the types
-            // would not match
+
             if (hint != null && targetType !is UnknownType && targetType !is AutoType) {
                 val match = super.tryCast(type, targetType, hint, targetHint)
                 if (match == CastNotPossible) {

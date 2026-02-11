@@ -792,9 +792,15 @@ impl From<PathSegment> for RSPathSegment {
 
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSPrefixExpr {pub(crate) ast_node: RSNode}
+pub struct RSPrefixExpr {pub(crate) ast_node: RSNode, operator: String, expr: Vec<RSExpr>}
 impl From<PrefixExpr> for RSPrefixExpr {
-    fn from(node: PrefixExpr ) -> Self {RSPrefixExpr{ast_node: node.syntax().into()}}
+    fn from(node: PrefixExpr ) -> Self {
+        RSPrefixExpr{
+            ast_node: node.syntax().into(),
+            operator: node.syntax().children_with_tokens().filter(|sn|sn.kind().is_punct()).map(|p|p.to_string()).into_iter().collect(),
+            expr: node.expr().map(Into::into).into_iter().collect()
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

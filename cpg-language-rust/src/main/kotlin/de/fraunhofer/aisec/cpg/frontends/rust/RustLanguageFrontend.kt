@@ -171,35 +171,6 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
     }
 
     override fun setComment(node: Node, astNode: RsAst) {
-        val metaAstNode = astNode.astNode()
-
-        node.comment = metaAstNode.comments
+        node.comment = astNode.astNode().comments
     }
-
-    fun operatorToString(op: RsAst) =
-        when (op) {
-            /*is ... -> "+"
-            is ... -> "-"
-            is ... -> "*"
-            is ... -> "*"
-            is ... -> "/"
-            is ... -> "%"
-            is ... -> "**"
-            is ... -> "<<"
-            is ... -> ">>"
-            is ... -> "|"
-            is ... -> "^"
-            is ... -> "&"
-            is ... -> "//"*/
-            else -> ""
-        }
-
-    fun operatorUnaryToString(op: RsAst) =
-        when (op) {
-            else -> ""
-        /*          is ... -> "~"
-        is ... -> "not"
-        is ... -> "+"
-        is ... -> "-"*/
-        }
 }

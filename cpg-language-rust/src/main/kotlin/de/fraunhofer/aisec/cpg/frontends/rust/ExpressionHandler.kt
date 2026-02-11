@@ -37,6 +37,7 @@ import uniffi.cpgrust.RsLiteralType
 import uniffi.cpgrust.RsMacroExpr
 import uniffi.cpgrust.RsMethodCallExpr
 import uniffi.cpgrust.RsPathExpr
+import uniffi.cpgrust.RsPrefixExpr
 
 class ExpressionHandler(frontend: RustLanguageFrontend) :
     RustHandler<Expression, RsAst.RustExpr>(::ProblemExpression, frontend) {
@@ -55,6 +56,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             is RsExpr.MacroExpr -> handleMacroExpr(node.v1)
             is RsExpr.PathExpr -> handlePathExpr(node.v1)
             is RsExpr.BinExpr -> handleBinExpr(node.v1)
+            is RsExpr.PrefixExpr -> handlePrefixExpr(node.v1)
             else -> handleNotSupported(RsAst.RustExpr(node), node::class.simpleName ?: "")
         }
     }
@@ -192,6 +194,15 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             problem = "PathExpression does not contain reference to a name",
             rawNode = raw,
         )
+    }
+
+    fun handlePrefixExpr(prefixExpr: RsPrefixExpr): Expression {
+        val raw = RsAst.RustExpr(RsExpr.PrefixExpr(prefixExpr))
+        return newUnaryOperator(prefixExpr.operator, postfix = false, prefix = true, rawNode = raw)
+            .also {
+                it.input =
+                    frontend.expressionHandler.handle(RsAst.RustExpr(prefixExpr.expr.first()))
+            }
     }
 
     fun handleBinExpr(binExpr: RsBinExpr): Expression {
