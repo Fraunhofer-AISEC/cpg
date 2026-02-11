@@ -72,6 +72,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             "float_literal" -> handleFloatLiteral(node)
             "char_literal" -> handleCharLiteral(node)
             "scoped_identifier" -> handleScopedIdentifier(node)
+            "unsafe_block" -> handleUnsafeBlock(node)
+            "async_block" -> handleAsyncBlock(node)
             "unit_expression" -> newLiteral(null, objectType("()"), rawNode = node)
             "self" -> newReference("self", rawNode = node)
             "parenthesized_expression" -> {
@@ -692,5 +694,49 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                     ?: newProblemExpression("Invalid reference operand", rawNode = value)
         }
         return op
+    }
+
+    private fun handleUnsafeBlock(node: TSNode): Expression {
+        // unsafe_block has an inner "block" named child
+        val blockNode = node.getChildByFieldName("block")
+        val block =
+            if (blockNode != null && !blockNode.isNull && blockNode.type == "block") {
+                frontend.statementHandler.handleBlock(blockNode)
+            } else {
+                // Fallback: look for first named child that is a block
+                var innerBlock: Block? = null
+                for (i in 0 until node.childCount) {
+                    val child = node.getChild(i)
+                    if (child.type == "block") {
+                        innerBlock = frontend.statementHandler.handleBlock(child)
+                        break
+                    }
+                }
+                innerBlock ?: frontend.statementHandler.handleBlock(node)
+            }
+        block.annotations += newAnnotation("unsafe", rawNode = node)
+        return block
+    }
+
+    private fun handleAsyncBlock(node: TSNode): Expression {
+        // async_block has an inner "block" named child
+        val blockNode = node.getChildByFieldName("block")
+        val block =
+            if (blockNode != null && !blockNode.isNull && blockNode.type == "block") {
+                frontend.statementHandler.handleBlock(blockNode)
+            } else {
+                // Fallback: look for first named child that is a block
+                var innerBlock: Block? = null
+                for (i in 0 until node.childCount) {
+                    val child = node.getChild(i)
+                    if (child.type == "block") {
+                        innerBlock = frontend.statementHandler.handleBlock(child)
+                        break
+                    }
+                }
+                innerBlock ?: frontend.statementHandler.handleBlock(node)
+            }
+        block.annotations += newAnnotation("async", rawNode = node)
+        return block
     }
 }

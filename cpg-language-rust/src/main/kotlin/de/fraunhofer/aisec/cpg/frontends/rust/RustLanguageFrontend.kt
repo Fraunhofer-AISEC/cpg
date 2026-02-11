@@ -92,6 +92,18 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
                 decl.annotations += pendingAnnotations
                 pendingAnnotations.clear()
             }
+
+            // Check for visibility_modifier as a child of the declaration node
+            // (e.g., "pub" in "pub fn foo()")
+            for (j in 0 until child.childCount) {
+                val grandchild = child.getChild(j)
+                if (grandchild.type == "visibility_modifier") {
+                    val visibilityText = codeOf(grandchild) ?: "pub"
+                    decl.annotations += newAnnotation(visibilityText, rawNode = grandchild)
+                    break
+                }
+            }
+
             tud.addDeclaration(decl)
         }
     }

@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.rust
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.treesitter.TSNode
 
@@ -51,6 +52,9 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             "mod_item" -> handleModItem(node)
             "type_item" -> handleTypeItem(node)
             "macro_definition" -> handleMacroDefinition(node)
+            "const_item" -> handleConstItem(node)
+            "static_item" -> handleStaticItem(node)
+            "use_declaration" -> handleUseDeclaration(node)
             else -> {
                 ProblemDeclaration("Unknown declaration type: ${node.type}")
             }
@@ -325,6 +329,35 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                     record.addDeclaration(field)
                 }
             }
+        } else {
+            // Check for tuple struct: struct Pair(i32, i32)
+            // In this case there is no "body" field but there is an
+            // ordered_field_declaration_list child.
+            for (i in 0 until node.childCount) {
+                val child = node.getChild(i)
+                if (child.type == "ordered_field_declaration_list") {
+                    var fieldIdx = 0
+                    for (j in 0 until child.childCount) {
+                        val fieldChild = child.getChild(j)
+                        if (
+                            fieldChild.isNamed &&
+                                fieldChild.type != "visibility_modifier" &&
+                                fieldChild.type != "attribute_item"
+                        ) {
+                            val field =
+                                newFieldDeclaration(
+                                    fieldIdx.toString(),
+                                    frontend.typeOf(fieldChild),
+                                    rawNode = fieldChild,
+                                )
+                            frontend.scopeManager.addDeclaration(field)
+                            record.addDeclaration(field)
+                            fieldIdx++
+                        }
+                    }
+                    break
+                }
+            }
         }
 
         frontend.scopeManager.leaveScope(record)
@@ -553,5 +586,66 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         func.annotations += annotation
         frontend.scopeManager.addDeclaration(func)
         return func
+    }
+
+    private fun handleConstItem(node: TSNode): Declaration {
+        val nameNode = node.getChildByFieldName("name")
+        val name = if (nameNode != null && !nameNode.isNull) frontend.codeOf(nameNode) ?: "" else ""
+
+        val variable = newVariableDeclaration(name, rawNode = node)
+        variable.annotations += newAnnotation("const", rawNode = node)
+
+        val typeNode = node.getChildByFieldName("type")
+        if (typeNode != null && !typeNode.isNull) {
+            variable.type = frontend.typeOf(typeNode)
+        }
+
+        val value = node.getChildByFieldName("value")
+        if (value != null && !value.isNull) {
+            variable.initializer = frontend.expressionHandler.handle(value) as? Expression
+        }
+
+        frontend.scopeManager.addDeclaration(variable)
+        return variable
+    }
+
+    private fun handleStaticItem(node: TSNode): Declaration {
+        val nameNode = node.getChildByFieldName("name")
+        val name = if (nameNode != null && !nameNode.isNull) frontend.codeOf(nameNode) ?: "" else ""
+
+        val variable = newVariableDeclaration(name, rawNode = node)
+        variable.annotations += newAnnotation("static", rawNode = node)
+
+        // Check for mut
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child.type == "mutable_specifier") {
+                variable.annotations += newAnnotation("mut", rawNode = child)
+                break
+            }
+        }
+
+        val typeNode = node.getChildByFieldName("type")
+        if (typeNode != null && !typeNode.isNull) {
+            variable.type = frontend.typeOf(typeNode)
+        }
+
+        val value = node.getChildByFieldName("value")
+        if (value != null && !value.isNull) {
+            variable.initializer = frontend.expressionHandler.handle(value) as? Expression
+        }
+
+        frontend.scopeManager.addDeclaration(variable)
+        return variable
+    }
+
+    private fun handleUseDeclaration(node: TSNode): Declaration {
+        // Extract the use path as a string
+        val argument = node.getNamedChild(0)
+        val path = if (argument != null && !argument.isNull) frontend.codeOf(argument) ?: "" else ""
+
+        val include = newIncludeDeclaration(path, rawNode = node)
+        frontend.scopeManager.addDeclaration(include)
+        return include
     }
 }
