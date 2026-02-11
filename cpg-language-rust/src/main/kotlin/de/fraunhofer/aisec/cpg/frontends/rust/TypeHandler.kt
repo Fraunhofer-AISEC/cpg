@@ -45,6 +45,13 @@ class TypeHandler(frontend: RustLanguageFrontend) :
             "tuple_type" -> handleTupleType(node)
             "array_type" -> handleArrayType(node)
             "generic_type" -> handleGenericType(node)
+            "function_type" -> handleFunctionType(node)
+            "abstract_type" -> handleAbstractType(node)
+            "dynamic_type" -> handleDynamicType(node)
+            "scoped_type_identifier" -> handleScopedTypeIdentifier(node)
+            "pointer_type" -> handlePointerType(node)
+            "unit_type" -> objectType("()")
+            "never_type" -> objectType("!")
             else -> {
                 objectType(frontend.codeOf(node) ?: "")
             }
@@ -95,5 +102,47 @@ class TypeHandler(frontend: RustLanguageFrontend) :
 
         // TODO: Handle generics (e.g. Vec<i32>)
         return objectType(typeName)
+    }
+
+    private fun handleFunctionType(node: TSNode): Type {
+        // fn(i32, i32) -> i32
+        // Model as ObjectType with the full code representation
+        return objectType(frontend.codeOf(node) ?: "fn")
+    }
+
+    private fun handleAbstractType(node: TSNode): Type {
+        // impl Trait
+        val traitNode = node.getNamedChild(0)
+        val name =
+            if (traitNode != null && !traitNode.isNull) frontend.codeOf(traitNode) ?: "" else ""
+        return objectType("impl $name")
+    }
+
+    private fun handleDynamicType(node: TSNode): Type {
+        // dyn Trait
+        val traitNode = node.getNamedChild(0)
+        val name =
+            if (traitNode != null && !traitNode.isNull) frontend.codeOf(traitNode) ?: "" else ""
+        return objectType("dyn $name")
+    }
+
+    private fun handleScopedTypeIdentifier(node: TSNode): Type {
+        // std::vec::Vec
+        return objectType(frontend.codeOf(node) ?: "")
+    }
+
+    private fun handlePointerType(node: TSNode): Type {
+        // *const T or *mut T
+        // Find the inner type child (skip mutable_specifier)
+        var typeNode: TSNode? = null
+        for (i in node.childCount - 1 downTo 0) {
+            val child = node.getChild(i)
+            if (child.isNamed && child.type != "mutable_specifier") {
+                typeNode = child
+                break
+            }
+        }
+        val type = if (typeNode != null && !typeNode.isNull) handle(typeNode) else unknownType()
+        return type.pointer()
     }
 }

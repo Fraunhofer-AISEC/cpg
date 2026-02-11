@@ -74,6 +74,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             "scoped_identifier" -> handleScopedIdentifier(node)
             "unsafe_block" -> handleUnsafeBlock(node)
             "async_block" -> handleAsyncBlock(node)
+            "tuple_index_expression" -> handleTupleIndexExpression(node)
+            "raw_string_literal" -> handleRawStringLiteral(node)
             "unit_expression" -> newLiteral(null, objectType("()"), rawNode = node)
             "self" -> newReference("self", rawNode = node)
             "parenthesized_expression" -> {
@@ -738,5 +740,42 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             }
         block.annotations += newAnnotation("async", rawNode = node)
         return block
+    }
+
+    private fun handleTupleIndexExpression(node: TSNode): Expression {
+        // tuple_index_expression: value.index (e.g., t.0)
+        // First named child is the tuple expression
+        val tuple = node.getNamedChild(0)
+
+        val base =
+            if (tuple != null && !tuple.isNull) {
+                handle(tuple) as? Expression
+                    ?: newProblemExpression("Invalid tuple base", rawNode = tuple)
+            } else {
+                newProblemExpression("Missing tuple", rawNode = node)
+            }
+
+        // Try to get the index via field name first, then fall back to extracting from code
+        val index = node.getChildByFieldName("index")
+        val indexName =
+            if (index != null && !index.isNull) {
+                frontend.codeOf(index) ?: "0"
+            } else {
+                // Fallback: extract the digit after the dot from the full code
+                val code = frontend.codeOf(node) ?: ""
+                val dotIdx = code.lastIndexOf('.')
+                if (dotIdx >= 0) code.substring(dotIdx + 1).trim() else "0"
+            }
+        return newMemberExpression(indexName, base, rawNode = node)
+    }
+
+    private fun handleRawStringLiteral(node: TSNode): Expression {
+        val code = frontend.codeOf(node) ?: ""
+        // Strip r#"..."# delimiters: remove leading r, then strip matching # and " pairs
+        val withoutR = code.removePrefix("r")
+        val hashes = withoutR.takeWhile { it == '#' }.length
+        val delimiter = "#".repeat(hashes) + "\""
+        val value = withoutR.removePrefix(delimiter).removeSuffix("\"" + "#".repeat(hashes))
+        return newLiteral(value, primitiveType("str"), rawNode = node)
     }
 }

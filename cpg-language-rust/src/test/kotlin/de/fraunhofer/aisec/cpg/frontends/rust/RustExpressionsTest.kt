@@ -151,4 +151,26 @@ class RustExpressionsTest : BaseTest() {
         assertTrue(unaryOps.any { it.operatorCode == "-" }, "Should have negation operator")
         assertTrue(unaryOps.any { it.operatorCode == "!" }, "Should have NOT operator")
     }
+
+    @Test
+    fun testTupleIndex() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("expressions.rs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+
+        val func = tu.functions["test_tuple_index"]
+        assertNotNull(func)
+        val body = func.body as? Block
+        assertNotNull(body)
+
+        val memberExprs = body.allChildren<MemberExpression>()
+        assertTrue(memberExprs.any { it.name.localName == "0" }, "Should have tuple.0 access")
+    }
 }

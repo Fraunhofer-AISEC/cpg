@@ -40,3 +40,12 @@ fn test_negation() {
     let x = -5;
     let b = !true;
 }
+
+fn test_tuple_index() {
+    let t = (1, 2, 3);
+    let first = t.0;
+}
+
+fn test_raw_string() {
+    let s = r#"hello "world""#;
+}

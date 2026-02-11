@@ -392,21 +392,30 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
         val body = node.getChildByFieldName("body")
         if (body != null && !body.isNull) {
+            val pendingAnnotations = mutableListOf<de.fraunhofer.aisec.cpg.graph.Annotation>()
             for (i in 0 until body.childCount) {
                 val child = body.getChild(i)
+                if (child.type == "attribute_item") {
+                    pendingAnnotations += frontend.parseAttribute(child)
+                    continue
+                }
                 if (child.isNamed) {
-                    when (child.type) {
-                        "function_item" -> {
-                            val decl = handleFunctionItem(child)
-                            record.addDeclaration(decl)
+                    val decl: Declaration? =
+                        when (child.type) {
+                            "function_item" -> handleFunctionItem(child)
+                            "function_signature_item" -> handleFunctionSignatureItem(child)
+                            "associated_type" -> {
+                                handleAssociatedType(child)
+                                null
+                            }
+                            else -> null
                         }
-                        "function_signature_item" -> {
-                            val decl = handleFunctionSignatureItem(child)
-                            record.addDeclaration(decl)
+                    if (decl != null) {
+                        if (pendingAnnotations.isNotEmpty()) {
+                            decl.annotations += pendingAnnotations
+                            pendingAnnotations.clear()
                         }
-                        "associated_type" -> {
-                            handleAssociatedType(child)
-                        }
+                        record.addDeclaration(decl)
                     }
                 }
             }
@@ -507,10 +516,20 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
         val body = node.getChildByFieldName("body")
         if (body != null) {
+            val pendingAnnotations = mutableListOf<de.fraunhofer.aisec.cpg.graph.Annotation>()
             for (i in 0 until body.childCount) {
                 val child = body.getChild(i)
+                if (child.type == "attribute_item") {
+                    pendingAnnotations += frontend.parseAttribute(child)
+                    continue
+                }
                 if (child.isNamed) {
-                    record.addDeclaration(handle(child))
+                    val decl = handle(child)
+                    if (pendingAnnotations.isNotEmpty()) {
+                        decl.annotations += pendingAnnotations
+                        pendingAnnotations.clear()
+                    }
+                    record.addDeclaration(decl)
                 }
             }
         }
@@ -529,10 +548,20 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
         val body = node.getChildByFieldName("body")
         if (body != null) {
+            val pendingAnnotations = mutableListOf<de.fraunhofer.aisec.cpg.graph.Annotation>()
             for (i in 0 until body.childCount) {
                 val child = body.getChild(i)
+                if (child.type == "attribute_item") {
+                    pendingAnnotations += frontend.parseAttribute(child)
+                    continue
+                }
                 if (child.isNamed) {
-                    mod.addDeclaration(handle(child))
+                    val decl = handle(child)
+                    if (pendingAnnotations.isNotEmpty()) {
+                        decl.annotations += pendingAnnotations
+                        pendingAnnotations.clear()
+                    }
+                    mod.addDeclaration(decl)
                 }
             }
         }
