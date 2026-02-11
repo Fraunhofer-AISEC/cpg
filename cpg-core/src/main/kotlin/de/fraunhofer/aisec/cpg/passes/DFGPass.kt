@@ -283,7 +283,14 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     for (param in node.parameters) {
                         val matchingField =
                             fields.firstOrNull { it.name.localName == param.name.localName }
-                        if (matchingField != null) {
+                        // Only add this edge if the field has no read usages. If it does,
+                        // handleMemberExpression will create
+                        // DFG edges for those reads, and our extra edge would create a cycle.
+                        val hasReadUsages =
+                            matchingField?.usages?.any {
+                                it is MemberExpression && it.access == AccessValues.READ
+                            } ?: false
+                        if (matchingField != null && !hasReadUsages) {
                             param.nextDFGEdges += matchingField
                         }
                     }
