@@ -42,7 +42,10 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
     override fun handleNode(node: TSNode): Statement {
         return when (node.type) {
-            "block" -> handleBlock(node)
+            "block" -> {
+                val block = handleBlock(node)
+                wrapWithLabel(node, block)
+            }
             "let_declaration" -> handleLetDeclaration(node)
             "return_expression" -> handleReturnExpression(node)
             "if_expression" -> handleIfExpression(node)
@@ -64,7 +67,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
         for (i in 0 until node.childCount) {
             val child = node.getChild(i)
-            if (child.isNamed && child.type != "{" && child.type != "}") {
+            if (child.isNamed && child.type != "{" && child.type != "}" && child.type != "label") {
                 block.statements += handle(child)
             }
         }
@@ -73,7 +76,32 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         return block
     }
 
-    private fun handleLetDeclaration(node: TSNode): DeclarationStatement {
+    /**
+     * Checks whether [node] has a `label` child and, if so, wraps [stmt] in a [LabelStatement].
+     * Otherwise returns [stmt] unchanged. This is used for labeled blocks (`'label: { ... }`).
+     */
+    internal fun wrapWithLabel(node: TSNode, stmt: Statement): Statement {
+        var labelNode: TSNode? = null
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child.type == "label") {
+                labelNode = child
+                break
+            }
+        }
+        return if (labelNode != null) {
+            val labelStmt = newLabelStatement(rawNode = node)
+            val code = frontend.codeOf(labelNode) ?: ""
+            // Labels look like 'outer: — strip the leading quote and trailing colon
+            labelStmt.label = code.removePrefix("'").removeSuffix(":")
+            labelStmt.subStatement = stmt
+            labelStmt
+        } else {
+            stmt
+        }
+    }
+
+    private fun handleLetDeclaration(node: TSNode): Statement {
         val patternNode = node.getChildByFieldName("pattern")
 
         // Handle tuple destructuring: let (a, b) = ...
@@ -132,10 +160,9 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             variable.type = frontend.typeOf(typeNode)
         }
 
-        val valueNode = node.getChildByFieldName("value")
-        if (valueNode != null) {
-            variable.initializer = frontend.expressionHandler.handle(valueNode) as? Expression
-        } else {
+        // Determine the value node and check if it is a labeled block
+        var valueNode = node.getChildByFieldName("value")
+        if (valueNode == null || valueNode.isNull) {
             // Fallback: search for a node after '='
             var foundEqual = false
             for (i in 0 until node.childCount) {
@@ -143,14 +170,26 @@ class StatementHandler(frontend: RustLanguageFrontend) :
                 if (child.type == "=") {
                     foundEqual = true
                 } else if (foundEqual && child.isNamed && child.type != ";") {
-                    variable.initializer = frontend.expressionHandler.handle(child) as? Expression
+                    valueNode = child
                     break
                 }
             }
         }
 
+        if (valueNode != null) {
+            variable.initializer = frontend.expressionHandler.handle(valueNode) as? Expression
+        }
+
         frontend.scopeManager.addDeclaration(variable)
         declStmt.addDeclaration(variable)
+
+        // If the value was a labeled block, wrap the declaration in a LabelStatement
+        if (valueNode != null && valueNode.type == "block") {
+            val wrapped = wrapWithLabel(valueNode, declStmt)
+            if (wrapped !== declStmt) {
+                return wrapped
+            }
+        }
 
         return declStmt
     }
@@ -435,7 +474,9 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         if (node.type == "block") {
             for (i in 0 until node.childCount) {
                 val child = node.getChild(i)
-                if (child.isNamed && child.type != "{" && child.type != "}") {
+                if (
+                    child.isNamed && child.type != "{" && child.type != "}" && child.type != "label"
+                ) {
                     block.statements += handle(child)
                 }
             }
