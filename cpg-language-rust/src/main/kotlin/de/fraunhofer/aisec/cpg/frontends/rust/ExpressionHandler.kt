@@ -31,8 +31,9 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import org.treesitter.TSNode
 
 /**
- * A [Handler] that translates Rust expressions into CPG [Expression] nodes. It currently supports
- * literals, binary and unary operations, function calls, assignments, and match expressions.
+ * A [Handler] that translates Rust expressions into CPG [Expression] nodes. It supports literals,
+ * binary and unary operations, function calls, assignments, match expressions, index expressions,
+ * range expressions, type cast expressions, closure expressions, and more.
  */
 class ExpressionHandler(frontend: RustLanguageFrontend) :
     RustHandler<Statement, TSNode>(::ProblemExpression, frontend) {
@@ -60,6 +61,19 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             "continue_expression" -> handleContinueExpression(node)
             "await_expression" -> handleAwaitExpression(node)
             "reference_expression" -> handleReferenceExpression(node)
+            "struct_expression" -> handleStructExpression(node)
+            "method_call_expression" -> handleMethodCallExpression(node)
+            "index_expression" -> handleIndexExpression(node)
+            "range_expression" -> handleRangeExpression(node)
+            "try_expression" -> handleTryExpression(node)
+            "type_cast_expression" -> handleTypeCastExpression(node)
+            "closure_expression" -> handleClosureExpression(node)
+            "negative_literal" -> handleNegativeLiteral(node)
+            "float_literal" -> handleFloatLiteral(node)
+            "char_literal" -> handleCharLiteral(node)
+            "scoped_identifier" -> handleScopedIdentifier(node)
+            "unit_expression" -> newLiteral(null, objectType("()"), rawNode = node)
+            "self" -> newReference("self", rawNode = node)
             "parenthesized_expression" -> {
                 val child = node.getNamedChild(0)
                 if (child != null) handle(child)
@@ -412,6 +426,249 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             op.input = newProblemExpression("Missing await operand", rawNode = node)
         }
         return op
+    }
+
+    private fun handleStructExpression(node: TSNode): Expression {
+        val nameNode = node.getChildByFieldName("name")
+        val name = if (nameNode != null && !nameNode.isNull) frontend.codeOf(nameNode) ?: "" else ""
+
+        val construct = newConstructExpression(name, rawNode = node)
+        construct.type = objectType(name)
+
+        val body = node.getChildByFieldName("body")
+        if (body != null && !body.isNull) {
+            for (i in 0 until body.childCount) {
+                val child = body.getChild(i)
+                when (child.type) {
+                    "field_initializer" -> {
+                        val fieldName = child.getChildByFieldName("field")
+                        val value = child.getChildByFieldName("value")
+                        if (
+                            fieldName != null && value != null && !fieldName.isNull && !value.isNull
+                        ) {
+                            val valExpr =
+                                handle(value) as? Expression
+                                    ?: newProblemExpression("Invalid field value", rawNode = value)
+                            construct.addArgument(valExpr, frontend.codeOf(fieldName) ?: "")
+                        }
+                    }
+                    "shorthand_field_initializer" -> {
+                        // { x } is shorthand for { x: x }
+                        val fieldName = frontend.codeOf(child) ?: ""
+                        val ref = newReference(fieldName, rawNode = child)
+                        construct.addArgument(ref, fieldName)
+                    }
+                    "base_field_initializer" -> {
+                        // ..other_struct spread
+                        val expr = child.getNamedChild(0)
+                        if (expr != null && !expr.isNull) {
+                            construct.addArgument(
+                                handle(expr) as? Expression
+                                    ?: newProblemExpression("Invalid base", rawNode = expr),
+                                "..",
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        return construct
+    }
+
+    private fun handleMethodCallExpression(node: TSNode): Expression {
+        val receiver = node.getNamedChild(0)
+        val methodName = node.getChildByFieldName("name")
+        val arguments = node.getChildByFieldName("arguments")
+
+        val base =
+            if (receiver != null && !receiver.isNull) {
+                handle(receiver) as? Expression
+                    ?: newProblemExpression("Invalid receiver", rawNode = receiver)
+            } else {
+                newProblemExpression("Missing receiver", rawNode = node)
+            }
+
+        val name =
+            if (methodName != null && !methodName.isNull) frontend.codeOf(methodName) ?: "" else ""
+        val member = newMemberExpression(name, base, rawNode = node)
+        val call = newMemberCallExpression(member, rawNode = node)
+
+        if (arguments != null && !arguments.isNull) {
+            for (i in 0 until arguments.childCount) {
+                val arg = arguments.getChild(i)
+                if (arg.isNamed) {
+                    val expr = handle(arg) as? Expression
+                    if (expr != null) call.addArgument(expr)
+                }
+            }
+        }
+
+        return call
+    }
+
+    private fun handleIndexExpression(node: TSNode): Expression {
+        val ase = newSubscriptExpression(rawNode = node)
+        val base = node.getNamedChild(0)
+        val index = node.getNamedChild(1)
+        if (base != null && !base.isNull) {
+            ase.arrayExpression =
+                handle(base) as? Expression
+                    ?: newProblemExpression("Invalid array base", rawNode = base)
+        }
+        if (index != null && !index.isNull) {
+            ase.subscriptExpression =
+                handle(index) as? Expression
+                    ?: newProblemExpression("Invalid index", rawNode = index)
+        }
+        return ase
+    }
+
+    private fun handleRangeExpression(node: TSNode): Expression {
+        // Range can have 0, 1, or 2 named children depending on form (..end, start.., start..end)
+        var floor: Expression? = null
+        var ceiling: Expression? = null
+
+        // Tree-sitter-rust range_expression: children are [start], operator (.., ..=), [end]
+        // We need to determine which children are start/end based on position relative to operator
+        var operatorIdx = -1
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            val code = frontend.codeOf(child) ?: ""
+            if (code == ".." || code == "..=") {
+                operatorIdx = i
+                break
+            }
+        }
+
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child.isNamed) {
+                val expr = handle(child) as? Expression
+                if (i < operatorIdx) {
+                    floor = expr
+                } else {
+                    ceiling = expr
+                }
+            }
+        }
+
+        return newRangeExpression(floor, ceiling, rawNode = node)
+    }
+
+    private fun handleTryExpression(node: TSNode): Expression {
+        // x? is modeled as a postfix unary operator "?"
+        val op = newUnaryOperator("?", postfix = true, prefix = false, rawNode = node)
+        val operand = node.getNamedChild(0)
+        if (operand != null && !operand.isNull) {
+            op.input =
+                handle(operand) as? Expression
+                    ?: newProblemExpression("Invalid try operand", rawNode = operand)
+        }
+        return op
+    }
+
+    private fun handleTypeCastExpression(node: TSNode): Expression {
+        val cast = newCastExpression(rawNode = node)
+        val value = node.getChildByFieldName("value")
+        val type = node.getChildByFieldName("type")
+        if (value != null && !value.isNull) {
+            cast.expression =
+                handle(value) as? Expression
+                    ?: newProblemExpression("Invalid cast operand", rawNode = value)
+        }
+        if (type != null && !type.isNull) {
+            cast.castType = frontend.typeOf(type)
+        }
+        return cast
+    }
+
+    private fun handleClosureExpression(node: TSNode): Expression {
+        val lambda = newLambdaExpression(rawNode = node)
+
+        // Create an anonymous function for the closure body
+        val func = newFunctionDeclaration("", rawNode = node)
+        frontend.scopeManager.enterScope(func)
+
+        // Parse closure parameters
+        val params = node.getChildByFieldName("parameters")
+        if (params != null && !params.isNull) {
+            for (i in 0 until params.childCount) {
+                val child = params.getChild(i)
+                if (child.type == "parameter") {
+                    val pattern = child.getChildByFieldName("pattern")
+                    val pName =
+                        if (pattern != null && !pattern.isNull) frontend.codeOf(pattern) ?: ""
+                        else ""
+                    val typeNode = child.getChildByFieldName("type")
+                    val param =
+                        newParameterDeclaration(pName, frontend.typeOf(typeNode), rawNode = child)
+                    frontend.scopeManager.addDeclaration(param)
+                    func.parameters += param
+                } else if (child.isNamed && child.type == "identifier") {
+                    // Simple closure param without type: |x| x + 1
+                    val pName = frontend.codeOf(child) ?: ""
+                    val param = newParameterDeclaration(pName, unknownType(), rawNode = child)
+                    frontend.scopeManager.addDeclaration(param)
+                    func.parameters += param
+                }
+            }
+        }
+
+        // Parse return type if present
+        val returnType = node.getChildByFieldName("return_type")
+        if (returnType != null && !returnType.isNull) {
+            func.returnTypes = listOf(frontend.typeOf(returnType))
+        }
+
+        // Parse body - can be a block or a single expression
+        val body = node.getChildByFieldName("body")
+        if (body != null && !body.isNull) {
+            func.body =
+                if (body.type == "block") {
+                    frontend.statementHandler.handle(body)
+                } else {
+                    frontend.expressionHandler.handle(body)
+                }
+        }
+
+        frontend.scopeManager.leaveScope(func)
+        lambda.function = func
+        return lambda
+    }
+
+    private fun handleNegativeLiteral(node: TSNode): Expression {
+        // negative_literal wraps a numeric literal with unary minus
+        val code = frontend.codeOf(node) ?: ""
+        if (code.contains('.')) {
+            val valueStr = code.filter { it.isDigit() || it == '-' || it == '.' }
+            val value = valueStr.toDoubleOrNull() ?: 0.0
+            return newLiteral(value, primitiveType("f64"), rawNode = node)
+        } else {
+            val valueStr = code.filter { it.isDigit() || it == '-' }
+            val value = valueStr.toLongOrNull() ?: 0L
+            return newLiteral(value, primitiveType("i32"), rawNode = node)
+        }
+    }
+
+    private fun handleFloatLiteral(node: TSNode): Expression {
+        val code = frontend.codeOf(node) ?: ""
+        val valueStr =
+            code.filter { it.isDigit() || it == '.' || it == '-' || it == 'e' || it == 'E' }
+        val value = valueStr.toDoubleOrNull() ?: 0.0
+        return newLiteral(value, primitiveType("f64"), rawNode = node)
+    }
+
+    private fun handleCharLiteral(node: TSNode): Expression {
+        val code = frontend.codeOf(node) ?: ""
+        val value = code.removeSurrounding("'")
+        return newLiteral(value, primitiveType("char"), rawNode = node)
+    }
+
+    private fun handleScopedIdentifier(node: TSNode): Expression {
+        // path::to::item - model as a Reference with full qualified name
+        val name = frontend.codeOf(node) ?: ""
+        return newReference(name, rawNode = node)
     }
 
     private fun handleReferenceExpression(node: TSNode): Expression {
