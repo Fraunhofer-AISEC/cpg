@@ -45,7 +45,8 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
     override fun handleNode(node: TSNode): Declaration {
         return when (node.type) {
-            "function_item" -> handleFunctionItem(node)
+            "function_item",
+            "function_signature_item" -> handleFunctionItem(node)
             "struct_item" -> handleStructItem(node)
             "enum_item" -> handleEnumItem(node)
             "impl_item" -> handleImplItem(node)
@@ -56,6 +57,12 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             "const_item" -> handleConstItem(node)
             "static_item" -> handleStaticItem(node)
             "use_declaration" -> handleUseDeclaration(node)
+            "union_item" -> handleUnionItem(node)
+            "foreign_mod_item" -> handleForeignModItem(node)
+            "extern_crate_declaration" -> handleExternCrateDeclaration(node)
+            "inner_attribute_item" -> handleInnerAttributeItem(node)
+            "empty_statement" -> newProblemDeclaration("empty_statement", rawNode = node)
+            "macro_invocation" -> handleMacroInvocationDecl(node)
             else -> {
                 newProblemDeclaration("Unknown declaration type: ${node.type}", rawNode = node)
             }
@@ -140,7 +147,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         }
 
         val body = node["body"]
-        if (body != null) {
+        if (body != null && !body.isNull) {
             func.body = frontend.statementHandler.handle(body)
         }
 
@@ -668,5 +675,108 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         val include = newIncludeDeclaration(path, rawNode = node)
         frontend.scopeManager.addDeclaration(include)
         return include
+    }
+
+    private fun handleUnionItem(node: TSNode): Declaration {
+        val nameNode = node.getChildByFieldName("name")
+        val name = nameNode?.let { frontend.codeOf(it) } ?: ""
+
+        val record = newRecordDeclaration(name, "union", rawNode = node)
+        frontend.scopeManager.addDeclaration(record)
+        frontend.scopeManager.enterScope(record)
+
+        val body = node.getChildByFieldName("body")
+        if (body != null && !body.isNull) {
+            for (i in 0 until body.childCount) {
+                val child = body.getChild(i)
+                if (child.type == "field_declaration") {
+                    val fieldNameNode = child.getChildByFieldName("name")
+                    val fieldName = fieldNameNode?.let { frontend.codeOf(it) } ?: ""
+                    val fieldTypeNode = child.getChildByFieldName("type")
+                    val field =
+                        newFieldDeclaration(
+                            fieldName,
+                            frontend.typeOf(fieldTypeNode),
+                            rawNode = child,
+                        )
+                    frontend.scopeManager.addDeclaration(field)
+                    record.addDeclaration(field)
+                }
+            }
+        }
+
+        frontend.scopeManager.leaveScope(record)
+        return record
+    }
+
+    private fun handleForeignModItem(node: TSNode): Declaration {
+        // extern "C" { fn foo(); }
+        // Model as NamespaceDeclaration with extern ABI annotation
+        var abi = ""
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child.type == "string_literal") {
+                abi = frontend.codeOf(child)?.trim('"') ?: ""
+                break
+            }
+        }
+
+        val ns = newNamespaceDeclaration("extern", rawNode = node)
+        if (abi.isNotEmpty()) {
+            ns.annotations += newAnnotation("extern \"$abi\"", rawNode = node)
+        }
+        frontend.scopeManager.addDeclaration(ns)
+        frontend.scopeManager.enterScope(ns)
+
+        val body = node.getChildByFieldName("body")
+        if (body != null && !body.isNull) {
+            for (i in 0 until body.childCount) {
+                val child = body.getChild(i)
+                if (child.isNamed) {
+                    val decl = handle(child)
+                    ns.addDeclaration(decl)
+                }
+            }
+        }
+
+        frontend.scopeManager.leaveScope(ns)
+        return ns
+    }
+
+    private fun handleExternCrateDeclaration(node: TSNode): Declaration {
+        val nameNode = node.getChildByFieldName("name")
+        val name = if (nameNode != null && !nameNode.isNull) frontend.codeOf(nameNode) ?: "" else ""
+
+        val include = newIncludeDeclaration(name, rawNode = node)
+        frontend.scopeManager.addDeclaration(include)
+        return include
+    }
+
+    private fun handleInnerAttributeItem(node: TSNode): Declaration {
+        // #![no_std] — model as an annotated empty declaration
+        var attrContent = ""
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child.type == "attribute") {
+                attrContent = frontend.codeOf(child) ?: ""
+                break
+            }
+        }
+        val decl = newVariableDeclaration("", rawNode = node)
+        decl.annotations += newAnnotation("#![$attrContent]", rawNode = node)
+        frontend.scopeManager.addDeclaration(decl)
+        return decl
+    }
+
+    private fun handleMacroInvocationDecl(node: TSNode): Declaration {
+        // Macro invocation at declaration level (e.g., include!("other.rs"))
+        // Delegate to expression handler and wrap
+        val expr = frontend.expressionHandler.handle(node) as? Expression
+        if (expr != null) {
+            val decl = newVariableDeclaration("", rawNode = node)
+            decl.initializer = expr
+            return decl
+        }
+        return newProblemDeclaration("Unhandled macro invocation at decl level", rawNode = node)
     }
 }

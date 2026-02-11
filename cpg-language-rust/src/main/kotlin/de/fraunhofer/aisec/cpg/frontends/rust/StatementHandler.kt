@@ -53,6 +53,14 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             "loop_expression" -> handleLoopExpression(node)
             "for_expression" -> handleForExpression(node)
             "expression_statement" -> handleExpressionStatement(node)
+            "empty_statement" -> newEmptyStatement(rawNode = node)
+            "function_item" -> {
+                // Nested function inside a block -- delegate to declaration handler
+                val decl = frontend.declarationHandler.handle(node)
+                val declStmt = newDeclarationStatement(rawNode = node)
+                declStmt.addDeclaration(decl)
+                declStmt
+            }
             else -> {
                 // Fallback: delegate to expression handler for trailing expressions in blocks
                 // (e.g. the last expression without semicolon is the block's return value)
@@ -158,6 +166,8 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         // Determine the value node and check if it is a labeled block
         var valueNode = node["value"]
         if (valueNode == null || valueNode.isNull) {
+            // Reset to null so downstream checks work correctly
+            valueNode = null
             // Fallback: search for a node after '='
             var foundEqual = false
             for (child in node.children) {
@@ -170,7 +180,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             }
         }
 
-        if (valueNode != null) {
+        if (valueNode != null && !valueNode.isNull) {
             variable.initializer = frontend.expressionHandler.handle(valueNode) as? Expression
         }
 
@@ -178,7 +188,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         declStmt.addDeclaration(variable)
 
         // If the value was a labeled block, wrap the declaration in a LabelStatement
-        if (valueNode != null && valueNode.type == "block") {
+        if (valueNode != null && !valueNode.isNull && valueNode.type == "block") {
             val wrapped = wrapWithLabel(valueNode, declStmt)
             if (wrapped !== declStmt) {
                 return wrapped

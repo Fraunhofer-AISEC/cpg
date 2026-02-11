@@ -399,11 +399,27 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                     val pattern = arm["pattern"]
                     val armValue = arm["value"]
 
+                    // Check for guard: look in the match_arm's children first,
+                    // then inside the match_pattern for an embedded "if" guard
                     var guardNode: TSNode? = null
                     for (c in arm.children) {
-                        if (c.type == "if_clause") {
+                        if (c.type == "if_clause" || c.type == "match_guard") {
                             guardNode = c
                             break
+                        }
+                    }
+                    // In tree-sitter-rust, the guard may be embedded in match_pattern:
+                    // match_pattern -> [identifier, "if", binary_expression]
+                    if (guardNode == null && pattern != null && !pattern.isNull) {
+                        var foundIf = false
+                        for (k in 0 until pattern.childCount) {
+                            val pc = pattern.getChild(k)
+                            if (pc.type == "if") {
+                                foundIf = true
+                            } else if (foundIf && pc.isNamed) {
+                                guardCondition = pc
+                                break
+                            }
                         }
                     }
 
@@ -419,8 +435,18 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                     var caseExpr = if (pattern != null) handle(pattern) as? Expression else null
 
                     if (guardNode != null) {
+                        if (condition == null || condition.isNull) {
                         val condition = guardNode["condition"]
-                        if (condition != null) {
+                            // Fallback: get the first named child as the condition
+                            for (ci in 0 until guardNode.childCount) {
+                                val gc = guardNode.getChild(ci)
+                                if (gc.isNamed) {
+                                    condition = gc
+                                    break
+                                }
+                            }
+                        }
+                        if (condition != null && !condition.isNull) {
                             val guardExpr = handle(condition) as? Expression
                             if (caseExpr != null && guardExpr != null) {
                                 val op = newBinaryOperator("if", rawNode = guardNode)
@@ -428,6 +454,15 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                                 op.rhs = guardExpr
                                 caseExpr = op
                             }
+                        }
+                    } else if (guardCondition != null) {
+                        // Guard was embedded inside match_pattern (tree-sitter-rust style)
+                        val guardExpr = handle(guardCondition) as? Expression
+                        if (caseExpr != null && guardExpr != null) {
+                            val op = newBinaryOperator("if", rawNode = arm)
+                            op.lhs = caseExpr
+                            op.rhs = guardExpr
+                            caseExpr = op
                         }
                     }
 
