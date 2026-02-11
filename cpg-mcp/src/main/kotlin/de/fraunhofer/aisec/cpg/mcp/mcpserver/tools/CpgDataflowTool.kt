@@ -34,20 +34,14 @@ import de.fraunhofer.aisec.cpg.graph.allChildrenWithOverlays
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgDataflowPayload
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.DataflowResult
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.QueryTreeNode
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.runOnCpg
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.addTool
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toQueryTreeNode
 import de.fraunhofer.aisec.cpg.query.May
 import de.fraunhofer.aisec.cpg.query.dataFlow
 import io.modelcontextprotocol.kotlin.sdk.server.Server
-import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
-import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonObject
 
 fun Server.addCpgDataflowTool() {
     val toolDescription =
@@ -62,93 +56,55 @@ fun Server.addCpgDataflowTool() {
         
         Example usage:
         - Is there a data flow from sensitive data to HTTP Request?
-        - Track file reads to network calls
-        
-        Parameters:
-        - from: Source concept type (e.g., 'ReadData', 'Data', 'Authentication')
-        - to: Target concept type (e.g., 'HttpRequest', 'CallExpression')
+        - Track file reads to network calls     
     """
             .trimIndent()
 
-    val inputSchema =
-        ToolSchema(
-            properties =
-                buildJsonObject {
-                    putJsonObject("from") {
-                        put("type", "string")
-                        put(
-                            "description",
-                            "Source concept type (e.g., 'ReadData', 'Data', 'Authentication')",
-                        )
-                    }
-                    putJsonObject("to") {
-                        put("type", "string")
-                        put(
-                            "description",
-                            "Target concept type (e.g., 'HttpRequest', 'CallExpression')",
-                        )
-                    }
-                },
-            required = listOf("from", "to"),
-        )
+    this.addTool<CpgDataflowPayload>(name = "cpg_dataflow", description = toolDescription) {
+        result: TranslationResult,
+        payload: CpgDataflowPayload ->
+        val allOverlayNodes = result.allChildrenWithOverlays<OverlayNode>()
+        val sourceNodes = allOverlayNodes.filter { it.name.localName == payload.from }
+        val targetNodes = allOverlayNodes.filter { it.name.localName == payload.to }
 
-    this.addTool(name = "cpg_dataflow", description = toolDescription, inputSchema = inputSchema) {
-        request ->
-        request.runOnCpg { result: TranslationResult, request: CallToolRequest ->
-            val payload =
-                request.arguments?.toObject<CpgDataflowPayload>()
-                    ?: return@runOnCpg CallToolResult(
-                        content =
-                            listOf(TextContent("Invalid or missing payload for cpg_dataflow tool."))
+        if (sourceNodes.isEmpty() || targetNodes.isEmpty()) {
+            return@addTool CallToolResult(
+                content =
+                    listOf(
+                        TextContent(
+                            "No concept found. Apply concepts first using cpg_apply_concepts."
+                        )
+                    )
+            )
+        }
+
+        val qTrees = mutableListOf<QueryTreeNode>()
+
+        sourceNodes.forEach { sourceOverlay ->
+            val sourceNode = sourceOverlay.underlyingNode
+            if (sourceNode != null) {
+                val queryTree =
+                    dataFlow(
+                        startNode = sourceNode,
+                        direction = Forward(GraphToFollow.DFG),
+                        type = May,
+                        scope = Intraprocedural(),
+                        predicate = { node ->
+                            targetNodes.any { targetOverlay ->
+                                targetOverlay.underlyingNode == node
+                            }
+                        },
                     )
 
-            val allOverlayNodes = result.allChildrenWithOverlays<OverlayNode>()
-            val sourceNodes = allOverlayNodes.filter { it.name.localName == payload.from }
-            val targetNodes = allOverlayNodes.filter { it.name.localName == payload.to }
-
-            if (sourceNodes.isEmpty() || targetNodes.isEmpty()) {
-                return@runOnCpg CallToolResult(
-                    content =
-                        listOf(
-                            TextContent(
-                                "No concept found. Apply concepts first using cpg_apply_concepts."
-                            )
-                        )
-                )
-            }
-
-            val qTrees = mutableListOf<QueryTreeNode>()
-
-            sourceNodes.forEach { sourceOverlay ->
-                val sourceNode = sourceOverlay.underlyingNode
-                if (sourceNode != null) {
-                    val queryTree =
-                        dataFlow(
-                            startNode = sourceNode,
-                            direction = Forward(GraphToFollow.DFG),
-                            type = May,
-                            scope = Intraprocedural(),
-                            predicate = { node ->
-                                targetNodes.any { targetOverlay ->
-                                    targetOverlay.underlyingNode == node
-                                }
-                            },
-                        )
-
-                    if (queryTree.value) {
-                        qTrees.add(queryTree.toQueryTreeNode())
-                    }
+                if (queryTree.value) {
+                    qTrees.add(queryTree.toQueryTreeNode())
                 }
             }
-
-            val dataflowResult =
-                DataflowResult(
-                    fromConcept = payload.from,
-                    toConcept = payload.to,
-                    foundPaths = qTrees,
-                )
-
-            CallToolResult(content = listOf(TextContent(Json.encodeToString(dataflowResult))))
         }
+
+        val dataflowResult =
+            DataflowResult(fromConcept = payload.from, toConcept = payload.to, foundPaths = qTrees)
+
+        CallToolResult(content = listOf(TextContent(Json.encodeToString(dataflowResult))))
     }
 }
