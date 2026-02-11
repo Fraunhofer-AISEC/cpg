@@ -97,8 +97,10 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
         }
 
         // If this is a member expression, and we do not know the base's type, we cannot create a
-        // declaration
-        if (ref is MemberExpression && ref.base.type is UnknownType) {
+        // declaration. However, we need to exclude the receiver (e.g. "self") because its type is
+        // not yet resolved at this point, but we still need to
+        // create field declarations for assignments".
+        if (ref is MemberExpression && ref.base.type is UnknownType && !ref.refersToReceiver) {
             return null
         }
 

@@ -31,8 +31,10 @@ import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberCallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.test.analyze
 import de.fraunhofer.aisec.cpg.test.assertFullName
+import de.fraunhofer.aisec.cpg.test.assertInvokes
 import de.fraunhofer.aisec.cpg.test.assertNotRefersTo
 import de.fraunhofer.aisec.cpg.test.assertRefersTo
 import java.io.File
@@ -125,5 +127,37 @@ class SymbolResolverTest {
         val doSomething = result.calls("do_something").singleOrNull()
         assertNotNull(doSomething, "Expected to find a single call to 'do_something'")
         assertIs<MemberCallExpression>(doSomething, "'do_something' should be a member call")
+    }
+
+    @Test
+    fun testFieldCallResolution() {
+        val topLevel = File("src/test/resources/python/field_call_resolution.py")
+        val result =
+            analyze(listOf(topLevel), topLevel.toPath(), true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        val clientClass = result.records["Client"]
+        assertNotNull(clientClass)
+
+        val serviceClass = result.records["Service"]
+        assertNotNull(serviceClass)
+
+        // Check that the field 'client' exists on Service
+        val clientField = serviceClass.fields["client"]
+        assertIs<FieldDeclaration>(clientField, "Expected a field 'client' on Service")
+
+        // The field should have type Client (not UNKNOWN)
+        val fieldType = clientField.type
+        assertIs<ObjectType>(fieldType, "Expected field 'client' to have an ObjectType")
+
+        val sendMethod = clientClass.methods["send"]
+        assertNotNull(sendMethod)
+
+        val sendCall = result.calls["send"]
+        assertNotNull(sendCall)
+        assertIs<MemberCallExpression>(sendCall)
+        assertInvokes(sendCall, sendMethod)
     }
 }
