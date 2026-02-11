@@ -3631,4 +3631,27 @@ class PointsToPassTest {
 
         assertEquals(printedA.prevDFG.toSet(), setOf(aDecl, aRefIf, aRefElse))
     }
+
+    @Test
+    fun testArrayInitializer() {
+        val file = File("src/test/resources/pointsto.cpp")
+        val tu =
+            analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
+                it.registerLanguage<CPPLanguage>()
+                it.registerPass<PointsToPass>()
+                it.registerFunctionSummaries(File("src/test/resources/hardcodedDFGedges.yml"))
+            }
+        assertNotNull(tu)
+
+        val fd = tu.functions("test_array_initializer").singleOrNull { it.body != null }
+        assertNotNull(fd)
+
+        val numbers0 = fd.allChildren<SubscriptExpression>().singleOrNull()
+        assertNotNull(numbers0)
+
+        val literal0 = fd.literals[0]
+        assertNotNull(literal0)
+
+        assertEquals(literal0, numbers0.prevDFG.single())
+    }
 }

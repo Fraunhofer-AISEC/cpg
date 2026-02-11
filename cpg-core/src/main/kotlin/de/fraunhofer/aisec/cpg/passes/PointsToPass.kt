@@ -58,6 +58,7 @@ import kotlin.collections.filter
 import kotlin.collections.map
 import kotlin.let
 import kotlin.text.contains
+import kotlin.text.ifEmpty
 import kotlin.time.DurationUnit
 import kotlin.time.TimeSource
 import kotlinx.coroutines.*
@@ -2266,6 +2267,8 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         doubleState: PointsToState.Element,
     ): PointsToState.Element {
         var doubleState = doubleState
+        // The entries we want to add to the declarationState
+        val declEntriesMap = ConcurrentIdentityHashMap<Node, DeclarationStateEntryElement>()
         /* No need to set the address, this already happens in the constructor */
         val addresses =
             if (currentNode is TupleDeclaration) {
@@ -2289,10 +2292,25 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                 )
             }
 
+        addresses.forEach { addr ->
+            declEntriesMap.computeIfAbsent(addr) {
+                DeclarationStateEntryElement(
+                    PowersetLattice.Element(addresses),
+                    PowersetLattice.Element(),
+                    lastWrites,
+                )
+            }
+        }
+
         (currentNode as? HasInitializer)?.initializer?.let { initializer ->
-            if (initializer is Literal<*>)
+            if (initializer is Literal<*>) {
                 values.add(NodeWithPropertiesKey(initializer, equalLinkedHashSetOf()))
-            else {
+                declEntriesMap.forEach {
+                    it.value.second.addAll(
+                        values.mapTo(PowersetLattice.Element()) { Pair(it.node, false) }
+                    )
+                }
+            } else {
                 // The EOG of Declarations does not play in our favor: We will handle the
                 // Declaration before we handled the initializer. So we explicitly handle the
                 // initializer before continuing
@@ -2304,11 +2322,49 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         is PointerDereference -> handleExpression(lattice, ini.input, doubleState)
                         else -> handleExpression(lattice, ini, doubleState)
                     }
-                values.addAll(
-                    doubleState.getValues(ini, ini).mapTo(PowersetLattice.Element()) {
-                        NodeWithPropertiesKey(it.first, equalLinkedHashSetOf())
+                if (ini is InitializerListExpression) {
+                    // Create a field for every initializer, i.e. at offset 0 we store the first
+                    // element, at offset 1 the second, etc...
+                    val fieldAddresses = identitySetOf<Node>()
+                    for (i in 0..<ini.initializers.size) {
+                        val fieldVal = ini.initializers[i]
+                        val parentName = getNodeName(currentNode)
+                        val newName = Name(i.toString(), parentName)
+                        doubleState.fetchFieldAddresses(addresses, newName).forEach { fieldAddr ->
+                            fieldAddresses.add(fieldAddr)
+                            val newEntry =
+                                declEntriesMap.computeIfAbsent(fieldAddr) {
+                                    DeclarationStateEntryElement(
+                                        PowersetLattice.Element(),
+                                        PowersetLattice.Element(),
+                                        PowersetLattice.Element(),
+                                    )
+                                }
+                            newEntry.first.add(fieldAddr)
+                            newEntry.second.add(Pair(fieldVal, false))
+                            newEntry.third.add(
+                                NodeWithPropertiesKey(fieldVal, equalLinkedHashSetOf())
+                            )
+                        }
                     }
-                )
+                    // add the entries for the fieldAddress to the main addresses
+                    addresses.forEach { addr ->
+                        declEntriesMap[addr]?.first?.addAll(fieldAddresses)
+                        // For arrays, we want the value to be the address
+                        declEntriesMap[addr]?.second?.addAll(addresses.map { Pair(it, false) })
+                    }
+                } else {
+                    values.addAll(
+                        doubleState.getValues(ini, ini).mapTo(PowersetLattice.Element()) {
+                            NodeWithPropertiesKey(it.first, equalLinkedHashSetOf())
+                        }
+                    )
+                    declEntriesMap.forEach {
+                        it.value.second.addAll(
+                            values.mapTo(PowersetLattice.Element()) { Pair(it.node, false) }
+                        )
+                    }
+                }
             }
         }
 
@@ -2322,21 +2378,11 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     PowersetLattice.Element(),
                 ),
             )
+
         /* In the DeclarationsState, we save the address which we wrote to the value for easier work with pointers
          */
-        addresses.forEach { addr ->
-            doubleState =
-                lattice.pushToDeclarationsState(
-                    doubleState,
-                    addr,
-                    DeclarationStateEntryElement(
-                        PowersetLattice.Element(addresses),
-                        PowersetLattice.Element(
-                            values.mapTo(PowersetLattice.Element()) { Pair(it.node, false) }
-                        ),
-                        lastWrites,
-                    ),
-                )
+        declEntriesMap.forEach {
+            doubleState = lattice.pushToDeclarationsState(doubleState, it.key, it.value)
         }
         return doubleState
     }
@@ -2574,11 +2620,6 @@ data class FetchElementFromDeclarationStateEntry(
     val subAccessName: String,
     val lastWrites: ConcurrentIdentitySet<NodeWithPropertiesKey>,
 )
-
-/** Fetch the address for `node` from the GeneralState */
-fun PointsToState.Element.fetchAddressFromGeneralState(node: Node): ConcurrentIdentitySet<Node> {
-    return this.generalState[node]?.first ?: PowersetLattice.Element()
-}
 
 /** Fetch the value for `node` from the GeneralState */
 fun PointsToState.Element.fetchValueFromGeneralState(
