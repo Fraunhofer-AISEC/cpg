@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils
 
 import de.fraunhofer.aisec.cpg.TranslationResult
+import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
@@ -78,7 +79,10 @@ fun getAvailableOperations(): List<Class<out Operation>> {
         }
 }
 
-inline fun <reified T> JsonObject.toObject() = Json.decodeFromString<T>(Json.encodeToString(this))
+@PublishedApi internal val lenientJson = Json { ignoreUnknownKeys = true }
+
+inline fun <reified T> JsonObject.toObject() =
+    lenientJson.decodeFromString<T>(Json.encodeToString(this))
 
 fun CallToolRequest.runOnCpg(
     query: BiFunction<TranslationResult, CallToolRequest, CallToolResult>

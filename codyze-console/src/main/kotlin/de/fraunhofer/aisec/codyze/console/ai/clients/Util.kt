@@ -95,7 +95,7 @@ suspend fun thinkTagsStreaming(
     return closed
 }
 
-/** Strip <think> tags from non-streaming content */
+/** Strip <think> tags from non-streaming content Note: Needed for GLM models */
 fun stripThinkTags(content: String): String {
     return content.replace(Regex("<think>.*?</think>", RegexOption.DOT_MATCHES_ALL), "").trim()
 }
