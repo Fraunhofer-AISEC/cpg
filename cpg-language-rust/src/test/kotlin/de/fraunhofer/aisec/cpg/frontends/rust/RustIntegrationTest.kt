@@ -151,5 +151,58 @@ class RustIntegrationTest : BaseTest() {
             config.annotations.any { it.name.localName == "derive(Clone)" },
             "Config should have derive(Clone) annotation",
         )
+
+        // === For-in loops ===
+        val forLoopDemo = tu.functions["for_loop_demo"]
+        assertNotNull(forLoopDemo)
+        val forBody = forLoopDemo.body as? Block
+        assertNotNull(forBody)
+        val forEachStmts = forBody.allChildren<ForEachStatement>()
+        assertTrue(forEachStmts.isNotEmpty(), "Should have for-each statements")
+
+        // === References and closures ===
+        val closuresAndRefs = tu.functions["closures_and_refs"]
+        assertNotNull(closuresAndRefs)
+        val closureBody = closuresAndRefs.body as? Block
+        assertNotNull(closureBody)
+        val refOps = closureBody.allChildren<UnaryOperator>().filter { it.operatorCode == "&" }
+        assertTrue(refOps.isNotEmpty(), "Should have & reference operators")
+        val lambdas = closureBody.allChildren<LambdaExpression>()
+        assertTrue(lambdas.isNotEmpty(), "Should have closures")
+
+        // === Struct expressions ===
+        val structDemo = tu.functions["struct_demo"]
+        assertNotNull(structDemo)
+        val structBody = structDemo.body as? Block
+        assertNotNull(structBody)
+        val constructs = structBody.allChildren<ConstructExpression>()
+        assertTrue(constructs.isNotEmpty(), "Should have struct construction")
+
+        // === Constants and statics ===
+        val piConst =
+            tu.allChildren<VariableDeclaration>().firstOrNull { it.name.localName == "PI" }
+        assertNotNull(piConst, "Should have const PI")
+        assertTrue(
+            piConst.annotations.any { it.name.localName == "const" },
+            "PI should have @const",
+        )
+
+        val countStatic =
+            tu.allChildren<VariableDeclaration>().firstOrNull { it.name.localName == "COUNT" }
+        assertNotNull(countStatic, "Should have static COUNT")
+        assertTrue(
+            countStatic.annotations.any { it.name.localName == "static" },
+            "COUNT should have @static",
+        )
+
+        // === Indexing and casting ===
+        val indexAndCast = tu.functions["index_and_cast"]
+        assertNotNull(indexAndCast)
+        val indexBody = indexAndCast.body as? Block
+        assertNotNull(indexBody)
+        val subscripts = indexBody.allChildren<SubscriptExpression>()
+        assertTrue(subscripts.isNotEmpty(), "Should have subscript expressions")
+        val casts = indexBody.allChildren<CastExpression>()
+        assertTrue(casts.isNotEmpty(), "Should have cast expressions")
     }
 }

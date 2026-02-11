@@ -95,3 +95,41 @@ type Coordinate = i32;
 struct Config {
     value: i32,
 }
+
+// For-in loop
+fn for_loop_demo() {
+    let items = [1, 2, 3];
+    for x in items {
+        let y = x;
+    }
+    for i in 0..10 {
+        let z = i;
+    }
+}
+
+// References and closures
+fn closures_and_refs() {
+    let x = 5;
+    let r = &x;
+    let v = *r;
+    let add = |a: i32, b: i32| a + b;
+    let sum = add(1, 2);
+}
+
+// Struct expressions
+fn struct_demo() {
+    let p = Point { x: 1, y: 2 };
+    let s = p.x + p.y;
+}
+
+// Constants and statics
+const PI: i32 = 3;
+static COUNT: i32 = 0;
+
+// Indexing and casting
+fn index_and_cast() {
+    let arr = [1, 2, 3];
+    let first = arr[0];
+    let x = 42;
+    let y = x as i64;
+}
