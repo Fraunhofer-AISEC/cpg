@@ -83,6 +83,34 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             "raw_string_literal" -> handleRawStringLiteral(node)
             "unit_expression" -> newLiteral(null, objectType("()"), rawNode = node)
             "self" -> newReference("self", rawNode = node)
+            "match_pattern" -> {
+                // match_pattern wraps the actual pattern in a match arm
+                val child = node.getNamedChild(0)
+                if (child != null) handle(child)
+                else newProblemExpression("Empty match pattern", rawNode = node)
+            }
+            "or_pattern" -> {
+                // 1 | 2 | 3 — model as a list of alternatives
+                val children = mutableListOf<Expression>()
+                for (i in 0 until node.childCount) {
+                    val child = node.getChild(i)
+                    if (child.isNamed) {
+                        val expr = handle(child) as? Expression
+                        if (expr != null) children += expr
+                    }
+                }
+                if (children.size == 1) {
+                    children.first()
+                } else {
+                    // Use a binary operator chain with "|"
+                    children.reduce { acc, expr ->
+                        val op = newBinaryOperator("|", rawNode = node)
+                        op.lhs = acc
+                        op.rhs = expr
+                        op
+                    }
+                }
+            }
             "parenthesized_expression" -> {
                 val child = node.getNamedChild(0)
                 if (child != null) handle(child)
@@ -406,9 +434,24 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         val macroNode = node.getChildByFieldName("macro")
         val name = macroNode?.let { frontend.codeOf(it) } ?: ""
 
-        // Treat macro call as a CallExpression for now
         val call =
             newCallExpression(newReference(name, rawNode = macroNode), fqn = name, rawNode = node)
+
+        // Extract arguments from the token_tree (tree-sitter doesn't parse macro bodies,
+        // but we can extract top-level named children as arguments)
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child.type == "token_tree") {
+                for (j in 0 until child.childCount) {
+                    val arg = child.getChild(j)
+                    if (arg.isNamed && arg.type != "token_tree") {
+                        val expr = handle(arg) as? Expression
+                        if (expr != null) call.addArgument(expr)
+                    }
+                }
+                break
+            }
+        }
 
         return call
     }

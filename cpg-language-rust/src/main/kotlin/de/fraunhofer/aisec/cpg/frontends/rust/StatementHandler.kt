@@ -51,7 +51,9 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             "for_expression" -> handleForExpression(node)
             "expression_statement" -> handleExpressionStatement(node)
             else -> {
-                newProblemExpression("Unknown statement type: ${node.type}", rawNode = node)
+                // Fallback: delegate to expression handler for trailing expressions in blocks
+                // (e.g. the last expression without semicolon is the block's return value)
+                frontend.expressionHandler.handle(node)
             }
         }
     }
@@ -458,7 +460,6 @@ class StatementHandler(frontend: RustLanguageFrontend) :
                 val typeChild = pattern.getChildByFieldName("type")
                 for (i in 0 until pattern.childCount) {
                     val child = pattern.getChild(i)
-                    // Skip the type name (child field "type")
                     val isType =
                         if (typeChild != null && !typeChild.isNull) {
                             child.startByte == typeChild.startByte &&
@@ -480,13 +481,80 @@ class StatementHandler(frontend: RustLanguageFrontend) :
                     }
                 }
             }
+            "struct_pattern" -> {
+                // Point { x, y } or Point { x: a, y: b }
+                // Skip the type child, recurse into field_pattern children
+                val typeChild = pattern.getChildByFieldName("type")
+                for (i in 0 until pattern.childCount) {
+                    val child = pattern.getChild(i)
+                    val isType =
+                        if (typeChild != null && !typeChild.isNull) {
+                            child.startByte == typeChild.startByte &&
+                                child.endByte == typeChild.endByte
+                        } else {
+                            false
+                        }
+                    if (!isType && child.isNamed && child.type != "remaining_field_pattern") {
+                        vars += extractBindings(child)
+                    }
+                }
+            }
+            "field_pattern" -> {
+                // Can be shorthand `x` (binds x) or `x: pattern` (binds from pattern)
+                val nameNode = pattern.getChildByFieldName("name")
+                val patternChild = pattern.getChildByFieldName("pattern")
+                if (patternChild != null && !patternChild.isNull) {
+                    vars += extractBindings(patternChild)
+                } else if (nameNode != null && !nameNode.isNull) {
+                    val name = frontend.codeOf(nameNode) ?: ""
+                    vars += newVariableDeclaration(name, rawNode = nameNode)
+                } else {
+                    // Fallback: treat the whole node as a binding
+                    val name = frontend.codeOf(pattern) ?: ""
+                    if (name.isNotEmpty()) {
+                        vars += newVariableDeclaration(name, rawNode = pattern)
+                    }
+                }
+            }
+            "slice_pattern" -> {
+                // [first, .., last] — recurse into children, skip remaining_field_pattern
+                for (i in 0 until pattern.childCount) {
+                    val child = pattern.getChild(i)
+                    if (child.isNamed && child.type != "remaining_field_pattern") {
+                        vars += extractBindings(child)
+                    }
+                }
+            }
+            "or_pattern" -> {
+                // 1 | 2 => bindings should be the same in all alternatives
+                // Extract from first alternative only
+                val firstChild = pattern.getNamedChild(0)
+                if (firstChild != null) {
+                    vars += extractBindings(firstChild)
+                }
+            }
+            "ref_pattern" -> {
+                // ref x — the binding is the inner pattern
+                val inner = pattern.getNamedChild(0)
+                if (inner != null) vars += extractBindings(inner)
+            }
+            "mut_pattern" -> {
+                // mut x — the binding is the inner pattern
+                val inner = pattern.getNamedChild(0)
+                if (inner != null) vars += extractBindings(inner)
+            }
+            "remaining_field_pattern",
+            "_",
+            "integer_literal",
+            "string_literal",
+            "boolean_literal",
+            "char_literal",
+            "negative_literal",
+            "float_literal" -> {
+                // These don't bind any variables
+            }
             else -> {
-                // Generic fallback for other patterns (struct_pattern, etc.)
-                // This might over-capture (e.g. enum variant names) if not careful,
-                // but strictly pattern matching usually only binds variables or matches consts.
-                // Assuming lowercase = var, uppercase = const/type is a heuristic we might need
-                // later.
-                // For now, recurse.
+                // Generic fallback: recurse into named children
                 for (i in 0 until pattern.childCount) {
                     val child = pattern.getChild(i)
                     if (child.isNamed) vars += extractBindings(child)

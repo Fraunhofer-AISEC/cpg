@@ -325,6 +325,17 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                             frontend.typeOf(fieldTypeNode),
                             rawNode = child,
                         )
+
+                    // Check for visibility modifier (e.g. pub)
+                    for (k in 0 until child.childCount) {
+                        val fieldChild = child.getChild(k)
+                        if (fieldChild.type == "visibility_modifier") {
+                            val vis = frontend.codeOf(fieldChild) ?: "pub"
+                            field.annotations += newAnnotation(vis, rawNode = fieldChild)
+                            break
+                        }
+                    }
+
                     frontend.scopeManager.addDeclaration(field)
                     record.addDeclaration(field)
                 }
