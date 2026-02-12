@@ -125,4 +125,56 @@ class NodeTest {
             block1.statementEdges == block2.statementEdges
         }
     }
+
+    @Test
+    fun testNodeEquals() {
+        with(TestLanguageFrontend()) {
+            // This test exercises the equals methods to improve code coverage
+            // Nodes without locations will not be equal (they use Object identity)
+
+            // FunctionDeclaration
+            val func1 = newFunctionDeclaration("foo")
+            val func2 = newFunctionDeclaration("foo")
+            assertNotEquals(func1, func2, "Functions without location should not be equal")
+
+            // CallExpression
+            val call1 = newCallExpression(newReference("foo"))
+            val call2 = newCallExpression(newReference("foo"))
+            assertNotEquals(call1, call2, "Calls without location should not be equal")
+
+            // RecordDeclaration
+            val record1 = newRecordDeclaration("MyClass", kind = "class")
+            val record2 = newRecordDeclaration("MyClass", kind = "class")
+            assertNotEquals(record1, record2, "Records without location should not be equal")
+
+            // TryStatement
+            val try1 = newTryStatement()
+            val try2 = newTryStatement()
+            assertNotEquals(try1, try2, "Try statements without location should not be equal")
+
+            // Statement
+            val stmt1 = newDeclarationStatement()
+            val stmt2 = newDeclarationStatement()
+            assertNotEquals(stmt1, stmt2, "Statements without location should not be equal")
+
+            // InitializerListExpression
+            val init1 = newInitializerListExpression()
+            val init2 = newInitializerListExpression()
+            assertNotEquals(init1, init2, "Initializers without location should not be equal")
+
+            // ExpressionList
+            val exprList1 = newExpressionList()
+            val exprList2 = newExpressionList()
+            assertNotEquals(
+                exprList1,
+                exprList2,
+                "Expression lists without location should not be equal",
+            )
+
+            // NewArrayExpression
+            val arr1 = newNewArrayExpression()
+            val arr2 = newNewArrayExpression()
+            assertNotEquals(arr1, arr2, "Arrays without location should not be equal")
+        }
+    }
 }
