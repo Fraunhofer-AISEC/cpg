@@ -27,12 +27,12 @@ package de.fraunhofer.aisec.cpg.graph.edges.collections
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import kotlin.reflect.KProperty
-import org.neo4j.ogm.annotation.Transient
 
 /**
- * This is a MAJOR workaround since Neo4J OGM does not allow to use our (generic) [Edge] class for
- * our AST edges. See https://github.com/neo4j/neo4j-ogm/issues/1132.
+ * This is a MAJOR workaround since the persistence system does not allow to use our (generic)
+ * [Edge] class for our AST edges. See https://github.com/neo4j/neo4j-ogm/issues/1132.
  *
  * Therefore, we need to wrap the edge in a list with a single element.
  */
@@ -189,7 +189,7 @@ open class EdgeSingletonList<
         return UnwrapDelegate()
     }
 
-    @Transient
+    @DoNotPersist
     inner class UnwrapDelegate<ThisType : Node>() {
         @Suppress("UNCHECKED_CAST")
         operator fun getValue(thisRef: ThisType, property: KProperty<*>): NullableNodeType {

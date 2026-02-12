@@ -49,18 +49,15 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
 import de.fraunhofer.aisec.cpg.passes.*
+import de.fraunhofer.aisec.cpg.persistence.Convert
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*
 import kotlin.uuid.Uuid
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.apache.commons.lang3.builder.ToStringStyle
-import org.neo4j.ogm.annotation.GeneratedValue
-import org.neo4j.ogm.annotation.Id
-import org.neo4j.ogm.annotation.Relationship
-import org.neo4j.ogm.annotation.Transient
-import org.neo4j.ogm.annotation.typeconversion.Convert
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -157,7 +154,7 @@ abstract class Node() :
 
     var prevCDG by unwrapping(Node::prevCDGEdges)
 
-    @DoNotPersist @Transient @JsonIgnore var astParent: AstNode? = null
+    @DoNotPersist @JsonIgnore var astParent: AstNode? = null
 
     /** Virtual property for accessing [prevEOGEdges] without property edges. */
     @PopulatedByPass(EvaluationOrderGraphPass::class) var prevEOG by unwrapping(Node::prevEOGEdges)
@@ -247,7 +244,7 @@ abstract class Node() :
     var isImplicit = false
 
     /** Required field for persistence. It contains the node ID. */
-    @DoNotPersist @Id @GeneratedValue var legacyId: Long = NodeIdGenerator.next()
+    @DoNotPersist var legacyId: Long = NodeIdGenerator.next()
 
     /**
      * A (more or less) unique identifier for this node. It is a [Uuid] derived from

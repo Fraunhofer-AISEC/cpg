@@ -61,7 +61,7 @@ class DataflowGranularityConverter : CpgCompositeConverter<Granularity> {
     override val graphSchema: List<Pair<String, String>>
         get() = listOf(Pair("String", GRANULARITY), Pair("String", PARTIAL_TARGET))
 
-    override fun toEntityAttribute(value: MutableMap<String, *>): Granularity {
+    override fun toEntityAttribute(value: Map<String, *>?): Granularity {
         throw UnsupportedOperationException()
     }
 }

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.helpers
 
 import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
+import de.fraunhofer.aisec.cpg.persistence.CompositeAttributeConverter
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import de.fraunhofer.aisec.cpg.test.*
@@ -36,7 +37,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
-import org.neo4j.ogm.typeconversion.CompositeAttributeConverter
 
 internal class LocationConverterTest : BaseTest() {
     private val sut: CompositeAttributeConverter<PhysicalLocation?>
@@ -92,7 +92,7 @@ internal class LocationConverterTest : BaseTest() {
     fun toEntityAttributeWithNullGraph() {
         val sut: CompositeAttributeConverter<PhysicalLocation?> = sut
         val have = sut.toGraphProperties(null)
-        assertEquals(mapOf(), have)
+        assertEquals(mapOf<String, Any?>(), have)
     }
 
     @Test

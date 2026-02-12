@@ -29,14 +29,13 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
+import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import kotlin.reflect.KProperty
-import org.neo4j.ogm.annotation.RelationshipEntity
 
 /**
- * An edge representing that a [Node] belongs to a
- * [de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock] or the basic block contains the node.
+ * An edge representing that a [Node] belongs to a [BasicBlock] or the basic block contains the
+ * node.
  */
-@RelationshipEntity
 class BasicBlockEdge(start: Node, end: Node) : Edge<Node>(start, end) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

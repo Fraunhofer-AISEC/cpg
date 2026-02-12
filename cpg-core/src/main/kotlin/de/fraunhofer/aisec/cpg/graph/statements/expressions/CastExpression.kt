@@ -30,8 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.persistence.Relationship
 import java.util.*
-import org.neo4j.ogm.annotation.Relationship
 import org.slf4j.LoggerFactory
 
 class CastExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
@@ -44,7 +44,7 @@ class CastExpression : Expression(), ArgumentHolder, HasType.TypeObserver {
      * This way we can still access the original type of expression (e.g., created by a
      * [NewExpression]), even when it is cast.
      */
-    @Relationship(type = "EXPRESSION")
+    @Relationship(value = "EXPRESSION")
     var expressionEdge =
         astEdgeOf<Expression>(
             of = ProblemExpression("could not parse inner expression"),

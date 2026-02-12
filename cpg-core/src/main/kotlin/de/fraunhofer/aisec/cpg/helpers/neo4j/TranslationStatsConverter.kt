@@ -55,9 +55,9 @@ class TranslationStatsConverter : CpgCompositeConverter<TranslationStats?> {
     override val graphSchema: List<Pair<String, String>>
         get() = listOf(Pair("String", FIELD_TOTAL_LINES_OF_CODE))
 
-    override fun toEntityAttribute(value: MutableMap<String, *>): TranslationStats {
+    override fun toEntityAttribute(value: Map<String, *>?): TranslationStats {
         return TranslationStats().also {
-            it.totalLinesOfCode = Integer.parseInt(value[FIELD_TOTAL_LINES_OF_CODE] as String)
+            it.totalLinesOfCode = Integer.parseInt(value?.get(FIELD_TOTAL_LINES_OF_CODE) as String)
         }
     }
 }

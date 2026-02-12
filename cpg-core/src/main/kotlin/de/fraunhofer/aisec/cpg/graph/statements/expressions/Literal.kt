@@ -25,11 +25,11 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.persistence.AttributeConverter
+import de.fraunhofer.aisec.cpg.persistence.Convert
 import java.math.BigInteger
 import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.typeconversion.Convert
-import org.neo4j.ogm.typeconversion.AttributeConverter
 
 /**
  * Represents a literal value, meaning the value is fixed and not depending on the runtime

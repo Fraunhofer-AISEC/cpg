@@ -34,7 +34,8 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.SymbolMap
 import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
-import org.neo4j.ogm.annotation.typeconversion.Convert
+import de.fraunhofer.aisec.cpg.persistence.Convert
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 
 /**
  * This class represents a real *import* of one or more symbols of a specified [NameScope] (e.g.,
@@ -159,7 +160,7 @@ class Import : Declaration() {
      * A list of symbols that this declaration imports. This will be populated by
      * [ImportResolver.handleImport].
      */
-    @Transient
+    @DoNotPersist
     @PopulatedByPass(ImportResolver::class)
     var importedSymbols: SymbolMap = mutableMapOf()
 }

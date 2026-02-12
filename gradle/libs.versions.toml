@@ -1,7 +1,6 @@
 [versions]
 kotlin = "2.3.0"
 kotlinx-json = "1.10.0"
-neo4j = "4.0.10"
 neo4j5 = "5.28.10"
 log4j = "2.25.3"
 spotless = "8.1.0"
@@ -35,8 +34,6 @@ slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j"}
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j"}
 
 apache-commons-lang3 = { module = "org.apache.commons:commons-lang3", version = "3.20.0"}
-neo4j-ogm-core = { module = "org.neo4j:neo4j-ogm-core", version.ref = "neo4j"}
-neo4j-ogm-bolt-driver = { module = "org.neo4j:neo4j-ogm-bolt-driver", version.ref = "neo4j"}
 neo4j-driver = { module = "org.neo4j.driver:neo4j-java-driver", version.ref = "neo4j5"}
 
 javaparser = { module = "com.github.javaparser:javaparser-symbol-solver-core", version = "3.28.0"}
@@ -92,7 +89,6 @@ dex2jar = {module = "de.femtopedia.dex2jar:dex2jar", version="2.4.22" }
 
 [bundles]
 log4j = ["log4j-impl", "log4j-core"]
-neo4j = ["neo4j-ogm-core", "neo4j-ogm-bolt-driver"]
 sootup = ["sootup-core", "sootup-java-core", "sootup-java-sourcecode", "sootup-java-bytecode", "sootup-jimple", "sootup-apk"]
 ktor = ["ktor-server-core", "ktor-server-netty", "ktor-server-cors","ktor-server-content-negotiation", "ktor-serialization-kotlinx-json"]
 

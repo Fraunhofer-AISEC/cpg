@@ -27,20 +27,21 @@ package de.fraunhofer.aisec.cpg.helpers.neo4j
 
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.parseName
-import org.neo4j.ogm.typeconversion.AttributeConverter
+import de.fraunhofer.aisec.cpg.persistence.AttributeConverter
 
 /**
  * This converter converts a [Name] into a single [String] (in contrast to the [NameConverter],
  * which splits it up into several properties).
  */
 class SimpleNameConverter : AttributeConverter<Name, String> {
-    override fun toGraphProperty(value: Name?): String {
+    override fun toGraphProperty(value: Name): String {
         return value.toString()
     }
 
-    override fun toEntityAttribute(value: String?): Name? {
+    override fun toEntityAttribute(value: String?): Name {
         if (value == null) {
-            return null
+            // Return an empty name if value is null
+            return Name("")
         }
 
         // We cannot really know what the actual delimiter was, so we need to supply some delimiters

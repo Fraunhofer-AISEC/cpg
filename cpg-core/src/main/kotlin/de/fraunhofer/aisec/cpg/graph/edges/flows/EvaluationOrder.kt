@@ -31,14 +31,12 @@ import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import kotlin.reflect.KProperty
-import org.neo4j.ogm.annotation.RelationshipEntity
 
 /**
  * An edge in our Evaluation Order Graph (EOG). It considers the order in which our AST statements
  * would be "evaluated" (e.g. by a compiler or interpreter). See [EvaluationOrderGraphPass] for more
  * details.
  */
-@RelationshipEntity
 class EvaluationOrder(
     start: Node,
     end: Node,

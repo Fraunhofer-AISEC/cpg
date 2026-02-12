@@ -33,12 +33,12 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.TO_STRING_STYLE
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.Persistable
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
-import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.persistence.*
 import java.util.*
 import kotlin.reflect.KProperty
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.*
 
 /**
  * This class represents an edge between two [Node] objects in a Neo4J graph. It can be used to
@@ -52,13 +52,12 @@ import org.neo4j.ogm.annotation.*
  * foo("bar", a = 2)
  * ```
  */
-@RelationshipEntity
 abstract class Edge<NodeType : Node> : Persistable, Cloneable, HasAssumptions {
     // Node where the edge is outgoing
-    @JsonIgnore @field:StartNode var start: Node
+    @JsonIgnore var start: Node
 
     // Node where the edge is ingoing
-    @JsonBackReference @field:EndNode var end: NodeType
+    @JsonBackReference var end: NodeType
 
     @DoNotPersist override val assumptions: MutableSet<Assumption> = mutableSetOf()
 
@@ -146,10 +145,10 @@ abstract class Edge<NodeType : Node> : Persistable, Cloneable, HasAssumptions {
         return Delegate()
     }
 
-    @Transient
+    @DoNotPersist
     inner class Delegate<ThisType : Node>() {
         operator fun getValue(thisRef: ThisType, property: KProperty<*>): NodeType {
-            var edge = this@Edge
+            val edge = this@Edge
             // We only support outgoing edges this way
             return edge.end
         }
