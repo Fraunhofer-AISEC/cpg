@@ -35,6 +35,7 @@ slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j"}
 
 apache-commons-lang3 = { module = "org.apache.commons:commons-lang3", version = "3.20.0"}
 neo4j-driver = { module = "org.neo4j.driver:neo4j-java-driver", version.ref = "neo4j5"}
+classgraph = { module = "io.github.classgraph:classgraph", version = "4.8.179"}
 
 javaparser = { module = "com.github.javaparser:javaparser-symbol-solver-core", version = "3.28.0"}
 jackson = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version = "2.21.0"}

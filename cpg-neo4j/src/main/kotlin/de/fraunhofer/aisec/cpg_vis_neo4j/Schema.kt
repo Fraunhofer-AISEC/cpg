@@ -340,19 +340,12 @@ class Schema {
         if (hierarchy[kClass]?.first != null) {
             out.print("**Labels**:")
 
-            hierarchy[kClass]?.first?.let {
-                getHierarchy(it).forEach {
-                    out.print(
-                        getBoxWithClass(
-                            "superclassLabel",
-                            "[${toLabel(it)}](#${toAnchorLink("e"+toLabel(it))})",
-                        )
-                    )
-                }
+            // Use the labels extension property from Common.kt
+            kClass.labels.forEach { label ->
+                out.print(
+                    getBoxWithClass("superclassLabel", "[${label}](#${toAnchorLink("e${label}")})")
+                )
             }
-            out.print(
-                getBoxWithClass("classLabel", "[${entityLabel}](#${toAnchorLink("e$entityLabel")})")
-            )
             out.println()
         }
         if (hierarchy[kClass]?.second?.isNotEmpty() == true) {
@@ -452,10 +445,9 @@ class Schema {
         val className = kClass.qualifiedName ?: kClass.simpleName ?: ""
         val entityLabel = toLabel(kClass)
 
-        val labels: MutableSet<String> = mutableSetOf(entityLabel)
-        if (hierarchy[kClass]?.first != null) {
-            hierarchy[kClass]?.first?.let { getHierarchy(it).forEach { labels.add(toLabel(it)) } }
-        }
+        // Use the labels extension property from Common.kt
+        val labels: Set<String> = kClass.labels
+
         val childLabels: MutableSet<String> = mutableSetOf()
         if (hierarchy[kClass]?.second?.isNotEmpty() == true) {
 
@@ -559,13 +551,6 @@ class Schema {
 
     private fun closeMermaid(out: PrintWriter) {
         out.println("```")
-    }
-
-    private fun getHierarchy(kClass: KClass<out Node>): MutableList<KClass<out Node>> {
-        val inheritance: MutableList<KClass<out Node>> = mutableListOf()
-        hierarchy[kClass]?.first?.let { inheritance.addAll(getHierarchy(it)) }
-        inheritance.add(kClass)
-        return inheritance
     }
 
     /**
