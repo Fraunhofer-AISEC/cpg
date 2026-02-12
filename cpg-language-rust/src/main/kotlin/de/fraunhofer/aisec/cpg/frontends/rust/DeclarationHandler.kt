@@ -37,6 +37,7 @@ import uniffi.cpgrust.RsModule
 import uniffi.cpgrust.RsParam
 import uniffi.cpgrust.RsPat
 import uniffi.cpgrust.RsStruct
+import uniffi.cpgrust.RsType
 
 class DeclarationHandler(frontend: RustLanguageFrontend) :
     RustHandler<Declaration, RsAst.RustItem>(::ProblemDeclaration, frontend) {
@@ -172,14 +173,9 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleImpl(impl: RsImpl): Declaration {
-        impl.pathTypes.toString()
-        // I think i want to make a block here or a namespace declaration like we have in C++ i
-        // think
-        // Todo the first part of the name is an interface "anouncement"
-        // The second part is like a namespace
-
         val implTarget = impl.pathTypes.last()
-
+        // The last part of the implementation block path is the target of the implementation, the
+        // record to add definitions to
         var name = implTarget.path?.segment?.nameRef?.let { parseName(it.text) } ?: Name("")
 
         val scope =
@@ -196,9 +192,18 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
         val scopedNode = scope?.astNode
 
-        val implAsNamespaceDecl = newExtensionDeclaration(name, RsAst.RustItem(RsItem.Impl(impl)))
+        // If the implementation blocks pathTypes is longer than one element, a trait was
+        // implemented for the record.
+        if (scopedNode is RecordDeclaration && impl.pathTypes.size > 1) {
+            val implInterface = impl.pathTypes.first()
+            name = implInterface.path?.segment?.nameRef?.let { parseName(it.text) } ?: Name("")
+            scopedNode.superClasses +=
+                objectType(name, rawNode = RsAst.RustType(RsType.PathType(implInterface)))
+        }
 
-        frontend.scopeManager.enterScope(implAsNamespaceDecl)
+        val extensionDeclaration = newExtensionDeclaration(name, RsAst.RustItem(RsItem.Impl(impl)))
+
+        frontend.scopeManager.enterScope(extensionDeclaration)
 
         for (item in impl.items) {
             when (item) {
@@ -206,10 +211,9 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                     val func = handleFunctionDeclaration(item.v1)
 
                     if (scopedNode is RecordDeclaration) {
-                        // Todo set impl first
                         frontend.scopeManager.addDeclaration(func)
                     }
-                    implAsNamespaceDecl.declarations += func
+                    extensionDeclaration.declarations += func
                 }
                 is RsAssocItem.Const -> {}
                 is RsAssocItem.TypeAlias -> {}
@@ -222,8 +226,8 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             frontend.scopeManager.enterScope(currentScope)
         }
 
-        frontend.scopeManager.leaveScope(implAsNamespaceDecl)
+        frontend.scopeManager.leaveScope(extensionDeclaration)
 
-        return implAsNamespaceDecl
+        return extensionDeclaration
     }
 }

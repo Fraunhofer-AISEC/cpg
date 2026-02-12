@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import kotlin.collections.plusAssign
 import uniffi.cpgrust.RsAst
 import uniffi.cpgrust.RsExprStmt
+import uniffi.cpgrust.RsItem
 import uniffi.cpgrust.RsLetStmt
 import uniffi.cpgrust.RsPat
 import uniffi.cpgrust.RsStmt
@@ -49,6 +50,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         return when (node) {
             is RsStmt.LetStmt -> handleLetStmt(node.v1)
             is RsStmt.ExprStmt -> handleExprStmt(node.v1)
+            is RsStmt.Item -> handleItem(node.v1)
             else ->
                 newProblemExpression(
                     problem = "The statement of class ${node.javaClass} is not supported yet",
@@ -93,10 +95,14 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         )
     }
 
-    /*private fun handle...(node: ..., ...): ... {
-        val statements = mutableListOf<Statement>()
+    fun handleItem(item: RsItem): Statement {
 
-        return statements
-    }*/
+        val declarationStatement = newDeclarationStatement(rawNode = item)
 
+        val handledDeclaration = frontend.declarationHandler.handle(RsAst.RustItem(item))
+        declarationStatement.declarations += handledDeclaration
+        frontend.scopeManager.addDeclaration(handledDeclaration)
+
+        return declarationStatement
+    }
 }

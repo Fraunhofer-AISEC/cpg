@@ -63,8 +63,6 @@ impl From<&SyntaxNode> for RSNode {
             "\n",
         );
         let comments = if docs.is_empty() { None } else { Some(docs) };
-        println!("Parent node: {:?}", syntax.kind());
-        syntax.children().for_each(| n | println!(" Syntactic Children {:?}", n.kind()));
 
         RSNode {text : syntax.text().to_string(), start_offset: syntax.text_range().start().into(), end_offset: syntax.text_range().end().into(), comments}
 
@@ -78,6 +76,7 @@ pub enum RSAst {
     RustItem(RSItem),
     RustExpr(RSExpr),
     RustStmt(RSStmt),
+    RustType(RSType), // Represent mentions of a type in the code
     RustAbi(RSAbi), // Needed for now to have Abi nodes in the hierarchy
     RustProblem(RSProblem) // Used to represent nodes that we are currently not making an interface for
 }
@@ -428,14 +427,14 @@ impl From<Static> for RSStatic {
 pub struct RSStruct {
     pub(crate) ast_node: RSNode,
     name: Option<String>,
-    fieldList: Option<RSFieldList>
+    field_list: Option<RSFieldList>
 }
 impl From<Struct> for RSStruct {
     fn from(node:  Struct) -> Self {
         RSStruct{
             ast_node: node.syntax().into(),
             name: node.name().map(|n|n.to_string()),
-            fieldList: node.field_list().map(Into::into)
+            field_list: node.field_list().map(Into::into)
         }
     }
 }
@@ -443,7 +442,11 @@ impl From<Struct> for RSStruct {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RSTrait {pub(crate) ast_node: RSNode}
 impl From<Trait> for RSTrait {
-    fn from(node:  Trait) -> Self {RSTrait{ast_node: node.syntax().into()}}
+    fn from(node:  Trait) -> Self {
+        RSTrait{
+            ast_node: node.syntax().into()
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -603,7 +606,7 @@ impl From<BlockExpr> for RSBlockExpr {
         let ret = RSBlockExpr{
             ast_node: node.syntax().into(),
             stmts: node.stmt_list().map(|sl| sl.statements().map(Into::into).collect::<Vec<_>>()).unwrap_or_default(),
-            tail_expr:node.stmt_list().map(|sl|sl.tail_expr().map(Into::into)).flatten().into_iter().collect()
+            tail_expr: node.stmt_list().map(|sl|sl.tail_expr().map(Into::into)).flatten().into_iter().collect()
         };
         ret
     }
@@ -670,7 +673,11 @@ impl From<FormatArgsExpr> for RSFormatArgsExpr {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct RSIfExpr {pub(crate) ast_node: RSNode}
 impl From<IfExpr> for RSIfExpr {
-    fn from(node: IfExpr ) -> Self {RSIfExpr{ast_node: node.syntax().into()}}
+    fn from(node: IfExpr ) -> Self {
+        RSIfExpr{
+            ast_node: node.syntax().into()
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -822,9 +829,14 @@ impl From<RefExpr> for RSRefExpr {
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct RSReturnExpr {pub(crate) ast_node: RSNode}
+pub struct RSReturnExpr {pub(crate) ast_node: RSNode, pub expr: Vec<RSExpr>}
 impl From<ReturnExpr> for RSReturnExpr {
-    fn from(node: ReturnExpr ) -> Self {RSReturnExpr{ast_node: node.syntax().into()}}
+    fn from(node: ReturnExpr ) -> Self {
+        RSReturnExpr{
+            ast_node: node.syntax().into(),
+            expr: node.expr().map(Into::into).into_iter().collect()
+        }
+    }
 }
 #[derive(uniffi::Record)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

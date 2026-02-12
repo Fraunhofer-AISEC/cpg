@@ -30,6 +30,7 @@ import uniffi.cpgrust.RsExpr
 import uniffi.cpgrust.RsItem
 import uniffi.cpgrust.RsNode
 import uniffi.cpgrust.RsStmt
+import uniffi.cpgrust.RsType
 
 /**
  * I dislike accessing a field by continuous extending of an access function, but Rust does not
@@ -41,6 +42,7 @@ fun RsAst.astNode(): RsNode {
         is RsAst.RustExpr -> this.v1.astNode()
         is RsAst.RustItem -> this.v1.astNode()
         is RsAst.RustStmt -> this.v1.astNode()
+        is RsAst.RustType -> this.v1.astNode()
         is RsAst.RustAbi -> this.v1.astNode
         is RsAst.RustProblem -> this.v1.astNode
     }
@@ -119,5 +121,24 @@ fun RsStmt.astNode(): RsNode {
         is RsStmt.ExprStmt -> this.v1.astNode
         is RsStmt.LetStmt -> this.v1.astNode
         is RsStmt.Item -> this.v1.astNode()
+    }
+}
+
+fun RsType.astNode(): RsNode {
+    return when (this) {
+        is RsType.ArrayType -> this.v1.astNode
+        is RsType.DynTraitType -> this.v1.astNode
+        is RsType.FnPtrType -> this.v1.astNode
+        is RsType.ForType -> this.v1.astNode
+        is RsType.ImplTraitType -> this.v1.astNode
+        is RsType.InferType -> this.v1.astNode
+        is RsType.MacroType -> this.v1.astNode
+        is RsType.NeverType -> this.v1.astNode
+        is RsType.ParenType -> this.v1.astNode
+        is RsType.PathType -> this.v1.astNode
+        is RsType.PtrType -> this.v1.astNode
+        is RsType.RefType -> this.v1.astNode
+        is RsType.SliceType -> this.v1.astNode
+        is RsType.TupleType -> this.v1.astNode
     }
 }
