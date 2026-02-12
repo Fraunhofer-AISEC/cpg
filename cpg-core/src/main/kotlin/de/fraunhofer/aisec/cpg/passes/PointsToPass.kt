@@ -1344,7 +1344,20 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
         val mapDstToSrc = ConcurrentIdentityHashMap<Node, ConcurrentIdentitySet<MapDstToSrcEntry>>()
 
         // The toIdentitySet avoids having the same elements multiple times
-        val invokes = currentNode.invokes.toConcurrentIdentitySet()
+        var invokes = currentNode.invokes.toConcurrentIdentitySet()
+        // If we have multiple functions with the same name and the same signature and one has an
+        // empty body, we assume that this is from the header so we ignore it
+        invokes =
+            invokes.mapNotNullTo(ConcurrentIdentitySet()) { inv ->
+                if (
+                    inv.body == null &&
+                        // If the body is empty, check if we have the "real" functionDeclaration
+                        // somewhere in our list
+                        invokes.any { it != inv && it.name == inv.name && it.type == inv.type }
+                )
+                    null
+                else inv
+            }
         invokes.forEach { invoke ->
             val inv = calculateFunctionSummaries(invoke)
             if (inv != null) {
@@ -1352,8 +1365,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                     calculateIncomingCallingContexts(lattice, inv, currentNode, doubleState)
 
                 // If we have a FunctionSummary, we push the values of the arguments and
-                // return value
-                // after executing the function call to our doubleState.
+                // return value after executing the function call to our doubleState.
                 // We can't go through all levels at once as a change at a lower level may
                 // affect a higher level. So let's do this step by step
                 for (depth in 0..3) {
