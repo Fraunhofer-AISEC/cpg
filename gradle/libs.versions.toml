@@ -1,17 +1,17 @@
 [versions]
 kotlin = "2.3.0"
-kotlinx-json = "1.9.0"
+kotlinx-json = "1.10.0"
 neo4j = "4.0.10"
 neo4j5 = "5.28.2"
 log4j = "2.25.3"
 spotless = "8.1.0"
-publish = "0.35.0"
+publish = "0.36.0"
 sootup = "2.0.0"
 slf4j = "2.0.16"
 clikt = "5.1.0"
 kaml = "0.104.0"
 sarif4k = "0.6.0"
-ktor = "3.3.0"
+ktor = "3.4.0"
 node = "22.14.0"
 deno-plugin = "0.1.5"
 
@@ -67,7 +67,7 @@ ktor-server-test-host = { module = "io.ktor:ktor-server-test-host", version.ref 
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-server-cio = { module = "io.ktor:ktor-server-cio", version.ref = "ktor" }
 
-mcp = {module = "io.modelcontextprotocol:kotlin-sdk", version = "0.8.0"}
+mcp = {module = "io.modelcontextprotocol:kotlin-sdk", version = "0.8.3"}
 
 # test
 junit-params = { module = "org.junit.jupiter:junit-jupiter-params", version = "5.14.1"}

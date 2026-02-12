@@ -142,7 +142,7 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
 
         // Make sure, that our top level is set either way
         val topLevel =
-            // If this file is part of an include, we set the top level to the root of the include
+            // If this file is part of an include, we set the top level to the root of the include.
             when {
                 dependency != null -> {
                     isDependency = true
@@ -321,9 +321,9 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
                     // Create an anonymous struct, this will add it to the scope manager. This is
                     // somewhat duplicate, but the easiest for now. We need to create it in the
                     // global scope to avoid namespace issues
-                    var record =
+                    val record =
                         scopeManager.withScope(scopeManager.globalScope) {
-                            var record = specificationHandler.buildRecordDeclaration(type, name)
+                            val record = specificationHandler.buildRecordDeclaration(type, name)
                             scopeManager.addDeclaration(record)
                             currentTU?.declarations += record
                             record
@@ -395,6 +395,7 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
         return Pair(type, variadic)
     }
 
+    // TODO function is never used -> missing implementation?
     private fun isBuiltinType(name: String): Boolean {
         return language.primitiveTypeNames.contains(name)
     }
