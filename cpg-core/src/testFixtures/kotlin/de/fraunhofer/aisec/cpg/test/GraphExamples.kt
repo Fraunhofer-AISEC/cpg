@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,8 +23,10 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg
+package de.fraunhofer.aisec.cpg.test
 
+import de.fraunhofer.aisec.cpg.InferenceConfiguration
+import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.ClassTestLanguage
 import de.fraunhofer.aisec.cpg.frontends.StructTestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
@@ -33,7 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.autoType
 import de.fraunhofer.aisec.cpg.graph.builder.*
 import de.fraunhofer.aisec.cpg.graph.newInitializerListExpression
 import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.types.PointerType.PointerOrigin.POINTER
+import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.net.URI
@@ -299,7 +301,12 @@ class GraphExamples {
                         // The main method
                         function("main", t("int")) {
                             body {
-                                declare { variable("node", t("T").reference(POINTER)) }
+                                declare {
+                                    variable(
+                                        "node",
+                                        t("T").reference(PointerType.PointerOrigin.POINTER),
+                                    )
+                                }
                                 member("value", ref("node"), "->") assign literal(42, t("int"))
                                 member("next", ref("node"), "->") assign ref("node")
                                 memberCall(
@@ -526,7 +533,7 @@ class GraphExamples {
                         function("somefunc") {
                             body {
                                 declare { variable("i", t("int")) { literal(0, t("int")) } }
-                                ref("i") += literal(0, t("int"))
+                                ref("i") plusAssign literal(0, t("int"))
                                 returnStmt { isImplicit = true }
                             }
                         }
