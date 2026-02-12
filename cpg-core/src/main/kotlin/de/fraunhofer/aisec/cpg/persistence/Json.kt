@@ -66,7 +66,7 @@ fun TranslationResult.createJsonGraph(): JsonGraph {
     val nodesJs =
         nodes.map {
             JsonNode(
-                it.legacyId!!,
+                it.legacyId,
                 it::class.labels,
                 it.properties().filter { prop -> prop.key != "id" },
             )
@@ -79,9 +79,9 @@ fun TranslationResult.createJsonGraph(): JsonGraph {
             JsonEdge(
                 idx.toLong(),
                 rel["type"] as String,
-                rel["startId"] as Long,
-                rel["endId"] as Long,
-                rel.filterKeys { !arrayOf("type", "startId", "endId").contains(it) },
+                rel["startLegacyId"] as Long,
+                rel["endLegacyId"] as Long,
+                rel.filterKeys { !arrayOf("type", "startLegacyId", "endLegacyId").contains(it) },
             )
         }
 

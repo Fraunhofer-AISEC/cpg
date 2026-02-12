@@ -399,18 +399,21 @@ fun List<Node>.collectRelationships(): List<de.fraunhofer.aisec.cpg.persistence.
                         value.map { edge ->
                             mapOf(
                                 "startId" to edge.start.id.toString(),
+                                "startLegacyId" to edge.start.legacyId,
                                 "endId" to edge.end.id.toString(),
+                                "endLegacyId" to edge.end.legacyId,
                                 "type" to entry.key,
                             ) + edge.properties()
                         }
                 }
-
                 is List<*> -> {
                     relationships +=
                         value.filterIsInstance<Node>().map { end ->
                             mapOf(
                                 "startId" to node.id.toString(),
+                                "startLegacyId" to node.legacyId,
                                 "endId" to end.id.toString(),
+                                "endLegacyId" to end.legacyId,
                                 "type" to entry.key,
                             )
                         }
@@ -419,7 +422,9 @@ fun List<Node>.collectRelationships(): List<de.fraunhofer.aisec.cpg.persistence.
                     relationships +=
                         mapOf(
                             "startId" to node.id.toString(),
+                            "startLegacyId" to node.legacyId,
                             "endId" to value.id.toString(),
+                            "endLegacyId" to value.legacyId,
                             "type" to entry.key,
                         )
                 }
