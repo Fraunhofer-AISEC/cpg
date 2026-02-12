@@ -65,8 +65,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         val block = newBlock(rawNode = node)
         frontend.scopeManager.enterScope(block)
 
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i)
+        for (child in node.children) {
             if (child.isNamed && child.type != "{" && child.type != "}" && child.type != "label") {
                 block.statements += handle(child)
             }
@@ -78,12 +77,11 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
     /**
      * Checks whether [node] has a `label` child and, if so, wraps [stmt] in a [LabelStatement].
-     * Otherwise returns [stmt] unchanged. This is used for labeled blocks (`'label: { ... }`).
+     * Otherwise, returns [stmt] unchanged. This is used for labeled blocks (`'label: { ... }`).
      */
     internal fun wrapWithLabel(node: TSNode, stmt: Statement): Statement {
         var labelNode: TSNode? = null
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i)
+        for (child in node.children) {
             if (child.type == "label") {
                 labelNode = child
                 break
@@ -91,7 +89,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         }
         return if (labelNode != null) {
             val labelStmt = newLabelStatement(rawNode = node)
-            val code = frontend.codeOf(labelNode) ?: ""
+            val code = labelNode.text()
             // Labels look like 'outer: — strip the leading quote and trailing colon
             labelStmt.label = code.removePrefix("'").removeSuffix(":")
             labelStmt.subStatement = stmt
@@ -102,7 +100,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleLetDeclaration(node: TSNode): Statement {
-        val patternNode = node.getChildByFieldName("pattern")
+        val patternNode = node["pattern"]
 
         // Handle tuple destructuring: let (a, b) = ...
         if (patternNode != null && patternNode.type == "tuple_pattern") {
@@ -118,32 +116,29 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             if (patternNode.type == "mut_pattern") {
                 isMutable = true
                 // The actual identifier is a child of mut_pattern
-                val innerPattern =
-                    patternNode.getNamedChild(0) ?: patternNode.getChildByFieldName("pattern")
+                val innerPattern = patternNode.getNamedChild(0) ?: patternNode["pattern"]
                 actualName =
                     if (innerPattern != null && !innerPattern.isNull) {
-                        frontend.codeOf(innerPattern) ?: ""
+                        innerPattern.text()
                     } else {
                         // Fallback: use full code minus "mut "
-                        (frontend.codeOf(patternNode) ?: "").removePrefix("mut ").trim()
+                        patternNode.text().removePrefix("mut ").trim()
                     }
             } else {
-                actualName = frontend.codeOf(patternNode) ?: ""
+                actualName = patternNode.text()
             }
         } else {
             // Fallback: first identifier
-            for (i in 0 until node.childCount) {
-                val child = node.getChild(i)
+            for (child in node.children) {
                 if (child.isNamed && child.type == "identifier") {
-                    actualName = frontend.codeOf(child) ?: ""
+                    actualName = child.text()
                     break
                 }
             }
         }
 
         // Also check for a standalone "mutable_specifier" child of the let_declaration
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i)
+        for (child in node.children) {
             if (child.type == "mutable_specifier") {
                 isMutable = true
                 break
@@ -155,18 +150,17 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             variable.annotations += newAnnotation("mut", rawNode = node)
         }
 
-        val typeNode = node.getChildByFieldName("type")
+        val typeNode = node["type"]
         if (typeNode != null) {
             variable.type = frontend.typeOf(typeNode)
         }
 
         // Determine the value node and check if it is a labeled block
-        var valueNode = node.getChildByFieldName("value")
+        var valueNode = node["value"]
         if (valueNode == null || valueNode.isNull) {
             // Fallback: search for a node after '='
             var foundEqual = false
-            for (i in 0 until node.childCount) {
-                val child = node.getChild(i)
+            for (child in node.children) {
                 if (child.type == "=") {
                     foundEqual = true
                 } else if (foundEqual && child.isNamed && child.type != ";") {
@@ -199,17 +193,16 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
         // Create a VariableDeclaration for each element in the tuple pattern
         val elements = mutableListOf<VariableDeclaration>()
-        for (i in 0 until patternNode.childCount) {
-            val child = patternNode.getChild(i)
+        for (child in patternNode.children) {
             if (child.isNamed) {
-                val name = frontend.codeOf(child) ?: ""
+                val name = child.text()
                 val variable = newVariableDeclaration(name, rawNode = child)
                 elements += variable
             }
         }
 
         // Parse the initializer
-        val valueNode = node.getChildByFieldName("value")
+        val valueNode = node["value"]
         val initializer =
             if (valueNode != null) {
                 frontend.expressionHandler.handle(valueNode) as? Expression
@@ -230,8 +223,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     private fun handleReturnExpression(node: TSNode): ReturnStatement {
         val ret = newReturnStatement(rawNode = node)
         // In Rust return_expression, the value is often a child
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i)
+        for (child in node.children) {
             if (child.isNamed && child.type != "return") {
                 ret.returnValue = frontend.expressionHandler.handle(child) as? Expression
                 break
@@ -243,15 +235,14 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     private fun handleIfExpression(node: TSNode): IfStatement {
         val ifStmt = newIfStatement(rawNode = node)
 
-        var condition = node.getChildByFieldName("condition")
+        var condition = node["condition"]
         if (condition != null && condition.isNull) condition = null
 
         if (condition != null) {
             ifStmt.condition = frontend.expressionHandler.handle(condition) as? Expression
         } else {
             // Fallback: search for a named child that isn't 'if' or '{' or 'block'
-            for (i in 0 until node.childCount) {
-                val child = node.getChild(i)
+            for (child in node.children) {
                 if (
                     !child.isNull &&
                         child.isNamed &&
@@ -269,12 +260,12 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         // Check for bindings (if let)
         val bindings =
             if (condition != null && condition.type == "let_condition") {
-                extractBindings(condition.getChildByFieldName("pattern"))
+                extractBindings(condition["pattern"])
             } else {
                 emptyList<VariableDeclaration>()
             }
 
-        val consequence = node.getChildByFieldName("consequence")
+        val consequence = node["consequence"]
         if (consequence != null && !consequence.isNull) {
             ifStmt.thenStatement =
                 if (bindings.isNotEmpty()) {
@@ -284,8 +275,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
                 }
         } else {
             // Fallback: the block is usually the consequence
-            for (i in 0 until node.childCount) {
-                val child = node.getChild(i)
+            for (child in node.children) {
                 if (!child.isNull && child.type == "block") {
                     ifStmt.thenStatement =
                         if (bindings.isNotEmpty()) {
@@ -298,7 +288,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             }
         }
 
-        val alternative = node.getChildByFieldName("alternative")
+        val alternative = node["alternative"]
         if (alternative != null && !alternative.isNull) {
             // Alternative can be another if_expression or a block
             // In Rust Tree-sitter, alternative is often an 'else_clause' node
@@ -306,8 +296,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
                 if (alternative.type == "else_clause") {
                     // Search for a named child in else_clause
                     var found: TSNode? = null
-                    for (j in 0 until alternative.childCount) {
-                        val c = alternative.getChild(j)
+                    for (c in alternative.children) {
                         if (!c.isNull && c.isNamed && c.type != "else") {
                             found = c
                             break
@@ -328,7 +317,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     private fun handleWhileExpression(node: TSNode): Statement {
         val whileStmt = newWhileStatement(rawNode = node)
 
-        var condition = node.getChildByFieldName("condition")
+        var condition = node["condition"]
         if (condition != null && condition.isNull) condition = null
 
         if (condition != null) {
@@ -338,12 +327,12 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         // Check for bindings (while let)
         val bindings =
             if (condition != null && condition.type == "let_condition") {
-                extractBindings(condition.getChildByFieldName("pattern"))
+                extractBindings(condition["pattern"])
             } else {
                 emptyList<VariableDeclaration>()
             }
 
-        val body = node.getChildByFieldName("body")
+        val body = node["body"]
         if (body != null && !body.isNull) {
             whileStmt.statement =
                 if (bindings.isNotEmpty()) {
@@ -353,10 +342,9 @@ class StatementHandler(frontend: RustLanguageFrontend) :
                 }
         }
 
-        var label = node.getChildByFieldName("label")
+        var label = node["label"]
         if (label == null || label.isNull) {
-            for (i in 0 until node.childCount) {
-                val child = node.getChild(i)
+            for (child in node.children) {
                 if (child.type == "loop_label" || child.type == "label") {
                     label = child
                     break
@@ -366,7 +354,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
         return if (label != null && !label.isNull) {
             val labelStmt = newLabelStatement(rawNode = node)
-            val code = frontend.codeOf(label) ?: ""
+            val code = label.text()
             labelStmt.label = code.removePrefix("'")
             labelStmt.subStatement = whileStmt
             labelStmt
@@ -380,15 +368,14 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         // Infinite loop: while(true)
         loop.condition = newLiteral(true, primitiveType("bool"), rawNode = node).implicit()
 
-        val body = node.getChildByFieldName("body")
+        val body = node["body"]
         if (body != null && !body.isNull) {
             loop.statement = handle(body)
         }
 
-        var label = node.getChildByFieldName("label")
+        var label = node["label"]
         if (label == null || label.isNull) {
-            for (i in 0 until node.childCount) {
-                val child = node.getChild(i)
+            for (child in node.children) {
                 if (child.type == "loop_label" || child.type == "label") {
                     label = child
                     break
@@ -398,7 +385,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
         return if (label != null && !label.isNull) {
             val labelStmt = newLabelStatement(rawNode = node)
-            val code = frontend.codeOf(label) ?: ""
+            val code = label.text()
             labelStmt.label = code.removePrefix("'")
             labelStmt.subStatement = loop
             labelStmt
@@ -412,10 +399,10 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         frontend.scopeManager.enterScope(forEach)
 
         // Pattern is the loop variable (e.g., "x" in "for x in items")
-        val pattern = node.getChildByFieldName("pattern")
+        val pattern = node["pattern"]
         if (pattern != null && !pattern.isNull) {
             val declStmt = newDeclarationStatement(rawNode = pattern)
-            val name = frontend.codeOf(pattern) ?: ""
+            val name = pattern.text()
             val variable = newVariableDeclaration(name, rawNode = pattern)
             frontend.scopeManager.addDeclaration(variable)
             declStmt.addDeclaration(variable)
@@ -429,7 +416,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         }
 
         // Body is the loop block
-        val body = node.getChildByFieldName("body")
+        val body = node["body"]
         if (body != null && !body.isNull) {
             forEach.statement = handle(body)
         }
@@ -437,10 +424,9 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         frontend.scopeManager.leaveScope(forEach)
 
         // Check for loop label
-        var label: TSNode? = node.getChildByFieldName("label")
+        var label: TSNode? = node["label"]
         if (label == null || label.isNull) {
-            for (i in 0 until node.childCount) {
-                val child = node.getChild(i)
+            for (child in node.children) {
                 if (child.type == "loop_label" || child.type == "label") {
                     label = child
                     break
@@ -450,7 +436,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
         return if (label != null && !label.isNull) {
             val labelStmt = newLabelStatement(rawNode = node)
-            val code = frontend.codeOf(label) ?: ""
+            val code = label.text()
             labelStmt.label = code.removePrefix("'")
             labelStmt.subStatement = forEach
             labelStmt
@@ -472,8 +458,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         }
 
         if (node.type == "block") {
-            for (i in 0 until node.childCount) {
-                val child = node.getChild(i)
+            for (child in node.children) {
                 if (
                     child.isNamed && child.type != "{" && child.type != "}" && child.type != "label"
                 ) {
@@ -494,13 +479,12 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
         when (pattern.type) {
             "identifier" -> {
-                val name = frontend.codeOf(pattern) ?: ""
+                val name = pattern.text()
                 vars += newVariableDeclaration(name, rawNode = pattern)
             }
             "tuple_struct_pattern" -> {
-                val typeChild = pattern.getChildByFieldName("type")
-                for (i in 0 until pattern.childCount) {
-                    val child = pattern.getChild(i)
+                val typeChild = pattern["type"]
+                for (child in pattern.children) {
                     val isType =
                         if (typeChild != null && !typeChild.isNull) {
                             child.startByte == typeChild.startByte &&
@@ -515,8 +499,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
                 }
             }
             "tuple_pattern" -> {
-                for (i in 0 until pattern.childCount) {
-                    val child = pattern.getChild(i)
+                for (child in pattern.children) {
                     if (child.isNamed && child.type != "(" && child.type != ")") {
                         vars += extractBindings(child)
                     }
@@ -525,9 +508,8 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             "struct_pattern" -> {
                 // Point { x, y } or Point { x: a, y: b }
                 // Skip the type child, recurse into field_pattern children
-                val typeChild = pattern.getChildByFieldName("type")
-                for (i in 0 until pattern.childCount) {
-                    val child = pattern.getChild(i)
+                val typeChild = pattern["type"]
+                for (child in pattern.children) {
                     val isType =
                         if (typeChild != null && !typeChild.isNull) {
                             child.startByte == typeChild.startByte &&
@@ -542,16 +524,16 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             }
             "field_pattern" -> {
                 // Can be shorthand `x` (binds x) or `x: pattern` (binds from pattern)
-                val nameNode = pattern.getChildByFieldName("name")
-                val patternChild = pattern.getChildByFieldName("pattern")
+                val nameNode = pattern["name"]
+                val patternChild = pattern["pattern"]
                 if (patternChild != null && !patternChild.isNull) {
                     vars += extractBindings(patternChild)
                 } else if (nameNode != null && !nameNode.isNull) {
-                    val name = frontend.codeOf(nameNode) ?: ""
+                    val name = nameNode.text()
                     vars += newVariableDeclaration(name, rawNode = nameNode)
                 } else {
                     // Fallback: treat the whole node as a binding
-                    val name = frontend.codeOf(pattern) ?: ""
+                    val name = pattern.text()
                     if (name.isNotEmpty()) {
                         vars += newVariableDeclaration(name, rawNode = pattern)
                     }
@@ -559,8 +541,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             }
             "slice_pattern" -> {
                 // [first, .., last] — recurse into children, skip remaining_field_pattern
-                for (i in 0 until pattern.childCount) {
-                    val child = pattern.getChild(i)
+                for (child in pattern.children) {
                     if (child.isNamed && child.type != "remaining_field_pattern") {
                         vars += extractBindings(child)
                     }
@@ -596,8 +577,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             }
             else -> {
                 // Generic fallback: recurse into named children
-                for (i in 0 until pattern.childCount) {
-                    val child = pattern.getChild(i)
+                for (child in pattern.children) {
                     if (child.isNamed) vars += extractBindings(child)
                 }
             }

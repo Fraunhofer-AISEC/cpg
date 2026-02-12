@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.rust
 
+import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
@@ -62,11 +63,10 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleFunctionItem(node: TSNode): Declaration {
-        val nameNode = node.getChildByFieldName("name")
-        val name = nameNode?.let { frontend.codeOf(it) } ?: ""
+        val nameNode = node["name"]
+        val name = nameNode.text()
 
-        val recordDeclaration =
-            (frontend.scopeManager.currentScope as? RecordScope)?.astNode as? RecordDeclaration
+        val recordDeclaration = frontend.scopeManager.currentRecord
 
         val func =
             if (recordDeclaration != null) {
@@ -81,25 +81,25 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             }
 
         // Check for async modifier
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i)
+        for (child in node.children) {
             if (child.type == "function_modifiers") {
-                for (j in 0 until child.childCount) {
-                    val modifier = child.getChild(j)
+                for (modifier in child.children) {
                     if (modifier.type == "async") {
+                        // We don't fully support async modifiers yet, so we just add an annotation
                         val annotation = newAnnotation("Async", rawNode = modifier)
                         func.annotations += annotation
                         break
                     }
                 }
             } else if (child.type == "async") {
+                // We don't fully support async modifiers yet, so we just add an annotation
                 val annotation = newAnnotation("Async", rawNode = child)
                 func.annotations += annotation
                 break
             }
         }
 
-        val typeParameters = node.getChildByFieldName("type_parameters")
+        val typeParameters = node["type_parameters"]
         val template =
             if (typeParameters != null && !typeParameters.isNull) {
                 val t = newFunctionTemplateDeclaration(name, rawNode = node)
@@ -115,21 +115,20 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
         frontend.scopeManager.enterScope(func)
 
-        val parameters = node.getChildByFieldName("parameters")
+        val parameters = node["parameters"]
         if (parameters != null) {
             handleParameters(parameters, func)
         }
 
-        val returnTypeNode = node.getChildByFieldName("return_type")
+        val returnTypeNode = node["return_type"]
         if (returnTypeNode != null) {
             func.returnTypes = listOf(frontend.typeOf(returnTypeNode))
         }
 
-        var whereClause = node.getChildByFieldName("where_clause")
+        var whereClause = node["where_clause"]
         if (whereClause == null || whereClause.isNull) {
             // Fallback: search for where_clause child by type
-            for (i in 0 until node.childCount) {
-                val c = node.getChild(i)
+            for (c in node.children) {
                 if (c.type == "where_clause") {
                     whereClause = c
                     break
@@ -140,7 +139,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             handleWhereClause(whereClause)
         }
 
-        val body = node.getChildByFieldName("body")
+        val body = node["body"]
         if (body != null) {
             func.body = frontend.statementHandler.handle(body)
         }
@@ -155,14 +154,13 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleWhereClause(node: TSNode) {
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i)
+        for (child in node.children) {
             if (child.type == "where_predicate") {
-                val left = child.getChildByFieldName("left")
-                val bounds = child.getChildByFieldName("bounds")
+                val left = child["left"]
+                val bounds = child["bounds"]
                 if (left != null && bounds != null && !left.isNull && !bounds.isNull) {
-                    val typeName = frontend.codeOf(left) ?: ""
-                    // Look up existing TypeParameterDeclaration to add bounds to its type
+                    val typeName = left.text()
+                    // Look up the existing TypeParameterDeclaration to add bounds to its type
                     val lookupName = Name(typeName, null, language.namespaceDelimiter)
                     val typeParamDecl =
                         frontend.scopeManager
@@ -179,11 +177,10 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
     private fun handleTypeParameters(node: TSNode, template: TemplateDeclaration) {
         if (node.isNull) return
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i)
+        for (child in node.children) {
             // Handle lifetime parameters (e.g., 'a in <'a, T>)
             if (child.type == "lifetime") {
-                val name = frontend.codeOf(child) ?: ""
+                val name = child.text()
                 val typeParam = newTypeParameterDeclaration(name, rawNode = child)
                 template.addDeclaration(typeParam)
                 frontend.scopeManager.addDeclaration(typeParam)
@@ -196,17 +193,17 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             ) {
                 // tree-sitter returns non-Java-null TSNode for missing fields,
                 // so we must check isNull explicitly
-                var nameNode = child.getChildByFieldName("left")
+                var nameNode = child["left"]
                 if (nameNode == null || nameNode.isNull) {
-                    nameNode = child.getChildByFieldName("name")
+                    nameNode = child["name"]
                 }
                 val name =
                     if (nameNode != null && !nameNode.isNull) frontend.codeOf(nameNode)
-                    else frontend.codeOf(child) ?: ""
+                    else child.text()
                 val typeParam = newTypeParameterDeclaration(name, rawNode = child)
 
                 if (child.type == "constrained_type_parameter") {
-                    val boundsNode = child.getChildByFieldName("bounds")
+                    val boundsNode = child["bounds"]
                     if (boundsNode != null && !boundsNode.isNull) {
                         parseTraitBounds(boundsNode, typeParam.type)
                     }
@@ -221,8 +218,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     private fun parseTraitBounds(node: TSNode, type: Type) {
         // Rust trait bounds can be a single trait or a list separated by +
         // In tree-sitter-rust, trait_bounds contains several children
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i)
+        for (child in node.children) {
             if (child.isNamed) {
                 // It's likely a type_identifier or a path
                 val boundType = frontend.typeHandler.handle(child)
@@ -232,19 +228,18 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleParameters(node: TSNode, func: FunctionDeclaration) {
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i)
+        for (child in node.children) {
             if (child.type == "parameter") {
-                val pattern = child.getChildByFieldName("pattern")
+                val pattern = child["pattern"]
                 var name = pattern?.let { frontend.codeOf(it) } ?: ""
-                val typeNode = child.getChildByFieldName("type")
+                val typeNode = child["type"]
 
                 // Check for mut keyword in pattern
                 val isMut = pattern != null && !pattern.isNull && pattern.type == "mut_pattern"
                 if (isMut) {
                     val inner = pattern.getNamedChild(0)
                     if (inner != null && !inner.isNull) {
-                        name = frontend.codeOf(inner) ?: ""
+                        name = inner.text()
                     } else {
                         name = name.removePrefix("mut ").trim()
                     }
@@ -273,8 +268,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             // Check if it's &self, &mut self, or self
             var isMut = false
             var isRef = false
-            for (i in 0 until node.childCount) {
-                val child = node.getChild(i)
+            for (child in node.children) {
                 if (child.type == "&") isRef = true
                 if (child.type == "mutable_specifier") isMut = true
             }
@@ -289,12 +283,12 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleStructItem(node: TSNode): Declaration {
-        val nameNode = node.getChildByFieldName("name")
+        val nameNode = node["name"]
         val name = nameNode?.let { frontend.codeOf(it) } ?: ""
 
         val record = newRecordDeclaration(name, "struct", rawNode = node)
 
-        val typeParameters = node.getChildByFieldName("type_parameters")
+        val typeParameters = node["type_parameters"]
         val template =
             if (typeParameters != null && !typeParameters.isNull) {
                 val t = newRecordTemplateDeclaration(name, rawNode = node)
@@ -310,14 +304,13 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
         frontend.scopeManager.enterScope(record)
 
-        val body = node.getChildByFieldName("body")
+        val body = node["body"]
         if (body != null && !body.isNull) {
-            for (i in 0 until body.childCount) {
-                val child = body.getChild(i)
+            for (child in body.children) {
                 if (child.type == "field_declaration") {
-                    val fieldNameNode = child.getChildByFieldName("name")
+                    val fieldNameNode = child["name"]
                     val fieldName = fieldNameNode?.let { frontend.codeOf(it) } ?: ""
-                    val fieldTypeNode = child.getChildByFieldName("type")
+                    val fieldTypeNode = child["type"]
 
                     val field =
                         newFieldDeclaration(
@@ -327,8 +320,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                         )
 
                     // Check for visibility modifier (e.g. pub)
-                    for (k in 0 until child.childCount) {
-                        val fieldChild = child.getChild(k)
+                    for (fieldChild in child.children) {
                         if (fieldChild.type == "visibility_modifier") {
                             val vis = frontend.codeOf(fieldChild) ?: "pub"
                             field.annotations += newAnnotation(vis, rawNode = fieldChild)
@@ -344,12 +336,10 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             // Check for tuple struct: struct Pair(i32, i32)
             // In this case there is no "body" field but there is an
             // ordered_field_declaration_list child.
-            for (i in 0 until node.childCount) {
-                val child = node.getChild(i)
+            for (child in node.children) {
                 if (child.type == "ordered_field_declaration_list") {
                     var fieldIdx = 0
-                    for (j in 0 until child.childCount) {
-                        val fieldChild = child.getChild(j)
+                    for (fieldChild in child.children) {
                         if (
                             fieldChild.isNamed &&
                                 fieldChild.type != "visibility_modifier" &&
@@ -380,12 +370,12 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleTraitItem(node: TSNode): Declaration {
-        val nameNode = node.getChildByFieldName("name")
+        val nameNode = node["name"]
         val name = nameNode?.let { frontend.codeOf(it) } ?: ""
 
         val record = newRecordDeclaration(name, "trait", rawNode = node)
 
-        val typeParameters = node.getChildByFieldName("type_parameters")
+        val typeParameters = node["type_parameters"]
         val template =
             if (typeParameters != null && !typeParameters.isNull) {
                 val t = newRecordTemplateDeclaration(name, rawNode = node)
@@ -401,11 +391,10 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
         frontend.scopeManager.enterScope(record)
 
-        val body = node.getChildByFieldName("body")
+        val body = node["body"]
         if (body != null && !body.isNull) {
             val pendingAnnotations = mutableListOf<de.fraunhofer.aisec.cpg.graph.Annotation>()
-            for (i in 0 until body.childCount) {
-                val child = body.getChild(i)
+            for (child in body.children) {
                 if (child.type == "attribute_item") {
                     pendingAnnotations += frontend.parseAttribute(child)
                     continue
@@ -441,7 +430,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleFunctionSignatureItem(node: TSNode): MethodDeclaration {
-        val nameNode = node.getChildByFieldName("name")
+        val nameNode = node["name"]
         val name = nameNode?.let { frontend.codeOf(it) } ?: ""
 
         val recordDeclaration =
@@ -457,12 +446,12 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
         frontend.scopeManager.enterScope(func)
 
-        val parameters = node.getChildByFieldName("parameters")
+        val parameters = node["parameters"]
         if (parameters != null) {
             handleParameters(parameters, func)
         }
 
-        val returnTypeNode = node.getChildByFieldName("return_type")
+        val returnTypeNode = node["return_type"]
         if (returnTypeNode != null) {
             func.returnTypes = listOf(frontend.typeOf(returnTypeNode))
         }
@@ -475,7 +464,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleEnumItem(node: TSNode): EnumDeclaration {
-        val nameNode = node.getChildByFieldName("name")
+        val nameNode = node["name"]
         val name = nameNode?.let { frontend.codeOf(it) } ?: ""
 
         val enumDecl = newEnumDeclaration(name, rawNode = node)
@@ -483,12 +472,11 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         frontend.scopeManager.addDeclaration(enumDecl)
         frontend.scopeManager.enterScope(enumDecl)
 
-        val body = node.getChildByFieldName("body")
+        val body = node["body"]
         if (body != null) {
-            for (i in 0 until body.childCount) {
-                val child = body.getChild(i)
+            for (child in body.children) {
                 if (child.type == "enum_variant") {
-                    val variantNameNode = child.getChildByFieldName("name")
+                    val variantNameNode = child["name"]
                     val variantName = variantNameNode?.let { frontend.codeOf(it) } ?: ""
 
                     val entry = newEnumConstantDeclaration(variantName, rawNode = child)
@@ -504,8 +492,8 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleImplItem(node: TSNode): Declaration {
-        val typeNode = node.getChildByFieldName("type")
-        val traitNode = node.getChildByFieldName("trait")
+        val typeNode = node["type"]
+        val traitNode = node["trait"]
 
         val typeNameString = typeNode?.let { frontend.codeOf(it) } ?: ""
         val typeName = Name(typeNameString, null, language.namespaceDelimiter)
@@ -520,17 +508,16 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         }
 
         if (traitNode != null && !traitNode.isNull) {
-            val traitNameString = frontend.codeOf(traitNode) ?: ""
+            val traitNameString = traitNode.text()
             record.implementedInterfaces += objectType(traitNameString)
         }
 
         frontend.scopeManager.enterScope(record)
 
-        val body = node.getChildByFieldName("body")
+        val body = node["body"]
         if (body != null) {
             val pendingAnnotations = mutableListOf<de.fraunhofer.aisec.cpg.graph.Annotation>()
-            for (i in 0 until body.childCount) {
-                val child = body.getChild(i)
+            for (child in body.children) {
                 if (child.type == "attribute_item") {
                     pendingAnnotations += frontend.parseAttribute(child)
                     continue
@@ -551,18 +538,17 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleModItem(node: TSNode): NamespaceDeclaration {
-        val nameNode = node.getChildByFieldName("name")
+        val nameNode = node["name"]
         val name = nameNode?.let { frontend.codeOf(it) } ?: ""
 
         val mod = newNamespaceDeclaration(name, rawNode = node)
         frontend.scopeManager.addDeclaration(mod)
         frontend.scopeManager.enterScope(mod)
 
-        val body = node.getChildByFieldName("body")
+        val body = node["body"]
         if (body != null) {
             val pendingAnnotations = mutableListOf<de.fraunhofer.aisec.cpg.graph.Annotation>()
-            for (i in 0 until body.childCount) {
-                val child = body.getChild(i)
+            for (child in body.children) {
                 if (child.type == "attribute_item") {
                     pendingAnnotations += frontend.parseAttribute(child)
                     continue
@@ -583,9 +569,9 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleTypeItem(node: TSNode): Declaration {
-        val nameNode = node.getChildByFieldName("name")
+        val nameNode = node["name"]
         val name = nameNode?.let { frontend.codeOf(it) } ?: ""
-        val typeNode = node.getChildByFieldName("type")
+        val typeNode = node["type"]
 
         val targetType = frontend.typeOf(typeNode)
         val aliasType = objectType(name)
@@ -596,7 +582,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleAssociatedType(node: TSNode): Declaration {
-        val nameNode = node.getChildByFieldName("name")
+        val nameNode = node["name"]
         val name = nameNode?.let { frontend.codeOf(it) } ?: ""
 
         // Associated types in traits have no concrete type yet (just a declaration).
@@ -607,7 +593,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         val decl = newTypedefDeclaration(targetType, aliasType, rawNode = node)
 
         // Parse optional trait bounds on the associated type
-        val boundsNode = node.getChildByFieldName("bounds")
+        val boundsNode = node["bounds"]
         if (boundsNode != null && !boundsNode.isNull) {
             parseTraitBounds(boundsNode, aliasType)
         }
@@ -617,7 +603,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleMacroDefinition(node: TSNode): Declaration {
-        val nameNode = node.getChildByFieldName("name")
+        val nameNode = node["name"]
         val name = nameNode?.let { frontend.codeOf(it) } ?: ""
 
         // Model macro_rules! definitions as FunctionDeclarations.
@@ -630,18 +616,18 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleConstItem(node: TSNode): Declaration {
-        val nameNode = node.getChildByFieldName("name")
-        val name = if (nameNode != null && !nameNode.isNull) frontend.codeOf(nameNode) ?: "" else ""
+        val nameNode = node["name"]
+        val name = nameNode.text()
 
         val variable = newVariableDeclaration(name, rawNode = node)
         variable.annotations += newAnnotation("const", rawNode = node)
 
-        val typeNode = node.getChildByFieldName("type")
+        val typeNode = node["type"]
         if (typeNode != null && !typeNode.isNull) {
             variable.type = frontend.typeOf(typeNode)
         }
 
-        val value = node.getChildByFieldName("value")
+        val value = node["value"]
         if (value != null && !value.isNull) {
             variable.initializer = frontend.expressionHandler.handle(value) as? Expression
         }
@@ -651,27 +637,26 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleStaticItem(node: TSNode): Declaration {
-        val nameNode = node.getChildByFieldName("name")
-        val name = if (nameNode != null && !nameNode.isNull) frontend.codeOf(nameNode) ?: "" else ""
+        val nameNode = node["name"]
+        val name = nameNode.text()
 
         val variable = newVariableDeclaration(name, rawNode = node)
         variable.annotations += newAnnotation("static", rawNode = node)
 
         // Check for mut
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i)
+        for (child in node.children) {
             if (child.type == "mutable_specifier") {
                 variable.annotations += newAnnotation("mut", rawNode = child)
                 break
             }
         }
 
-        val typeNode = node.getChildByFieldName("type")
+        val typeNode = node["type"]
         if (typeNode != null && !typeNode.isNull) {
             variable.type = frontend.typeOf(typeNode)
         }
 
-        val value = node.getChildByFieldName("value")
+        val value = node["value"]
         if (value != null && !value.isNull) {
             variable.initializer = frontend.expressionHandler.handle(value) as? Expression
         }
@@ -683,7 +668,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     private fun handleUseDeclaration(node: TSNode): Declaration {
         // Extract the use path as a string
         val argument = node.getNamedChild(0)
-        val path = if (argument != null && !argument.isNull) frontend.codeOf(argument) ?: "" else ""
+        val path = argument.text()
 
         val include = newIncludeDeclaration(path, rawNode = node)
         frontend.scopeManager.addDeclaration(include)

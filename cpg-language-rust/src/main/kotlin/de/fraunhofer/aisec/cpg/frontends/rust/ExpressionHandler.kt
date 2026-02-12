@@ -92,8 +92,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             "or_pattern" -> {
                 // 1 | 2 | 3 — model as a list of alternatives
                 val children = mutableListOf<Expression>()
-                for (i in 0 until node.childCount) {
-                    val child = node.getChild(i)
+                for (child in node.children) {
                     if (child.isNamed) {
                         val expr = handle(child) as? Expression
                         if (expr != null) children += expr
@@ -123,7 +122,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleIntegerLiteral(node: TSNode): Literal<Long> {
-        val code = frontend.codeOf(node) ?: ""
+        val code = node.text()
         // Rust integers can have suffixes (e.g. 1u32) and underscores (e.g. 1_000)
         val valueStr = code.filter { it.isDigit() || it == '-' }
         val value = valueStr.toLongOrNull() ?: 0L
@@ -131,7 +130,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleStringLiteral(node: TSNode): Literal<String> {
-        val code = frontend.codeOf(node) ?: ""
+        val code = node.text()
         return when {
             code.startsWith("b\"") -> {
                 val value = code.removePrefix("b\"").removeSuffix("\"")
@@ -149,20 +148,20 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleBooleanLiteral(node: TSNode): Literal<Boolean> {
-        val code = frontend.codeOf(node) ?: ""
+        val code = node.text()
         val value = code == "true"
         return newLiteral(value, primitiveType("bool"), rawNode = node)
     }
 
     private fun handleIdentifier(node: TSNode): Reference {
-        val name = frontend.codeOf(node) ?: ""
+        val name = node.text()
         return newReference(name, rawNode = node)
     }
 
     private fun handleBinaryExpression(node: TSNode): BinaryOperator {
-        val left = node.getChildByFieldName("left")
-        val right = node.getChildByFieldName("right")
-        val operator = node.getChildByFieldName("operator")
+        val left = node["left"]
+        val right = node["right"]
+        val operator = node["operator"]
 
         val op = newBinaryOperator(operator?.let { frontend.codeOf(it) } ?: "", rawNode = node)
         if (left != null)
@@ -175,7 +174,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     private fun handleUnaryExpression(node: TSNode): UnaryOperator {
         val operator = node.getChild(0) // Usually anonymous
-        val operand = node.getChildByFieldName("operand") ?: node.getNamedChild(0)
+        val operand = node["operand"] ?: node.getNamedChild(0)
 
         val opCode = operator.let { frontend.codeOf(it) } ?: ""
         val op = newUnaryOperator(opCode, postfix = false, prefix = true, rawNode = node)
@@ -186,8 +185,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleAssignmentExpression(node: TSNode): Statement {
-        val left = node.getChildByFieldName("left")
-        val right = node.getChildByFieldName("right")
+        val left = node["left"]
+        val right = node["right"]
 
         val lhs =
             handle(left ?: return newProblemExpression("Missing LHS in assignment")) as? Expression
@@ -205,9 +204,9 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleCompoundAssignmentExpression(node: TSNode): Statement {
-        val left = node.getChildByFieldName("left")
-        val operator = node.getChildByFieldName("operator")
-        val right = node.getChildByFieldName("right")
+        val left = node["left"]
+        val operator = node["operator"]
+        val right = node["right"]
 
         val lhs =
             handle(left ?: return newProblemExpression("Missing LHS in assignment")) as? Expression
@@ -228,15 +227,11 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     private fun handleTupleExpression(node: TSNode): InitializerListExpression {
         val ile = newInitializerListExpression(rawNode = node)
         ile.type = objectType("tuple")
-        val list = mutableListOf<Expression>()
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i)
-            if (child.isNamed) {
-                val expr = handle(child) as? Expression
-                if (expr != null) list += expr
-            }
-        }
-        ile.initializers = list
+        ile.initializers =
+            node.children
+                .filter { it.isNamed }
+                .mapNotNull { handle(it) as? Expression }
+                .toMutableList()
         return ile
     }
 
@@ -244,8 +239,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         val ile = newInitializerListExpression(rawNode = node)
         ile.type = objectType("array")
         val list = mutableListOf<Expression>()
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i)
+        for (child in node.children) {
             if (child.isNamed) {
                 val expr = handle(child) as? Expression
                 if (expr != null) list += expr
@@ -257,9 +251,9 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     private fun handleCallExpression(node: TSNode): Expression {
         val function =
-            node.getChildByFieldName("function")
+            node["function"]
                 ?: return newProblemExpression("Missing function in call", rawNode = node)
-        val arguments = node.getChildByFieldName("arguments")
+        val arguments = node["arguments"]
 
         // Detect turbofish / generic function call: identity::<i32>(42)
         // Tree-sitter AST: call_expression > function: generic_function
@@ -279,8 +273,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             }
 
         if (arguments != null) {
-            for (i in 0 until arguments.childCount) {
-                val arg = arguments.getChild(i)
+            for (arg in arguments.children) {
                 if (arg.isNamed) {
                     val expr = handle(arg) as? Expression
                     if (expr != null) call.addArgument(expr)
@@ -297,8 +290,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         arguments: TSNode?,
     ): Expression {
         // generic_function has children: function (identifier/scoped_identifier) + type_arguments
-        val innerFunction = genericFunction.getChildByFieldName("function")
-        val typeArguments = genericFunction.getChildByFieldName("type_arguments")
+        val innerFunction = genericFunction["function"]
+        val typeArguments = genericFunction["type_arguments"]
 
         val callee =
             if (innerFunction != null && !innerFunction.isNull) {
@@ -312,10 +305,9 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
         // Add type arguments as template parameters
         if (typeArguments != null && !typeArguments.isNull) {
-            for (i in 0 until typeArguments.childCount) {
-                val typeArg = typeArguments.getChild(i)
+            for (typeArg in typeArguments.children) {
                 if (typeArg.isNamed) {
-                    val typeName = frontend.codeOf(typeArg) ?: ""
+                    val typeName = typeArg.text()
                     val type = frontend.typeHandler.handle(typeArg)
                     val typeExpr = newTypeExpression(typeName, type, rawNode = typeArg)
                     call.addTemplateParameter(typeExpr)
@@ -325,8 +317,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
         // Add arguments
         if (arguments != null) {
-            for (i in 0 until arguments.childCount) {
-                val arg = arguments.getChild(i)
+            for (arg in arguments.children) {
                 if (arg.isNamed) {
                     val expr = handle(arg) as? Expression
                     if (expr != null) call.addArgument(expr)
@@ -338,8 +329,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleFieldExpression(node: TSNode): Statement {
-        val value = node.getChildByFieldName("value")
-        val field = node.getChildByFieldName("field")
+        val value = node["value"]
+        val field = node["field"]
 
         val base =
             handle(
@@ -357,23 +348,21 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleMatchExpression(node: TSNode): Statement {
-        val value = node.getChildByFieldName("value")
-        val body = node.getChildByFieldName("body")
+        val value = node["value"]
+        val body = node["body"]
 
         val switch = newSwitchStatement(rawNode = node)
         if (value != null) switch.selector = handle(value) as? Expression
 
         val block = newBlock().implicit()
         if (body != null) {
-            for (i in 0 until body.childCount) {
-                val arm = body.getChild(i)
+            for (arm in body.children) {
                 if (arm.type == "match_arm") {
-                    val pattern = arm.getChildByFieldName("pattern")
-                    val armValue = arm.getChildByFieldName("value")
+                    val pattern = arm["pattern"]
+                    val armValue = arm["value"]
 
                     var guardNode: TSNode? = null
-                    for (k in 0 until arm.childCount) {
-                        val c = arm.getChild(k)
+                    for (c in arm.children) {
                         if (c.type == "if_clause") {
                             guardNode = c
                             break
@@ -392,7 +381,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                     var caseExpr = if (pattern != null) handle(pattern) as? Expression else null
 
                     if (guardNode != null) {
-                        val condition = guardNode.getChildByFieldName("condition")
+                        val condition = guardNode["condition"]
                         if (condition != null) {
                             val guardExpr = handle(condition) as? Expression
                             if (caseExpr != null && guardExpr != null) {
@@ -431,19 +420,17 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleMacroInvocation(node: TSNode): Expression {
-        val macroNode = node.getChildByFieldName("macro")
-        val name = macroNode?.let { frontend.codeOf(it) } ?: ""
+        val macroNode = node["macro"]
+        val name = macroNode.text()
 
         val call =
             newCallExpression(newReference(name, rawNode = macroNode), fqn = name, rawNode = node)
 
         // Extract arguments from the token_tree (tree-sitter doesn't parse macro bodies,
         // but we can extract top-level named children as arguments)
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i)
+        for (child in node.children) {
             if (child.type == "token_tree") {
-                for (j in 0 until child.childCount) {
-                    val arg = child.getChild(j)
+                for (arg in child.children) {
                     if (arg.isNamed && arg.type != "token_tree") {
                         val expr = handle(arg) as? Expression
                         if (expr != null) call.addArgument(expr)
@@ -457,8 +444,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleLetCondition(node: TSNode): Expression {
-        val pattern = node.getChildByFieldName("pattern")
-        val value = node.getChildByFieldName("value")
+        val pattern = node["pattern"]
+        val value = node["value"]
 
         val lhs =
             if (pattern != null) {
@@ -487,10 +474,9 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     private fun handleBreakExpression(node: TSNode): Statement {
         val breakStmt = newBreakStatement(rawNode = node)
-        var label = node.getChildByFieldName("label")
+        var label = node["label"]
         if (label == null || label.isNull) {
-            for (i in 0 until node.childCount) {
-                val c = node.getChild(i)
+            for (c in node.children) {
                 if (c.type == "loop_label" || c.type == "label") {
                     label = c
                     break
@@ -499,7 +485,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         }
 
         if (label != null && !label.isNull) {
-            val code = frontend.codeOf(label) ?: ""
+            val code = label.text()
             breakStmt.label = code.removePrefix("'")
         }
         return breakStmt
@@ -507,10 +493,9 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     private fun handleContinueExpression(node: TSNode): Statement {
         val continueStmt = newContinueStatement(rawNode = node)
-        var label = node.getChildByFieldName("label")
+        var label = node["label"]
         if (label == null || label.isNull) {
-            for (i in 0 until node.childCount) {
-                val c = node.getChild(i)
+            for (c in node.children) {
                 if (c.type == "loop_label" || c.type == "label") {
                     label = c
                     break
@@ -519,14 +504,14 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         }
 
         if (label != null && !label.isNull) {
-            val code = frontend.codeOf(label) ?: ""
+            val code = label.text()
             continueStmt.label = code.removePrefix("'")
         }
         return continueStmt
     }
 
     private fun handleAwaitExpression(node: TSNode): Expression {
-        var expr = node.getChildByFieldName("expression")
+        var expr = node["expression"]
         if (expr == null || expr.isNull) {
             if (node.childCount > 0) {
                 expr = node.getChild(0)
@@ -545,32 +530,31 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleStructExpression(node: TSNode): Expression {
-        val nameNode = node.getChildByFieldName("name")
-        val name = if (nameNode != null && !nameNode.isNull) frontend.codeOf(nameNode) ?: "" else ""
+        val nameNode = node["name"]
+        val name = nameNode.text()
 
         val construct = newConstructExpression(name, rawNode = node)
         construct.type = objectType(name)
 
-        val body = node.getChildByFieldName("body")
+        val body = node["body"]
         if (body != null && !body.isNull) {
-            for (i in 0 until body.childCount) {
-                val child = body.getChild(i)
+            for (child in body.children) {
                 when (child.type) {
                     "field_initializer" -> {
-                        val fieldName = child.getChildByFieldName("field")
-                        val value = child.getChildByFieldName("value")
+                        val fieldName = child["field"]
+                        val value = child["value"]
                         if (
                             fieldName != null && value != null && !fieldName.isNull && !value.isNull
                         ) {
                             val valExpr =
                                 handle(value) as? Expression
                                     ?: newProblemExpression("Invalid field value", rawNode = value)
-                            construct.addArgument(valExpr, frontend.codeOf(fieldName) ?: "")
+                            construct.addArgument(valExpr, fieldName.text())
                         }
                     }
                     "shorthand_field_initializer" -> {
                         // { x } is shorthand for { x: x }
-                        val fieldName = frontend.codeOf(child) ?: ""
+                        val fieldName = child.text()
                         val ref = newReference(fieldName, rawNode = child)
                         construct.addArgument(ref, fieldName)
                     }
@@ -594,8 +578,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     private fun handleMethodCallExpression(node: TSNode): Expression {
         val receiver = node.getNamedChild(0)
-        val methodName = node.getChildByFieldName("name")
-        val arguments = node.getChildByFieldName("arguments")
+        val methodName = node["name"]
+        val arguments = node["arguments"]
 
         val base =
             if (receiver != null && !receiver.isNull) {
@@ -605,14 +589,12 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
                 newProblemExpression("Missing receiver", rawNode = node)
             }
 
-        val name =
-            if (methodName != null && !methodName.isNull) frontend.codeOf(methodName) ?: "" else ""
+        val name = methodName.text()
         val member = newMemberExpression(name, base, rawNode = node)
         val call = newMemberCallExpression(member, rawNode = node)
 
         if (arguments != null && !arguments.isNull) {
-            for (i in 0 until arguments.childCount) {
-                val arg = arguments.getChild(i)
+            for (arg in arguments.children) {
                 if (arg.isNamed) {
                     val expr = handle(arg) as? Expression
                     if (expr != null) call.addArgument(expr)
@@ -648,20 +630,18 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         // Tree-sitter-rust range_expression: children are [start], operator (.., ..=), [end]
         // We need to determine which children are start/end based on position relative to operator
         var operatorIdx = -1
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i)
-            val code = frontend.codeOf(child) ?: ""
+        for (child in node.children) {
+            val code = child.text()
             if (code == ".." || code == "..=") {
-                operatorIdx = i
+                operatorIdx = node.children.indexOf(child)
                 break
             }
         }
 
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i)
+        for (child in node.children) {
             if (child.isNamed) {
                 val expr = handle(child) as? Expression
-                if (i < operatorIdx) {
+                if (node.children.indexOf(child) < operatorIdx) {
                     floor = expr
                 } else {
                     ceiling = expr
@@ -686,8 +666,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     private fun handleTypeCastExpression(node: TSNode): Expression {
         val cast = newCastExpression(rawNode = node)
-        val value = node.getChildByFieldName("value")
-        val type = node.getChildByFieldName("type")
+        val value = node["value"]
+        val type = node["type"]
         if (value != null && !value.isNull) {
             cast.expression =
                 handle(value) as? Expression
@@ -707,23 +687,20 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         frontend.scopeManager.enterScope(func)
 
         // Parse closure parameters
-        val params = node.getChildByFieldName("parameters")
+        val params = node["parameters"]
         if (params != null && !params.isNull) {
-            for (i in 0 until params.childCount) {
-                val child = params.getChild(i)
+            for (child in params.children) {
                 if (child.type == "parameter") {
-                    val pattern = child.getChildByFieldName("pattern")
-                    val pName =
-                        if (pattern != null && !pattern.isNull) frontend.codeOf(pattern) ?: ""
-                        else ""
-                    val typeNode = child.getChildByFieldName("type")
+                    val pattern = child["pattern"]
+                    val pName = pattern.text()
+                    val typeNode = child["type"]
                     val param =
                         newParameterDeclaration(pName, frontend.typeOf(typeNode), rawNode = child)
                     frontend.scopeManager.addDeclaration(param)
                     func.parameters += param
                 } else if (child.isNamed && child.type == "identifier") {
                     // Simple closure param without type: |x| x + 1
-                    val pName = frontend.codeOf(child) ?: ""
+                    val pName = child.text()
                     val param = newParameterDeclaration(pName, unknownType(), rawNode = child)
                     frontend.scopeManager.addDeclaration(param)
                     func.parameters += param
@@ -732,13 +709,13 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         }
 
         // Parse return type if present
-        val returnType = node.getChildByFieldName("return_type")
+        val returnType = node["return_type"]
         if (returnType != null && !returnType.isNull) {
             func.returnTypes = listOf(frontend.typeOf(returnType))
         }
 
         // Parse body - can be a block or a single expression
-        val body = node.getChildByFieldName("body")
+        val body = node["body"]
         if (body != null && !body.isNull) {
             func.body =
                 if (body.type == "block") {
@@ -755,7 +732,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     private fun handleNegativeLiteral(node: TSNode): Expression {
         // negative_literal wraps a numeric literal with unary minus
-        val code = frontend.codeOf(node) ?: ""
+        val code = node.text()
         if (code.contains('.')) {
             val valueStr = code.filter { it.isDigit() || it == '-' || it == '.' }
             val value = valueStr.toDoubleOrNull() ?: 0.0
@@ -768,7 +745,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleFloatLiteral(node: TSNode): Expression {
-        val code = frontend.codeOf(node) ?: ""
+        val code = node.text()
         val valueStr =
             code.filter { it.isDigit() || it == '.' || it == '-' || it == 'e' || it == 'E' }
         val value = valueStr.toDoubleOrNull() ?: 0.0
@@ -776,24 +753,23 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleCharLiteral(node: TSNode): Expression {
-        val code = frontend.codeOf(node) ?: ""
+        val code = node.text()
         val value = code.removeSurrounding("'")
         return newLiteral(value, primitiveType("char"), rawNode = node)
     }
 
     private fun handleScopedIdentifier(node: TSNode): Expression {
         // path::to::item - model as a Reference with full qualified name
-        val name = frontend.codeOf(node) ?: ""
+        val name = node.text()
         return newReference(name, rawNode = node)
     }
 
     private fun handleReferenceExpression(node: TSNode): Expression {
-        val value = node.getChildByFieldName("value")
+        val value = node["value"]
 
         // Check for mutable reference (&mut x)
         var isMut = false
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i)
+        for (child in node.children) {
             if (child.type == "mutable_specifier") {
                 isMut = true
                 break
@@ -819,8 +795,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             } else {
                 // Fallback: look for first named child that is a block
                 var innerBlock: Block? = null
-                for (i in 0 until node.childCount) {
-                    val child = node.getChild(i)
+                for (child in node.children) {
                     if (child.type == "block") {
                         innerBlock = frontend.statementHandler.handleBlock(child)
                         break
@@ -841,8 +816,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             } else {
                 // Fallback: look for first named child that is a block
                 var innerBlock: Block? = null
-                for (i in 0 until node.childCount) {
-                    val child = node.getChild(i)
+                for (child in node.children) {
                     if (child.type == "block") {
                         innerBlock = frontend.statementHandler.handleBlock(child)
                         break
@@ -868,13 +842,13 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             }
 
         // Try to get the index via field name first, then fall back to extracting from code
-        val index = node.getChildByFieldName("index")
+        val index = node["index"]
         val indexName =
             if (index != null && !index.isNull) {
                 frontend.codeOf(index) ?: "0"
             } else {
                 // Fallback: extract the digit after the dot from the full code
-                val code = frontend.codeOf(node) ?: ""
+                val code = node.text()
                 val dotIdx = code.lastIndexOf('.')
                 if (dotIdx >= 0) code.substring(dotIdx + 1).trim() else "0"
             }
@@ -882,7 +856,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleRawStringLiteral(node: TSNode): Expression {
-        val code = frontend.codeOf(node) ?: ""
+        val code = node.text()
         // Strip r#"..."# delimiters: remove leading r, then strip matching # and " pairs
         val withoutR = code.removePrefix("r")
         val hashes = withoutR.takeWhile { it == '#' }.length
@@ -893,10 +867,8 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     private fun handleGenericFunctionReference(node: TSNode): Expression {
         // Fallback for generic_function outside of a call context
-        val innerFunction = node.getChildByFieldName("function")
-        val name =
-            if (innerFunction != null && !innerFunction.isNull) frontend.codeOf(innerFunction) ?: ""
-            else frontend.codeOf(node) ?: ""
+        val innerFunction = node["function"]
+        val name = innerFunction.text().ifEmpty { node.text() }
         return newReference(name, rawNode = node)
     }
 }

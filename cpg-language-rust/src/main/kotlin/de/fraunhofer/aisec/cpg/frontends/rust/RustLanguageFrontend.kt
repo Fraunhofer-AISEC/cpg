@@ -78,8 +78,7 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
     internal fun handleChildren(parent: TSNode, tud: TranslationUnitDeclaration) {
         val pendingAnnotations = mutableListOf<de.fraunhofer.aisec.cpg.graph.Annotation>()
 
-        for (i in 0 until parent.childCount) {
-            val child = parent.getChild(i)
+        for (child in parent.children) {
             if (!child.isNamed) continue
 
             if (child.type == "attribute_item") {
@@ -95,8 +94,7 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
 
             // Check for visibility_modifier as a child of the declaration node
             // (e.g., "pub" in "pub fn foo()")
-            for (j in 0 until child.childCount) {
-                val grandchild = child.getChild(j)
+            for (grandchild in child.children) {
                 if (grandchild.type == "visibility_modifier") {
                     val visibilityText = codeOf(grandchild) ?: "pub"
                     decl.annotations += newAnnotation(visibilityText, rawNode = grandchild)
@@ -112,8 +110,7 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
         // attribute_item has children: #, [, attribute, ]
         // The "attribute" child contains the actual content like "derive(Clone, Debug)"
         var attrContent = ""
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i)
+        for (child in node.children) {
             if (child.type == "attribute") {
                 attrContent = codeOf(child) ?: ""
                 break
@@ -127,12 +124,12 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
     }
 
     override fun codeOf(astNode: TSNode): String? {
-        if (astNode.isNull()) return null
+        if (astNode.isNull) return null
         return content.substring(astNode.startByte, astNode.endByte)
     }
 
     override fun locationOf(astNode: TSNode): PhysicalLocation? {
-        if (astNode.isNull()) return null
+        if (astNode.isNull) return null
         val startPoint = astNode.startPoint
         val endPoint = astNode.endPoint
 
@@ -145,4 +142,25 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
     override fun setComment(node: Node, astNode: TSNode) {
         // TODO
     }
+}
+
+/**
+ * Helper extension to get the children of a [TSNode] as a sequence, which can be more convenient to
+ * work with than the indexed access provided by Tree-sitter.
+ */
+val TSNode.children: Sequence<TSNode>
+    get() = (0 until childCount).asSequence().map { getChild(it) }
+
+/** Helper extension to get a child of a [TSNode] by its name. */
+operator fun TSNode.get(name: String): TSNode? {
+    return this.getChildByFieldName(name)
+}
+
+/**
+ * Helper extension to get the text of a [TSNode] as a string. Returns an empty string if the node
+ * is null.
+ */
+context(handler: RustHandler<*, *>)
+fun TSNode?.text(): String {
+    return this?.let { handler.frontend.codeOf(it) } ?: ""
 }

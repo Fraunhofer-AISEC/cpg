@@ -53,22 +53,22 @@ class TypeHandler(frontend: RustLanguageFrontend) :
             "unit_type" -> objectType("()")
             "never_type" -> objectType("!")
             else -> {
-                objectType(frontend.codeOf(node) ?: "")
+                objectType(node.text())
             }
         }
     }
 
     private fun handlePrimitiveType(node: TSNode): Type {
-        return objectType(frontend.codeOf(node) ?: "")
+        return objectType(node.text())
     }
 
     private fun handleTypeIdentifier(node: TSNode): Type {
-        return objectType(frontend.codeOf(node) ?: "")
+        return objectType(node.text())
     }
 
     private fun handleReferenceType(node: TSNode): Type {
         // reference_type children: &, optional lifetime, optional mutable_specifier, type
-        var typeNode = node.getChildByFieldName("type")
+        var typeNode = node["type"]
         if (typeNode == null || typeNode.isNull) {
             // Fallback: find the last named child that isn't a lifetime or mutable_specifier
             for (i in node.childCount - 1 downTo 0) {
@@ -87,18 +87,18 @@ class TypeHandler(frontend: RustLanguageFrontend) :
 
     private fun handleTupleType(node: TSNode): Type {
         // Rust tuples are complex, but for now we'll just treat them as ObjectType
-        return objectType(frontend.codeOf(node) ?: "")
+        return objectType(node.text())
     }
 
     private fun handleArrayType(node: TSNode): Type {
-        val typeNode = node.getChildByFieldName("type") ?: node.getNamedChild(0)
+        val typeNode = node["type"] ?: node.getNamedChild(0)
         val type = if (typeNode != null) handle(typeNode) else unknownType()
         return type.array()
     }
 
     private fun handleGenericType(node: TSNode): Type {
-        val typeNode = node.getChildByFieldName("type")
-        val typeName = typeNode?.let { frontend.codeOf(it) } ?: ""
+        val typeNode = node["type"]
+        val typeName = typeNode.text()
 
         // TODO: Handle generics (e.g. Vec<i32>)
         return objectType(typeName)
@@ -107,28 +107,26 @@ class TypeHandler(frontend: RustLanguageFrontend) :
     private fun handleFunctionType(node: TSNode): Type {
         // fn(i32, i32) -> i32
         // Model as ObjectType with the full code representation
-        return objectType(frontend.codeOf(node) ?: "fn")
+        return objectType(node.text().ifEmpty { "fn" })
     }
 
     private fun handleAbstractType(node: TSNode): Type {
         // impl Trait
         val traitNode = node.getNamedChild(0)
-        val name =
-            if (traitNode != null && !traitNode.isNull) frontend.codeOf(traitNode) ?: "" else ""
+        val name = traitNode.text()
         return objectType("impl $name")
     }
 
     private fun handleDynamicType(node: TSNode): Type {
         // dyn Trait
         val traitNode = node.getNamedChild(0)
-        val name =
-            if (traitNode != null && !traitNode.isNull) frontend.codeOf(traitNode) ?: "" else ""
+        val name = traitNode.text()
         return objectType("dyn $name")
     }
 
     private fun handleScopedTypeIdentifier(node: TSNode): Type {
         // std::vec::Vec
-        return objectType(frontend.codeOf(node) ?: "")
+        return objectType(node.text())
     }
 
     private fun handlePointerType(node: TSNode): Type {
