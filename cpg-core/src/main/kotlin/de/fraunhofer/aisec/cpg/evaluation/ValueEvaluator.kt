@@ -124,7 +124,7 @@ open class ValueEvaluator(
         }
 
         // If the node is already in the path, we are looping, so we can stop here
-        if (node in this.path) cannotEvaluate(node, this)
+        if (node in this.path) return cannotEvaluate(node, this)
 
         // Add the expression to the current path
         node.let { this.path += it }
