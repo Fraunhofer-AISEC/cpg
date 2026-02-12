@@ -64,7 +64,11 @@ import kotlin.uuid.Uuid
 open class QueryTree<T>(
     value: T,
     var children: List<QueryTree<*>> = emptyList(),
-    var stringRepresentation: String = "",
+    /**
+     * A human-readable string representation of the query tree element. This should contain info
+     * about the (syntactic) meaning or interpretation of this query tree.
+     */
+    stringRepresentation: String = "",
 
     /**
      * The node, to which this current element of the query tree is associated with. This is useful
@@ -85,6 +89,9 @@ open class QueryTree<T>(
     val operator: QueryTreeOperators,
     val collectCallerInfo: Boolean = true,
 ) : Comparable<QueryTree<T>>, HasAssumptions {
+    /** The metric ID is used to track which metric this query tree represents. */
+    var metricId: String? = null
+
     /**
      * Determines if the [QueryTree.value] is acceptable after evaluating the [assumptions] which
      * affect the result.
@@ -92,6 +99,18 @@ open class QueryTree<T>(
     open val confidence: AcceptanceStatus
         get() {
             return calculateConfidence()
+        }
+
+    /**
+     * A human-readable string representation of the query tree element. This should contain info
+     * about the (syntactic) meaning or interpretation of this query tree.
+     */
+    var stringRepresentation: String = stringRepresentation
+        set(fieldValue) {
+            field = fieldValue
+
+            // Update the ID whenever the value changes
+            id = computeId()
         }
 
     /** The value of the [QueryTree] is the result of the query evaluation. */
@@ -137,6 +156,12 @@ open class QueryTree<T>(
         }
 
         checkForSuppression()
+    }
+
+    /** Sets the [metricId] and returns this [QueryTree]. */
+    fun withMetricId(metricId: String?): QueryTree<T> {
+        this.metricId = metricId
+        return this
     }
 
     /**
@@ -248,7 +273,10 @@ open class QueryTree<T>(
                 }
             }
 
-        return Uuid.fromLongs(nodePart ?: 0, childrenIds + Objects.hash(value))
+        return Uuid.fromLongs(
+            nodePart ?: 0,
+            childrenIds + Objects.hash(value, stringRepresentation),
+        )
     }
 
     fun printNicely(depth: Int = 0): String {
@@ -302,8 +330,7 @@ open class QueryTree<T>(
                 // If there are no children, we collect the assumptions from the value
                 // This is useful for cases where the value itself is a HasAssumptions
                 // or a Collection of HasAssumptions
-                val value = this.value
-                when (value) {
+                when (val value = this.value) {
                     is HasAssumptions -> {
                         value.relevantAssumptions()
                     }

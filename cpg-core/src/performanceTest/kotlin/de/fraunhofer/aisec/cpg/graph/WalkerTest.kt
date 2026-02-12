@@ -76,7 +76,7 @@ class WalkerTest : BaseTest() {
 
                 method.body = comp
 
-                record.addMethod(method)
+                record.methods += method
             }
 
             // And a couple of fields
@@ -89,7 +89,7 @@ class WalkerTest : BaseTest() {
                 lit.value = j
                 field.initializer = lit
 
-                record.addField(field)
+                record.fields += field
             }
 
             tu.addDeclaration(record)

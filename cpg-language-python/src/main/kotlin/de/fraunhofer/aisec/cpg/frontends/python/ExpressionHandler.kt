@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import jep.python.PyObject
 
@@ -471,7 +470,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
     }
 
     private fun handleAttribute(node: Python.AST.Attribute): Expression {
-        var base = handle(node.value)
+        val base = handle(node.value)
 
         return newMemberExpression(name = node.attr, base = base, rawNode = node)
     }
@@ -521,7 +520,7 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
      * TODO: cast, memberexpression, magic
      */
     private fun handleCall(node: Python.AST.Call): Expression {
-        var callee = frontend.expressionHandler.handle(node.func)
+        val callee = frontend.expressionHandler.handle(node.func)
 
         val ret =
             if (callee is MemberExpression) {
@@ -543,23 +542,6 @@ class ExpressionHandler(frontend: PythonLanguageFrontend) :
 
     private fun handleName(node: Python.AST.Name): Expression {
         val r = newReference(name = node.id, rawNode = node)
-
-        /*
-         * TODO: this is not nice... :(
-         *
-         * Take a little shortcut and set refersTo, in case this is a method receiver. This allows us to play more
-         * nicely with member (call) expressions on the current class, since then their base type is known.
-         */
-        val currentFunction = frontend.scopeManager.currentFunction
-        if (currentFunction is MethodDeclaration) {
-            val recv = currentFunction.receiver
-            recv.let {
-                if (node.id == it?.name?.localName) {
-                    r.refersTo = it
-                    r.type = it.type
-                }
-            }
-        }
         return r
     }
 

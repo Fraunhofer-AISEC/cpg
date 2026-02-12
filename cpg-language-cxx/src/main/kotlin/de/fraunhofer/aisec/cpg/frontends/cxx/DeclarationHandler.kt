@@ -75,7 +75,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             is CPPASTNamespaceAlias -> handleNamespaceAlias(node)
             is CPPASTLinkageSpecification -> handleLinkageSpecification(node)
             else -> {
-                return handleNotSupported(node, node.javaClass.name)
+                handleNotSupported(node, node.javaClass.name)
             }
         }
     }
@@ -141,10 +141,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
         // Finally, handle all declarations within that namespace
         for (child in ctx.declarations) {
-            val decl = handle(child)
-            if (decl == null) {
-                continue
-            }
+            val decl = handle(child) ?: continue
 
             frontend.scopeManager.addDeclaration(decl)
             nsd.declarations += decl
@@ -324,7 +321,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 typeParamDecl.type = parameterizedType
                 if (templateParameter.defaultType != null) {
                     val defaultType = frontend.typeOf(templateParameter.defaultType)
-                    typeParamDecl.default = defaultType
+                    typeParamDecl.default = newTypeExpression(defaultType.name, type = defaultType)
                 }
                 templateDeclaration.parameters += typeParamDecl
             } else if (templateParameter is CPPASTParameterDeclaration) {
@@ -550,7 +547,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                         primaryDeclaration.name.isEmpty() &&
                             ctx.rawSignature.trim().startsWith("typedef")
                     ) {
-                        // This is a special case, which is a common idiom in C, to typedef a
+                        // This is a special case, which is a common idiom in C, to typedef an
                         // unnamed struct into a type. For example `typedef struct { int a; } S`. In
                         // this case the record declaration actually has no name and only the
                         // typedef'd name is called S. However, to make things a little bit easier
@@ -580,23 +577,24 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             }
         }
 
+        // TODO `useNameOfDeclarator` is always `false` -> issue?
         return Pair(primaryDeclaration, useNameOfDeclarator)
     }
 
     /**
-     * Extracts template parameters (used for [VariableDeclaration.templateParameters] out of the
+     * Extracts template parameters (used for [VariableDeclaration.templateParameters]) out of the
      * declaration (if it has any), otherwise null is returned.
      */
     private fun extractTemplateParams(
         ctx: IASTSimpleDeclaration,
         declSpecifier: IASTDeclSpecifier,
-    ): MutableList<Node>? {
+    ): MutableList<AstNode>? {
         if (
             !ctx.isTypedef &&
                 declSpecifier is CPPASTNamedTypeSpecifier &&
                 declSpecifier.name is CPPASTTemplateId
         ) {
-            val templateParams = mutableListOf<Node>()
+            val templateParams = mutableListOf<AstNode>()
             val templateId = declSpecifier.name as CPPASTTemplateId
             for (templateArgument in templateId.templateArguments) {
                 if (templateArgument is CPPASTTypeId) {
@@ -656,9 +654,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         for (enumerator in declSpecifier.enumerators) {
             // Enums are a bit complicated. Their fully qualified name (in C++) includes the enum
             // class, so e.g. `MyEnum::THIS'. In order to do that, we need to be in the `MyEnum`
-            // scope when we create it. But, the symbol of the enum can both be resolved using just
+            // scope when we create it. But, the symbol of the enum can be resolved using just
             // the enum constant `THIS` as well as `MyEnum::THIS` (at least in C++11). So we need to
-            // put the symbol both in the outer scope as well as the enum's scope.
+            // put the symbol in the outer scope as well as the enum's scope.
             frontend.scopeManager.enterScope(enum)
             val enumConst =
                 newEnumConstantDeclaration(enumerator.name.toString(), rawNode = enumerator)
@@ -686,7 +684,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
      * contains.
      */
     private fun handleLinkageSpecification(ctx: CPPASTLinkageSpecification): Declaration {
-        var sequence = DeclarationSequence()
+        val sequence = DeclarationSequence()
 
         // Just forward its declaration(s) to our handler
         for (decl in ctx.declarations) {
@@ -728,8 +726,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             newTranslationUnitDeclaration(translationUnit.filePath, rawNode = translationUnit)
 
         // There might have been errors in the previous translation unit and in any case
-        // we need to reset the scope manager scope to global, to avoid spilling scope errors into
-        // other translation units
+        // we need to reset the scope manager scope to global scope to avoid spilling scope errors
+        // into other translation units
         frontend.scopeManager.resetToGlobal(node)
         frontend.currentTU = node
         val problematicIncludes = HashMap<String?, HashSet<ProblemDeclaration>>()
@@ -808,10 +806,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         allIncludes.remove(translationUnit.filePath)
         // attach to remaining nodes
         for ((key, value) in allIncludes) {
-            val includeDeclaration = includeMap[key]
-            if (includeDeclaration == null) {
-                continue
-            }
+            val includeDeclaration = includeMap[key] ?: continue
             for (s in value) {
                 includeMap[s]?.let { includeDeclaration.includes += it }
             }

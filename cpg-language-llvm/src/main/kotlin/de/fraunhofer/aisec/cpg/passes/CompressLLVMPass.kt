@@ -39,6 +39,9 @@ import java.util.*
 
 @ExecuteFirst
 @RequiredFrontend(LLVMIRLanguageFrontend::class)
+@Description(
+    "Re-organizes some nodes in the CPG if they originate from LLVM IR code, removing redundant nodes and edges to optimize the graph structure for analysis."
+)
 class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
     override fun accept(component: Component) {
         val flatAST = SubgraphWalker.flattenAST(component)
@@ -204,15 +207,15 @@ class CompressLLVMPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Iterates through all nodes which are reachable from the catch clause. Note: When reaching a
-     * `TryStatement`, we do not follow the path further. This is why we can't use the `allChildren`
-     * extension.
+     * Iterates through all [AstNode]s which are reachable from the catch clause. Note: When
+     * reaching a `TryStatement`, we do not follow the path further. This is why we can't use the
+     * `allChildren` extension.
      */
-    private fun getAllChildrenRecursively(node: CatchClause?): Set<Node> {
+    private fun getAllChildrenRecursively(node: CatchClause?): Set<AstNode> {
         if (node == null) return setOf()
-        val worklist: Queue<Node> = LinkedList()
+        val worklist: Queue<AstNode> = LinkedList()
         worklist.add(node.body)
-        val alreadyChecked = LinkedHashSet<Node>()
+        val alreadyChecked = LinkedHashSet<AstNode>()
         while (worklist.isNotEmpty()) {
             val currentNode = worklist.remove()
             alreadyChecked.add(currentNode)

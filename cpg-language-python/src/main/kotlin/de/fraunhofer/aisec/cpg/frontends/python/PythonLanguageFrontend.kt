@@ -288,15 +288,19 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
         return lines
     }
 
+    /**
+     * The [PhysicalLocation] of our [astNode] node. We default to `-1` for line/column numbers in
+     * case no location information is available.
+     */
     override fun locationOf(astNode: Python.AST.AST): PhysicalLocation? {
         return if (astNode is Python.AST.WithLocation) {
             PhysicalLocation(
                 uri,
                 Region(
-                    startLine = astNode.lineno,
-                    endLine = astNode.end_lineno,
-                    startColumn = astNode.col_offset + 1,
-                    endColumn = astNode.end_col_offset + 1,
+                    startLine = astNode.lineno ?: -1,
+                    endLine = astNode.end_lineno ?: -1,
+                    startColumn = astNode.col_offset?.plus(1) ?: -1,
+                    endColumn = astNode.end_col_offset?.plus(1) ?: -1,
                 ),
             )
         } else {
@@ -309,7 +313,7 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
     }
 
     private fun pythonASTtoCPG(pyAST: PyObject, path: Path): TranslationUnitDeclaration {
-        var topLevel = ctx.currentComponent?.topLevel() ?: path.parent.toFile()
+        val topLevel = ctx.currentComponent?.topLevel() ?: path.parent.toFile()
 
         val pythonASTModule =
             fromPython(pyAST) as? Python.AST.Module
@@ -337,14 +341,14 @@ class PythonLanguageFrontend(ctx: TranslationContext, language: Language<PythonL
         // with packages. Note: in reality, only directories that have __init__.py file present are
         // actually packages, but we skip this for now. Since we are dealing with potentially
         // relative paths, we need to canonicalize both paths.
-        var relative =
+        val relative =
             path.toFile().canonicalFile.relativeToOrNull(topLevel.canonicalFile)?.toPath()
-        var module = path.nameWithoutExtension
-        var modulePaths = (relative?.parent?.pathString?.split("/") ?: listOf()) + module
+        val module = path.nameWithoutExtension
+        val modulePaths = (relative?.parent?.pathString?.split("/") ?: listOf()) + module
 
         val lastNamespace =
             modulePaths.fold(null) { previous: NamespaceDeclaration?, path ->
-                var fqn = previous?.name.fqn(path)
+                val fqn = previous?.name.fqn(path)
 
                 // The __init__ module is very special in Python. The symbols that are declared by
                 // __init__.py are available directly under the path of the package (not module) it
@@ -448,7 +452,7 @@ fun populateSystemInformation(
     config: TranslationConfiguration,
     tu: TranslationUnitDeclaration,
 ): SystemInformation {
-    var sysInfo =
+    val sysInfo =
         SystemInformation(
             platform = config.symbols["PYTHON_PLATFORM"],
             versionInfo = config.versionInfo,

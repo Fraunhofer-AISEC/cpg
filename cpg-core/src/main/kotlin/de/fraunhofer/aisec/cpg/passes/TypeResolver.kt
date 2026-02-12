@@ -49,9 +49,12 @@ import kotlin.collections.plusAssign
  * [ObjectType]s) and their [RecordDeclaration].
  */
 @DependsOn(ImportResolver::class)
+@Description(
+    "Resolves and infers types for nodes in the CPG, enhancing the semantic understanding of the code represented in the graph."
+)
 open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
-    lateinit var walker: SubgraphWalker.ScopedWalker
+    lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
 
     override fun accept(component: Component) {
         ctx.currentComponent = component
@@ -63,7 +66,7 @@ open class TypeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     /**
      * This function is called for each [Node] in the component. It checks if the node has a type or
      * declares a type. If so, it tries to resolve the type using [resolveType]. It also checks for
-     * secondary type edges (see [HasSecondaryTypeEdge] and resolves them as well.
+     * secondary type edges (see [HasSecondaryTypeEdge]) and resolves them as well.
      *
      * @param node The node to handle.
      */

@@ -25,6 +25,7 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
@@ -46,7 +47,7 @@ class NewExpression : Expression(), HasInitializer {
      * ConstructExpression is created
      */
     @Relationship(value = "TEMPLATE_PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    var templateParameterEdges = astEdgesOf<Node>()
+    var templateParameterEdges = astEdgesOf<AstNode>()
     var templateParameters by unwrapping(NewExpression::templateParameterEdges)
 
     override fun toString(): String {

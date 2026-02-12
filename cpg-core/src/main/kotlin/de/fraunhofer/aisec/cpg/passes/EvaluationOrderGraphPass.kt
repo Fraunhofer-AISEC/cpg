@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.frontends.HasShortCircuitOperators
 import de.fraunhofer.aisec.cpg.frontends.ProcessedListener
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
@@ -71,8 +72,8 @@ import org.slf4j.LoggerFactory
  * [currentPredecessors] or even temporarily save and restore the valid eog exits of an ast subtree,
  * e.g. [IfStatement].
  *
- * The EOG is similar to the CFG `ControlFlowGraphPass`, but there are some subtle differences:
- * * For methods without explicit return statement, EOF will have an edge to a virtual return node
+ * The EOG is similar to the CFG (Control Flow Graph), but there are some subtle differences:
+ * * For methods without explicit return statement, EOG will have an edge to a virtual return node
  *   with line number -1 which does not exist in the original code. A CFG will always end with the
  *   last reachable statement(s) and not insert any virtual return statements.
  * * EOG considers an opening blocking ("Block", indicated by a "{") as a separate node. A CFG will
@@ -86,6 +87,9 @@ import org.slf4j.LoggerFactory
  * this pass and fine-tune it.
  */
 @Suppress("MemberVisibilityCanBePrivate")
+@Description(
+    "Adds EOG edges to the graph. These represent the execution order of statements or expressions and is similar to a fine-grained version of a control flow graph."
+)
 open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
     var currentPredecessors = mutableListOf<Node>()
@@ -1383,7 +1387,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
          * @param n
          * @return
          */
-        fun checkEOGInvariant(n: Node): Boolean {
+        fun checkEOGInvariant(n: AstNode): Boolean {
             val allNodes = SubgraphWalker.flattenAST(n)
             var ret = true
             for (node in allNodes) {
@@ -1449,7 +1453,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * to be extended if new nodes are added that have a condition relevant as entry points when
      * looping.
      */
-    val Node.conditions: List<Node>
+    val Node.conditions: List<AstNode>
         get() =
             when (this) {
                 is WhileStatement ->
@@ -1485,7 +1489,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         }
     }
 
-    fun drawEOGToEntriesOf(from: List<Node>, toEntriesOf: Node?, branchLabel: Boolean? = null) {
+    fun drawEOGToEntriesOf(from: List<Node>, toEntriesOf: AstNode?, branchLabel: Boolean? = null) {
         val tmpBranchLabel = nextEdgeBranch
         branchLabel?.let { nextEdgeBranch = it }
         SubgraphWalker.getEOGPathEdges(toEntriesOf).entries.forEach { entrance ->

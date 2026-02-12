@@ -131,7 +131,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
                 packDecl?.name?.toString()?.split(language.namespaceDelimiter)?.fold(null) {
                     previous: NamespaceDeclaration?,
                     path ->
-                    var fqn = previous?.name.fqn(path)
+                    val fqn = previous?.name.fqn(path)
 
                     val nsd = newNamespaceDeclaration(fqn, rawNode = packDecl)
                     scopeManager.addDeclaration(nsd)
@@ -248,9 +248,9 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
             if (type == "var") {
                 unknownType()
             } else typeOf(resolved.type)
-        } catch (ex: RuntimeException) {
+        } catch (_: RuntimeException) {
             getTypeFromImportIfPossible(nodeWithType.type)
-        } catch (ex: NoClassDefFoundError) {
+        } catch (_: NoClassDefFoundError) {
             getTypeFromImportIfPossible(nodeWithType.type)
         }
     }
@@ -260,9 +260,9 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
             if (type.toString() == "var") {
                 unknownType()
             } else typeOf(type.resolve())
-        } catch (ex: RuntimeException) {
+        } catch (_: RuntimeException) {
             getTypeFromImportIfPossible(type)
-        } catch (ex: NoClassDefFoundError) {
+        } catch (_: NoClassDefFoundError) {
             getTypeFromImportIfPossible(type)
         }
     }
@@ -271,7 +271,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
     fun getQualifiedMethodNameAsGoodAsPossible(callExpr: MethodCallExpr): String {
         return try {
             callExpr.resolve().qualifiedName
-        } catch (ex: RuntimeException) {
+        } catch (_: RuntimeException) {
             val scope = callExpr.scope
             if (scope.isPresent) {
                 val expression = scope.get()
@@ -285,7 +285,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
                 }
                 if (scope.get().toString() == THIS) {
                     // this is not strictly true. This could also be a function of a superclass,
-                    // but is the best we can do for now. If the superclass would be known,
+                    // but is the best we can do for now. If the superclass was known,
                     // this would already be resolved by the Java resolver
                     fqn(callExpr.nameAsString).toString()
                 } else {
@@ -304,7 +304,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
                 // this is not strictly true. This could also be a function of a superclass or from
                 // a static asterisk import
             }
-        } catch (ex: NoClassDefFoundError) {
+        } catch (_: NoClassDefFoundError) {
             val scope = callExpr.scope
             if (scope.isPresent) {
                 val expression = scope.get()
@@ -388,9 +388,9 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
                 type = typeOf(resolved.returnType)
             }
             type
-        } catch (ex: RuntimeException) {
+        } catch (_: RuntimeException) {
             getTypeFromImportIfPossible(nodeWithType.type)
-        } catch (ex: NoClassDefFoundError) {
+        } catch (_: NoClassDefFoundError) {
             getTypeFromImportIfPossible(nodeWithType.type)
         }
     }
@@ -408,7 +408,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
             scopeManager.firstScopeOrNull { scope: Scope -> scope.astNode is NamespaceDeclaration }
                 ?: return simpleName
         // If scope is null we are in a default package
-        return theScope.name?.fqn(simpleName).toString()
+        return theScope.name.fqn(simpleName).toString()
     }
 
     private fun getTypeFromImportIfPossible(type: Type): de.fraunhofer.aisec.cpg.graph.types.Type {
@@ -468,10 +468,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
      * @param node the node
      * @param owner the AST owner node
      */
-    fun processAnnotations(
-        node: de.fraunhofer.aisec.cpg.graph.Node,
-        owner: NodeWithAnnotations<*>,
-    ) {
+    fun processAnnotations(node: AstNode, owner: NodeWithAnnotations<*>) {
         if (config.processAnnotations) {
             node.annotations += handleAnnotations(owner)
         }

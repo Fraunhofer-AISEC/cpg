@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
+import de.fraunhofer.aisec.cpg.persistence.pushToNeo4j
 import java.math.BigInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -38,17 +39,17 @@ import kotlin.test.assertNotNull
 class Neo4JTest {
     @Test
     fun testPush() {
-        val (application, result) = createTranslationResult()
+        val (_, result) = createTranslationResult()
 
         // 22 inferred functions, 1 inferred method, 2 inferred constructors, 11 regular functions
         assertEquals(36, result.functions.size)
 
-        application.pushToNeo4j(result)
+        result.pushToNeo4j()
     }
 
     @Test
     fun testPushVeryLong() {
-        val (application, result) = createTranslationResult("very_long.cpp")
+        val (_, result) = createTranslationResult("very_long.cpp")
 
         assertEquals(1, result.variables.size)
 
@@ -56,14 +57,14 @@ class Neo4JTest {
         assertIs<Literal<BigInteger>>(lit)
         assertEquals(BigInteger("10958011617037158669"), lit.value)
 
-        application.pushToNeo4j(result)
+        result.pushToNeo4j()
     }
 
     @Test
     fun testPushConcepts() {
-        val (application, result) = createTranslationResult()
+        val (_, result) = createTranslationResult()
 
-        val tu = result.translationUnits.firstOrNull()
+        val tu = result.components.firstOrNull()?.translationUnits?.firstOrNull()
         assertNotNull(tu)
 
         val connectCall = result.calls["connect"]
@@ -99,6 +100,6 @@ class Neo4JTest {
         )
         assertEquals(1, tu.operationNodes.size, "Expected to find the `Connect` operation.")
 
-        application.pushToNeo4j(result)
+        result.pushToNeo4j()
     }
 }

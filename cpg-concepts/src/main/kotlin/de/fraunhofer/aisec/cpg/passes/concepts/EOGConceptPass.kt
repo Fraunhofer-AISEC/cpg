@@ -64,6 +64,7 @@ typealias NodeToOverlayState = MapLattice<Node, PowersetLattice.Element<OverlayN
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(DFGPass::class)
 @DependsOn(ControlFlowSensitiveDFGPass::class, softDependency = true)
+@Description("Creates Concept and Operation overlay nodes based on EOG traversal.")
 open class EOGConceptPass(ctx: TranslationContext) :
     EOGStarterPass(ctx, sort = EOGStarterLeastTUImportCatchLastSorter) {
 
@@ -87,7 +88,10 @@ open class EOGConceptPass(ctx: TranslationContext) :
 
         val nextEog = node.nextEOGEdges.toList()
         val finalState =
-            lattice.lub(lattice.iterateEOG(nextEog, startState, ::transfer), startState, true)
+            lattice.iterateEOG(nextEog, startState, ::transfer)?.let { tmpFinalState ->
+                lattice.lub(tmpFinalState, startState, true)
+            } ?: startState
+
         // We set the underlying node based on the final state
         for ((underlyingNode, overlayNodes) in finalState) {
             overlayNodes.forEach {

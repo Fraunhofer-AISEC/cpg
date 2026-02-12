@@ -40,7 +40,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
             is GoStandardLibrary.Ast.TypeSpec -> handleTypeSpec(node)
             is GoStandardLibrary.Ast.ValueSpec -> handleValueSpec(node)
             else -> {
-                return handleNotSupported(node, node.goType)
+                handleNotSupported(node, node.goType)
             }
         }
     }
@@ -117,8 +117,8 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 val type = frontend.typeOf(field.type)
 
                 // A field can also have no name, which means that it is embedded. In this case, it
-                // can be accessed by the local name of its type and therefore we name the field
-                // accordingly. We use the modifiers property to denote that this is an embedded
+                // can be accessed by the local name of its type, and therefore we name the field
+                // accordingly. We use the "modifiers" property to denote that this is an embedded
                 // field, so we can easily retrieve them later
                 val (fieldName, modifiers) =
                     if (field.names.isEmpty()) {
@@ -205,7 +205,8 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
             for (ident in valueSpec.names) {
                 // We want to make sure that top-level declarations, i.e, the ones that are directly
-                // in a namespace are FQNs. Otherwise we cannot resolve them properly when we access
+                // in a namespace are FQNs. Otherwise, we cannot resolve them properly when we
+                // access
                 // them outside of the package.
                 val fqn =
                     if (frontend.scopeManager.currentScope is NameScope) {
@@ -237,7 +238,8 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
 
             for ((nameIdx, ident) in valueSpec.names.withIndex()) {
                 // We want to make sure that top-level declarations, i.e, the ones that are directly
-                // in a namespace are FQNs. Otherwise we cannot resolve them properly when we access
+                // in a namespace are FQNs. Otherwise, we cannot resolve them properly when we
+                // access
                 // them outside of the package.
                 val fqn =
                     if (frontend.scopeManager.currentScope is NameScope) {
@@ -299,6 +301,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         }
     }
 
+    @Suppress("unused")
     private fun handleFuncTypeSpec(
         spec: GoStandardLibrary.Ast.TypeSpec,
         type: GoStandardLibrary.Ast.FuncType,

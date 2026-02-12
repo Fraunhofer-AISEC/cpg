@@ -40,9 +40,11 @@ import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker.IterativeGraphWalker
 import de.fraunhofer.aisec.cpg.helpers.Util
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.inference.DFGFunctionSummaries
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /** Adds the DFG edges for various types of nodes. */
 @DependsOn(SymbolResolver::class)
+@Description("Adds DFG edges to the graph but without considering the control flow.")
 class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private val callsInferredFunctions = mutableListOf<CallExpression>()
 
@@ -53,7 +55,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         )
 
         val inferDfgForUnresolvedCalls = config.inferenceConfiguration.inferDfgForUnresolvedSymbols
-        val walker = IterativeGraphWalker()
+        val walker = IterativeGraphWalker(Strategy::AST_FORWARD)
         walker.registerOnNodeVisit { node, parent ->
             handle(node, parent, inferDfgForUnresolvedCalls, config.functionSummaries)
         }

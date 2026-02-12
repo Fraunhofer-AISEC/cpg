@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import java.io.File
-import java.lang.RuntimeException
 import java.nio.file.Path
 import java.nio.file.Paths
 import jep.JepConfig
@@ -64,7 +63,7 @@ object JepSingleton {
         val virtualEnvName = System.getenv("CPG_PYTHON_VIRTUALENV") ?: "cpg"
         val virtualEnvPath =
             Paths.get(System.getProperty("user.home"), ".virtualenvs", virtualEnvName)
-        val pythonVersions = listOf("3.8", "3.9", "3.10", "3.11", "3.12", "3.13")
+        val pythonVersions = listOf("3.10", "3.11", "3.12", "3.13", "3.14", "3.15")
         val wellKnownPaths = mutableListOf<Path>()
         pythonVersions.forEach { version ->
             // Linux
@@ -131,6 +130,13 @@ object JepSingleton {
 
     /** Setup and configure (load the Python code and trigger the debug script) an interpreter. */
     fun getInterp(): SharedInterpreter {
-        return SharedInterpreter()
+        try {
+            return SharedInterpreter()
+        } catch (e: UnsatisfiedLinkError) {
+            log.error(
+                "Failed to create Jep interpreter. Did you set up Jep correctly? Note: the Jep module has to be rebuild after a Python upgrade. Consult [the README](https://github.com/Fraunhofer-AISEC/cpg/?tab=readme-ov-file#virtual-env) for detailed instructions."
+            )
+            throw e
+        }
     }
 }

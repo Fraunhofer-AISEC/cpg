@@ -60,7 +60,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             is IASTCompositeTypeSpecifier -> handleCompositeTypeSpecifier(node)
             is CPPASTSimpleTypeTemplateParameter -> handleTemplateTypeParameter(node)
             else -> {
-                return handleNotSupported(node, node.javaClass.name)
+                handleNotSupported(node, node.javaClass.name)
             }
         }
     }
@@ -103,7 +103,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // Check, if the name is qualified or if we are within a record scope
         return if (
             frontend.scopeManager.currentScope is RecordScope ||
-                language.namespaceDelimiter.let { name.contains(it) } == true
+                language.namespaceDelimiter.let { name.contains(it) }
         ) {
             // If yes, treat this like a field declaration
             this.handleFieldDeclarator(ctx)
@@ -231,16 +231,16 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
         // We need to check if this function is actually part of a named declaration, such as a
         // record or a namespace, but defined externally.
-        var parentScope: NameScope? = null
+        var namedScoped: NameScope? = null
 
-        // Check for function definitions that really belong to a named scoped, i.e. if they
+        // Check for function definitions that really belong to a named scope, i.e., if they
         // contain a scope operator. This could either be a namespace or a record.
         val parent = name.parent
         if (parent != null) {
-            // In this case, the name contains a qualifier, and we can try to check, if we have a
+            // In this case, the name contains a qualifier, and we can try to check if we have a
             // matching name scope for the parent name. We also need to take the current namespace
             // into account
-            parentScope =
+            namedScoped =
                 frontend.scopeManager.lookupScope(
                     parseName(
                         frontend.scopeManager.currentNamespace
@@ -249,7 +249,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                     )
                 )
 
-            declaration = createAppropriateFunction(name, parentScope, ctx.parent)
+            declaration = createAppropriateFunction(name, namedScoped, ctx.parent)
         } else if (frontend.scopeManager.isInRecord) {
             // If the current scope is already a record, it's a method
             declaration =
@@ -263,30 +263,14 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         val outsideOfScope = frontend.scopeManager.currentScope != declaration.scope
 
         // If we know our parent scope, but are outside the actual scope on the AST, we
-        // need to temporarily enter the scope. This way, we can do a little trick
-        // and (manually) add the declaration to the AST element of the current scope
-        // (probably the global scope), but associate it to the named scope.
-        if (parentScope != null && outsideOfScope) {
-            // Bypass the scope manager and manually add it to the AST parent
-            val scopeParent = frontend.scopeManager.currentScope?.astNode
-            if (scopeParent != null && scopeParent is DeclarationHolder) {
-                scopeParent.addDeclaration(declaration)
-            }
-
-            // Enter the name scope
-            parentScope.astNode?.let {
+        // need to temporarily enter the scope. This way, we declare this function in the named
+        // scope but don't add it to its AST (since its outside).
+        if (namedScoped != null && outsideOfScope) {
+            // Enter the named scope
+            namedScoped.astNode?.let {
                 frontend.scopeManager.enterScope(it)
                 frontend.scopeManager.addDeclaration(declaration)
             }
-
-            // We also need to by-pass the scope manager for this, because it will
-            // otherwise add the declaration to the AST element of the named scope (the record
-            // or namespace declaration); in the case of a record declaration to the `methods`
-            // fields. However, since `methods` is an  AST field, (for now) we only want those
-            // methods in there, that were actual AST
-            // parents. This is also something that we need to figure out how we want to handle
-            // this.
-            parentScope.addSymbol(declaration.symbol, declaration)
         }
 
         // Enter the scope of the function itself
@@ -336,8 +320,8 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         }
 
         // Check for varargs. Note the difference to Java: here, we don't have a named array
-        // containing the varargs, but they are rather treated as kind of an invisible arg list that
-        // is appended to the original ones. For coherent graph behaviour, we introduce an implicit
+        // containing the varargs, but they are rather treated as a kind of invisible arg list that
+        // is appended to the original ones. For coherent graph behavior, we introduce an implicit
         // declaration that wraps this list
         if (ctx.takesVarArgs()) {
             val varargs = newParameterDeclaration("va_args", unknownType(), true)
@@ -348,10 +332,10 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         }
         frontend.scopeManager.leaveScope(declaration)
 
-        // if we know our record declaration, but are outside the actual record, we
-        // need to leave the record scope again afterwards
-        if (parentScope != null && outsideOfScope) {
-            parentScope.astNode?.let { frontend.scopeManager.leaveScope(it) }
+        // If we know our record declaration, but are outside the actual record, we
+        // need to leave the record scope again afterward
+        if (namedScoped != null && outsideOfScope) {
+            namedScoped.astNode?.let { frontend.scopeManager.leaveScope(it) }
         }
 
         // We recognize an ambiguity here, but cannot solve it at the moment

@@ -31,12 +31,15 @@ import de.fraunhofer.aisec.cpg.graph.concepts.logging.*
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
+import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.ComponentPass
 import de.fraunhofer.aisec.cpg.passes.DFGPass
+import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.passes.EvaluationOrderGraphPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteLate
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -48,8 +51,10 @@ import org.slf4j.LoggerFactory
 @DependsOn(SymbolResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(DFGPass::class)
+@Description("Translates Python logging imports and calls to logging concept nodes.")
 class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
     private var log: Logger = LoggerFactory.getLogger(this.javaClass)
+    lateinit var walker: SubgraphWalker.ScopedWalker<Node>
 
     /**
      * A storage connecting CPG nodes with [de.fraunhofer.aisec.cpg.graph.concepts.logging.Log]s.
@@ -78,15 +83,32 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
+     * This pass needs to handle nodes in EOG order to make sure that log creation is handled before
+     * log usage. The actual handling is done in [handleNode].
+     */
+    override fun accept(comp: Component) {
+        walker = SubgraphWalker.ScopedWalker(ctx.scopeManager, Strategy::EOG_FORWARD)
+        walker.registerHandler { node -> handleNode(node) }
+        // Gather all resolution EOG starters; and make sure they really do not have a
+        // predecessor, otherwise we might analyze a node multiple times
+        val nodes = comp.allEOGStarters.filter { it.prevEOGEdges.isEmpty() }
+        walker.iterateAll(nodes)
+
+        // Store the global `import logging` node for later use
+        loggingLogger =
+            comp.imports.singleOrNull { import -> import.import.toString() == "logging" }
+    }
+
+    /**
      * This pass is interested in [ImportDeclaration]s and
      * [de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression]s as these are the
      * relevant parts of the Python code for logging.
      */
-    override fun accept(comp: Component) {
-        loggingLogger =
-            comp.imports.singleOrNull { import -> import.import.toString() == "logging" }
-        comp.imports.forEach { import -> handleImport(import) }
-        comp.calls.forEach { call -> handleCall(call) }
+    private fun handleNode(node: Node) {
+        when (node) {
+            is ImportDeclaration -> handleImport(node)
+            is CallExpression -> handleCall(node)
+        }
     }
 
     /**
@@ -211,7 +233,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
      */
     private fun logOpHelper(callExpression: CallExpression, logger: Log) {
         val callee = callExpression.callee
-        when (callee.name.localName.toString()) {
+        when (callee.name.localName) {
             "fatal",
             "critical",
             "error",
@@ -219,7 +241,7 @@ class PythonLoggingConceptPass(ctx: TranslationContext) : ComponentPass(ctx) {
             "warning",
             "info",
             "debug" -> {
-                val name = callExpression.name.localName.toString()
+                val name = callExpression.name.localName
                 val lvl = logLevelStringToEnum(name)
                 newLogWrite(
                     underlyingNode = callExpression,

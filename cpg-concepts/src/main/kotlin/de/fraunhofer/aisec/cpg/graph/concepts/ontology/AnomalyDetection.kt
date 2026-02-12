@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,4 +23,25 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.frontends.golang
+package de.fraunhofer.aisec.cpg.graph.concepts.ontology
+
+import de.fraunhofer.aisec.cpg.graph.Node
+import java.util.Objects
+import kotlin.Any
+import kotlin.Boolean
+import kotlin.Int
+
+/** Analyzes the activity of a NetworkService (which includes DatabaseServices). */
+public open class AnomalyDetection(
+    public val enabled: Boolean?,
+    public val applicationLogging: ApplicationLogging?,
+    underlyingNode: Node? = null,
+) : Auditing(underlyingNode) {
+    override fun equals(other: Any?): Boolean =
+        other is AnomalyDetection &&
+            super.equals(other) &&
+            other.enabled == this.enabled &&
+            other.applicationLogging == this.applicationLogging
+
+    override fun hashCode(): Int = Objects.hash(super.hashCode(), enabled, applicationLogging)
+}

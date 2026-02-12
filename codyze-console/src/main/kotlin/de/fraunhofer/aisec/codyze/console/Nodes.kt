@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
-import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts
 import de.fraunhofer.aisec.cpg.passes.concepts.LoadPersistedConcepts.*
 import de.fraunhofer.aisec.cpg.query.*
 import io.github.detekt.sarif4k.ArtifactLocation
@@ -286,7 +285,7 @@ data class ConceptRequestJSON(
                         ),
                     constructorArguments =
                         this.constructorArgs?.map {
-                            LoadPersistedConcepts.ConstructorArgumentEntry(
+                            ConstructorArgumentEntry(
                                 name = it.argumentName,
                                 value = it.argumentValue,
                             )
@@ -377,7 +376,9 @@ fun Node.toJSON(noEdges: Boolean = false): NodeJSON {
                 val path = uri.toString()
                 path.substringAfterLast('/').substringAfterLast('\\')
             },
-        astChildren = if (noEdges) emptyList() else this.astChildren.map { it.toJSON() },
+        astChildren =
+            if (noEdges) emptyList()
+            else (this as? AstNode)?.astChildren?.map { it.toJSON() } ?: emptyList(),
         prevDFG = if (noEdges) emptyList() else this.prevDFGEdges.map { it.toJSON() },
         nextDFG = if (noEdges) emptyList() else this.nextDFGEdges.map { it.toJSON() },
         translationUnitId = this.translationUnit?.id,

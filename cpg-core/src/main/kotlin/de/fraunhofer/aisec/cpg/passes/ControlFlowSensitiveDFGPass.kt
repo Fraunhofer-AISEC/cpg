@@ -48,6 +48,9 @@ import kotlin.contracts.contract
 @OptIn(ExperimentalContracts::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(DFGPass::class)
+@Description(
+    "Enhances the Data Flow Graph (DFG) by considering control flow information, leading to more accurate (i.e., flow-sensitive) data flow representation."
+)
 open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     class Configuration(
@@ -56,12 +59,20 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
          * [Statement.cyclomaticComplexity]) a [FunctionDeclaration] must have in order to be
          * considered.
          */
-        var maxComplexity: Int? = null
+        var maxComplexity: Int? = null,
+        /**
+         * This specifies the maximum time (in ms) we want to spend analyzing a single
+         * [de.fraunhofer.aisec.cpg.graph.EOGStarterHolder]. If the time is exceeded, we skip the
+         * function (or whatever is starting the EOG). If `null`, no time limit is enforced.
+         */
+        var timeout: Long? = null,
     ) : PassConfiguration()
 
     override fun cleanup() {
         // Nothing to do
     }
+
+    var purelyLocalNodes: Set<Node> = setOf()
 
     /** We perform the actions for each [FunctionDeclaration]. */
     override fun accept(node: Node) {
@@ -71,10 +82,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             // more than it helps.
             return
         }
+
         // These are EOGStarterHolders but do not have an EOG which means, they will just cause
         // problems. Again, if we delete information/edges, we will never be able to recover them.
         if (node is FunctionTemplateDeclaration) return
-
         // Calculate the complexity of the function and see, if it exceeds our threshold
         val max = passConfig<Configuration>()?.maxComplexity
         val c = (node as? FunctionDeclaration)?.body?.cyclomaticComplexity ?: 0
@@ -87,7 +98,16 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
         log.trace("Handling {} (complexity: {})", node.name, c)
 
-        clearFlowsOfVariableDeclarations(node)
+        var edgesToRemove: Set<Dataflow> = setOf()
+        var allNodesWithEdgesToRemove: Set<Node> = setOf()
+
+        if (node is AstNode) {
+            val tmpTriple = collectFlowsToClear(node)
+            edgesToRemove = tmpTriple.first
+            allNodesWithEdgesToRemove = tmpTriple.second
+            purelyLocalNodes = tmpTriple.third
+        }
+
         val startState = DFGPassState<Set<Node>>()
 
         startState.declarationsState.push(node, PowersetLattice(identitySetOf()))
@@ -109,7 +129,18 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         }
 
         val finalState =
-            iterateEOG(node.nextEOGEdges, startState, ::transfer) as? DFGPassState ?: return
+            iterateEOG(
+                node.nextEOGEdges,
+                startState,
+                passConfig<Configuration>()?.timeout,
+                ::transfer,
+            )
+                as? DFGPassState ?: return
+
+        for (node in allNodesWithEdgesToRemove) {
+            node.prevDFGEdges.removeAll(edgesToRemove)
+            node.nextDFGEdges.removeAll(edgesToRemove)
+        }
 
         removeUnreachableImplicitReturnStatement(
             node,
@@ -164,7 +195,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
      * Removes all the incoming and outgoing DFG edges for each variable declaration in the block of
      * code [node].
      */
-    protected fun clearFlowsOfVariableDeclarations(node: Node) {
+    protected fun collectFlowsToClear(node: AstNode): Triple<Set<Dataflow>, Set<Node>, Set<Node>> {
         // Get all children of the node which are not part of child EOG starters' children. We need
         // this to filter out effects on the childStarters' children. We do not want to impact them,
         // so we later filter out all things which occur in the children or even completely outside
@@ -179,6 +210,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 }
             )
 
+        val edgesToRemove = mutableSetOf<Dataflow>()
+        val allNodesWithEdgesToRemove = mutableSetOf<Node>()
+        val purelyLocalNodes = mutableSetOf<Node>()
+
         // Get the local variables and parameters inside the node's astChildren (without the
         // childStarters' children). For these, we remove prev and next DFG edges from/to nodes
         // inside the node's astChildren
@@ -189,15 +224,28 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     it !is FieldDeclaration &&
                     it !is TupleDeclaration) || it is ParameterDeclaration
             }) {
+            allNodesWithEdgesToRemove.add(varDecl)
             // Clear only prev DFG inside this function!
             varDecl.prevDFGEdges
                 .filter { it.start in allChildrenOfFunction }
-                .forEach { varDecl.prevDFGEdges.remove(it) }
+                .forEach {
+                    edgesToRemove.add(it)
+                    // varDecl.prevDFGEdges.remove(it)
+                }
             // Clear only next DFG inside this function!
             varDecl.nextDFGEdges
                 .filter { it.end in allChildrenOfFunction }
-                .forEach { varDecl.nextDFGEdges.remove(it) }
+                .forEach {
+                    edgesToRemove.add(it)
+                    // varDecl.nextDFGEdges.remove(it)
+                }
+            if (
+                varDecl.prevDFGEdges.all { it in edgesToRemove } and
+                    varDecl.nextDFGEdges.all { it in edgesToRemove }
+            )
+                purelyLocalNodes.add(varDecl)
         }
+        return Triple(edgesToRemove, allNodesWithEdgesToRemove, purelyLocalNodes)
     }
 
     /**
@@ -472,7 +520,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             // DFG edges left which are associated to this variable declaration. In this case, we
             // add the write operation from this reference to the variable declaration.
             currentNode.refersTo?.let { variableDecl ->
-                if (variableDecl.prevDFG.isNotEmpty() || variableDecl.nextDFG.isNotEmpty())
+                if (variableDecl !in purelyLocalNodes)
                     doubleState.push(variableDecl, PowersetLattice(identitySetOf(currentNode)))
             }
         } else {
@@ -658,7 +706,11 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         var returnStatements: State<Node, V> = State(),
     ) : State<Node, V>() {
         override fun duplicate(): DFGPassState<V> {
-            return DFGPassState(generalState.duplicate(), declarationsState.duplicate())
+            return DFGPassState(
+                generalState.duplicate(),
+                declarationsState.duplicate(),
+                returnStatements.duplicate(),
+            )
         }
 
         override fun get(key: Node): LatticeElement<V>? {
@@ -669,7 +721,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             return if (other is DFGPassState) {
                 val (_, generalUpdate) = generalState.lub(other.generalState)
                 val (_, declUpdate) = declarationsState.lub(other.declarationsState)
-                Pair(this, generalUpdate || declUpdate)
+                val (_, returnUpdate) = returnStatements.lub(other.returnStatements)
+                Pair(this, generalUpdate || declUpdate || returnUpdate)
             } else {
                 val (_, generalUpdate) = generalState.lub(other)
                 Pair(this, generalUpdate)

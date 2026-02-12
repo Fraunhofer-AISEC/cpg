@@ -74,7 +74,7 @@ class TypeScriptLanguageFrontend(
         private val parserFile: File = createTempFile("parser", "")
 
         init {
-            val arch = System.getProperty("os.arch")
+            val arch = System.getProperty("os.arch").replace("amd64", "x86_64")
             val os: String =
                 when {
                     System.getProperty("os.name").startsWith("Mac") -> {
@@ -218,7 +218,7 @@ class TypeScriptLanguageFrontend(
     internal fun getIdentifierName(node: TypeScriptNode) =
         node.firstChild("Identifier")?.let { this.codeOf(it) } ?: ""
 
-    fun processAnnotations(node: Node, astNode: TypeScriptNode) {
+    fun processAnnotations(node: AstNode, astNode: TypeScriptNode) {
         // filter for decorators
         astNode.children
             ?.filter { it.type == "Decorator" }

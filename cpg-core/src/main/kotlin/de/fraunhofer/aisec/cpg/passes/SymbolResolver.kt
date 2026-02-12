@@ -45,6 +45,7 @@ import de.fraunhofer.aisec.cpg.passes.inference.tryFieldInference
 import de.fraunhofer.aisec.cpg.passes.inference.tryFunctionInference
 import de.fraunhofer.aisec.cpg.passes.inference.tryFunctionInferenceFromFunctionPointer
 import de.fraunhofer.aisec.cpg.passes.inference.tryVariableInference
+import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import kotlin.collections.firstOrNull
 import org.slf4j.Logger
@@ -84,6 +85,9 @@ import org.slf4j.LoggerFactory
 @DependsOn(TypeHierarchyResolver::class)
 @DependsOn(EvaluationOrderGraphPass::class)
 @DependsOn(ImportResolver::class)
+@Description(
+    "Resolves symbols in the CPG, linking variable and function usages (i.e., refersTo and calledBy/invokes edges) to their respective declarations. Generates the call graph."
+)
 open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     /** Configuration for the [SymbolResolver]. */
@@ -105,7 +109,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         val experimentalEOGWorklist: Boolean = false,
     ) : PassConfiguration()
 
-    protected lateinit var walker: ScopedWalker
+    protected lateinit var walker: ScopedWalker<Node>
 
     protected val templateList = mutableListOf<TemplateDeclaration>()
 
@@ -137,16 +141,18 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         if (passConfig?.experimentalEOGWorklist == true && eogStarter is FunctionDeclaration) {
             acceptWithIterateEOG(eogStarter)
         } else {
-            walker = ScopedWalker(scopeManager)
-
             cacheTemplates(ctx.currentComponent)
 
-            walker.strategy =
-                if (passConfig?.skipUnreachableEOG == true) {
-                    Strategy::REACHABLE_EOG_FORWARD
-                } else {
-                    Strategy::EOG_FORWARD
-                }
+            walker =
+                ScopedWalker(
+                    scopeManager,
+                    if (passConfig?.skipUnreachableEOG == true) {
+                        Strategy::REACHABLE_EOG_FORWARD
+                    } else {
+                        Strategy::EOG_FORWARD
+                    },
+                )
+
             walker.clearCallbacks()
             walker.registerHandler(this::handle)
 
@@ -172,13 +178,20 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
             componentsToTemplates[component]?.let { templateList.addAll(it) }
             return
         }
-        walker.registerHandler { node ->
-            if (node is TemplateDeclaration) {
-                templateList.add(node)
-            }
-        }
+
         component?.let {
-            it.translationUnits.forEach { tu -> walker.iterate(tu) }
+            it.translationUnits.forEach { tu ->
+                tu.accept(
+                    Strategy::AST_FORWARD,
+                    object : IVisitor<AstNode>() {
+                        override fun visit(t: AstNode) {
+                            if (t is TemplateDeclaration) {
+                                templateList.add(t)
+                            }
+                        }
+                    },
+                )
+            }
             componentsToTemplates[it] = templateList
         }
     }
@@ -541,7 +554,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
                     addRecursiveDefaultTemplateArgs(constructExpression, template)
 
                     // Add missing defaults
-                    val missingNewParams: List<Node?> =
+                    val missingNewParams =
                         template.parameterDefaults.subList(
                             constructExpression.templateArguments.size,
                             template.parameterDefaults.size,
@@ -678,7 +691,12 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     ): Set<FunctionDeclaration> {
         return declaration.overriddenBy
             .filter { f ->
-                f is MethodDeclaration && f.recordDeclaration?.toType() in possibleSubTypes
+                if (f is MethodDeclaration) {
+                    val record = f.recordDeclaration
+                    record != null && record.toType() in possibleSubTypes
+                } else {
+                    false
+                }
             }
             .toSet()
     }

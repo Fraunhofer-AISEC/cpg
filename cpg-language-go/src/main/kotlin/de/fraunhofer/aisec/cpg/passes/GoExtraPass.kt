@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
  * This pass takes care of several things that we need to clean up, once all translation units are
@@ -96,10 +97,15 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ExecuteBefore
 @ExecuteBefore(EvaluationOrderGraphPass::class)
 @DependsOn(ImportResolver::class)
 @DependsOn(TypeResolver::class)
+@Description(
+    "This pass takes care of several things that we need to clean up, once all translation units are successfully parsed, but before any of the remaining CPG passes, such as call resolving occurs. Adds Type Listeners for Key/Value Variables in For-Each Statements, Infers NamespaceDeclarations for Import Packages, Declares Variables in Short Assignments, Adjust Names of Keys in Key Value Expressions to FQN, and Adds Methods of Embedded Structs to the Record's Scope."
+)
 class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
-    private lateinit var walker: SubgraphWalker.ScopedWalker
+    private lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
 
+    // Note: Code analysis suggests that this property is non-nullable, but there is a complex
+    // reason, why it has to be nullable.
     override val scope: Scope?
         get() = scopeManager.currentScope
 
@@ -109,7 +115,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
             component.translationUnits += addBuiltIn()
         }
 
-        walker = SubgraphWalker.ScopedWalker(scopeManager)
+        walker = SubgraphWalker.ScopedWalker(scopeManager, Strategy::AST_FORWARD)
         walker.registerHandler { node ->
             when (node) {
                 is RecordDeclaration -> handleRecordDeclaration(node)
@@ -151,7 +157,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         scopeManager.enterScope(record)
 
         // Loop through the embedded struct and add their methods to the record's scope.
-        for (method in record.embeddedStructs.flatMap { it.methods }) {
+        for (method in record.embeddedStructs.flatMap { it.toType().methods }) {
             // Add it to the scope, but do NOT add it to the underlying AST field (methods),
             // otherwise we would duplicate the method in the AST
             scopeManager.addDeclaration(method)
@@ -242,7 +248,7 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 type
             }
 
-        // The type of a "inner" composite literal can be omitted if the outer one is creating
+        // The type of an "inner" composite literal can be omitted if the outer one is creating
         // an array type. In this case, we need to set the type manually because the type for
         // the "inner" one is empty.
         // Example code:
@@ -257,28 +263,34 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         // }
         if (type is PointerType && type.isArray) {
             for (init in node.initializers) {
-                if (init is InitializerListExpression) {
-                    init.type = type.elementType
-                } else if (init is KeyValueExpression && init.value is InitializerListExpression) {
-                    init.value?.type = type.elementType
-                } else if (init is KeyValueExpression && init.key is InitializerListExpression) {
-                    init.key?.type = type.elementType
+                when (init) {
+                    is InitializerListExpression -> {
+                        init.type = type.elementType
+                    }
+
+                    is KeyValueExpression if init.value is InitializerListExpression -> {
+                        init.value.type = type.elementType
+                    }
+
+                    is KeyValueExpression if init.key is InitializerListExpression -> {
+                        init.key.type = type.elementType
+                    }
                 }
             }
         } else if (type?.isMap == true) {
             for (init in node.initializers) {
                 if (init is KeyValueExpression) {
                     if (init.key is InitializerListExpression) {
-                        init.key?.type = (type as ObjectType).generics.getOrNull(0) ?: unknownType()
+                        init.key.type = (type as ObjectType).generics.getOrNull(0) ?: unknownType()
                     } else if (init.value is InitializerListExpression) {
-                        init.value?.type =
+                        init.value.type =
                             (type as ObjectType).generics.getOrNull(1) ?: unknownType()
                     }
                 }
             }
         }
 
-        // Afterwards, we are not interested in arrays and maps, but only the "inner" single-object
+        // Afterward, we are not interested in arrays and maps, but only the "inner" single-object
         // expressions
         if (
             type is UnknownType ||

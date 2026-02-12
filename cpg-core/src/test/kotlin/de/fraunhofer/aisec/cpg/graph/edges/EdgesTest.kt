@@ -35,8 +35,8 @@ class EdgesTest {
     @Test
     fun testUnwrap() {
         with(TestLanguageFrontend()) {
-            var record = newRecordDeclaration("myRecord", kind = "class")
-            var method = newMethodDeclaration("myFunc")
+            val record = newRecordDeclaration("myRecord", kind = "class")
+            val method = newMethodDeclaration("myFunc")
             record.methods += method
 
             assertEquals(1, record.methods.size)

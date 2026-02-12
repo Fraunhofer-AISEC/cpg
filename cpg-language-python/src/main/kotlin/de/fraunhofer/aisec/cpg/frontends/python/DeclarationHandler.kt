@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
@@ -102,7 +103,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
      * `receiver` (most often called `self`).
      */
     private fun handleFunctionDef(s: Python.AST.NormalOrAsyncFunctionDef): FunctionDeclaration {
-        var recordDeclaration =
+        val recordDeclaration =
             (frontend.scopeManager.currentScope as? RecordScope)?.astNode as? RecordDeclaration
         val language = language
         val func =
@@ -114,7 +115,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                         rawNode = s,
                     )
                 } else if (language is HasOperatorOverloading && s.name.isKnownOperatorName) {
-                    var decl =
+                    val decl =
                         newOperatorDeclaration(
                             name = s.name,
                             recordDeclaration = recordDeclaration,
@@ -161,6 +162,21 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
 
         if (s.body.isNotEmpty()) {
             func.body = frontend.statementHandler.makeBlock(s.body, parentNode = s)
+        }
+
+        if (func is ConstructorDeclaration) {
+            (func.body as? Block)?.let { block ->
+                block +=
+                    newReturnStatement().apply {
+                        this.isImplicit = true
+                        this.returnValue =
+                            newReference("self").apply {
+                                this.isImplicit = true
+                                this.access = AccessValues.READ
+                            }
+                        this.codeAndLocationFrom(func)
+                    }
+            }
         }
 
         frontend.scopeManager.leaveScope(func)
@@ -268,11 +284,12 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                 val defaultValue =
                     args.defaults.getOrNull(0)?.let { frontend.expressionHandler.handle(it) }
                 defaultValue?.let {
-                    frontend.scopeManager.addDeclaration(recvNode)
                     result.additionalProblems +=
                         newProblemExpression("Receiver with default value", rawNode = args)
                 }
             }
+            // Add the receiver to the scope so that references to it can be resolved
+            frontend.scopeManager.addDeclaration(recvNode)
 
             when (result) {
                 is ConstructorDeclaration,
@@ -360,7 +377,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
     ): List<Annotation> {
         val annotations = mutableListOf<Annotation>()
         for (decorator in decoratorList) {
-            var annotation =
+            val annotation =
                 when (decorator) {
                     is Python.AST.Name -> {
                         val parsedDecorator = frontend.expressionHandler.handle(decorator)

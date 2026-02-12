@@ -25,10 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
+import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
 import de.fraunhofer.aisec.cpg.graph.types.DeclaresType
 import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
@@ -50,20 +52,44 @@ open class RecordDeclaration :
     /** The kind, i.e. struct, class, union or enum. */
     var kind: String? = null
 
+    /**
+     * The [FieldDeclaration]s that are directly contained in this record declaration's AST
+     * structure. This does not include any fields that might be declared in a base class or
+     * interface or fields that are declared outside the AST structure.
+     */
     @Relationship(value = "FIELDS", direction = Relationship.Direction.OUTGOING)
     var fieldEdges = astEdgesOf<FieldDeclaration>()
+    /** Virtual property to directly access the nodes in [fieldEdges]. */
     var fields by unwrapping(RecordDeclaration::fieldEdges)
 
+    /**
+     * The [MethodDeclaration]s that are directly contained in this record declaration's AST
+     * structure. This does not include any methods that might be declared in a base class or
+     * interface or methods that are declared outside the AST structure.
+     */
     @Relationship(value = "METHODS", direction = Relationship.Direction.OUTGOING)
     var methodEdges = astEdgesOf<MethodDeclaration>()
+    /** Virtual property to directly access the nodes in [methods]. */
     var methods by unwrapping(RecordDeclaration::methodEdges)
 
+    /**
+     * The [ConstructorDeclaration]s that are directly contained in this record declaration's AST
+     * structure. This does not include any constructors that might be declared in a base class or
+     * interface or constructors that are declared outside the AST structure.
+     */
     @Relationship(value = "CONSTRUCTORS", direction = Relationship.Direction.OUTGOING)
     var constructorEdges = astEdgesOf<ConstructorDeclaration>()
+    /** Virtual property to directly access the nodes in [constructors]. */
     var constructors by unwrapping(RecordDeclaration::constructorEdges)
 
+    /**
+     * The [RecordDeclaration]s that are directly contained in this record declaration's AST
+     * structure. This does not include any records that might be declared in a base class or
+     * interface or records that are declared outside the AST structure.
+     */
     @Relationship(value = "RECORDS", direction = Relationship.Direction.OUTGOING)
     var recordEdges = astEdgesOf<RecordDeclaration>()
+    /** Virtual property to directly access the nodes in [recordEdges]. */
     var records by unwrapping(RecordDeclaration::recordEdges)
 
     @Relationship(value = "TEMPLATES", direction = Relationship.Direction.OUTGOING)
@@ -94,38 +120,6 @@ open class RecordDeclaration :
     var staticImportStatements: List<String> = ArrayList()
 
     @Relationship var staticImports: MutableSet<ValueDeclaration> = HashSet()
-
-    fun addField(fieldDeclaration: FieldDeclaration) {
-        addIfNotContains(fieldEdges, fieldDeclaration)
-    }
-
-    fun removeField(fieldDeclaration: FieldDeclaration) {
-        fieldEdges.removeIf { it.end == fieldDeclaration }
-    }
-
-    fun addMethod(methodDeclaration: MethodDeclaration) {
-        addIfNotContains(methodEdges, methodDeclaration)
-    }
-
-    fun removeMethod(methodDeclaration: MethodDeclaration?) {
-        methodEdges.removeIf { it.end == methodDeclaration }
-    }
-
-    fun addConstructor(constructorDeclaration: ConstructorDeclaration) {
-        addIfNotContains(constructorEdges, constructorDeclaration)
-    }
-
-    fun removeConstructor(constructorDeclaration: ConstructorDeclaration?) {
-        constructorEdges.removeIf { it.end == constructorDeclaration }
-    }
-
-    fun removeRecord(recordDeclaration: RecordDeclaration) {
-        recordEdges.removeIf { it.end == recordDeclaration }
-    }
-
-    fun removeTemplate(templateDeclaration: TemplateDeclaration?) {
-        templateEdges.removeIf { it.end == templateDeclaration }
-    }
 
     @DoNotPersist
     override val declarations: List<Declaration>
@@ -182,6 +176,8 @@ open class RecordDeclaration :
             return list
         }
 
+    override var firstBasicBlock: BasicBlock? = null
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is RecordDeclaration) return false
@@ -217,16 +213,18 @@ open class RecordDeclaration :
      *
      * @return the type
      */
-    fun toType(): Type {
+    fun toType(): ObjectType {
         val type = objectType(name)
         if (type is ObjectType) {
-            // as a shortcut, directly set the record declaration. This will be otherwise done
+            // As a shortcut, directly set the record declaration. This will be otherwise done
             // later by a pass, but for some frontends we need this immediately, so we set
             // this here.
             type.recordDeclaration = this
+            type.superTypes.addAll(this.superTypes)
+            return type
+        } else {
+            throw TranslationException("Cannot create type for $this, as it is not an ObjectType")
         }
-        type.superTypes.addAll(this.superTypes)
-        return type
     }
 
     override val declaredType: Type

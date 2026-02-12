@@ -139,7 +139,7 @@ fun QueryTree<*>.getCodeflow(): List<List<Node>> {
     } else if (this.value is Boolean) {
         this.children.flatMap { it.getCodeflow() }
     } else {
-        listOf<List<Node>>()
+        listOf()
     }
 }
 
@@ -249,15 +249,15 @@ fun Map.Entry<String, File>.toSarifLocation(
 fun de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.toSarif(
     component: Component? = null
 ): PhysicalLocation {
-    var uri = this.artifactLocation.uri.toPath()
+    var uri = this.artifactLocation.uri?.toPath()
     val uriBase = component?.location?.artifactLocation?.uri?.toPath()
-    if (uriBase != null) {
+    if (uri != null && uriBase != null) {
         uri = uri.relativeToOrSelf(uriBase)
     }
 
     return PhysicalLocation(
         artifactLocation =
-            ArtifactLocation(uri = uri.toString(), uriBaseID = component?.name?.localName),
+            ArtifactLocation(uri = uri?.toString(), uriBaseID = component?.name?.localName),
         region =
             Region(
                 startLine = this.region.startLine.toLong(),

@@ -27,8 +27,8 @@ package example
 
 project {
     suppressions {
-        /** The encrypt function has 7 characters, so its ok. */
-        queryTreeById("00000000-137f-f4c6-0000-000000000540" to true)
+        /** The encrypt function has 7 characters, so it's ok. */
+        queryTreeById("00000000-137f-f4c6-ffff-ffffde545796" to true)
 
         /**
          * This is a suppression for a query that checks for a function named "foo" and contains a

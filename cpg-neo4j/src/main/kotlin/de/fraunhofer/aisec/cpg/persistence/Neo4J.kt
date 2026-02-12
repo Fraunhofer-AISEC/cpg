@@ -35,6 +35,8 @@ import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
+import java.net.ConnectException
+import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
 import org.slf4j.LoggerFactory
 
@@ -61,6 +63,35 @@ const val nodeChunkSize = 10000
 internal val log = LoggerFactory.getLogger("Persistence")
 
 internal typealias Relationship = Map<String, Any?>
+
+/**
+ * This function creates a new Neo4j session, optionally purges the database, and persists the
+ * current [TranslationResult] into the database using the [persist] function (which requires a
+ * session context often not available at the call-site).
+ *
+ * @param noPurgeDb A boolean flag indicating whether to skip the database purge step. If set to
+ *   true, the existing data in the database will not be deleted before persisting the new data.
+ * @param protocol The protocol to use for connecting to the Neo4j database
+ * @param host The host address of the Neo4j database
+ * @param port The port number for the Neo4j database connection
+ * @param neo4jUsername The username for authenticating with the Neo4j database
+ * @param neo4jPassword The password for authenticating with the Neo4j database
+ */
+fun TranslationResult.pushToNeo4j(
+    noPurgeDb: Boolean = false,
+    protocol: String = Neo4jConnectionDefaults.PROTOCOL,
+    host: String = Neo4jConnectionDefaults.HOST,
+    port: Int = Neo4jConnectionDefaults.PORT,
+    neo4jUsername: String = Neo4jConnectionDefaults.USERNAME,
+    neo4jPassword: String = Neo4jConnectionDefaults.PASSWORD,
+) {
+    val session: Session = connect(protocol, host, port, neo4jUsername, neo4jPassword)
+    with(session) {
+        if (!noPurgeDb) executeWrite { tx -> tx.run("MATCH (n) DETACH DELETE n").consume() }
+        this@pushToNeo4j.persist()
+    }
+    session.close()
+}
 
 /**
  * Persists the current [TranslationResult] into a graph database.
@@ -209,12 +240,16 @@ val Persistable.connectedNodes: IdentitySet<Node>
 
         for (entry in this::class.schemaRelationships) {
             val value = entry.value.call(this)
-            if (value is EdgeCollection<*, *>) {
-                nodes += value.toNodeCollection()
-            } else if (value is List<*>) {
-                nodes += value.filterIsInstance<Node>()
-            } else if (value is Node) {
-                nodes += value
+            when (value) {
+                is EdgeCollection<*, *> -> {
+                    nodes += value.toNodeCollection()
+                }
+                is List<*> -> {
+                    nodes += value.filterIsInstance<Node>()
+                }
+                is Node -> {
+                    nodes += value
+                }
             }
         }
 
@@ -227,31 +262,35 @@ private fun List<Node>.collectRelationships(): List<Relationship> {
     for (node in this) {
         for (entry in node::class.schemaRelationships) {
             val value = entry.value.call(node)
-            if (value is EdgeCollection<*, *>) {
-                relationships +=
-                    value.map { edge ->
-                        mapOf(
-                            "startId" to edge.start.id.toString(),
-                            "endId" to edge.end.id.toString(),
-                            "type" to entry.key,
-                        ) + edge.properties()
-                    }
-            } else if (value is List<*>) {
-                relationships +=
-                    value.filterIsInstance<Node>().map { end ->
+            when (value) {
+                is EdgeCollection<*, *> -> {
+                    relationships +=
+                        value.map { edge ->
+                            mapOf(
+                                "startId" to edge.start.id.toString(),
+                                "endId" to edge.end.id.toString(),
+                                "type" to entry.key,
+                            ) + edge.properties()
+                        }
+                }
+                is List<*> -> {
+                    relationships +=
+                        value.filterIsInstance<Node>().map { end ->
+                            mapOf(
+                                "startId" to node.id.toString(),
+                                "endId" to end.id.toString(),
+                                "type" to entry.key,
+                            )
+                        }
+                }
+                is Node -> {
+                    relationships +=
                         mapOf(
                             "startId" to node.id.toString(),
-                            "endId" to end.id.toString(),
+                            "endId" to value.id.toString(),
                             "type" to entry.key,
                         )
-                    }
-            } else if (value is Node) {
-                relationships +=
-                    mapOf(
-                        "startId" to node.id.toString(),
-                        "endId" to value.id.toString(),
-                        "type" to entry.key,
-                    )
+                }
             }
         }
     }
@@ -266,4 +305,30 @@ private fun List<Node>.collectRelationships(): List<Relationship> {
         ) + edge.properties()
     }*/
     return relationships
+}
+
+/**
+ * Connects to the neo4j db.
+ *
+ * @return a Pair of Optionals of the Session and the SessionFactory, if it is possible to connect
+ *   to neo4j. If it is not possible, the return value is a Pair of empty Optionals.
+ * @throws InterruptedException, if the thread is interrupted while it tries to connect to the neo4j
+ *   db.
+ * @throws ConnectException, if there is no connection to bolt://localhost:7687 possible
+ */
+@Throws(InterruptedException::class, ConnectException::class)
+fun connect(
+    protocol: String = Neo4jConnectionDefaults.PROTOCOL,
+    host: String = Neo4jConnectionDefaults.HOST,
+    port: Int = Neo4jConnectionDefaults.PORT,
+    neo4jUsername: String = Neo4jConnectionDefaults.USERNAME,
+    neo4jPassword: String = Neo4jConnectionDefaults.PASSWORD,
+): Session {
+    val driver =
+        GraphDatabase.driver(
+            "$protocol$host:$port",
+            org.neo4j.driver.AuthTokens.basic(neo4jUsername, neo4jPassword),
+        )
+    driver.verifyConnectivity()
+    return driver.session()
 }

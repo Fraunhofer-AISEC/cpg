@@ -28,6 +28,8 @@ package de.fraunhofer.aisec.cpg.helpers
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import java.util.IdentityHashMap
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * A complete lattice is an ordered structure of values of type [T]. [T] could be anything, e.g., a
@@ -73,9 +75,10 @@ class PowersetLattice(override val elements: IdentitySet<Node>) :
 }
 
 /**
- * Stores the current state. I.e., it maps [K] (e.g. a [Node] or [Edge]) to a [LatticeElement]. It
- * provides some useful functions e.g. to check if the mapping has to be updated (e.g. because there
- * are new nodes or because a new lattice element is bigger than the old one).
+ * Stores the current state. I.e., it maps [K] (e.g. a [Node] or [PropertyEdge]) to a
+ * [LatticeElement]. It provides some useful functions e.g. to check if the mapping has to be
+ * updated (e.g. because there are new nodes or because a new lattice element is bigger than the old
+ * one).
  */
 open class State<K, V> : HashMap<K, LatticeElement<V>>() {
 
@@ -215,9 +218,6 @@ class Worklist<K : Any, N : Any, V>() {
         return node
     }
 
-    /** Checks if [currentNode] has already been visited before. */
-    fun hasAlreadySeen(currentNode: K) = currentNode in alreadySeen
-
     /** Computes the meet over paths for all the states in [globalState]. */
     fun mop(): State<N, V>? {
         val firstKey = globalState.keys.firstOrNull()
@@ -242,9 +242,10 @@ class Worklist<K : Any, N : Any, V>() {
 inline fun <reified K : Node, V> iterateEOG(
     startNode: K,
     startState: State<K, V>,
-    transformation: (K, State<K, V>) -> State<K, V>,
+    timeout: Long? = null,
+    crossinline transformation: (K, State<K, V>) -> State<K, V>,
 ): State<K, V>? {
-    return iterateEOG(startNode, startState) { k, s, _ -> transformation(k, s) }
+    return iterateEOG(startNode, startState, timeout) { k, s, _ -> transformation(k, s) }
 }
 
 /**
@@ -258,6 +259,21 @@ inline fun <reified K : Node, V> iterateEOG(
  * not useful for this analysis. The [transformation] has to return the updated [State].
  */
 inline fun <reified K : Node, V> iterateEOG(
+    startNode: K,
+    startState: State<K, V>,
+    timeout: Long? = null,
+    crossinline transformation: (K, State<K, V>, Worklist<K, K, V>) -> State<K, V>,
+): State<K, V>? {
+    return runBlocking {
+        if (timeout != null) {
+            withTimeoutOrNull(timeout) { iterateEogInternal(startNode, startState, transformation) }
+        } else {
+            iterateEogInternal(startNode, startState, transformation)
+        }
+    }
+}
+
+inline fun <reified K : Node, V> iterateEogInternal(
     startNode: K,
     startState: State<K, V>,
     transformation: (K, State<K, V>, Worklist<K, K, V>) -> State<K, V>,
@@ -282,8 +298,9 @@ inline fun <reified K : Node, V> iterateEOG(
             transformation(nextNode, if (insideBB) state else state.duplicate(), worklist)
         if (worklist.update(nextNode, newState)) {
             nextNode.nextEOGEdges.forEach {
-                if (it is K) {
-                    worklist.push(it, newState)
+                val end = it.end
+                if (end is K) {
+                    worklist.push(end, newState)
                 }
             }
         }
@@ -294,15 +311,31 @@ inline fun <reified K : Node, V> iterateEOG(
 inline fun <reified K : Edge<Node>, N : Any, V> iterateEOG(
     startEdges: List<K>,
     startState: State<N, V>,
-    transformation: (K, State<N, V>) -> State<N, V>,
+    timeout: Long? = null,
+    crossinline transformation: (K, State<N, V>) -> State<N, V>,
 ): State<N, V>? {
-    return iterateEOG(startEdges, startState) { k, s, _ -> transformation(k, s) }
+    return iterateEOG(startEdges, startState, timeout) { k, s, _ -> transformation(k, s) }
 }
 
 inline fun <reified K : Edge<Node>, N : Any, V> iterateEOG(
     startEdges: List<K>,
     startState: State<N, V>,
-    transformation: (K, State<N, V>, Worklist<K, N, V>) -> State<N, V>,
+    timeout: Long? = null,
+    crossinline transformation: (K, State<N, V>, Worklist<K, N, V>) -> State<N, V>,
+): State<N, V>? {
+    return runBlocking {
+        timeout?.let { timeout ->
+            withTimeoutOrNull(timeout) {
+                iterateEogInternal(startEdges, startState, transformation)
+            }
+        } ?: run { iterateEogInternal(startEdges, startState, transformation) }
+    }
+}
+
+inline fun <reified K : Edge<Node>, N : Any, V> iterateEogInternal(
+    startEdges: List<K>,
+    startState: State<N, V>,
+    crossinline transformation: (K, State<N, V>, Worklist<K, N, V>) -> State<N, V>,
 ): State<N, V>? {
     val globalState = IdentityHashMap<K, State<N, V>>()
     for (startEdge in startEdges) {

@@ -26,9 +26,9 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
 import de.fraunhofer.aisec.cpg.processing.IVisitor
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
-import java.util.*
 
 /**
  * Transitively connect [RecordDeclaration] nodes with their supertypes' records.
@@ -57,6 +56,9 @@ import java.util.*
  * information in the graph might not be fully correct
  */
 @DependsOn(TypeResolver::class)
+@Description(
+    "Builds the type hierarchy within the CPG, establishing relationships between types such as inheritance and interface implementation."
+)
 open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     protected val recordMap = mutableMapOf<Name, RecordDeclaration>()
     protected val enums = mutableListOf<EnumDeclaration>()
@@ -79,12 +81,12 @@ open class TypeHierarchyResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    protected fun findRecordsAndEnums(node: Node) {
+    protected fun findRecordsAndEnums(node: AstNode) {
         // Using a visitor to avoid loops in the AST
         node.accept(
             Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
+            object : IVisitor<AstNode>() {
+                override fun visit(t: AstNode) {
                     if (t is EnumDeclaration) {
                         enums.add(t)
                     } else if (t is RecordDeclaration) {

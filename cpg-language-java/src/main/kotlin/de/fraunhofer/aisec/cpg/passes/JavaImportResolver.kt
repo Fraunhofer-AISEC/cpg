@@ -45,6 +45,7 @@ import java.util.regex.Pattern
  */
 @DependsOn(TypeHierarchyResolver::class)
 @RequiredFrontend(JavaLanguageFrontend::class)
+@Description("Pass that resolves Java imports.")
 open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
     protected val records: MutableList<RecordDeclaration> = ArrayList()
     protected val importables: MutableMap<String, Declaration> = HashMap()
@@ -155,20 +156,20 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             targetMethod.language = base.language
             targetMethod.isInferred = true
 
-            base.addField(targetField)
-            base.addMethod(targetMethod)
+            base.fields += targetField
+            base.methods += targetMethod
             result.add(targetField)
             result.add(targetMethod)
         }
         return result
     }
 
-    protected fun findImportables(node: Node) {
+    protected fun findImportables(node: AstNode) {
         // Using a visitor to avoid loops in the AST
         node.accept(
             Strategy::AST_FORWARD,
-            object : IVisitor<Node>() {
-                override fun visit(t: Node) {
+            object : IVisitor<AstNode>() {
+                override fun visit(t: AstNode) {
                     if (t is RecordDeclaration) {
                         records.add(t)
                         importables.putIfAbsent(t.name.toString(), t)

@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.passes
 
 import de.fraunhofer.aisec.cpg.TranslationContext
+import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
@@ -39,12 +40,14 @@ import de.fraunhofer.aisec.cpg.helpers.functional.Lattice
 import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.Order
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 
 /**
  * A [Pass] which uses a simple logic to determine constant values and mark unreachable code regions
  * by setting the [EvaluationOrder.unreachable] property to true.
  */
 @DependsOn(ControlFlowSensitiveDFGPass::class)
+@Description("A pass which marks unreachable EOG edges.")
 open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     override fun cleanup() {
@@ -52,9 +55,12 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     override fun accept(node: Node) {
-        val walker = SubgraphWalker.IterativeGraphWalker()
+        val walker = SubgraphWalker.IterativeGraphWalker(strategy = Strategy::AST_FORWARD)
         walker.registerOnNodeVisit(::handle)
-        walker.iterate(node)
+
+        if (node is AstNode) {
+            walker.iterate(node)
+        }
     }
 
     /**
@@ -70,7 +76,15 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         }
 
         val nextEog = node.nextEOGEdges.toList()
-        val finalStateNew = unreachabilityState.iterateEOG(nextEog, startState, ::transfer)
+        val finalStateNew =
+            unreachabilityState.iterateEOG(nextEog, startState, ::transfer)
+                ?: run {
+                    log.warn(
+                        "Could not compute unreachability of EOG edges for {}, reached a timeout",
+                        node.name,
+                    )
+                    return@handle
+                }
 
         for ((key, value) in finalStateNew) {
             if (value.reachability == Reachability.UNREACHABLE) {
@@ -143,20 +157,24 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         val evalResult = n.language.evaluator.evaluate(n.condition)
 
         val (unreachableEdges, remainingEdges) =
-            if (evalResult == true) {
-                // If the condition is always true, the "false" branch is always unreachable
-                Pair(
-                    n.nextEOGEdges.filter { e -> e.branch == false },
-                    n.nextEOGEdges.filter { e -> e.branch != false },
-                )
-            } else if (evalResult == false) {
-                // If the condition is always false, the "true" branch is always unreachable
-                Pair(
-                    n.nextEOGEdges.filter { e -> e.branch == true },
-                    n.nextEOGEdges.filter { e -> e.branch != true },
-                )
-            } else {
-                Pair(listOf(), n.nextEOGEdges)
+            when (evalResult) {
+                true -> {
+                    // If the condition is always true, the "false" branch is always unreachable
+                    Pair(
+                        n.nextEOGEdges.filter { e -> e.branch == false },
+                        n.nextEOGEdges.filter { e -> e.branch != false },
+                    )
+                }
+                false -> {
+                    // If the condition is always false, the "true" branch is always unreachable
+                    Pair(
+                        n.nextEOGEdges.filter { e -> e.branch == true },
+                        n.nextEOGEdges.filter { e -> e.branch != true },
+                    )
+                }
+                else -> {
+                    Pair(listOf(), n.nextEOGEdges)
+                }
             }
 
         return propagateState(
@@ -192,18 +210,24 @@ open class UnreachableEOGPass(ctx: TranslationContext) : EOGStarterPass(ctx) {
         val evalResult = n.language.evaluator.evaluate(condition)
 
         val (unreachableEdges, remainingEdges) =
-            if (evalResult is Boolean && evalResult == true) {
-                Pair(
-                    n.nextEOGEdges.filter { e -> e.branch == false },
-                    n.nextEOGEdges.filter { e -> e.branch != false },
-                )
-            } else if (evalResult is Boolean && evalResult == false) {
-                Pair(
-                    n.nextEOGEdges.filter { e -> e.branch == true },
-                    n.nextEOGEdges.filter { e -> e.branch != true },
-                )
-            } else {
-                Pair(listOf(), n.nextEOGEdges)
+            when (evalResult) {
+                is Boolean if evalResult -> {
+                    Pair(
+                        n.nextEOGEdges.filter { e -> e.branch == false },
+                        n.nextEOGEdges.filter { e -> e.branch != false },
+                    )
+                }
+
+                is Boolean if !evalResult -> {
+                    Pair(
+                        n.nextEOGEdges.filter { e -> e.branch == true },
+                        n.nextEOGEdges.filter { e -> e.branch != true },
+                    )
+                }
+
+                else -> {
+                    Pair(listOf(), n.nextEOGEdges)
+                }
             }
         return propagateState(
             unreachableEdges = unreachableEdges,
@@ -287,7 +311,7 @@ class ReachabilityLattice() : Lattice<ReachabilityLattice.Element> {
     override val bottom: Element
         get() = Element(Reachability.BOTTOM)
 
-    override fun lub(one: Element, two: Element, allowModify: Boolean): Element {
+    override fun lub(one: Element, two: Element, allowModify: Boolean, widen: Boolean): Element {
         return if (allowModify) {
             when (compare(one, two)) {
                 Order.EQUAL -> one
