@@ -272,8 +272,6 @@ class DFGTest {
         assertEquals(22, path.nodes.size)
     }
 
-    // TODO for merge
-    @Ignore
     @Test
     fun testDictAccess() {
         val topLevel = Path.of("src", "test", "resources", "python")

@@ -2091,21 +2091,29 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
             if (currentNode.isCompoundAssignment)
                 currentNode.lhs.map { Pair(it, doubleState.getLastWrites(it)) }
             else null
-        /* If the lhs is a MemberExpression, we additionally set the last write to the base here */
-        destinations.filterIsInstance<MemberExpression>().forEach { me ->
-            doubleState.getAddresses(me.base, me.base).forEach { baseAddress ->
-                val entry =
-                    doubleState.declarationsState.computeIfAbsent(baseAddress) {
-                        TripleLattice.Element(
-                            PowersetLattice.Element(baseAddress),
-                            PowersetLattice.Element(),
-                            PowersetLattice.Element(),
-                        )
-                    }
-                entry.third.clear()
-                entry.third.add(NodeWithPropertiesKey(me.base, equalLinkedHashSetOf(false)))
+        /* If the lhs is a MemberExpression or a SubscriptExpression, we additionally set the last write to the base/arrayExpression here */
+        destinations
+            .mapNotNullTo(ConcurrentIdentitySet()) {
+                when (it) {
+                    is MemberExpression -> it.base
+                    is SubscriptExpression -> it.arrayExpression
+                    else -> null
+                }
             }
-        }
+            .forEach { expression ->
+                doubleState.getAddresses(expression, expression).forEach { baseAddress ->
+                    val entry =
+                        doubleState.declarationsState.computeIfAbsent(baseAddress) {
+                            TripleLattice.Element(
+                                PowersetLattice.Element(baseAddress),
+                                PowersetLattice.Element(),
+                                PowersetLattice.Element(),
+                            )
+                        }
+                    entry.third.clear()
+                    entry.third.add(NodeWithPropertiesKey(expression, equalLinkedHashSetOf(false)))
+                }
+            }
 
         doubleState =
             doubleState.updateValues(
