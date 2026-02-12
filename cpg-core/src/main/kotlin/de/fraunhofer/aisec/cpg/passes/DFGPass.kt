@@ -124,7 +124,7 @@ open class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             // is Reference -> handleReference(node)
             is PointerReference -> handlePointerReference(node)
             is PointerDereference -> handlePointerDereference(node)
-            // is SubscriptExpression -> handleSubscriptExpression(node)
+            is SubscriptExpression -> handleSubscriptExpression(node)
             is NewArrayExpression -> handleNewArrayExpression(node)
             is ConditionalExpression -> handleConditionalExpression(node)
             is MemberExpression -> handleMemberExpression(node)

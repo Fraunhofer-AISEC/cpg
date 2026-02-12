@@ -610,20 +610,20 @@ class PointsToPassTest {
         assertEquals(1, n0Line68.memoryAddresses.size)
         assertEquals(1, n0Line68.fullMemoryValues.size)
         assertEquals(literal1, n0Line68.fullMemoryValues.firstOrNull())
-        assertEquals(n0Line67, n0Line68.prevDFG.singleOrNull())
+        assertEquals(n0Line67, n0Line68.prevFullDFG.singleOrNull())
 
         // Line 71
         assertEquals(1, niLine71.memoryAddresses.size)
         assertEquals(1, niLine71.fullMemoryValues.size)
         assertEquals(exprLine71, niLine71.fullMemoryValues.firstOrNull())
-        assertEquals(exprLine71, niLine71.prevDFG.singleOrNull())
+        assertEquals(exprLine71, niLine71.prevFullDFG.singleOrNull())
 
         // Line 75
         assertEquals(1, njLine75.memoryAddresses.size)
         assertEquals(1, njLine75.fullMemoryValues.size)
         assertTrue(njLine75.fullMemoryValues.first() is UnknownMemoryValue)
         assertLocalName("j", njLine75.fullMemoryValues.first())
-        assertEquals(0, njLine75.prevDFG.size)
+        assertEquals(0, njLine75.prevFullDFG.size)
     }
 
     @Test
@@ -1784,7 +1784,7 @@ class PointsToPassTest {
                 .size,
         )
 
-        assertEquals(2, sseLine181.prevDFG.size)
+        assertEquals(3, sseLine181.prevDFG.size)
         // One DFG-Edge to the SSE in Line 202
         assertEquals(
             param1SSELine202,
@@ -1802,6 +1802,14 @@ class PointsToPassTest {
             ceLine180,
             sseLine181.prevDFGEdges
                 .singleOrNull { it.functionSummary && it.granularity is FullDataflowGranularity }
+                ?.start,
+        )
+
+        // One IndexedDataFlowGranularity edge to the base
+        assertEquals(
+            sseLine181.arrayExpression,
+            sseLine181.prevDFGEdges
+                .singleOrNull { it.granularity is IndexedDataflowGranularity }
                 ?.start,
         )
 
@@ -3652,6 +3660,6 @@ class PointsToPassTest {
         val literal0 = fd.literals[0]
         assertNotNull(literal0)
 
-        assertEquals(literal0, numbers0.prevDFG.single())
+        assertEquals(literal0, numbers0.prevFullDFG.single())
     }
 }
