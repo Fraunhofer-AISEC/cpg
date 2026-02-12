@@ -41,8 +41,6 @@ class ParameterDeclaration : ValueDeclaration(), HasDefault<Expression?>, Argume
     var defaultValueEdge = astOptionalEdgeOf<Expression>()
     private var defaultValue by unwrapping(ParameterDeclaration::defaultValueEdge)
 
-    var modifiers: List<String> = mutableListOf()
-
     override var default: Expression?
         get() = defaultValue
         set(value) {

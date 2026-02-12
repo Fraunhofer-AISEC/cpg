@@ -139,7 +139,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             newFieldDeclaration(
                 name.localName,
                 unknownType(),
-                emptyList(),
+                emptySet(),
                 initializer = initializer,
                 implicitInitializerAllowed = true,
                 rawNode = ctx,
@@ -405,7 +405,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 newFieldDeclaration(
                     name,
                     unknownType(),
-                    emptyList(),
+                    emptySet(),
                     initializer = null,
                     implicitInitializerAllowed = false,
                     rawNode = ctx,

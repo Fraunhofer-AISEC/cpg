@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.jvm
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.helpers.map
 import sootup.core.jimple.basic.Local
 import sootup.core.model.SootClass
 import sootup.core.model.SootField

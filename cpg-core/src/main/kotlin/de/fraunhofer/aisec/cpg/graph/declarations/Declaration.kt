@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.AstNode
+import de.fraunhofer.aisec.cpg.graph.HasModifiers
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -43,7 +44,7 @@ import org.neo4j.ogm.annotation.NodeEntity
  * however clang does establish a connection between those nodes, we currently do not.
  */
 @NodeEntity
-abstract class Declaration : AstNode() {
+abstract class Declaration : AstNode(), HasModifiers {
     @DoNotPersist
     val symbol: Symbol
         get() {
@@ -55,6 +56,8 @@ abstract class Declaration : AstNode() {
      * [RecordDeclaration], this will return the [RecordScope] of the particular record or class.
      */
     var declaringScope: Scope? = null
+
+    override var modifiers: Set<String> = setOf()
 
     override fun getExitNextEOG(): Collection<Node> {
         return setOf()
