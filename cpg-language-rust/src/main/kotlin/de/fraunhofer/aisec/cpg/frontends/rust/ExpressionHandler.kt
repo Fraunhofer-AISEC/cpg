@@ -163,7 +163,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         val right = node["right"]
         val operator = node["operator"]
 
-        val op = newBinaryOperator(operator?.let { frontend.codeOf(it) } ?: "", rawNode = node)
+        val op = newBinaryOperator(operator.text(), rawNode = node)
         if (left != null)
             op.lhs = handle(left) as? Expression ?: newProblemExpression("LHS not an expression")
         if (right != null)
@@ -176,7 +176,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         val operator = node.getChild(0) // Usually anonymous
         val operand = node["operand"] ?: node.getNamedChild(0)
 
-        val opCode = operator.let { frontend.codeOf(it) } ?: ""
+        val opCode = operator.text()
         val op = newUnaryOperator(opCode, postfix = false, prefix = true, rawNode = node)
         if (operand != null)
             op.input =
@@ -214,7 +214,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         val rhs =
             handle(right ?: return newProblemExpression("Missing RHS in assignment")) as? Expression
                 ?: return newProblemExpression("RHS not an expression")
-        val opCode = operator?.let { frontend.codeOf(it) } ?: ""
+        val opCode = operator.text()
 
         return newAssignExpression(
             operatorCode = opCode,
@@ -342,7 +342,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             )
                 as? Expression
                 ?: return newProblemExpression("Missing value in field expression", rawNode = node)
-        val name = field?.let { frontend.codeOf(it) } ?: ""
+        val name = field.text()
 
         return newMemberExpression(name, base, rawNode = node)
     }
@@ -788,7 +788,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     private fun handleUnsafeBlock(node: TSNode): Expression {
         // unsafe_block has an inner "block" named child
-        val blockNode = node.getChildByFieldName("block")
+        val blockNode = node["block"]
         val block =
             if (blockNode != null && !blockNode.isNull && blockNode.type == "block") {
                 frontend.statementHandler.handleBlock(blockNode)
@@ -809,7 +809,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
 
     private fun handleAsyncBlock(node: TSNode): Expression {
         // async_block has an inner "block" named child
-        val blockNode = node.getChildByFieldName("block")
+        val blockNode = node["block"]
         val block =
             if (blockNode != null && !blockNode.isNull && blockNode.type == "block") {
                 frontend.statementHandler.handleBlock(blockNode)
@@ -845,7 +845,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         val index = node["index"]
         val indexName =
             if (index != null && !index.isNull) {
-                frontend.codeOf(index) ?: "0"
+                index.text().ifEmpty { "0" }
             } else {
                 // Fallback: extract the digit after the dot from the full code
                 val code = node.text()

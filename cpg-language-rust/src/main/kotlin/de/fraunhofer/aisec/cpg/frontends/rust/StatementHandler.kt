@@ -410,7 +410,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         }
 
         // Value is the iterable expression (e.g., "items" in "for x in items")
-        val value = node.getChildByFieldName("value")
+        val value = node["value"]
         if (value != null && !value.isNull) {
             forEach.iterable = frontend.expressionHandler.handle(value) as? Expression
         }

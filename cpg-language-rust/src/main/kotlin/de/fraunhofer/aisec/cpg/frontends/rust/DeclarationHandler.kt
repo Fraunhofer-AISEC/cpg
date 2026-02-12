@@ -197,9 +197,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                 if (nameNode == null || nameNode.isNull) {
                     nameNode = child["name"]
                 }
-                val name =
-                    if (nameNode != null && !nameNode.isNull) frontend.codeOf(nameNode)
-                    else child.text()
+                val name = nameNode.text().ifEmpty { child.text() }
                 val typeParam = newTypeParameterDeclaration(name, rawNode = child)
 
                 if (child.type == "constrained_type_parameter") {
@@ -231,7 +229,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         for (child in node.children) {
             if (child.type == "parameter") {
                 val pattern = child["pattern"]
-                var name = pattern?.let { frontend.codeOf(it) } ?: ""
+                var name = pattern.text()
                 val typeNode = child["type"]
 
                 // Check for mut keyword in pattern
@@ -284,7 +282,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
     private fun handleStructItem(node: TSNode): Declaration {
         val nameNode = node["name"]
-        val name = nameNode?.let { frontend.codeOf(it) } ?: ""
+        val name = nameNode.text()
 
         val record = newRecordDeclaration(name, "struct", rawNode = node)
 
@@ -309,7 +307,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             for (child in body.children) {
                 if (child.type == "field_declaration") {
                     val fieldNameNode = child["name"]
-                    val fieldName = fieldNameNode?.let { frontend.codeOf(it) } ?: ""
+                    val fieldName = fieldNameNode.text()
                     val fieldTypeNode = child["type"]
 
                     val field =
@@ -322,7 +320,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                     // Check for visibility modifier (e.g. pub)
                     for (fieldChild in child.children) {
                         if (fieldChild.type == "visibility_modifier") {
-                            val vis = frontend.codeOf(fieldChild) ?: "pub"
+                            val vis = fieldChild.text().ifEmpty { "pub" }
                             field.annotations += newAnnotation(vis, rawNode = fieldChild)
                             break
                         }
@@ -371,7 +369,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
     private fun handleTraitItem(node: TSNode): Declaration {
         val nameNode = node["name"]
-        val name = nameNode?.let { frontend.codeOf(it) } ?: ""
+        val name = nameNode.text()
 
         val record = newRecordDeclaration(name, "trait", rawNode = node)
 
@@ -431,7 +429,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
     private fun handleFunctionSignatureItem(node: TSNode): MethodDeclaration {
         val nameNode = node["name"]
-        val name = nameNode?.let { frontend.codeOf(it) } ?: ""
+        val name = nameNode.text()
 
         val recordDeclaration =
             (frontend.scopeManager.currentScope as? RecordScope)?.astNode as? RecordDeclaration
@@ -465,7 +463,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
     private fun handleEnumItem(node: TSNode): EnumDeclaration {
         val nameNode = node["name"]
-        val name = nameNode?.let { frontend.codeOf(it) } ?: ""
+        val name = nameNode.text()
 
         val enumDecl = newEnumDeclaration(name, rawNode = node)
         enumDecl.kind = "enum"
@@ -477,7 +475,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             for (child in body.children) {
                 if (child.type == "enum_variant") {
                     val variantNameNode = child["name"]
-                    val variantName = variantNameNode?.let { frontend.codeOf(it) } ?: ""
+                    val variantName = variantNameNode.text()
 
                     val entry = newEnumConstantDeclaration(variantName, rawNode = child)
                     entry.type = enumDecl.toType()
@@ -495,7 +493,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         val typeNode = node["type"]
         val traitNode = node["trait"]
 
-        val typeNameString = typeNode?.let { frontend.codeOf(it) } ?: ""
+        val typeNameString = typeNode.text()
         val typeName = Name(typeNameString, null, language.namespaceDelimiter)
 
         // Try to find an existing record in the current scope
@@ -539,7 +537,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
     private fun handleModItem(node: TSNode): NamespaceDeclaration {
         val nameNode = node["name"]
-        val name = nameNode?.let { frontend.codeOf(it) } ?: ""
+        val name = nameNode.text()
 
         val mod = newNamespaceDeclaration(name, rawNode = node)
         frontend.scopeManager.addDeclaration(mod)
@@ -570,7 +568,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
     private fun handleTypeItem(node: TSNode): Declaration {
         val nameNode = node["name"]
-        val name = nameNode?.let { frontend.codeOf(it) } ?: ""
+        val name = nameNode.text()
         val typeNode = node["type"]
 
         val targetType = frontend.typeOf(typeNode)
@@ -583,7 +581,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
     private fun handleAssociatedType(node: TSNode): Declaration {
         val nameNode = node["name"]
-        val name = nameNode?.let { frontend.codeOf(it) } ?: ""
+        val name = nameNode.text()
 
         // Associated types in traits have no concrete type yet (just a declaration).
         // Model as a TypedefDeclaration with unknown target type.
@@ -604,7 +602,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
     private fun handleMacroDefinition(node: TSNode): Declaration {
         val nameNode = node["name"]
-        val name = nameNode?.let { frontend.codeOf(it) } ?: ""
+        val name = nameNode.text()
 
         // Model macro_rules! definitions as FunctionDeclarations.
         // The macro body is opaque (token trees), so we just capture the declaration.
