@@ -2,7 +2,7 @@
 kotlin = "2.3.0"
 kotlinx-json = "1.10.0"
 neo4j = "4.0.10"
-neo4j5 = "5.28.2"
+neo4j5 = "5.28.10"
 log4j = "2.25.3"
 spotless = "8.1.0"
 publish = "0.36.0"

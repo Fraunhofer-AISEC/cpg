@@ -25,13 +25,12 @@
  */
 package de.fraunhofer.aisec.cpg_vis_neo4j
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase.Companion.fromFile
-import de.fraunhofer.aisec.cpg.helpers.Benchmark
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.concepts.file.python.PythonFileConceptPass
 import de.fraunhofer.aisec.cpg.persistence.Neo4jConnectionDefaults
+import de.fraunhofer.aisec.cpg.persistence.persistJson
 import de.fraunhofer.aisec.cpg.persistence.pushToNeo4j
 import java.io.File
 import java.net.ConnectException
@@ -39,12 +38,6 @@ import java.nio.file.Paths
 import java.util.concurrent.Callable
 import kotlin.reflect.KClass
 import kotlin.system.exitProcess
-import org.neo4j.ogm.context.EntityGraphMapper
-import org.neo4j.ogm.context.MappingContext
-import org.neo4j.ogm.cypher.compiler.MultiStatementCypherCompiler
-import org.neo4j.ogm.cypher.compiler.builders.node.DefaultNodeBuilder
-import org.neo4j.ogm.cypher.compiler.builders.node.DefaultRelationshipBuilder
-import org.neo4j.ogm.metadata.MetaData
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import picocli.CommandLine
@@ -57,18 +50,6 @@ private const val DEBUG_PARSER = true
 
 private const val DEFAULT_SAVE_DEPTH = -1
 private const val DEFAULT_MAX_COMPLEXITY = -1
-
-data class JsonNode(val id: Long, val labels: Set<String>, val properties: Map<String, Any>)
-
-data class JsonEdge(
-    val id: Long,
-    val type: String,
-    val startNode: Long,
-    val endNode: Long,
-    val properties: Map<String, Any>,
-)
-
-data class JsonGraph(val nodes: List<JsonNode>, val edges: List<JsonEdge>)
 
 /**
  * An application to export the <a href="https://github.com/Fraunhofer-AISEC/cpg">cpg</a> to a <a
@@ -295,102 +276,6 @@ class Application : Callable<Int> {
         arrayOf("de.fraunhofer.aisec.cpg.graph", "de.fraunhofer.aisec.cpg.frontends")
 
     /**
-     * Create node and relationship builders to map the cpg via OGM. This method is not a public API
-     * of the OGM, thus we use reflection to access the related methods.
-     *
-     * @param translationResult, translationResult to map
-     */
-    fun translateCPGToOGMBuilders(
-        translationResult: TranslationResult
-    ): Pair<List<DefaultNodeBuilder>?, List<DefaultRelationshipBuilder>?> {
-        val meta = MetaData(*packages)
-        val con = MappingContext(meta)
-        val entityGraphMapper = EntityGraphMapper(meta, con)
-
-        translationResult.components.map { entityGraphMapper.map(it, depth) }
-        translationResult.additionalNodes.map { entityGraphMapper.map(it, depth) }
-
-        val compiler = entityGraphMapper.compileContext().compiler
-
-        // get private fields of `CypherCompiler` via reflection
-        val getNewNodeBuilders =
-            MultiStatementCypherCompiler::class.java.getDeclaredField("newNodeBuilders")
-        val getNewRelationshipBuilders =
-            MultiStatementCypherCompiler::class.java.getDeclaredField("newRelationshipBuilders")
-        getNewNodeBuilders.isAccessible = true
-        getNewRelationshipBuilders.isAccessible = true
-
-        // We only need `newNodeBuilders` and `newRelationshipBuilders` as we are "importing" to an
-        // empty "db" and all nodes and relations will be new
-        val newNodeBuilders =
-            (getNewNodeBuilders[compiler] as? ArrayList<*>)?.filterIsInstance<DefaultNodeBuilder>()
-        val newRelationshipBuilders =
-            (getNewRelationshipBuilders[compiler] as? ArrayList<*>)?.filterIsInstance<
-                DefaultRelationshipBuilder
-            >()
-        return newNodeBuilders to newRelationshipBuilders
-    }
-
-    /**
-     * Use the provided node and relationship builders to create list of nodes and edges
-     *
-     * @param newNodeBuilders, input node builders
-     * @param newRelationshipBuilders, input relationship builders
-     */
-    fun buildJsonGraph(
-        newNodeBuilders: List<DefaultNodeBuilder>?,
-        newRelationshipBuilders: List<DefaultRelationshipBuilder>?,
-    ): JsonGraph {
-        // create simple json structure with flat list of nodes and edges
-        val nodes =
-            newNodeBuilders?.map {
-                val node = it.node()
-                JsonNode(
-                    node.id,
-                    node.labels.toSet(),
-                    node.propertyList.associate { prop -> prop.key to prop.value },
-                )
-            } ?: emptyList()
-        val edges =
-            newRelationshipBuilders
-                // For some reason, there are edges without start or end node??
-                ?.filter { it.edge().startNode != null }
-                ?.map {
-                    val edge = it.edge()
-                    JsonEdge(
-                        edge.id,
-                        edge.type,
-                        edge.startNode,
-                        edge.endNode,
-                        edge.propertyList.associate { prop -> prop.key to prop.value },
-                    )
-                } ?: emptyList()
-
-        return JsonGraph(nodes, edges)
-    }
-
-    /**
-     * Exports the TranslationResult to json. Serialization is done via the Neo4j OGM.
-     *
-     * @param translationResult, input translationResult, not null
-     * @param path, path to output json file
-     */
-    fun exportToJson(translationResult: TranslationResult, path: File) {
-        val bench = Benchmark(this.javaClass, "Export cpg to json", false, translationResult)
-        log.info("Export graph to json using import depth: $depth")
-
-        val (nodes, edges) = translateCPGToOGMBuilders(translationResult)
-        val graph = buildJsonGraph(nodes, edges)
-        val objectMapper = ObjectMapper()
-        objectMapper.writeValue(path, graph)
-
-        log.info(
-            "Exported ${graph.nodes.size} Nodes and ${graph.edges.size} Edges to json file ${path.absoluteFile}"
-        )
-        bench.addMeasurement()
-    }
-
-    /**
      * Checks if all elements in the parameter are a valid file and returns a list of files.
      *
      * @param filenames The filenames to check
@@ -555,7 +440,7 @@ class Application : Callable<Int> {
             "Benchmark: analyzing code in " + (analyzingTime - startTime) / S_TO_MS_FACTOR + " s."
         )
 
-        exportJsonFile?.let { exportToJson(translationResult, it) }
+        exportJsonFile?.let { translationResult.persistJson(it) }
         if (!noNeo4j) {
             translationResult.pushToNeo4j(
                 noPurgeDb = noPurgeDb,

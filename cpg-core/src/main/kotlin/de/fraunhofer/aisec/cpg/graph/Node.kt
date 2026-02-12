@@ -246,8 +246,8 @@ abstract class Node() :
      */
     var isImplicit = false
 
-    /** Required field for object graph mapping. It contains the node id. */
-    @DoNotPersist @Id @GeneratedValue var legacyId: Long? = null
+    /** Required field for persistence. It contains the node ID. */
+    @DoNotPersist @Id @GeneratedValue var legacyId: Long = NodeIdGenerator.next()
 
     /**
      * A (more or less) unique identifier for this node. It is a [Uuid] derived from
