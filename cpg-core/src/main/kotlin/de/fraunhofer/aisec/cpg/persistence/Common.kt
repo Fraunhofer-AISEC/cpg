@@ -238,7 +238,7 @@ val KClass<out Persistable>.schemaRelationships: Map<String, KProperty1<out Pers
             for (property in properties) {
                 if (isRelationship(property)) {
                     val name = property.relationshipName
-                    schema.put(name, property)
+                    schema[name] = property
                 }
             }
             schema
@@ -353,7 +353,15 @@ fun String.toUpperSnakeCase(): String {
     return this.replace(pattern, "_$0").uppercase()
 }
 
-internal typealias CpgRelationship = Map<String, Any?>
+/**
+ * Represents a relationship between two [Node] objects (including any properties).
+ *
+ * The following keys MUST be set:
+ * - `startId`: The ID of the start node of the relationship.
+ * - `endId`: The ID of the end node of the relationship.
+ * - `type`: The name of the relationship type.
+ */
+internal typealias Relationship = Map<String, Any?>
 
 /**
  * Returns all [Node] objects that are connected with this node with some kind of relationship
@@ -364,50 +372,57 @@ val Persistable.connectedNodes: IdentitySet<Node>
         val nodes = identitySetOf<Node>()
 
         for (entry in this::class.schemaRelationships) {
-            val value = entry.value.call(this)
-            if (value is EdgeCollection<*, *>) {
-                nodes += value.toNodeCollection()
-            } else if (value is List<*>) {
-                nodes += value.filterIsInstance<Node>()
-            } else if (value is Node) {
-                nodes += value
+            when (val value = entry.value.call(this)) {
+                is EdgeCollection<*, *> -> {
+                    nodes += value.toNodeCollection()
+                }
+                is List<*> -> {
+                    nodes += value.filterIsInstance<Node>()
+                }
+                is Node -> {
+                    nodes += value
+                }
             }
         }
 
         return nodes
     }
 
-fun List<Node>.collectRelationships(): List<CpgRelationship> {
-    val relationships = mutableListOf<CpgRelationship>()
+fun List<Node>.collectRelationships(): List<de.fraunhofer.aisec.cpg.persistence.Relationship> {
+    val relationships = mutableListOf<de.fraunhofer.aisec.cpg.persistence.Relationship>()
 
     for (node in this) {
         for (entry in node::class.schemaRelationships) {
-            val value = entry.value.call(node)
-            if (value is EdgeCollection<*, *>) {
-                relationships +=
-                    value.map { edge ->
+            when (val value = entry.value.call(node)) {
+                is EdgeCollection<*, *> -> {
+                    relationships +=
+                        value.map { edge ->
+                            mapOf(
+                                "startId" to edge.start.id.toString(),
+                                "endId" to edge.end.id.toString(),
+                                "type" to entry.key,
+                            ) + edge.properties()
+                        }
+                }
+
+                is List<*> -> {
+                    relationships +=
+                        value.filterIsInstance<Node>().map { end ->
+                            mapOf(
+                                "startId" to node.id.toString(),
+                                "endId" to end.id.toString(),
+                                "type" to entry.key,
+                            )
+                        }
+                }
+                is Node -> {
+                    relationships +=
                         mapOf(
-                            "startId" to edge.start.legacyId,
-                            "endId" to edge.end.legacyId,
-                            "type" to entry.key,
-                        ) + edge.properties()
-                    }
-            } else if (value is List<*>) {
-                relationships +=
-                    value.filterIsInstance<Node>().map { end ->
-                        mapOf(
-                            "startId" to node.legacyId,
-                            "endId" to end.legacyId,
+                            "startId" to node.id.toString(),
+                            "endId" to value.id.toString(),
                             "type" to entry.key,
                         )
-                    }
-            } else if (value is Node) {
-                relationships +=
-                    mapOf(
-                        "startId" to node.legacyId,
-                        "endId" to value.legacyId,
-                        "type" to entry.key,
-                    )
+                }
             }
         }
     }

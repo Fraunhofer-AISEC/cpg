@@ -65,10 +65,6 @@ mavenPublishing {
 }
 
 dependencies {
-    // Neo4j OGM. This will be removed at some point
-    implementation(libs.bundles.neo4j)
-    integrationTestImplementation(libs.bundles.neo4j)
-
     // Neo4J Driver
     api(libs.neo4j.driver)
 
