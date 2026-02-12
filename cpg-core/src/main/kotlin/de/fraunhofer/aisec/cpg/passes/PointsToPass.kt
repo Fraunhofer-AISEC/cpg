@@ -2358,6 +2358,9 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                 NodeWithPropertiesKey(fieldVal, equalLinkedHashSetOf())
                             )
                         }
+                        // We only analyze the first 200 elements in order not to have a too large
+                        // state
+                        if (i > 200) break
                     }
                     // add the entries for the fieldAddress to the main addresses
                     addresses.forEach { addr ->
