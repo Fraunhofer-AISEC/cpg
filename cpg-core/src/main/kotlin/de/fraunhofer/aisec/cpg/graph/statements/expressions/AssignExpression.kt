@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.helpers.Util
 import org.neo4j.ogm.annotation.Relationship
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -68,9 +69,44 @@ class AssignExpression :
                 var base = (end as? MemberExpression)?.base as? MemberExpression
                 while (base != null) {
                     base.access = AccessValues.READWRITE
+                    // TODO think about it: base.dfgHandlerHint = true
                     base = base.base as? MemberExpression
                 }
 
+                if (isSimpleAssignment) {
+                    // For SubscriptExpressions, the arrayExpression is not written to, so we ignore
+                    // it
+                    if (end !is SubscriptExpression) {
+                        val unwrapped = end.unwrapReference()
+
+                        if (unwrapped is Reference) {
+                            unwrapped.let {
+                                it.access = AccessValues.WRITE
+                                it.dfgHandlerHint = true
+                            }
+                        }
+                    }
+                } else {
+                    val unwrapped = end.unwrapReference()
+                    if (unwrapped is Reference) {
+                        unwrapped.let {
+                            it.access = AccessValues.READWRITE
+                            it.dfgHandlerHint = true
+                        }
+                    }
+
+                    if (!isCompoundAssignment) {
+                        // If this is neither a simple nor a compound assignment, probably something
+                        // went wrong, we still model this as a READWRITE, but we indicate a warning
+                        // to
+                        // the user
+                        Util.warnWithFileLocation(
+                            this,
+                            log,
+                            "Assignment is neither a simple nor a compound assignment. This is suspicious.",
+                        )
+                    }
+                }
                 end.access =
                     if (isSimpleAssignment) {
                         AccessValues.WRITE

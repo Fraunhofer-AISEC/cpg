@@ -29,6 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.assumptions.addAssumptionDependence
+import de.fraunhofer.aisec.cpg.evaluation.ValueEvaluator
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ControlDependence
@@ -38,11 +39,18 @@ import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.helpers.SubgraphWalker
+import de.fraunhofer.aisec.cpg.helpers.functional.splitInto
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.passes.reconstructedImportName
+import java.util.Objects
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.filter
 import kotlin.collections.firstOrNull
 import kotlin.math.absoluteValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 
 /**
  * Flattens the AST beginning with this node and returns all nodes of type [T]. For convenience, an
@@ -94,12 +102,22 @@ inline fun <reified T> Node?.allChildrenWithOverlays(
 ): List<T> {
     val nodes = SubgraphWalker.flattenAST(this as AstNode?)
     val nodesWithOverlays = nodes + nodes.flatMap { it.overlays }
-    val filtered = nodesWithOverlays.filterIsInstance<T>()
-
-    return if (predicate != null) {
-        filtered.filter(predicate)
-    } else {
-        filtered
+    return runBlocking {
+        if (predicate != null) {
+            nodesWithOverlays
+                .splitInto()
+                .map { chunk ->
+                    async(Dispatchers.Default) { chunk.filterIsInstance<T>().filter(predicate) }
+                }
+                .awaitAll()
+                .flatten()
+        } else {
+            nodesWithOverlays
+                .splitInto()
+                .map { chunk -> async(Dispatchers.Default) { chunk.filterIsInstance<T>() } }
+                .awaitAll()
+                .flatten()
+        }
     }
 }
 
@@ -466,6 +484,16 @@ class Context(
         return this
     }
 
+    override fun equals(other: Any?): Boolean {
+        return other is Context &&
+            this.indexStack == other.indexStack &&
+            this.callStack == other.callStack
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hash(super.hashCode(), indexStack, callStack)
+    }
+
     companion object {
         /**
          * Creates a new [Context] with an empty index stack and call stack given by the
@@ -538,6 +566,30 @@ class SimpleStack<T> {
 
     operator fun contains(elem: T): Boolean {
         return deque.contains(elem)
+    }
+
+    /** Hack: Check if the items in the deque repeat themselves */
+    fun isLoop(): Boolean {
+        if (this.deque.isEmpty()) return false
+        val first = this.deque.removeFirst()
+        var current: T? = null
+        val pattern = mutableListOf(first)
+        var containsLoop = true
+
+        // Pop elements until we determine the pattern
+        while (current != first) {
+            if (this.deque.isEmpty()) return false
+            if (this.deque.first() == first) break
+            // We have a small loop over a single element
+            if (current != first) current = this.deque.removeFirst()
+            pattern.add(current)
+        }
+        // Now let's check if the pattern happens again
+        pattern.forEach {
+            if (this.deque.isEmpty()) return false
+            if (it != this.deque.removeFirst()) containsLoop = false
+        }
+        return containsLoop
     }
 }
 
@@ -854,11 +906,12 @@ fun Node.followPrevCDGUntilHit(
  */
 fun Node.followXUntilHit(
     x:
-        (Node, Context, List<Pair<Node, Context>>, MutableList<NodePath>) -> Collection<
+        (Node, Context, List<Pair<Node, Context>>, MutableSet<NodePath>) -> Collection<
                 Pair<Node, Context>
             >,
     collectFailedPaths: Boolean = true,
     findAllPossiblePaths: Boolean = true,
+    continueAfterHit: Boolean = false,
     ctx: Context = Context(steps = 0),
     earlyTermination: (Node, Context) -> Boolean,
     predicate: (Node) -> Boolean,
@@ -868,7 +921,7 @@ fun Node.followXUntilHit(
     val fulfilledPaths = mutableListOf<NodePath>()
     // failedPaths: All the paths which do not satisfy "predicate"
     val failedPaths = mutableListOf<Pair<FailureReason, NodePath>>()
-    val loopingPaths = mutableListOf<NodePath>()
+    val loopingPaths: MutableSet<NodePath> = ConcurrentHashMap.newKeySet()
     // The list of paths where we're not done yet.
     val worklist = identitySetOf<List<Pair<Node, Context>>>()
     worklist.add(listOf(this to ctx)) // We start only with the "from" node (=this)
@@ -925,6 +978,15 @@ fun Node.followXUntilHit(
             // with the next step to the worklist.
             if (
                 !isNodeWithCallStackInPath(next, newContext, currentPath) &&
+                    // A hack that tries to ensure that we are not running in circles: Watch out if
+                    // the top of the newContext and the currentPath callStack are the same and not
+                    // null, this could indicate a loop
+                    // However, if the newContext and the currentPath last's callStack are the same,
+                    // it should be fine I guess
+                    !newContext.callStack.clone().isLoop() &&
+                    (newContext.callStack.top != currentPath.last().second.callStack.top ||
+                        newContext.callStack.top == null ||
+                        newContext.callStack == currentPath.last().second.callStack) &&
                     (findAllPossiblePaths ||
                         (!isNodeWithCallStackInPath(next, newContext, alreadySeenNodes) &&
                             worklist.none { isNodeWithCallStackInPath(next, newContext, it) }))
@@ -1453,12 +1515,11 @@ private fun Node.eogDistanceTo(to: Node): Int {
  * When called on the right-hand side of this assignment, this function will return `a`.
  */
 fun Expression?.unwrapReference(): Reference? {
-    return when (this) {
-        is Reference -> this
-        is UnaryOperator if (this.operatorCode == "*" || this.operatorCode == "&") ->
-            this.input.unwrapReference()
-
-        is CastExpression -> this.expression.unwrapReference()
+    return when {
+        this is Reference -> this
+        this is PointerReference -> this
+        this is PointerDereference -> this
+        this is CastExpression -> this.expression.unwrapReference()
         else -> null
     }
 }
@@ -1551,3 +1612,78 @@ val Expression.isImported: Boolean
     get() {
         return this.importedFrom.isNotEmpty()
     }
+
+/** Checks if a branchingNode contains checks for NULL (or 0). */
+fun Node.isNullCheck(refersTo: Declaration?): Boolean {
+    val checklist = mutableSetOf<BinaryOperator>()
+    if (this is BinaryOperator) {
+        checklist.add(this)
+    } else if ((this as? IfStatement)?.condition is BinaryOperator) {
+        checklist.add(this.condition as BinaryOperator)
+    } else
+    // Something we can't handle, so better return false
+    return false
+
+    while (checklist.isNotEmpty()) {
+        val operator = checklist.first()
+        var operatorPassedCheck = false
+        checklist.remove(operator)
+
+        // If we have multiple BinaryOperators in the if statement, we have to work
+        // through them separately
+        if (operator.lhs is BinaryOperator) {
+            checklist.add(operator.lhs as BinaryOperator)
+            operatorPassedCheck = true
+        } else if (
+            // It might also be an ExpressionList such as (var = foo(), foo == NULL).
+            // In this case we only take the last element of the ExpressionList
+            operator.lhs is ExpressionList &&
+                (operator.lhs as ExpressionList).expressionEdges.last().end is BinaryOperator
+        ) {
+            checklist.add(
+                (operator.lhs as ExpressionList).expressionEdges.last().end as BinaryOperator
+            )
+            operatorPassedCheck = true
+        }
+
+        // And the same for the rhs
+        if (operator.rhs is BinaryOperator) {
+            checklist.add(operator.rhs as BinaryOperator)
+            operatorPassedCheck = true
+        } else if (
+            operator.rhs is ExpressionList &&
+                (operator.rhs as ExpressionList).expressionEdges.last().end is BinaryOperator
+        ) {
+            checklist.add(
+                (operator.rhs as ExpressionList).expressionEdges.last().end as BinaryOperator
+            )
+            operatorPassedCheck = true
+        }
+
+        // If we already operate on the innermost BinaryOperator, let's see if it does a
+        // NULL check on our variable
+        if (
+            ((operator.rhs.name.localName == "NULL" ||
+                operator.rhs.evaluate(ValueEvaluator()) == 0 ||
+                // Hack for now until the CPG correctly parses '\0'
+                operator.rhs.evaluate(ValueEvaluator()) == '\\') &&
+                (operator.lhs as? Reference)?.refersTo == refersTo) ||
+                // the same for the other way round
+                ((operator.lhs.evaluate(ValueEvaluator()) == '\\' ||
+                    operator.lhs.name.localName == "NULL" ||
+                    operator.lhs.evaluate(ValueEvaluator()) == 0) &&
+                    (operator.lhs as? Reference)?.refersTo == refersTo)
+        ) {
+            operatorPassedCheck = true
+        }
+
+        // When we didn't find either a NULL-check for the operator or a further clause, it's a
+        // non-NULL check
+        if (!operatorPassedCheck) {
+            return false
+        }
+    }
+    // when we ran through the whole checklist and didn't find anything besides a NULL-check, we can
+    // return true
+    return true
+}

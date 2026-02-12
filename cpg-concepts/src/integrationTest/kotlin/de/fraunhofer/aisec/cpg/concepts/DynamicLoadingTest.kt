@@ -44,6 +44,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
 class DynamicLoadingTest {
+
     @Test
     fun testCXXPOSIX() {
         val topLevel = File("src/integrationTest/resources/c")

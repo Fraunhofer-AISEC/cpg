@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.helpers.functional.MapLattice
 import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.passes.configuration.DependsOn
+import kotlinx.coroutines.runBlocking
 
 typealias NodeToOverlayStateElement = MapLattice.Element<Node, PowersetLattice.Element<OverlayNode>>
 
@@ -87,10 +88,11 @@ open class EOGConceptPass(ctx: TranslationContext) :
         val startState = getInitialState(lattice, node)
 
         val nextEog = node.nextEOGEdges.toList()
-        val finalState =
-            lattice.iterateEOG(nextEog, startState, ::transfer)?.let { tmpFinalState ->
+        val finalState = runBlocking {
+            lattice.iterateEOG(nextEog, startState, ::transfer).first.let { tmpFinalState ->
                 lattice.lub(tmpFinalState, startState, true)
             } ?: startState
+        }
 
         // We set the underlying node based on the final state
         for ((underlyingNode, overlayNodes) in finalState) {
@@ -203,7 +205,7 @@ open class EOGConceptPass(ctx: TranslationContext) :
     }
 
     /** This function is called for each edge in the EOG until the fixpoint is computed. */
-    fun transfer(
+    suspend fun transfer(
         lattice: Lattice<NodeToOverlayStateElement>,
         currentEdge: EvaluationOrder,
         currentState: NodeToOverlayStateElement,
@@ -234,13 +236,16 @@ open class EOGConceptPass(ctx: TranslationContext) :
         return if (filteredAddedOverlays.isEmpty()) {
             currentState
         } else {
-            lattice.lub(
-                currentState,
-                NodeToOverlayStateElement(
-                    currentNode to PowersetLattice.Element(*filteredAddedOverlays.toTypedArray())
-                ),
-                true,
-            )
+            runBlocking {
+                lattice.lub(
+                    currentState,
+                    NodeToOverlayStateElement(
+                        currentNode to
+                            PowersetLattice.Element(*filteredAddedOverlays.toTypedArray())
+                    ),
+                    true,
+                )
+            }
         }
     }
 

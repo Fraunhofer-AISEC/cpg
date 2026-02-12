@@ -43,8 +43,13 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.helpers.functional.ConcurrentIdentityHashMap
+import de.fraunhofer.aisec.cpg.helpers.functional.EqualLinkedHashSet
+import de.fraunhofer.aisec.cpg.helpers.functional.equalLinkedHashSetOf
+import de.fraunhofer.aisec.cpg.passes.PointsToPass.NodeWithPropertiesKey
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
@@ -101,6 +106,46 @@ open class FunctionDeclaration :
         get() {
             return if (isDefinition) this else field
         }
+
+    /**
+     * Saves the information on which parameter(s) of the function are modified by the function.
+     * This is interesting since we need to add DFG edges between the modified parameter and the
+     * respective argument(s). For each [ParameterDeclaration] as well as the
+     * [MethodDeclaration.receiver] that has some incoming DFG-edge within this
+     * [FunctionDeclaration], we store all previous DFG nodes. The map stores a List of FSEntries
+     * for each modified parameter. `derefDst` indicates if we write to the parameter's value or
+     * it's dereferenced value, `srcNode` indicates the new source value and `derefSource` if it
+     * should be dereferenced Additionally, `subAccessName` indicates sub-accesses, i.e. to parts of
+     * a struct or to array-expressions
+     */
+    data class FSEntry(
+        val destValueDepth: Int =
+            1, // 0: Address, 1: Value, 2: DerefValue, 3: DerefderefValue, ....
+        val srcNode: Any?,
+        val srcValueDepth: Int = 1, // 0: Address, 1: Value, 2: DerefValue, 3:
+        val subAccessName: String,
+        // Node which a set of possible properties, such as a callingcontext
+        val lastWrites: MutableSet<NodeWithPropertiesKey> = ConcurrentHashMap.newKeySet(),
+        // Additional properties such the granularity or the shortFS
+        // We use shortFunctionSummaries to draw "short" DFG-Edges that allow us to follow DFG Paths
+        // without going into functions. Not as detailed, but faster
+        val properties: EqualLinkedHashSet<Any> = equalLinkedHashSetOf(),
+        // Sometimes, we need a dummy of a functionSummary, for example to avoid recursion. We
+        // indicate here if this is one
+        val isDummy: Boolean = false,
+    ) {
+        override fun equals(other: Any?): Boolean =
+            other is FSEntry &&
+                destValueDepth == other.destValueDepth &&
+                srcNode == other.srcNode &&
+                srcValueDepth == other.srcValueDepth &&
+                subAccessName == other.subAccessName &&
+                lastWrites == other.lastWrites &&
+                properties == other.properties &&
+                isDummy == other.isDummy
+    }
+
+    var functionSummary = ConcurrentIdentityHashMap<Node, MutableSet<FSEntry>>()
 
     /** Returns true, if this function has a [body] statement. */
     fun hasBody(): Boolean {
@@ -197,9 +242,9 @@ open class FunctionDeclaration :
         }
 
     /** This returns a simple heuristic for the complexity of a function declaration. */
-    val complexity: Int
+    val complexity: Long
         get() {
-            return this.body?.cyclomaticComplexity ?: 0
+            return this.body?.cyclomaticComplexity(0) ?: 0L
         }
 
     override val secondaryTypes: List<Type>
@@ -243,49 +288,47 @@ open class FunctionDeclaration :
 }
 
 /** This is a very basic implementation of Cyclomatic Complexity. */
-val Statement.cyclomaticComplexity: Int
-    get() {
-        var i = 0
-        for (stmt in (this as? StatementHolder)?.statements ?: listOf(this)) {
-            when (stmt) {
-                is ForEachStatement -> {
-                    // add one and include the children
-                    i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
-                }
-                is ForStatement -> {
-                    // add one and include the children
-                    i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
-                }
-                is IfStatement -> {
-                    // add one for each branch (and include the children)
-                    stmt.thenStatement?.let { i += it.cyclomaticComplexity + 1 }
-                    stmt.elseStatement?.let { i += it.cyclomaticComplexity + 1 }
-                }
-                is SwitchStatement -> {
-                    // forward it to the block containing the case statements
-                    stmt.statement?.let { i += it.cyclomaticComplexity }
-                }
-                is CaseStatement -> {
-                    // add one for each branch (and include the children)
-                    stmt.caseExpression?.let { i += it.cyclomaticComplexity }
-                }
-                is DoStatement -> {
-                    // add one for the do statement (and include the children)
-                    i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
-                }
-                is WhileStatement -> {
-                    // add one for the while statement (and include the children)
-                    i += (stmt.statement?.cyclomaticComplexity ?: 0) + 1
-                }
-                is GotoStatement -> {
-                    // add one
-                    i++
-                }
-                is StatementHolder -> {
-                    i += stmt.cyclomaticComplexity
-                }
+fun Statement.cyclomaticComplexity(depth: Int = 1): Long {
+    var i: Long = 0
+    for (stmt in (this as? StatementHolder)?.statements ?: listOf(this)) {
+        when (stmt) {
+            is ForEachStatement,
+            is ForStatement -> {
+                // add the depth and include the children
+                i += depth * ((stmt.statement?.cyclomaticComplexity(depth + 1) ?: 0) + 1)
+            }
+            is IfStatement -> {
+                // add the depth for each branch (and include the children)
+                stmt.thenStatement?.let { i += depth + it.cyclomaticComplexity(depth + 1) }
+                stmt.elseStatement?.let { i += depth + it.cyclomaticComplexity(depth + 1) }
+            }
+            is SwitchStatement -> {
+                // forward it to the block containing the case statements
+                stmt.statement?.let { i += depth + it.cyclomaticComplexity(depth + 1) }
+            }
+            is CaseStatement -> {
+                // add the depth for each branch (and include the children)
+                stmt.caseExpression?.let { i += depth + it.cyclomaticComplexity(depth + 1) }
+            }
+            is DoStatement,
+            is WhileStatement -> {
+                // add one for the do statement (and include the children)
+                i += depth + ((stmt.statement?.cyclomaticComplexity(depth + 1) ?: 0))
+            }
+            is GotoStatement -> {
+                // Analyze where the goto jumps to. Then go through the target block and fetch its
+                // complexity
+                /*                stmt.nextEOG.forEach { next ->
+                    i += next.firstParentOrNull<Block>()?.cyclomaticComplexity(depth + 1) ?: 0
+                }*/
+                // add the depth
+                i += depth
+            }
+            is StatementHolder -> {
+                i += depth + stmt.cyclomaticComplexity(depth + 1)
             }
         }
-
-        return i
     }
+
+    return i
+}

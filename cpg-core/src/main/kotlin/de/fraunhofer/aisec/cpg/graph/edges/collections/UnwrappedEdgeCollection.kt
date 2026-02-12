@@ -78,7 +78,10 @@ sealed class UnwrappedEdgeCollection<NodeType : Node, EdgeType : Edge<NodeType>>
     }
 
     override fun containsAll(elements: Collection<NodeType>): Boolean {
-        TODO("Not yet implemented")
+        for (element in elements) {
+            if (!contains(element)) return false
+        }
+        return true
     }
 
     override fun isEmpty(): Boolean {

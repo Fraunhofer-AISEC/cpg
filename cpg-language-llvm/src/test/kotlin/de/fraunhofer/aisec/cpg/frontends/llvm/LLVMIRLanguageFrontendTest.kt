@@ -141,8 +141,7 @@ class LLVMIRLanguageFrontendTest {
         // we will check them in the reverse order (after the unary operator)
 
         val unary = arrayidx.initializer
-        assertIs<UnaryOperator>(unary)
-        assertEquals("&", unary.operatorCode)
+        assertIs<PointerReference>(unary)
 
         var arrayExpr = unary.input
         assertIs<SubscriptExpression>(arrayExpr)
@@ -363,8 +362,7 @@ class LLVMIRLanguageFrontendTest {
         val declarationInitializer = declaration.initializer
         assertIs<ConstructExpression>(declarationInitializer)
         val value1 = declarationInitializer.arguments[0]
-        assertIs<UnaryOperator>(value1)
-        assertEquals("*", value1.operatorCode)
+        assertIs<PointerDereference>(value1)
         assertLocalName("ptr", value1.input)
 
         // Check that the first value is *ptr == 5
@@ -372,8 +370,7 @@ class LLVMIRLanguageFrontendTest {
         assertIs<BinaryOperator>(value2)
         assertEquals("==", value2.operatorCode)
         val value2Lhs = value2.lhs
-        assertIs<UnaryOperator>(value2Lhs)
-        assertEquals("*", value2Lhs.operatorCode)
+        assertIs<PointerDereference>(value2Lhs)
         assertLocalName("ptr", value2Lhs.input)
         assertLiteralValue(5L, value2.rhs)
 
@@ -384,8 +381,7 @@ class LLVMIRLanguageFrontendTest {
         assertIs<BinaryOperator>(ifExpr)
         assertEquals("==", ifExpr.operatorCode)
         val ifExprLhs = ifExpr.lhs
-        assertIs<UnaryOperator>(ifExprLhs)
-        assertEquals("*", ifExprLhs.operatorCode)
+        assertIs<PointerDereference>(ifExprLhs)
         assertLocalName("ptr", ifExprLhs.input)
         assertLiteralValue(5L, ifExpr.rhs)
 
@@ -395,8 +391,7 @@ class LLVMIRLanguageFrontendTest {
         assertEquals(1, thenExpr.rhs.size)
         assertEquals("=", thenExpr.operatorCode)
         val thenExprLhs = thenExpr.lhs.first()
-        assertIs<UnaryOperator>(thenExprLhs)
-        assertEquals("*", thenExprLhs.operatorCode)
+        assertIs<PointerDereference>(thenExprLhs)
         assertLocalName("ptr", thenExprLhs.input)
         assertIs<Reference>(thenExpr.rhs.first())
         assertLocalName("old1", thenExpr.rhs.first())
@@ -499,8 +494,7 @@ class LLVMIRLanguageFrontendTest {
         val initXOpDeclaration = loadXStatement.singleDeclaration
         assertIs<VariableDeclaration>(initXOpDeclaration)
         val initXOp = initXOpDeclaration.initializer
-        assertIs<UnaryOperator>(initXOp)
-        assertEquals("*", initXOp.operatorCode)
+        assertIs<PointerDereference>(initXOp)
 
         var ref = initXOp.input
         assertIs<Reference>(ref)
@@ -513,8 +507,7 @@ class LLVMIRLanguageFrontendTest {
         assertIs<VariableDeclaration>(loadADeclaration)
         assertLocalName("locA", loadAStatement.singleDeclaration)
         val initAOp = loadADeclaration.initializer
-        assertIs<UnaryOperator>(initAOp)
-        assertEquals("*", initAOp.operatorCode)
+        assertIs<PointerDereference>(initAOp)
 
         ref = initAOp.input
         assertIs<Reference>(ref)
@@ -550,8 +543,7 @@ class LLVMIRLanguageFrontendTest {
 
         assertEquals(1, store.lhs.size)
         val dereferencePtr = store.lhs.firstOrNull()
-        assertIs<UnaryOperator>(dereferencePtr)
-        assertEquals("*", dereferencePtr.operatorCode)
+        assertIs<PointerDereference>(dereferencePtr)
         assertEquals("i32", dereferencePtr.type.typeName)
         assertRefersTo(dereferencePtr.input, ptr)
 

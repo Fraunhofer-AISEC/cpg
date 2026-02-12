@@ -43,7 +43,7 @@ class ExpressionBuilderTest {
             val node1 = newLiteral(1)
             val node2 = newReference("node2")
             val granularity = FieldDataflowGranularity(FieldDeclaration())
-            val callingContextIn = CallingContextIn(CallExpression())
+            val callingContextIn = CallingContextIn(mutableListOf(CallExpression()))
             node1.prevDFGEdges.addContextSensitive(node2, granularity, callingContextIn)
 
             val clone = node1.duplicate(false)
@@ -62,7 +62,7 @@ class ExpressionBuilderTest {
             val node1 = newLiteral(1)
             val node2 = newReference("node2")
             val granularity = FieldDataflowGranularity(FieldDeclaration())
-            val callingContextIn = CallingContextIn(CallExpression())
+            val callingContextIn = CallingContextIn(mutableListOf(CallExpression()))
             node1.nextDFGEdges.addContextSensitive(node2, granularity, callingContextIn)
 
             val clone = node1.duplicate(false)

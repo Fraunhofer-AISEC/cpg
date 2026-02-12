@@ -476,6 +476,48 @@ fun MetadataProvider.newReference(
 }
 
 /**
+ * Creates a new [PointerReference]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newPointerReference(
+    name: CharSequence?,
+    type: Type = unknownType(),
+    rawNode: Any? = null,
+): PointerReference {
+    val node = PointerReference()
+    node.applyMetadata(this, name, rawNode, true)
+
+    node.type = type
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [PointerReference]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newPointerDereference(
+    name: CharSequence?,
+    type: Type = unknownType(),
+    rawNode: Any? = null,
+): PointerDereference {
+    val node = PointerDereference()
+    node.applyMetadata(this, name, rawNode, true)
+
+    node.type = type
+
+    log(node)
+    return node
+}
+
+/**
  * Creates a new [DeleteExpression]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended

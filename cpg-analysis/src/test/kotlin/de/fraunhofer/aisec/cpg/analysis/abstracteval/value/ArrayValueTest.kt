@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.analysis.abstracteval.value
 
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.*
-import de.fraunhofer.aisec.cpg.analysis.abstracteval.IntervalLattice
 import de.fraunhofer.aisec.cpg.analysis.abstracteval.LatticeInterval
+import de.fraunhofer.aisec.cpg.analysis.abstracteval.NewIntervalLattice
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.array
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
@@ -40,7 +40,10 @@ import kotlin.test.assertEquals
 
 class ArrayValueTest {
     private val lattice =
-        TupleState<Any>(DeclarationState(IntervalLattice()), NewIntervalState(IntervalLattice()))
+        TupleState<Any>(
+            DeclarationState(NewIntervalLattice()),
+            NewIntervalState(NewIntervalLattice()),
+        )
 
     @Test
     fun applyDeclarationTest() {

@@ -34,13 +34,29 @@ import de.fraunhofer.aisec.cpg.IncompatibleSignature
 import de.fraunhofer.aisec.cpg.SignatureMatches
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
+import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.ContextProvider
+import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
+import de.fraunhofer.aisec.cpg.graph.applyMetadata
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
+import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
+import de.fraunhofer.aisec.cpg.graph.edges.flows.default
+import de.fraunhofer.aisec.cpg.graph.newFunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.newParameterDeclaration
 import de.fraunhofer.aisec.cpg.graph.parseName
+import de.fraunhofer.aisec.cpg.graph.returns
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnknownMemoryValue
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.unknownType
+import de.fraunhofer.aisec.cpg.helpers.functional.PowersetLattice
+import de.fraunhofer.aisec.cpg.helpers.functional.equalLinkedHashSetOf
+import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import de.fraunhofer.aisec.cpg.matchesSignature
 import de.fraunhofer.aisec.cpg.passes.DFGPass
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.tryCast
 import java.io.File
 import org.slf4j.Logger
@@ -58,21 +74,12 @@ class DFGFunctionSummaries {
     /** Caches a mapping of the [FunctionDeclarationEntry] to a list of its [DFGEntry]. */
     val functionToDFGEntryMap = mutableMapOf<FunctionDeclarationEntry, List<DFGEntry>>()
 
-    /**
-     * Saves the information on which parameter(s) of a function are modified by the function. This
-     * is interesting since we need to add DFG edges between the modified parameter and the
-     * respective argument(s). For each [ParameterDeclaration] as well as the
-     * [MethodDeclaration.receiver] that has some incoming DFG-edge within this
-     * [FunctionDeclaration], we store all previous DFG nodes.
-     */
-    val functionToChangedParameters =
-        mutableMapOf<FunctionDeclaration, MutableMap<ValueDeclaration, MutableSet<Node>>>()
-
     fun hasSummary(functionDeclaration: FunctionDeclaration) =
-        functionDeclaration in functionToChangedParameters
+        functionDeclaration.functionSummary.isNotEmpty()
 
-    fun getLastWrites(functionDeclaration: FunctionDeclaration): Map<ValueDeclaration, Set<Node>> =
-        functionToChangedParameters[functionDeclaration] ?: mapOf()
+    fun getLastWrites(
+        functionDeclaration: FunctionDeclaration
+    ): Map<Node, Set<FunctionDeclaration.FSEntry>> = functionDeclaration.functionSummary
 
     /** This function returns a list of [DataflowEntry] from the specified file. */
     private fun addEntriesFromFile(file: File): Map<FunctionDeclarationEntry, List<DFGEntry>> {
@@ -98,6 +105,37 @@ class DFGFunctionSummaries {
         val dfgEntries = findFunctionDeclarationEntry(functionDeclaration) ?: return false
         applyDfgEntryToFunctionDeclaration(functionDeclaration, dfgEntries)
         return true
+    }
+
+    fun generateFunctionForEntry(
+        contextProvider: ContextProvider,
+        language: Language<*>,
+        declEntry: FunctionDeclarationEntry,
+        summary: List<DFGEntry>,
+    ): FunctionDeclaration {
+        val inferredFunction =
+            contextProvider.newFunctionDeclaration(language.parseName(declEntry.methodName))
+        declEntry.signature?.forEachIndexed { i, typeName ->
+            val type =
+                if (contextProvider.ctx.typeManager.typeExists(typeName)) {
+                    contextProvider.ctx.typeManager.lookupResolvedType(typeName)
+                } else {
+                    val type = ObjectType(typeName, listOf(), false, language)
+                    // Apply our usual metadata, such as scope, code, location, if we have any. Make
+                    // sure only to refer by the local name because we will treat types as sort of
+                    // references when creating them and resolve them later.
+                    type.applyMetadata(contextProvider, typeName, doNotPrependNamespace = true)
+
+                    // Piping it through register type will ensure that we know the type and can
+                    // resolve it later
+                    // contextProvider.ctx.typeManager.registerType(type)
+                    type
+                } ?: language.unknownType()
+            inferredFunction.parameters +=
+                contextProvider.newParameterDeclaration(Name("param$i"), type)
+        }
+        applyDfgEntryToFunctionDeclaration(inferredFunction, summary)
+        return inferredFunction
     }
 
     /**
@@ -128,7 +166,7 @@ class DFGFunctionSummaries {
         val matchingEntries =
             functionToDFGEntryMap.keys.filter {
                 // The language has to match otherwise the remaining comparison is useless
-                if (it.language == languageName) {
+                if (languageName.endsWith(it.language)) {
                     // Split the name if we have a FQN
                     val entryMethodName = language.parseName(it.methodName)
                     val entryRecord =
@@ -204,17 +242,16 @@ class DFGFunctionSummaries {
                     typeManager.lookupResolvedType(it1, language = language)
                 } ?: language.unknownType()
 
-            var mostPreciseType =
+            val mostPreciseType =
                 uniqueTypes
-                    .map { Pair(it, language?.tryCast(targetType, it)) }
-                    .sortedBy { it.second?.depthDistance }
-                    .firstOrNull()
+                    .map { Pair(it, language.tryCast(targetType, it)) }
+                    .minByOrNull { it.second.depthDistance }
                     ?.first
 
-            var mostPreciseClassEntries =
+            val mostPreciseClassEntries =
                 typeEntryList.filter { it.first == mostPreciseType }.map { it.second }
 
-            var signatureResults =
+            val signatureResults =
                 mostPreciseClassEntries
                     .map {
                         Pair(
@@ -246,62 +283,122 @@ class DFGFunctionSummaries {
      * This method parses the [DFGEntry] entries in [dfgEntries] and adds the respective DFG edges
      * between the parameters, receiver and potentially the [functionDeclaration] itself.
      */
-    private fun applyDfgEntryToFunctionDeclaration(
+    fun applyDfgEntryToFunctionDeclaration(
         functionDeclaration: FunctionDeclaration,
         dfgEntries: List<DFGEntry>,
     ) {
         for (entry in dfgEntries) {
-            val from =
+            var srcValueDepth = 1
+            var destValueDepth = 1
+            val granularity =
+                if (entry.dfgType == "partial") PartialDataflowGranularity("hardcoded")
+                else default()
+            val destNodes: MutableSet<Node> = mutableSetOf()
+            val from: Any? =
                 if (entry.from.startsWith("param")) {
                     try {
-                        val paramIndex = entry.from.removePrefix("param").toInt()
-                        functionDeclaration.parameters[paramIndex]
-                    } catch (e: NumberFormatException) {
+                        val e = entry.from.split(".")
+                        val paramIndex = e.getOrNull(0)?.removePrefix("param")?.toInt()
+                        if (paramIndex != null) {
+                            val tmp = functionDeclaration.parameters.getOrNull(paramIndex)
+                            if (e.getOrNull(1) == "deref") srcValueDepth = 2
+                            tmp
+                        } else null
+                    } catch (_: NumberFormatException) {
                         null
                     }
+                } else if (entry.from.startsWith("NewMemoryAddress")) {
+                    Name(entry.from, functionDeclaration.name)
                 } else if (entry.from == "base") {
                     (functionDeclaration as? MethodDeclaration)?.receiver
                 } else {
-                    null
+                    UnknownMemoryValue(Name(entry.from))
                 }
             val to =
                 if (entry.to.startsWith("param")) {
                     try {
-                        val paramIndex = entry.to.removePrefix("param").toInt()
-                        val paramTo = functionDeclaration.parameters[paramIndex]
-                        if (from != null) {
-                            functionToChangedParameters
-                                .computeIfAbsent(functionDeclaration) { mutableMapOf() }
-                                .computeIfAbsent(paramTo) { mutableSetOf() }
-                                .add(from)
+                        val e = entry.to.split(".")
+                        val paramIndex = e.getOrNull(0)?.removePrefix("param")?.toInt()
+                        if (e.getOrNull(1) == "deref") destValueDepth = 2
+                        else if (e.getOrNull(1) == "address") destValueDepth = 0
+                        val paramTo =
+                            paramIndex?.let { functionDeclaration.parameters.getOrNull(it) }
+                        if (paramTo != null) {
+                            destNodes.add(paramTo)
                         }
                         paramTo
-                    } catch (e: NumberFormatException) {
+                    } catch (_: NumberFormatException) {
                         null
                     }
                 } else if (entry.to == "base") {
                     val receiver = (functionDeclaration as? MethodDeclaration)?.receiver
                     if (from != null) {
                         if (receiver != null) {
-                            functionToChangedParameters
-                                .computeIfAbsent(functionDeclaration) { mutableMapOf() }
-                                .computeIfAbsent(receiver, ::mutableSetOf)
-                                .add(from)
+                            destNodes.add(receiver)
+                            // TODO Make sure that this makes sense
+                            /*functionDeclaration.functionSummary
+                            .computeIfAbsent(receiver) { identitySetOf() }
+                            .add(
+                                FunctionDeclaration.FSEntry(
+                                    destValueDepth,
+                                    from,
+                                    srcValueDepth,
+                                    "",
+                                    equalLinkedHashSetOf(
+                                        Pair(functionDeclaration, equalLinkedHashSetOf())
+                                    ),
+                                    equalLinkedHashSetOf(false),
+                                )
+                            )*/
                         }
                     }
                     receiver
                 } else if (entry.to == "return") {
+                    if (functionDeclaration.returns.isNotEmpty())
+                        destNodes.addAll(functionDeclaration.returns)
+                    else destNodes.add(functionDeclaration)
                     functionDeclaration
                 } else if (entry.to.startsWith("return")) {
-                    val returnIndex = entry.to.removePrefix("param").toInt()
+                    val returnIndex = entry.to.removePrefix("return").toInt()
                     // TODO: It would be nice if we could model the index. Not sure how this is done
+                    destNodes.addAll(functionDeclaration.returns)
                     functionDeclaration
                 } else {
                     null
                 }
+
+            if (from != null && destNodes.isNotEmpty()) {
+                destNodes.forEach { destNode ->
+                    functionDeclaration.functionSummary
+                        .computeIfAbsent(destNode) { identitySetOf() }
+                        .add(
+                            FunctionDeclaration.FSEntry(
+                                destValueDepth,
+                                from,
+                                srcValueDepth,
+                                "",
+                                PowersetLattice.Element(
+                                    PointsToPass.NodeWithPropertiesKey(
+                                        destNode,
+                                        equalLinkedHashSetOf(),
+                                    )
+                                ),
+                                equalLinkedHashSetOf(granularity, false),
+                            )
+                        )
+                }
+            }
+
             // TODO: It would make sense to model properties here. Could be the index of a return
             // value, full vs. partial flow or whatever comes to our minds in the future
-            to?.let { from?.nextDFGEdges += it }
+            // TODO: Unsure if we still need this. We currently draw the edges between the
+            // ParameterMemoryValues. We can't do this here because we don't yet have them, so we do
+            // this in handleCallExpression in the pointsToPass
+            // Note: When we have a Name for a memoryAddress that does not yet exist, we need to
+            // draw the DFG edge later in writeEntry()
+            to?.let {
+                (from as? Node)?.nextDFGEdges += Dataflow(from, it, granularity = granularity)
+            }
         }
     }
 

@@ -30,9 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.AutoType
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
@@ -74,6 +72,12 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
                 exchangeTypeObserverWithAccessPropagation(old, new)
                 if (value is Reference) {
                     value.resolutionHelper = this
+                    // If we are dealing with Pointer(De)References, we also have to set the
+                    // resolutionHelper for the input
+                    val input =
+                        ((value as? PointerReference)?.input as? Reference)
+                            ?: ((value as? PointerDereference)?.input as? Reference)
+                    input?.let { it.resolutionHelper = this }
                 }
             }
         )

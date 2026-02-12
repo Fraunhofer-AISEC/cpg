@@ -403,6 +403,8 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             is Literal<*> -> handleDefault(node)
             is DefaultStatement -> handleDefault(node)
             is TypeIdExpression -> handleDefault(node)
+            is PointerDereference -> handlePointerDereference(node)
+            is PointerReference -> handlePointerReference(node)
             is Reference -> handleDefault(node)
             is ImportDeclaration -> handleDefault(node)
             // These nodes are not added to the EOG
@@ -419,6 +421,18 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
         // Finally the template itself
         attachToEOG(template)
+    }
+
+    protected fun handlePointerReference(node: PointerReference) {
+        handleEOG(node.input)
+
+        attachToEOG(node)
+    }
+
+    protected fun handlePointerDereference(node: PointerDereference) {
+        handleEOG(node.input)
+
+        attachToEOG(node)
     }
 
     /**
@@ -631,7 +645,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         // Handle left hand side(s) first
         node.lhs.forEach { handleEOG(it) }
 
-        // Then the right side(s). Avoid creating the EOG twice if it's already part of the
+        // Then, handle the right side(s). Avoid creating the EOG twice if it's already part of the
         // initializer of a declaration
         node.rhs.forEach {
             if (it !in node.declarations.map { decl -> decl.initializer }) {

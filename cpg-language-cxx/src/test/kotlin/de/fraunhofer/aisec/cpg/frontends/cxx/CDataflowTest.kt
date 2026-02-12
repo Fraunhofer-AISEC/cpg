@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflow
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FieldDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
 import de.fraunhofer.aisec.cpg.test.*
 import java.io.File
@@ -62,15 +63,18 @@ class CDataflowTest {
         // In this example we want to have the list of all fields of "ctx" that
         // are written to in the start function itself. For this to achieve we can follow the
         // "FULL" dfg flow until the end and collect partial writes on the way.
-        val result = startVariable.followNextFullDFGEdgesUntilHit { it.nextDFG.isEmpty() }
-        val flow = result.fulfilled.singleOrNull()
+        val result =
+            startVariable.memoryValues
+                .singleOrNull { it.name.localName == "derefvalue" }
+                ?.followNextFullDFGEdgesUntilHit { it.nextDFG.isEmpty() }
+        val flow = result?.fulfilled?.flatMap { it.nodes }
         assertNotNull(flow)
         val fields =
-            flow.nodes
+            flow
                 .flatMap {
                     it.prevDFGEdges
                         .map(Dataflow::granularity)
-                        .filterIsInstance<PartialDataflowGranularity<*>>()
+                        .filterIsInstance<FieldDataflowGranularity>()
                 }
                 .mapNotNull(PartialDataflowGranularity<*>::partialTarget)
                 .toSet()

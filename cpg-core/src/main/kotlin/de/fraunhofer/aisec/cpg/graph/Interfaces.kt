@@ -25,14 +25,53 @@
  */
 package de.fraunhofer.aisec.cpg.graph
 
+import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.declarations.OperatorDeclaration
+import de.fraunhofer.aisec.cpg.graph.edges.MemoryAddressEdges
+import de.fraunhofer.aisec.cpg.graph.edges.flows.Dataflows
+import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.HasType
 import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.passes.DFGPass
+import de.fraunhofer.aisec.cpg.passes.PointsToPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
+import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
+
+/**
+ * Represents that this node (potentially) makes use of the given memory addresses e.g. to load or
+ * store data.
+ */
+interface HasMemoryAddress {
+
+    /** The memory addresses which this node uses e.g. to load or store data. */
+    @PopulatedByPass(DFGPass::class, PointsToPass::class) var memoryAddressEdges: MemoryAddressEdges
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
+    var memoryAddresses: MutableSet<MemoryAddress>
+}
+
+/** Represents that this node may hold the value(s)/data given by [memoryValues]. */
+interface HasMemoryValue {
+
+    /** The value(s)/data the node holds. */
+    @PopulatedByPass(DFGPass::class, PointsToPass::class) var memoryValueEdges: Dataflows<Node>
+    @PopulatedByPass(DFGPass::class, PointsToPass::class) var memoryValues: MutableSet<Node>
+
+    @PopulatedByPass(DFGPass::class, PointsToPass::class) var memoryValueUsageEdges: Dataflows<Node>
+    @PopulatedByPass(DFGPass::class, PointsToPass::class) var memoryValueUsages: MutableSet<Node>
+
+    @DoNotPersist
+    @PopulatedByPass(DFGPass::class, PointsToPass::class)
+    val fullMemoryValues: Set<Node>
+        get() =
+            memoryValueEdges
+                .filter { it.granularity is FullDataflowGranularity && !it.functionSummary }
+                .map { it.start }
+                .toSet()
+}
 
 /** A simple interface that a node has [language]. */
 interface HasLanguage {
@@ -120,15 +159,6 @@ interface HasInitializer : HasScope, HasType, ArgumentHolder, AssignmentHolder {
         get() {
             return initializer?.let { listOf(Assignment(it, this, this)) } ?: listOf()
         }
-}
-
-/**
- * Some nodes have aliases, i.e., it potentially references another variable. This means that
- * writing to this node, also writes to its [aliases] and vice versa.
- */
-interface HasAliases : HasScope {
-    /** The aliases which this node has. */
-    var aliases: MutableSet<HasAliases>
 }
 
 /**
