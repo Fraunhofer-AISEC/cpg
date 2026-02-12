@@ -38,6 +38,7 @@ import de.fraunhofer.aisec.cpg.helpers.Util
 import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTVisibilityLabel
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage
 import org.eclipse.cdt.internal.core.dom.parser.cpp.*
 
@@ -475,14 +476,32 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         recordDeclaration: RecordDeclaration,
         ctx: IASTCompositeTypeSpecifier,
     ) {
+        // Track current visibility - default depends on the record type
+        var currentVisibility =
+            when (recordDeclaration.kind) {
+                "class" -> "private"
+                "struct",
+                "union" -> "public"
+                else -> "public"
+            }
+
         for (member in ctx.members) {
             if (member is CPPASTVisibilityLabel) {
-                // TODO: parse visibility
+                // Update visibility state for the following members
+                currentVisibility =
+                    when (member.visibility) {
+                        ICPPASTVisibilityLabel.v_public -> "public"
+                        ICPPASTVisibilityLabel.v_protected -> "protected"
+                        ICPPASTVisibilityLabel.v_private -> "private"
+                        else -> currentVisibility
+                    }
                 continue
             }
 
             val declaration = frontend.declarationHandler.handle(member)
             if (declaration != null) {
+                // Apply current visibility to the declaration
+                declaration.modifiers += currentVisibility
                 frontend.scopeManager.addDeclaration(declaration)
                 recordDeclaration.addDeclaration(declaration)
             }
