@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.statements.Statement
@@ -45,9 +44,7 @@ class ExpressionList : Expression() {
         if (other !is ExpressionList) {
             return false
         }
-        return (super.equals(other) &&
-            expressions == other.expressions &&
-            propertyEqualsList(expressionEdges, other.expressionEdges))
+        return (super.equals(other) && expressionEdges == other.expressionEdges)
     }
 
     override fun hashCode(): Int {

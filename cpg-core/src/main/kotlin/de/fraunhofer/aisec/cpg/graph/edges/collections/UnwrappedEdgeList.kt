@@ -236,6 +236,12 @@ class UnwrappedEdgeList<NodeType : Node, EdgeType : Edge<NodeType>>(
     }
 
     override fun equals(other: Any?): Boolean {
+        // If comparing with another UnwrappedEdgeList, delegate to the backing edge list
+        if (other is UnwrappedEdgeList<*, *>) {
+            return list == other.list
+        }
+
+        // Otherwise, compare as a list of nodes
         return other is List<*> && this.iterator().asSequence().toList() == other
     }
 }

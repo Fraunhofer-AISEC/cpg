@@ -28,7 +28,6 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.graph.HasInitializer
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
@@ -70,8 +69,7 @@ class NewArrayExpression : Expression(), HasInitializer {
         if (other !is NewArrayExpression) return false
         return (super.equals(other) &&
             initializer == other.initializer &&
-            dimensions == other.dimensions &&
-            propertyEqualsList(dimensionEdges, other.dimensionEdges))
+            dimensionEdges == other.dimensionEdges)
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), initializer, dimensions)

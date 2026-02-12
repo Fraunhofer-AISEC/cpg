@@ -32,7 +32,6 @@ import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
-import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.*
@@ -61,9 +60,7 @@ abstract class Statement : AstNode(), DeclarationHolder {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Statement) return false
-        return super.equals(other) &&
-            locals == other.locals &&
-            propertyEqualsList(localEdges, other.localEdges)
+        return super.equals(other) && localEdges == other.localEdges
     }
 
     override fun hashCode() = Objects.hash(super.hashCode(), locals)

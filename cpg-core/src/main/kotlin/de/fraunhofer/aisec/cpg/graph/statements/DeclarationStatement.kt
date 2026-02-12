@@ -27,7 +27,6 @@ package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.Objects
@@ -74,9 +73,7 @@ open class DeclarationStatement : Statement() {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is DeclarationStatement) return false
-        return super.equals(other) &&
-            declarations == other.declarations &&
-            propertyEqualsList(declarationEdges, other.declarationEdges)
+        return super.equals(other) && declarationEdges == other.declarationEdges
     }
 
     override fun addDeclaration(declaration: Declaration) {

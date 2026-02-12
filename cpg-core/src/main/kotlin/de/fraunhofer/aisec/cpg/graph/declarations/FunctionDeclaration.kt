@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.graph.declarations
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.flows.Invokes
@@ -175,8 +174,7 @@ open class FunctionDeclaration :
         }
         return (super.equals(other) &&
             body == other.body &&
-            parameters == other.parameters &&
-            propertyEqualsList(parameterEdges, other.parameterEdges) &&
+            parameterEdges == other.parameterEdges &&
             throwsTypes == other.throwsTypes)
     }
 

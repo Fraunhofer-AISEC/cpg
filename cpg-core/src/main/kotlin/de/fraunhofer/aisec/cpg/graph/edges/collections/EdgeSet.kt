@@ -96,7 +96,6 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
         if (this === other) return true
         if (other !is EdgeSet<*, *>) return false
 
-        // Otherwise, try to compare the contents of the lists with the propertyEquals method
         return this.containsAll(other)
     }
 
