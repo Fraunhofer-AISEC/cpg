@@ -23,17 +23,15 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.frontends.jvm
+package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.frontends.FrontendConfiguration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 
-class JVMFrontendConfiguration(val packagesToIgnore: List<String> = listOf()) :
-    FrontendConfiguration() {
+class GoFrontendConfiguration(val dependencyList: List<String>) : FrontendConfiguration() {
     override fun doNotParseBody(node: FunctionDeclaration): Boolean {
-        return this.packagesToIgnore.none {
-            (node as? MethodDeclaration)?.recordDeclaration?.name.toString().startsWith(it)
-        }
+        node.firstParentOrNull<TranslationUnitDeclaration>().name
     }
 }

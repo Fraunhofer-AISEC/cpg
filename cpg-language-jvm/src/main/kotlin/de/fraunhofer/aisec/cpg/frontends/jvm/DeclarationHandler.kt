@@ -146,10 +146,7 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
             (this.ctx.config.frontendConfigurations[this.frontend::class]
                 as? JVMFrontendConfiguration)
 
-        if (
-            config?.packagesToIgnore?.none { record?.name.toString().startsWith(it) } != false &&
-                sootMethod.isConcrete
-        ) {
+        if (config?.doNotParseBody(method) != false && sootMethod.isConcrete) {
             // Handle method body
             method.body = frontend.statementHandler.handle(sootMethod.body)
         }

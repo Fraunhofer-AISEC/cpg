@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -35,6 +36,11 @@ import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.util.*
 import org.slf4j.LoggerFactory
+
+/** Configuration specific to the frontend. */
+abstract class FrontendConfiguration {
+    abstract fun doNotParseBody(node: FunctionDeclaration): Boolean
+}
 
 /**
  * The main task of the language frontend is to translate the programming language-specific files to
