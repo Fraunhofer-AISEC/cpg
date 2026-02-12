@@ -27,6 +27,6 @@ package de.fraunhofer.aisec.cpg.passes
 
 /** Provides a brief description for the annotated pass. */
 @Retention(AnnotationRetention.RUNTIME)
-@Target(AnnotationTarget.CLASS)
+@Target(AnnotationTarget.CLASS, AnnotationTarget.PROPERTY)
 @Repeatable
 annotation class Description(val briefDescription: String)
