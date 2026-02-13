@@ -26,7 +26,9 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.OperatorDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.HasType
@@ -148,4 +150,23 @@ interface HasOverloadedOperation : HasOperatorCode {
      * [SymbolResolver] is looking for an overloaded [OperatorDeclaration].
      */
     val operatorBase: Expression
+}
+
+/**
+ * Specifies that a node has modifiers, e.g., determining its visibility (typically `public` or
+ * `private) or other modifiers like `mut`. The modifiers are represented as a set of strings and
+ * are specific to the language.
+ *
+ * Careful distinction between modifiers and types is necessary and might be different for different
+ * languages, for example in C++ `int` is a type, but `const` or `volatile` are most likely
+ * modifiers.
+ */
+interface HasModifiers {
+
+    /**
+     * The modifiers of this node. The actual modifiers are language-specific and can be any string,
+     * but typical examples include `public`, `private`, `protected` for [MethodDeclaration]s and
+     * `mut` or `volatile` for [VariableDeclaration]s.
+     */
+    var modifiers: Set<String>
 }
