@@ -119,6 +119,27 @@ fun LanguageFrontend<*, *>.namespace(
 }
 
 /**
+ * Creates a new [ExtensionDeclaration] in the Fluent Node DSL with the given [name]. The
+ * declaration will be set to the [ScopeManager.currentExtension]. The [init] block can be used to
+ * create further sub-nodes as well as configuring the created node itself.
+ */
+context(holder: DeclarationHolder)
+fun LanguageFrontend<*, *>.extension(
+    name: CharSequence? = null,
+    init: ExtensionDeclaration.() -> Unit,
+): ExtensionDeclaration {
+    val node = newExtensionDeclaration(name ?: Node.EMPTY_NAME)
+
+    scopeManager.enterScope(node)
+    init(node)
+    scopeManager.leaveScope(node)
+    scopeManager.addDeclaration(node)
+    holder.addDeclaration(node)
+
+    return node
+}
+
+/**
  * Creates a new [RecordDeclaration] in the Fluent Node DSL with the given [name]. The declaration
  * will be set to the [ScopeManager.currentRecord]. The [init] block can be used to create further
  * sub-nodes as well as configuring the created node itself.
@@ -212,7 +233,7 @@ fun LanguageFrontend<*, *>.function(
  * [returnType]. The [init] block can be used to create further sub-nodes as well as configuring the
  * created node itself.
  */
-context(record: RecordDeclaration)
+context(holder: DeclarationHolder)
 fun LanguageFrontend<*, *>.method(
     name: CharSequence,
     returnType: Type = this.unknownType(),
@@ -230,7 +251,7 @@ fun LanguageFrontend<*, *>.method(
     scopeManager.leaveScope(node)
 
     scopeManager.addDeclaration(node)
-    record.methods += node
+    holder.addDeclaration(node)
 
     return node
 }

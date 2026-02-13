@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.Objects
+import org.slf4j.LoggerFactory
 
 /**
  * Children in this declaration are added to an existing node with namespace. This can be a Record,
@@ -52,6 +53,8 @@ class ExtensionDeclaration : Declaration(), DeclarationHolder {
      */
     var path: String? = null
 
+    var extendedDeclaration: DeclarationHolder? = null
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is ExtensionDeclaration) return false
@@ -61,7 +64,16 @@ class ExtensionDeclaration : Declaration(), DeclarationHolder {
     override fun hashCode() = Objects.hash(super.hashCode(), declarations)
 
     override fun addDeclaration(declaration: Declaration) {
-        addIfNotContains(declarations, declaration)
+        extendedDeclaration?.let { addDeclaration(declaration) }
+            ?: log.warn(
+                "{} could not be added to a declaration that {} this tries to extend. No declaration to extend was set.",
+                declaration,
+                this,
+            )
+    }
+
+    companion object {
+        private val log = LoggerFactory.getLogger(ExtensionDeclaration::class.java)
     }
 
     override fun getStartingPrevEOG(): Collection<Node> {
