@@ -762,10 +762,19 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                                 .filterTo(PowersetLattice.Element()) {
                                                     shortFS in it.properties
                                                 }
+                                        // If the value is a newly created MemoryAddress, we only
+                                        // set the
+                                        // name so that we know later that we have to create a new
+                                        // MemoryAddress for each CallExpression
+                                        val addressName = (value as? MemoryAddress)?.name?.localName
+                                        val v =
+                                            if (addressName?.startsWith("NewMemoryAddress") == true)
+                                                Name(addressName, node.name)
+                                            else value
                                         existingEntry.add(
                                             FSEntry(
                                                 dstValueDepth,
-                                                value,
+                                                v,
                                                 srcValueDepth,
                                                 subAccessName,
                                                 filteredLastWrites,
@@ -777,7 +786,7 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                                         val shortFSEntry =
                                             FSEntry(
                                                 dstValueDepth,
-                                                node,
+                                                v,
                                                 0,
                                                 subAccessName,
                                                 PowersetLattice.Element(
@@ -1067,9 +1076,17 @@ open class PointsToPass(ctx: TranslationContext) : EOGStarterPass(ctx, orderDepe
                         .computeIfAbsent(currentNode) { ConcurrentHashMap.newKeySet<FSEntry>() }
                         .addAll(
                             doubleState.getValues(retval, retval).map {
-                                FunctionDeclaration.FSEntry(
+                                // If the value is a newly created MemoryAddress, we only set the
+                                // name so that we know later that we have to create a new
+                                // MemoryAddress for each CallExpression
+                                val addressName = (it.first as? MemoryAddress)?.name?.localName
+                                val v =
+                                    if (addressName?.startsWith("NewMemoryAddress") == true)
+                                        Name(addressName, parentFD.name)
+                                    else it.first
+                                FSEntry(
                                     0,
-                                    it.first,
+                                    v,
                                     1,
                                     "",
                                     mutableSetOf(
