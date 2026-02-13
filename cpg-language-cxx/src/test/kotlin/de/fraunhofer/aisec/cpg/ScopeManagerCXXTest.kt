@@ -60,7 +60,10 @@ internal class ScopeManagerTest : BaseTest() {
             assertSame(it, scope!!.astNode)
         }
 
-        val constructors = tu.allChildren<ConstructorDeclaration>()
+        val constructors =
+            tu.allChildren<ConstructorDeclaration>().filter {
+                it.recordDeclaration?.name?.localName == "SomeClass"
+            }
         assertFalse(constructors.isEmpty())
 
         // make sure that the scope of the constructor actually has the constructor as an ast node.

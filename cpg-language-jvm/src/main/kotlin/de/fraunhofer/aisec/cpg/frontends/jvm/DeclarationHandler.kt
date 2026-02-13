@@ -149,7 +149,7 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
         return newFieldDeclaration(
             field.name,
             frontend.typeOf(field.type),
-            field.modifiers.map { it.name.lowercase() },
+            field.modifiers.map { it.name.lowercase() }.toSet(),
             rawNode = field,
         )
     }

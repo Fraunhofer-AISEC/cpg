@@ -51,7 +51,6 @@ import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.matchesSignature
 import java.util.function.Supplier
-import kotlin.collections.set
 
 open class DeclarationHandler(lang: JavaLanguageFrontend) :
     Handler<Declaration, Node, JavaLanguageFrontend>(Supplier { ProblemDeclaration() }, lang) {
@@ -107,6 +106,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     ): de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration {
         val resolvedMethod = methodDecl.resolve()
         val currentRecordDecl = frontend.scopeManager.currentRecord
+
         val functionDeclaration =
             this.newMethodDeclaration(
                 resolvedMethod.name,
@@ -114,6 +114,9 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 currentRecordDecl,
                 rawNode = methodDecl,
             )
+        functionDeclaration.modifiers =
+            methodDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
+
         frontend.scopeManager.enterScope(functionDeclaration)
         createMethodReceiver(currentRecordDecl, functionDeclaration)
         functionDeclaration.addThrowTypes(
@@ -188,6 +191,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             classInterDecl.implementedTypes
                 .map { type -> frontend.getTypeAsGoodAsPossible(type) }
                 .toMutableList()
+        recordDeclaration.modifiers =
+            classInterDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
 
         frontend.typeManager.addTypeParameter(
             recordDeclaration,
@@ -221,7 +226,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             // Enter the scope of the inner class because the new field belongs there.
             frontend.scopeManager.enterScope(recordDeclaration)
             val field =
-                this.newFieldDeclaration("this$" + scope.name.localName, fieldType, listOf())
+                this.newFieldDeclaration("this$" + scope.name.localName, fieldType, setOf())
                     .implicit("this$" + scope.name.localName)
             frontend.scopeManager.addDeclaration(field)
             recordDeclaration.fields += field
@@ -234,8 +239,6 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         fieldDecl: com.github.javaparser.ast.body.FieldDeclaration
     ): DeclarationSequence {
         val declarationSequence = DeclarationSequence()
-
-        val modifiers = fieldDecl.modifiers.map { modifier -> modifier.keyword.asString() }
 
         for (variable in fieldDecl.variables) {
             val initializer =
@@ -283,7 +286,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 this.newFieldDeclaration(
                     variable.name.asString(),
                     type,
-                    modifiers,
+                    fieldDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet(),
                     initializer,
                     rawNode = fieldDecl,
                 )

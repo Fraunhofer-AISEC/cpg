@@ -681,6 +681,11 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val constant = recordDeclaration.fields["CONSTANT"]
         assertNotNull(constant)
         assertEquals(tu.incompleteType().reference(POINTER), field.type)
+
+        // Check visibility modifiers
+        assertContains(field.modifiers, "private")
+        assertContains(constant.modifiers, "private")
+
         assertEquals(4, recordDeclaration.methods.size)
 
         val method = recordDeclaration.methods[0]
@@ -729,6 +734,11 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         )
         assertTrue(inlineMethod.hasBody())
 
+        // Check visibility modifiers for methods
+        assertContains(method.modifiers, "public")
+        assertContains(methodWithParam.modifiers, "public")
+        assertContains(inlineMethod.modifiers, "public")
+
         val inlineConstructor = recordDeclaration.constructors[0]
         assertEquals(recordDeclaration.name.localName, inlineConstructor.name.localName)
         assertEquals(
@@ -769,6 +779,23 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         val anotherMethod = tu.methods["anotherMethod"]
         assertNotNull(anotherMethod)
         assertFullName("OtherClass::anotherMethod", anotherMethod)
+
+        // Test struct visibility - structs default to public
+        val structDeclaration = tu.records["SomeStruct"]
+        assertNotNull(structDeclaration)
+        assertEquals("struct", structDeclaration.kind)
+
+        val publicByDefault = structDeclaration.fields["publicByDefault"]
+        assertNotNull(publicByDefault)
+        assertContains(publicByDefault.modifiers, "public")
+
+        val privateField = structDeclaration.fields["privateField"]
+        assertNotNull(privateField)
+        assertContains(privateField.modifiers, "private")
+
+        val structMethod = structDeclaration.methods["method"]
+        assertNotNull(structMethod)
+        assertContains(structMethod.modifiers, "public")
     }
 
     @Test

@@ -215,7 +215,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
 
             frontend.scopeManager.enterScope(record)
 
-            val field = newFieldDeclaration(fieldName, fieldType, listOf(), null, false)
+            val field = newFieldDeclaration(fieldName, fieldType, setOf(), null, false)
             frontend.scopeManager.addDeclaration(field)
             record.fields += field
 

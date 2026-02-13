@@ -35,7 +35,7 @@ import org.neo4j.ogm.annotation.Relationship
  * the field as well as an initializer [Expression] which provides an initial value for the field.
  */
 class FieldDeclaration : VariableDeclaration() {
-    /** Specifies, whether this field declaration is also a definition, i.e. has an initializer. */
+    /** Specifies whether this field declaration is also a definition, i.e. has an initializer. */
     var isDefinition = false
 
     /** If this is only a declaration, this provides a link to the definition of the field. */
@@ -48,8 +48,6 @@ class FieldDeclaration : VariableDeclaration() {
                 field
             }
         }
-
-    var modifiers: List<String> = mutableListOf()
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

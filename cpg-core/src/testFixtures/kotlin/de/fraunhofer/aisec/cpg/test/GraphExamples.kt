@@ -459,7 +459,7 @@ class GraphExamples {
                         record("Variables") {
                             field("field", t("int")) {
                                 literal(42, t("int"))
-                                modifiers = listOf("private")
+                                modifiers = setOf("private")
                             }
                             method("getField", t("int")) {
                                 receiver = newVariableDeclaration("this", t("Variables"))

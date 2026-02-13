@@ -108,7 +108,7 @@ class Query {
                         record("Dataflow") {
                             field("logger", t("Logger")) {
                                 // TODO: this field is static. How do we model this?
-                                this.modifiers = listOf("static")
+                                this.modifiers = setOf("static")
                                 memberCall("getLogger", ref("Logger")) {
                                     literal("DataflowLogger", t("string"))
                                 }
@@ -186,7 +186,7 @@ class Query {
                         record("Dataflow") {
                             field("logger", t("Logger")) {
                                 // TODO: this field is static. How do we model this?
-                                this.modifiers = listOf("static")
+                                this.modifiers = setOf("static")
                                 memberCall("getLogger", ref("Logger")) {
                                     literal("DataflowLogger", t("string"))
                                 }
@@ -261,7 +261,7 @@ class Query {
                         record("Dataflow") {
                             field("logger", t("Logger")) {
                                 // TODO: this field is static. How do we model this?
-                                this.modifiers = listOf("static")
+                                this.modifiers = setOf("static")
                                 memberCall("getLogger", ref("Logger")) {
                                     literal("DataflowLogger", t("string"))
                                 }

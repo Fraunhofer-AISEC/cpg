@@ -452,7 +452,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
                     hint.name.localName,
                     // we will set the type later through the type inference observer
                     record.unknownType(),
-                    listOf(),
+                    setOf(),
                     null,
                     false,
                 )

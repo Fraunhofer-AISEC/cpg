@@ -123,9 +123,9 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 val (fieldName, modifiers) =
                     if (field.names.isEmpty()) {
                         // Retrieve the root type local name
-                        Pair(type.root.name.localName, listOf("embedded"))
+                        Pair(type.root.name.localName, setOf("embedded"))
                     } else {
-                        Pair(field.names[0].name, listOf())
+                        Pair(field.names[0].name, setOf())
                     }
 
                 val decl = newFieldDeclaration(fieldName, type, modifiers, rawNode = field)
