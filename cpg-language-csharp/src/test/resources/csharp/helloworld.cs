@@ -1,0 +1,4 @@
+namespace HelloWorld
+{
+    class Greeter { }
+}
