@@ -49,7 +49,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             is RsItem.Module -> handleModule(item.v1)
             is RsItem.Struct -> handleStruct(item.v1)
             is RsItem.Impl -> handleImpl(item.v1)
-            else -> handleNotSupported(node, node::class.simpleName ?: "")
+            else -> handleNotSupported(node, item::class.simpleName ?: "")
         }
     }
 
