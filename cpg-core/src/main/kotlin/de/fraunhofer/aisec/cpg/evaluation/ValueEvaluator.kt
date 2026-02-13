@@ -123,10 +123,9 @@ open class ValueEvaluator(
             return null
         }
 
-        // If the node is already in the path, we are looping, so we can stop here
-        if (node in this.path) {
-            val lastEntry = this.path.last()
-            return if (lastEntry is Literal<*>) lastEntry.value else cannotEvaluate(node, this)
+        // If the node is already in the path twice, we are looping, so we can stop here
+        if (this.path.filter { it === node }.size > 1) {
+            cannotEvaluate(node, this)
         }
 
         // Add the expression to the current path
