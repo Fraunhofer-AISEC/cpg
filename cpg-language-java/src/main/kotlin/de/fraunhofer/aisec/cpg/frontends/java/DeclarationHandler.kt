@@ -49,10 +49,8 @@ import de.fraunhofer.aisec.cpg.graph.types.FunctionType.Companion.computeType
 import de.fraunhofer.aisec.cpg.graph.types.ParameterizedType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
 import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.helpers.map
 import de.fraunhofer.aisec.cpg.matchesSignature
 import java.util.function.Supplier
-import kotlin.collections.set
 
 open class DeclarationHandler(lang: JavaLanguageFrontend) :
     Handler<Declaration, Node, JavaLanguageFrontend>(Supplier { ProblemDeclaration() }, lang) {
