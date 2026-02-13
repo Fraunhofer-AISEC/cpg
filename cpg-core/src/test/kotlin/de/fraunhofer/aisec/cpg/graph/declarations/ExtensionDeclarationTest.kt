@@ -46,8 +46,7 @@ class ExtensionDeclarationTest {
                 translationResult {
                     translationUnit {
                         val rec = record("Record") {}
-                        extension("Extension") {
-                            this.extendedDeclaration = rec
+                        extension("Extension", rec) {
                             method("extFunc") {}
                             field("extField") {}
                         }
@@ -63,10 +62,12 @@ class ExtensionDeclarationTest {
             val records = tu.declarations.filterIsInstance<RecordDeclaration>()
             assertEquals(1, records.size, "One record should be present")
 
+            scopeManager.enterScope(records.first())
+
             extensions.first().astChildren.filterIsInstance<Declaration>().forEach { declaration ->
                 assertTrue(
-                    records.first().declarations.contains(declaration),
-                    "Record should contain the extension's declaration",
+                    scopeManager.currentScope.symbols.values.flatten().contains(declaration),
+                    "Records symbol map should contain the extension's declaration",
                 )
             }
         }

@@ -53,7 +53,8 @@ class ExtensionDeclaration : Declaration(), DeclarationHolder {
      */
     var path: String? = null
 
-    var extendedDeclaration: DeclarationHolder? = null
+    /** We currently only allow extending a record declaration. */
+    var extendedDeclaration: RecordDeclaration? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -64,12 +65,7 @@ class ExtensionDeclaration : Declaration(), DeclarationHolder {
     override fun hashCode() = Objects.hash(super.hashCode(), declarations)
 
     override fun addDeclaration(declaration: Declaration) {
-        extendedDeclaration?.let { addDeclaration(declaration) }
-            ?: log.warn(
-                "{} could not be added to a declaration that {} this tries to extend. No declaration to extend was set.",
-                declaration,
-                this,
-            )
+        addIfNotContains(declarations, declaration)
     }
 
     companion object {

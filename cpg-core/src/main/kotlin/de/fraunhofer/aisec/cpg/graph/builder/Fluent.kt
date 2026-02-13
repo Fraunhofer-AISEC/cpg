@@ -126,13 +126,15 @@ fun LanguageFrontend<*, *>.namespace(
 context(holder: DeclarationHolder)
 fun LanguageFrontend<*, *>.extension(
     name: CharSequence? = null,
+    extendedDeclaration: RecordDeclaration? = null,
     init: ExtensionDeclaration.() -> Unit,
 ): ExtensionDeclaration {
     val node = newExtensionDeclaration(name ?: Node.EMPTY_NAME)
+    node.extendedDeclaration = extendedDeclaration
 
-    scopeManager.enterScope(node)
+    scopeManager.enterScope(extendedDeclaration ?: node)
     init(node)
-    scopeManager.leaveScope(node)
+    scopeManager.leaveScope(extendedDeclaration ?: node)
     scopeManager.addDeclaration(node)
     holder.addDeclaration(node)
 
