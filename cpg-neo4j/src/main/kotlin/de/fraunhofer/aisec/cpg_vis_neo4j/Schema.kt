@@ -159,27 +159,37 @@ class Schema {
             ClassGraph().acceptPackages(Node::class.java.packageName).enableClassInfo().scan()
 
         val nodeClass = Node::class
+        val allSubclasses = scanResult.getSubclasses(Node::class.java).loadClasses()
+
+        // Include both abstract and concrete classes for hierarchy building
+        val allEntities =
+            allSubclasses
+                .map { it.kotlin }
+                .filter { !it.java.isInterface }
+                .filterIsInstance<KClass<out Node>>()
+                .toMutableList()
+
+        // Also keep track of just the concrete entities for schema output
         val entities =
-            scanResult
-                .getSubclasses(Node::class.java)
-                .loadClasses()
+            allSubclasses
                 .map { it.kotlin }
                 .filter { !it.java.isInterface && !Modifier.isAbstract(it.java.modifiers) }
                 .filterIsInstance<KClass<out Node>>()
                 .toMutableList()
 
         // Add the Node class itself
+        allEntities.add(0, nodeClass)
         entities.add(0, nodeClass)
 
-        // Build hierarchy
-        entities.forEach { entity ->
+        // Build hierarchy (use all entities including abstract classes)
+        allEntities.forEach { entity ->
             val superC =
                 entity.superclasses
                     .firstOrNull { it.isSubclassOf(Node::class) && it != Any::class }
                     ?.let { it as? KClass<out Node> }
 
             val children =
-                entities.filter { child ->
+                allEntities.filter { child ->
                     child.superclasses.firstOrNull {
                         it.isSubclassOf(Node::class) && it != Any::class
                     } == entity
