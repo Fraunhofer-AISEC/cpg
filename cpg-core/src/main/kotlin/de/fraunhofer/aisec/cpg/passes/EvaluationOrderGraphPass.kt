@@ -72,8 +72,8 @@ import org.slf4j.LoggerFactory
  * [currentPredecessors] or even temporarily save and restore the valid eog exits of an ast subtree,
  * e.g. [IfStatement].
  *
- * The EOG is similar to the CFG (Control Flow Graph), but there are some subtle differences:
- * * For methods without explicit return statement, EOG will have an edge to a virtual return node
+ * The EOG is similar to the CFG `ControlFlowGraphPass`, but there are some subtle differences:
+ * * For methods without explicit return statement, EOF will have an edge to a virtual return node
  *   with line number -1 which does not exist in the original code. A CFG will always end with the
  *   last reachable statement(s) and not insert any virtual return statements.
  * * EOG considers an opening blocking ("Block", indicated by a "{") as a separate node. A CFG will
@@ -87,9 +87,6 @@ import org.slf4j.LoggerFactory
  * this pass and fine-tune it.
  */
 @Suppress("MemberVisibilityCanBePrivate")
-@Description(
-    "Adds EOG edges to the graph. These represent the execution order of statements or expressions and is similar to a fine-grained version of a control flow graph."
-)
 open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPass(ctx) {
 
     var currentPredecessors = mutableListOf<Node>()
@@ -194,6 +191,16 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         handleStatementHolder(node)
 
         // loop through functions
+        for (child in node.declarations) {
+            currentPredecessors.clear()
+            handleEOG(child)
+        }
+        processedListener.clearProcessed()
+    }
+
+    /** The Extension Declaration only contains other declarations and therefore does not */
+    protected fun handleExtensionDeclaration(node: ExtensionDeclaration) {
+        // Handle the declarations contained in the extension
         for (child in node.declarations) {
             currentPredecessors.clear()
             handleEOG(child)
@@ -353,6 +360,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             is TranslationUnitDeclaration -> handleTranslationUnitDeclaration(node)
             is NamespaceDeclaration -> handleNamespaceDeclaration(node)
             is RecordDeclaration -> handleRecordDeclaration(node)
+            is ExtensionDeclaration -> handleExtensionDeclaration(node)
             is FunctionDeclaration -> handleFunctionDeclaration(node)
             is TupleDeclaration -> handleTupleDeclaration(node)
             is VariableDeclaration -> handleVariableDeclaration(node)
