@@ -350,12 +350,18 @@ class Schema {
         if (hierarchy[kClass]?.first != null) {
             out.print("**Labels**:")
 
-            // Use the labels extension property from Common.kt
-            kClass.labels.forEach { label ->
+            // Use the labels extension property from Common.kt, but exclude the current class
+            // to only show the parent hierarchy (superclasses)
+            val parentLabels = kClass.labels.filter { it != entityLabel }
+            parentLabels.forEach { label ->
                 out.print(
                     getBoxWithClass("superclassLabel", "[${label}](#${toAnchorLink("e${label}")})")
                 )
             }
+            // Add the current class with different styling
+            out.print(
+                getBoxWithClass("classLabel", "[${entityLabel}](#${toAnchorLink("e$entityLabel")})")
+            )
             out.println()
         }
         if (hierarchy[kClass]?.second?.isNotEmpty() == true) {
