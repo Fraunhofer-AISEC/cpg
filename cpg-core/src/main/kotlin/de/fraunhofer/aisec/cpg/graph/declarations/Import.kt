@@ -32,10 +32,10 @@ import de.fraunhofer.aisec.cpg.graph.scopes.FileScope
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.scopes.SymbolMap
-import de.fraunhofer.aisec.cpg.helpers.neo4j.SimpleNameConverter
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.persistence.Convert
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
+import de.fraunhofer.aisec.cpg.persistence.converters.SimpleNameConverter
 
 /**
  * This class represents a real *import* of one or more symbols of a specified [NameScope] (e.g.,

@@ -37,7 +37,6 @@ import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.helpers.MeasurementHolder
 import de.fraunhofer.aisec.cpg.helpers.StatisticsHolder
-import de.fraunhofer.aisec.cpg.helpers.neo4j.TranslationStatsConverter
 import de.fraunhofer.aisec.cpg.passes.ImportDependencies
 import de.fraunhofer.aisec.cpg.passes.ImportResolver
 import de.fraunhofer.aisec.cpg.passes.Pass
@@ -47,6 +46,7 @@ import de.fraunhofer.aisec.cpg.passes.markDirty
 import de.fraunhofer.aisec.cpg.persistence.Convert
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.persistence.Relationship
+import de.fraunhofer.aisec.cpg.persistence.converters.TranslationStatsConverter
 import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap

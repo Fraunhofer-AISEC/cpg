@@ -32,9 +32,8 @@ import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.HasType
-import de.fraunhofer.aisec.cpg.helpers.neo4j.DataflowGranularityConverter
-import de.fraunhofer.aisec.cpg.persistence.*
 import de.fraunhofer.aisec.cpg.persistence.Convert
+import de.fraunhofer.aisec.cpg.persistence.converters.DataflowGranularityConverter
 import java.util.Objects
 import kotlin.reflect.KProperty
 

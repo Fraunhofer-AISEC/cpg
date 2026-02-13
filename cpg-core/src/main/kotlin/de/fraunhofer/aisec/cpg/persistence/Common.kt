@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeList
 import de.fraunhofer.aisec.cpg.helpers.IdentitySet
 import de.fraunhofer.aisec.cpg.helpers.identitySetOf
-import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
+import de.fraunhofer.aisec.cpg.persistence.converters.NameConverter
 import kotlin.collections.plusAssign
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
@@ -52,7 +52,7 @@ import kotlin.reflect.jvm.javaType
 import kotlin.uuid.Uuid
 
 /** This annotation is used to denote that this property or class should not be persisted */
-@Target(AnnotationTarget.PROPERTY, AnnotationTarget.CLASS) annotation class DoNotPersist()
+@Target(AnnotationTarget.PROPERTY, AnnotationTarget.CLASS) annotation class DoNotPersist
 
 /**
  * Interface for converters that convert between object property types and graph database types.

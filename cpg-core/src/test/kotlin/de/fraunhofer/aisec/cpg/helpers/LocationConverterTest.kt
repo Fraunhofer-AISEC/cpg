@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
-import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
 import de.fraunhofer.aisec.cpg.persistence.CompositeAttributeConverter
+import de.fraunhofer.aisec.cpg.persistence.converters.LocationConverter
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import de.fraunhofer.aisec.cpg.test.*

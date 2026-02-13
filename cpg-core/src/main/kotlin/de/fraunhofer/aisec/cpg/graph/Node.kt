@@ -46,12 +46,12 @@ import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
-import de.fraunhofer.aisec.cpg.helpers.neo4j.LocationConverter
-import de.fraunhofer.aisec.cpg.helpers.neo4j.NameConverter
 import de.fraunhofer.aisec.cpg.passes.*
 import de.fraunhofer.aisec.cpg.persistence.Convert
 import de.fraunhofer.aisec.cpg.persistence.DoNotPersist
 import de.fraunhofer.aisec.cpg.persistence.Relationship
+import de.fraunhofer.aisec.cpg.persistence.converters.LocationConverter
+import de.fraunhofer.aisec.cpg.persistence.converters.NameConverter
 import de.fraunhofer.aisec.cpg.processing.IVisitable
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.util.*

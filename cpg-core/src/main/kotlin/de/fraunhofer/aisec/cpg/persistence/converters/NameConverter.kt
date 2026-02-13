@@ -23,7 +23,7 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.cpg.helpers.neo4j
+package de.fraunhofer.aisec.cpg.persistence.converters
 
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.parseName
