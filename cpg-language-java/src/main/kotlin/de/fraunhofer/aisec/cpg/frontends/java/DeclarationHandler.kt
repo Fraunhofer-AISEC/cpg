@@ -194,7 +194,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 .map { type -> frontend.getTypeAsGoodAsPossible(type) }
                 .toMutableList()
         recordDeclaration.modifiers =
-            classInterDecl.modifiers.mapTo(hashSetOf()) { modifier -> modifier.keyword.asString() }
+            classInterDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet()
 
         frontend.typeManager.addTypeParameter(
             recordDeclaration,
@@ -288,9 +288,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                 this.newFieldDeclaration(
                     variable.name.asString(),
                     type,
-                    fieldDecl.modifiers.mapTo(hashSetOf()) { modifier ->
-                        modifier.keyword.asString()
-                    },
+                    fieldDecl.modifiers.map { modifier -> modifier.keyword.asString() }.toSet(),
                     initializer,
                     rawNode = fieldDecl,
                 )

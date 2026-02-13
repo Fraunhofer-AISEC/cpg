@@ -553,17 +553,3 @@ object Util {
         EXITS,
     }
 }
-
-/**
- * Applies the given predicate to each element in this set and returns a new set containing the
- * results.
- *
- * @param T the type of the elements in the original set
- * @param R the type of the elements in the resulting set
- * @param predicate a function that maps an element of type T to type R
- * @return a new set with elements of type R, resulting from applying the predicate to each element
- *   of the original set
- */
-fun <T, R> Set<T>.map(predicate: (T) -> R): Set<R> {
-    return mapTo(hashSetOf(), predicate)
-}
