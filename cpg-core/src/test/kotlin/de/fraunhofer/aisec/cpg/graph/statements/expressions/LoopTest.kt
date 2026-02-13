@@ -25,10 +25,10 @@
  */
 package de.fraunhofer.aisec.cpg.graph.statements.expressions
 
-import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements
+import de.fraunhofer.aisec.cpg.test.GraphExamples
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertNotEquals
