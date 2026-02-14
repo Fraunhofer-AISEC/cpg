@@ -26,6 +26,8 @@
 package de.fraunhofer.aisec.cpg.frontends.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 import org.treesitter.TSNode
@@ -52,6 +54,13 @@ class TypeHandler(frontend: RustLanguageFrontend) :
             "pointer_type" -> handlePointerType(node)
             "unit_type" -> objectType("()")
             "never_type" -> objectType("!")
+            "generic_type_with_turbofish" -> handleGenericType(node)
+            "bounded_type" -> {
+                val firstType = node.getNamedChild(0)
+                if (firstType != null && !firstType.isNull) handle(firstType)
+                else objectType(frontend.codeOf(node) ?: "")
+            }
+            "qualified_type" -> objectType(frontend.codeOf(node) ?: "")
             else -> {
                 objectType(node.text())
             }
@@ -86,8 +95,14 @@ class TypeHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleTupleType(node: TSNode): Type {
-        // Rust tuples are complex, but for now we'll just treat them as ObjectType
-        return objectType(node.text())
+        val elementTypes = mutableListOf<Type>()
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child.isNamed) {
+                elementTypes += handle(child)
+            }
+        }
+        return TupleType(elementTypes)
     }
 
     private fun handleArrayType(node: TSNode): Type {
@@ -99,15 +114,42 @@ class TypeHandler(frontend: RustLanguageFrontend) :
     private fun handleGenericType(node: TSNode): Type {
         val typeNode = node["type"]
         val typeName = typeNode.text()
-
-        // TODO: Handle generics (e.g. Vec<i32>)
-        return objectType(typeName)
+        val typeName = typeNode?.let { frontend.codeOf(it) } ?: frontend.codeOf(node) ?: ""
+        val typeArgs = node.getChildByFieldName("type_arguments")
+        val generics = mutableListOf<Type>()
+        if (typeArgs != null && !typeArgs.isNull) {
+            for (i in 0 until typeArgs.childCount) {
+                val arg = typeArgs.getChild(i)
+                if (arg.isNamed) {
+                    generics += handle(arg)
+                }
+            }
+        }
+        return objectType(typeName, generics)
     }
 
     private fun handleFunctionType(node: TSNode): Type {
-        // fn(i32, i32) -> i32
-        // Model as ObjectType with the full code representation
-        return objectType(node.text().ifEmpty { "fn" })
+        val paramTypes = mutableListOf<Type>()
+        val params = node.getChildByFieldName("parameters")
+        if (params != null && !params.isNull) {
+            for (i in 0 until params.childCount) {
+                val child = params.getChild(i)
+                if (child.isNamed) paramTypes += handle(child)
+            }
+        }
+        val returnNode = node.getChildByFieldName("return_type")
+        val returnTypes =
+            if (returnNode != null && !returnNode.isNull) {
+                listOf(handle(returnNode))
+            } else {
+                listOf(objectType("()"))
+            }
+        return FunctionType(
+            frontend.codeOf(node) ?: "fn",
+            paramTypes,
+            returnTypes,
+            frontend.language,
+        )
     }
 
     private fun handleAbstractType(node: TSNode): Type {

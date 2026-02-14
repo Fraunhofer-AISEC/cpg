@@ -257,11 +257,8 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleSelfParameter(node: TSNode, func: FunctionDeclaration) {
-        val recordDeclaration =
-            (frontend.scopeManager.currentScope as? RecordScope)?.astNode as? RecordDeclaration
-                ?: return
-
         if (func is MethodDeclaration) {
+            val recordDeclaration = func.recordDeclaration ?: return
             val selfType = recordDeclaration.toType()
             // Check if it's &self, &mut self, or self
             var isMut = false
