@@ -66,7 +66,6 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             "await_expression" -> handleAwaitExpression(node)
             "reference_expression" -> handleReferenceExpression(node)
             "struct_expression" -> handleStructExpression(node)
-            "method_call_expression" -> handleMethodCallExpression(node)
             "index_expression" -> handleIndexExpression(node)
             "range_expression" -> handleRangeExpression(node)
             "try_expression" -> handleTryExpression(node)
@@ -122,11 +121,50 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
     }
 
     private fun handleIntegerLiteral(node: TSNode): Literal<Long> {
-        val code = node.text()
         // Rust integers can have suffixes (e.g. 1u32) and underscores (e.g. 1_000)
-        val valueStr = code.filter { it.isDigit() || it == '-' }
-        val value = valueStr.toLongOrNull() ?: 0L
-        return newLiteral(value, primitiveType("i32"), rawNode = node)
+        val code = node.text()
+        // Strip underscores and type suffixes
+        val cleaned =
+            code
+                .replace("_", "")
+                .removeSuffix("i8")
+                .removeSuffix("i16")
+                .removeSuffix("i32")
+                .removeSuffix("i64")
+                .removeSuffix("i128")
+                .removeSuffix("isize")
+                .removeSuffix("u8")
+                .removeSuffix("u16")
+                .removeSuffix("u32")
+                .removeSuffix("u64")
+                .removeSuffix("u128")
+                .removeSuffix("usize")
+        val value =
+            when {
+                cleaned.startsWith("0x") || cleaned.startsWith("0X") ->
+                    cleaned.drop(2).toLongOrNull(16) ?: 0L
+                cleaned.startsWith("0o") || cleaned.startsWith("0O") ->
+                    cleaned.drop(2).toLongOrNull(8) ?: 0L
+                cleaned.startsWith("0b") || cleaned.startsWith("0B") ->
+                    cleaned.drop(2).toLongOrNull(2) ?: 0L
+                else -> cleaned.toLongOrNull() ?: 0L
+            }
+        val typeName =
+            when {
+                code.endsWith("u8") -> "u8"
+                code.endsWith("u16") -> "u16"
+                code.endsWith("u32") -> "u32"
+                code.endsWith("u64") -> "u64"
+                code.endsWith("u128") -> "u128"
+                code.endsWith("usize") -> "usize"
+                code.endsWith("i8") -> "i8"
+                code.endsWith("i16") -> "i16"
+                code.endsWith("i64") -> "i64"
+                code.endsWith("i128") -> "i128"
+                code.endsWith("isize") -> "isize"
+                else -> "i32"
+            }
+        return newLiteral(value, primitiveType(typeName), rawNode = node)
     }
 
     private fun handleStringLiteral(node: TSNode): Literal<String> {

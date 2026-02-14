@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.rust
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
@@ -43,6 +44,7 @@ import org.treesitter.*
  * the `io.github.bonede:tree-sitter-ng` bindings to translate Rust source code into the common CPG
  * representation.
  */
+@SupportsParallelParsing
 class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLanguageFrontend>) :
     LanguageFrontend<TSNode, TSNode?>(ctx, language) {
 

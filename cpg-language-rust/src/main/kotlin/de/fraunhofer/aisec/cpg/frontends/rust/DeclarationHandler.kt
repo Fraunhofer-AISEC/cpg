@@ -57,7 +57,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             "static_item" -> handleStaticItem(node)
             "use_declaration" -> handleUseDeclaration(node)
             else -> {
-                ProblemDeclaration("Unknown declaration type: ${node.type}")
+                newProblemDeclaration("Unknown declaration type: ${node.type}", rawNode = node)
             }
         }
     }

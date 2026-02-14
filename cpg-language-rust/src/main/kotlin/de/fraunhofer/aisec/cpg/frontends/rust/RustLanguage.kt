@@ -26,8 +26,13 @@
 package de.fraunhofer.aisec.cpg.frontends.rust
 
 import de.fraunhofer.aisec.cpg.frontends.*
+import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
+import de.fraunhofer.aisec.cpg.graph.scopes.Symbol
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.UnaryOperator
 import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
+import org.neo4j.ogm.annotation.Transient
 
 /**
  * The [Language] definition for Rust. It currently supports basic types and operators.
@@ -35,7 +40,17 @@ import kotlin.reflect.KClass
  * More information can be found in the [Rust Reference](https://doc.rust-lang.org/reference/).
  */
 class RustLanguage :
-    Language<RustLanguageFrontend>(), HasShortCircuitOperators, HasDefaultArguments {
+    Language<RustLanguageFrontend>(),
+    HasShortCircuitOperators,
+    HasGenerics,
+    HasStructs,
+    HasFirstClassFunctions,
+    HasGlobalFunctions,
+    HasGlobalVariables,
+    HasAnonymousIdentifier,
+    HasFunctionPointers,
+    HasFunctionStyleConstruction,
+    HasOperatorOverloading {
     override val fileExtensions = listOf("rs")
     override val namespaceDelimiter = "::"
 
@@ -43,8 +58,58 @@ class RustLanguage :
     override val conjunctiveOperators = listOf("&&")
     override val disjunctiveOperators = listOf("||")
 
+    override val startCharacter = '<'
+    override val endCharacter = '>'
+
     override val compoundAssignmentOperators =
         setOf("+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>=")
+
+    @Transient
+    override val overloadedOperatorNames:
+        Map<Pair<KClass<out HasOverloadedOperation>, String>, Symbol> =
+        mapOf(
+            UnaryOperator::class of "!" to "Not::not",
+            UnaryOperator::class of "*" to "Deref::deref",
+            UnaryOperator::class of "-" to "Neg::neg",
+            BinaryOperator::class of "!=" to "PartialEq::ne",
+            BinaryOperator::class of "%" to "Rem::rem",
+            BinaryOperator::class of "%=" to "RemAssign::rem_assign",
+            BinaryOperator::class of "&" to "BitAnd::bitand",
+            BinaryOperator::class of "&=" to "BitAndAssign::bitand_assign",
+            BinaryOperator::class of "*" to "Mul::mul",
+            BinaryOperator::class of "*=" to "MulAssign::mul_assign",
+            BinaryOperator::class of "+" to "Add::add",
+            BinaryOperator::class of "+=" to "AddAssign::add_assign",
+            BinaryOperator::class of "-" to "Sub::sub",
+            BinaryOperator::class of "-=" to "SubAssign::sub_assign",
+            BinaryOperator::class of "/" to "Div::div",
+            BinaryOperator::class of "/=" to "DivAssign::div_assign",
+            BinaryOperator::class of "<<" to "Shl::shl",
+            BinaryOperator::class of "<<=" to "ShlAssign::shl_assign",
+            BinaryOperator::class of "<" to "PartialOrd::lt",
+            BinaryOperator::class of "<=" to "PartialOrd::le",
+            BinaryOperator::class of "==" to "PartialEq::eq",
+            BinaryOperator::class of ">" to "PartialOrd::gt",
+            BinaryOperator::class of ">=" to "PartialOrd::ge",
+            BinaryOperator::class of ">>" to "Shr::shr",
+            BinaryOperator::class of ">>=" to "ShrAssign::shr_assign",
+            BinaryOperator::class of "^" to "BitXor::bitxor",
+            BinaryOperator::class of "^=" to "BitXorAssign::bitxor_assign",
+            BinaryOperator::class of "|" to "BitOr::bitor",
+            BinaryOperator::class of "|=" to "BitOrAssign::bitor_assign",
+        )
+
+    override fun propagateTypeOfBinaryOperation(
+        operatorCode: String?,
+        lhsType: Type,
+        rhsType: Type,
+        hint: BinaryOperator?,
+    ): Type =
+        when {
+            operatorCode == "+" && lhsType is StringType && rhsType is StringType ->
+                builtInTypes["String"] as Type
+            else -> super.propagateTypeOfBinaryOperation(operatorCode, lhsType, rhsType, hint)
+        }
 
     /** See [Documentation](https://doc.rust-lang.org/reference/types.html). */
     override val builtInTypes =

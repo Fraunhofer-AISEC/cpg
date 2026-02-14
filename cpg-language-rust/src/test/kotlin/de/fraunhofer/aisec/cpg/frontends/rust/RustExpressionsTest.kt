@@ -233,6 +233,57 @@ class RustExpressionsTest : BaseTest() {
     }
 
     @Test
+    fun testIntegerLiterals() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("integer_literals.rs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+
+        val func = tu.functions["test_integer_literals"]
+        assertNotNull(func)
+        val body = func.body as? Block
+        assertNotNull(body)
+
+        @Suppress("UNCHECKED_CAST")
+        val literals = body.allChildren<Literal<*>>().filter { it.value is Long }
+
+        // decimal: 42
+        val decimal =
+            literals.first { (it.value as Long) == 42L && it.type.name.localName == "i32" }
+        assertNotNull(decimal, "Should parse decimal 42")
+
+        // hex: 0xFF = 255
+        val hex = literals.first { (it.value as Long) == 255L }
+        assertNotNull(hex, "Should parse hex 0xFF as 255")
+
+        // octal: 0o77 = 63
+        val octal = literals.first { (it.value as Long) == 63L }
+        assertNotNull(octal, "Should parse octal 0o77 as 63")
+
+        // binary: 0b1010 = 10
+        val binary = literals.first { (it.value as Long) == 10L }
+        assertNotNull(binary, "Should parse binary 0b1010 as 10")
+
+        // with underscores: 1_000_000
+        val underscored = literals.first { (it.value as Long) == 1_000_000L }
+        assertNotNull(underscored, "Should parse 1_000_000")
+
+        // typed u8: 42u8 -> type should be u8
+        val typedU8 = literals.filter { (it.value as Long) == 42L }
+        assertTrue(typedU8.any { it.type.name.localName == "u8" }, "Should have u8 typed literal")
+
+        // typed i64: 100i64 -> type should be i64
+        val typedI64 = literals.first { (it.value as Long) == 100L }
+        assertEquals("i64", typedI64.type.name.localName, "Should infer i64 type from suffix")
+    }
+
+    @Test
     fun testTurbofish() {
         val topLevel = Path.of("src", "test", "resources", "rust")
         val tu =
