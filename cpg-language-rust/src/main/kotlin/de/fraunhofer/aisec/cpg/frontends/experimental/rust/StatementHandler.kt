@@ -69,6 +69,9 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         }
     }
 
+    /**
+     * Translates a Rust `block` (e.g., `{ ... }`) into a [Block] containing its child statements.
+     */
     internal fun handleBlock(node: TSNode): Block {
         val block = newBlock(rawNode = node)
         frontend.scopeManager.enterScope(block)
@@ -183,6 +186,10 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         return declStmt
     }
 
+    /**
+     * Translates a Rust tuple-destructuring `let` (e.g., `let (a, b) = tuple`) into a
+     * [DeclarationStatement] containing a [TupleDeclaration].
+     */
     private fun handleTupleLetDeclaration(node: TSNode, patternNode: TSNode): DeclarationStatement {
         val declStmt = newDeclarationStatement(rawNode = node)
 
@@ -215,6 +222,9 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         return declStmt
     }
 
+    /**
+     * Translates a Rust `return_expression` into a [ReturnStatement] with an optional return value.
+     */
     private fun handleReturnExpression(node: TSNode): ReturnStatement {
         val ret = newReturnStatement(rawNode = node)
         // In Rust return_expression, the value is often a child
@@ -286,6 +296,10 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         return ifStmt
     }
 
+    /**
+     * Translates a Rust `while_expression` (including `while let`) into a [WhileStatement]. If a
+     * loop label is present, wraps the result in a [LabelStatement].
+     */
     private fun handleWhileExpression(node: TSNode): Statement {
         val whileStmt = newWhileStatement(rawNode = node)
 
@@ -327,6 +341,10 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         }
     }
 
+    /**
+     * Translates a Rust `loop_expression` (infinite loop) into a [WhileStatement] with a `true`
+     * condition. If a loop label is present, wraps the result in a [LabelStatement].
+     */
     private fun handleLoopExpression(node: TSNode): Statement {
         val loop = newWhileStatement(rawNode = node)
         // Infinite loop: while(true)
@@ -550,6 +568,10 @@ class StatementHandler(frontend: RustLanguageFrontend) :
         return vars
     }
 
+    /**
+     * Translates an `expression_statement` by delegating statement-like expressions (if, block,
+     * return, loops) to the statement handler and all others to the expression handler.
+     */
     private fun handleExpressionStatement(node: TSNode): Statement {
         val child = node.getNamedChild(0) ?: return newEmptyStatement(rawNode = node)
         return if (

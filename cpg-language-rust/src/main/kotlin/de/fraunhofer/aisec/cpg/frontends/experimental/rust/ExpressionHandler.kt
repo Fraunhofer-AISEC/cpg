@@ -122,6 +122,10 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         }
     }
 
+    /**
+     * Translates a Rust `integer_literal` into a [Literal]. Handles type suffixes (e.g., `1u32`),
+     * underscore separators (e.g., `1_000`), and hex/octal/binary radix prefixes.
+     */
     private fun handleIntegerLiteral(node: TSNode): Literal<Long> {
         // Rust integers can have suffixes (e.g. 1u32) and underscores (e.g. 1_000)
         val code = node.text()
@@ -172,6 +176,10 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return newLiteral(value, primitiveType(typeName), rawNode = node)
     }
 
+    /**
+     * Translates a Rust `string_literal` into a [Literal]. Also handles byte string (`b"..."`) and
+     * C string (`c"..."`) prefixed literals.
+     */
     private fun handleStringLiteral(node: TSNode): Literal<String> {
         val code = node.text()
         return when {
@@ -192,12 +200,14 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         }
     }
 
+    /** Translates a Rust `boolean_literal` (`true` or `false`) into a [Literal]. */
     private fun handleBooleanLiteral(node: TSNode): Literal<Boolean> {
         val code = node.text()
         val value = code == "true"
         return newLiteral(value, primitiveType("bool"), rawNode = node)
     }
 
+    /** Translates a Rust `identifier` into a [Reference]. */
     private fun handleIdentifier(node: TSNode): Reference {
         val name = node.text()
         return newReference(name, rawNode = node)
@@ -216,6 +226,9 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return op
     }
 
+    /**
+     * Translates a Rust `unary_expression` (e.g., `-x`, `!flag`, `*ptr`) into a [UnaryOperator].
+     */
     private fun handleUnaryExpression(node: TSNode): UnaryOperator {
         val operator = node.getChild(0) // Usually anonymous
         val operand = node["operand"] ?: node.getNamedChild(0)
@@ -228,6 +241,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return op
     }
 
+    /** Translates a Rust `assignment_expression` (e.g., `x = 5`) into an [AssignExpression]. */
     private fun handleAssignmentExpression(node: TSNode): Statement {
         val left = node["left"]
         val right = node["right"]
@@ -245,6 +259,10 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         )
     }
 
+    /**
+     * Translates a Rust `compound_assignment_expr` (e.g., `x += 1`, `y *= 2`) into an
+     * [AssignExpression] with the corresponding compound operator.
+     */
     private fun handleCompoundAssignmentExpression(node: TSNode): Statement {
         val left = node["left"]
         val operator = node["operator"]
@@ -264,6 +282,10 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         )
     }
 
+    /**
+     * Translates a Rust `tuple_expression` (e.g., `(1, "hello")`) into an
+     * [InitializerListExpression].
+     */
     private fun handleTupleExpression(node: TSNode): InitializerListExpression {
         val ile = newInitializerListExpression(rawNode = node)
         ile.type = objectType("tuple")
@@ -275,6 +297,9 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return ile
     }
 
+    /**
+     * Translates a Rust `array_expression` (e.g., `[1, 2, 3]`) into an [InitializerListExpression].
+     */
     private fun handleArrayExpression(node: TSNode): InitializerListExpression {
         val ile = newInitializerListExpression(rawNode = node)
         ile.type = objectType("array")
@@ -329,6 +354,10 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return call
     }
 
+    /**
+     * Translates a turbofish-style generic function call (e.g., `identity::<i32>(42)`) into a
+     * template [CallExpression] with [TypeExpression] template parameters.
+     */
     private fun handleGenericCallExpression(
         node: TSNode,
         genericFunction: TSNode,
@@ -367,6 +396,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return call
     }
 
+    /** Translates a Rust `field_expression` (e.g., `point.x`) into a [MemberExpression]. */
     private fun handleFieldExpression(node: TSNode): Statement {
         val value = node["value"]
         val field = node["field"]
@@ -487,6 +517,10 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return switch
     }
 
+    /**
+     * Translates a Rust `macro_invocation` (e.g., `println!("hello")`) into a [CallExpression].
+     * Macro arguments from the `token_tree` are extracted as best-effort expression arguments.
+     */
     private fun handleMacroInvocation(node: TSNode): Expression {
         val macroNode = node["macro"]
         val name = macroNode.text()
@@ -511,6 +545,10 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return call
     }
 
+    /**
+     * Translates a Rust `let_condition` (e.g., `let Some(x) = opt` in `if let`) into a
+     * [BinaryOperator] with `"let"` as the operator code.
+     */
     private fun handleLetCondition(node: TSNode): Expression {
         // let_condition always has "pattern" and "value" fields per grammar
         val pattern = node["pattern"]!!
@@ -525,6 +563,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return op
     }
 
+    /** Translates a Rust `break_expression` into a [BreakStatement], preserving any loop label. */
     private fun handleBreakExpression(node: TSNode): Statement {
         val breakStmt = newBreakStatement(rawNode = node)
         val label = findLabel(node)
@@ -536,6 +575,10 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return breakStmt
     }
 
+    /**
+     * Translates a Rust `continue_expression` into a [ContinueStatement], preserving any loop
+     * label.
+     */
     private fun handleContinueExpression(node: TSNode): Statement {
         val continueStmt = newContinueStatement(rawNode = node)
         val label = findLabel(node)
@@ -547,6 +590,9 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return continueStmt
     }
 
+    /**
+     * Translates a Rust `await_expression` (e.g., `future.await`) into a postfix [UnaryOperator].
+     */
     private fun handleAwaitExpression(node: TSNode): Expression {
         // await_expression always has the awaited expression as its first named child
         val expr = node.getNamedChild(0)
@@ -605,6 +651,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return construct
     }
 
+    /** Translates a Rust `index_expression` (e.g., `arr[0]`) into a [SubscriptExpression]. */
     private fun handleIndexExpression(node: TSNode): Expression {
         // index_expression always has exactly 2 named children: base and index
         val ase = newSubscriptExpression(rawNode = node)
@@ -618,6 +665,10 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return ase
     }
 
+    /**
+     * Translates a Rust `range_expression` (e.g., `0..10`, `..end`, `start..=end`) into a
+     * [RangeExpression] with optional floor and ceiling bounds.
+     */
     private fun handleRangeExpression(node: TSNode): Expression {
         // Range can have 0, 1, or 2 named children depending on form (..end, start.., start..end)
         var floor: Expression? = null
@@ -648,6 +699,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return newRangeExpression(floor, ceiling, rawNode = node)
     }
 
+    /** Translates a Rust `try_expression` (e.g., `result?`) into a postfix `?` [UnaryOperator]. */
     private fun handleTryExpression(node: TSNode): Expression {
         // try_expression always has the operand as its first named child: expr '?'
         val op = newUnaryOperator("?", postfix = true, prefix = false, rawNode = node)
@@ -658,6 +710,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return op
     }
 
+    /** Translates a Rust `type_cast_expression` (e.g., `x as i64`) into a [CastExpression]. */
     private fun handleTypeCastExpression(node: TSNode): Expression {
         // type_cast_expression always has "value" and "type" fields per grammar
         val cast = newCastExpression(rawNode = node)
@@ -725,6 +778,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return lambda
     }
 
+    /** Translates a Rust `negative_literal` (e.g., `-42`, `-3.14`) into a numeric [Literal]. */
     private fun handleNegativeLiteral(node: TSNode): Expression {
         // negative_literal wraps a numeric literal with unary minus
         val code = node.text()
@@ -739,6 +793,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         }
     }
 
+    /** Translates a Rust `float_literal` (e.g., `3.14`, `1.0e10`) into an `f64` [Literal]. */
     private fun handleFloatLiteral(node: TSNode): Expression {
         val code = node.text()
         val valueStr =
@@ -747,18 +802,24 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return newLiteral(value, primitiveType("f64"), rawNode = node)
     }
 
+    /** Translates a Rust `char_literal` (e.g., `'a'`) into a `char` [Literal]. */
     private fun handleCharLiteral(node: TSNode): Expression {
         val code = node.text()
         val value = code.removeSurrounding("'")
         return newLiteral(value, primitiveType("char"), rawNode = node)
     }
 
+    /** Translates a Rust `scoped_identifier` (e.g., `std::io::Error`) into a [Reference]. */
     private fun handleScopedIdentifier(node: TSNode): Expression {
         // path::to::item - model as a Reference with full qualified name
         val name = node.text()
         return newReference(name, rawNode = node)
     }
 
+    /**
+     * Translates a Rust `reference_expression` (e.g., `&x`, `&mut x`) into a prefix [UnaryOperator]
+     * with operator code `"&"` or `"&mut"`.
+     */
     private fun handleReferenceExpression(node: TSNode): Expression {
         // reference_expression always has a "value" field per grammar
         val value = node["value"]!!
@@ -780,6 +841,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return op
     }
 
+    /** Translates a Rust `unsafe_block` into a [Block] with an `"unsafe"` modifier. */
     private fun handleUnsafeBlock(node: TSNode): Expression {
         // unsafe_block: 'unsafe' block — no field name, so we pass the whole node
         // to handleBlock which iterates named children and finds the inner block
@@ -788,6 +850,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return block
     }
 
+    /** Translates a Rust `async_block` into a [Block] with an `"async"` modifier. */
     private fun handleAsyncBlock(node: TSNode): Expression {
         // async_block: 'async' [move] block — no field name, so we pass the whole node
         val block = frontend.statementHandler.handleBlock(node)
@@ -795,6 +858,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return block
     }
 
+    /** Translates a Rust `raw_string_literal` (e.g., `r#"hello"#`) into a `str` [Literal]. */
     private fun handleRawStringLiteral(node: TSNode): Expression {
         val code = node.text()
         // Strip r#"..."# delimiters: remove leading r, then strip matching # and " pairs
@@ -818,6 +882,10 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         return null
     }
 
+    /**
+     * Fallback handler for a `generic_function` node that appears outside of a call context.
+     * Returns a [Reference] with the inner function name.
+     */
     private fun handleGenericFunctionReference(node: TSNode): Expression {
         // Fallback for generic_function outside of a call context
         val innerFunction = node["function"]

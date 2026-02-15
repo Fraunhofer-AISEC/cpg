@@ -819,7 +819,7 @@ class RustBranchCoverageTest : BaseTest() {
         val blocks = body.allChildren<Block>()
         assertTrue(
             blocks.any { block -> block.annotations.any { it.name.localName == "unsafe" } },
-            "Should have unsafe-annotated block",
+            "Should have unsafe block",
         )
     }
 
@@ -838,7 +838,7 @@ class RustBranchCoverageTest : BaseTest() {
         val blocks = body.allChildren<Block>()
         assertTrue(
             blocks.any { block -> block.annotations.any { it.name.localName == "async" } },
-            "Should have async-annotated block",
+            "Should have async block",
         )
     }
 

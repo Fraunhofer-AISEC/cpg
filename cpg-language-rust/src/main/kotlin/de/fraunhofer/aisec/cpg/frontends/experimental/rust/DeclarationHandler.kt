@@ -100,16 +100,12 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             if (child.type == "function_modifiers") {
                 for (modifier in child.children) {
                     if (modifier.type == "async") {
-                        // We don't fully support async modifiers yet, so we just add an annotation
-                        val annotation = newAnnotation("Async", rawNode = modifier)
-                        func.annotations += annotation
+                        func.annotations += newAnnotation("async", rawNode = modifier)
                         break
                     }
                 }
             } else if (child.type == "async") {
-                // We don't fully support async modifiers yet, so we just add an annotation
-                val annotation = newAnnotation("Async", rawNode = child)
-                func.annotations += annotation
+                func.annotations += newAnnotation("async", rawNode = child)
                 break
             }
         }
@@ -158,6 +154,10 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         return func
     }
 
+    /**
+     * Processes a Rust `where_clause` by resolving each predicate's trait bounds and adding them as
+     * super types on the corresponding [TypeParameterDeclaration].
+     */
     private fun handleWhereClause(node: TSNode) {
         for (child in node.children) {
             if (child.type == "where_predicate") {
@@ -180,6 +180,10 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         }
     }
 
+    /**
+     * Processes generic type parameters (e.g., `<T: Clone, 'a>`) and creates
+     * [TypeParameterDeclaration] nodes for each, adding them to the given [template].
+     */
     private fun handleTypeParameters(node: TSNode, template: TemplateDeclaration) {
         if (node.isNull) return
         for (child in node.children) {
@@ -218,6 +222,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         }
     }
 
+    /** Parses trait bounds (e.g., `Clone + Debug`) and adds them as super types on [type]. */
     private fun parseTraitBounds(node: TSNode, type: Type) {
         // Rust trait bounds can be a single trait or a list separated by +
         // In tree-sitter-rust, trait_bounds contains several children
@@ -230,6 +235,10 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         }
     }
 
+    /**
+     * Processes function parameters, creating [ParameterDeclaration] nodes for each parameter. Also
+     * handles `self_parameter` for method receivers and `mut` patterns.
+     */
     private fun handleParameters(node: TSNode, func: FunctionDeclaration) {
         for (child in node.children) {
             if (child.type == "parameter") {
@@ -261,6 +270,10 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         }
     }
 
+    /**
+     * Processes a `self_parameter` (e.g., `&self`, `&mut self`, `self`) by creating a receiver
+     * [VariableDeclaration] on the [MethodDeclaration].
+     */
     private fun handleSelfParameter(node: TSNode, func: FunctionDeclaration) {
         if (func is MethodDeclaration) {
             val recordDeclaration = func.recordDeclaration ?: return
@@ -595,6 +608,10 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         return mod
     }
 
+    /**
+     * Translates a Rust `type_item` (type alias, e.g., `type Meters = i32`) into a
+     * [TypedefDeclaration].
+     */
     private fun handleTypeItem(node: TSNode): Declaration {
         val nameNode = node["name"]
         val name = nameNode.text()
@@ -608,6 +625,10 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         return decl
     }
 
+    /**
+     * Translates a Rust `associated_type` declaration inside a trait (e.g., `type Item;`) into a
+     * [TypedefDeclaration] with an unknown target type.
+     */
     private fun handleAssociatedType(node: TSNode): Declaration {
         val nameNode = node["name"]
         val name = nameNode.text()
@@ -629,6 +650,10 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         return decl
     }
 
+    /**
+     * Translates a Rust `macro_definition` (`macro_rules!`) into a [FunctionDeclaration] with a
+     * `"macro_rules"` annotation. The macro body is opaque.
+     */
     private fun handleMacroDefinition(node: TSNode): Declaration {
         val nameNode = node["name"]
         val name = nameNode.text()
@@ -642,6 +667,10 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         return func
     }
 
+    /**
+     * Translates a Rust `const_item` (e.g., `const MAX: i32 = 100`) into a [VariableDeclaration]
+     * with a `"const"` modifier.
+     */
     private fun handleConstItem(node: TSNode): Declaration {
         val nameNode = node["name"]
         val name = nameNode.text()
@@ -663,6 +692,10 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         return variable
     }
 
+    /**
+     * Translates a Rust `static_item` (e.g., `static mut COUNT: i32 = 0`) into a
+     * [VariableDeclaration] with `"static"` and optionally `"mut"` modifiers.
+     */
     private fun handleStaticItem(node: TSNode): Declaration {
         val nameNode = node["name"]
         val name = nameNode.text()
@@ -692,6 +725,9 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         return variable
     }
 
+    /**
+     * Translates a Rust `use_declaration` (e.g., `use std::io::Read`) into an [IncludeDeclaration].
+     */
     private fun handleUseDeclaration(node: TSNode): Declaration {
         // Extract the use path as a string
         val argument = node.getNamedChild(0)
@@ -702,6 +738,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         return include
     }
 
+    /** Translates a Rust `union_item` into a [RecordDeclaration] with kind `"union"`. */
     private fun handleUnionItem(node: TSNode): Declaration {
         val nameNode = node["name"]
         val name = nameNode.text()
@@ -733,6 +770,10 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         return record
     }
 
+    /**
+     * Translates a Rust `foreign_mod_item` (e.g., `extern "C" { fn foo(); }`) into a
+     * [NamespaceDeclaration] with an extern ABI annotation.
+     */
     private fun handleForeignModItem(node: TSNode): Declaration {
         // extern "C" { fn foo(); }
         // Model as NamespaceDeclaration with extern ABI annotation
@@ -765,6 +806,10 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         return ns
     }
 
+    /**
+     * Translates a Rust `extern_crate_declaration` (e.g., `extern crate serde`) into an
+     * [IncludeDeclaration].
+     */
     private fun handleExternCrateDeclaration(node: TSNode): Declaration {
         val nameNode = node["name"]
         val name = nameNode.text()
@@ -774,6 +819,9 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         return include
     }
 
+    /**
+     * Translates a Rust `inner_attribute_item` (e.g., `#![no_std]`) into an annotated declaration.
+     */
     private fun handleInnerAttributeItem(node: TSNode): Declaration {
         // #![no_std] — model as an annotated empty declaration
         var attrContent = ""
@@ -789,6 +837,9 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         return decl
     }
 
+    /**
+     * Translates a `macro_invocation` at declaration level by delegating to the expression handler.
+     */
     private fun handleMacroInvocationDecl(node: TSNode): Declaration {
         // Macro invocation at declaration level (e.g., include!("other.rs"))
         // Delegate to expression handler and wrap

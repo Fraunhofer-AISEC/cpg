@@ -182,11 +182,11 @@ class RustControlFlowTest : BaseTest() {
 
         val asyncFn = tu.functions["async_fn"]
         assertNotNull(asyncFn)
-        assertTrue(asyncFn.annotations.any { it.name.localName == "Async" })
+        assertTrue(asyncFn.annotations.any { it.name.localName == "async" })
 
         val caller = tu.functions["caller"]
         assertNotNull(caller)
-        assertTrue(caller.annotations.any { it.name.localName == "Async" })
+        assertTrue(caller.annotations.any { it.name.localName == "async" })
 
         val body = caller.body as? Block
         assertNotNull(body)

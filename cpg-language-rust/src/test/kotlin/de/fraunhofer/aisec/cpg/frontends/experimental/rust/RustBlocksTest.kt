@@ -58,12 +58,12 @@ class RustBlocksTest : BaseTest() {
             "unsafe block should be handled, not produce ProblemExpression",
         )
 
-        // The unsafe block should produce a Block with @unsafe annotation
+        // The unsafe block should produce a Block with "unsafe" annotation
         val unsafeBlocks =
             func.allChildren<Block>().filter { block ->
                 block.annotations.any { it.name.localName == "unsafe" }
             }
-        assertTrue(unsafeBlocks.isNotEmpty(), "Should have a block with @unsafe annotation")
+        assertTrue(unsafeBlocks.isNotEmpty(), "Should have a block with unsafe annotation")
     }
 
     @Test
@@ -90,12 +90,12 @@ class RustBlocksTest : BaseTest() {
             "async block should be handled, not produce ProblemExpression",
         )
 
-        // The async block should produce a Block with @async annotation
+        // The async block should produce a Block with "async" annotation
         val asyncBlocks =
             func.allChildren<Block>().filter { block ->
                 block.annotations.any { it.name.localName == "async" }
             }
-        assertTrue(asyncBlocks.isNotEmpty(), "Should have a block with @async annotation")
+        assertTrue(asyncBlocks.isNotEmpty(), "Should have a block with async annotation")
     }
 
     @Test

@@ -103,7 +103,7 @@ class RustIntegrationTest : BaseTest() {
         // === Async ===
         val fetchData = tu.functions["fetch_data"]
         assertNotNull(fetchData)
-        assertTrue(fetchData.annotations.any { it.name.localName == "Async" })
+        assertTrue(fetchData.annotations.any { it.name.localName == "async" })
 
         // === Control flow ===
         val controlFlow = tu.functions["control_flow"]
@@ -184,7 +184,7 @@ class RustIntegrationTest : BaseTest() {
         assertNotNull(piConst, "Should have const PI")
         assertTrue(
             piConst.annotations.any { it.name.localName == "const" },
-            "PI should have @const",
+            "PI should have const annotation",
         )
 
         val countStatic =
@@ -192,7 +192,7 @@ class RustIntegrationTest : BaseTest() {
         assertNotNull(countStatic, "Should have static COUNT")
         assertTrue(
             countStatic.annotations.any { it.name.localName == "static" },
-            "COUNT should have @static",
+            "COUNT should have static annotation",
         )
 
         // === Indexing and casting ===

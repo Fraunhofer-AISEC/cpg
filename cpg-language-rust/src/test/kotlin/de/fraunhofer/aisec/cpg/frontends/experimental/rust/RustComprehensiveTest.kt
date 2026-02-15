@@ -356,7 +356,7 @@ class RustComprehensiveTest : BaseTest() {
         val blocks = body.allChildren<Block>()
         val unsafeBlock =
             blocks.firstOrNull { block -> block.annotations.any { it.name.localName == "unsafe" } }
-        assertNotNull(unsafeBlock, "Should have unsafe annotated block")
+        assertNotNull(unsafeBlock, "Should have unsafe block")
     }
 
     @Test
@@ -371,7 +371,7 @@ class RustComprehensiveTest : BaseTest() {
         val blocks = body.allChildren<Block>()
         val asyncBlock =
             blocks.firstOrNull { block -> block.annotations.any { it.name.localName == "async" } }
-        assertNotNull(asyncBlock, "Should have async annotated block")
+        assertNotNull(asyncBlock, "Should have async block")
     }
 
     @Test
