@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.experimental.rust
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
+import de.fraunhofer.aisec.cpg.frontends.SupportsNewParse
 import de.fraunhofer.aisec.cpg.frontends.SupportsParallelParsing
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
@@ -37,6 +38,7 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.net.URI
+import java.nio.file.Path
 import org.treesitter.*
 
 /**
@@ -46,7 +48,7 @@ import org.treesitter.*
  */
 @SupportsParallelParsing
 class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLanguageFrontend>) :
-    LanguageFrontend<TSNode, TSNode?>(ctx, language) {
+    LanguageFrontend<TSNode, TSNode?>(ctx, language), SupportsNewParse {
 
     private lateinit var content: String
     private lateinit var uri: URI
@@ -58,8 +60,13 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
 
     @Throws(TranslationException::class)
     override fun parse(file: File): TranslationUnitDeclaration {
-        content = file.readText()
-        uri = file.toURI()
+        return parse(file.readText(), file.toPath())
+    }
+
+    @Throws(TranslationException::class)
+    override fun parse(content: String, path: Path?): TranslationUnitDeclaration {
+        this.content = content
+        this.uri = path?.toUri() ?: URI("unknown:///")
 
         val parser = TSParser()
         parser.setLanguage(TreeSitterRust())
@@ -67,7 +74,8 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
         val tree = parser.parseString(null, content)
         val rootNode = tree.rootNode
 
-        val tud = newTranslationUnitDeclaration(file.absolutePath, rawNode = rootNode)
+        val name = path?.toAbsolutePath()?.toString() ?: "unknown"
+        val tud = newTranslationUnitDeclaration(name, rawNode = rootNode)
         tud.location = locationOf(rootNode)
 
         scopeManager.resetToGlobal(tud)
@@ -99,7 +107,7 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
             for (grandchild in child.children) {
                 if (grandchild.type == "visibility_modifier") {
                     val visibilityText = codeOf(grandchild) ?: "pub"
-                    decl.annotations += newAnnotation(visibilityText, rawNode = grandchild)
+                    decl.modifiers += visibilityText
                     break
                 }
             }

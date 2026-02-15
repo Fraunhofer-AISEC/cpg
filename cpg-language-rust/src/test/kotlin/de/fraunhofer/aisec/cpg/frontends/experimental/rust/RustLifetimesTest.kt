@@ -88,12 +88,12 @@ class RustLifetimesTest : BaseTest() {
         val vars = func.allChildren<VariableDeclaration>()
         val counter = vars.firstOrNull { it.name.localName == "counter" }
         assertNotNull(counter)
-        assertTrue(counter.annotations.any { it.name.localName == "mut" })
+        assertTrue("mut" in counter.modifiers)
 
         // `immutable` should NOT have a mut annotation
         val immutable = vars.firstOrNull { it.name.localName == "immutable" }
         assertNotNull(immutable)
-        assertFalse(immutable.annotations.any { it.name.localName == "mut" })
+        assertFalse("mut" in immutable.modifiers)
     }
 
     @Test

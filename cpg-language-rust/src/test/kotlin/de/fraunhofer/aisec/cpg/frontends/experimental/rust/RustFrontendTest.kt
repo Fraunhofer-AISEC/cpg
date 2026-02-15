@@ -54,7 +54,7 @@ class RustFrontendTest : BaseTest() {
 
         val letX = body.statements.getOrNull(0) as? DeclarationStatement
         assertNotNull(letX)
-        val x = letX.declarations[0] as? VariableDeclaration
+        val x = letX.declarations.getOrNull(0) as? VariableDeclaration
         assertNotNull(x)
         assertEquals("x", x.name.localName)
 
@@ -78,11 +78,13 @@ class RustFrontendTest : BaseTest() {
         val body = foo.body as? Block
         assertNotNull(body)
 
-        val ifStmt = body.statements.getOrNull(0) as? IfStatement
-        assertNotNull(ifStmt)
-        assertNotNull(ifStmt.condition)
-        assertNotNull(ifStmt.thenStatement)
-        assertNotNull(ifStmt.elseStatement)
+        // In Rust, `if` with an `else` clause is an expression that returns a value,
+        // so it is modeled as a ConditionalExpression rather than an IfStatement.
+        val condExpr = body.statements.getOrNull(0) as? ConditionalExpression
+        assertNotNull(condExpr)
+        assertNotNull(condExpr.condition)
+        assertNotNull(condExpr.thenExpression)
+        assertNotNull(condExpr.elseExpression)
     }
 
     @Test
@@ -107,7 +109,7 @@ class RustFrontendTest : BaseTest() {
         val letA = body.statements.getOrNull(0) as? DeclarationStatement
         assertNotNull(letA)
         assertFalse(letA.declarations.isEmpty(), "Declarations in letA should not be empty")
-        val a = letA.declarations[0] as? VariableDeclaration
+        val a = letA.declarations.getOrNull(0) as? VariableDeclaration
         assertNotNull(a)
         assertIs<BinaryOperator>(a.initializer)
 
@@ -115,7 +117,7 @@ class RustFrontendTest : BaseTest() {
         val letB = body.statements.getOrNull(1) as? DeclarationStatement
         assertNotNull(letB)
         assertFalse(letB.declarations.isEmpty(), "Declarations in letB should not be empty")
-        val b = letB.declarations[0] as? VariableDeclaration
+        val b = letB.declarations.getOrNull(0) as? VariableDeclaration
         assertNotNull(b)
         assertIs<UnaryOperator>(b.initializer)
 
@@ -123,7 +125,7 @@ class RustFrontendTest : BaseTest() {
         val letC = body.statements.getOrNull(2) as? DeclarationStatement
         assertNotNull(letC)
         assertFalse(letC.declarations.isEmpty(), "Declarations in letC should not be empty")
-        val c = letC.declarations[0] as? VariableDeclaration
+        val c = letC.declarations.getOrNull(0) as? VariableDeclaration
         assertNotNull(c)
         assertIs<InitializerListExpression>(c.initializer)
 
@@ -131,7 +133,7 @@ class RustFrontendTest : BaseTest() {
         val letD = body.statements.getOrNull(3) as? DeclarationStatement
         assertNotNull(letD)
         assertFalse(letD.declarations.isEmpty(), "Declarations in letD should not be empty")
-        val d = letD.declarations[0] as? VariableDeclaration
+        val d = letD.declarations.getOrNull(0) as? VariableDeclaration
         assertNotNull(d)
         assertIs<InitializerListExpression>(d.initializer)
 
@@ -158,9 +160,9 @@ class RustFrontendTest : BaseTest() {
         val foo = tu.functions["foo"]
         assertNotNull(foo)
 
-        assertEquals("i32", foo.parameters[0].type.name.localName)
-        assertTrue(foo.parameters[1].type.name.toString().contains("str"))
-        assertEquals("Vec", foo.parameters[2].type.name.localName)
+        assertEquals("i32", foo.parameters.getOrNull(0)?.type?.name?.localName)
+        assertTrue(foo.parameters.getOrNull(1)?.type?.name?.toString()?.contains("str") == true)
+        assertEquals("Vec", foo.parameters.getOrNull(2)?.type?.name?.localName)
     }
 
     @Test
@@ -176,7 +178,7 @@ class RustFrontendTest : BaseTest() {
         assertNotNull(myStruct)
         assertEquals("struct", myStruct.kind)
         assertEquals(2, myStruct.fields.size)
-        assertEquals("field1", myStruct.fields[0].name.localName)
+        assertEquals("field1", myStruct.fields.getOrNull(0)?.name?.localName)
 
         val myMethod = myStruct.methods["my_method"]
         assertNotNull(myMethod)
@@ -225,7 +227,7 @@ class RustFrontendTest : BaseTest() {
 
         val innerFunc = myMod.functions["inner_func"]
         assertNotNull(innerFunc)
-        val returnStmt = (innerFunc.body as? Block)?.statements?.get(0) as? ReturnStatement
+        val returnStmt = (innerFunc.body as? Block)?.statements?.getOrNull(0) as? ReturnStatement
         assertNotNull(returnStmt)
         assertNotNull(returnStmt.returnValue)
     }
@@ -257,9 +259,9 @@ class RustFrontendTest : BaseTest() {
         assertNotNull(genericId, "Should find a FunctionTemplateDeclaration named generic_id")
         // Check if we handled the generic parameter T
         assertEquals(1, genericId.parameters.size, "Should have 1 parameter (T)")
-        assertEquals("T", genericId.parameters[0].name.localName)
+        assertEquals("T", genericId.parameters.getOrNull(0)?.name?.localName)
 
-        val func = genericId.realization[0]
+        val func = genericId.realization.getOrNull(0)
         assertNotNull(func)
         assertEquals("generic_id", func.name.localName)
     }

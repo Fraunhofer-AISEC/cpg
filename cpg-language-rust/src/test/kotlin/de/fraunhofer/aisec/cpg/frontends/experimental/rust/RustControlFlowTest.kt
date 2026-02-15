@@ -67,13 +67,13 @@ class RustControlFlowTest : BaseTest() {
         // Statement 0: Binding for x
         val declX = thenBlock.statements.getOrNull(0) as? DeclarationStatement
         assertNotNull(declX)
-        val xVar = declX.declarations[0] as? VariableDeclaration
+        val xVar = declX.declarations.getOrNull(0) as? VariableDeclaration
         assertEquals("x", xVar?.name?.localName)
 
         // Statement 1: let y = x
         val declStmt = thenBlock.statements.getOrNull(1) as? DeclarationStatement
         assertNotNull(declStmt)
-        val y = declStmt.declarations[0] as? VariableDeclaration
+        val y = declStmt.declarations.getOrNull(0) as? VariableDeclaration
         assertEquals("y", y?.name?.localName)
 
         val init = y?.initializer
@@ -111,13 +111,13 @@ class RustControlFlowTest : BaseTest() {
         // Statement 0: Binding for x
         val declX = loopBody.statements.getOrNull(0) as? DeclarationStatement
         assertNotNull(declX)
-        val xVar = declX.declarations[0] as? VariableDeclaration
+        val xVar = declX.declarations.getOrNull(0) as? VariableDeclaration
         assertEquals("x", xVar?.name?.localName)
 
         // Statement 1: let y = x
         val declStmtLocal = loopBody.statements.getOrNull(1) as? DeclarationStatement
         assertNotNull(declStmtLocal)
-        val y = declStmtLocal.declarations[0] as? VariableDeclaration
+        val y = declStmtLocal.declarations.getOrNull(0) as? VariableDeclaration
         assertEquals("y", y?.name?.localName)
 
         val init = y?.initializer
@@ -182,11 +182,11 @@ class RustControlFlowTest : BaseTest() {
 
         val asyncFn = tu.functions["async_fn"]
         assertNotNull(asyncFn)
-        assertTrue(asyncFn.annotations.any { it.name.localName == "async" })
+        assertTrue("async" in asyncFn.modifiers)
 
         val caller = tu.functions["caller"]
         assertNotNull(caller)
-        assertTrue(caller.annotations.any { it.name.localName == "async" })
+        assertTrue("async" in caller.modifiers)
 
         val body = caller.body as? Block
         assertNotNull(body)

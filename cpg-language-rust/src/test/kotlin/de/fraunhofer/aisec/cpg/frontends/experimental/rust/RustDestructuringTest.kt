@@ -57,8 +57,8 @@ class RustDestructuringTest : BaseTest() {
 
         val tuple = tuples.first()
         assertEquals(2, tuple.elements.size, "Tuple should have 2 elements")
-        assertEquals("a", tuple.elements[0].name.localName)
-        assertEquals("b", tuple.elements[1].name.localName)
+        assertEquals("a", tuple.elements.getOrNull(0)?.name?.localName)
+        assertEquals("b", tuple.elements.getOrNull(1)?.name?.localName)
         assertNotNull(tuple.initializer, "Tuple should have an initializer")
     }
 

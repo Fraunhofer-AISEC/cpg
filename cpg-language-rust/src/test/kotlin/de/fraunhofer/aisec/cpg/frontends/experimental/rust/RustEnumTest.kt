@@ -48,25 +48,25 @@ class RustEnumTest : BaseTest() {
         assertIs<EnumDeclaration>(color)
         assertEquals("enum", color.kind)
         assertEquals(3, color.entries.size)
-        assertEquals("Red", color.entries[0].name.localName)
-        assertEquals("Green", color.entries[1].name.localName)
-        assertEquals("Blue", color.entries[2].name.localName)
+        assertEquals("Red", color.entries.getOrNull(0)?.name?.localName)
+        assertEquals("Green", color.entries.getOrNull(1)?.name?.localName)
+        assertEquals("Blue", color.entries.getOrNull(2)?.name?.localName)
 
         // Shape enum with tuple variants
         val shape = tu.records["Shape"]
         assertNotNull(shape, "Should find Shape enum")
         assertIs<EnumDeclaration>(shape)
         assertEquals(2, shape.entries.size)
-        assertEquals("Circle", shape.entries[0].name.localName)
-        assertEquals("Rectangle", shape.entries[1].name.localName)
+        assertEquals("Circle", shape.entries.getOrNull(0)?.name?.localName)
+        assertEquals("Rectangle", shape.entries.getOrNull(1)?.name?.localName)
 
         // Message enum with mixed variants
         val message = tu.records["Message"]
         assertNotNull(message, "Should find Message enum")
         assertIs<EnumDeclaration>(message)
         assertEquals(3, message.entries.size)
-        assertEquals("Quit", message.entries[0].name.localName)
-        assertEquals("Move", message.entries[1].name.localName)
-        assertEquals("Write", message.entries[2].name.localName)
+        assertEquals("Quit", message.entries.getOrNull(0)?.name?.localName)
+        assertEquals("Move", message.entries.getOrNull(1)?.name?.localName)
+        assertEquals("Write", message.entries.getOrNull(2)?.name?.localName)
     }
 }

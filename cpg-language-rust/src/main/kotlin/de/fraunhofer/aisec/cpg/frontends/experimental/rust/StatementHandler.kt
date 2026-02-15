@@ -48,7 +48,12 @@ class StatementHandler(frontend: RustLanguageFrontend) :
             }
             "let_declaration" -> handleLetDeclaration(node)
             "return_expression" -> handleReturnExpression(node)
-            "if_expression" -> handleIfExpression(node)
+            "if_expression" -> {
+                // Delegate to the expression handler which will produce a
+                // ConditionalExpression when an else clause is present, or fall back
+                // to handleIfExpression (IfStatement) when there is no else clause.
+                frontend.expressionHandler.handleNode(node)
+            }
             "while_expression" -> handleWhileExpression(node)
             "loop_expression" -> handleLoopExpression(node)
             "for_expression" -> handleForExpression(node)
@@ -154,7 +159,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
         val variable = newVariableDeclaration(actualName, rawNode = node)
         if (isMutable) {
-            variable.annotations += newAnnotation("mut", rawNode = node)
+            variable.modifiers += "mut"
         }
 
         val typeNode = node["type"]
@@ -239,10 +244,14 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
     /**
      * Translates a Rust `if_expression` into an [IfStatement]. Supports `if let` bindings (which
-     * inject variable declarations into the then-branch) and `else if` chains. Note: Rust treats
-     * `if` as an expression, but the CPG models it as a statement.
+     * inject variable declarations into the then-branch) and `else if` chains.
+     *
+     * This method is used for `if` expressions that do **not** have an `else` clause and therefore
+     * cannot be used in value position. When an `else` clause is present, the [ExpressionHandler]
+     * produces a [de.fraunhofer.aisec.cpg.graph.statements.expressions.ConditionalExpression]
+     * instead.
      */
-    private fun handleIfExpression(node: TSNode): IfStatement {
+    internal fun handleIfExpression(node: TSNode): IfStatement {
         val ifStmt = newIfStatement(rawNode = node)
 
         var condition = node["condition"]

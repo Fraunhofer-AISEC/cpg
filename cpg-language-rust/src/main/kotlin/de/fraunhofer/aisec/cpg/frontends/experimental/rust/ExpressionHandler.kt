@@ -47,7 +47,7 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
             "binary_expression" -> handleBinaryExpression(node)
             "call_expression" -> handleCallExpression(node)
             "field_expression" -> handleFieldExpression(node)
-            "if_expression" -> frontend.statementHandler.handleNode(node)
+            "if_expression" -> handleIfExpression(node)
             "return_expression" -> frontend.statementHandler.handleNode(node)
             "while_expression" -> frontend.statementHandler.handleNode(node)
             "loop_expression" -> frontend.statementHandler.handleNode(node)
@@ -867,6 +867,91 @@ class ExpressionHandler(frontend: RustLanguageFrontend) :
         val delimiter = "#".repeat(hashes) + "\""
         val value = withoutR.removePrefix(delimiter).removeSuffix("\"" + "#".repeat(hashes))
         return newLiteral(value, primitiveType("str"), rawNode = node)
+    }
+
+    /**
+     * Translates a Rust `if_expression` into either a [ConditionalExpression] or delegates to the
+     * [StatementHandler] to produce an [de.fraunhofer.aisec.cpg.graph.statements.IfStatement].
+     *
+     * In Rust, `if` is an expression that returns a value. When an `if` has an `else` clause, it
+     * can be used in value position (e.g., `let x = if cond { a } else { b }`). In that case, we
+     * model it as a [ConditionalExpression] with `condition`, `thenExpression`, and
+     * `elseExpression`.
+     *
+     * When the `if` does **not** have an `else` clause, it cannot produce a value and is purely a
+     * control-flow statement, so we delegate to [StatementHandler.handleNode] which produces an
+     * [de.fraunhofer.aisec.cpg.graph.statements.IfStatement].
+     *
+     * For `else if` chains, the `alternative` field contains an `else_clause` whose child is
+     * another `if_expression`. This is handled recursively, producing nested
+     * [ConditionalExpression] nodes.
+     */
+    private fun handleIfExpression(node: TSNode): Statement {
+        val alternative = node["alternative"]
+        val hasElse = alternative != null && !alternative.isNull
+
+        // Without an else clause, the if cannot be used as a value expression.
+        // Delegate directly to the statement handler's handleIfExpression to produce
+        // an IfStatement (avoiding re-entry through handleNode which would loop back here).
+        if (!hasElse) {
+            return frontend.statementHandler.handleIfExpression(node)
+        }
+
+        // Parse the condition
+        var conditionNode = node["condition"]
+        if (conditionNode != null && conditionNode.isNull) conditionNode = null
+
+        val condition =
+            if (conditionNode != null) {
+                handle(conditionNode) as? Expression
+                    ?: newProblemExpression("Invalid if condition", rawNode = conditionNode)
+            } else {
+                newProblemExpression("Missing if condition", rawNode = node)
+            }
+
+        // Parse the consequence (then branch) -- this is a block
+        val consequenceNode = node["consequence"]
+        val thenExpr =
+            if (consequenceNode != null && !consequenceNode.isNull) {
+                // Check for if-let bindings that need to inject declarations
+                val bindings =
+                    if (conditionNode != null && conditionNode.type == "let_condition") {
+                        frontend.statementHandler.extractBindings(conditionNode["pattern"])
+                    } else {
+                        emptyList()
+                    }
+                if (bindings.isNotEmpty()) {
+                    frontend.statementHandler.handleBlockWithBindings(consequenceNode, bindings)
+                } else {
+                    frontend.statementHandler.handleBlock(consequenceNode)
+                }
+            } else {
+                null
+            }
+
+        // Parse the alternative (else branch)
+        // The else_clause may contain a block or another if_expression (for else-if chains)
+        val elseExpr: Expression? =
+            if (alternative.type == "else_clause") {
+                var found: TSNode? = null
+                for (c in alternative.children) {
+                    if (!c.isNull && c.isNamed && c.type != "else") {
+                        found = c
+                        break
+                    }
+                }
+                if (found != null) {
+                    // If the else contains another if_expression, recurse to get a nested
+                    // ConditionalExpression (or IfStatement if it has no else)
+                    handle(found) as? Expression
+                } else {
+                    null
+                }
+            } else {
+                handle(alternative) as? Expression
+            }
+
+        return newConditionalExpression(condition, thenExpr, elseExpr, rawNode = node)
     }
 
     /**

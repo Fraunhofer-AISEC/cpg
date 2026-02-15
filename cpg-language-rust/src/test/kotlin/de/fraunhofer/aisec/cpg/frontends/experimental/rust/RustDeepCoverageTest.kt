@@ -225,9 +225,10 @@ class RustDeepCoverageTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val ifStmts = body.allChildren<IfStatement>()
-        assertTrue(ifStmts.isNotEmpty(), "Should have if-let statement")
-        assertNotNull(ifStmts.first().elseStatement, "If-let should have else branch")
+        // if let with else clause is modeled as ConditionalExpression
+        val condExprs = body.allChildren<ConditionalExpression>()
+        assertTrue(condExprs.isNotEmpty(), "Should have if-let conditional expression")
+        assertNotNull(condExprs.first().elseExpression, "If-let should have else branch")
     }
 
     @Test
@@ -250,8 +251,9 @@ class RustDeepCoverageTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val ifStmts = body.allChildren<IfStatement>()
-        assertTrue(ifStmts.size >= 2, "Should have nested if-else-if chain")
+        // if-else-if chains with else are modeled as nested ConditionalExpressions
+        val condExprs = body.allChildren<ConditionalExpression>()
+        assertTrue(condExprs.size >= 2, "Should have nested if-else-if chain")
     }
 
     @Test
@@ -262,9 +264,10 @@ class RustDeepCoverageTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val ifStmts = body.allChildren<IfStatement>()
-        assertTrue(ifStmts.isNotEmpty(), "Should have simple if")
-        assertNotNull(ifStmts.first().elseStatement, "Should have else branch")
+        // Simple if-else is modeled as ConditionalExpression
+        val condExprs = body.allChildren<ConditionalExpression>()
+        assertTrue(condExprs.isNotEmpty(), "Should have conditional expression")
+        assertNotNull(condExprs.first().elseExpression, "Should have else branch")
     }
 
     // ==================== Assignments ====================

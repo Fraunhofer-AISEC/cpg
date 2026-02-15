@@ -84,10 +84,7 @@ class RustAdvancedTypesTest : BaseTest() {
 
         val publicFn = tu.functions["public_fn"]
         assertNotNull(publicFn, "public_fn should exist")
-        // Visibility is modeled as annotation
-        assertTrue(
-            publicFn.annotations.any { it.name.localName == "pub" },
-            "Should have pub annotation",
-        )
+        // Visibility is modeled as modifier
+        assertTrue("pub" in publicFn.modifiers, "Should have pub modifier")
     }
 }

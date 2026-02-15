@@ -499,8 +499,10 @@ class RustBranchCoverageTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val ifStmts = body.allChildren<IfStatement>()
-        assertTrue(ifStmts.size >= 3, "Should have nested if chain: ${ifStmts.size}")
+        // All if branches in test_nested_if have else clauses, so they are modeled
+        // as ConditionalExpression (Rust if-else is an expression).
+        val condExprs = body.allChildren<ConditionalExpression>()
+        assertTrue(condExprs.size >= 3, "Should have nested conditional chain: ${condExprs.size}")
     }
 
     // =========================================================================
@@ -1232,8 +1234,9 @@ class RustBranchCoverageTest : BaseTest() {
         assertNotNull(func, "Should have test_if_let function")
         val body = func.body as? Block
         assertNotNull(body)
-        val ifStmts = body.allChildren<IfStatement>()
-        assertTrue(ifStmts.isNotEmpty(), "Should have if-let expression")
+        // if let with else clause is modeled as ConditionalExpression
+        val condExprs = body.allChildren<ConditionalExpression>()
+        assertTrue(condExprs.isNotEmpty(), "Should have if-let conditional expression")
     }
 
     @Test
@@ -1244,8 +1247,9 @@ class RustBranchCoverageTest : BaseTest() {
         assertNotNull(func, "Should have test_if_let_chain function")
         val body = func.body as? Block
         assertNotNull(body)
-        val ifStmts = body.allChildren<IfStatement>()
-        assertTrue(ifStmts.size >= 2, "Should have nested if-let: ${ifStmts.size}")
+        // Both if-let expressions have else clauses, so they become ConditionalExpressions
+        val condExprs = body.allChildren<ConditionalExpression>()
+        assertTrue(condExprs.size >= 2, "Should have nested if-let conditionals: ${condExprs.size}")
     }
 
     @Test

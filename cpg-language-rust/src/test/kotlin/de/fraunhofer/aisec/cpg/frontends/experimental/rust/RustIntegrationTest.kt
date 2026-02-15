@@ -103,7 +103,7 @@ class RustIntegrationTest : BaseTest() {
         // === Async ===
         val fetchData = tu.functions["fetch_data"]
         assertNotNull(fetchData)
-        assertTrue(fetchData.annotations.any { it.name.localName == "async" })
+        assertTrue("async" in fetchData.modifiers)
 
         // === Control flow ===
         val controlFlow = tu.functions["control_flow"]
@@ -126,7 +126,7 @@ class RustIntegrationTest : BaseTest() {
         val counterVar =
             body.allChildren<VariableDeclaration>().firstOrNull { it.name.localName == "counter" }
         assertNotNull(counterVar)
-        assertTrue(counterVar.annotations.any { it.name.localName == "mut" })
+        assertTrue("mut" in counterVar.modifiers)
 
         // === Ownership ===
         val ownership = tu.functions["ownership"]
@@ -182,18 +182,12 @@ class RustIntegrationTest : BaseTest() {
         val piConst =
             tu.allChildren<VariableDeclaration>().firstOrNull { it.name.localName == "PI" }
         assertNotNull(piConst, "Should have const PI")
-        assertTrue(
-            piConst.annotations.any { it.name.localName == "const" },
-            "PI should have const annotation",
-        )
+        assertTrue("const" in piConst.modifiers, "PI should have const modifier")
 
         val countStatic =
             tu.allChildren<VariableDeclaration>().firstOrNull { it.name.localName == "COUNT" }
         assertNotNull(countStatic, "Should have static COUNT")
-        assertTrue(
-            countStatic.annotations.any { it.name.localName == "static" },
-            "COUNT should have static annotation",
-        )
+        assertTrue("static" in countStatic.modifiers, "COUNT should have static modifier")
 
         // === Indexing and casting ===
         val indexAndCast = tu.functions["index_and_cast"]

@@ -249,24 +249,15 @@ class RustComprehensiveTest : BaseTest() {
         val vars = tu.allChildren<VariableDeclaration>()
         val maxSize = vars.firstOrNull { it.name.localName == "MAX_SIZE" }
         assertNotNull(maxSize, "Should find MAX_SIZE const")
-        assertTrue(
-            maxSize.annotations.any { it.name.localName == "const" },
-            "MAX_SIZE should have const annotation",
-        )
+        assertTrue("const" in maxSize.modifiers, "MAX_SIZE should have const modifier")
 
         val global = vars.firstOrNull { it.name.localName == "GLOBAL" }
         assertNotNull(global, "Should find GLOBAL static")
-        assertTrue(
-            global.annotations.any { it.name.localName == "static" },
-            "GLOBAL should have static annotation",
-        )
+        assertTrue("static" in global.modifiers, "GLOBAL should have static modifier")
 
         val mutGlobal = vars.firstOrNull { it.name.localName == "MUTABLE_GLOBAL" }
         assertNotNull(mutGlobal, "Should find MUTABLE_GLOBAL")
-        assertTrue(
-            mutGlobal.annotations.any { it.name.localName == "mut" },
-            "MUTABLE_GLOBAL should have mut annotation",
-        )
+        assertTrue("mut" in mutGlobal.modifiers, "MUTABLE_GLOBAL should have mut modifier")
     }
 
     @Test

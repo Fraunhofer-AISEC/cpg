@@ -100,12 +100,12 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             if (child.type == "function_modifiers") {
                 for (modifier in child.children) {
                     if (modifier.type == "async") {
-                        func.annotations += newAnnotation("async", rawNode = modifier)
+                        func.modifiers += "async"
                         break
                     }
                 }
             } else if (child.type == "async") {
-                func.annotations += newAnnotation("async", rawNode = child)
+                func.modifiers += "async"
                 break
             }
         }
@@ -289,7 +289,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             val selfVar = newVariableDeclaration("self", rawNode = node)
             selfVar.type = paramType
             if (isMut) {
-                selfVar.annotations += newAnnotation("mut", rawNode = node)
+                selfVar.modifiers += "mut"
             }
             func.receiver = selfVar
         }
@@ -453,10 +453,12 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
-     * Translates a Rust `function_signature_item` (e.g., in a trait or extern block) into a
-     * [MethodDeclaration]. Signatures without a `self` parameter are marked as static.
+     * Translates a Rust `function_signature_item` into a [FunctionDeclaration]. This handles Rust
+     * function signatures such as trait method declarations and extern function declarations. When
+     * inside a record scope (e.g., a trait or impl block), a [MethodDeclaration] is created
+     * instead. Signatures without a `self` parameter are marked as static when in record scope.
      */
-    private fun handleFunctionSignatureItem(node: TSNode): MethodDeclaration {
+    private fun handleFunctionSignatureItem(node: TSNode): FunctionDeclaration {
         val nameNode = node["name"]
         val name = nameNode.text()
 
@@ -465,12 +467,16 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         val hasSelf = parameters?.children?.any { it.type == "self_parameter" } == true
 
         val func =
-            newMethodDeclaration(
-                name,
-                isStatic = !hasSelf,
-                recordDeclaration = recordDeclaration,
-                rawNode = node,
-            )
+            if (recordDeclaration != null) {
+                newMethodDeclaration(
+                    name,
+                    isStatic = !hasSelf,
+                    recordDeclaration = recordDeclaration,
+                    rawNode = node,
+                )
+            } else {
+                newFunctionDeclaration(name, rawNode = node)
+            }
 
         frontend.scopeManager.enterScope(func)
 
@@ -676,7 +682,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         val name = nameNode.text()
 
         val variable = newVariableDeclaration(name, rawNode = node)
-        variable.annotations += newAnnotation("const", rawNode = node)
+        variable.modifiers += "const"
 
         val typeNode = node["type"]
         if (typeNode != null && !typeNode.isNull) {
@@ -701,12 +707,12 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         val name = nameNode.text()
 
         val variable = newVariableDeclaration(name, rawNode = node)
-        variable.annotations += newAnnotation("static", rawNode = node)
+        variable.modifiers += "static"
 
         // Check for mut
         for (child in node.children) {
             if (child.type == "mutable_specifier") {
-                variable.annotations += newAnnotation("mut", rawNode = child)
+                variable.modifiers += "mut"
                 break
             }
         }

@@ -260,11 +260,12 @@ class RustCoverageGapsTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val ifStmts = body.allChildren<IfStatement>()
-        assertTrue(ifStmts.isNotEmpty(), "Should have if statements")
-        // The outer if should have an else branch
-        val outerIf = ifStmts.first()
-        assertNotNull(outerIf.elseStatement, "First if should have else branch")
+        // if-else chains are modeled as nested ConditionalExpressions
+        val condExprs = body.allChildren<ConditionalExpression>()
+        assertTrue(condExprs.isNotEmpty(), "Should have conditional expressions")
+        // The outer conditional should have an else branch
+        val outerCond = condExprs.first()
+        assertNotNull(outerCond.elseExpression, "First conditional should have else branch")
     }
 
     @Test

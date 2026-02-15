@@ -67,7 +67,7 @@ class RustTraitsTest : BaseTest() {
             tu.declarations.filterIsInstance<FunctionTemplateDeclaration>().first {
                 it.name.localName == "generic_foo"
             }
-        val tParam = genericFooTemplate.parameters[0] as? TypeParameterDeclaration
+        val tParam = genericFooTemplate.parameters.getOrNull(0) as? TypeParameterDeclaration
         assertNotNull(tParam)
         assertEquals("T", tParam.name.localName)
 
