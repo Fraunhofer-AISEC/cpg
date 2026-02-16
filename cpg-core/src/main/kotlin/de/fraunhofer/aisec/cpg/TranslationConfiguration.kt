@@ -125,7 +125,8 @@ private constructor(
     matchCommentsToNodes: Boolean,
     addIncludesToGraph: Boolean,
     passConfigurations: Map<KClass<out Pass<*>>, PassConfiguration>,
-    frontendConfigurations: Map<KClass<out LanguageFrontend<*, *>>, FrontendConfiguration>,
+    frontendConfigurations:
+        Map<KClass<out LanguageFrontend<*, *>>, FrontendConfiguration<out LanguageFrontend<*, *>>>,
     /** The maximum number a pass will get executed, in order to prevent loops. */
     val maxPassExecutions: Int,
     /** A list of exclusion patterns used to filter files and directories. */
@@ -203,7 +204,8 @@ private constructor(
     /** This sub configuration object holds all information about inference and smart-guessing. */
     val inferenceConfiguration: InferenceConfiguration
     val passConfigurations: Map<KClass<out Pass<*>>, PassConfiguration>
-    val frontendConfigurations: Map<KClass<out LanguageFrontend<*, *>>, FrontendConfiguration>
+    val frontendConfigurations:
+        Map<KClass<out LanguageFrontend<*, *>>, FrontendConfiguration<out LanguageFrontend<*, *>>>
 
     init {
         this.registeredPasses = passes
@@ -276,7 +278,10 @@ private constructor(
         private var passConfigurations: MutableMap<KClass<out Pass<*>>, PassConfiguration> =
             mutableMapOf()
         private var frontendConfigurations:
-            MutableMap<KClass<out LanguageFrontend<*, *>>, FrontendConfiguration> =
+            MutableMap<
+                KClass<out LanguageFrontend<*, *>>,
+                FrontendConfiguration<out LanguageFrontend<*, *>>,
+            > =
             mutableMapOf()
         private var maxPassExecutions = 5
         private val exclusionPatternsByRegex = mutableListOf<Regex>()
@@ -479,14 +484,14 @@ private constructor(
 
         fun <T : LanguageFrontend<*, *>> configureFrontend(
             clazz: KClass<T>,
-            config: FrontendConfiguration,
+            config: FrontendConfiguration<T>,
         ): Builder {
             this.frontendConfigurations[clazz] = config
             return this
         }
 
         inline fun <reified T : LanguageFrontend<*, *>> configureFrontend(
-            config: FrontendConfiguration
+            config: FrontendConfiguration<T>
         ): Builder {
             return this.configureFrontend(T::class, config)
         }

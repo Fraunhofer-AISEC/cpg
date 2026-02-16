@@ -38,7 +38,8 @@ import java.util.*
 import org.slf4j.LoggerFactory
 
 /** Configuration specific to the frontend. */
-abstract class FrontendConfiguration {
+abstract class FrontendConfiguration<L : LanguageFrontend<*, *>> {
+    context(frontend: L)
     abstract fun doNotParseBody(node: FunctionDeclaration): Boolean
 }
 
@@ -71,6 +72,9 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
     val scopeManager: ScopeManager = ctx.scopeManager
     val typeManager: TypeManager = ctx.typeManager
     val config: TranslationConfiguration = ctx.config
+
+    val frontendConfiguration: FrontendConfiguration<out LanguageFrontend<*, *>>? =
+        this.ctx.config.frontendConfigurations[this::class]
 
     var currentTU: TranslationUnitDeclaration? = null
 

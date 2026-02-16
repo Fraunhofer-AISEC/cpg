@@ -30,7 +30,8 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 
 class JVMFrontendConfiguration(val packagesToIgnore: List<String> = listOf()) :
-    FrontendConfiguration() {
+    FrontendConfiguration<JVMLanguageFrontend>() {
+    context(frontend: JVMLanguageFrontend)
     override fun doNotParseBody(node: FunctionDeclaration): Boolean {
         return this.packagesToIgnore.none {
             (node as? MethodDeclaration)?.recordDeclaration?.name.toString().startsWith(it)
