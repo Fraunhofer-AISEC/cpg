@@ -38,6 +38,7 @@ class TypeTest {
         val result =
             analyze(listOf(topLevel.resolve("type_loop.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
+                it.configureFrontend<GoLanguageFrontend>(GoFrontendConfiguration())
             }
         assertNotNull(result)
 

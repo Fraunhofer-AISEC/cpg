@@ -43,6 +43,7 @@ class StatementTest {
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("branch.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
+                it.configureFrontend<GoLanguageFrontend>(GoFrontendConfiguration())
             }
 
         assertNotNull(tu)
@@ -85,6 +86,7 @@ class StatementTest {
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("defer.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
+                it.configureFrontend<GoLanguageFrontend>(GoFrontendConfiguration())
             }
         assertNotNull(tu)
 
@@ -118,6 +120,7 @@ class StatementTest {
                 true,
             ) {
                 it.registerLanguage<GoLanguage>()
+                it.configureFrontend<GoLanguageFrontend>(GoFrontendConfiguration())
             }
         assertNotNull(tu)
 
