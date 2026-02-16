@@ -482,6 +482,16 @@ private constructor(
             return this
         }
 
+        /**
+         * Configures a [LanguageFrontend] with a [FrontendConfiguration] [config]. This allows us
+         * to pass additional information to the frontend, such methods which should not be analyzed
+         * to save memory (e.g., library methods).
+         *
+         * @param clazz The class of the [LanguageFrontend] for which the configuration should be
+         *   applied.
+         * @param config The configuration to apply for the specified [LanguageFrontend].
+         * @return this
+         */
         fun <T : LanguageFrontend<*, *>> configureFrontend(
             clazz: KClass<T>,
             config: FrontendConfiguration<T>,
@@ -490,6 +500,14 @@ private constructor(
             return this
         }
 
+        /**
+         * Configures a [LanguageFrontend] with the [FrontendConfiguration] [config]. This allows us
+         * to pass additional information to the frontend, such methods which should not be analyzed
+         * to save memory (e.g., library methods).
+         *
+         * @param config The configuration to apply for the specified [LanguageFrontend].
+         * @return this
+         */
         inline fun <reified T : LanguageFrontend<*, *>> configureFrontend(
             config: FrontendConfiguration<T>
         ): Builder {
