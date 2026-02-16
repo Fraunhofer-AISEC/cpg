@@ -29,8 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.FrontendConfiguration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 
 class GoFrontendConfiguration() : FrontendConfiguration<GoLanguageFrontend>() {
-    context(frontend: GoLanguageFrontend)
-    override fun doNotParseBody(node: FunctionDeclaration): Boolean {
+    override fun doNotParseBody(frontend: GoLanguageFrontend, node: FunctionDeclaration): Boolean {
         return frontend.isDependency
     }
 }

@@ -34,12 +34,12 @@ class JVMFrontendConfiguration(val packagesToIgnore: List<String> = listOf()) :
     /**
      * Determines whether the body of a function should NOT be parsed.
      *
+     * @param frontend The language frontend
      * @param node The function declaration to check
      * @return true if the function's package matches any package in [packagesToIgnore] (skip
      *   parsing), false otherwise (parse the body)
      */
-    context(frontend: JVMLanguageFrontend)
-    override fun doNotParseBody(node: FunctionDeclaration): Boolean {
+    override fun doNotParseBody(frontend: JVMLanguageFrontend, node: FunctionDeclaration): Boolean {
         return this.packagesToIgnore.any {
             (node as? MethodDeclaration)?.recordDeclaration?.name.toString().startsWith(it)
         }

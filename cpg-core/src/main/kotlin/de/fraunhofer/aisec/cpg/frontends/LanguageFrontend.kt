@@ -39,8 +39,15 @@ import org.slf4j.LoggerFactory
 
 /** Configuration specific to the frontend. */
 abstract class FrontendConfiguration<L : LanguageFrontend<*, *>> {
-    context(frontend: L)
-    abstract fun doNotParseBody(node: FunctionDeclaration): Boolean
+    /**
+     * Determines whether the body of a function should NOT be parsed.
+     *
+     * @param frontend The language frontend
+     * @param node The function declaration to check
+     * @return true if the function's package matches any package in [packagesToIgnore] (skip
+     *   parsing), false otherwise (parse the body)
+     */
+    abstract fun doNotParseBody(frontend: L, node: FunctionDeclaration): Boolean
 }
 
 /**
@@ -73,8 +80,9 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
     val typeManager: TypeManager = ctx.typeManager
     val config: TranslationConfiguration = ctx.config
 
-    val frontendConfiguration: FrontendConfiguration<out LanguageFrontend<*, *>>? =
+    open val frontendConfiguration: FrontendConfiguration<out LanguageFrontend<*, *>>? by lazy {
         this.ctx.config.frontendConfigurations[this::class]
+    }
 
     var currentTU: TranslationUnitDeclaration? = null
 

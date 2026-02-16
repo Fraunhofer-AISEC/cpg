@@ -142,11 +142,9 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
             method.parameters += param
         }
 
-        val config = this.frontend.frontendConfiguration as? JVMFrontendConfiguration
-
         // Parse body if: config is null (default) OR doNotParseBody returns false
         val shouldSkipBody =
-            config?.let { with(this.frontend) { it.doNotParseBody(method) } } ?: false
+            this.frontend.frontendConfiguration?.doNotParseBody(this.frontend, method) ?: false
 
         if (!shouldSkipBody && sootMethod.isConcrete) {
             // Handle method body

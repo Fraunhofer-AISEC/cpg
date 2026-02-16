@@ -65,6 +65,10 @@ class JVMLanguageFrontend(
 
     lateinit var view: JavaView
 
+    override val frontendConfiguration: JVMFrontendConfiguration? by lazy {
+        this.ctx.config.frontendConfigurations[this::class] as? JVMFrontendConfiguration
+    }
+
     var body: Body? = null
 
     var printer: NormalStmtPrinter? = null
