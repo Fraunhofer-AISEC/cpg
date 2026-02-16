@@ -142,11 +142,11 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
             method.parameters += param
         }
 
-        val config =
-            (this.ctx.config.frontendConfigurations[this.frontend::class]
-                as? JVMFrontendConfiguration)
+        val config = this.frontend.frontendConfiguration as? JVMFrontendConfiguration
 
-        if (config?.doNotParseBody(method) != false && sootMethod.isConcrete) {
+        if (
+            with(this.frontend) { config?.doNotParseBody(method) } != false && sootMethod.isConcrete
+        ) {
             // Handle method body
             method.body = frontend.statementHandler.handle(sootMethod.body)
         }

@@ -26,24 +26,11 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.frontends.FrontendConfiguration
-import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
-import java.io.File
-import java.nio.file.Path
 
-class GoFrontendConfiguration(val includePaths: List<Path>) : FrontendConfiguration() {
+class GoFrontendConfiguration() : FrontendConfiguration<GoLanguageFrontend>() {
+    context(frontend: GoLanguageFrontend)
     override fun doNotParseBody(node: FunctionDeclaration): Boolean {
-        fun Name.toFilename(): String =
-            this.parent?.let { it.toFilename() + "/" + this.localName } ?: this.localName
-
-        val tudFile =
-            File(
-                node.firstParentOrNull<TranslationUnitDeclaration>()?.name?.toFilename()
-                    ?: return false
-            )
-
-        return includePaths.any { tudFile.absolutePath.contains(it.toAbsolutePath().toString()) }
+        return frontend.isDependency
     }
 }
