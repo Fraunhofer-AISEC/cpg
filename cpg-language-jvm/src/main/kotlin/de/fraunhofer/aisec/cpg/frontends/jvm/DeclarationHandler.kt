@@ -144,9 +144,11 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
 
         val config = this.frontend.frontendConfiguration as? JVMFrontendConfiguration
 
-        if (
-            with(this.frontend) { config?.doNotParseBody(method) } != false && sootMethod.isConcrete
-        ) {
+        // Parse body if: config is null (default) OR doNotParseBody returns false
+        val shouldSkipBody =
+            config?.let { with(this.frontend) { it.doNotParseBody(method) } } ?: false
+
+        if (!shouldSkipBody && sootMethod.isConcrete) {
             // Handle method body
             method.body = frontend.statementHandler.handle(sootMethod.body)
         }
