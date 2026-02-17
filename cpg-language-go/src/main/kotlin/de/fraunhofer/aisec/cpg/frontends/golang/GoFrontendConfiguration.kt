@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 
 abstract class GoFrontendConfiguration() : FrontendConfiguration<GoLanguageFrontend>()
 
-class NoDependenciesGoFrontendConfiguration : FrontendConfiguration<GoLanguageFrontend>() {
+class NoDependenciesGoFrontendConfiguration : GoFrontendConfiguration() {
     /**
      * By default, we do not parse the body of functions in dependencies, as they are often large
      * and not relevant for analysis. This can be overridden by providing a custom
