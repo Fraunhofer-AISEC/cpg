@@ -39,7 +39,10 @@ abstract class EdgeSet<NodeType : Node, EdgeType : Edge<NodeType>>(
     override var outgoing: Boolean = true,
     override var onAdd: ((EdgeType) -> Unit)? = null,
     override var onRemove: ((EdgeType) -> Unit)? = null,
-) : HashSet<EdgeType>(), EdgeCollection<NodeType, EdgeType> {
+    // We explicitly set the capacity to 1, as we expect that most nodes will only have one edge of
+    // a given type. This is a common case for many edge types in the CPG, and setting the initial
+    // capacity to 1 can save memory in these cases.
+) : HashSet<EdgeType>(1), EdgeCollection<NodeType, EdgeType> {
     override fun add(element: EdgeType): Boolean {
         val ok = super<HashSet>.add(element)
         if (ok) {
