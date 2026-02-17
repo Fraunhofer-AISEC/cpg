@@ -30,46 +30,42 @@ import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import java.util.Objects
-import org.slf4j.LoggerFactory
 
 /**
- * Children in this declaration are added to an existing node with namespace. This can be a Record,
- * or another similar construct that contains declarations. The children are therefore in this ast
- * construct but are added to the symbol table of the construct it is extending.
+ * Represents an extension to an existing declaration (e.g. [RecordDeclaration], such as Rust `impl`
+ * blocks or C# partial classes. The declarations contained within this node are part of the AST
+ * structure of the extension but are added to the symbol table of the [extendedDeclaration] they
+ * are extending.
  *
- * The name that this extension has needs to identify the construct, it is extending
+ * The [name] of this extension identifies the construct it is extending.
  */
 class ExtensionDeclaration : Declaration(), DeclarationHolder {
     /**
-     * Edges to nested namespaces, records, functions, fields etc. contained in the current
-     * namespace.
+     * Edges to [Declaration] nodes (e.g. a [MethodDeclaration]) contained in this extension
+     * declaration.
      */
     val declarationEdges = astEdgesOf<Declaration>()
     override val declarations by unwrapping(ExtensionDeclaration::declarationEdges)
 
     /**
-     * In some languages, there is a relationship between paths / directories and the package
-     * structure. Therefore, we need to be aware of the path this namespace / package is in.
+     * The [Declaration] we are "extending" with this extension declaration. All children of this
+     * extension MUST be placed in the [Declaration.declaringScope] of this declaration. Currently,
+     * we only accept a [RecordDeclaration].
      */
-    var path: String? = null
-
-    /** We currently only allow extending a record declaration. */
     var extendedDeclaration: RecordDeclaration? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is ExtensionDeclaration) return false
-        return super.equals(other) && declarations == other.declarations
+        return super.equals(other) &&
+            declarations == other.declarations &&
+            extendedDeclaration == other.extendedDeclaration
     }
 
-    override fun hashCode() = Objects.hash(super.hashCode(), declarations)
+    override fun hashCode() = Objects.hash(super.hashCode(), declarations, extendedDeclaration)
 
     override fun addDeclaration(declaration: Declaration) {
         addIfNotContains(declarations, declaration)
-    }
-
-    companion object {
-        private val log = LoggerFactory.getLogger(ExtensionDeclaration::class.java)
     }
 
     override fun getStartingPrevEOG(): Collection<Node> {
