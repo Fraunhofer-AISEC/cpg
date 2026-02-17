@@ -462,6 +462,24 @@ fun MetadataProvider.newNamespaceDeclaration(
 }
 
 /**
+ * Creates a new [ExtensionDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newExtensionDeclaration(
+    name: CharSequence,
+    rawNode: Any? = null,
+): ExtensionDeclaration {
+    val node = ExtensionDeclaration()
+    node.applyMetadata(this, name, rawNode)
+
+    log(node)
+    return node
+}
+
+/**
  * Creates a new [ImportDeclaration]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
