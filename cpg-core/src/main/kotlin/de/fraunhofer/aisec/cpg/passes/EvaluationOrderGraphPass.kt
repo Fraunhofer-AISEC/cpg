@@ -198,7 +198,11 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         processedListener.clearProcessed()
     }
 
-    /** The Extension Declaration only contains other declarations and therefore does not */
+    /**
+     * The [ExtensionDeclaration] only contains other declarations and therefore does not
+     * introduce its own evaluation order or EOG nodes/edges. Instead, we simply traverse and
+     * build the EOG for each contained declaration individually.
+     */
     protected fun handleExtensionDeclaration(node: ExtensionDeclaration) {
         // Handle the declarations contained in the extension
         for (child in node.declarations) {

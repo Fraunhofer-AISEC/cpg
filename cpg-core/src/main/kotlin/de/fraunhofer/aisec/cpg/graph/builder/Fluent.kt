@@ -119,8 +119,10 @@ fun LanguageFrontend<*, *>.namespace(
 }
 
 /**
- * Creates a new [ExtensionDeclaration] in the Fluent Node DSL with the given [name]. The
- * declaration will be set to the [ScopeManager.currentExtension]. The [init] block can be used to
+ * Creates a new [ExtensionDeclaration] in the Fluent Node DSL with the given [name].
+ *
+ * The scope for the [init] block is set to either the provided [extendedDeclaration] (if non-null)
+ * or to the newly created [ExtensionDeclaration] node itself. The [init] block can be used to
  * create further sub-nodes as well as configuring the created node itself.
  */
 context(holder: DeclarationHolder)
