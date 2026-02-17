@@ -33,10 +33,10 @@ import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 
 fun configureServer(
     configure: Server.() -> Server = {
-        this.addCpgTranslate()
-        this.addListPasses()
-        this.addRunPass()
-        this.addCpgAnalyzeTool()
+        //        this.addCpgTranslate()
+        //        this.addListPasses()
+        //        this.addRunPass()
+        //        this.addCpgAnalyzeTool()
         this.addCpgLlmAnalyzeTool()
         this.addCpgApplyConceptsTool()
         this.addCpgDataflowTool()
@@ -44,11 +44,12 @@ fun configureServer(
         this.listRecords()
         this.listCalls()
         this.listCallsTo()
-        this.listAvailableConcepts()
-        this.listAvailableOperations()
-        this.getAllArgs()
-        this.getArgByIndexOrName()
-        this.listConceptsAndOperations()
+        //        this.listAvailableConcepts()
+        //        this.listAvailableOperations()
+        //        this.getAllArgs()
+        //        this.getArgByIndexOrName()
+        //        this.listConceptsAndOperations()
+        this.getNode()
         this
     }
 ): Server {

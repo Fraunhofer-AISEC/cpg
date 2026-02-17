@@ -62,6 +62,7 @@ class CpgAnalyzeToolTest {
                 "cpg_list_call_arg_by_name_or_index",
                 "cpg_list_available_concepts",
                 "cpg_list_available_operations",
+                "cpg_get_node",
             ),
             testServer.tools.keys,
         )

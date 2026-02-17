@@ -5,7 +5,41 @@
   import { flattenNodes } from '$lib/flatten';
   import Highlight, { LineNumbers } from 'svelte-highlight';
   import python from 'svelte-highlight/languages/python';
+  import java from 'svelte-highlight/languages/java';
+  import cpp from 'svelte-highlight/languages/cpp';
+  import csharp from 'svelte-highlight/languages/csharp';
+  import javascript from 'svelte-highlight/languages/javascript';
+  import typescript from 'svelte-highlight/languages/typescript';
+  import go from 'svelte-highlight/languages/go';
+  import rust from 'svelte-highlight/languages/rust';
+  import ruby from 'svelte-highlight/languages/ruby';
+  import plaintext from 'svelte-highlight/languages/plaintext';
   import 'svelte-highlight/styles/github.css';
+
+  const languageMap: Record<string, any> = {
+    '.py': python,
+    '.java': java,
+    '.kt': java, // Kotlin uses Java highlighting as fallback
+    '.c': cpp,
+    '.cpp': cpp,
+    '.cc': cpp,
+    '.cxx': cpp,
+    '.h': cpp,
+    '.hpp': cpp,
+    '.cs': csharp,
+    '.js': javascript,
+    '.jsx': javascript,
+    '.ts': typescript,
+    '.tsx': typescript,
+    '.go': go,
+    '.rs': rust,
+    '.rb': ruby,
+  };
+
+  function getLanguage(fileName: string) {
+    const ext = fileName.substring(fileName.lastIndexOf('.'));
+    return languageMap[ext] || plaintext;
+  }
 
   interface Props {
     translationUnit: TranslationUnitJSON;
@@ -114,7 +148,7 @@
 
     <div class="relative">
       <div class="font-mono">
-        <Highlight language={python} code={translationUnit.code} let:highlighted>
+        <Highlight language={getLanguage(translationUnit.name)} code={translationUnit.code} let:highlighted>
           <LineNumbers
             {highlighted}
             highlightedLines={highlightLine ? [highlightLine - 1] : []}

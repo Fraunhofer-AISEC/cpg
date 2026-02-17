@@ -64,12 +64,7 @@ import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.graph.variables
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.cpgDescription
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalysisResult
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgAnalyzePayload
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgRunPassPayload
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.PassInfo
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.runOnCpg
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.*
 import de.fraunhofer.aisec.cpg.mcp.setupTranslationConfiguration
 import de.fraunhofer.aisec.cpg.passes.BasicBlockCollectorPass
 import de.fraunhofer.aisec.cpg.passes.ComponentPass
@@ -97,7 +92,6 @@ import de.fraunhofer.aisec.cpg.passes.configuration.ReplacePass
 import de.fraunhofer.aisec.cpg.passes.consumeTargets
 import de.fraunhofer.aisec.cpg.passes.hardDependencies
 import de.fraunhofer.aisec.cpg.passes.softDependencies
-import de.fraunhofer.aisec.cpg.serialization.toJSON
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolRequest
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
@@ -236,14 +230,12 @@ fun runCpgAnalyze(
     val variables = result.variables
     val callExpressions = result.calls
 
-    val nodeInfos = allNodes.map { node: Node -> node.toJSON(noEdges = true) }
-
     return CpgAnalysisResult(
         totalNodes = allNodes.size,
         functions = functions.size,
         variables = variables.size,
         callExpressions = callExpressions.size,
-        nodes = nodeInfos,
+        functionSummaries = functions.map { it.toSummary() },
     )
 }
 

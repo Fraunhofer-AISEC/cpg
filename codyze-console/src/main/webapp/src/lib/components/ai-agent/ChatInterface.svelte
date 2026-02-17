@@ -1,7 +1,7 @@
 <script lang="ts">
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import MessageInput from './MessageInput.svelte';
-  import ToolResultWidget from './widgets/ToolResultWidget.svelte';
+  import CodeItemList, { isCodeItemContent } from './widgets/CodeItemList.svelte';
   import CodePreview from './CodePreview.svelte';
   import ApiService from '$lib/services/apiService';
   import type { NodeJSON, AnalysisResultJSON, TranslationUnitJSON, ChatMessage } from '$lib/types';
@@ -200,8 +200,22 @@
               </div>
             {/if}
             {#if message.contentType === 'tool-result' && message.toolResult}
-              <!-- Tool Result Widget -->
-              <ToolResultWidget data={message.toolResult} onItemClick={handleNodeClick} />
+              {#if isCodeItemContent(message.toolResult.content)}
+                <CodeItemList data={message.toolResult} onItemClick={handleNodeClick} />
+              {:else}
+                <!-- Fallback: plain text/JSON -->
+                <div class="my-2 bg-white border border-gray-200 rounded-lg overflow-hidden">
+                  <div class="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b border-gray-200">
+                    {#if message.toolResult.toolName}
+                      <span class="text-sm font-semibold text-gray-700 font-mono">{message.toolResult.toolName}</span>
+                    {/if}
+                    {#if message.toolResult.isError}
+                      <span class="px-2 py-1 bg-red-100 text-red-800 text-xs font-semibold rounded uppercase">Error</span>
+                    {/if}
+                  </div>
+                  <pre class="p-4 m-0 font-mono text-sm text-gray-700 overflow-x-auto whitespace-pre-wrap break-words">{typeof message.toolResult.content === 'string' ? message.toolResult.content : JSON.stringify(message.toolResult.content, null, 2)}</pre>
+                </div>
+              {/if}
             {:else if message.content}
               <!-- Regular Text or markdown table -->
               <div class="prose prose-sm max-w-4xl text-gray-800">

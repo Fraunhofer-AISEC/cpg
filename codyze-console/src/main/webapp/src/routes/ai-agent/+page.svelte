@@ -39,6 +39,7 @@
   let streamingContent = $state('');
   let streamingReasoning = $state('');
   let showWelcome = $state(persisted.showWelcome);
+  let abortController: AbortController | null = null;
 
   // Save state to sessionStorage whenever it changes
   $effect(() => {
@@ -58,11 +59,17 @@
   }
 
   function resetChat() {
+    // Abort any in-flight stream
+    if (abortController) {
+      abortController.abort();
+      abortController = null;
+    }
     showWelcome = true;
     chatMessages = [];
     currentMessage = '';
     streamingContent = '';
     streamingReasoning = '';
+    isLoading = false;
   }
 
   async function sendMessage() {

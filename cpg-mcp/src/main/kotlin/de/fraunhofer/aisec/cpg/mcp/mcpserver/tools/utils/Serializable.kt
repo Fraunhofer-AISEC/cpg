@@ -59,12 +59,48 @@ data class OverlayInfo(
 }
 
 @Serializable
+data class FunctionSummary(
+    val id: String,
+    val name: String,
+    val fileName: String?,
+    val startLine: Int?,
+    val endLine: Int?,
+    val parameters: List<String>,
+    val returnType: String?,
+    val callees: List<String>,
+    val code: String?,
+)
+
+@Serializable
+data class RecordSummary(
+    val id: String,
+    val name: String,
+    val fileName: String?,
+    val startLine: Int?,
+    val endLine: Int?,
+    val kind: String?,
+    val fieldCount: Int,
+    val methodNames: List<String>,
+)
+
+@Serializable
+data class CallSummary(
+    val id: String,
+    val name: String,
+    val fileName: String?,
+    val startLine: Int?,
+    val endLine: Int?,
+    val arguments: List<String>,
+    val code: String?,
+)
+
+@Serializable
 data class CpgAnalysisResult(
     val totalNodes: Int,
     val functions: Int,
     val variables: Int,
     val callExpressions: Int,
-    val nodes: List<NodeJSON>,
+    val functionSummaries: List<FunctionSummary>,
 )
 
 @Serializable

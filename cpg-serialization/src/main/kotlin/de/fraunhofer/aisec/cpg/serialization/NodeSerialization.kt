@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.serialization
 
-import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
@@ -71,9 +70,9 @@ data class NodeJSON(
     val endColumn: Int,
     val code: String,
     val name: String,
-    val astChildren: List<NodeJSON>,
-    val prevDFG: List<EdgeJSON> = emptyList(),
-    val nextDFG: List<EdgeJSON> = emptyList(),
+    //    val astChildren: List<NodeJSON>,
+    //    val prevDFG: List<EdgeJSON> = emptyList(),
+    //    val nextDFG: List<EdgeJSON> = emptyList(),
     @Serializable(with = UuidSerializer::class) val translationUnitId: Uuid? = null,
     val componentName: String? = null,
     val fileName: String? = null,
@@ -96,11 +95,11 @@ fun Node.toJSON(noEdges: Boolean = false): NodeJSON {
                 val path = uri.toString()
                 path.substringAfterLast('/').substringAfterLast('\\')
             },
-        astChildren =
-            if (noEdges) emptyList()
-            else (this as? AstNode)?.astChildren?.map { it.toJSON() } ?: emptyList(),
-        prevDFG = if (noEdges) emptyList() else this.prevDFGEdges.map { it.toJSON() },
-        nextDFG = if (noEdges) emptyList() else this.nextDFGEdges.map { it.toJSON() },
+        //        astChildren =
+        //            if (noEdges) emptyList()
+        //            else (this as? AstNode)?.astChildren?.map { it.toJSON() } ?: emptyList(),
+        //        prevDFG = if (noEdges) emptyList() else this.prevDFGEdges.map { it.toJSON() },
+        //        nextDFG = if (noEdges) emptyList() else this.nextDFGEdges.map { it.toJSON() },
         translationUnitId = this.translationUnit?.id,
         componentName = this.component?.name?.toString(),
     )

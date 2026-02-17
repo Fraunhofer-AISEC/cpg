@@ -78,14 +78,14 @@ class GeminiClient(
         userMessage: String,
         conversationHistory: List<ChatMessageJSON>,
         tools: List<Tool>,
-        toolResults: List<ToolCallWithResult>?,
+        maxAgentSteps: List<List<ToolCallWithResult>>?,
         onText: suspend (String) -> Unit,
         onReasoning: suspend (String) -> Unit,
     ): List<ToolCall> {
         val toolCalls = mutableListOf<ToolCall>()
 
         val geminiTools =
-            if (toolResults == null && tools.isNotEmpty()) {
+            if (tools.isNotEmpty()) {
                 listOf(
                     GeminiTools(
                         functionDeclarations =
@@ -117,43 +117,44 @@ class GeminiClient(
         }
 
         val contents =
-            if (toolResults != null) {
+            if (maxAgentSteps != null) {
                 historyContents +
                     listOf(
-                        GeminiContent(
-                            role = "user",
-                            parts = listOf(GeminiPart(text = userMessage)),
-                        ),
-                        GeminiContent(
-                            role = "model",
-                            parts =
-                                toolResults.map { tr ->
-                                    GeminiPart(
-                                        functionCall =
-                                            GeminiFunctionCall(
-                                                name = tr.call.name,
-                                                args =
-                                                    Json.parseToJsonElement(tr.call.arguments)
-                                                        .jsonObject,
-                                            )
-                                    )
-                                },
-                        ),
-                        GeminiContent(
-                            role = "user",
-                            parts =
-                                toolResults.map { tr ->
-                                    GeminiPart(
-                                        functionResponse =
-                                            GeminiFunctionResponse(
-                                                name = tr.call.name,
-                                                response =
-                                                    buildJsonObject { put("result", tr.result) },
-                                            )
-                                    )
-                                },
-                        ),
-                    )
+                        GeminiContent(role = "user", parts = listOf(GeminiPart(text = userMessage)))
+                    ) +
+                    maxAgentSteps.flatMap { roundtrip ->
+                        listOf(
+                            GeminiContent(
+                                role = "model",
+                                parts =
+                                    roundtrip.map { tr ->
+                                        GeminiPart(
+                                            functionCall =
+                                                GeminiFunctionCall(
+                                                    name = tr.call.name,
+                                                    args =
+                                                        Json.parseToJsonElement(tr.call.arguments)
+                                                            .jsonObject,
+                                                )
+                                        )
+                                    },
+                            ),
+                            GeminiContent(
+                                role = "user",
+                                parts =
+                                    roundtrip.map { tr ->
+                                        GeminiPart(
+                                            functionResponse =
+                                                GeminiFunctionResponse(
+                                                    name = tr.call.name,
+                                                    response =
+                                                        buildJsonObject { put("result", tr.result) },
+                                                )
+                                        )
+                                    },
+                            ),
+                        )
+                    }
             } else {
                 historyContents +
                     listOf(

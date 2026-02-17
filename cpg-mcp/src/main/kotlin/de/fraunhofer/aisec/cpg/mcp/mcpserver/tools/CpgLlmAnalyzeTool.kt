@@ -27,11 +27,7 @@ package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.cpgDescription
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgLlmAnalyzePayload
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.OverlaySuggestion
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableConcepts
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableOperations
-import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.*
 import de.fraunhofer.aisec.cpg.serialization.toJSON
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
@@ -243,14 +239,20 @@ fun Server.addCpgLlmAnalyzeTool() {
                     val enrichedItems =
                         parsed.items.map { suggestion ->
                             val node = nodes.find { it.id.toString() == suggestion.nodeId }
-                            val conceptNode =
-                                suggestion.conceptNodeId?.let { id ->
-                                    nodes.find { it.id.toString() == id }
-                                }
 
                             suggestion.copy(
-                                node = node?.toJSON(noEdges = true),
-                                conceptNode = conceptNode?.toJSON(noEdges = true),
+                                name = node?.name?.toString() ?: suggestion.name,
+                                type = node?.javaClass?.simpleName ?: suggestion.type,
+                                code = node?.code ?: suggestion.code,
+                                fileName =
+                                    node?.location?.artifactLocation?.uri?.let { uri ->
+                                        uri.toString()
+                                            .substringAfterLast('/')
+                                            .substringAfterLast('\\')
+                                    } ?: suggestion.fileName,
+                                startLine =
+                                    node?.location?.region?.startLine ?: suggestion.startLine,
+                                endLine = node?.location?.region?.endLine ?: suggestion.endLine,
                             )
                         }
 

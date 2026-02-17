@@ -1,9 +1,30 @@
+<script lang="ts" module>
+  export function getItemsArray(content: any): any[] {
+    if (!content) return [];
+    if (content.items && Array.isArray(content.items)) return content.items;
+    if (Array.isArray(content)) return content;
+    // Single object with id or nodeId — wrap as one-element list
+    if (typeof content === 'object' && ('id' in content || 'nodeId' in content)) return [content];
+    return [];
+  }
+
+  export function isCodeItemContent(content: any): boolean {
+    const items = getItemsArray(content);
+    if (items.length === 0) return false;
+    const first = items[0];
+    if (typeof first === 'string') return true;
+    if (typeof first === 'object' && first !== null) {
+      if ('id' in first || 'nodeId' in first) return true;
+    }
+    return false;
+  }
+</script>
+
 <script lang="ts">
-  import type { WidgetProps } from './widgetRegistry';
+  import type { ToolResultData } from './widgetRegistry';
 
-  let { data, onItemClick }: WidgetProps = $props();
+  let { data, onItemClick }: { data: ToolResultData; onItemClick?: (item: any) => void } = $props();
 
-  // Normalized item for display - we extract what we need from any input
   interface DisplayItem {
     id: string;
     title: string;
@@ -15,104 +36,36 @@
     original: any;
   }
 
-  // Get items array from content (handles different response structures)
-  function getItemsArray(content: any): any[] {
-    if (!content) return [];
-    // Response with { items: [...] }
-    if (content.items && Array.isArray(content.items)) return content.items;
-    // Direct array
-    if (Array.isArray(content)) return content;
-    return [];
+  const EXTRA_PROP_FIELDS: Record<string, string> = {
+    parameters: 'Parameters',
+    returnType: 'Return Type',
+    callees: 'Callees',
+    methodNames: 'Methods',
+    arguments: 'Arguments',
+    code: 'Code',
+    reasoning: 'Reasoning',
+    securityImpact: 'Security Impact',
+    fieldCount: 'Fields',
+  };
+
+  function buildDynamicExtraProps(item: any): Record<string, string> {
+    const props: Record<string, string> = {};
+    for (const [field, label] of Object.entries(EXTRA_PROP_FIELDS)) {
+      if (item[field] !== undefined && item[field] !== null) {
+        props[label] = Array.isArray(item[field]) ? item[field].join(', ') : String(item[field]);
+      }
+    }
+    return props;
   }
 
-  // Detect what kind of item we're dealing with and normalize it
-  function normalizeItem(item: any, index: number): DisplayItem {
-    // String item (legacy format)
-    if (typeof item === 'string') {
-      return {
-        id: `item-${index}`,
-        title: item,
-        subtitle: '',
-        location: undefined,
-        expandable: false,
-        extraProps: {},
-        original: item
-      };
-    }
-
-    // Overlay suggestion (from cpg_llm_analyze) - has node + overlay
-    if (item.node && item.overlay) {
-      const node = item.node;
-      return {
-        id: node.id?.toString() || item.nodeId || `item-${index}`,
-        title: node.name || 'Unknown',
-        subtitle: node.type || '',
-        badge: {
-          text: getShortName(item.overlay),
-          color: item.overlayType === 'Concept' ? 'green' : 'amber'
-        },
-        location: formatNodeLocation(node),
-        expandable: !!(item.reasoning || item.securityImpact || node.code),
-        extraProps: buildExtraProps({
-          Reasoning: item.reasoning,
-          'Security Impact': item.securityImpact,
-          Code: node.code
-        }),
-        original: item
-      };
-    }
-
-    // Applied overlay (from list_concepts_and_operations) - has nodeId + overlayClass
-    if (item.nodeId && item.overlayClass) {
-      return {
-        id: item.nodeId,
-        title: item.name || 'Unknown',
-        subtitle: item.overlayClass,
-        location: formatLocation(item),
-        expandable: !!item.code,
-        extraProps: buildExtraProps({ Code: item.code }),
-        original: item
-      };
-    }
-
-    // Node (from list_functions, list_records, etc.) - has id + type + name
-    if (item.id && item.type) {
-      return {
-        id: item.id?.toString() || `item-${index}`,
-        title: item.name || 'Unknown',
-        subtitle: item.type,
-        location: formatNodeLocation(item),
-        expandable: !!item.code,
-        extraProps: buildExtraProps({ Code: item.code }),
-        original: item
-      };
-    }
-
-    // Fallback - just show whatever we can
-    return {
-      id: item.id?.toString() || item.nodeId || `item-${index}`,
-      title: item.name || item.title || JSON.stringify(item).slice(0, 50),
-      subtitle: item.type || '',
-      location: formatLocation(item),
-      expandable: false,
-      extraProps: {},
-      original: item
-    };
+  function isConceptClass(overlayClass: string): boolean {
+    const lower = overlayClass.toLowerCase();
+    return lower.includes('concept') || lower.includes('Concept');
   }
 
-  function buildExtraProps(props: Record<string, any>): Record<string, string> {
-    const result: Record<string, string> = {};
-    for (const [key, value] of Object.entries(props)) {
-      if (value) result[key] = String(value);
-    }
-    return result;
-  }
-
-  function formatNodeLocation(item: any): string {
-    if (!item) return '';
-    if (!item.fileName && !item.startLine) return '';
-    if (!item.fileName) return `Line ${item.startLine}`;
-    return `${item.fileName}:${item.startLine}`;
+  function getShortName(fullName: string): string {
+    const parts = fullName.split('.');
+    return parts[parts.length - 1];
   }
 
   function formatLocation(item: any): string {
@@ -121,9 +74,38 @@
     return `${item.fileName}:${item.startLine}`;
   }
 
-  function getShortName(fullName: string): string {
-    const parts = fullName.split('.');
-    return parts[parts.length - 1];
+  function normalizeItem(item: any, index: number): DisplayItem {
+    if (typeof item === 'string') {
+      return {
+        id: `item-${index}`,
+        title: item,
+        subtitle: '',
+        expandable: false,
+        extraProps: {},
+        original: item
+      };
+    }
+
+    const id = `${item.id?.toString() || item.nodeId || 'item'}-${index}`;
+    const title = item.name || item.nodeId || 'Unknown';
+    const subtitle = item.overlay ? getShortName(item.overlay) : (item.returnType || item.kind || item.overlayClass || item.type || '');
+    const location = formatLocation(item);
+    const extraProps = buildDynamicExtraProps(item);
+
+    return {
+      id,
+      title,
+      subtitle,
+      location,
+      badge: item.overlayType
+        ? { text: item.overlayType, color: item.overlayType === 'Concept' ? 'green' : 'amber' }
+        : item.overlayClass
+          ? { text: item.overlayClass, color: isConceptClass(item.overlayClass) ? 'green' : 'amber' }
+          : undefined,
+      expandable: Object.keys(extraProps).length > 0,
+      extraProps,
+      original: item,
+    };
   }
 
   function getBadgeClasses(color: string): string {
@@ -135,8 +117,25 @@
     }
   }
 
-  // Reactive: get normalized items
+  function deriveWidgetTitle(items: DisplayItem[]): string {
+    if (items.length === 0) return 'No Results';
+    const types = new Set(items.map(i => i.subtitle).filter(Boolean));
+    if (types.size === 1) {
+      const type = [...types][0];
+      return `${items.length} ${type}${items.length !== 1 ? 's' : ''}`;
+    }
+    return `${items.length} Result${items.length !== 1 ? 's' : ''}`;
+  }
+
   let items = $derived(getItemsArray(data.content).map((item, i) => normalizeItem(item, i)));
+
+  // Collapse/show-more
+  const DEFAULT_VISIBLE = 10;
+  let showAll = $state(false);
+  let visibleItems = $derived(showAll ? items : items.slice(0, DEFAULT_VISIBLE));
+  let hasMore = $derived(items.length > DEFAULT_VISIBLE);
+
+  let widgetTitle = $derived(deriveWidgetTitle(items));
 
   // Expanded state
   let expandedIds = $state<Set<string>>(new Set());
@@ -155,8 +154,6 @@
       onItemClick(item.original);
     }
   }
-
-  let toolDisplayName = $derived(data.toolName || 'Results');
 </script>
 
 <div class="item-list-widget">
@@ -166,7 +163,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
           d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
       </svg>
-      <span class="tool-name">{toolDisplayName}</span>
+      <span class="tool-name">{widgetTitle}</span>
     </div>
     <span class="results-count">{items.length} result{items.length !== 1 ? 's' : ''}</span>
   </div>
@@ -177,7 +174,7 @@
         <p class="empty-text">No results</p>
       </div>
     {:else}
-      {#each items as item (item.id)}
+      {#each visibleItems as item (item.id)}
         <div class="result-item-container">
           <button
             class="result-item"
@@ -193,7 +190,7 @@
               {#if item.subtitle || item.location}
                 <div class="item-subtitle">
                   {#if item.subtitle}<span class="item-type">{item.subtitle}</span>{/if}
-                  {#if item.subtitle && item.location}<span class="item-divider">·</span>{/if}
+                  {#if item.subtitle && item.location}<span class="item-divider">&middot;</span>{/if}
                   {#if item.location}<span class="item-location">{item.location}</span>{/if}
                 </div>
               {/if}
@@ -229,6 +226,12 @@
           {/if}
         </div>
       {/each}
+
+      {#if hasMore && !showAll}
+        <button class="show-more-btn" onclick={() => showAll = true} type="button">
+          Show all {items.length} results ({items.length - DEFAULT_VISIBLE} more)
+        </button>
+      {/if}
     {/if}
   </div>
 </div>
@@ -416,6 +419,27 @@
     transition: all 0.15s;
   }
   .view-btn:hover { background: #f9fafb; border-color: #3b82f6; color: #3b82f6; }
+
+  .show-more-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.625rem 1rem;
+    background: white;
+    border: 1px dashed #d1d5db;
+    border-radius: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.15s;
+    width: 100%;
+  }
+  .show-more-btn:hover {
+    background: #f9fafb;
+    border-color: #3b82f6;
+    color: #3b82f6;
+  }
 
   .empty-state {
     display: flex;

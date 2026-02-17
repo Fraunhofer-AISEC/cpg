@@ -74,8 +74,8 @@ class ChatService {
         when (llmProvider) {
             "gemini" -> {
                 val apiKey =
-                    System.getenv("GOOGLE_API_KEY")
-                        ?: throw IllegalStateException("GOOGLE_API_KEY not set")
+                    System.getenv("GEMINI_API_KEY")
+                        ?: throw IllegalStateException("GEMINI_API_KEY not set")
                 GeminiClient(httpClient, llmModel, apiKey, llmBaseUrl)
             }
             else -> OpenAiClient(httpClient, llmModel, llmBaseUrl)

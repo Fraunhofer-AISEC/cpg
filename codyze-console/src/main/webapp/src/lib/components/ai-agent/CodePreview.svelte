@@ -47,7 +47,7 @@
     </button>
   </div>
 
-  <!-- Code Content - Using existing CodeViewer -->
+  <!-- Code Content -->
   <div class="preview-content">
     <CodeViewer
       {translationUnit}

@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils
 
-import de.fraunhofer.aisec.cpg.serialization.NodeJSON
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -59,8 +58,12 @@ data class OverlaySuggestion(
     val arguments: Map<String, String>? = null,
     val reasoning: String? = null,
     val securityImpact: String? = null,
-    val node: NodeJSON? = null,
-    val conceptNode: NodeJSON? = null,
+    val name: String? = null,
+    val type: String? = null,
+    val code: String? = null,
+    val fileName: String? = null,
+    val startLine: Int? = null,
+    val endLine: Int? = null,
 )
 
 @Serializable data class CpgApplyConceptsPayload(val items: List<OverlaySuggestion>)

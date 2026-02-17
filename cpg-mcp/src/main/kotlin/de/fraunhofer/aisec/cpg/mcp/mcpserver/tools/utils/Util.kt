@@ -29,9 +29,13 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
+import de.fraunhofer.aisec.cpg.graph.callees
 import de.fraunhofer.aisec.cpg.graph.concepts.Concept
 import de.fraunhofer.aisec.cpg.graph.concepts.Operation
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
 import de.fraunhofer.aisec.cpg.graph.listOverlayClasses
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.globalAnalysisResult
 import de.fraunhofer.aisec.cpg.query.QueryTree
 import de.fraunhofer.aisec.cpg.serialization.NodeJSON
@@ -56,6 +60,42 @@ fun <T> QueryTree<T>.toQueryTreeNode(): QueryTreeNode {
 fun Node.toJson() = Json.encodeToString(this.toJSON())
 
 fun OverlayNode.toJson() = Json.encodeToString(OverlayInfo(this))
+
+fun FunctionDeclaration.toSummary() =
+    FunctionSummary(
+        id = this.id.toString(),
+        name = this.name.localName,
+        fileName = this.location?.artifactLocation?.fileName,
+        startLine = this.location?.region?.startLine,
+        endLine = this.location?.region?.endLine,
+        parameters = this.parameters.map { "${it.type.typeName} ${it.name.localName}" },
+        returnType = this.returnTypes.firstOrNull()?.typeName,
+        callees = this.callees.map { it.name.localName },
+        code = this.code,
+    )
+
+fun RecordDeclaration.toSummary() =
+    RecordSummary(
+        id = this.id.toString(),
+        name = this.name.localName,
+        fileName = this.location?.artifactLocation?.fileName,
+        startLine = this.location?.region?.startLine,
+        endLine = this.location?.region?.endLine,
+        kind = this.kind,
+        fieldCount = this.fields.size,
+        methodNames = this.methods.map { it.name.localName },
+    )
+
+fun CallExpression.toSummary() =
+    CallSummary(
+        id = this.id.toString(),
+        name = this.name.localName,
+        fileName = this.location?.artifactLocation?.fileName,
+        startLine = this.location?.region?.startLine,
+        endLine = this.location?.region?.endLine,
+        arguments = this.arguments.map { "${it.type.typeName} ${it.name.localName}" },
+        code = this.code,
+    )
 
 /** Returns all available concrete (non-abstract) concept classes. */
 fun getAvailableConcepts(): List<Class<out Concept>> {

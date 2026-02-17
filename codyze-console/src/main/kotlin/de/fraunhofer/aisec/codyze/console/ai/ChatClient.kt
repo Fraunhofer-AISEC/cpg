@@ -88,6 +88,9 @@ class ChatClient(
         }
     }
 
+    /** Maximum number of tool call iterations before forcing a text response. */
+    private val maxToolIterations = 8
+
     /** Process a chat query using the LLM with MCP tool support */
     fun chat(request: ChatRequestJSON): Flow<String> = channelFlow {
         send(Events.keepalive())
@@ -96,7 +99,10 @@ class ChatClient(
         val conversationHistory = request.messages
 
         try {
-            val toolCalls =
+            val maxAgentSteps = mutableListOf<List<ToolCallWithResult>>()
+            var counter = 0
+
+            var toolCalls =
                 llm.sendPrompt(
                     userMessage = userMessage,
                     conversationHistory = conversationHistory,
@@ -105,20 +111,24 @@ class ChatClient(
                     onReasoning = { thought -> send(Events.reasoning(thought)) },
                 )
 
-            if (toolCalls.isNotEmpty()) {
-                val toolResults =
+            while (toolCalls.isNotEmpty() && counter < maxToolIterations) {
+                counter++
+                val roundtripResults =
                     toolCalls.map { toolCall ->
                         val result = executeToolCall(toolCall) { jsonEvent -> send(jsonEvent) }
                         ToolCallWithResult(toolCall, result)
                     }
+                maxAgentSteps.add(roundtripResults)
 
-                llm.sendPrompt(
-                    userMessage = userMessage,
-                    conversationHistory = conversationHistory,
-                    toolResults = toolResults,
-                    onText = { text -> send(Events.text(text)) },
-                    onReasoning = { thought -> send(Events.reasoning(thought)) },
-                )
+                toolCalls =
+                    llm.sendPrompt(
+                        userMessage = userMessage,
+                        conversationHistory = conversationHistory,
+                        maxAgentSteps = maxAgentSteps,
+                        tools = tools,
+                        onText = { text -> send(Events.text(text)) },
+                        onReasoning = { thought -> send(Events.reasoning(thought)) },
+                    )
             }
         } catch (e: Exception) {
             println("[LLM] Error: ${e.message}")

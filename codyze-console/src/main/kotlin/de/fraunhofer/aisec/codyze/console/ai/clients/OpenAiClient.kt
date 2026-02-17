@@ -91,12 +91,14 @@ class OpenAiClient(
         userMessage: String,
         conversationHistory: List<ChatMessageJSON>,
         tools: List<Tool>,
-        toolResults: List<ToolCallWithResult>?,
+        maxAgentSteps: List<List<ToolCallWithResult>>?,
         onText: suspend (String) -> Unit,
         onReasoning: suspend (String) -> Unit,
     ): List<ToolCall> {
         val collectedToolCalls = mutableListOf<ToolCall>()
         val accumulatedToolCalls = mutableListOf<JsonObject>()
+
+        var callIdCounter = 0
 
         val messages = buildList {
             add(OpenAiMessage(role = "system", content = JsonPrimitive(SYSTEM_PROMPT)))
@@ -109,39 +111,43 @@ class OpenAiClient(
 
             add(OpenAiMessage(role = "user", content = JsonPrimitive(userMessage)))
 
-            if (toolResults != null) {
-                add(
-                    OpenAiMessage(
-                        role = "assistant",
-                        content = JsonPrimitive(""),
-                        toolCalls =
-                            toolResults.mapIndexed { index, tr ->
-                                OpenAiToolCall(
-                                    id = "call_$index",
-                                    type = "function",
-                                    function =
-                                        OpenAiFunctionCall(
-                                            name = tr.call.name,
-                                            arguments = tr.call.arguments,
-                                        ),
-                                )
-                            },
-                    )
-                )
-                toolResults.forEachIndexed { index, tr ->
+            if (maxAgentSteps != null) {
+                for (agentStep in maxAgentSteps) {
+                    val startId = callIdCounter
                     add(
                         OpenAiMessage(
-                            role = "tool",
-                            toolCallId = "call_$index",
-                            content = JsonPrimitive(tr.result),
+                            role = "assistant",
+                            content = JsonPrimitive(""),
+                            toolCalls =
+                                agentStep.mapIndexed { index, tr ->
+                                    OpenAiToolCall(
+                                        id = "call_${startId + index}",
+                                        type = "function",
+                                        function =
+                                            OpenAiFunctionCall(
+                                                name = tr.call.name,
+                                                arguments = tr.call.arguments,
+                                            ),
+                                    )
+                                },
                         )
                     )
+                    agentStep.forEachIndexed { index, tr ->
+                        add(
+                            OpenAiMessage(
+                                role = "tool",
+                                toolCallId = "call_${startId + index}",
+                                content = JsonPrimitive(tr.result),
+                            )
+                        )
+                    }
+                    callIdCounter += agentStep.size
                 }
             }
         }
 
         val openAiTools =
-            if (toolResults == null && tools.isNotEmpty()) {
+            if (tools.isNotEmpty()) {
                 tools.map { tool ->
                     OpenAiTool(
                         type = "function",
