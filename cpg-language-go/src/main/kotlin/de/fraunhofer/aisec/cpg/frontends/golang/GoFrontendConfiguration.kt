@@ -29,7 +29,9 @@ import de.fraunhofer.aisec.cpg.frontends.FrontendConfiguration
 import de.fraunhofer.aisec.cpg.graph.FrontendProvider
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 
-class GoFrontendConfiguration : FrontendConfiguration<GoLanguageFrontend>() {
+abstract class GoFrontendConfiguration() : FrontendConfiguration<GoLanguageFrontend>()
+
+class NoDependenciesGoFrontendConfiguration : FrontendConfiguration<GoLanguageFrontend>() {
     /**
      * By default, we do not parse the body of functions in dependencies, as they are often large
      * and not relevant for analysis. This can be overridden by providing a custom
@@ -41,5 +43,12 @@ class GoFrontendConfiguration : FrontendConfiguration<GoLanguageFrontend>() {
     context(provider: FrontendProvider<GoLanguageFrontend>)
     override fun doNotParseBody(node: FunctionDeclaration): Boolean {
         return provider.frontend.isDependency
+    }
+}
+
+class EmptyGoFrontendConfiguration() : GoFrontendConfiguration() {
+    context(provider: FrontendProvider<GoLanguageFrontend>)
+    override fun doNotParseBody(node: FunctionDeclaration): Boolean {
+        return false // Always parse the body of functions
     }
 }

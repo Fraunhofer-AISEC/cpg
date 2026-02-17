@@ -75,8 +75,8 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
     var currentFile: GoStandardLibrary.Ast.File? = null
 
     override val frontendConfiguration: GoFrontendConfiguration by lazy {
-        (this.ctx.config.frontendConfigurations[this::class] as? GoFrontendConfiguration)
-            ?: GoFrontendConfiguration()
+        this.ctx.config.frontendConfigurations[this::class] as? GoFrontendConfiguration
+            ?: NoDependenciesGoFrontendConfiguration()
     }
 
     var isDependency: Boolean = false
