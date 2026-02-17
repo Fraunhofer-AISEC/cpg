@@ -120,12 +120,10 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
     @get:JsonIgnore abstract val builtInTypes: Map<String, Type>
 
     /** The access modifiers of this programming language */
-    open val accessModifiers: Set<String>
-        get() = setOf("public", "protected", "private")
+    open val accessModifiers: Set<String> = setOf("public", "protected", "private")
 
     /** The arithmetic operations of this language */
-    open val arithmeticOperations: Set<String>
-        get() = setOf("+", "-", "*", "/", "%", "<<", ">>")
+    open val arithmeticOperations: Set<String> = setOf("+", "-", "*", "/", "%", "<<", ">>")
 
     /** All operators which perform and assignment and an operation using lhs and rhs. */
     abstract val compoundAssignmentOperators: Set<String>

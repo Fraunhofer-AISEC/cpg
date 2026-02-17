@@ -242,6 +242,14 @@ interface ContextProvider : MetadataProvider {
 }
 
 /**
+ * A simple interface that everything that supplies a language frontend should implement. Most
+ * prominent examples are [Handler]s.
+ */
+interface FrontendProvider<L : LanguageFrontend<*, *>> {
+    val frontend: L
+}
+
+/**
  * This [MetadataProvider] makes sure that we can type our node builder functions correctly. For
  * language frontend and handlers, [T] should be set to the type of the raw node. For passes, [T]
  * should be set to [Nothing], since we do not have raw nodes there.

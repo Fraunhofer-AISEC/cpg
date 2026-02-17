@@ -36,6 +36,8 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
 import sootup.apk.frontend.ApkAnalysisInputLocation
+import sootup.apk.frontend.DexBodyInterceptors
+import sootup.core.cache.provider.LRUCacheProvider
 import sootup.core.model.Body
 import sootup.core.model.SootMethod
 import sootup.core.model.SourceType
@@ -43,14 +45,7 @@ import sootup.core.transform.BodyInterceptor
 import sootup.core.types.ArrayType
 import sootup.core.types.UnknownType
 import sootup.core.util.printer.NormalStmtPrinter
-import sootup.interceptors.Aggregator
-import sootup.interceptors.CastAndReturnInliner
-import sootup.interceptors.CopyPropagator
-import sootup.interceptors.EmptySwitchEliminator
-import sootup.interceptors.LocalNameStandardizer
-import sootup.interceptors.NopEliminator
-import sootup.interceptors.TypeAssigner
-import sootup.interceptors.UnreachableCodeEliminator
+import sootup.interceptors.*
 import sootup.java.bytecode.frontend.inputlocation.JavaClassPathAnalysisInputLocation
 import sootup.java.core.views.JavaView
 import sootup.java.frontend.inputlocation.JavaSourcePathAnalysisInputLocation
@@ -69,6 +64,11 @@ class JVMLanguageFrontend(
     val expressionHandler = ExpressionHandler(this)
 
     lateinit var view: JavaView
+
+    override val frontendConfiguration: JVMFrontendConfiguration by lazy {
+        (this.ctx.config.frontendConfigurations[this::class] as? JVMFrontendConfiguration)
+            ?: JVMFrontendConfiguration()
+    }
 
     var body: Body? = null
 
@@ -123,9 +123,14 @@ class JVMLanguageFrontend(
                     )
                 }
                 "apk" -> {
-                    val apkAnalysis = ApkAnalysisInputLocation(file.toPath(), "", bodyInterceptors)
+                    val apkAnalysis =
+                        ApkAnalysisInputLocation(
+                            file.toPath(),
+                            "",
+                            DexBodyInterceptors.Default.bodyInterceptors(),
+                        )
 
-                    JavaView(apkAnalysis)
+                    JavaView(listOf(apkAnalysis), LRUCacheProvider(2))
                 }
                 "jimple" -> {
                     JimpleView(
@@ -182,6 +187,12 @@ class JVMLanguageFrontend(
             try {
                 return astNode.body.toString()
             } catch (e: IllegalArgumentException) {
+                log.error("Could not retrieve the code of $astNode", e)
+            }
+        } else {
+            try {
+                return astNode.toString()
+            } catch (e: Exception) {
                 log.error("Could not retrieve the code of $astNode", e)
             }
         }
