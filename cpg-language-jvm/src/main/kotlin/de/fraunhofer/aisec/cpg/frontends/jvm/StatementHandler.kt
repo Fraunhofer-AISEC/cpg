@@ -40,24 +40,32 @@ class StatementHandler(frontend: JVMLanguageFrontend) :
     Handler<Statement?, Any, JVMLanguageFrontend>(::ProblemExpression, frontend) {
 
     override fun handle(ctx: Any): Statement? {
-        return when (ctx) {
-            is Body -> handleBody(ctx)
-            is JAssignStmt -> handleAbstractDefinitionStmt(ctx)
-            is JIdentityStmt -> handleAbstractDefinitionStmt(ctx)
-            is JIfStmt -> handleIfStmt(ctx)
-            is JGotoStmt -> handleGotoStmt(ctx)
-            is JInvokeStmt -> handleInvokeStmt(ctx)
-            is JReturnStmt -> handleReturnStmt(ctx)
-            is JReturnVoidStmt -> handleReturnVoidStmt(ctx)
-            is JThrowStmt -> handleThrowExpression(ctx)
-            is JNopStmt -> newEmptyStatement(ctx)
-            else -> {
-                log.warn("Unhandled statement type: ${ctx.javaClass.simpleName}")
-                newProblemExpression(
-                    "Unhandled statement type: ${ctx.javaClass.simpleName}",
-                    rawNode = ctx,
-                )
+        try {
+            return when (ctx) {
+                is Body -> handleBody(ctx)
+                is JAssignStmt -> handleAbstractDefinitionStmt(ctx)
+                is JIdentityStmt -> handleAbstractDefinitionStmt(ctx)
+                is JIfStmt -> handleIfStmt(ctx)
+                is JGotoStmt -> handleGotoStmt(ctx)
+                is JInvokeStmt -> handleInvokeStmt(ctx)
+                is JReturnStmt -> handleReturnStmt(ctx)
+                is JReturnVoidStmt -> handleReturnVoidStmt(ctx)
+                is JThrowStmt -> handleThrowExpression(ctx)
+                is JNopStmt -> newEmptyStatement(ctx)
+                else -> {
+                    log.warn("Unhandled statement type: ${ctx.javaClass.simpleName}")
+                    newProblemExpression(
+                        "Unhandled statement type: ${ctx.javaClass.simpleName}",
+                        rawNode = ctx,
+                    )
+                }
             }
+        } catch (e: Exception) {
+            log.error("Error while handling a statement", e)
+            return newProblemExpression(
+                "Error handling statement ${ctx}: ${e.message}",
+                rawNode = ctx,
+            )
         }
     }
 

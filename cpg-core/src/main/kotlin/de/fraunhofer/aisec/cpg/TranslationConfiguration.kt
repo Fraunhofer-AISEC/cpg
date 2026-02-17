@@ -31,6 +31,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import de.fraunhofer.aisec.cpg.TranslationContext.EmptyTranslationContext
 import de.fraunhofer.aisec.cpg.TranslationResult.Companion.DEFAULT_APPLICATION_NAME
 import de.fraunhofer.aisec.cpg.frontends.CompilationDatabase
+import de.fraunhofer.aisec.cpg.frontends.FrontendConfiguration
 import de.fraunhofer.aisec.cpg.frontends.KClassSerializer
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
@@ -124,6 +125,8 @@ private constructor(
     matchCommentsToNodes: Boolean,
     addIncludesToGraph: Boolean,
     passConfigurations: Map<KClass<out Pass<*>>, PassConfiguration>,
+    frontendConfigurations:
+        Map<KClass<out LanguageFrontend<*, *>>, FrontendConfiguration<out LanguageFrontend<*, *>>>,
     /** The maximum number a pass will get executed, in order to prevent loops. */
     val maxPassExecutions: Int,
     /** A list of exclusion patterns used to filter files and directories. */
@@ -200,8 +203,9 @@ private constructor(
 
     /** This sub configuration object holds all information about inference and smart-guessing. */
     val inferenceConfiguration: InferenceConfiguration
-
     val passConfigurations: Map<KClass<out Pass<*>>, PassConfiguration>
+    val frontendConfigurations:
+        Map<KClass<out LanguageFrontend<*, *>>, FrontendConfiguration<out LanguageFrontend<*, *>>>
 
     init {
         this.registeredPasses = passes
@@ -218,6 +222,7 @@ private constructor(
         this.matchCommentsToNodes = matchCommentsToNodes
         this.addIncludesToGraph = addIncludesToGraph
         this.passConfigurations = passConfigurations
+        this.frontendConfigurations = frontendConfigurations
     }
 
     /** Returns a list of all analyzed files. */
@@ -271,6 +276,12 @@ private constructor(
         private var addIncludesToGraph = true
         private var useDefaultPasses = false
         private var passConfigurations: MutableMap<KClass<out Pass<*>>, PassConfiguration> =
+            mutableMapOf()
+        private var frontendConfigurations:
+            MutableMap<
+                KClass<out LanguageFrontend<*, *>>,
+                FrontendConfiguration<out LanguageFrontend<*, *>>,
+            > =
             mutableMapOf()
         private var maxPassExecutions = 5
         private val exclusionPatternsByRegex = mutableListOf<Regex>()
@@ -469,6 +480,38 @@ private constructor(
         inline fun <reified T : Language<*>> registerLanguage(): Builder {
             registerLanguage(T::class)
             return this
+        }
+
+        /**
+         * Configures a [LanguageFrontend] with a [FrontendConfiguration] [config]. This allows us
+         * to pass additional information to the frontend, such methods which should not be analyzed
+         * to save memory (e.g., library methods).
+         *
+         * @param clazz The class of the [LanguageFrontend] for which the configuration should be
+         *   applied.
+         * @param config The configuration to apply for the specified [LanguageFrontend].
+         * @return this
+         */
+        fun <T : LanguageFrontend<*, *>> configureFrontend(
+            clazz: KClass<T>,
+            config: FrontendConfiguration<T>,
+        ): Builder {
+            this.frontendConfigurations[clazz] = config
+            return this
+        }
+
+        /**
+         * Configures a [LanguageFrontend] with the [FrontendConfiguration] [config]. This allows us
+         * to pass additional information to the frontend, such methods which should not be analyzed
+         * to save memory (e.g., library methods).
+         *
+         * @param config The configuration to apply for the specified [LanguageFrontend].
+         * @return this
+         */
+        inline fun <reified T : LanguageFrontend<*, *>> configureFrontend(
+            config: FrontendConfiguration<T>
+        ): Builder {
+            return this.configureFrontend(T::class, config)
         }
 
         fun <T : Pass<*>> configurePass(clazz: KClass<T>, config: PassConfiguration): Builder {
@@ -720,6 +763,7 @@ private constructor(
                 matchCommentsToNodes,
                 addIncludesToGraph,
                 passConfigurations,
+                frontendConfigurations,
                 maxPassExecutions,
                 exclusionPatternsByString,
                 exclusionPatternsByRegex,
