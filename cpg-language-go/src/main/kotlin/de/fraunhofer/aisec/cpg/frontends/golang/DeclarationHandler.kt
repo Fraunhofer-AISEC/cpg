@@ -139,7 +139,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
         handleFuncParams(func, funcDecl.type.params)
 
         // Only parse function body in non-dependencies
-        if (this.frontend.frontendConfiguration?.doNotParseBody(this.frontend, func) != true) {
+        if (!frontend.frontendConfiguration.doNotParseBody(func)) {
             // Check, if the last statement is a return statement, otherwise we insert an implicit
             // one
             val body = funcDecl.body?.let { frontend.statementHandler.handle(it) }

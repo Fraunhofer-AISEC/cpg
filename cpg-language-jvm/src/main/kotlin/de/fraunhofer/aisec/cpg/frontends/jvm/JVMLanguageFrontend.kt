@@ -65,8 +65,9 @@ class JVMLanguageFrontend(
 
     lateinit var view: JavaView
 
-    override val frontendConfiguration: JVMFrontendConfiguration? by lazy {
-        this.ctx.config.frontendConfigurations[this::class] as? JVMFrontendConfiguration
+    override val frontendConfiguration: JVMFrontendConfiguration by lazy {
+        (this.ctx.config.frontendConfigurations[this::class] as? JVMFrontendConfiguration)
+            ?: JVMFrontendConfiguration()
     }
 
     var body: Body? = null

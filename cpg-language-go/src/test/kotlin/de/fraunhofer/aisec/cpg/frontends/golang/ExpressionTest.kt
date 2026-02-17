@@ -43,7 +43,6 @@ class ExpressionTest {
                 true,
             ) {
                 it.registerLanguage<GoLanguage>()
-                it.configureFrontend<GoLanguageFrontend>(GoFrontendConfiguration())
             }
         assertNotNull(tu)
 
@@ -74,7 +73,6 @@ class ExpressionTest {
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("slices.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
-                it.configureFrontend<GoLanguageFrontend>(GoFrontendConfiguration())
             }
         assertNotNull(tu)
 
@@ -132,7 +130,6 @@ class ExpressionTest {
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("chan.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
-                it.configureFrontend<GoLanguageFrontend>(GoFrontendConfiguration())
             }
         assertNotNull(tu)
 
@@ -169,7 +166,6 @@ class ExpressionTest {
                 true,
             ) {
                 it.registerLanguage<GoLanguage>()
-                it.configureFrontend<GoLanguageFrontend>(GoFrontendConfiguration())
             }
         assertNotNull(tu)
 

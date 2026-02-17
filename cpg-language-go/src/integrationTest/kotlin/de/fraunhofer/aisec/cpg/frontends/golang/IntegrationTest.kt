@@ -59,7 +59,6 @@ class IntegrationTest {
                     .symbols(project.symbols)
                     .includePath(project.includePaths.first().path)
                     .registerLanguage<GoLanguage>()
-                    .configureFrontend<GoLanguageFrontend>(GoFrontendConfiguration())
                     .defaultPasses()
             )
         assertNotNull(tus)

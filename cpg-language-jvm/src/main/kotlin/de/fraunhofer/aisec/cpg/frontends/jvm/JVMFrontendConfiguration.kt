@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.jvm
 
 import de.fraunhofer.aisec.cpg.frontends.FrontendConfiguration
+import de.fraunhofer.aisec.cpg.graph.FrontendProvider
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
 
@@ -34,12 +35,13 @@ class JVMFrontendConfiguration(val packagesToIgnore: List<String> = listOf()) :
     /**
      * Determines whether the body of a function should NOT be parsed.
      *
-     * @param frontend The language frontend
+     * @param provider A provider for a [JVMLanguageFrontend]
      * @param node The function declaration to check
      * @return true if the function's package matches any package in [packagesToIgnore] (skip
      *   parsing), false otherwise (parse the body)
      */
-    override fun doNotParseBody(frontend: JVMLanguageFrontend, node: FunctionDeclaration): Boolean {
+    context(provider: FrontendProvider<JVMLanguageFrontend>)
+    override fun doNotParseBody(node: FunctionDeclaration): Boolean {
         return this.packagesToIgnore.any {
             (node as? MethodDeclaration)?.recordDeclaration?.name.toString().startsWith(it)
         }

@@ -26,10 +26,20 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.frontends.FrontendConfiguration
+import de.fraunhofer.aisec.cpg.graph.FrontendProvider
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 
-class GoFrontendConfiguration() : FrontendConfiguration<GoLanguageFrontend>() {
-    override fun doNotParseBody(frontend: GoLanguageFrontend, node: FunctionDeclaration): Boolean {
-        return frontend.isDependency
+class GoFrontendConfiguration : FrontendConfiguration<GoLanguageFrontend>() {
+    /**
+     * By default, we do not parse the body of functions in dependencies, as they are often large
+     * and not relevant for analysis. This can be overridden by providing a custom
+     * [GoFrontendConfiguration].
+     *
+     * @param provider A provider for a [GoLanguageFrontend]
+     * @param node The function declaration to check
+     */
+    context(provider: FrontendProvider<GoLanguageFrontend>)
+    override fun doNotParseBody(node: FunctionDeclaration): Boolean {
+        return provider.frontend.isDependency
     }
 }

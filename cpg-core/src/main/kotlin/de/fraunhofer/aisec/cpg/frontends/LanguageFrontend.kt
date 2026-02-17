@@ -44,10 +44,10 @@ abstract class FrontendConfiguration<L : LanguageFrontend<*, *>> {
      *
      * @param frontend The language frontend
      * @param node The function declaration to check
-     * @return true if the function's package matches any package in [packagesToIgnore] (skip
-     *   parsing), false otherwise (parse the body)
+     * @return true if the function's body should not be parsed, false otherwise (parse the body)
      */
-    abstract fun doNotParseBody(frontend: L, node: FunctionDeclaration): Boolean
+    context(provider: FrontendProvider<L>)
+    abstract fun doNotParseBody(node: FunctionDeclaration): Boolean
 }
 
 /**

@@ -43,7 +43,6 @@ class DeclarationTest {
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("unnamed.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
-                it.configureFrontend<GoLanguageFrontend>(GoFrontendConfiguration())
             }
         assertNotNull(tu)
 
@@ -65,7 +64,6 @@ class DeclarationTest {
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("unnamed.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
-                it.configureFrontend<GoLanguageFrontend>(GoFrontendConfiguration())
             }
         assertNotNull(tu)
 
@@ -87,7 +85,6 @@ class DeclarationTest {
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("struct.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
-                it.configureFrontend<GoLanguageFrontend>(GoFrontendConfiguration())
             }
         assertNotNull(tu)
 
@@ -182,7 +179,6 @@ class DeclarationTest {
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("embed.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
-                it.configureFrontend<GoLanguageFrontend>(GoFrontendConfiguration())
             }
         assertNotNull(tu)
 
@@ -207,7 +203,6 @@ class DeclarationTest {
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("declare.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
-                it.configureFrontend<GoLanguageFrontend>(GoFrontendConfiguration())
             }
         assertNotNull(tu)
 
@@ -273,7 +268,6 @@ class DeclarationTest {
                 true,
             ) {
                 it.registerLanguage<GoLanguage>()
-                it.configureFrontend<GoLanguageFrontend>(GoFrontendConfiguration())
             }
         assertNotNull(tu)
 
@@ -290,7 +284,6 @@ class DeclarationTest {
         val result =
             analyze(listOf(topLevel.resolve("const.go").toFile()), topLevel, true) {
                 it.registerLanguage<GoLanguage>()
-                it.configureFrontend<GoLanguageFrontend>(GoFrontendConfiguration())
             }
         assertNotNull(result)
 
@@ -336,7 +329,6 @@ class DeclarationTest {
                 true,
             ) {
                 it.registerLanguage<GoLanguage>()
-                it.configureFrontend<GoLanguageFrontend>(GoFrontendConfiguration())
                 it.includePath(stdLib)
             }
         assertNotNull(result)
@@ -372,7 +364,6 @@ class DeclarationTest {
                 true,
             ) {
                 it.registerLanguage<GoLanguage>()
-                it.configureFrontend<GoLanguageFrontend>(GoFrontendConfiguration())
             }
         assertNotNull(result)
 
