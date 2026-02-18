@@ -1042,7 +1042,7 @@ class DFGTest {
     }
 
     @Test
-    fun testConstructorKeywordArgDFG() {
+    fun testInferredConstructorArgDFG() {
         val topLevel = Path.of("src", "test", "resources", "python")
         val result =
             analyze(

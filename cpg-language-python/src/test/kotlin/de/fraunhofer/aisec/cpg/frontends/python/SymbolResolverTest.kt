@@ -144,11 +144,9 @@ class SymbolResolverTest {
         val serviceClass = result.records["Service"]
         assertNotNull(serviceClass)
 
-        // Check that the field 'client' exists on Service
         val clientField = serviceClass.fields["client"]
-        assertIs<FieldDeclaration>(clientField, "Expected a field 'client' on Service")
+        assertIs<FieldDeclaration>(clientField, "Expected a field 'client'")
 
-        // The field should have type Client (not UNKNOWN)
         val fieldType = clientField.type
         assertIs<ObjectType>(fieldType, "Expected field 'client' to have an ObjectType")
 
@@ -159,5 +157,19 @@ class SymbolResolverTest {
         assertNotNull(sendCall)
         assertIs<MemberCallExpression>(sendCall)
         assertInvokes(sendCall, sendMethod)
+    }
+
+    @Test
+    fun testFieldCallResolution2() {
+        val topLevel = File("src/test/resources/python/field_call_resolution.py")
+        val result =
+            analyze(listOf(topLevel), topLevel.toPath(), true) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        // TODO: Not sure if this fix in PythonAddDeclarationsPass is correct, as in some cases like
+        // the following one it won't work
+        /** def __init__(self, client): self.client = client or Client() */
     }
 }
