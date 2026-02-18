@@ -51,7 +51,7 @@ fun <T> QueryTree<T>.toQueryTreeNode(): QueryTreeNode {
     return QueryTreeNode(
         queryTreeId = this.id.toString(),
         value = this.value.toString(),
-        node = this.node?.toJSON(noEdges = true),
+        node = this.node?.toJSON(noEdges = false),
         children = this.children.map { it.toQueryTreeNode() },
     )
 }
