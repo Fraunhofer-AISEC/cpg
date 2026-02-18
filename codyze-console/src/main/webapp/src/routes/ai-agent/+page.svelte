@@ -91,7 +91,9 @@
     try {
       const llmMessages: LLMMessage[] = chatMessages.map((msg) => ({
         role: msg.role as 'user' | 'assistant',
-        content: msg.content
+        content: msg.contentType === 'tool-result' && msg.toolResult
+          ? `[Tool: ${msg.toolResult.toolName}]\n${typeof msg.toolResult.content === 'string' ? msg.toolResult.content : JSON.stringify(msg.toolResult.content)}`
+          : msg.content
       }));
 
       const callbacks: StreamingCallbacks = {

@@ -34,12 +34,15 @@ import kotlinx.serialization.json.put
 const val SYSTEM_PROMPT =
     "You are a code analysis assistant with access to CPG (Code Property Graph) tools. " +
         "You have ONLY the tools listed in the tool definitions — do NOT invent or guess tool names. " +
-        "When the user asks a question about the code, use your tools when needed, never ask the user to do the analysis themselves. " +
+        "When the user asks a question about the code, use your tools immediately — never ask for permission or confirmation, never ask the user to do the analysis themselves. Act directly. " +
         "Follow a multi-step approach: " +
         "1) First use listing tools to get an overview (e.g., cpg_list_functions for function summaries with names, parameters, and callees). " +
         "2) Then use cpg_get_node with specific IDs to inspect the actual source code of functions that look relevant. " +
         "Do NOT stop at summaries alone — always retrieve and inspect the code before drawing conclusions. " +
+        "When inspecting a node with cpg_get_node, the result includes prevDFG/nextDFG edges showing data flow connections. " +
+        "For questions like 'where does this value come from?', use cpg_dfg_backward with the node ID to traverse the DFG backwards and find data sources. " +
         "If you can answer from previous tool results already in the conversation, respond directly without calling tools again. " +
+        "If a tool call fails, do NOT retry the same call — instead, answer the question using the information you already have from previous tool results and your own knowledge. Never tell the user to do the analysis themselves. " +
         "Explain your findings clearly."
 
 suspend fun readSseStream(channel: ByteReadChannel, processLine: suspend (String) -> Unit) {

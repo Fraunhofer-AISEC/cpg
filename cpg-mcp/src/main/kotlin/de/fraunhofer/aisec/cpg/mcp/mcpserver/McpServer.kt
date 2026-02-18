@@ -37,9 +37,9 @@ fun configureServer(
         //        this.addListPasses()
         //        this.addRunPass()
         //        this.addCpgAnalyzeTool()
-        this.addCpgLlmAnalyzeTool()
-        this.addCpgApplyConceptsTool()
-        this.addCpgDataflowTool()
+        //        this.addCpgLlmAnalyzeTool()
+        //        this.addCpgApplyConceptsTool()
+        //        this.addCpgDataflowTool()
         this.listFunctions()
         this.listRecords()
         this.listCalls()
@@ -50,6 +50,7 @@ fun configureServer(
         //        this.getArgByIndexOrName()
         //        this.listConceptsAndOperations()
         this.getNode()
+        this.addDfgBackwardTool()
         this
     }
 ): Server {

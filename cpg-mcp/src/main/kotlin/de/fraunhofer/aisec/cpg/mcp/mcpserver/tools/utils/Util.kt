@@ -49,7 +49,7 @@ import kotlinx.serialization.json.JsonObject
 
 fun <T> QueryTree<T>.toQueryTreeNode(): QueryTreeNode {
     return QueryTreeNode(
-        id = this.id.toString(),
+        queryTreeId = this.id.toString(),
         value = this.value.toString(),
         node = this.node?.toJSON(noEdges = true),
         children = this.children.map { it.toQueryTreeNode() },
@@ -68,7 +68,14 @@ fun FunctionDeclaration.toSummary() =
         fileName = this.location?.artifactLocation?.fileName,
         startLine = this.location?.region?.startLine,
         endLine = this.location?.region?.endLine,
-        parameters = this.parameters.map { "${it.type.typeName} ${it.name.localName}" },
+        parameters =
+            this.parameters.map {
+                ParameterInfo(
+                    id = it.id.toString(),
+                    name = it.name.localName,
+                    type = it.type.typeName,
+                )
+            },
         returnType = this.returnTypes.firstOrNull()?.typeName,
         callees = this.callees.map { it.name.localName },
         code = this.code,

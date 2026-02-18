@@ -58,6 +58,8 @@ data class OverlayInfo(
     )
 }
 
+@Serializable data class ParameterInfo(val id: String, val name: String, val type: String)
+
 @Serializable
 data class FunctionSummary(
     val id: String,
@@ -65,7 +67,7 @@ data class FunctionSummary(
     val fileName: String?,
     val startLine: Int?,
     val endLine: Int?,
-    val parameters: List<String>,
+    val parameters: List<ParameterInfo>,
     val returnType: String?,
     val callees: List<String>,
     val code: String?,
@@ -112,7 +114,7 @@ data class DataflowResult(
 
 @Serializable
 data class QueryTreeNode(
-    val id: String,
+    val queryTreeId: String,
     val value: String,
     val node: NodeJSON?,
     val children: List<QueryTreeNode> = emptyList(),

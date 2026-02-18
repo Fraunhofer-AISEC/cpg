@@ -11,10 +11,10 @@
 
   // Suggested questions - project-wide
   const suggestedQuestions = [
-    'List all functions in the project',
-    'Find security vulnerabilities',
-    'Analyze data flows from user inputs',
-    'Show all external dependencies'
+    'List all functions and their parameters',
+    'What classes are defined?',
+    'Which function implements AES encryption?',
+    'What functions are called by the main entry point?'
   ];
 
   function handleSendMessage() {
