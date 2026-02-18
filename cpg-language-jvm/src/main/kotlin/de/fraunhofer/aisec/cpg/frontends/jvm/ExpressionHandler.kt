@@ -42,71 +42,79 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
     Handler<Expression, Value, JVMLanguageFrontend>(::ProblemExpression, frontend) {
 
     override fun handle(ctx: Value): Expression {
-        return when (ctx) {
-            is JCaughtExceptionRef -> handleExceptionRef(ctx)
-            is Local -> handleLocal(ctx)
-            is JThisRef -> handleThisRef(ctx)
-            is JParameterRef -> handleParameterRef(ctx)
-            is JInstanceFieldRef -> handleInstanceFieldRef(ctx)
-            is JStaticFieldRef -> handleStaticFieldRef(ctx)
-            is JArrayRef -> handleArrayRef(ctx)
-            is JInterfaceInvokeExpr -> handleInterfaceInvokeExpr(ctx)
-            is JVirtualInvokeExpr -> handleVirtualInvokeExpr(ctx)
-            is JDynamicInvokeExpr -> handleDynamicInvokeExpr(ctx)
-            is JSpecialInvokeExpr -> handleSpecialInvoke(ctx)
-            is JStaticInvokeExpr -> handleStaticInvoke(ctx)
-            is JNewExpr -> handleNewExpr(ctx)
-            is JNewArrayExpr -> handleNewArrayExpr(ctx)
-            is JNewMultiArrayExpr -> handleNewMultiArrayExpr(ctx)
-            is JCastExpr -> handleCastExpr(ctx)
-            // Binary operators
-            // - Equality checks
-            is JEqExpr,
-            is JNeExpr,
-            is JGeExpr,
-            is JGtExpr,
-            is JLeExpr,
-            is JLtExpr,
-            // - Numeric comparisons
-            is JCmpExpr,
-            is JCmplExpr,
-            is JCmpgExpr,
-            // - Simple arithmetics
-            is JAddExpr,
-            is JDivExpr,
-            is JMulExpr,
-            is JRemExpr,
-            is JSubExpr,
-            // - Binary arithmetics
-            is JAndExpr,
-            is JOrExpr,
-            is JShlExpr,
-            is JShrExpr,
-            is JUshrExpr,
-            is JXorExpr,
-            // Fallback, just to be sure
-            is AbstractBinopExpr -> handleAbstractBinopExpr(ctx)
-            // Unary operators
-            is JNegExpr -> handleNegExpr(ctx)
-            // Special operators, which we need to model as binary/unary operators
-            is JInstanceOfExpr -> handleInstanceOfExpr(ctx)
-            is JLengthExpr -> handleLengthExpr(ctx)
-            // Constants
-            is BooleanConstant -> handleBooleanConstant(ctx)
-            is FloatConstant -> handleFloatConstant(ctx)
-            is DoubleConstant -> handleDoubleConstant(ctx)
-            is IntConstant -> handleIntConstant(ctx)
-            is LongConstant -> handleLongConstant(ctx)
-            is StringConstant -> handleStringConstant(ctx)
-            is NullConstant -> handleNullConstant(ctx)
-            is ClassConstant -> handleClassConstant(ctx)
-            else -> {
-                log.warn("Unhandled expression type: ${ctx.javaClass.simpleName}")
-                newProblemExpression(
-                    "Unhandled expression type: ${ctx.javaClass.simpleName}",
-                    rawNode = ctx,
-                )
+        try {
+            return when (ctx) {
+                is JCaughtExceptionRef -> handleExceptionRef(ctx)
+                is Local -> handleLocal(ctx)
+                is JThisRef -> handleThisRef(ctx)
+                is JParameterRef -> handleParameterRef(ctx)
+                is JInstanceFieldRef -> handleInstanceFieldRef(ctx)
+                is JStaticFieldRef -> handleStaticFieldRef(ctx)
+                is JArrayRef -> handleArrayRef(ctx)
+                is JInterfaceInvokeExpr -> handleInterfaceInvokeExpr(ctx)
+                is JVirtualInvokeExpr -> handleVirtualInvokeExpr(ctx)
+                is JDynamicInvokeExpr -> handleDynamicInvokeExpr(ctx)
+                is JSpecialInvokeExpr -> handleSpecialInvoke(ctx)
+                is JStaticInvokeExpr -> handleStaticInvoke(ctx)
+                is JNewExpr -> handleNewExpr(ctx)
+                is JNewArrayExpr -> handleNewArrayExpr(ctx)
+                is JNewMultiArrayExpr -> handleNewMultiArrayExpr(ctx)
+                is JCastExpr -> handleCastExpr(ctx)
+                // Binary operators
+                // - Equality checks
+                is JEqExpr,
+                is JNeExpr,
+                is JGeExpr,
+                is JGtExpr,
+                is JLeExpr,
+                is JLtExpr,
+                // - Numeric comparisons
+                is JCmpExpr,
+                is JCmplExpr,
+                is JCmpgExpr,
+                // - Simple arithmetics
+                is JAddExpr,
+                is JDivExpr,
+                is JMulExpr,
+                is JRemExpr,
+                is JSubExpr,
+                // - Binary arithmetics
+                is JAndExpr,
+                is JOrExpr,
+                is JShlExpr,
+                is JShrExpr,
+                is JUshrExpr,
+                is JXorExpr,
+                // Fallback, just to be sure
+                is AbstractBinopExpr -> handleAbstractBinopExpr(ctx)
+                // Unary operators
+                is JNegExpr -> handleNegExpr(ctx)
+                // Special operators, which we need to model as binary/unary operators
+                is JInstanceOfExpr -> handleInstanceOfExpr(ctx)
+                is JLengthExpr -> handleLengthExpr(ctx)
+                // Constants
+                is BooleanConstant -> handleBooleanConstant(ctx)
+                is FloatConstant -> handleFloatConstant(ctx)
+                is DoubleConstant -> handleDoubleConstant(ctx)
+                is IntConstant -> handleIntConstant(ctx)
+                is LongConstant -> handleLongConstant(ctx)
+                is StringConstant -> handleStringConstant(ctx)
+                is NullConstant -> handleNullConstant(ctx)
+                is ClassConstant -> handleClassConstant(ctx)
+                else -> {
+                    log.warn("Unhandled expression type: ${ctx.javaClass.simpleName}")
+                    newProblemExpression(
+                        "Unhandled expression type: ${ctx.javaClass.simpleName}",
+                        rawNode = ctx,
+                    )
+                }
             }
+        } catch (e: Exception) {
+            log.error("Error while handling an expression", e)
+            return newProblemExpression(
+                "Error handling expression ${ctx}: ${e.message}",
+                rawNode = ctx,
+            )
         }
     }
 

@@ -74,6 +74,11 @@ class GoLanguageFrontend(ctx: TranslationContext, language: Language<GoLanguageF
     private var commentMap: GoStandardLibrary.Ast.CommentMap? = null
     var currentFile: GoStandardLibrary.Ast.File? = null
 
+    override val frontendConfiguration: GoFrontendConfiguration by lazy {
+        this.ctx.config.frontendConfigurations[this::class] as? GoFrontendConfiguration
+            ?: NoDependenciesGoFrontendConfiguration()
+    }
+
     var isDependency: Boolean = false
 
     val declarationHandler = DeclarationHandler(this)
