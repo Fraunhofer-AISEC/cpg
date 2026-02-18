@@ -140,7 +140,7 @@ class RustDeclarationsTest : BaseTest() {
 
     @Test
     fun testUnionDeclaration() {
-        val tu = parseTU("declarations_extended.rs")
+        val tu = parseTU("declarations.rs")
         assertNotNull(tu)
 
         val records = tu.records
@@ -156,7 +156,7 @@ class RustDeclarationsTest : BaseTest() {
 
     @Test
     fun testExternBlock() {
-        val tu = parseTU("declarations_extended.rs")
+        val tu = parseTU("declarations.rs")
         assertNotNull(tu)
 
         val namespaces = tu.allChildren<NamespaceDeclaration>()
@@ -173,7 +173,7 @@ class RustDeclarationsTest : BaseTest() {
 
     @Test
     fun testExternCrate() {
-        val tu = parseTU("declarations_extended.rs")
+        val tu = parseTU("declarations.rs")
         assertNotNull(tu)
 
         val includes = tu.allChildren<IncludeDeclaration>()
@@ -185,7 +185,7 @@ class RustDeclarationsTest : BaseTest() {
 
     @Test
     fun testInnerAttribute() {
-        val tu = parseTU("declarations_extended.rs")
+        val tu = parseTU("declarations.rs")
         assertNotNull(tu)
 
         // Inner attribute should produce a declaration with annotation
@@ -198,7 +198,7 @@ class RustDeclarationsTest : BaseTest() {
 
     @Test
     fun testEmptyStatement() {
-        val tu = parseTU("declarations_extended.rs")
+        val tu = parseTU("declarations.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_empty_statement"]
@@ -212,7 +212,7 @@ class RustDeclarationsTest : BaseTest() {
 
     @Test
     fun testSelfParameterRef() {
-        val tu = parseTU("declarations_extended.rs")
+        val tu = parseTU("declarations.rs")
         assertNotNull(tu)
 
         val point = tu.records["Point"]
@@ -244,7 +244,7 @@ class RustDeclarationsTest : BaseTest() {
 
     @Test
     fun testTraitWithAssociatedType() {
-        val tu = parseTU("declarations_extended.rs")
+        val tu = parseTU("declarations.rs")
         assertNotNull(tu)
 
         val shape = tu.records["Shape"]
@@ -263,7 +263,7 @@ class RustDeclarationsTest : BaseTest() {
 
     @Test
     fun testWhereClauseWithMultipleBounds() {
-        val tu = parseTU("declarations_extended.rs")
+        val tu = parseTU("declarations.rs")
         assertNotNull(tu)
 
         val templates = tu.allChildren<FunctionTemplateDeclaration>()
@@ -289,7 +289,7 @@ class RustDeclarationsTest : BaseTest() {
 
     @Test
     fun testBranchTupleStructs() {
-        val tu = parseTU("branch_coverage_declarations.rs")
+        val tu = parseTU("declarations.rs")
         assertNotNull(tu)
         val pair = tu.records["Pair"]
         assertNotNull(pair, "Should have Pair tuple struct")
@@ -301,7 +301,7 @@ class RustDeclarationsTest : BaseTest() {
 
     @Test
     fun testBranchMutParam() {
-        val tu = parseTU("branch_coverage_declarations.rs")
+        val tu = parseTU("declarations.rs")
         assertNotNull(tu)
         val func = tu.functions["test_mut_param"]
         assertNotNull(func, "Should have test_mut_param function")
@@ -310,7 +310,7 @@ class RustDeclarationsTest : BaseTest() {
 
     @Test
     fun testBranchAnnotatedImpl() {
-        val tu = parseTU("branch_coverage_declarations.rs")
+        val tu = parseTU("declarations.rs")
         assertNotNull(tu)
         val record = tu.records["MyType"]
         assertNotNull(record, "Should have MyType record")
@@ -324,7 +324,7 @@ class RustDeclarationsTest : BaseTest() {
 
     @Test
     fun testBranchAnnotatedModule() {
-        val tu = parseTU("branch_coverage_declarations.rs")
+        val tu = parseTU("declarations.rs")
         assertNotNull(tu)
         val namespaces = tu.allChildren<NamespaceDeclaration>()
         assertTrue(
@@ -335,7 +335,7 @@ class RustDeclarationsTest : BaseTest() {
 
     @Test
     fun testBranchExternCBlock() {
-        val tu = parseTU("branch_coverage_declarations.rs")
+        val tu = parseTU("declarations.rs")
         assertNotNull(tu)
         val funcs = tu.allChildren<FunctionDeclaration>()
         assertTrue(
@@ -346,7 +346,7 @@ class RustDeclarationsTest : BaseTest() {
 
     @Test
     fun testBranchEmptyStatementAndMacroDecl() {
-        val tu = parseTU("branch_coverage_declarations.rs")
+        val tu = parseTU("declarations.rs")
         assertNotNull(tu)
         val allDecls = tu.allChildren<Declaration>()
         assertTrue(allDecls.isNotEmpty(), "Should have declarations")
@@ -416,7 +416,7 @@ class RustDeclarationsTest : BaseTest() {
 
     @Test
     fun testDeepExternBlockFunctions() {
-        val tu = parseTU("declarations_extended.rs")
+        val tu = parseTU("declarations.rs")
         assertNotNull(tu)
         val allFuncs = tu.allChildren<FunctionDeclaration>()
         assertTrue(allFuncs.any { it.name.localName == "printf" }, "Should have extern fn printf")

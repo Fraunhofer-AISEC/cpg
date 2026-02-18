@@ -115,7 +115,7 @@ class RustTraitsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_declarations.rs").toFile()),
+                listOf(topLevel.resolve("declarations.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -132,7 +132,7 @@ class RustTraitsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_declarations.rs").toFile()),
+                listOf(topLevel.resolve("declarations.rs").toFile()),
                 topLevel,
                 true,
             ) {
