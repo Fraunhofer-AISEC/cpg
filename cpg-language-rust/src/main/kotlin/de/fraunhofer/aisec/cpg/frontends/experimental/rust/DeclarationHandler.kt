@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.experimental.rust
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import org.treesitter.TSNode
@@ -304,7 +305,24 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         val nameNode = node["name"]
         val name = nameNode.text()
 
-        val record = newRecordDeclaration(name, "struct", rawNode = node)
+        // Quickly check if we have already defined this record implicitly because of an impl block
+        // before the struct declaration. If so, we need to update the existing record instead of
+        // creating a new one.
+        val recordScope =
+            frontend.scopeManager
+                .filterScopes { it.name == parseName(name) && it is RecordScope }
+                .firstOrNull()
+        val implicitRecord = recordScope?.astNode as? RecordDeclaration
+
+        // Update existing implicit record or create new one
+        val record =
+            if (implicitRecord != null) {
+                implicitRecord.isImplicit = false
+                implicitRecord.setCodeAndLocation(frontend, node)
+                implicitRecord
+            } else {
+                newRecordDeclaration(name, "struct", rawNode = node)
+            }
 
         val typeParameters = node["type_parameters"]
         val template =
@@ -539,44 +557,39 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
 
         val typeNameString = typeNode.text()
         val typeName = Name(typeNameString, null, language.namespaceDelimiter)
+        val impl = newExtensionDeclaration(typeNameString)
 
-        // Try to find an existing record in the current scope
-        val existing = frontend.scopeManager.lookupSymbolByName(typeName, language)
-        var record = existing.firstOrNull { it is RecordDeclaration } as? RecordDeclaration
+        // Try to find an existing record scope with the type name
+        val recordScope =
+            frontend.scopeManager
+                .filterScopes { it.name == typeName && it is RecordScope }
+                .firstOrNull()
+        var record = recordScope?.astNode as? RecordDeclaration
 
-        if (record == null) {
-            record = newRecordDeclaration(typeNameString, "struct", rawNode = node)
-            frontend.scopeManager.addDeclaration(record)
+        if (record != null) {
+            impl.extendedDeclaration = record
+        } else {
+            // We are running into the situation that we define the impl block BEFORE the struct
+            // (which is allowed). But in this case we need to define an implicit record declaration
+            // for the struct, so that we have a record to attach the impl block to. We will get rid
+            // of this record declaration later.
+            record = newRecordDeclaration(typeNameString, "struct", rawNode = typeNode).implicit()
         }
+
+        // Enter the record's scope, so methods are added to the RecordScope
+        // which is where ObjectType.methods looks for them
+        frontend.scopeManager.enterScope(record)
 
         if (traitNode != null && !traitNode.isNull) {
             val traitNameString = traitNode.text()
             record.implementedInterfaces += objectType(traitNameString)
         }
 
-        frontend.scopeManager.enterScope(record)
-
         val body = node["body"]
-        if (body != null) {
-            val pendingAnnotations = mutableListOf<de.fraunhofer.aisec.cpg.graph.Annotation>()
-            for (child in body.children) {
-                if (child.type == "attribute_item") {
-                    pendingAnnotations += frontend.parseAttribute(child)
-                    continue
-                }
-                if (child.isNamed) {
-                    val decl = handle(child)
-                    if (pendingAnnotations.isNotEmpty()) {
-                        decl.annotations += pendingAnnotations
-                        pendingAnnotations.clear()
-                    }
-                    record.addDeclaration(decl)
-                }
-            }
-        }
+        handleChildrenWithAnnotations(body, impl)
 
         frontend.scopeManager.leaveScope(record)
-        return record
+        return impl
     }
 
     /**
@@ -592,6 +605,19 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
         frontend.scopeManager.enterScope(mod)
 
         val body = node["body"]
+        handleChildrenWithAnnotations(body, mod)
+
+        frontend.scopeManager.leaveScope(mod)
+        return mod
+    }
+
+    /**
+     * Helper method to process the children of a module, impl block, or trait body, handling inner
+     * attributes (annotations) and adding named declarations to the given [holder]. This is used
+     * for the bodies of `mod_item`, `impl_item`, and `trait_item`, which can all contain inner
+     * attributes that apply to their child declarations.
+     */
+    private fun handleChildrenWithAnnotations(body: TSNode?, holder: DeclarationHolder) {
         if (body != null) {
             val pendingAnnotations = mutableListOf<de.fraunhofer.aisec.cpg.graph.Annotation>()
             for (child in body.children) {
@@ -605,13 +631,10 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                         decl.annotations += pendingAnnotations
                         pendingAnnotations.clear()
                     }
-                    mod.addDeclaration(decl)
+                    holder.addDeclaration(decl)
                 }
             }
         }
-
-        frontend.scopeManager.leaveScope(mod)
-        return mod
     }
 
     /**

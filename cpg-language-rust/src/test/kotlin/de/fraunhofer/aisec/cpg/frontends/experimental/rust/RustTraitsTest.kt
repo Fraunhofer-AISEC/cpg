@@ -46,11 +46,12 @@ class RustTraitsTest : BaseTest() {
         assertNotNull(myTrait)
         assertEquals("trait", myTrait.kind)
 
-        val requiredMethod = myTrait.methods["required_method"]
+        val myTraitType = myTrait.toType()
+        val requiredMethod = myTraitType.methods["required_method"]
         assertNotNull(requiredMethod)
         assertFalse(requiredMethod.hasBody())
 
-        val defaultMethod = myTrait.methods["default_method"]
+        val defaultMethod = myTraitType.methods["default_method"]
         assertNotNull(defaultMethod)
         assertTrue(defaultMethod.hasBody())
 
@@ -58,7 +59,8 @@ class RustTraitsTest : BaseTest() {
         assertNotNull(myStruct)
 
         // Check implementation
-        val implMethod = myStruct.methods["required_method"]
+        val myStructType = myStruct.toType()
+        val implMethod = myStructType.methods["required_method"]
         assertNotNull(implMethod)
         assertEquals(myStruct, implMethod.recordDeclaration)
         assertTrue(implMethod.hasBody())
@@ -92,7 +94,8 @@ class RustTraitsTest : BaseTest() {
         assertEquals("trait", iteratorTrait.kind)
 
         // Iterator should have a "next" method signature
-        val nextMethod = iteratorTrait.methods["next"]
+        val iteratorType = iteratorTrait.toType()
+        val nextMethod = iteratorType.methods["next"]
         assertNotNull(nextMethod)
 
         // The Counter struct should implement Iterator
@@ -101,7 +104,8 @@ class RustTraitsTest : BaseTest() {
         assertTrue(counter.implementedInterfaces.any { it.name.localName == "Iterator" })
 
         // Counter should have a "next" method implementation
-        val counterNext = counter.methods["next"]
+        val counterType = counter.toType()
+        val counterNext = counterType.methods["next"]
         assertNotNull(counterNext)
         assertTrue(counterNext.hasBody())
     }

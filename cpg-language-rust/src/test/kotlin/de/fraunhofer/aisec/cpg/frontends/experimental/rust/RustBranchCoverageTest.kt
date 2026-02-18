@@ -294,8 +294,9 @@ class RustBranchCoverageTest : BaseTest() {
         assertNotNull(tu)
         val record = tu.records["Annotated"]
         assertNotNull(record, "Should have Annotated trait")
+        val recordType = record.toType()
         assertTrue(
-            record.methods.any { it.name.localName == "compute" },
+            recordType.methods.any { it.name.localName == "compute" },
             "Trait should have compute method",
         )
     }
@@ -310,7 +311,8 @@ class RustBranchCoverageTest : BaseTest() {
         assertNotNull(tu)
         val record = tu.records["MyType"]
         assertNotNull(record, "Should have MyType record")
-        val methods = record.methods
+        val recordType = record.toType()
+        val methods = recordType.methods
         assertTrue(
             methods.any { it.name.localName == "get_value" },
             "MyType should have get_value method",
@@ -472,18 +474,18 @@ class RustBranchCoverageTest : BaseTest() {
     fun testCounterMethods() {
         val tu = parseTU("branch_coverage.rs")
         assertNotNull(tu)
+
         val counter = tu.records["Counter"]
         assertNotNull(counter, "Should have Counter struct")
-        assertTrue(
-            counter.methods.any { it.name.localName == "increment" },
-            "Counter should have increment method",
-        )
-        assertTrue(
-            counter.methods.any { it.name.localName == "get" },
-            "Counter should have get method",
-        )
+
+        val counterType = counter.toType()
+        val incrementMethod = counterType.methods["increment"]
+        assertNotNull(incrementMethod, "Counter should have Increment method")
+
+        val getMethod = counterType.methods["get"]
+        assertNotNull(getMethod, "Counter should have Get method")
+
         // Check self parameter
-        val incrementMethod = counter.methods.first { it.name.localName == "increment" }
         assertNotNull(incrementMethod.receiver, "increment should have self receiver")
     }
 
@@ -645,9 +647,10 @@ class RustBranchCoverageTest : BaseTest() {
         assertNotNull(tu)
         val counter = tu.records["Counter"]
         assertNotNull(counter, "Should have Counter")
+        val counterType = counter.toType()
         // Check that Summary trait is implemented
         assertTrue(
-            counter.methods.any { it.name.localName == "summarize" },
+            counterType.methods.any { it.name.localName == "summarize" },
             "Counter should have summarize from Summary trait impl",
         )
     }
@@ -967,8 +970,9 @@ class RustBranchCoverageTest : BaseTest() {
         assertNotNull(tu)
         val record = tu.records["Container2"]
         assertNotNull(record, "Should have Container2 trait")
+        val recordType = record.toType()
         assertTrue(
-            record.methods.any { it.name.localName == "first" },
+            recordType.methods.any { it.name.localName == "first" },
             "Container2 should have first method",
         )
     }
@@ -1614,8 +1618,9 @@ class RustBranchCoverageTest : BaseTest() {
         assertNotNull(tu)
         val record = tu.records["TraitWithConst"]
         assertNotNull(record, "Should have TraitWithConst trait")
+        val recordType = record.toType()
         assertTrue(
-            record.methods.any { it.name.localName == "value" },
+            recordType.methods.any { it.name.localName == "value" },
             "TraitWithConst should have value method",
         )
     }

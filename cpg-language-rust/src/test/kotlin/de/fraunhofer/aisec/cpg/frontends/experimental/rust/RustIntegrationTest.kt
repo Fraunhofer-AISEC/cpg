@@ -72,15 +72,17 @@ class RustIntegrationTest : BaseTest() {
         val drawable = tu.records["Drawable"]
         assertNotNull(drawable)
         assertEquals("trait", drawable.kind)
-        assertNotNull(drawable.methods["draw"])
-        assertNotNull(drawable.methods["description"])
+        val drawableType = drawable.toType()
+        assertNotNull(drawableType.methods["draw"])
+        assertNotNull(drawableType.methods["description"])
 
         // === Impl ===
         assertTrue(
             point.implementedInterfaces.any { it.name.localName == "Drawable" },
             "Point should implement Drawable",
         )
-        assertNotNull(point.methods["draw"])
+        val pointType = point.toType()
+        assertNotNull(pointType.methods["draw"])
 
         // === Generic function with lifetime and trait bounds ===
         val processTemplate =

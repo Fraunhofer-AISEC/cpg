@@ -180,7 +180,8 @@ class RustFrontendTest : BaseTest() {
         assertEquals(2, myStruct.fields.size)
         assertEquals("field1", myStruct.fields.getOrNull(0)?.name?.localName)
 
-        val myMethod = myStruct.methods["my_method"]
+        val myStructType = myStruct.toType()
+        val myMethod = myStructType.methods["my_method"]
         assertNotNull(myMethod)
         assertEquals(myStruct, myMethod.recordDeclaration)
 
@@ -250,7 +251,8 @@ class RustFrontendTest : BaseTest() {
 
         val point = tu.records["Point"]
         assertNotNull(point)
-        assertEquals(2, point.methods.size)
+        val pointType = point.toType()
+        assertEquals(2, pointType.methods.size)
 
         val genericId =
             tu.declarations.filterIsInstance<FunctionTemplateDeclaration>().firstOrNull {

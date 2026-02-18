@@ -374,9 +374,10 @@ class RustDeepCoverageTest : BaseTest() {
         assertNotNull(tu)
         val drawable = tu.records["Drawable"]
         assertNotNull(drawable, "Should have Drawable trait")
+        val drawableType = drawable.toType()
         assertTrue(
-            drawable.methods.size >= 2,
-            "Drawable should have at least 2 methods: ${drawable.methods.map { it.name }}",
+            drawableType.methods.size >= 2,
+            "Drawable should have at least 2 methods: ${drawableType.methods.map { it.name }}",
         )
     }
 
@@ -394,7 +395,8 @@ class RustDeepCoverageTest : BaseTest() {
         assertNotNull(tu)
         val circle = tu.records["Circle"]
         assertNotNull(circle, "Should have Circle struct")
-        assertTrue(circle.methods.isNotEmpty(), "Circle should have methods from impl blocks")
+        val circleType = circle.toType()
+        assertTrue(circleType.methods.isNotEmpty(), "Circle should have methods from impl blocks")
     }
 
     // ==================== Generics ====================

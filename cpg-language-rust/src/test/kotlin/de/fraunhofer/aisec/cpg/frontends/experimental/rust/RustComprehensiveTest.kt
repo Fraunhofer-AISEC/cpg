@@ -174,7 +174,8 @@ class RustComprehensiveTest : BaseTest() {
         val myStruct = records["MyStruct"]
         assertNotNull(myStruct, "Should find MyStruct")
 
-        val methods = myStruct.methods
+        val myStructType = myStruct.toType()
+        val methods = myStructType.methods
         val byRef = methods["by_ref"]
         assertNotNull(byRef, "Should find by_ref method")
         assertNotNull(byRef.receiver, "&self method should have receiver")

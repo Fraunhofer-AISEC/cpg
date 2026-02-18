@@ -123,7 +123,8 @@ class RustDeclarationsExtendedTest : BaseTest() {
         val point = tu.records["Point"]
         assertNotNull(point, "Should find Point struct")
 
-        val methods = point.methods
+        val pointType = point.toType()
+        val methods = pointType.methods
 
         // &self
         val distance = methods["distance"]
@@ -156,7 +157,8 @@ class RustDeclarationsExtendedTest : BaseTest() {
         assertEquals("trait", shape.kind, "Shape should be a trait")
 
         // Should have methods
-        val methods = shape.methods
+        val shapeType = shape.toType()
+        val methods = shapeType.methods
         assertTrue(methods.any { it.name.localName == "area" }, "Trait should have area method")
         assertTrue(
             methods.any { it.name.localName == "name" },
