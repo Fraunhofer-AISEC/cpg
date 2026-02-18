@@ -232,6 +232,10 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
         for (candidate in candidates) {
             candidate.definition = declaration
 
+            // Set the (visibility) modifiers from the declaration to the definition, since they are
+            // usually in the declaration
+            declaration.modifiers = candidate.modifiers
+
             // Do some additional magic with default parameters, which I do not really
             // understand
             for (i in declaration.parameters.indices) {

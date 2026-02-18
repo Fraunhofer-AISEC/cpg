@@ -300,11 +300,25 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         assertLiteralValue(1, recordDeclaration.fields["field1"]?.initializer)
         assertLiteralValue(2, recordDeclaration.fields["field2"]?.initializer)
 
+        // Check visibility modifiers for fields
+        val field = recordDeclaration.fields["field"]
+        assertNotNull(field)
+        assertContains(field.modifiers, "private")
+        val field1 = recordDeclaration.fields["field1"]
+        assertNotNull(field1)
+        assertContains(field1.modifiers, "private")
+
         val method = recordDeclaration.methods[0]
         assertNotNull(method)
         assertEquals(recordDeclaration, method.recordDeclaration)
         assertLocalName("method", method)
         assertEquals(tu.primitiveType("java.lang.Integer"), method.returnTypes.firstOrNull())
+
+        // Method has no visibility modifier, so it should have package-private (no modifier in set)
+        // In Java, package-private means no access modifier keyword is present
+        assertFalse(method.modifiers.contains("private"))
+        assertFalse(method.modifiers.contains("public"))
+        assertFalse(method.modifiers.contains("protected"))
 
         val functionType = method.type as? FunctionType
         assertNotNull(functionType)

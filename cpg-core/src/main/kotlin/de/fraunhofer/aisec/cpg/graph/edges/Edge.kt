@@ -54,9 +54,6 @@ import org.neo4j.ogm.annotation.*
  */
 @RelationshipEntity
 abstract class Edge<NodeType : Node> : Persistable, Cloneable, HasAssumptions {
-    /** Required field for object graph mapping. It contains the node id. */
-    @field:Id @field:GeneratedValue private val id: Long? = null
-
     // Node where the edge is outgoing
     @JsonIgnore @field:StartNode var start: Node
 

@@ -953,6 +953,12 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     problemType = ProblemNode.ProblemType.TRANSLATION,
                     rawNode = mightBeAsync,
                 )
+
+            // We don't fully support the semantics of async expressions yet, but we can add the
+            // modifier if it is a declaration
+            if (parentNode is Declaration) {
+                parentNode.modifiers += "async"
+            }
         }
     }
 }

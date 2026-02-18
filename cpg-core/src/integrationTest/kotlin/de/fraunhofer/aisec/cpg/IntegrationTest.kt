@@ -23,36 +23,18 @@
  *                    \______/ \__|       \______/
  *
  */
-package de.fraunhofer.aisec.neo4j
+package de.fraunhofer.aisec.cpg
 
-import de.fraunhofer.aisec.cpg.TranslationManager
-import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
-import de.fraunhofer.aisec.cpg_vis_neo4j.Application
-import java.nio.file.Paths
+import de.fraunhofer.aisec.cpg.persistence.createJsonGraph
+import de.fraunhofer.aisec.cpg.persistence.persistJson
+import de.fraunhofer.aisec.cpg.test.GraphExamples
 import kotlin.io.path.createTempFile
-import kotlin.reflect.jvm.javaField
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import org.junit.jupiter.api.Test
-import org.neo4j.ogm.annotation.Relationship
-import picocli.CommandLine
-
-fun createTranslationResult(file: String = "client.cpp"): Pair<Application, TranslationResult> {
-    val topLevel = Paths.get("src").resolve("integrationTest").resolve("resources").toAbsolutePath()
-    val path = topLevel.resolve(file).toAbsolutePath()
-
-    val cmd = CommandLine(Application::class.java)
-    cmd.parseArgs(path.toString())
-    val application = cmd.getCommand<Application>()
-
-    val translationConfiguration = application.setupTranslationConfiguration()
-    val translationResult =
-        TranslationManager.builder().config(translationConfiguration).build().analyze().get()
-    return application to translationResult
-}
 
 /**
  * A class for integration tests. They depend on the C++ frontend, so we classify them as an
@@ -62,32 +44,28 @@ class IntegrationTest {
 
     @Test
     fun testBuildJsonGraph() {
-        val (application, translationResult) = createTranslationResult()
+        val translationResult = GraphExamples.getInitializerListExprDFG()
 
-        // 22 inferred functions, 1 inferred method, 2 inferred constructors, 11 regular functions
-        assertEquals(36, translationResult.functions.size)
+        assertEquals(2, translationResult.functions.size)
 
-        val (nodes, edges) = application.translateCPGToOGMBuilders(translationResult)
-        val graph = application.buildJsonGraph(nodes, edges)
+        val graph = translationResult.createJsonGraph()
         val connectToFuncDel =
             graph.nodes.firstOrNull {
                 it.labels.contains(FunctionDeclaration::class.simpleName) &&
-                    it.properties["name"] == "connectTo"
+                    it.properties["name"] == "foo"
             }
         assertNotNull(connectToFuncDel)
 
         val connectToCallExpr =
             graph.nodes.firstOrNull {
                 it.labels.contains(CallExpression::class.simpleName) &&
-                    it.properties["name"] == "connectTo"
+                    it.properties["name"] == "foo"
             }
         assertNotNull(connectToCallExpr)
 
         val invokesEdge =
             graph.edges.firstOrNull {
-                it.type ==
-                    (CallExpression::invokeEdges.javaField?.getAnnotation(Relationship::class.java))
-                        ?.value &&
+                it.type == "INVOKES" &&
                     it.startNode == connectToCallExpr.id &&
                     it.endNode == connectToFuncDel.id
             }
@@ -96,11 +74,10 @@ class IntegrationTest {
 
     @Test
     fun testExportToJson() {
-        val (application, translationResult) = createTranslationResult()
-        // 22 inferred functions, 1 inferred method, 2 inferred constructors, 11 regular functions
-        assertEquals(36, translationResult.functions.size)
+        val translationResult = GraphExamples.getInitializerListExprDFG()
+        assertEquals(2, translationResult.functions.size)
         val path = createTempFile().toFile()
-        application.exportToJson(translationResult, path)
+        translationResult.persistJson(path)
         assert(path.length() > 0)
     }
 }

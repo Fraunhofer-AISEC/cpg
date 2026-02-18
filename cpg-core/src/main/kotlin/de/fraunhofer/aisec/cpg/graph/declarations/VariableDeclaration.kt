@@ -89,6 +89,7 @@ open class VariableDeclaration : ValueDeclaration(), HasInitializer, HasType.Typ
             .append("name", name)
             .append("location", location)
             .append("initializer", initializer)
+            .append("modifiers", modifiers)
             .toString()
     }
 
