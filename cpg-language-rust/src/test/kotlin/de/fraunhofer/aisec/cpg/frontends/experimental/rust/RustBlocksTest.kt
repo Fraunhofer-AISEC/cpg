@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.experimental.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
@@ -33,13 +34,17 @@ import java.nio.file.Path
 import kotlin.test.*
 
 class RustBlocksTest : BaseTest() {
+
+    private val topLevel = Path.of("src", "test", "resources", "rust")
+
+    private fun parseTU(file: String) =
+        analyzeAndGetFirstTU(listOf(topLevel.resolve(file).toFile()), topLevel, true) {
+            it.registerLanguage<RustLanguage>()
+        }
+
     @Test
     fun testUnsafeBlock() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
-        val tu =
-            analyzeAndGetFirstTU(listOf(topLevel.resolve("blocks.rs").toFile()), topLevel, true) {
-                it.registerLanguage<RustLanguage>()
-            }
+        val tu = parseTU("blocks.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_unsafe"]
@@ -68,11 +73,7 @@ class RustBlocksTest : BaseTest() {
 
     @Test
     fun testAsyncBlock() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
-        val tu =
-            analyzeAndGetFirstTU(listOf(topLevel.resolve("blocks.rs").toFile()), topLevel, true) {
-                it.registerLanguage<RustLanguage>()
-            }
+        val tu = parseTU("blocks.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_async_block"]
@@ -100,11 +101,7 @@ class RustBlocksTest : BaseTest() {
 
     @Test
     fun testImplicitReturn() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
-        val tu =
-            analyzeAndGetFirstTU(listOf(topLevel.resolve("blocks.rs").toFile()), topLevel, true) {
-                it.registerLanguage<RustLanguage>()
-            }
+        val tu = parseTU("blocks.rs")
         assertNotNull(tu)
 
         val func = tu.functions["implicit_return"]
@@ -114,5 +111,60 @@ class RustBlocksTest : BaseTest() {
 
         // The function body should contain a statement (the implicit return value 42)
         assertTrue(body.statements.isNotEmpty(), "Function body should have statements")
+    }
+
+    @Test
+    fun testLabeledBlock() {
+        val tu = parseTU("labeled_block.rs")
+        assertNotNull(tu)
+
+        // Test labeled block used as a statement (test_labeled_block_stmt)
+        val stmtFunc = tu.functions["test_labeled_block_stmt"]
+        assertNotNull(stmtFunc, "Should find test_labeled_block_stmt function")
+        val stmtBody = stmtFunc.body as? Block
+        assertNotNull(stmtBody)
+
+        // No ProblemExpressions with "Unknown" in the function body
+        val stmtProblems = stmtBody.allChildren<ProblemExpression>()
+        assertTrue(
+            stmtProblems.none { it.problem.contains("Unknown") },
+            "Labeled block should not produce ProblemExpression with 'Unknown': ${stmtProblems.map { it.problem }}",
+        )
+
+        // A LabelStatement should exist with label "block" (without the leading ')
+        val labelStmts = stmtBody.allChildren<LabelStatement>()
+        assertTrue(labelStmts.isNotEmpty(), "Should have a LabelStatement for the labeled block")
+        val labelStmt = labelStmts.first()
+        assertEquals("block", labelStmt.label, "Label should be 'block' without the leading quote")
+
+        // The LabelStatement's subStatement should be a Block
+        val sub = labelStmt.subStatement
+        assertIs<Block>(sub, "LabelStatement subStatement should be a Block")
+
+        // Test labeled block used as an expression in a let binding (test_labeled_block)
+        val exprFunc = tu.functions["test_labeled_block"]
+        assertNotNull(exprFunc, "Should find test_labeled_block function")
+        val exprBody = exprFunc.body as? Block
+        assertNotNull(exprBody)
+
+        // No ProblemExpressions with "Unknown"
+        val exprProblems = exprBody.allChildren<ProblemExpression>()
+        assertTrue(
+            exprProblems.none { it.problem.contains("Unknown") },
+            "Labeled block expr should not produce ProblemExpression with 'Unknown': ${exprProblems.map { it.problem }}",
+        )
+
+        // A LabelStatement should exist with label "outer"
+        val exprLabelStmts = exprBody.allChildren<LabelStatement>()
+        assertTrue(
+            exprLabelStmts.isNotEmpty(),
+            "Should have a LabelStatement for the labeled block expression",
+        )
+        val exprLabelStmt = exprLabelStmts.first()
+        assertEquals(
+            "outer",
+            exprLabelStmt.label,
+            "Label should be 'outer' without the leading quote",
+        )
     }
 }

@@ -33,17 +33,17 @@ import java.nio.file.Path
 import kotlin.test.*
 
 class RustStructExprTest : BaseTest() {
+
+    private val topLevel = Path.of("src", "test", "resources", "rust")
+
+    private fun parseTU(file: String) =
+        analyzeAndGetFirstTU(listOf(topLevel.resolve(file).toFile()), topLevel, true) {
+            it.registerLanguage<RustLanguage>()
+        }
+
     @Test
     fun testStructExpression() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
-        val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("structs_and_methods.rs").toFile()),
-                topLevel,
-                true,
-            ) {
-                it.registerLanguage<RustLanguage>()
-            }
+        val tu = parseTU("structs_and_methods.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_struct_expr"]
@@ -61,15 +61,7 @@ class RustStructExprTest : BaseTest() {
 
     @Test
     fun testMethodCall() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
-        val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("structs_and_methods.rs").toFile()),
-                topLevel,
-                true,
-            ) {
-                it.registerLanguage<RustLanguage>()
-            }
+        val tu = parseTU("structs_and_methods.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_struct_expr"]
@@ -83,5 +75,73 @@ class RustStructExprTest : BaseTest() {
         // p.sum() should be a MemberCallExpression
         val memberCalls = body.allChildren<MemberCallExpression>()
         assertTrue(memberCalls.isNotEmpty(), "Should have method calls")
+    }
+
+    @Test
+    fun testShorthandStructInit() {
+        val tu = parseTU("struct_init_shorthand.rs")
+        assertNotNull(tu)
+        val func = tu.functions["test_shorthand_init"]
+        assertNotNull(func)
+        val body = func.body as? Block
+        assertNotNull(body)
+
+        val constructs = body.allChildren<ConstructExpression>()
+        assertTrue(constructs.isNotEmpty(), "Should have struct construction")
+        val config = constructs.first()
+        assertTrue(config.arguments.isNotEmpty(), "Should have shorthand field arguments")
+    }
+
+    @Test
+    fun testBranchStructFull() {
+        val tu = parseTU("branch_coverage_edge_cases.rs")
+        assertNotNull(tu)
+        val func = tu.functions["test_struct_full"]
+        assertNotNull(func)
+        val body = func.body as? Block
+        assertNotNull(body)
+        val constructs = body.allChildren<ConstructExpression>()
+        assertTrue(constructs.size >= 3, "Should have 3+ struct constructions")
+    }
+
+    @Test
+    fun testDeepStructFieldInit() {
+        val tu = parseTU("struct_expressions_deep.rs")
+        assertNotNull(tu)
+        val func = tu.functions["test_struct_field_init"]
+        assertNotNull(func)
+        val body = func.body as? Block
+        assertNotNull(body)
+        val constructs = body.allChildren<ConstructExpression>()
+        assertTrue(constructs.isNotEmpty(), "Should have struct construction")
+    }
+
+    @Test
+    fun testDeepStructShorthand() {
+        val tu = parseTU("struct_expressions_deep.rs")
+        assertNotNull(tu)
+        val func = tu.functions["test_struct_shorthand"]
+        assertNotNull(func)
+        val body = func.body as? Block
+        assertNotNull(body)
+        val constructs = body.allChildren<ConstructExpression>()
+        assertTrue(constructs.isNotEmpty(), "Should have shorthand struct construction")
+    }
+
+    @Test
+    fun testDeepStructSpread() {
+        val tu = parseTU("struct_expressions_deep.rs")
+        assertNotNull(tu)
+        val func = tu.functions["test_struct_spread"]
+        assertNotNull(func)
+        val body = func.body as? Block
+        assertNotNull(body)
+        val constructs = body.allChildren<ConstructExpression>()
+        assertTrue(
+            constructs.any { c ->
+                c.arguments.any { arg -> arg is Reference && arg.name.localName == "p1" }
+            },
+            "Should have struct spread referencing p1",
+        )
     }
 }

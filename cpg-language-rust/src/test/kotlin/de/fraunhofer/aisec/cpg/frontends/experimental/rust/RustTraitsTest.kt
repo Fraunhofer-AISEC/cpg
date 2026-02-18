@@ -109,4 +109,115 @@ class RustTraitsTest : BaseTest() {
         assertNotNull(counterNext)
         assertTrue(counterNext.hasBody())
     }
+
+    @Test
+    fun testBranchTraitWithTypeParams() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("branch_coverage_declarations.rs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+        val templates = tu.allChildren<TemplateDeclaration>()
+        val converterTemplate = templates.find { it.name.localName == "Converter" }
+        assertNotNull(converterTemplate, "Should have Converter template")
+    }
+
+    @Test
+    fun testBranchAnnotatedTrait() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("branch_coverage_declarations.rs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+        val record = tu.records["Annotated"]
+        assertNotNull(record, "Should have Annotated trait")
+        val recordType = record.toType()
+        assertTrue(
+            recordType.methods.any { it.name.localName == "compute" },
+            "Trait should have compute method",
+        )
+    }
+
+    @Test
+    fun testBranchTraitImpl() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("branch_coverage_edge_cases.rs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+        val counter = tu.records["Counter"]
+        assertNotNull(counter, "Should have Counter")
+        val counterType = counter.toType()
+        assertTrue(
+            counterType.methods.any { it.name.localName == "summarize" },
+            "Counter should have summarize from Summary trait impl",
+        )
+    }
+
+    @Test
+    fun testDeepTraitWithMethods() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("traits_deep.rs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+        val drawable = tu.records["Drawable"]
+        assertNotNull(drawable, "Should have Drawable trait")
+        val drawableType = drawable.toType()
+        assertTrue(drawableType.methods.size >= 2, "Drawable should have at least 2 methods")
+    }
+
+    @Test
+    fun testDeepTraitWithSuperTrait() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("traits_deep.rs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+        val resizable = tu.records["Resizable"]
+        assertNotNull(resizable, "Should have Resizable trait")
+    }
+
+    @Test
+    fun testDeepImplTraitForStruct() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("traits_deep.rs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+        val circle = tu.records["Circle"]
+        assertNotNull(circle, "Should have Circle struct")
+        val circleType = circle.toType()
+        assertTrue(circleType.methods.isNotEmpty(), "Circle should have methods from impl blocks")
+    }
 }

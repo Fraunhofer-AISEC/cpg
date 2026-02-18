@@ -118,4 +118,38 @@ class RustLifetimesTest : BaseTest() {
         // The type should be a reference
         assertTrue(param.type is ReferenceType)
     }
+
+    @Test
+    fun testDeepMutableRef() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("references_lifetimes.rs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+        val func = tu.functions["test_mutable_ref"]
+        assertNotNull(func)
+        assertTrue(func.parameters.isNotEmpty(), "Should have parameter")
+    }
+
+    @Test
+    fun testDeepLifetimeRef() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("references_lifetimes.rs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+        val func = tu.functions["test_lifetime_ref"]
+        assertNotNull(func)
+        assertTrue(func.parameters.isNotEmpty(), "Should have parameter")
+    }
 }

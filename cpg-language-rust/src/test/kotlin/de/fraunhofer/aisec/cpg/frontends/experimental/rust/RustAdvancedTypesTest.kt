@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.experimental.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import java.nio.file.Path

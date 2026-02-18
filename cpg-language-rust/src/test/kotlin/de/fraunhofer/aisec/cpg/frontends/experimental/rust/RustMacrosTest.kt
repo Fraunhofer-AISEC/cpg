@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.experimental.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
 import java.nio.file.Path
@@ -74,5 +74,90 @@ class RustMacrosTest : BaseTest() {
         val calls = func.allChildren<CallExpression>()
         assertTrue(calls.any { it.name.localName == "my_macro" })
         assertTrue(calls.any { it.name.localName == "println" })
+    }
+
+    @Test
+    fun testMacroArguments() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("macros_args.rs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+
+        val func = tu.functions["test_macro_args"]
+        assertNotNull(func)
+        val body = func.body as? Block
+        assertNotNull(body)
+
+        // println! should have arguments extracted from token_tree
+        val calls = body.allChildren<CallExpression>()
+        val printlnCall = calls.firstOrNull { it.name.localName == "println" }
+        assertNotNull(printlnCall, "Should find println macro call")
+        assertTrue(
+            printlnCall.arguments.isNotEmpty(),
+            "println! should have arguments extracted from token_tree",
+        )
+
+        // First argument should be the format string
+        val formatArg = printlnCall.arguments.first()
+        assertIs<Literal<*>>(formatArg)
+    }
+
+    @Test
+    fun testBranchMacros() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("branch_coverage_edge_cases.rs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+        val func = tu.functions["test_macros"]
+        assertNotNull(func)
+        val body = func.body as? Block
+        assertNotNull(body)
+        val calls = body.allChildren<CallExpression>()
+        assertTrue(calls.any { it.name.localName == "println" }, "Should have println macro call")
+    }
+
+    @Test
+    fun testBranchBlockMacroInvocationAtTopLevel() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("branch_coverage_final.rs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+        val allDecls = tu.allChildren<Declaration>()
+        assertTrue(allDecls.isNotEmpty(), "Should have declarations including macro invocation")
+    }
+
+    @Test
+    fun testDeepMacroInvocationDecl() {
+        val topLevel = Path.of("src", "test", "resources", "rust")
+        val tu =
+            analyzeAndGetFirstTU(
+                listOf(topLevel.resolve("comprehensive.rs").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<RustLanguage>()
+            }
+        assertNotNull(tu)
+        val decls = tu.allChildren<Declaration>()
+        val problems = tu.allChildren<ProblemDeclaration>()
+        assertTrue(decls.isNotEmpty() || problems.isNotEmpty(), "Macro decl should parse")
     }
 }

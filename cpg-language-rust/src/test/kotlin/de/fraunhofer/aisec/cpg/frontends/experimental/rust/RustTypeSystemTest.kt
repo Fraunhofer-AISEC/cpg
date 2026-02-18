@@ -190,4 +190,64 @@ class RustTypeSystemTest : BaseTest() {
             "Lifetime refs should not produce problems: ${problems.map { it.problem }}",
         )
     }
+
+    @Test
+    fun testBranchBoundedType() {
+        val tu = parseTU("branch_coverage_types.rs")
+        assertNotNull(tu)
+        val func = tu.functions["test_bounded_type"]
+        assertNotNull(func, "Should have test_bounded_type function")
+        assertTrue(func.parameters.isNotEmpty(), "Should have parameter with bounded type")
+    }
+
+    @Test
+    fun testBranchFnTypeNoReturn() {
+        val tu = parseTU("branch_coverage_types.rs")
+        assertNotNull(tu)
+        val func = tu.functions["test_fn_type_no_return"]
+        assertNotNull(func, "Should have test_fn_type_no_return function")
+        assertTrue(func.parameters.isNotEmpty(), "Should have fn type parameter")
+    }
+
+    @Test
+    fun testDeepRawPointers() {
+        val tu = parseTU("advanced_features.rs")
+        assertNotNull(tu)
+        val func = tu.functions["test_raw_pointers"]
+        assertNotNull(func)
+        assertTrue(func.parameters.size >= 2, "Should have 2 pointer parameters")
+    }
+
+    @Test
+    fun testDeepDynTrait() {
+        val tu = parseTU("advanced_features.rs")
+        assertNotNull(tu)
+        val func = tu.functions["test_dyn_trait"]
+        assertNotNull(func)
+        assertTrue(func.parameters.isNotEmpty(), "Should have dyn trait parameter")
+    }
+
+    @Test
+    fun testDeepNeverType() {
+        val tu = parseTU("advanced_features.rs")
+        assertNotNull(tu)
+        val func = tu.functions["test_never"]
+        assertNotNull(func, "Should have function returning never type")
+    }
+
+    @Test
+    fun testDeepImplTraitReturn() {
+        val tu = parseTU("type_system.rs")
+        assertNotNull(tu)
+        val func = tu.functions["test_impl_trait"]
+        assertNotNull(func, "Should have function returning impl trait")
+    }
+
+    @Test
+    fun testDeepGenericWithBounds() {
+        val tu = parseTU("generics_deep.rs")
+        assertNotNull(tu)
+        val func = tu.functions["test_generic_with_bounds"]
+        assertNotNull(func, "Should have generic function with bounds")
+    }
 }
