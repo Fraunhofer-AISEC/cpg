@@ -1,4 +1,4 @@
 namespace HelloWorld
 {
-    class Greeter { }
+    class Foo { }
 }

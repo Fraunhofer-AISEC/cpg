@@ -47,9 +47,9 @@ class CSharpLanguageFrontendTest : BaseTest() {
         assertNotNull(tu)
 
         val ns = tu.namespaces["HelloWorld"]
-        assertNotNull(ns, "Expected namespace HelloWorld")
+        assertNotNull(ns)
 
-        val greeter = ns.records["Greeter"]
-        assertNotNull(greeter, "Expected class Greeter")
+        val foo = ns.records["Foo"]
+        assertNotNull(foo)
     }
 }

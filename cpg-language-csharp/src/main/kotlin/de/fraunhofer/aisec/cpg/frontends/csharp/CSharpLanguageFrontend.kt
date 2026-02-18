@@ -58,6 +58,7 @@ class CSharpLanguageFrontend(ctx: TranslationContext, language: Language<CSharpL
             Native.load(libFile.absolutePath, CSharpNativeParser::class.java)
         }
 
+        // TODO: Do we need the free call?
         internal fun nativeString(ptr: Pointer): String {
             return try {
                 ptr.getString(0, "UTF-8")
@@ -66,6 +67,7 @@ class CSharpLanguageFrontend(ctx: TranslationContext, language: Language<CSharpL
             }
         }
 
+        // TODO: Change the type of the native parser functions like in the go frontend
         fun wrapHandle(handle: Pointer): CSharpSyntaxNode {
             val kind = nativeString(nativeLib.getKind(handle))
             return when (kind) {
