@@ -1159,11 +1159,7 @@ class RustExpressionsTest : BaseTest() {
     fun testDeepTypeCast() {
         val topLevel = Path.of("src", "test", "resources", "rust")
         val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("type_operations.rs").toFile()),
-                topLevel,
-                true,
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("types.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
             }
         assertNotNull(tu)

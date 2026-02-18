@@ -43,7 +43,7 @@ class RustStructExprTest : BaseTest() {
 
     @Test
     fun testStructExpression() {
-        val tu = parseTU("structs_and_methods.rs")
+        val tu = parseTU("structs.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_struct_expr"]
@@ -61,7 +61,7 @@ class RustStructExprTest : BaseTest() {
 
     @Test
     fun testMethodCall() {
-        val tu = parseTU("structs_and_methods.rs")
+        val tu = parseTU("structs.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_struct_expr"]
@@ -79,7 +79,7 @@ class RustStructExprTest : BaseTest() {
 
     @Test
     fun testShorthandStructInit() {
-        val tu = parseTU("struct_init_shorthand.rs")
+        val tu = parseTU("structs.rs")
         assertNotNull(tu)
         val func = tu.functions["test_shorthand_init"]
         assertNotNull(func)
@@ -106,7 +106,7 @@ class RustStructExprTest : BaseTest() {
 
     @Test
     fun testDeepStructFieldInit() {
-        val tu = parseTU("struct_expressions_deep.rs")
+        val tu = parseTU("structs.rs")
         assertNotNull(tu)
         val func = tu.functions["test_struct_field_init"]
         assertNotNull(func)
@@ -118,7 +118,7 @@ class RustStructExprTest : BaseTest() {
 
     @Test
     fun testDeepStructShorthand() {
-        val tu = parseTU("struct_expressions_deep.rs")
+        val tu = parseTU("structs.rs")
         assertNotNull(tu)
         val func = tu.functions["test_struct_shorthand"]
         assertNotNull(func)
@@ -130,7 +130,7 @@ class RustStructExprTest : BaseTest() {
 
     @Test
     fun testDeepStructSpread() {
-        val tu = parseTU("struct_expressions_deep.rs")
+        val tu = parseTU("structs.rs")
         assertNotNull(tu)
         val func = tu.functions["test_struct_spread"]
         assertNotNull(func)
@@ -143,5 +143,26 @@ class RustStructExprTest : BaseTest() {
             },
             "Should have struct spread referencing p1",
         )
+    }
+
+    @Test
+    fun testStructs() {
+        val tu = parseTU("structs.rs")
+        assertNotNull(tu)
+
+        val myStruct = tu.records["MyStruct"]
+        assertNotNull(myStruct)
+        assertEquals("struct", myStruct.kind)
+        assertEquals(2, myStruct.fields.size)
+        assertEquals("field1", myStruct.fields.getOrNull(0)?.name?.localName)
+
+        val myStructType = myStruct.toType()
+        val myMethod = myStructType.methods["my_method"]
+        assertNotNull(myMethod)
+        assertEquals(myStruct, myMethod.recordDeclaration)
+
+        val myEnum = tu.records["MyEnum"]
+        assertNotNull(myEnum)
+        assertEquals("enum", myEnum.kind)
     }
 }

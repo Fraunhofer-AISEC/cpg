@@ -36,11 +36,7 @@ class RustAdvancedTypesTest : BaseTest() {
     fun testTupleStruct() {
         val topLevel = Path.of("src", "test", "resources", "rust")
         val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("advanced_types.rs").toFile()),
-                topLevel,
-                true,
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("types.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
             }
         assertNotNull(tu)
@@ -54,11 +50,7 @@ class RustAdvancedTypesTest : BaseTest() {
     fun testEnumWithData() {
         val topLevel = Path.of("src", "test", "resources", "rust")
         val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("advanced_types.rs").toFile()),
-                topLevel,
-                true,
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("types.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
             }
         assertNotNull(tu)
@@ -72,11 +64,7 @@ class RustAdvancedTypesTest : BaseTest() {
     fun testVisibility() {
         val topLevel = Path.of("src", "test", "resources", "rust")
         val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("advanced_types.rs").toFile()),
-                topLevel,
-                true,
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("types.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
             }
         assertNotNull(tu)

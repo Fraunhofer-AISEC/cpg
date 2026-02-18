@@ -166,31 +166,6 @@ class RustFrontendTest : BaseTest() {
     }
 
     @Test
-    fun testStructs() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
-        val tu =
-            analyzeAndGetFirstTU(listOf(topLevel.resolve("structs.rs").toFile()), topLevel, true) {
-                it.registerLanguage<RustLanguage>()
-            }
-        assertNotNull(tu)
-
-        val myStruct = tu.records["MyStruct"]
-        assertNotNull(myStruct)
-        assertEquals("struct", myStruct.kind)
-        assertEquals(2, myStruct.fields.size)
-        assertEquals("field1", myStruct.fields.getOrNull(0)?.name?.localName)
-
-        val myStructType = myStruct.toType()
-        val myMethod = myStructType.methods["my_method"]
-        assertNotNull(myMethod)
-        assertEquals(myStruct, myMethod.recordDeclaration)
-
-        val myEnum = tu.records["MyEnum"]
-        assertNotNull(myEnum)
-        assertEquals("enum", myEnum.kind)
-    }
-
-    @Test
     fun testMatch() {
         val topLevel = Path.of("src", "test", "resources", "rust")
         val tu =

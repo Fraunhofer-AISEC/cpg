@@ -49,7 +49,7 @@ class RustTypeSystemTest : BaseTest() {
 
     @Test
     fun testGenericTypesPreserveArguments() {
-        val tu = parseTU("type_system.rs")
+        val tu = parseTU("types.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_generic_types"]
@@ -78,7 +78,7 @@ class RustTypeSystemTest : BaseTest() {
 
     @Test
     fun testTupleType() {
-        val tu = parseTU("type_system.rs")
+        val tu = parseTU("types.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_tuple_types"]
@@ -92,7 +92,7 @@ class RustTypeSystemTest : BaseTest() {
 
     @Test
     fun testFunctionType() {
-        val tu = parseTU("type_system.rs")
+        val tu = parseTU("types.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_function_types"]
@@ -111,7 +111,7 @@ class RustTypeSystemTest : BaseTest() {
 
     @Test
     fun testNeverType() {
-        val tu = parseTU("type_system.rs")
+        val tu = parseTU("types.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_never_type"]
@@ -123,7 +123,7 @@ class RustTypeSystemTest : BaseTest() {
 
     @Test
     fun testUnitType() {
-        val tu = parseTU("type_system.rs")
+        val tu = parseTU("types.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_unit_type"]
@@ -135,7 +135,7 @@ class RustTypeSystemTest : BaseTest() {
 
     @Test
     fun testPointerTypes() {
-        val tu = parseTU("type_system.rs")
+        val tu = parseTU("types.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_pointer_types"]
@@ -154,7 +154,7 @@ class RustTypeSystemTest : BaseTest() {
 
     @Test
     fun testArrayType() {
-        val tu = parseTU("type_system.rs")
+        val tu = parseTU("types.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_array_type"]
@@ -176,7 +176,7 @@ class RustTypeSystemTest : BaseTest() {
 
     @Test
     fun testLifetimeRef() {
-        val tu = parseTU("type_system.rs")
+        val tu = parseTU("types.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_lifetime_ref"]
@@ -193,7 +193,7 @@ class RustTypeSystemTest : BaseTest() {
 
     @Test
     fun testBranchBoundedType() {
-        val tu = parseTU("branch_coverage_types.rs")
+        val tu = parseTU("types.rs")
         assertNotNull(tu)
         val func = tu.functions["test_bounded_type"]
         assertNotNull(func, "Should have test_bounded_type function")
@@ -202,7 +202,7 @@ class RustTypeSystemTest : BaseTest() {
 
     @Test
     fun testBranchFnTypeNoReturn() {
-        val tu = parseTU("branch_coverage_types.rs")
+        val tu = parseTU("types.rs")
         assertNotNull(tu)
         val func = tu.functions["test_fn_type_no_return"]
         assertNotNull(func, "Should have test_fn_type_no_return function")
@@ -211,7 +211,7 @@ class RustTypeSystemTest : BaseTest() {
 
     @Test
     fun testDeepRawPointers() {
-        val tu = parseTU("advanced_features.rs")
+        val tu = parseTU("types.rs")
         assertNotNull(tu)
         val func = tu.functions["test_raw_pointers"]
         assertNotNull(func)
@@ -220,7 +220,7 @@ class RustTypeSystemTest : BaseTest() {
 
     @Test
     fun testDeepDynTrait() {
-        val tu = parseTU("advanced_features.rs")
+        val tu = parseTU("types.rs")
         assertNotNull(tu)
         val func = tu.functions["test_dyn_trait"]
         assertNotNull(func)
@@ -229,7 +229,7 @@ class RustTypeSystemTest : BaseTest() {
 
     @Test
     fun testDeepNeverType() {
-        val tu = parseTU("advanced_features.rs")
+        val tu = parseTU("types.rs")
         assertNotNull(tu)
         val func = tu.functions["test_never"]
         assertNotNull(func, "Should have function returning never type")
@@ -237,7 +237,7 @@ class RustTypeSystemTest : BaseTest() {
 
     @Test
     fun testDeepImplTraitReturn() {
-        val tu = parseTU("type_system.rs")
+        val tu = parseTU("types.rs")
         assertNotNull(tu)
         val func = tu.functions["test_impl_trait"]
         assertNotNull(func, "Should have function returning impl trait")
@@ -245,7 +245,7 @@ class RustTypeSystemTest : BaseTest() {
 
     @Test
     fun testDeepGenericWithBounds() {
-        val tu = parseTU("generics_deep.rs")
+        val tu = parseTU("types.rs")
         assertNotNull(tu)
         val func = tu.functions["test_generic_with_bounds"]
         assertNotNull(func, "Should have generic function with bounds")

@@ -37,11 +37,7 @@ class RustTypeHandlerTest : BaseTest() {
     fun testFunctionPointerType() {
         val topLevel = Path.of("src", "test", "resources", "rust")
         val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("advanced_types2.rs").toFile()),
-                topLevel,
-                true,
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("types.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
             }
         assertNotNull(tu)
@@ -59,11 +55,7 @@ class RustTypeHandlerTest : BaseTest() {
     fun testImplTraitType() {
         val topLevel = Path.of("src", "test", "resources", "rust")
         val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("advanced_types2.rs").toFile()),
-                topLevel,
-                true,
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("types.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
             }
         assertNotNull(tu)
@@ -81,11 +73,7 @@ class RustTypeHandlerTest : BaseTest() {
     fun testRawPointerType() {
         val topLevel = Path.of("src", "test", "resources", "rust")
         val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("advanced_types2.rs").toFile()),
-                topLevel,
-                true,
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("types.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
             }
         assertNotNull(tu)
