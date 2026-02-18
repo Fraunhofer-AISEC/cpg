@@ -96,7 +96,7 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                 newFunctionDeclaration(name, rawNode = node)
             }
 
-        // Check for async modifier
+        // Check for async modifier (only present in function_item, not function_signature_item)
         for (child in node.children) {
             if (child.type == "function_modifiers") {
                 for (modifier in child.children) {
@@ -443,8 +443,8 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                 if (child.isNamed) {
                     val decl: Declaration? =
                         when (child.type) {
-                            "function_item" -> handleFunctionItem(child)
-                            "function_signature_item" -> handleFunctionSignatureItem(child)
+                            "function_item",
+                            "function_signature_item" -> handleFunctionItem(child)
                             "associated_type" -> {
                                 handleAssociatedType(child)
                                 null
@@ -468,50 +468,6 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
             return template
         }
         return record
-    }
-
-    /**
-     * Translates a Rust `function_signature_item` into a [FunctionDeclaration]. This handles Rust
-     * function signatures such as trait method declarations and extern function declarations. When
-     * inside a record scope (e.g., a trait or impl block), a [MethodDeclaration] is created
-     * instead. Signatures without a `self` parameter are marked as static when in record scope.
-     */
-    private fun handleFunctionSignatureItem(node: TSNode): FunctionDeclaration {
-        val nameNode = node["name"]
-        val name = nameNode.text()
-
-        val recordDeclaration = frontend.scopeManager.currentRecord
-        val parameters = node["parameters"]
-        val hasSelf = parameters?.children?.any { it.type == "self_parameter" } == true
-
-        val func =
-            if (recordDeclaration != null) {
-                newMethodDeclaration(
-                    name,
-                    isStatic = !hasSelf,
-                    recordDeclaration = recordDeclaration,
-                    rawNode = node,
-                )
-            } else {
-                newFunctionDeclaration(name, rawNode = node)
-            }
-
-        frontend.scopeManager.enterScope(func)
-
-        if (parameters != null) {
-            handleParameters(parameters, func)
-        }
-
-        val returnTypeNode = node["return_type"]
-        if (returnTypeNode != null) {
-            func.returnTypes = listOf(frontend.typeOf(returnTypeNode))
-        }
-
-        // Signature has no body
-        frontend.scopeManager.leaveScope(func)
-        frontend.scopeManager.addDeclaration(func)
-
-        return func
     }
 
     /**
@@ -614,8 +570,8 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
     /**
      * Helper method to process the children of a module, impl block, or trait body, handling inner
      * attributes (annotations) and adding named declarations to the given [holder]. This is used
-     * for the bodies of `mod_item`, `impl_item`, and `trait_item`, which can all contain inner
-     * attributes that apply to their child declarations.
+     * for the bodies of `mod_item` and `impl_item`. For impl blocks, declarations are not added to
+     * the holder (ExtensionDeclaration) since they're already added to the record scope.
      */
     private fun handleChildrenWithAnnotations(body: TSNode?, holder: DeclarationHolder) {
         if (body != null) {
@@ -631,7 +587,11 @@ class DeclarationHandler(frontend: RustLanguageFrontend) :
                         decl.annotations += pendingAnnotations
                         pendingAnnotations.clear()
                     }
-                    holder.addDeclaration(decl)
+                    // Only add to holder if it's not an ExtensionDeclaration
+                    // (for impl blocks, methods are already in the record scope)
+                    if (holder !is ExtensionDeclaration) {
+                        holder.addDeclaration(decl)
+                    }
                 }
             }
         }
