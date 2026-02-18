@@ -177,17 +177,6 @@ class OpenAiClient(
         val request =
             OpenAiRequest(model = model, messages = messages, tools = openAiTools, stream = true)
 
-        val msgChars = messages.sumOf { (it.content as? JsonPrimitive)?.content?.length ?: 0 }
-        val toolChars =
-            openAiTools?.sumOf { it.function.description.length + it.function.name.length } ?: 0
-        val systemChars = SYSTEM_PROMPT.length
-        val totalChars = msgChars + toolChars + systemChars
-        println(
-            "Sending request: Messages: ${messages.size} | Tools: ${openAiTools?.size ?: 0} | ~${totalChars / 4} tokens"
-        )
-        val requestJson = Json { prettyPrint = true }.encodeToString(request)
-        println("Request:\n$requestJson")
-
         httpClient
             .preparePost("$baseUrl/v1/chat/completions") {
                 contentType(ContentType.Application.Json)
@@ -260,9 +249,9 @@ class OpenAiClient(
                     }
                 }
 
-                delta["tool_calls"]?.jsonArray?.forEach { tcElement ->
-                    val tc = tcElement.jsonObject
-                    val index = tc["index"]?.jsonPrimitive?.intOrNull ?: 0
+                delta["tool_calls"]?.jsonArray?.forEach { tool ->
+                    val toolJSON = tool.jsonObject
+                    val index = toolJSON["index"]?.jsonPrimitive?.intOrNull ?: 0
                     val toolCall =
                         toolCallsMap.getOrPut(index) {
                             mutableMapOf(
@@ -273,9 +262,9 @@ class OpenAiClient(
                             )
                         }
 
-                    tc["id"]?.jsonPrimitive?.contentOrNull?.let { toolCall["id"] = it }
-                    tc["type"]?.jsonPrimitive?.contentOrNull?.let { toolCall["type"] = it }
-                    tc["function"]?.jsonObject?.let { func ->
+                    toolJSON["id"]?.jsonPrimitive?.contentOrNull?.let { toolCall["id"] = it }
+                    toolJSON["type"]?.jsonPrimitive?.contentOrNull?.let { toolCall["type"] = it }
+                    toolJSON["function"]?.jsonObject?.let { func ->
                         func["name"]?.jsonPrimitive?.contentOrNull?.let {
                             toolCall["name"] = it
                             totalOutputChars += it.length
@@ -288,8 +277,6 @@ class OpenAiClient(
                 }
             }
         }
-
-        println("Response finished | ~${totalOutputChars / 4} tokens")
 
         toolCallsMap.values.forEach { toolCall ->
             if (toolCall["name"] != null) {

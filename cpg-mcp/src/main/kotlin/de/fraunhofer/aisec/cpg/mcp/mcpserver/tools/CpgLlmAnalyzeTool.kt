@@ -245,11 +245,13 @@ fun Server.addCpgLlmAnalyzeTool() {
                                 type = node?.javaClass?.simpleName ?: suggestion.type,
                                 code = node?.code ?: suggestion.code,
                                 fileName =
-                                    node?.location?.artifactLocation?.uri?.let { uri ->
-                                        uri.toString()
-                                            .substringAfterLast('/')
-                                            .substringAfterLast('\\')
-                                    } ?: suggestion.fileName,
+                                    node
+                                        ?.location
+                                        ?.artifactLocation
+                                        ?.uri
+                                        ?.toString()
+                                        ?.substringAfterLast('/')
+                                        ?.substringAfterLast('\\') ?: suggestion.fileName,
                                 startLine =
                                     node?.location?.region?.startLine ?: suggestion.startLine,
                                 endLine = node?.location?.region?.endLine ?: suggestion.endLine,
