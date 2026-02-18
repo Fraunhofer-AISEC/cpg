@@ -1040,4 +1040,50 @@ class DFGTest {
             "Expected DFG path from 'baz' through the constructor to return f",
         )
     }
+
+    @Test
+    fun testInferredConstructorArgDFG() {
+        val topLevel = Path.of("src", "test", "resources", "python")
+        val result =
+            analyze(
+                listOf(topLevel.resolve("inferred_construct_dfg.py").toFile()),
+                topLevel,
+                true,
+            ) {
+                it.registerLanguage<PythonLanguage>()
+            }
+        assertNotNull(result)
+
+        // Test case 1: A(b=b)
+        val fooFunc = result.functions["foo"]
+        assertNotNull(fooFunc)
+        val aRef = fooFunc.refs["a_var"]
+        assertNotNull(aRef)
+
+        val classA = result.records["A"]
+        assertNotNull(classA)
+
+        val fieldB = classA.fields["b"]
+        assertNotNull(fieldB)
+
+        val pathsToFieldB = aRef.followDFGEdgesUntilHit { it == fieldB }
+        assertTrue(
+            pathsToFieldB.fulfilled.isNotEmpty(),
+            "Expected DFG path from 'a_var' through constructor to field b",
+        )
+
+        // Test case 2: B(x=some_other_var)
+        val barFunc = result.functions["bar"]
+        assertNotNull(barFunc)
+
+        val someOtherVarRef = barFunc.refs["some_other_var"]
+        assertNotNull(someOtherVarRef)
+
+        val pathsToFieldX =
+            someOtherVarRef.followDFGEdgesUntilHit(collectFailedPaths = true) { it == fieldB }
+        assertTrue(
+            pathsToFieldX.fulfilled.isNotEmpty(),
+            "Expected DFG path from 'some_other_var' through constructor to field 'b'",
+        )
+    }
 }
