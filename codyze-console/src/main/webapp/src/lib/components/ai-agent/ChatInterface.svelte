@@ -2,6 +2,7 @@
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import MessageInput from './MessageInput.svelte';
   import CodeItemList, { isCodeItemContent } from './widgets/CodeItemList.svelte';
+  import DfgFlowWidget from './widgets/DfgFlowWidget.svelte';
   import CodePreview from './CodePreview.svelte';
   import ApiService from '$lib/services/apiService';
   import type { NodeJSON, AnalysisResultJSON, TranslationUnitJSON, ChatMessage } from '$lib/types';
@@ -200,7 +201,9 @@
               </div>
             {/if}
             {#if message.contentType === 'tool-result' && message.toolResult}
-              {#if isCodeItemContent(message.toolResult.content)}
+              {#if message.toolResult.toolName === 'cpg_dfg_backward'}
+                <DfgFlowWidget content={message.toolResult.content} />
+              {:else if isCodeItemContent(message.toolResult.content)}
                 <CodeItemList data={message.toolResult} onItemClick={handleNodeClick} />
               {:else}
                 <!-- Fallback: plain text/JSON -->

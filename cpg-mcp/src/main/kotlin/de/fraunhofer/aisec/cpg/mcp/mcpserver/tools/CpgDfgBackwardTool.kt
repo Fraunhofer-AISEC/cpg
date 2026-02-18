@@ -53,9 +53,10 @@ fun Server.addDfgBackwardTool() {
         Traverse the Data Flow Graph (DFG) backwards from a given node to find where data originates.
 
         Uses the CPG's built-in dataflow analysis with backward direction to trace data sources.
-        The analysis follows prevDFG edges and stops at nodes that have no further incoming data flows (= data sources).
+        The analysis follows prevDFG edges and stops at nodes that have no further incoming data flows.
 
-        Use this to answer questions like "where does this value come from?" or "what is the source of this data?".
+        Example usage:
+        - "Where does this value come from?"
 
         Parameters:
         - id: The ID of the node to start the backward traversal from.

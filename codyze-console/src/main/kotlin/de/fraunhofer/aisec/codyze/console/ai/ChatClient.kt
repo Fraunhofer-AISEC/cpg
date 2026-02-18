@@ -110,9 +110,13 @@ class ChatClient(
                     onText = { text -> send(Events.text(text)) },
                     onReasoning = { thought -> send(Events.reasoning(thought)) },
                 )
+            println(
+                "Agent- Initial sendPrompt returned ${toolCalls.size} tool calls: ${toolCalls.map { it.name }}"
+            )
 
             while (toolCalls.isNotEmpty() && counter < maxToolIterations) {
                 counter++
+                println("Agent- Round $counter: executing ${toolCalls.map { it.name }}")
                 val roundtripResults =
                     toolCalls.map { toolCall ->
                         val result = executeToolCall(toolCall) { jsonEvent -> send(jsonEvent) }
@@ -131,7 +135,7 @@ class ChatClient(
                     )
             }
         } catch (e: Exception) {
-            println("[LLM] Error: ${e.message}")
+            println("ChatClient.chat - Error: ${e.message}")
             send(Events.text("Error: ${e.message}"))
         }
     }
@@ -151,7 +155,7 @@ class ChatClient(
 
             val content = buildToolContentPayload(contentTexts)
             val event = Events.toolResult(toolCall.name, content)
-            println("[Tool] Emitting event: $event")
+            println("Tool - Emitting event: $event")
             emit(event)
 
             resultText
