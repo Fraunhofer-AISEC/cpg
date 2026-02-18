@@ -97,7 +97,7 @@ class StatementHandler(frontend: RustLanguageFrontend) :
 
     fun handleItem(item: RsItem): Statement {
 
-        val declarationStatement = newDeclarationStatement(rawNode = item)
+        val declarationStatement = newDeclarationStatement(rawNode = RsAst.RustItem(item))
 
         val handledDeclaration = frontend.declarationHandler.handle(RsAst.RustItem(item))
         declarationStatement.declarations += handledDeclaration

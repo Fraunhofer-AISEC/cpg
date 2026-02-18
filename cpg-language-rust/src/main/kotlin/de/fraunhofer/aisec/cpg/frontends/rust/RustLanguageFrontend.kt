@@ -39,6 +39,7 @@ import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.net.URI
 import kotlin.collections.plusAssign
+import kotlin.math.min
 import uniffi.cpgrust.RsAst
 import uniffi.cpgrust.RsItem
 import uniffi.cpgrust.RsType
@@ -157,7 +158,8 @@ class RustLanguageFrontend(ctx: TranslationContext, language: Language<RustLangu
         val metaAstNode = astNode.astNode()
         val contentBefore = fileContent.substring(0, metaAstNode.startOffset.toInt())
         val upTo = contentBefore.split(lineSeparator)
-        val contentBeforeAndIn = fileContent.substring(0, metaAstNode.endOffset.toInt())
+        val contentBeforeAndIn =
+            fileContent.substring(0, min(metaAstNode.endOffset.toInt(), fileContent.length))
         val upToIncluding = contentBeforeAndIn.split(lineSeparator)
         return PhysicalLocation(
             uri,
