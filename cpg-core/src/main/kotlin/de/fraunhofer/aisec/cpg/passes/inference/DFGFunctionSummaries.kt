@@ -61,9 +61,8 @@ class DFGFunctionSummaries {
     /**
      * Saves the information on which parameter(s) of a function are modified by the function. This
      * is interesting since we need to add DFG edges between the modified parameter and the
-     * respective argument(s). For each [ParameterDeclaration] as well as the
-     * [MethodDeclaration.receiver] that has some incoming DFG-edge within this
-     * [FunctionDeclaration], we store all previous DFG nodes.
+     * respective argument(s). For each [Parameter] as well as the [Method.receiver] that has some
+     * incoming DFG-edge within this [FunctionDeclaration], we store all previous DFG nodes.
      */
     val functionToChangedParameters =
         mutableMapOf<FunctionDeclaration, MutableMap<ValueDeclaration, MutableSet<Node>>>()
@@ -146,7 +145,7 @@ class DFGFunctionSummaries {
                         // name's parent and generate a type from it. We then check if this type is
                         // a supertype
                         (entryRecord == null ||
-                            (functionDecl as? MethodDeclaration)
+                            (functionDecl as? Method)
                                 ?.recordDeclaration
                                 ?.toType()
                                 ?.tryCast(entryRecord) != CastNotPossible) &&
@@ -260,7 +259,7 @@ class DFGFunctionSummaries {
                         null
                     }
                 } else if (entry.from == "base") {
-                    (functionDeclaration as? MethodDeclaration)?.receiver
+                    (functionDeclaration as? Method)?.receiver
                 } else {
                     null
                 }
@@ -280,7 +279,7 @@ class DFGFunctionSummaries {
                         null
                     }
                 } else if (entry.to == "base") {
-                    val receiver = (functionDeclaration as? MethodDeclaration)?.receiver
+                    val receiver = (functionDeclaration as? Method)?.receiver
                     if (from != null) {
                         if (receiver != null) {
                             functionToChangedParameters
@@ -320,7 +319,7 @@ class DFGFunctionSummaries {
     data class FunctionDeclarationEntry(
         /** The FQN of the [Language] for which this flow is relevant. */
         val language: String,
-        /** The FQN of the [FunctionDeclaration] or [MethodDeclaration]. */
+        /** The FQN of the [FunctionDeclaration] or [Method]. */
         val methodName: String,
         /**
          * The signature of the [FunctionDeclaration]. We use a list of the FQN of the [Type]s of

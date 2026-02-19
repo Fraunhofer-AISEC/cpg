@@ -25,20 +25,38 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
-import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
+import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
+import de.fraunhofer.aisec.cpg.graph.types.Type
+import de.fraunhofer.aisec.cpg.graph.unknownType
+import java.util.*
 import org.apache.commons.lang3.builder.ToStringBuilder
-import org.neo4j.ogm.annotation.Relationship
 
-class EnumDeclaration : Record() {
-    @Relationship(value = "ENTRIES", direction = Relationship.Direction.OUTGOING)
-    var entryEdges = astEdgesOf<EnumConstant>()
-    var entries by unwrapping(EnumDeclaration::entryEdges)
+/** Represents a type alias definition as found in C/C++: `typedef unsigned long ulong;` */
+class Typedef : Declaration() /*, DeclaresType*/, HasSecondaryTypeEdge {
+    /** The already existing type that is to be aliased */
+    var type: Type = unknownType()
+
+    /** The newly created alias to be defined */
+    var alias: Type = unknownType()
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Typedef) return false
+        return super.equals(other) && type == other.type && alias == other.alias
+    }
+
+    override fun hashCode() = Objects.hash(super.hashCode(), type, alias)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("entries", entries)
+            .append("type", type)
+            .append("alias", alias)
             .toString()
     }
+
+    override val secondaryTypes: List<Type>
+        get() = listOf(alias)
+
+    /*override val declaredType: Type
+    get() = alias*/
 }

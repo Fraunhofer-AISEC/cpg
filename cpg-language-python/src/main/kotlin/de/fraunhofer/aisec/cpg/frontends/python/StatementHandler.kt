@@ -466,7 +466,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 if (node.type != null) {
                     // the parameter can have a name, or we use the anonymous identifier _
                     catchClause.parameter =
-                        newVariableDeclaration(
+                        newVariable(
                             name = node.name ?: "",
                             type = frontend.typeOf(node.type),
                             rawNode = node,
@@ -691,7 +691,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     /** Small utility function to check, whether we are inside an __init__ module. */
     private fun isInitModule(): Boolean =
         (frontend.scopeManager.firstScopeIsInstanceOrNull<NameScope>()?.astNode
-                as? NamespaceDeclaration)
+                as? Namespace)
             ?.path
             ?.endsWith(PythonLanguage.IDENTIFIER_INIT) == true
 
@@ -948,7 +948,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     internal fun addAsyncWarning(mightBeAsync: Python.AST.AsyncOrNot, parentNode: Node) {
         if (mightBeAsync is IsAsync) {
             parentNode.additionalProblems +=
-                newProblemDeclaration(
+                newProblem(
                     problem = "The \"async\" keyword is not yet supported.",
                     problemType = ProblemNode.ProblemType.TRANSLATION,
                     rawNode = mightBeAsync,

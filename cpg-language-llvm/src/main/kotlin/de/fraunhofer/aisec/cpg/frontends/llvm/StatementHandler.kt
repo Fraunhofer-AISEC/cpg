@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
@@ -56,8 +56,8 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      *
      * It is noteworthy, that LLVM IR is a single state assignment form, meaning, that all
      * instructions that perform an assignment will result in a [DeclarationStatement] and a
-     * [VariableDeclaration], with the original instruction wrapped into the
-     * [VariableDeclaration.initializer] property.
+     * [Variable], with the original instruction wrapped into the
+     * [Variable.initializer] property.
      *
      * Currently, this wrapping is done in the individual instruction parsing functions, but should
      * be extracted from that, e.g. by routing it through the [DeclarationHandler].
@@ -113,7 +113,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 (decl as? DeclarationStatement)?.let {
                     // cache binding
                     frontend.bindingsCache[instr.symbolName] =
-                        decl.singleDeclaration as VariableDeclaration
+                        decl.singleDeclaration as Variable
                 }
 
                 decl
@@ -645,7 +645,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 base =
                     newReference(
                         copy.singleDeclaration?.name?.localName,
-                        (copy.singleDeclaration as? VariableDeclaration)?.type ?: unknownType(),
+                        (copy.singleDeclaration as? Variable)?.type ?: unknownType(),
                         rawNode = instr,
                     )
             }
@@ -1145,7 +1145,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
             val catchClause = newCatchClause(rawNode = instr)
             catchClause.name = Name(gotoCatch.labelName)
             catchClause.parameter =
-                newVariableDeclaration(
+                newVariable(
                     "e_${gotoCatch.labelName}",
                     unknownType(),
                     true,
@@ -1197,7 +1197,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
                 "e_${instr.address()}"
             }
         val except =
-            newVariableDeclaration(
+            newVariable(
                 exceptionName,
                 objectType(catchType), // TODO: This doesn't work for multiple types to catch
                 false,
@@ -1221,7 +1221,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val newArrayDecl = declarationOrNot(frontend.getOperandValueAtIndex(instr, 0), instr)
         compoundStatement.statements += newArrayDecl
 
-        val decl = newArrayDecl.declarations[0] as? VariableDeclaration
+        val decl = newArrayDecl.declarations[0] as? Variable
         val arrayExpr = newSubscriptExpression(rawNode = instr)
         arrayExpr.arrayExpression =
             newReference(
@@ -1338,7 +1338,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
      */
     fun handlePhi(
         instr: LLVMValueRef,
-        tu: TranslationUnitDeclaration,
+        tu: TranslationUnit,
         flatAST: MutableList<AstNode>,
     ) {
         val labelMap = mutableMapOf<LabelStatement, Expression>()
@@ -1394,7 +1394,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         val firstBB = functions[0].body as Block
         val varName = instr.name
         val type = frontend.typeOf(instr)
-        val declaration = newVariableDeclaration(varName, type, false, rawNode = instr)
+        val declaration = newVariable(varName, type, false, rawNode = instr)
         declaration.type = type
 
         flatAST.add(declaration)
@@ -1447,7 +1447,7 @@ class StatementHandler(lang: LLVMIRLanguageFrontend) :
         // if it is still empty, we probably do not have a left side
         return if (lhs != "") {
             val decl =
-                newVariableDeclaration(lhs, frontend.typeOf(valueRef), false, rawNode = valueRef)
+                newVariable(lhs, frontend.typeOf(valueRef), false, rawNode = valueRef)
             decl.initializer = rhs
 
             // add the declaration to the current scope

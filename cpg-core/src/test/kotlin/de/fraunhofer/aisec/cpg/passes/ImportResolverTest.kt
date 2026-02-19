@@ -32,9 +32,9 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.builder.translationResult
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.newImportDeclaration
-import de.fraunhofer.aisec.cpg.graph.newNamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.newTranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.newVariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.newNamespace
+import de.fraunhofer.aisec.cpg.graph.newTranslationUnit
+import de.fraunhofer.aisec.cpg.graph.newVariable
 import de.fraunhofer.aisec.cpg.graph.parseName
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -55,10 +55,10 @@ class ImportResolverTest {
                             // directly imports the other namespace (let's start easy). We
                             // intentionally
                             // create them in reverse order
-                            var tuB = newTranslationUnitDeclaration("file.b")
+                            var tuB = newTranslationUnit("file.b")
                             scopeManager.resetToGlobal(tuB)
 
-                            var pkgB = newNamespaceDeclaration("b")
+                            var pkgB = newNamespace("b")
                             scopeManager.addDeclaration(pkgB)
                             tuB.declarations += pkgB
 
@@ -85,15 +85,15 @@ class ImportResolverTest {
                         .also { this.addTranslationUnit(it) }
 
                     with(frontend) {
-                            var tuA = newTranslationUnitDeclaration("file.a")
+                            var tuA = newTranslationUnit("file.a")
                             scopeManager.resetToGlobal(tuA)
 
-                            var pkgA = newNamespaceDeclaration("a")
+                            var pkgA = newNamespace("a")
                             scopeManager.addDeclaration(pkgA)
                             tuA.declarations += pkgA
 
                             scopeManager.enterScope(pkgA)
-                            var foo = newVariableDeclaration(parseName("a.foo"))
+                            var foo = newVariable(parseName("a.foo"))
                             scopeManager.addDeclaration(foo)
                             pkgA.declarations += foo
 
@@ -103,15 +103,15 @@ class ImportResolverTest {
                         .also { this.addTranslationUnit(it) }
 
                     with(frontend) {
-                            var tuA = newTranslationUnitDeclaration("file.c")
+                            var tuA = newTranslationUnit("file.c")
                             scopeManager.resetToGlobal(tuA)
 
-                            var pkgA = newNamespaceDeclaration("c")
+                            var pkgA = newNamespace("c")
                             scopeManager.addDeclaration(pkgA)
                             tuA.declarations += pkgA
 
                             scopeManager.enterScope(pkgA)
-                            var foo = newVariableDeclaration(parseName("c.bar"))
+                            var foo = newVariable(parseName("c.bar"))
                             scopeManager.addDeclaration(foo)
                             pkgA.declarations += foo
 

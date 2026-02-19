@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.test.*
@@ -37,7 +37,7 @@ import java.nio.file.Path
 import kotlin.test.*
 
 class CallResolverTest : BaseTest() {
-    private fun testMethods(records: List<RecordDeclaration>, intType: Type, stringType: Type) {
+    private fun testMethods(records: List<Record>, intType: Type, stringType: Type) {
         val callsRecord = findByUniqueName(records, "Calls")
         val externalRecord = findByUniqueName(records, "External")
         val superClassRecord = findByUniqueName(records, "SuperClass")
@@ -56,7 +56,7 @@ class CallResolverTest : BaseTest() {
         checkCalls(intType, stringType, externalMethods, externalCalls)
     }
 
-    private fun ensureNoUnknownClassDummies(records: List<RecordDeclaration>) {
+    private fun ensureNoUnknownClassDummies(records: List<Record>) {
         val callsRecord = findByUniqueName(records, "Calls")
         assertTrue(records.stream().noneMatch { it.name.localName == "Unknown" })
 
@@ -94,7 +94,7 @@ class CallResolverTest : BaseTest() {
         }
     }
 
-    private fun testOverriding(records: List<RecordDeclaration>) {
+    private fun testOverriding(records: List<Record>) {
         val callsRecord = findByUniqueName(records, "Calls")
         val externalRecord = findByUniqueName(records, "External")
         val superClassRecord = findByUniqueName(records, "SuperClass")

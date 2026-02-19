@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
 class DeclarationHandler(frontend: GoLanguageFrontend) :
-    GoHandler<Declaration?, GoStandardLibrary.Ast.Decl>(::ProblemDeclaration, frontend) {
+    GoHandler<Declaration?, GoStandardLibrary.Ast.Decl>(::Problem, frontend) {
 
     override fun handleNode(node: GoStandardLibrary.Ast.Decl): Declaration? {
         return when (node) {
@@ -57,7 +57,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                     frontend.scopeManager.currentNamespace.fqn(recordType.root.name.localName)
 
                 val method =
-                    newMethodDeclaration(Name(funcDecl.name.name, fqnRecord), rawNode = funcDecl)
+                    newMethod(Name(funcDecl.name.name, fqnRecord), rawNode = funcDecl)
 
                 // The name of the Go receiver is optional. In fact, if the name is not
                 // specified we probably do not need any receiver variable at all,
@@ -65,7 +65,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 // of the struct, but it is not modifying the receiver.
                 if (recvField?.names?.isNotEmpty() == true) {
                     method.receiver =
-                        newVariableDeclaration(
+                        newVariable(
                             recvField.names[0].name,
                             recordType,
                             rawNode = recvField,
@@ -76,7 +76,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                     // TODO: this will only find methods within the current translation unit.
                     //  this is a limitation that we have for C++ as well
                     val record =
-                        frontend.scopeManager.lookupScope(fqnRecord)?.astNode as? RecordDeclaration
+                        frontend.scopeManager.lookupScope(fqnRecord)?.astNode as? Record
 
                     // Enter scope of record, so we can later resolve this correctly. We do NOT add
                     // the method to the AST methods property because it is declared outside of the
@@ -100,7 +100,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
 
         frontend.scopeManager.enterScope(func)
 
-        val receiver = (func as? MethodDeclaration)?.receiver
+        val receiver = (func as? Method)?.receiver
         if (receiver != null) {
             // Add the receiver do the scope manager, so we can resolve the receiver value
             frontend.scopeManager.addDeclaration(receiver)
@@ -117,7 +117,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 // If the function has named return variables, be sure to declare them as well
                 if (returnVar.names.isNotEmpty()) {
                     val returnParam =
-                        newVariableDeclaration(
+                        newVariable(
                             returnVar.names[0].name,
                             frontend.typeOf(returnVar.type),
                             rawNode = returnVar,
@@ -157,7 +157,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
         frontend.scopeManager.leaveScope(func)
 
         // Leave scope of record, if applicable
-        (func as? MethodDeclaration)?.recordDeclaration?.let {
+        (func as? Method)?.recordDeclaration?.let {
             frontend.scopeManager.leaveScope(it)
         }
 
@@ -204,7 +204,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                 // (and make it an array afterward)
                 val (type, variadic) = frontend.fieldTypeOf(param.type)
 
-                val p = newParameterDeclaration(name, type, variadic, rawNode = param)
+                val p = newParameter(name, type, variadic, rawNode = param)
 
                 frontend.scopeManager.addDeclaration(p)
                 func.parameters += p

@@ -25,8 +25,8 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.java
 
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.MemberExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.HasType
@@ -47,17 +47,17 @@ import de.fraunhofer.aisec.cpg.passes.SymbolResolver.Companion.LOGGER
  */
 fun SymbolResolver.handleSuperExpressionHelper(
     memberExpression: MemberExpression,
-    curClass: RecordDeclaration,
+    curClass: Record,
 ): Boolean {
     // Because the "super" keyword still refers to "this" (but cast to another class), we
     // still need to connect the super reference to the receiver of this method.
     val func = scopeManager.currentFunction
-    if (func is MethodDeclaration) {
+    if (func is Method) {
         (memberExpression.base as Reference?)?.refersTo = func.receiver
     }
 
     // In the next step we can "cast" the base to the correct type, by setting the base
-    var target: RecordDeclaration? = null
+    var target: Record? = null
 
     // In case the reference is just called "super", this is a direct superclass, either
     // defined explicitly or java.lang.Object by default
@@ -103,8 +103,8 @@ fun SymbolResolver.handleSuperExpressionHelper(
 
 fun SymbolResolver.handleSpecificSupertype(
     callee: MemberExpression,
-    curClass: RecordDeclaration,
-): RecordDeclaration? {
+    curClass: Record,
+): Record? {
     val baseName = callee.base.name.parent ?: return null
 
     val type = typeManager.lookupResolvedType(baseName.toString()) ?: callee.unknownType()

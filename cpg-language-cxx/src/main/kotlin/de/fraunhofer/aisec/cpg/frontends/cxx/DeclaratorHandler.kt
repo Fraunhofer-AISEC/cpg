@@ -50,7 +50,7 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.*
  * See [DeclarationHandler] for a detailed explanation, why this is split into a dedicated handler.
  */
 class DeclaratorHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Declaration, IASTNode>(Supplier(::ProblemDeclaration), lang) {
+    CXXHandler<Declaration, IASTNode>(Supplier(::Problem), lang) {
 
     override fun handleNode(node: IASTNode): Declaration {
         return when (node) {
@@ -96,7 +96,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // This is just a nested declarator, i.e. () wrapping the real declarator
         if (ctx.initializer == null && ctx.nestedDeclarator is IASTDeclarator) {
             return handle(ctx.nestedDeclarator)
-                ?: ProblemDeclaration("could not parse nested declaration")
+                ?: Problem("could not parse nested declaration")
         }
 
         val name = ctx.name.toString()
@@ -115,7 +115,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
             val implicitInitializerAllowed = frontend.dialect is GPPLanguage
 
             val declaration =
-                newVariableDeclaration(
+                newVariable(
                     ctx.name.toString(),
                     unknownType(), // Type will be filled out later by
                     // handleSimpleDeclaration
@@ -129,15 +129,15 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
     /**
      * Translates (data members)[https://en.cppreference.com/w/cpp/language/data_members] of a C++
-     * class or C/C++ struct into a [FieldDeclaration].
+     * class or C/C++ struct into a [Field].
      */
-    private fun handleFieldDeclarator(ctx: IASTDeclarator): FieldDeclaration {
+    private fun handleFieldDeclarator(ctx: IASTDeclarator): Field {
         val initializer = ctx.initializer?.let { frontend.initializerHandler.handle(it) }
 
         val name = parseName(ctx.name.toString())
 
         val declaration =
-            newFieldDeclaration(
+            newField(
                 name.localName,
                 unknownType(),
                 emptySet(),
@@ -150,7 +150,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     }
 
     /**
-     * A small utility function that creates a [ConstructorDeclaration], [MethodDeclaration] or
+     * A small utility function that creates a [Constructor], [Method] or
      * [FunctionDeclaration] depending on which scope the function should live in. This basically
      * checks if the scope is a namespace or a record and if the name matches to the record (in case
      * of a constructor).
@@ -169,27 +169,27 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 name.isKnownOperatorName -> {
                     // retrieve the operator code
                     val operatorCode = name.localName.drop("operator".length)
-                    newOperatorDeclaration(name, operatorCode, rawNode = ctx)
+                    newOperator(name, operatorCode, rawNode = ctx)
                 }
                 // Check, if it's a constructor. This is the case if the local names of the function
                 // and the record declaration match
-                holder is RecordDeclaration && name.localName == holder.name.localName -> {
-                    newConstructorDeclaration(name, holder, rawNode = ctx)
+                holder is Record && name.localName == holder.name.localName -> {
+                    newConstructor(name, holder, rawNode = ctx)
                 }
                 // It's also a constructor, if the name is in the form A::A, and it has no type
                 // specifier
                 name.localName == name.parent.toString() &&
                     ((ctx as? IASTFunctionDefinition)?.declSpecifier as? IASTSimpleDeclSpecifier)
                         ?.type == IASTSimpleDeclSpecifier.t_unspecified -> {
-                    newConstructorDeclaration(name, null, rawNode = ctx)
+                    newConstructor(name, null, rawNode = ctx)
                 }
                 // It could also be a scoped function declaration.
-                scope?.astNode is NamespaceDeclaration -> {
+                scope?.astNode is Namespace -> {
                     newFunctionDeclaration(name, rawNode = ctx)
                 }
                 // Otherwise, it's a method to a known or unknown record
                 else -> {
-                    newMethodDeclaration(name, false, holder as? RecordDeclaration, rawNode = ctx)
+                    newMethod(name, false, holder as? Record, rawNode = ctx)
                 }
             }
 
@@ -278,7 +278,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         frontend.scopeManager.enterScope(declaration)
 
         // Create the method receiver (if this is a method)
-        if (declaration is MethodDeclaration) {
+        if (declaration is Method) {
             createMethodReceiver(declaration)
         }
 
@@ -286,7 +286,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         for (param in ctx.parameters) {
             val arg = frontend.parameterDeclarationHandler.handle(param)
 
-            if (arg is ParameterDeclaration) {
+            if (arg is Parameter) {
                 // check for void type parameters
                 if (arg.type is IncompleteType) {
                     if (arg.name.isNotEmpty()) {
@@ -313,7 +313,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 arg.argumentIndex = i
             }
 
-            if (arg is ParameterDeclaration) {
+            if (arg is Parameter) {
                 frontend.scopeManager.addDeclaration(arg)
                 declaration.parameters += arg
             }
@@ -325,7 +325,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // is appended to the original ones. For coherent graph behavior, we introduce an implicit
         // declaration that wraps this list
         if (ctx.takesVarArgs()) {
-            val varargs = newParameterDeclaration("va_args", unknownType(), true)
+            val varargs = newParameter("va_args", unknownType(), true)
             varargs.isImplicit = true
             varargs.argumentIndex = i
             frontend.scopeManager.addDeclaration(varargs)
@@ -347,7 +347,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 frontend.scopeManager.currentFunction != null
         ) {
             val problem =
-                newProblemDeclaration(
+                newProblem(
                     "CDT tells us this is a (named) function declaration in parenthesis without a body directly within a block scope, this might be an ambiguity which we cannot solve currently."
                 )
 
@@ -361,11 +361,11 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
     /**
      * This function takes cares of creating a receiver and setting it to the supplied
-     * [MethodDeclaration]. In C++ this is called the
+     * [Method]. In C++ this is called the
      * [implicit object parameter](https://en.cppreference.com/w/cpp/language/overload_resolution#Implicit_object_parameter)
      * .
      */
-    private fun createMethodReceiver(declaration: MethodDeclaration) {
+    private fun createMethodReceiver(declaration: Method) {
         val recordDeclaration = declaration.recordDeclaration
 
         // Create a pointer to the class type (if we know it)
@@ -375,7 +375,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // will create another implicit constructexpression for this variable, and we don't want
         // this.
         val thisDeclaration =
-            newVariableDeclaration("this", type = type, implicitInitializerAllowed = false)
+            newVariable("this", type = type, implicitInitializerAllowed = false)
         // Yes, this is implicit
         thisDeclaration.isImplicit = true
 
@@ -394,7 +394,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         if (recordDeclaration == null) {
             // variable
             result =
-                newVariableDeclaration(
+                newVariable(
                     name,
                     unknownType(),
                     implicitInitializerAllowed = true,
@@ -403,7 +403,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         } else {
             // field
             result =
-                newFieldDeclaration(
+                newField(
                     name,
                     unknownType(),
                     emptySet(),
@@ -418,7 +418,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         return result
     }
 
-    private fun handleCompositeTypeSpecifier(ctx: IASTCompositeTypeSpecifier): RecordDeclaration {
+    private fun handleCompositeTypeSpecifier(ctx: IASTCompositeTypeSpecifier): Record {
         val kind: String =
             when (ctx.key) {
                 IASTCompositeTypeSpecifier.k_struct -> "struct"
@@ -427,7 +427,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 else -> "struct"
             }
 
-        val recordDeclaration = newRecordDeclaration(ctx.name.toString(), kind, rawNode = ctx)
+        val recordDeclaration = newRecord(ctx.name.toString(), kind, rawNode = ctx)
 
         // Handle C++ classes
         if (ctx is CPPASTCompositeTypeSpecifier) {
@@ -444,7 +444,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         if (recordDeclaration.constructors.isEmpty()) {
             // create an implicit constructor declaration with the same name as the record
             val constructorDeclaration =
-                newConstructorDeclaration(recordDeclaration.name.localName, recordDeclaration)
+                newConstructor(recordDeclaration.name.localName, recordDeclaration)
                     .implicit(code = recordDeclaration.name.localName)
 
             createMethodReceiver(constructorDeclaration)
@@ -464,16 +464,16 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
      * Handles template parameters that are types
      *
      * @param ctx
-     * @return TypeParameterDeclaration with its name
+     * @return TypeParameter with its name
      */
     private fun handleTemplateTypeParameter(
         ctx: CPPASTSimpleTypeTemplateParameter
-    ): TypeParameterDeclaration {
-        return newTypeParameterDeclaration(ctx.rawSignature, rawNode = ctx)
+    ): TypeParameter {
+        return newTypeParameter(ctx.rawSignature, rawNode = ctx)
     }
 
     private fun processMembers(
-        recordDeclaration: RecordDeclaration,
+        recordDeclaration: Record,
         ctx: IASTCompositeTypeSpecifier,
     ) {
         // Track current visibility - default depends on the record type

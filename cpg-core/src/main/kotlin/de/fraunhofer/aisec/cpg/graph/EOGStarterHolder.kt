@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.overlays.BasicBlock
 import de.fraunhofer.aisec.cpg.passes.EOGStarterPass
 import de.fraunhofer.aisec.cpg.passes.SymbolResolver
@@ -41,7 +41,7 @@ import de.fraunhofer.aisec.cpg.passes.SymbolResolver
  * In some cases, the [Node] that implements this interface will add itself, for example in a
  * [FunctionDeclaration], so that we can use all functions as an entry-point to symbol resolution.
  * In other cases, certain child nodes might be added to [eogStarters], for example to add all
- * top-level declarations in a [TranslationUnitDeclaration].
+ * top-level declarations in a [TranslationUnit].
  *
  * The common denominator is that all the nodes contained in [eogStarters] **start** an EOG path,
  * i.e., they should have a valid [Node.nextEOG], but an empty [Node.prevEOG].

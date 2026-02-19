@@ -30,8 +30,8 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import java.io.File
@@ -91,10 +91,10 @@ class JVMLanguageFrontend(
      * Because of a limitation in SootUp, we can only specify the whole classpath for soot to parse.
      * But in the CPG we need to specify one file. In this case, we take the
      * [TranslationConfiguration.topLevel] and hand it over to soot, which parses all appropriate
-     * files within this folder/classpath. This means that the returned [TranslationUnitDeclaration]
+     * files within this folder/classpath. This means that the returned [TranslationUnit]
      * will contain not just the content of one file but the whole directory.
      */
-    override fun parse(file: File): TranslationUnitDeclaration {
+    override fun parse(file: File): TranslationUnit {
         val view =
             when (file.extension) {
                 "class" -> {
@@ -142,16 +142,16 @@ class JVMLanguageFrontend(
                 }
             }
         // This contains the whole directory
-        val tu = newTranslationUnitDeclaration(file.parent)
+        val tu = newTranslationUnit(file.parent)
         scopeManager.resetToGlobal(tu)
 
-        val packages = mutableMapOf<String, NamespaceDeclaration>()
+        val packages = mutableMapOf<String, Namespace>()
 
         for (sootClass in view.classes) {
             // Create an appropriate namespace, if it does not already exist
             val pkg =
                 packages.computeIfAbsent(sootClass.type.packageName.name) {
-                    val pkg = newNamespaceDeclaration(it)
+                    val pkg = newNamespace(it)
                     scopeManager.addDeclaration(pkg)
                     tu.addDeclaration(pkg)
                     pkg

@@ -32,20 +32,20 @@ import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
 /** Node representing a declaration of a template class or struct */
-class RecordTemplateDeclaration : TemplateDeclaration() {
+class RecordTemplate : Template() {
     /**
      * Edges pointing to all RecordDeclarations that are realized by the ClassTempalte. Before the
-     * expansion pass there is only a single RecordDeclaration which is instantiated after the
-     * expansion pass for each instantiation of the ClassTemplate there will be a realization
+     * expansion pass there is only a single Record which is instantiated after the expansion pass
+     * for each instantiation of the ClassTemplate there will be a realization
      */
     @Relationship(value = "REALIZATION", direction = Relationship.Direction.OUTGOING)
-    val realizationEdges = astEdgesOf<RecordDeclaration>()
-    override val realizations by unwrapping(RecordTemplateDeclaration::realizationEdges)
+    val realizationEdges = astEdgesOf<Record>()
+    override val realizations by unwrapping(RecordTemplate::realizationEdges)
 
     override fun addDeclaration(declaration: Declaration) {
-        if (declaration is TypeParameterDeclaration || declaration is ParameterDeclaration) {
+        if (declaration is TypeParameter || declaration is Parameter) {
             addIfNotContains(super.parameterEdges, declaration)
-        } else if (declaration is RecordDeclaration) {
+        } else if (declaration is Record) {
             addIfNotContains(realizationEdges, declaration)
         }
     }
@@ -54,7 +54,7 @@ class RecordTemplateDeclaration : TemplateDeclaration() {
         if (this === other) return true
         if (other == null || javaClass != other.javaClass) return false
         if (!super.equals(other)) return false
-        val that = other as RecordTemplateDeclaration
+        val that = other as RecordTemplate
         return realizations == that.realizations &&
             propertyEqualsList(realizationEdges, that.realizationEdges) &&
             parameters == that.parameters &&

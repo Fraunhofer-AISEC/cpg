@@ -25,38 +25,31 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.types.HasSecondaryTypeEdge
-import de.fraunhofer.aisec.cpg.graph.types.Type
-import de.fraunhofer.aisec.cpg.graph.unknownType
-import java.util.*
+import de.fraunhofer.aisec.cpg.graph.ProblemNode
+import java.util.Objects
 import org.apache.commons.lang3.builder.ToStringBuilder
 
-/** Represents a type alias definition as found in C/C++: `typedef unsigned long ulong;` */
-class TypedefDeclaration : Declaration() /*, DeclaresType*/, HasSecondaryTypeEdge {
-    /** The already existing type that is to be aliased */
-    var type: Type = unknownType()
-
-    /** The newly created alias to be defined */
-    var alias: Type = unknownType()
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is TypedefDeclaration) return false
-        return super.equals(other) && type == other.type && alias == other.alias
-    }
-
-    override fun hashCode() = Objects.hash(super.hashCode(), type, alias)
+/**
+ * A node where the statement could not be translated by the graph. We use ProblemExpressions
+ * whenever the CPG library requires an [Declaration].
+ */
+class Problem(
+    override var problem: String = "",
+    override var problemType: ProblemNode.ProblemType = ProblemNode.ProblemType.TRANSLATION,
+) : ValueDeclaration(), ProblemNode {
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)
-            .append("type", type)
-            .append("alias", alias)
+            .appendSuper(super.toString())
+            .append("problem", problem)
             .toString()
     }
 
-    override val secondaryTypes: List<Type>
-        get() = listOf(alias)
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Problem) return false
+        return super.equals(other) && problem == other.problem
+    }
 
-    /*override val declaredType: Type
-    get() = alias*/
+    override fun hashCode() = Objects.hash(super.hashCode(), problem)
 }

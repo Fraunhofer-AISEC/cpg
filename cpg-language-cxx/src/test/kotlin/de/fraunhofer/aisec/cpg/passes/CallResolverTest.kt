@@ -28,10 +28,10 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.ConstructorDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
@@ -43,7 +43,7 @@ import java.util.function.Predicate
 import kotlin.test.*
 
 class CallResolverTest : BaseTest() {
-    private fun testMethods(records: List<RecordDeclaration>, intType: Type, stringType: Type) {
+    private fun testMethods(records: List<Record>, intType: Type, stringType: Type) {
         val callsRecord = findByUniqueName(records, "Calls")
         val externalRecord = findByUniqueName(records, "External")
         val superClassRecord = findByUniqueName(records, "SuperClass")
@@ -62,7 +62,7 @@ class CallResolverTest : BaseTest() {
         checkCalls(intType, stringType, externalMethods, externalCalls)
     }
 
-    private fun ensureNoUnknownClassDummies(records: List<RecordDeclaration>) {
+    private fun ensureNoUnknownClassDummies(records: List<Record>) {
         val callsRecord = findByUniqueName(records, "Calls")
         assertTrue(records.stream().noneMatch { it.name.localName == "Unknown" })
 
@@ -72,7 +72,7 @@ class CallResolverTest : BaseTest() {
 
     /**
      * Checks that method calls from a function outside a class are correctly resolved to the
-     * MethodDeclaration
+     * Method
      *
      * @param result
      */
@@ -85,7 +85,7 @@ class CallResolverTest : BaseTest() {
         val callExpressions = result.calls
         val invoke = findByUniqueName(callExpressions, "invoke")
         assertEquals(1, invoke.invokes.size)
-        assertTrue(invoke.invokes[0] is MethodDeclaration)
+        assertTrue(invoke.invokes[0] is Method)
     }
 
     private fun checkCalls(
@@ -119,7 +119,7 @@ class CallResolverTest : BaseTest() {
         }
     }
 
-    private fun testOverriding(records: List<RecordDeclaration>) {
+    private fun testOverriding(records: List<Record>) {
         val callsRecord = findByUniqueName(records, "Calls")
         val externalRecord = findByUniqueName(records, "External")
         val superClassRecord = findByUniqueName(records, "SuperClass")
@@ -159,7 +159,7 @@ class CallResolverTest : BaseTest() {
 
         // Test functions (not methods!)
         val functions =
-            result.functions { it.name.localName == "functionTarget" && it !is MethodDeclaration }
+            result.functions { it.name.localName == "functionTarget" && it !is Method }
         val calls = findByName(result.calls, "functionTarget")
         checkCalls(intType, stringType, functions, calls)
         ensureNoUnknownClassDummies(records)
@@ -278,7 +278,7 @@ class CallResolverTest : BaseTest() {
         // Check defines edge
         assertEquals(displayDefinition, displayDeclaration.definition)
 
-        // Check defaults edge of ParameterDeclaration
+        // Check defaults edge of Parameter
         assertEquals(displayDeclaration.defaultParameters, displayDefinition.defaultParameters)
 
         // Check call display(1);
@@ -356,7 +356,7 @@ class CallResolverTest : BaseTest() {
             }
         val literalStar = findByUniquePredicate(result.literals) { it.value == '*' }
         val literal3 = findByUniquePredicate(result.literals) { it.value == 3 }
-        // Check defaults edge of ParameterDeclaration
+        // Check defaults edge of Parameter
         assertTrue(displayFunction.defaultParameters[0] is Literal<*>)
         assertTrue(displayFunction.defaultParameters[1] is Literal<*>)
         assertEquals('*', (displayFunction.defaultParameters[0] as Literal<*>).value)
@@ -673,8 +673,8 @@ class CallResolverTest : BaseTest() {
         val calls = result.calls
         val methodDeclarations = result.methods
         val calcOverload: FunctionDeclaration =
-            findByUniquePredicate(methodDeclarations) { c: MethodDeclaration ->
-                c.recordDeclaration!!.name.localName == "Overload" && c !is ConstructorDeclaration
+            findByUniquePredicate(methodDeclarations) { c: Method ->
+                c.recordDeclaration!!.name.localName == "Overload" && c !is Constructor
             }
 
         // This call must resolve to implicit cast of the overloaded class and not to the base class

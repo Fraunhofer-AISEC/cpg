@@ -28,9 +28,9 @@ package de.fraunhofer.aisec.cpg.frontends
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.statements.ForStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.sarif.Region
@@ -60,7 +60,7 @@ class FrontendHelperTest {
         assertNotNull(result)
         // The class should have 2 comments: The javadoc and "Class comment"
         val tu = result.components.flatMap { it.translationUnits }.first()
-        val classDeclaration = tu.declarations.first() as RecordDeclaration
+        val classDeclaration = tu.declarations.first() as Record
         classDeclaration.comment = "" // Reset the comment of the ClassDerclaration
 
         val comment = "This comment clearly belongs to the class."
@@ -72,7 +72,7 @@ class FrontendHelperTest {
         assertTrue(classDeclaration.comment?.contains(comment2) == true)
 
         // "javadoc of arg" belongs to the arg and not the class
-        val fieldDecl = classDeclaration.declarations.first() as FieldDeclaration
+        val fieldDecl = classDeclaration.declarations.first() as Field
         fieldDecl.comment = ""
         val comment3 = "javadoc of arg"
         FrontendUtils.matchCommentToNode(comment3, Region(5, 9, 5, 23), tu)
@@ -93,7 +93,7 @@ class FrontendHelperTest {
         assertTrue(constructorAssignment.comment?.contains(comment5) == true)
         assertNull(constructor.comment)
 
-        val mainMethod = classDeclaration.declarations[2] as MethodDeclaration
+        val mainMethod = classDeclaration.declarations[2] as Method
         assertNull(mainMethod.comment)
         val forLoop = (mainMethod.body as Block).statements[0] as ForStatement
         forLoop.comment = null
@@ -144,8 +144,8 @@ class FrontendHelperTest {
         assertNotNull(result)
 
         val tu = result.components.flatMap { it.translationUnits }.first()
-        val classDeclaration = tu.declarations.first() as RecordDeclaration
-        val mainMethod = classDeclaration.declarations[1] as MethodDeclaration
+        val classDeclaration = tu.declarations.first() as Record
+        val mainMethod = classDeclaration.declarations[1] as Method
         val forLoop = (mainMethod.body as Block).statements[0] as ForStatement
         val printStatement = (forLoop.statement as Block).statements.first()
 

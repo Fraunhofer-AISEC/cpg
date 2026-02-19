@@ -31,10 +31,10 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
+import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
@@ -48,13 +48,13 @@ import org.ini4j.Profile.Section
 /**
  * The INI file frontend. This frontend utilizes the [ini4j library](https://ini4j.sourceforge.net/)
  * to parse the config file. The result consists of
- * - a [TranslationUnitDeclaration] wrapping the entire result
- * - a [NamespaceDeclaration] wrapping the INI file and thus preventing collisions with other
+ * - a [TranslationUnit] wrapping the entire result
+ * - a [Namespace] wrapping the INI file and thus preventing collisions with other
  *   symbols which might have the same name
- * - a [RecordDeclaration] per `Section` (a section refers to a block of INI values marked with a
+ * - a [Record] per `Section` (a section refers to a block of INI values marked with a
  *   line `[SectionName]`)
- * - a [FieldDeclaration] per entry in a section. The [FieldDeclaration.name] matches the `entry`s
- *   `name` field and the [FieldDeclaration.initializer] is set to a [Literal] with the
+ * - a [Field] per entry in a section. The [Field.name] matches the `entry`s
+ *   `name` field and the [Field.initializer] is set to a [Literal] with the
  *   corresponding `entry`s `value`.
  *
  * Note:
@@ -75,7 +75,7 @@ class IniFileFrontend(ctx: TranslationContext, language: Language<IniFileFronten
     private lateinit var uri: URI
     private lateinit var region: Region
 
-    override fun parse(file: File): TranslationUnitDeclaration {
+    override fun parse(file: File): TranslationUnit {
         uri = file.toURI()
         region = Region()
 
@@ -102,10 +102,10 @@ class IniFileFrontend(ctx: TranslationContext, language: Language<IniFileFronten
                 file.nameWithoutExtension
             }
 
-        val tud = newTranslationUnitDeclaration(name = file.name, rawNode = ini)
+        val tud = newTranslationUnit(name = file.name, rawNode = ini)
         scopeManager.resetToGlobal(tud)
 
-        val nsd = newNamespaceDeclaration(name = namespace, rawNode = ini)
+        val nsd = newNamespace(name = namespace, rawNode = ini)
         scopeManager.addDeclaration(nsd)
         tud.addDeclaration(nsd)
 
@@ -122,11 +122,11 @@ class IniFileFrontend(ctx: TranslationContext, language: Language<IniFileFronten
     }
 
     /**
-     * Translates a `Section` into a [RecordDeclaration] and handles all `entries` using
+     * Translates a `Section` into a [Record] and handles all `entries` using
      * [handleEntry].
      */
-    private fun handleSection(section: Section): RecordDeclaration {
-        val record = newRecordDeclaration(name = section.name, kind = "section", rawNode = section)
+    private fun handleSection(section: Section): Record {
+        val record = newRecord(name = section.name, kind = "section", rawNode = section)
         scopeManager.enterScope(record)
         section.entries.forEach {
             val field = handleEntry(it)
@@ -139,12 +139,12 @@ class IniFileFrontend(ctx: TranslationContext, language: Language<IniFileFronten
     }
 
     /**
-     * Translates an `MutableEntry` to a new [FieldDeclaration] with the
-     * [FieldDeclaration.initializer] being set to the `entry`s value.
+     * Translates an `MutableEntry` to a new [Field] with the
+     * [Field.initializer] being set to the `entry`s value.
      */
-    private fun handleEntry(entry: MutableMap.MutableEntry<String?, String?>): FieldDeclaration {
+    private fun handleEntry(entry: MutableMap.MutableEntry<String?, String?>): Field {
         val field =
-            newFieldDeclaration(name = entry.key, type = primitiveType("string"), rawNode = entry)
+            newField(name = entry.key, type = primitiveType("string"), rawNode = entry)
                 .apply { initializer = newLiteral(value = entry.value, rawNode = entry) }
 
         return field

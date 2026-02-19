@@ -48,7 +48,7 @@ import de.fraunhofer.aisec.cpg.helpers.Util
  * [DeclarationHandler], for others, the [StatementHandler] will forward these statements to us.
  */
 class DeclarationHandler(frontend: PythonLanguageFrontend) :
-    PythonHandler<Declaration, Python.AST.Def>(::ProblemDeclaration, frontend) {
+    PythonHandler<Declaration, Python.AST.Def>(::Problem, frontend) {
     override fun handleNode(node: Python.AST.Def): Declaration {
         return when (node) {
             is Python.AST.FunctionDef -> handleFunctionDef(node)
@@ -59,10 +59,10 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
 
     /**
      * Translates a Python [`ClassDef`](https://docs.python.org/3/library/ast.html#ast.ClassDef)
-     * into an [RecordDeclaration].
+     * into an [Record].
      */
-    private fun handleClassDef(stmt: Python.AST.ClassDef): RecordDeclaration {
-        val cls = newRecordDeclaration(stmt.name, "class", rawNode = stmt)
+    private fun handleClassDef(stmt: Python.AST.ClassDef): Record {
+        val cls = newRecord(stmt.name, "class", rawNode = stmt)
         stmt.bases.map { cls.superClasses.add(frontend.typeOf(it)) }
 
         frontend.scopeManager.enterScope(cls)
@@ -94,29 +94,29 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
     /**
      * We have to consider multiple things when matching Python's FunctionDef to the CPG:
      * - A [Python.AST.FunctionDef] could be one of
-     *     - a [ConstructorDeclaration] if it appears in a record and its [name] is `__init__`
-     *     - a [MethodDeclaration] if it appears in a record, and it isn't a
-     *       [ConstructorDeclaration]
+     *     - a [Constructor] if it appears in a record and its [name] is `__init__`
+     *     - a [Method] if it appears in a record, and it isn't a
+     *       [Constructor]
      *     - a [FunctionDeclaration] if neither of the above apply
      *
-     * In case of a [ConstructorDeclaration] or[MethodDeclaration]: the first argument is the
+     * In case of a [Constructor] or[Method]: the first argument is the
      * `receiver` (most often called `self`).
      */
     private fun handleFunctionDef(s: Python.AST.NormalOrAsyncFunctionDef): FunctionDeclaration {
         val recordDeclaration =
-            (frontend.scopeManager.currentScope as? RecordScope)?.astNode as? RecordDeclaration
+            (frontend.scopeManager.currentScope as? RecordScope)?.astNode as? Record
         val language = language
         val func =
             if (recordDeclaration != null) {
                 if (s.name == IDENTIFIER_INIT) {
-                    newConstructorDeclaration(
+                    newConstructor(
                         name = s.name,
                         recordDeclaration = recordDeclaration,
                         rawNode = s,
                     )
                 } else if (language is HasOperatorOverloading && s.name.isKnownOperatorName) {
                     val decl =
-                        newOperatorDeclaration(
+                        newOperator(
                             name = s.name,
                             recordDeclaration = recordDeclaration,
                             operatorCode = language.operatorCodeFor(s.name) ?: "",
@@ -132,7 +132,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                     }
                     decl
                 } else {
-                    newMethodDeclaration(
+                    newMethod(
                         name = s.name,
                         recordDeclaration = recordDeclaration,
                         isStatic = false,
@@ -150,7 +150,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
         func.annotations += handleAnnotations(s)
 
         // Handle return type and calculate function type
-        if (func is ConstructorDeclaration) {
+        if (func is Constructor) {
             // Return type of the constructor is always its record declaration type
             func.returnTypes = listOf(recordDeclaration?.toType() ?: unknownType())
         } else {
@@ -164,7 +164,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
             func.body = frontend.statementHandler.makeBlock(s.body, parentNode = s)
         }
 
-        if (func is ConstructorDeclaration) {
+        if (func is Constructor) {
             (func.body as? Block)?.let { block ->
                 block +=
                     newReturnStatement().apply {
@@ -188,7 +188,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
     private fun handleArguments(
         args: Python.AST.arguments,
         func: FunctionDeclaration,
-        recordDeclaration: RecordDeclaration?,
+        recordDeclaration: Record?,
     ) {
         // We can merge posonlyargs and args because both are positional arguments. We do not
         // enforce that posonlyargs can ONLY be used in a positional style, whereas args can be used
@@ -215,10 +215,10 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * This function creates a [newParameterDeclaration] for the argument, setting any modifiers
+     * This function creates a [newParameter] for the argument, setting any modifiers
      * (like positional-only or keyword-only) and [defaultValue] if applicable.
      *
-     * This also adds the [ParameterDeclaration] to the [FunctionDeclaration.parameters].
+     * This also adds the [Parameter] to the [FunctionDeclaration.parameters].
      */
     internal fun handleArgument(
         func: FunctionDeclaration,
@@ -227,9 +227,9 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
         isVariadic: Boolean = false,
         isKwoOnly: Boolean = false,
         defaultValue: Expression? = null,
-    ): ParameterDeclaration {
+    ): Parameter {
         val arg =
-            newParameterDeclaration(
+            newParameter(
                 name = node.arg,
                 type = dynamicType(),
                 variadic = isVariadic,
@@ -262,7 +262,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
         positionalArguments: List<Python.AST.arg>,
         args: Python.AST.arguments,
         result: FunctionDeclaration,
-        recordDeclaration: RecordDeclaration,
+        recordDeclaration: Record,
     ) {
         // first argument is the receiver
         val recvPythonNode = positionalArguments.firstOrNull()
@@ -271,7 +271,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
         } else {
             val tpe = recordDeclaration.toType()
             val recvNode =
-                newVariableDeclaration(
+                newVariable(
                     name = recvPythonNode.arg,
                     type = tpe,
                     implicitInitializerAllowed = false,
@@ -292,8 +292,8 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
             frontend.scopeManager.addDeclaration(recvNode)
 
             when (result) {
-                is ConstructorDeclaration,
-                is MethodDeclaration -> result.receiver = recvNode
+                is Constructor,
+                is Method -> result.receiver = recvNode
                 else ->
                     result.additionalProblems +=
                         newProblemExpression(

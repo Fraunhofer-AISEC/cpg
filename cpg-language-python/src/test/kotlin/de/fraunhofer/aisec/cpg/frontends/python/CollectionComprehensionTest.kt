@@ -27,11 +27,11 @@ package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.functions
 import de.fraunhofer.aisec.cpg.graph.get
@@ -163,7 +163,7 @@ class CollectionComprehensionTest {
 
         // Check that the declarations exist for the variables k and v
         val declarationK = variableK.refersTo
-        assertIs<VariableDeclaration>(declarationK, "The refersTo should be a VariableDeclaration")
+        assertIs<Variable>(declarationK, "The refersTo should be a Variable")
         assertIs<LocalScope>(
             declarationK.scope,
             "The scope of the variable is the local scope belonging to the list comprehension. In particular, it is not the FunctionScope.",
@@ -179,7 +179,7 @@ class CollectionComprehensionTest {
             "The argument k of the call also refers to the variable k declared in the comprehension expression.",
         )
         val declarationV = variableV.refersTo
-        assertIs<VariableDeclaration>(declarationV, "The refersTo should be a VariableDeclaration")
+        assertIs<Variable>(declarationV, "The refersTo should be a Variable")
         assertIs<LocalScope>(
             declarationV.scope,
             "The scope of the variable is the local scope belonging to the list comprehension. In particular, it is not the FunctionScope.",
@@ -251,7 +251,7 @@ class CollectionComprehensionTest {
         )
 
         val paramX = listCompFunctionDeclaration.parameters[0]
-        assertIs<ParameterDeclaration>(
+        assertIs<Parameter>(
             paramX,
             "The function \"list_comp\" has a parameter called \"x^\".",
         )
@@ -1051,7 +1051,7 @@ class CollectionComprehensionTest {
         )
 
         val xDeclaration = compBindingFunctionDeclaration.variables.firstOrNull()
-        assertIs<VariableDeclaration>(xDeclaration)
+        assertIs<Variable>(xDeclaration)
 
         assertEquals(
             5,
@@ -1089,9 +1089,9 @@ class CollectionComprehensionTest {
         )
 
         val xDeclaration = compBindingAssignExprFunctionDeclaration.variables["x"]
-        assertIs<VariableDeclaration>(
+        assertIs<Variable>(
             xDeclaration,
-            "There must be a VariableDeclaration with the local name \"x\" inside the function.",
+            "There must be a Variable with the local name \"x\" inside the function.",
         )
 
         assertEquals(
@@ -1130,9 +1130,9 @@ class CollectionComprehensionTest {
         )
 
         val xDeclaration = compBindingAssignExprNestedFunctionDeclaration.variables["x"]
-        assertIs<VariableDeclaration>(
+        assertIs<Variable>(
             xDeclaration,
-            "There must be a VariableDeclaration with the local name \"x\" inside the function.",
+            "There must be a Variable with the local name \"x\" inside the function.",
         )
 
         assertEquals(
@@ -1202,9 +1202,9 @@ class CollectionComprehensionTest {
             "The left hand side of the assignment \"b = [0, 1, 2]\" is expected to be represented by a Reference with localName \"b\" in the CPG.",
         )
         val bDeclaration = listBInitialization.variables["b"]
-        assertIs<VariableDeclaration>(
+        assertIs<Variable>(
             bDeclaration,
-            "There must be a VariableDeclaration with the local name \"b\" inside the first statement of the function \"comprehension_with_list_assignment\".",
+            "There must be a Variable with the local name \"b\" inside the first statement of the function \"comprehension_with_list_assignment\".",
         )
         assertRefersTo(
             refBFirstStatement,
@@ -1300,23 +1300,23 @@ class CollectionComprehensionTest {
             "We expect that there's one DFG edge flowing into the reference \"a\" in the tuple. It should come from the InitializerListExpression and have the index \"0\"",
         )
         val variableDeclarationA = refA.refersTo
-        assertIs<VariableDeclaration>(
+        assertIs<Variable>(
             variableDeclarationA,
-            "We expect that the reference \"a\" refers to a VariableDeclaration with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
+            "We expect that the reference \"a\" refers to a Variable with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
         )
         assertIs<LocalScope>(
             variableDeclarationA.scope,
-            "We expect that the reference \"a\" refers to a VariableDeclaration with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
+            "We expect that the reference \"a\" refers to a Variable with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
         )
         assertEquals(
             listComprehensionWithTupleAndAssignmentToListElement,
             variableDeclarationA.scope?.astNode,
-            "We expect that the reference \"a\" refers to a VariableDeclaration with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
+            "We expect that the reference \"a\" refers to a Variable with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
         )
         assertRefersTo(
             refB,
             bDeclaration,
-            "We expect that the reference \"b\" in the tuple refers to the VariableDeclaration of \"b\" which is added outside the list comprehension (in statement 0).",
+            "We expect that the reference \"b\" in the tuple refers to the Variable of \"b\" which is added outside the list comprehension (in statement 0).",
         )
         val tupleToB0 = accessB0.prevDFGEdges.singleOrNull { it.start == tuple }
         assertNotNull(
@@ -1367,9 +1367,9 @@ class CollectionComprehensionTest {
             "The left hand side of the assignment \"b = [0, 1, 2]\" is expected to be represented by a Reference with localName \"b\" in the CPG.",
         )
         val bDeclaration = listBInitialization.variables["b"]
-        assertIs<VariableDeclaration>(
+        assertIs<Variable>(
             bDeclaration,
-            "There must be a VariableDeclaration with the local name \"b\" inside the first statement of the function \"comprehension_with_list_assignment_and_index_variable\".",
+            "There must be a Variable with the local name \"b\" inside the first statement of the function \"comprehension_with_list_assignment_and_index_variable\".",
         )
         assertRefersTo(
             refBFirstStatement,
@@ -1465,28 +1465,28 @@ class CollectionComprehensionTest {
             "We expect that there's one DFG edge flowing into the reference \"a\" in the tuple. It should come from the InitializerListExpression and have the index \"0\"",
         )
         val variableDeclarationA = refA.refersTo
-        assertIs<VariableDeclaration>(
+        assertIs<Variable>(
             variableDeclarationA,
-            "We expect that the reference \"a\" in the first element of the tuple refers to a VariableDeclaration with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
+            "We expect that the reference \"a\" in the first element of the tuple refers to a Variable with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
         )
         assertRefersTo(
             index,
             variableDeclarationA,
-            "We expect that the reference \"a\" in the second element of the tuple refers to the same VariableDeclaration as the first element of the tuple.",
+            "We expect that the reference \"a\" in the second element of the tuple refers to the same Variable as the first element of the tuple.",
         )
         assertIs<LocalScope>(
             variableDeclarationA.scope,
-            "We expect that the reference \"a\" refers to a VariableDeclaration with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
+            "We expect that the reference \"a\" refers to a Variable with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
         )
         assertEquals(
             listComprehensionWithTupleAndAssignmentToListElement,
             variableDeclarationA.scope?.astNode,
-            "We expect that the reference \"a\" refers to a VariableDeclaration with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
+            "We expect that the reference \"a\" refers to a Variable with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
         )
         assertRefersTo(
             refB,
             bDeclaration,
-            "We expect that the reference \"b\" in the tuple refers to the VariableDeclaration of \"b\" which is added outside the list comprehension (in statement 0).",
+            "We expect that the reference \"b\" in the tuple refers to the Variable of \"b\" which is added outside the list comprehension (in statement 0).",
         )
 
         val tupleToBA = accessBA.prevDFGEdges.singleOrNull { it.start == tuple }
@@ -1541,9 +1541,9 @@ class CollectionComprehensionTest {
             "The left hand side of the assignment \"b = [0, 1, 2]\" is expected to be represented by a Reference with localName \"b\" in the CPG.",
         )
         val bDeclaration = listBInitialization.variables["b"]
-        assertIs<VariableDeclaration>(
+        assertIs<Variable>(
             bDeclaration,
-            "There must be a VariableDeclaration with the local name \"b\" inside the first statement of the function \"comprehension_with_list_assignment_and_index_variable_reversed\".",
+            "There must be a Variable with the local name \"b\" inside the first statement of the function \"comprehension_with_list_assignment_and_index_variable_reversed\".",
         )
         assertRefersTo(
             refBFirstStatement,
@@ -1562,9 +1562,9 @@ class CollectionComprehensionTest {
             "The left hand side of the assignment \"a = 1\" is expected to be represented by a Reference with localName \"a\" in the CPG.",
         )
         val aDeclaration = localAAssignment.variables["a"]
-        assertIs<VariableDeclaration>(
+        assertIs<Variable>(
             aDeclaration,
-            "There must be a VariableDeclaration with the local name \"a\" inside the first statement of the function \"comprehension_with_list_assignment_and_index_variable_reversed\".",
+            "There must be a Variable with the local name \"a\" inside the first statement of the function \"comprehension_with_list_assignment_and_index_variable_reversed\".",
         )
         assertRefersTo(
             localARef,
@@ -1640,13 +1640,13 @@ class CollectionComprehensionTest {
 
         // Now the actually interesting part: We check for variables belonging to the references.
         val innerVariableDeclarationA = refA.refersTo
-        assertIs<VariableDeclaration>(
+        assertIs<Variable>(
             innerVariableDeclarationA,
-            "We expect that the reference \"a\" in the second element of the tuple refers to a VariableDeclaration with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
+            "We expect that the reference \"a\" in the second element of the tuple refers to a Variable with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
         )
         assertIs<LocalScope>(
             innerVariableDeclarationA.scope,
-            "We expect that the reference \"a\" refers to a VariableDeclaration with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
+            "We expect that the reference \"a\" refers to a Variable with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
         )
         assertEquals(
             1,
@@ -1671,7 +1671,7 @@ class CollectionComprehensionTest {
         assertEquals(
             listComprehensionWithTupleAndAssignmentToListElement,
             innerVariableDeclarationA.scope?.astNode,
-            "We expect that the reference \"a\" refers to a VariableDeclaration with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
+            "We expect that the reference \"a\" refers to a Variable with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
         )
 
         val tupleToBA = accessBA.prevDFGEdges.singleOrNull { it.start == tuple }
@@ -1692,7 +1692,7 @@ class CollectionComprehensionTest {
         assertRefersTo(
             refB,
             bDeclaration,
-            "We expect that the reference \"b\" in the tuple refers to the VariableDeclaration of \"b\" which is added outside the list comprehension (in statement 0).",
+            "We expect that the reference \"b\" in the tuple refers to the Variable of \"b\" which is added outside the list comprehension (in statement 0).",
         )
         assertEquals(
             0,
@@ -1702,16 +1702,16 @@ class CollectionComprehensionTest {
         assertNotRefersTo(
             indexA,
             aDeclaration,
-            "We expect that the reference \"a\" used as an index in the first element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
+            "We expect that the reference \"a\" used as an index in the first element of the tuple does not refer to the same Variable as the second element of the tuple nor to the local variable nor does it have an own Variable since python would just crash.",
         )
         assertNotRefersTo(
             indexA,
             innerVariableDeclarationA,
-            "We expect that the reference \"a\" used as an index in the first element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
+            "We expect that the reference \"a\" used as an index in the first element of the tuple does not refer to the same Variable as the second element of the tuple nor to the local variable nor does it have an own Variable since python would just crash.",
         )
         assertNull(
             indexA.refersTo,
-            "We expect that the reference \"a\" used as an index in the first element of the tuple does not refer to the same VariableDeclaration as the second element of the tuple nor to the local variable nor does it have an own VariableDeclaration since python would just crash.",
+            "We expect that the reference \"a\" used as an index in the first element of the tuple does not refer to the same Variable as the second element of the tuple nor to the local variable nor does it have an own Variable since python would just crash.",
         )
     }
 
@@ -1747,9 +1747,9 @@ class CollectionComprehensionTest {
             "The left hand side of the assignment \"b = [0, 1, 2]\" is expected to be represented by a Reference with localName \"b\" in the CPG.",
         )
         val bDeclaration = listBInitialization.variables["b"]
-        assertIs<VariableDeclaration>(
+        assertIs<Variable>(
             bDeclaration,
-            "There must be a VariableDeclaration with the local name \"b\" inside the first statement of the function \"comprehension_with_list_assignment_and_local_index_variable\".",
+            "There must be a Variable with the local name \"b\" inside the first statement of the function \"comprehension_with_list_assignment_and_local_index_variable\".",
         )
         assertRefersTo(
             refBFirstStatement,
@@ -1768,9 +1768,9 @@ class CollectionComprehensionTest {
             "The left hand side of the assignment \"c = 1\" is expected to be represented by a Reference with localName \"c\" in the CPG.",
         )
         val cDeclaration = localCAssignment.variables["c"]
-        assertIs<VariableDeclaration>(
+        assertIs<Variable>(
             cDeclaration,
-            "There must be a VariableDeclaration with the local name \"c\" inside the first statement of the function \"comprehension_with_list_assignment_and_local_index_variable\".",
+            "There must be a Variable with the local name \"c\" inside the first statement of the function \"comprehension_with_list_assignment_and_local_index_variable\".",
         )
         assertRefersTo(
             localCRef,
@@ -1846,23 +1846,23 @@ class CollectionComprehensionTest {
 
         // Now the actually interesting part: We check for variables belonging to the references.
         val variableDeclarationA = refA.refersTo
-        assertIs<VariableDeclaration>(
+        assertIs<Variable>(
             variableDeclarationA,
-            "We expect that the reference \"a\" in the second element of the tuple refers to a VariableDeclaration with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
+            "We expect that the reference \"a\" in the second element of the tuple refers to a Variable with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
         )
         assertIs<LocalScope>(
             variableDeclarationA.scope,
-            "We expect that the reference \"a\" refers to a VariableDeclaration with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
+            "We expect that the reference \"a\" refers to a Variable with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
         )
         assertEquals(
             listComprehensionWithTupleAndAssignmentToListElement,
             variableDeclarationA.scope?.astNode,
-            "We expect that the reference \"a\" refers to a VariableDeclaration with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
+            "We expect that the reference \"a\" refers to a Variable with localName \"a\" which is not null and whose scope is the LocalScope of the list comprehension.",
         )
         assertRefersTo(
             refB,
             bDeclaration,
-            "We expect that the reference \"b\" in the tuple refers to the VariableDeclaration of \"b\" which is added outside the list comprehension (in statement 0).",
+            "We expect that the reference \"b\" in the tuple refers to the Variable of \"b\" which is added outside the list comprehension (in statement 0).",
         )
         assertRefersTo(
             index,
@@ -1903,9 +1903,9 @@ class CollectionComprehensionTest {
             "The left hand side of the assignment \"b = [0, 1, 2]\" is expected to be represented by a Reference with localName \"b\" in the CPG.",
         )
         val bDeclaration = listBInitialization.variables["b"]
-        assertIs<VariableDeclaration>(
+        assertIs<Variable>(
             bDeclaration,
-            "There must be a VariableDeclaration with the local name \"b\" inside the first statement of the function \"list_comprehension_to_list_index\".",
+            "There must be a Variable with the local name \"b\" inside the first statement of the function \"list_comprehension_to_list_index\".",
         )
         assertRefersTo(
             refBFirstStatement,
@@ -1963,7 +1963,7 @@ class CollectionComprehensionTest {
         assertRefersTo(
             refB,
             bDeclaration,
-            "We expect that the reference \"b\" in the control variable refers to the VariableDeclaration of \"b\" which is added outside the list comprehension (in statement 0).",
+            "We expect that the reference \"b\" in the control variable refers to the Variable of \"b\" which is added outside the list comprehension (in statement 0).",
         )
         assertContains(
             accessB0.prevDFG,
@@ -2004,9 +2004,9 @@ class CollectionComprehensionTest {
             "The left hand side of the assignment \"b = Magic())\" is expected to be represented by a Reference with localName \"b\" in the CPG.",
         )
         val bDeclaration = listBInitialization.variables["b"]
-        assertIs<VariableDeclaration>(
+        assertIs<Variable>(
             bDeclaration,
-            "There must be a VariableDeclaration with the local name \"b\" inside the first statement of the function \"list_comprehension_to_field\".",
+            "There must be a Variable with the local name \"b\" inside the first statement of the function \"list_comprehension_to_field\".",
         )
         assertRefersTo(
             refBFirstStatement,
@@ -2059,13 +2059,13 @@ class CollectionComprehensionTest {
         assertRefersTo(
             refB,
             bDeclaration,
-            "We expect that the reference \"b\" used in the control variable refers to the VariableDeclaration of \"b\" which is added outside the list comprehension (in statement 0).",
+            "We expect that the reference \"b\" used in the control variable refers to the Variable of \"b\" which is added outside the list comprehension (in statement 0).",
         )
 
         val magicClass = result.records["Magic"]
-        assertIs<RecordDeclaration>(
+        assertIs<Record>(
             magicClass,
-            "There must be a class called \"Magic\" in the file. It must be neither null nor any other class than a RecordDeclaration which is expected to model python classes in the CPG.",
+            "There must be a class called \"Magic\" in the file. It must be neither null nor any other class than a Record which is expected to model python classes in the CPG.",
         )
         assertEquals(
             1,
@@ -2073,7 +2073,7 @@ class CollectionComprehensionTest {
             "We expect exactly one field inside the record declaration representing the class \"Magic\" and that's the field which we expect to represent the class' attribute \"a\".",
         )
         val fieldA = magicClass.fields["a"]
-        assertIs<FieldDeclaration>(
+        assertIs<Field>(
             fieldA,
             "We expect exactly one field inside the record declaration representing the class \"Magic\" and that's the field which we expect to represent the class' attribute \"a\".",
         )
@@ -2081,7 +2081,7 @@ class CollectionComprehensionTest {
         assertRefersTo(
             bMemberA,
             fieldA,
-            "We expect that the member expression \"b.a\" used as control variable refers to the FieldDeclaration \"a\" of the class \"Magic\".",
+            "We expect that the member expression \"b.a\" used as control variable refers to the Field \"a\" of the class \"Magic\".",
         )
         assertEquals(
             1,

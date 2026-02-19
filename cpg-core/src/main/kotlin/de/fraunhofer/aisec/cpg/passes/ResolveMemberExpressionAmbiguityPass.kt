@@ -33,8 +33,8 @@ import de.fraunhofer.aisec.cpg.graph.HasBase
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.fqn
 import de.fraunhofer.aisec.cpg.graph.newReference
@@ -69,7 +69,7 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
 
     lateinit var walker: SubgraphWalker.ScopedWalker<AstNode>
 
-    override fun accept(tu: TranslationUnitDeclaration) {
+    override fun accept(tu: TranslationUnit) {
         walker = SubgraphWalker.ScopedWalker(ctx.scopeManager, Strategy::AST_FORWARD)
         walker.registerHandler { node ->
             when (node) {
@@ -180,7 +180,7 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
      * import, returns null.
      *
      * The function looks up the name in the current scope. If a symbol is found that represents a
-     * [NamespaceDeclaration], the name of the declaration is returned.
+     * [Namespace], the name of the declaration is returned.
      *
      * @param name The name to check for an import.
      * @param hint The expression that hints at the language and location.
@@ -193,7 +193,7 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
                 language = hint.language,
                 location = hint.location,
                 startScope = hint.scope,
-                predicate = { it is NamespaceDeclaration },
+                predicate = { it is Namespace },
             )
         // There can be multiple declarations for the same namespace because the declaration can
         // exist multiple times, but per definition in the scope manager, they all point to the same

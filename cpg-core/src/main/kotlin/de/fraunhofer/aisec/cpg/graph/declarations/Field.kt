@@ -31,16 +31,16 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /**
- * Declaration of a field within a [RecordDeclaration]. It contains the modifiers associated with
- * the field as well as an initializer [Expression] which provides an initial value for the field.
+ * Declaration of a field within a [Record]. It contains the modifiers associated with the field as
+ * well as an initializer [Expression] which provides an initial value for the field.
  */
-class FieldDeclaration : VariableDeclaration() {
+class Field : Variable() {
     /** Specifies whether this field declaration is also a definition, i.e. has an initializer. */
     var isDefinition = false
 
     /** If this is only a declaration, this provides a link to the definition of the field. */
     @Relationship(value = "DEFINES")
-    var definition: FieldDeclaration = this
+    var definition: Field = this
         get() {
             return if (isDefinition) {
                 this
@@ -61,7 +61,7 @@ class FieldDeclaration : VariableDeclaration() {
         if (this === other) {
             return true
         }
-        if (other !is FieldDeclaration) {
+        if (other !is Field) {
             return false
         }
         return (super.equals(other) && modifiers == other.modifiers)

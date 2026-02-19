@@ -31,10 +31,10 @@ import de.fraunhofer.aisec.cpg.graph.AccessValues
 import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.Component
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -93,8 +93,8 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         val callee = call.callee
         if (
             callee.type is FunctionPointerType ||
-                ((callee as? Reference)?.refersTo is ParameterDeclaration ||
-                    (callee as? Reference)?.refersTo is VariableDeclaration)
+                ((callee as? Reference)?.refersTo is Parameter ||
+                    (callee as? Reference)?.refersTo is Variable)
         ) {
             handleCallee(call, callee)
         }
@@ -153,7 +153,7 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 continue
             }
 
-            val isLambda = curr is VariableDeclaration && curr.initializer is LambdaExpression
+            val isLambda = curr is Variable && curr.initializer is LambdaExpression
             val currentFunction =
                 if (isLambda) {
                     (curr.initializer as LambdaExpression).function
@@ -196,14 +196,14 @@ class DynamicInvokeResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 //   happens in another function). In this case, we look at write-usages to the
                 //   field and use all of those. This is only a temporary workaround until someone
                 //   implements an interprocedural analysis (for example).
-                (curr.refersTo as? FieldDeclaration)
+                (curr.refersTo as? Field)
                     ?.usages
                     ?.filter {
                         it.access == AccessValues.WRITE || it.access == AccessValues.READWRITE
                     }
                     ?.let { prevDFGToPush.addAll(it) }
                 // Also add the initializer of the field (if it exists)
-                (curr.refersTo as? FieldDeclaration)?.initializer?.let { prevDFGToPush.add(it) }
+                (curr.refersTo as? Field)?.initializer?.let { prevDFGToPush.add(it) }
             }
 
             prevDFGToPush.forEach(Consumer(work::push))

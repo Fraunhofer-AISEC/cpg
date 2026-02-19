@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
 import de.fraunhofer.aisec.cpg.test.*
@@ -146,7 +146,7 @@ internal class FunctionPointerTest : BaseTest() {
         }
     }
 
-    private fun getSourceFunction(variable: VariableDeclaration): FunctionDeclaration {
+    private fun getSourceFunction(variable: Variable): FunctionDeclaration {
         val functions: MutableList<FunctionDeclaration> = ArrayList()
         val worklist: Deque<Node> = ArrayDeque()
         val seen = Collections.newSetFromMap(IdentityHashMap<Node, Boolean>())

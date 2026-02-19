@@ -200,7 +200,7 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
     val statementHandler = StatementHandler(this)
 
     @Throws(TranslationException::class)
-    override fun parse(file: File): TranslationUnitDeclaration {
+    override fun parse(file: File): TranslationUnit {
         val content = FileContent.createForExternalFileLocation(file.absolutePath)
 
         // include paths
@@ -478,7 +478,7 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
      * behind this, is that in some scenarios we create the [Declaration] before the type and in
      * some, we derive the declaration from the type. In the first one, we might get some necessary
      * information from the declaration, that influences the type parsing. One such example is that
-     * we check, whether a declaration is a [ConstructorDeclaration] and return an [ObjectType] that
+     * we check, whether a declaration is a [Constructor] and return an [ObjectType] that
      * corresponds with the record name it instantiates.
      *
      * @param hint an optional [Declaration], which serves as a parsing hint.
@@ -589,18 +589,18 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
             }
             // The type of constructor declaration is always the declaration itself
             specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
-                hint is ConstructorDeclaration -> {
+                hint is Constructor -> {
                 hint.name.parent?.let { objectType(it, rawNode = specifier) } ?: unknownType()
             }
             // The type of conversion operator is also always the declaration itself
             specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
-                hint is MethodDeclaration &&
+                hint is Method &&
                 hint.name.localName == "operator#0" -> {
                 hint.name.parent?.let { objectType(it, rawNode = specifier) } ?: unknownType()
             }
             // The type of conversion operator is also always the declaration itself
             specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
-                hint is MethodDeclaration &&
+                hint is Method &&
                 hint.name.localName == "operator#0*" -> {
                 hint.name.parent?.let { objectType(it, rawNode = specifier).pointer() }
                     ?: unknownType()
@@ -608,7 +608,7 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
             // The type of destructor is unspecified, but we model it as a void type to make it
             // compatible with other methods.
             specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
-                hint is MethodDeclaration &&
+                hint is Method &&
                 hint.isDestructor -> {
                 incompleteType()
             }
@@ -883,7 +883,7 @@ private val IASTSimpleDeclSpecifier.canonicalName: CharSequence
  * Returns whether this method is a
  * [Destructor](https://en.cppreference.com/w/cpp/language/destructor).
  */
-val MethodDeclaration.isDestructor: Boolean
+val Method.isDestructor: Boolean
     get() {
         return "~" + this.name.parent?.localName == this.name.localName
     }

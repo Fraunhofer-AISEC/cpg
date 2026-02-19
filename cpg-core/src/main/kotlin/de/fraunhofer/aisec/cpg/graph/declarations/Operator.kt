@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2024, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,31 +25,24 @@
  */
 package de.fraunhofer.aisec.cpg.graph.declarations
 
-import de.fraunhofer.aisec.cpg.graph.ProblemNode
-import java.util.Objects
-import org.apache.commons.lang3.builder.ToStringBuilder
+import de.fraunhofer.aisec.cpg.frontends.HasOperatorOverloading
+import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
+import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 
 /**
- * A node where the statement could not be translated by the graph. We use ProblemExpressions
- * whenever the CPG library requires an [Declaration].
+ * Some languages allow to either overload operators or to add custom operators to classes (see
+ * [HasOperatorOverloading]). In both cases, this special function class denotes that this handles
+ * this particular operator call.
+ *
+ * We need to derive from [Method] because all operators have a base class on which they operate on.
+ * Therefore, we need to associate them with an [ObjectType] and/or [Record]. There are some very
+ * special cases for C++, where we can have a global operator for a particular class. In this case
+ * we just pretend like it is a method operator.
  */
-class ProblemDeclaration(
-    override var problem: String = "",
-    override var problemType: ProblemNode.ProblemType = ProblemNode.ProblemType.TRANSLATION,
-) : ValueDeclaration(), ProblemNode {
+class Operator : Method(), HasOperatorCode {
+    /** The operator code which this operator declares. */
+    override var operatorCode: String? = null
 
-    override fun toString(): String {
-        return ToStringBuilder(this, TO_STRING_STYLE)
-            .appendSuper(super.toString())
-            .append("problem", problem)
-            .toString()
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is ProblemDeclaration) return false
-        return super.equals(other) && problem == other.problem
-    }
-
-    override fun hashCode() = Objects.hash(super.hashCode(), problem)
+    val isPrefix: Boolean = false
+    val isPostfix: Boolean = false
 }

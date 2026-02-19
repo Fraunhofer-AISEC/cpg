@@ -39,19 +39,19 @@ import org.neo4j.ogm.annotation.Relationship
  * form a new namespace prefix. While RecordDeclarations in C++ and Java have their own namespace,
  * namespace declarations can be declared multiple times. At the beginning of a Java-file, a
  * namespace declaration is used to represent the package name as namespace. In its explicit
- * appearance a namespace declaration can contain [FunctionDeclaration] and [RecordDeclaration]
- * similar to a [RecordDeclaration] and the semantic difference between NamespaceDeclaration and
- * [RecordDeclaration] lies in the non-instantiability of a namespace.
+ * appearance a namespace declaration can contain [FunctionDeclaration] and [Record] similar to a
+ * [Record] and the semantic difference between Namespace and [Record] lies in the
+ * non-instantiability of a namespace.
  *
  * The name property of this node need to be a FQN for property resolution.
  */
-class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder, EOGStarterHolder {
+class Namespace : Declaration(), DeclarationHolder, StatementHolder, EOGStarterHolder {
     /**
      * Edges to nested namespaces, records, functions, fields etc. contained in the current
      * namespace.
      */
     val declarationEdges = astEdgesOf<Declaration>()
-    override val declarations by unwrapping(NamespaceDeclaration::declarationEdges)
+    override val declarations by unwrapping(Namespace::declarationEdges)
 
     /** The list of statements. */
     @Relationship(value = "STATEMENTS", direction = Relationship.Direction.OUTGOING)
@@ -65,7 +65,7 @@ class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder, 
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is NamespaceDeclaration) return false
+        if (other !is Namespace) return false
         return super.equals(other) && declarations == other.declarations
     }
 
@@ -75,7 +75,7 @@ class NamespaceDeclaration : Declaration(), DeclarationHolder, StatementHolder, 
         addIfNotContains(declarations, declaration)
     }
 
-    override var statements by unwrapping(NamespaceDeclaration::statementEdges)
+    override var statements by unwrapping(Namespace::statementEdges)
 
     @DoNotPersist
     override val eogStarters: List<Node>

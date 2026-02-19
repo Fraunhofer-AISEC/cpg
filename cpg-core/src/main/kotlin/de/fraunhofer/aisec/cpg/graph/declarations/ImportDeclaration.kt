@@ -38,9 +38,9 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
 
 /**
  * This class represents a real *import* of one or more symbols of a specified [NameScope] (e.g.,
- * defined by a [NamespaceDeclaration]) into the current scope. Depending on the language, this can
- * be only used at the global or package scope (e.g. in Go and Java with the `import` keyword) or in
- * any scope (e.g. in C++ with the `using` keyword).
+ * defined by a [Namespace]) into the current scope. Depending on the language, this can be only
+ * used at the global or package scope (e.g. in Go and Java with the `import` keyword) or in any
+ * scope (e.g. in C++ with the `using` keyword).
  *
  * ### Examples (Go)
  *
@@ -126,7 +126,7 @@ import org.neo4j.ogm.annotation.typeconversion.Convert
 class ImportDeclaration : Declaration() {
 
     /**
-     * The imported symbol: This usually refers to a [NamespaceDeclaration] / its [NameScope] or a
+     * The imported symbol: This usually refers to a [Namespace] / its [NameScope] or a
      * [Declaration] within this namespace. This will always refer to the original name of the
      * imported symbol, even though an alias is used.
      * * If no alias is used, the [name] of this declaration is also set to the same name as the

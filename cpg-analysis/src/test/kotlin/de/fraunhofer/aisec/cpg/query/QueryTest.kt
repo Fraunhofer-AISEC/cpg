@@ -714,7 +714,7 @@ class QueryTest {
             assertNotNull(queryTree3)
             assertNull(queryTree3.node)
 
-            val tu = newTranslationUnitDeclaration("tu")
+            val tu = newTranslationUnit("tu")
             val func1 = newFunctionDeclaration("func1")
             tu.declarations += func1
             val func2 = newFunctionDeclaration("func2")

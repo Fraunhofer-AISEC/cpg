@@ -77,18 +77,17 @@ fun LanguageFrontend<*, *>.translationResult(
 }
 
 /**
- * Creates a new [TranslationUnitDeclaration] in the Fluent Node DSL with the given [name]. The
- * declaration will be set to the [ScopeManager.globalScope]. The [init] block can be used to create
- * further sub-nodes as well as configuring the created node itself.
+ * Creates a new [TranslationUnit] in the Fluent Node DSL with the given [name]. The declaration
+ * will be set to the [ScopeManager.globalScope]. The [init] block can be used to create further
+ * sub-nodes as well as configuring the created node itself.
  */
 context(result: TranslationResult)
 fun LanguageFrontend<*, *>.translationUnit(
     name: CharSequence = Node.EMPTY_NAME,
-    init: TranslationUnitDeclaration.() -> Unit,
-): TranslationUnitDeclaration {
+    init: TranslationUnit.() -> Unit,
+): TranslationUnit {
     val node =
-        with(this) { newTranslationUnitDeclaration(name) }
-            .apply { this.location = getCallerFileAndLine() }
+        with(this) { newTranslationUnit(name) }.apply { this.location = getCallerFileAndLine() }
 
     scopeManager.resetToGlobal(node)
     init(node)
@@ -98,16 +97,13 @@ fun LanguageFrontend<*, *>.translationUnit(
 }
 
 /**
- * Creates a new [NamespaceDeclaration] in the Fluent Node DSL with the given [name]. The
- * declaration will be set to the [ScopeManager.globalScope]. The [init] block can be used to create
- * further sub-nodes as well as configuring the created node itself.
+ * Creates a new [Namespace] in the Fluent Node DSL with the given [name]. The declaration will be
+ * set to the [ScopeManager.globalScope]. The [init] block can be used to create further sub-nodes
+ * as well as configuring the created node itself.
  */
 context(holder: DeclarationHolder)
-fun LanguageFrontend<*, *>.namespace(
-    name: CharSequence,
-    init: NamespaceDeclaration.() -> Unit,
-): NamespaceDeclaration {
-    val node = newNamespaceDeclaration(name).apply { this.location = getCallerFileAndLine() }
+fun LanguageFrontend<*, *>.namespace(name: CharSequence, init: Namespace.() -> Unit): Namespace {
+    val node = newNamespace(name).apply { this.location = getCallerFileAndLine() }
 
     scopeManager.enterScope(node)
     init(node)
@@ -119,19 +115,19 @@ fun LanguageFrontend<*, *>.namespace(
 }
 
 /**
- * Creates a new [ExtensionDeclaration] in the Fluent Node DSL with the given [name].
+ * Creates a new [Extension] in the Fluent Node DSL with the given [name].
  *
  * The scope for the [init] block is set to either the provided [extendedDeclaration] (if non-null)
- * or to the newly created [ExtensionDeclaration] node itself. The [init] block can be used to
- * create further sub-nodes as well as configuring the created node itself.
+ * or to the newly created [Extension] node itself. The [init] block can be used to create further
+ * sub-nodes as well as configuring the created node itself.
  */
 context(holder: DeclarationHolder)
 fun LanguageFrontend<*, *>.extension(
     name: CharSequence? = null,
-    extendedDeclaration: RecordDeclaration? = null,
-    init: ExtensionDeclaration.() -> Unit,
-): ExtensionDeclaration {
-    val node = newExtensionDeclaration(name ?: Node.EMPTY_NAME)
+    extendedDeclaration: Record? = null,
+    init: Extension.() -> Unit,
+): Extension {
+    val node = newExtension(name ?: Node.EMPTY_NAME)
     node.extendedDeclaration = extendedDeclaration
 
     scopeManager.enterScope(extendedDeclaration ?: node)
@@ -144,17 +140,17 @@ fun LanguageFrontend<*, *>.extension(
 }
 
 /**
- * Creates a new [RecordDeclaration] in the Fluent Node DSL with the given [name]. The declaration
- * will be set to the [ScopeManager.currentRecord]. The [init] block can be used to create further
- * sub-nodes as well as configuring the created node itself.
+ * Creates a new [Record] in the Fluent Node DSL with the given [name]. The declaration will be set
+ * to the [ScopeManager.currentRecord]. The [init] block can be used to create further sub-nodes as
+ * well as configuring the created node itself.
  */
 context(holder: DeclarationHolder)
 fun LanguageFrontend<*, *>.record(
     name: CharSequence,
     kind: String = "class",
-    init: RecordDeclaration.() -> Unit,
-): RecordDeclaration {
-    val node = newRecordDeclaration(name, kind).apply { this.location = getCallerFileAndLine() }
+    init: Record.() -> Unit,
+): Record {
+    val node = newRecord(name, kind).apply { this.location = getCallerFileAndLine() }
 
     scopeManager.enterScope(node)
     init(node)
@@ -166,17 +162,17 @@ fun LanguageFrontend<*, *>.record(
 }
 
 /**
- * Creates a new [FieldDeclaration] in the Fluent Node DSL with the given [name] and optional
- * [type]. The [init] block can be used to create further sub-nodes as well as configuring the
- * created node itself.
+ * Creates a new [Field] in the Fluent Node DSL with the given [name] and optional [type]. The
+ * [init] block can be used to create further sub-nodes as well as configuring the created node
+ * itself.
  */
 context(holder: DeclarationHolder)
 fun LanguageFrontend<*, *>.field(
     name: CharSequence,
     type: Type = unknownType(),
-    init: (FieldDeclaration.() -> Unit)? = null,
-): FieldDeclaration {
-    val node = newFieldDeclaration(name).apply { this.location = getCallerFileAndLine() }
+    init: (Field.() -> Unit)? = null,
+): Field {
+    val node = newField(name).apply { this.location = getCallerFileAndLine() }
     node.type = type
 
     if (init != null) {
@@ -189,12 +185,10 @@ fun LanguageFrontend<*, *>.field(
     return node
 }
 
-/**
- * Creates a new [IncludeDeclaration] and adds it to the surrounding [TranslationUnitDeclaration].
- */
-context(tu: TranslationUnitDeclaration)
-fun LanguageFrontend<*, *>.import(name: CharSequence): IncludeDeclaration {
-    val node = this.newIncludeDeclaration(name).apply { this.location = getCallerFileAndLine() }
+/** Creates a new [Include] and adds it to the surrounding [TranslationUnit]. */
+context(tu: TranslationUnit)
+fun LanguageFrontend<*, *>.import(name: CharSequence): Include {
+    val node = this.newInclude(name).apply { this.location = getCallerFileAndLine() }
     (tu).addDeclaration(node)
     return node
 }
@@ -233,17 +227,17 @@ fun LanguageFrontend<*, *>.function(
 }
 
 /**
- * Creates a new [MethodDeclaration] in the Fluent Node DSL with the given [name] and optional
- * [returnType]. The [init] block can be used to create further sub-nodes as well as configuring the
- * created node itself.
+ * Creates a new [Method] in the Fluent Node DSL with the given [name] and optional [returnType].
+ * The [init] block can be used to create further sub-nodes as well as configuring the created node
+ * itself.
  */
 context(holder: DeclarationHolder)
 fun LanguageFrontend<*, *>.method(
     name: CharSequence,
     returnType: Type = this.unknownType(),
-    init: (MethodDeclaration.() -> Unit)? = null,
-): MethodDeclaration {
-    val node = this.newMethodDeclaration(name).apply { this.location = getCallerFileAndLine() }
+    init: (Method.() -> Unit)? = null,
+): Method {
+    val node = this.newMethod(name).apply { this.location = getCallerFileAndLine() }
 
     node.returnTypes = listOf(returnType)
     node.type = with(node) { computeType(node) }
@@ -261,20 +255,15 @@ fun LanguageFrontend<*, *>.method(
 }
 
 /**
- * Creates a new [ConstructorDeclaration] in the Fluent Node DSL for the enclosing
- * [RecordDeclaration]. The [init] block can be used to create further sub-nodes as well as
- * configuring the created node itself.
+ * Creates a new [Constructor] in the Fluent Node DSL for the enclosing [Record]. The [init] block
+ * can be used to create further sub-nodes as well as configuring the created node itself.
  */
-context(recordDeclaration: RecordDeclaration)
-fun LanguageFrontend<*, *>.constructor(
-    init: ConstructorDeclaration.() -> Unit
-): ConstructorDeclaration {
+context(recordDeclaration: Record)
+fun LanguageFrontend<*, *>.constructor(init: Constructor.() -> Unit): Constructor {
     val node =
-        this.newConstructorDeclaration(
-                recordDeclaration.name,
-                recordDeclaration = recordDeclaration,
-            )
-            .apply { this.location = getCallerFileAndLine() }
+        this.newConstructor(recordDeclaration.name, recordDeclaration = recordDeclaration).apply {
+            this.location = getCallerFileAndLine()
+        }
 
     scopeManager.enterScope(node)
     init(node)
@@ -317,7 +306,7 @@ fun LanguageFrontend<*, *>.block(needsScope: Boolean = true, init: Block.() -> U
 }
 
 /**
- * Creates a new [ParameterDeclaration] in the Fluent Node DSL and adds it to the
+ * Creates a new [Parameter] in the Fluent Node DSL and adds it to the
  * [FunctionDeclaration.parameters] of the nearest enclosing [FunctionDeclaration]. The [init] block
  * can be used to create further sub-nodes as well as configuring the created node itself.
  */
@@ -325,10 +314,9 @@ context(func: FunctionDeclaration)
 fun LanguageFrontend<*, *>.param(
     name: CharSequence,
     type: Type = this.unknownType(),
-    init: (ParameterDeclaration.() -> Unit)? = null,
-): ParameterDeclaration {
-    val node =
-        this.newParameterDeclaration(name, type).apply { this.location = getCallerFileAndLine() }
+    init: (Parameter.() -> Unit)? = null,
+): Parameter {
+    val node = this.newParameter(name, type).apply { this.location = getCallerFileAndLine() }
     init?.let { it(node) }
 
     scopeManager.addDeclaration(node)
@@ -430,11 +418,10 @@ fun LanguageFrontend<*, *>.declare(init: DeclarationStatement.() -> Unit): Decla
 fun LanguageFrontend<*, *>.declareVar(
     name: String,
     type: Type,
-    init: (VariableDeclaration.() -> Unit)? = null,
+    init: (Variable.() -> Unit)? = null,
 ): DeclarationStatement {
     val node = newDeclarationStatement().apply { this.location = getCallerFileAndLine() }
-    val variableDecl =
-        newVariableDeclaration(name, type).apply { this.location = getCallerFileAndLine() }
+    val variableDecl = newVariable(name, type).apply { this.location = getCallerFileAndLine() }
 
     if (init != null) {
         init(variableDecl)
@@ -446,7 +433,7 @@ fun LanguageFrontend<*, *>.declareVar(
 }
 
 /**
- * Creates a new [VariableDeclaration] in the Fluent Node DSL and adds it to the
+ * Creates a new [Variable] in the Fluent Node DSL and adds it to the
  * [DeclarationStatement.declarations] of the nearest enclosing [DeclarationStatement]. The [init]
  * block can be used to create further sub-nodes as well as configuring the created node itself.
  */
@@ -454,10 +441,9 @@ context(stmt: DeclarationStatement)
 fun LanguageFrontend<*, *>.variable(
     name: String,
     type: Type = this.unknownType(),
-    init: (VariableDeclaration.() -> Unit)? = null,
-): VariableDeclaration {
-    val node =
-        this.newVariableDeclaration(name, type).apply { this.location = getCallerFileAndLine() }
+    init: (Variable.() -> Unit)? = null,
+): Variable {
+    val node = this.newVariable(name, type).apply { this.location = getCallerFileAndLine() }
     if (init != null) init(node)
 
     stmt.declarations += node
@@ -467,7 +453,7 @@ fun LanguageFrontend<*, *>.variable(
 }
 
 /**
- * Creates a new [ProblemDeclaration] in the Fluent Node DSL and adds it to the
+ * Creates a new [Problem] in the Fluent Node DSL and adds it to the
  * [DeclarationStatement.declarations] of the nearest enclosing [DeclarationStatement]. The [init]
  * block can be used to create further sub-nodes as well as configuring the created node itself.
  */
@@ -475,10 +461,10 @@ context(stmt: DeclarationStatement)
 fun LanguageFrontend<*, *>.problemDecl(
     description: String,
     type: ProblemNode.ProblemType = ProblemNode.ProblemType.TRANSLATION,
-    init: (ProblemDeclaration.() -> Unit)? = null,
-): ProblemDeclaration {
+    init: (Problem.() -> Unit)? = null,
+): Problem {
     val node =
-        this.newProblemDeclaration(problem = description, problemType = type).apply {
+        this.newProblem(problem = description, problemType = type).apply {
             this.location = getCallerFileAndLine()
         }
     if (init != null) init(node)
@@ -1139,7 +1125,7 @@ fun LanguageFrontend<*, *>.ref(
  * differentiate the different nodes. This is primarily needed for the mermaid graph printer, which
  * relies on [Node.hashCode], which in turn relies on [Node.location].
  */
-context(tu: TranslationUnitDeclaration)
+context(tu: TranslationUnit)
 fun Expression.line(i: Int): Expression {
     // We just stupidly assume that the name of node is also its code
     val code = this.name
@@ -1831,10 +1817,9 @@ fun Node.inferPseudoLocations(currentFile: URI? = null, line: Int = 1, column: I
     }
 }
 
-context(method: MethodDeclaration)
-fun LanguageFrontend<*, *>.receiver(name: String, type: Type): VariableDeclaration {
-    val node =
-        this.newVariableDeclaration(name, type).apply { this.location = getCallerFileAndLine() }
+context(method: Method)
+fun LanguageFrontend<*, *>.receiver(name: String, type: Type): Variable {
+    val node = this.newVariable(name, type).apply { this.location = getCallerFileAndLine() }
 
     method.receiver = node
     scopeManager.addDeclaration(node)

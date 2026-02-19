@@ -28,18 +28,18 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.Imports
 import de.fraunhofer.aisec.cpg.graph.edges.unwrappingIncoming
 import de.fraunhofer.aisec.cpg.passes.updateImportedSymbols
 import org.neo4j.ogm.annotation.Relationship
 
 /**
- * This scope is opened up by a [NamespaceDeclaration] and represents the scope of the whole
- * namespace. This scope is special in a way that it will only exist once (per [GlobalScope]) and
- * contains all symbols declared in this namespace, even if they are spread across multiple files.
+ * This scope is opened up by a [Namespace] and represents the scope of the whole namespace. This
+ * scope is special in a way that it will only exist once (per [GlobalScope]) and contains all
+ * symbols declared in this namespace, even if they are spread across multiple files.
  */
-class NamespaceScope(astNode: NamespaceDeclaration) : NameScope(astNode) {
+class NamespaceScope(astNode: Namespace) : NameScope(astNode) {
 
     /**
      * This is the mirror property to [Scope.importedScopeEdges]. It specifies which other [Scope]s

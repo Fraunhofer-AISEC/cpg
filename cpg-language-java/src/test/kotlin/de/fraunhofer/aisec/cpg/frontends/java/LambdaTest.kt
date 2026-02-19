@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.frontends.java
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationManager
 import de.fraunhofer.aisec.cpg.graph.calls
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
@@ -77,7 +77,7 @@ class JavaLambdaTest {
             result.calls { it.name.localName == "testFunction" }[0].arguments.first()
         assertTrue(testfunctionArg is Reference)
         assertTrue(
-            (testfunctionArg.refersTo as? VariableDeclaration)?.initializer is LambdaExpression
+            (testfunctionArg.refersTo as? Variable)?.initializer is LambdaExpression
         )
 
         val testfunctionBody = mapArg.function?.body as? BinaryOperator
@@ -89,7 +89,7 @@ class JavaLambdaTest {
         val constructExpr =
             (lambdaVar.initializer as? NewExpression)?.initializer as? ConstructExpression
         assertNotNull(constructExpr)
-        val anonymousRecord = constructExpr.instantiates as? RecordDeclaration
+        val anonymousRecord = constructExpr.instantiates as? Record
         assertNotNull(anonymousRecord)
         assertTrue(anonymousRecord.isImplicit)
         assertEquals(1, anonymousRecord.superClasses.size)

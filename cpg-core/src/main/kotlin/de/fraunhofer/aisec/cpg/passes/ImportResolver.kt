@@ -34,8 +34,8 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.Import
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
@@ -54,11 +54,10 @@ import java.util.IdentityHashMap
 
 /**
  * This class holds the information about import dependencies between nodes that represent some kind
- * of "module" (usually either a [TranslationUnitDeclaration] or a [Component]). The dependency is
- * based on which module imports symbols of another module (usually in the form of a
- * [NamespaceDeclaration]). The idea is to provide a sorted list of modules in which to resolve
- * symbols and imports ideally. This is stored in [sorted] and is automatically computed the fist
- * time someone accesses the property.
+ * of "module" (usually either a [TranslationUnit] or a [Component]). The dependency is based on
+ * which module imports symbols of another module (usually in the form of a [Namespace]). The idea
+ * is to provide a sorted list of modules in which to resolve symbols and imports ideally. This is
+ * stored in [sorted] and is automatically computed the fist time someone accesses the property.
  */
 @Description(
     "Resolves import statements in the code, linking imported entities to their definitions within the CPG."
@@ -195,8 +194,8 @@ class ImportDependencies<T : Node>(modules: MutableList<T>) : IdentityHashMap<T,
 
 /**
  * This pass looks for [ImportDeclaration] nodes and imports symbols into their respective [Scope].
- * It does so by first building a dependency map between [TranslationUnitDeclaration] nodes, based
- * on their [ImportDeclaration] nodes.
+ * It does so by first building a dependency map between [TranslationUnit] nodes, based on their
+ * [ImportDeclaration] nodes.
  */
 class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
 
@@ -242,7 +241,7 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
     }
 
     /**
-     * This callback collects dependencies between [TranslationUnitDeclaration] nodes based on a
+     * This callback collects dependencies between [TranslationUnit] nodes based on a
      * [ImportDeclaration].
      */
     private fun collectImportDependencies(import: ImportDeclaration) {
@@ -290,9 +289,9 @@ class ImportResolver(ctx: TranslationContext) : TranslationResultPass(ctx) {
                     // leaf namespaces. However, this can be extremely slow because it first gathers
                     // all children and then filters them. Instead, we can directly filter for the
                     // child declarations.
-                    it is NamespaceDeclaration &&
+                    it is Namespace &&
                         !it.isInferred &&
-                        it.declarations.filterIsInstance<NamespaceDeclaration>().isEmpty()
+                        it.declarations.filterIsInstance<Namespace>().isEmpty()
                 }
 
             // We are only interested in "leaf" namespace declarations, meaning that they do not

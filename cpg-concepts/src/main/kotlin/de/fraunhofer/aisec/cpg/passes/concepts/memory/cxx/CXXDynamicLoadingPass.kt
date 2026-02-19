@@ -39,9 +39,9 @@ import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadSymbol
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.newLoadLibrary
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.newLoadSymbol
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -65,14 +65,14 @@ import kotlin.io.path.nameWithoutExtension
 )
 class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
-    override fun handleNode(node: Node, tu: TranslationUnitDeclaration) {
+    override fun handleNode(node: Node, tu: TranslationUnit) {
         when (node) {
             is CallExpression -> handleCallExpression(node, tu)
         }
     }
 
     /** Handles a [CallExpression] node and checks if it is a dynamic loading operation. */
-    private fun handleCallExpression(call: CallExpression, tu: TranslationUnitDeclaration) {
+    private fun handleCallExpression(call: CallExpression, tu: TranslationUnit) {
         val concept = tu.getConceptOrCreate<DynamicLoading>()
 
         val ops =
@@ -130,7 +130,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
                     )
                     .apply { path?.let { addAssumptionDependence(path) } }
             } else {
-                candidates = candidates?.filterIsInstance<VariableDeclaration>()
+                candidates = candidates?.filterIsInstance<Variable>()
                 newLoadSymbol(
                         underlyingNode = call,
                         concept = concept,

@@ -36,7 +36,7 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TypedefDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Typedef
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.Import
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.Imports
@@ -124,13 +124,13 @@ sealed class Scope(
      * A map of typedefs keyed by their alias name. This is still needed as a bridge until we
      * completely redesign the alias / typedef system.
      */
-    @Transient val typedefs = mutableMapOf<Name, TypedefDeclaration>()
+    @Transient val typedefs = mutableMapOf<Name, Typedef>()
 
     /**
      * Adds a [typedef] declaration to the scope. This is used to store typedefs in the scope, so
      * that they can be resolved later on.
      */
-    fun addTypedef(typedef: TypedefDeclaration) {
+    fun addTypedef(typedef: Typedef) {
         typedefs[typedef.alias.name] = typedef
     }
 

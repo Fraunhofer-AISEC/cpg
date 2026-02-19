@@ -44,8 +44,8 @@ import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.component
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.ast.TemplateArguments
 import de.fraunhofer.aisec.cpg.graph.pointer
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
@@ -471,24 +471,23 @@ abstract class Language<T : LanguageFrontend<*, *>>() : Node() {
 
     /**
      * There are some cases where our [Inference] system needs to place declarations, e.g., a
-     * [NamespaceDeclaration] in the [GlobalScope]. The issue with that is that the [Scope.astNode]
-     * of the global scope is always the last parsed [TranslationUnitDeclaration] and we might end
-     * up adding the declaration to some random translation unit, where it does not really belong.
+     * [Namespace] in the [GlobalScope]. The issue with that is that the [Scope.astNode] of the
+     * global scope is always the last parsed [TranslationUnit] and we might end up adding the
+     * declaration to some random translation unit, where it does not really belong.
      *
-     * Therefore, we give the language a chance to return a [TranslationUnitDeclaration] where the
-     * declaration should be placed. If the language does not override this function, the default
-     * implementation will return the first [TranslationUnitDeclaration] in the [Component] of
-     * [source].
+     * Therefore, we give the language a chance to return a [TranslationUnit] where the declaration
+     * should be placed. If the language does not override this function, the default implementation
+     * will return the first [TranslationUnit] in the [Component] of [source].
      *
      * But languages might choose to take the information of [TypeToInfer] and [source] and create a
-     * specific [TranslationUnitDeclaration], e.g., for each namespace that is inferred globally or
-     * try to put all inferred declarations into one specific (inferred) new translation unit.
+     * specific [TranslationUnit], e.g., for each namespace that is inferred globally or try to put
+     * all inferred declarations into one specific (inferred) new translation unit.
      *
      * @param TypeToInfer the type of the node that should be inferred
      * @param source the source that was responsible for the inference
      */
     context(provider: ContextProvider)
-    fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnitDeclaration {
+    fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnit {
         // The easiest way to identify the current component would be traversing the AST, but that
         // does not work for types. But types have a scope and the scope (should) have the
         // connection to the AST. We add several fallbacks here to make sure that we have a

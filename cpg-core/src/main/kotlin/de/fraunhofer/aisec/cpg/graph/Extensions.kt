@@ -115,7 +115,7 @@ inline fun <reified T : OverlayNode> Node.hasOverlay(): Boolean {
  * explanation, see [EOGStarterHolder].
  *
  * While it is in theory possible to retrieve this property from all nodes, most use cases should
- * include retrieving it from either an individual [TranslationUnitDeclaration] or the complete
+ * include retrieving it from either an individual [TranslationUnit] or the complete
  * [TranslationResult].
  */
 val AstNode.allEOGStarters: List<Node>
@@ -1138,40 +1138,40 @@ val AstNode?.mcalls: List<MemberCallExpression>
 val AstNode?.casts: List<CastExpression>
     get() = this.allChildren()
 
-/** Returns all [MethodDeclaration] children in this graph, starting with this [Node]. */
-val AstNode?.methods: List<MethodDeclaration>
+/** Returns all [Method] children in this graph, starting with this [Node]. */
+val AstNode?.methods: List<Method>
     get() = this.allChildren()
 
-/** Returns all [OperatorDeclaration] children in this graph, starting with this [Node]. */
-val AstNode?.operators: List<OperatorDeclaration>
+/** Returns all [Operator] children in this graph, starting with this [Node]. */
+val AstNode?.operators: List<Operator>
     get() = this.allChildren()
 
-/** Returns all [FieldDeclaration] children in this graph, starting with this [Node]. */
-val AstNode?.fields: List<FieldDeclaration>
+/** Returns all [Field] children in this graph, starting with this [Node]. */
+val AstNode?.fields: List<Field>
     get() = this.allChildren()
 
-/** Returns all [ParameterDeclaration] children in this graph, starting with this [Node]. */
-val AstNode?.parameters: List<ParameterDeclaration>
+/** Returns all [Parameter] children in this graph, starting with this [Node]. */
+val AstNode?.parameters: List<Parameter>
     get() = this.allChildren()
 
 /** Returns all [FunctionDeclaration] children in this graph, starting with this [Node]. */
 val AstNode?.functions: List<FunctionDeclaration>
     get() = this.allChildren()
 
-/** Returns all [RecordDeclaration] children in this graph, starting with this [Node]. */
-val AstNode?.records: List<RecordDeclaration>
+/** Returns all [Record] children in this graph, starting with this [Node]. */
+val AstNode?.records: List<Record>
     get() = this.allChildren()
 
-/** Returns all [RecordDeclaration] children in this graph, starting with this [Node]. */
-val AstNode?.namespaces: List<NamespaceDeclaration>
+/** Returns all [Record] children in this graph, starting with this [Node]. */
+val AstNode?.namespaces: List<Namespace>
     get() = this.allChildren()
 
 /** Returns all [ImportDeclaration] children in this graph, starting with this [Node]. */
 val AstNode?.imports: List<ImportDeclaration>
     get() = this.allChildren()
 
-/** Returns all [VariableDeclaration] children in this graph, starting with this [Node]. */
-val AstNode?.variables: List<VariableDeclaration>
+/** Returns all [Variable] children in this graph, starting with this [Node]. */
+val AstNode?.variables: List<Variable>
     get() = this.allChildren()
 
 /** Returns all [Literal] children in this graph, starting with this [Node]. */
@@ -1332,7 +1332,7 @@ val AstNode?.assignments: List<Assignment>
  * Returns the [Assignment.value] of the first (by EOG order beginning from) [Assignment] that this
  * variable has as its [Assignment.target] in the scope of the variable.
  */
-val VariableDeclaration.firstAssignment: Expression?
+val Variable.firstAssignment: Expression?
     get() {
         val start = this.scope?.astNode ?: return null
         val assignments = start.assignments.filter { (it.target as? Reference)?.refersTo == this }
@@ -1422,7 +1422,7 @@ fun Node.controlledBy(): List<Node> {
  */
 val SubscriptExpression.arraySize: Expression
     get() =
-        (((this.arrayExpression as Reference).refersTo as VariableDeclaration).initializer
+        (((this.arrayExpression as Reference).refersTo as Variable).initializer
                 as NewArrayExpression)
             .dimensions[0]
 
@@ -1464,17 +1464,17 @@ fun Expression?.unwrapReference(): Reference? {
 }
 
 /**
- * Returns the [TranslationUnitDeclaration] where this node is located in.
+ * Returns the [TranslationUnit] where this node is located in.
  *
  * If this is an [OverlayNode], we start searching in the [OverlayNode.underlyingNode].
  */
-val Node.translationUnit: TranslationUnitDeclaration?
+val Node.translationUnit: TranslationUnit?
     get() {
-        return this as? TranslationUnitDeclaration
+        return this as? TranslationUnit
             ?: if (this is OverlayNode) {
-                this.underlyingNode?.firstParentOrNull<TranslationUnitDeclaration>()
+                this.underlyingNode?.firstParentOrNull<TranslationUnit>()
             } else {
-                this.firstParentOrNull<TranslationUnitDeclaration>()
+                this.firstParentOrNull<TranslationUnit>()
             }
     }
 

@@ -48,8 +48,8 @@ class VisitorTest : BaseTest() {
     @Test
     fun testLoopDetection() {
         // Let's create an intentional loop
-        val tu = TranslationUnitDeclaration()
-        val name = NamespaceDeclaration()
+        val tu = TranslationUnit()
+        val name = Namespace()
         val func = FunctionDeclaration()
         name.addDeclaration(tu)
         name.addDeclaration(func)
@@ -110,7 +110,7 @@ class VisitorTest : BaseTest() {
                 }
             },
         )
-        // TODO: It seems to expect a FieldDeclaration for "System" but that's contrary to other
+        // TODO: It seems to expect a Field for "System" but that's contrary to other
         // tests where it shouldn't exist.
         // Please double check. Until then, I'll change the expected number.
         assertEquals(37, nodeList.size)
@@ -166,8 +166,8 @@ class VisitorTest : BaseTest() {
     fun testFallbackTULeastImported() {
         val component = Component()
 
-        val tr1 = TranslationUnitDeclaration().also { it.name = Name("tr1") }
-        val tr2 = TranslationUnitDeclaration().also { it.name = Name("tr2") }
+        val tr1 = TranslationUnit().also { it.name = Name("tr1") }
+        val tr2 = TranslationUnit().also { it.name = Name("tr2") }
 
         component.translationUnits += tr1
         component.translationUnits += tr2
@@ -177,7 +177,7 @@ class VisitorTest : BaseTest() {
         assertEquals(listOf(tr1, tr2), fallback)
 
         component.translationUnitDependencies =
-            ImportDependencies<TranslationUnitDeclaration>(component.translationUnits).also {
+            ImportDependencies<TranslationUnit>(component.translationUnits).also {
                 it.add(tr1, tr2)
                 it
             }
@@ -189,7 +189,7 @@ class VisitorTest : BaseTest() {
     }
 
     companion object {
-        private var recordDeclaration: RecordDeclaration? = null
+        private var recordDeclaration: Record? = null
 
         @BeforeAll
         @JvmStatic

@@ -63,8 +63,8 @@ class ExtensionTest {
     @Test
     fun testAllUniqueEOGStartersOrSingles() {
         with(TestLanguageFrontend()) {
-            val tu = newTranslationUnitDeclaration("file")
-            val record = newRecordDeclaration("MyClass", "class")
+            val tu = newTranslationUnit("file")
+            val record = newRecord("MyClass", "class")
             tu.declarations += record
 
             val func = newFunctionDeclaration("myFunc")

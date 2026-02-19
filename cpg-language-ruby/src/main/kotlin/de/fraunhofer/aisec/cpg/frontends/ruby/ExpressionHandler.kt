@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.ruby
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import org.jruby.ast.*
 import org.jruby.ast.Node
@@ -77,7 +77,7 @@ class ExpressionHandler(lang: RubyLanguageFrontend) :
         frontend.scopeManager.enterScope(func)
 
         for (arg in node.argsNode.args) {
-            val param = frontend.declarationHandler.handle(arg) as? ParameterDeclaration
+            val param = frontend.declarationHandler.handle(arg) as? Parameter
             if (param == null) {
                 continue
             }

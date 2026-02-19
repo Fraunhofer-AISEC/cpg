@@ -41,9 +41,9 @@ import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
 /**
- * This pass determines the data flows of References which refer to a VariableDeclaration (not a
- * field) while considering the control flow of a function. After this path, only such data flows
- * are left which can occur when following the control flow (in terms of the EOG) of the program.
+ * This pass determines the data flows of References which refer to a Variable (not a field) while
+ * considering the control flow of a function. After this path, only such data flows are left which
+ * can occur when following the control flow (in terms of the EOG) of the program.
  */
 @OptIn(ExperimentalContracts::class)
 @DependsOn(EvaluationOrderGraphPass::class)
@@ -85,7 +85,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
         // These are EOGStarterHolders but do not have an EOG which means, they will just cause
         // problems. Again, if we delete information/edges, we will never be able to recover them.
-        if (node is FunctionTemplateDeclaration) return
+        if (node is FunctionTemplate) return
         // Calculate the complexity of the function and see, if it exceeds our threshold
         val max = passConfig<Configuration>()?.maxComplexity
         val c = (node as? FunctionDeclaration)?.body?.cyclomaticComplexity ?: 0
@@ -120,9 +120,9 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             }
         }
 
-        // If we start in a VariableDeclaration, we have to set the initializer as the last write
+        // If we start in a Variable, we have to set the initializer as the last write
         // because we won't visit the declaration itself.
-        (node as? VariableDeclaration)?.let { varDecl ->
+        (node as? Variable)?.let { varDecl ->
             varDecl.initializer?.let { initializer ->
                 startState.push(varDecl, PowersetLattice(identitySetOf(initializer)))
             }
@@ -162,7 +162,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                         it.filterIsInstance<Granularity>().singleOrNull() ?: FullDataflowGranularity
                 }
 
-                if ((it is VariableDeclaration || it is ParameterDeclaration) && key == it) {
+                if ((it is Variable || it is Parameter) && key == it) {
                     // Nothing to do
                 } else if (callingContext != null) {
                     key.prevDFGEdges.addContextSensitive(
@@ -204,8 +204,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         val allChildrenOfFunction =
             node.allChildren<Node>(
                 stopAtNode = {
-                    it is FunctionTemplateDeclaration ||
-                        it is VariableDeclaration && it.prevEOG.isEmpty() && !it.isImplicit ||
+                    it is FunctionTemplate ||
+                        it is Variable && it.prevEOG.isEmpty() && !it.isImplicit ||
                         it is EOGStarterHolder && it.prevEOG.isEmpty() && it != node
                 }
             )
@@ -219,10 +219,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         // inside the node's astChildren
         for (varDecl in
             allChildrenOfFunction.filter {
-                (it is VariableDeclaration &&
-                    !it.isGlobal &&
-                    it !is FieldDeclaration &&
-                    it !is TupleDeclaration) || it is ParameterDeclaration
+                (it is Variable && !it.isGlobal && it !is Field && it !is Tuple) || it is Parameter
             }) {
             allNodesWithEdgesToRemove.add(varDecl)
             // Clear only prev DFG inside this function!
@@ -268,7 +265,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
         val doubleState = state as DFGPassState
 
-        if (currentNode is VariableDeclaration) {
+        if (currentNode is Variable) {
             val initializer = currentNode.initializer
             if (initializer != null) {
                 // A variable declaration with an initializer => The initializer flows to the
@@ -276,7 +273,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                 doubleState.push(currentNode, PowersetLattice(identitySetOf(initializer)))
             }
 
-            if (currentNode is TupleDeclaration) {
+            if (currentNode is Tuple) {
                 // For a tuple declaration, we write the elements in this statement. We do not
                 // really care about the tuple when using the elements subsequently.
                 currentNode.elements.forEachIndexed { idx, variable ->
@@ -377,9 +374,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             }
         } else if (
             (currentNode as? Reference)?.access == AccessValues.READ &&
-                (currentNode.refersTo is VariableDeclaration ||
-                    currentNode.refersTo is ParameterDeclaration) &&
-                currentNode.refersTo !is FieldDeclaration
+                (currentNode.refersTo is Variable || currentNode.refersTo is Parameter) &&
+                currentNode.refersTo !is Field
         ) {
             // We can only find a change if there's a state for the variable
             doubleState.declarationsState[currentNode.refersTo]?.let {
@@ -393,9 +389,8 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             }
         } else if (
             (currentNode as? Reference)?.access == AccessValues.READWRITE &&
-                (currentNode.refersTo is VariableDeclaration ||
-                    currentNode.refersTo is ParameterDeclaration) &&
-                currentNode.refersTo !is FieldDeclaration
+                (currentNode.refersTo is Variable || currentNode.refersTo is Parameter) &&
+                currentNode.refersTo !is Field
         ) {
             // We can only find a change if there's a state for the variable
             doubleState.declarationsState[currentNode.refersTo]?.let {
@@ -406,7 +401,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         } else if (currentNode is ComprehensionExpression) {
             handleComprehensionExpression(currentNode, doubleState)
         } else if (currentNode is ForEachStatement && currentNode.variable != null) {
-            // The VariableDeclaration in the ForEachStatement doesn't have an initializer, so
+            // The Variable in the ForEachStatement doesn't have an initializer, so
             // the "normal" case won't work. We handle this case separately here...
             // This is what we write to the declaration
             val iterable = currentNode.iterable as? Expression
@@ -488,9 +483,9 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                     for ((param, _) in changedParams) {
                         val arg =
                             when (param) {
-                                (invoked as? MethodDeclaration)?.receiver ->
+                                (invoked as? Method)?.receiver ->
                                     (currentNode as? MemberCallExpression)?.base as? Reference
-                                is ParameterDeclaration ->
+                                is Parameter ->
                                     currentNode.arguments[param.argumentIndex] as? Reference
                                 else -> null
                             }
@@ -510,11 +505,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
             }
         } else if (
             (currentNode as? Reference)?.access == AccessValues.WRITE &&
-                (currentNode.refersTo is VariableDeclaration ||
-                    currentNode.refersTo is ParameterDeclaration) &&
-                currentNode.refersTo !is FieldDeclaration
+                (currentNode.refersTo is Variable || currentNode.refersTo is Parameter) &&
+                currentNode.refersTo !is Field
         ) {
-            // This is a really ugly workaround: Check if the VariableDeclaration which this
+            // This is a really ugly workaround: Check if the Variable which this
             // reference refers to is used as some sort of non-local (in terms of not reachable via
             // the connected EOG). For us, an indication of this is that there are some prev or next
             // DFG edges left which are associated to this variable declaration. In this case, we
@@ -757,14 +751,14 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
  * (most likely a [Reference]) refers to.
  *
  * In the most basic use-case the [objectIdentifier] of a simple variable reference is the hash-code
- * of its [VariableDeclaration]. Consider the following code:
+ * of its [Variable]. Consider the following code:
  * ```c
  * int a = 1;
  * printf(a);
  * ```
  *
  * In this case, the "object identifier" of the [Reference] `a` in the second line is the hash-code
- * of the [VariableDeclaration] `a` in the first line.
+ * of the [Variable] `a` in the first line.
  *
  * However, we also need to differentiate between different objects that are used as fields as well
  * as different instances of the fields. Consider the second example:
@@ -781,10 +775,10 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
  * ```
  *
  * In this case, the [objectIdentifier] of the [MemberExpression] `a` is a combination of the
- * hash-code of the [VariableDeclaration] `a` as well as the [FieldDeclaration] of `field`. The same
- * applies for `b`. If we would only rely on the [VariableDeclaration], we would not be sensitive to
- * fields, if we would only rely on the [FieldDeclaration], we would not be sensitive to different
- * object instances. Therefore, we consider both.
+ * hash-code of the [Variable] `a` as well as the [Field] of `field`. The same applies for `b`. If
+ * we would only rely on the [Variable], we would not be sensitive to fields, if we would only rely
+ * on the [Field], we would not be sensitive to different object instances. Therefore, we consider
+ * both.
  *
  * Please note however, that this current, very basic implementation does not consider perform any
  * kind of pointer or alias analysis. This means that even though the "contents" of two variables

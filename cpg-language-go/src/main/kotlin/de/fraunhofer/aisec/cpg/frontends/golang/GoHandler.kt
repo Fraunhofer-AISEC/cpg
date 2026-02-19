@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.golang
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.ProblemNode
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.scopes.NamespaceScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
 import de.fraunhofer.aisec.cpg.helpers.Util
@@ -101,10 +101,10 @@ abstract class GoHandler<ResultNode : Node?, HandlerNode : GoStandardLibrary.Ast
                 frontend.scopeManager
                     .filterScopes {
                         it is NamespaceScope &&
-                            (it.astNode as? NamespaceDeclaration)?.path == filename
+                            (it.astNode as? Namespace)?.path == filename
                     }
                     .firstOrNull()
-                    ?.astNode as? NamespaceDeclaration
+                    ?.astNode as? Namespace
 
             if (namespace != null) {
                 // We can directly take the "real" namespace name then

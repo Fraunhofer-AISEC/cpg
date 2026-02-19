@@ -28,12 +28,12 @@ package de.fraunhofer.aisec.codyze
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.query.AcceptedResult
 import de.fraunhofer.aisec.cpg.query.NotYetEvaluated
@@ -275,11 +275,11 @@ fun de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.toSarif(
 private fun Node.toSarifKind(): String? {
     return when (this) {
         is FunctionDeclaration -> "function"
-        is FieldDeclaration -> "member"
-        is TranslationUnitDeclaration -> "module"
-        is NamespaceDeclaration -> "namespace"
-        is ParameterDeclaration -> "parameter"
-        is VariableDeclaration -> "variable"
+        is Field -> "member"
+        is TranslationUnit -> "module"
+        is Namespace -> "namespace"
+        is Parameter -> "parameter"
+        is Variable -> "variable"
         is Type -> "type"
         else -> null
     }

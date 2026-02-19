@@ -27,10 +27,10 @@ package de.fraunhofer.aisec.cpg.frontends.ruby
 
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
+import de.fraunhofer.aisec.cpg.graph.declarations.Problem
 import de.fraunhofer.aisec.cpg.graph.newFunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.newParameterDeclaration
+import de.fraunhofer.aisec.cpg.graph.newParameter
 import de.fraunhofer.aisec.cpg.graph.newReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -39,7 +39,7 @@ import org.jruby.ast.DefnNode
 import org.jruby.ast.Node
 
 class DeclarationHandler(lang: RubyLanguageFrontend) :
-    RubyHandler<Declaration, Node>({ ProblemDeclaration() }, lang) {
+    RubyHandler<Declaration, Node>({ Problem() }, lang) {
 
     override fun handleNode(node: Node): Declaration {
         return when (node) {
@@ -50,7 +50,7 @@ class DeclarationHandler(lang: RubyLanguageFrontend) :
     }
 
     private fun handleArgumentNode(node: ArgumentNode): Declaration {
-        return newParameterDeclaration(node.name.idString(), variadic = false)
+        return newParameter(node.name.idString(), variadic = false)
     }
 
     private fun handleDefnNode(node: DefnNode): FunctionDeclaration {
@@ -59,7 +59,7 @@ class DeclarationHandler(lang: RubyLanguageFrontend) :
         frontend.scopeManager.enterScope(func)
 
         for (arg in node.argsNode.args) {
-            val param = this.handle(arg) as? ParameterDeclaration
+            val param = this.handle(arg) as? Parameter
             if (param == null) {
                 continue
             }

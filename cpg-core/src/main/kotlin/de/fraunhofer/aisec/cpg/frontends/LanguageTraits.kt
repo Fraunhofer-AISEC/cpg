@@ -33,8 +33,8 @@ import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.passes.*
@@ -73,11 +73,11 @@ interface HasTemplates : HasGenerics {
      *   second parameter is a list of [FunctionDeclaration] candidates.
      */
     fun handleTemplateFunctionCalls(
-        curClass: RecordDeclaration?,
+        curClass: Record?,
         templateCall: CallExpression,
         applyInference: Boolean,
         ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration?,
+        currentTU: TranslationUnit?,
         needsExactMatch: Boolean,
     ): Pair<Boolean, List<FunctionDeclaration>>
 }
@@ -120,7 +120,7 @@ interface HasSuperClasses : LanguageTrait {
 
     fun SymbolResolver.handleSuperExpression(
         memberExpression: MemberExpression,
-        curClass: RecordDeclaration,
+        curClass: Record,
     ): Boolean
 }
 
@@ -207,16 +207,15 @@ interface HasAnonymousIdentifier : LanguageTrait {
 
 /**
  * A language trait, that specifies that this language has global variables directly in the
- * [GlobalScope], i.e., not within a namespace, but directly contained in a
- * [TranslationUnitDeclaration].
+ * [GlobalScope], i.e., not within a namespace, but directly contained in a [TranslationUnit].
  */
 interface HasGlobalVariables : LanguageTrait
 
 /**
  * A language trait, that specifies that this language has global functions directly in the
- * [GlobalScope], i.e., not within a namespace, but directly contained in a
- * [TranslationUnitDeclaration]. For example, C++ has global functions, Java and Go do not (as every
- * function is either in a class or a namespace).
+ * [GlobalScope], i.e., not within a namespace, but directly contained in a [TranslationUnit]. For
+ * example, C++ has global functions, Java and Go do not (as every function is either in a class or
+ * a namespace).
  */
 interface HasGlobalFunctions : LanguageTrait
 

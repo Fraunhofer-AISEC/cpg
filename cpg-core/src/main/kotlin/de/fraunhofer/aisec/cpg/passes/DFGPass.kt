@@ -78,12 +78,12 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 val changedParams =
                     functionSummaries.functionToChangedParameters[invoked] ?: mapOf()
                 for ((param, _) in changedParams) {
-                    if (param == (invoked as? MethodDeclaration)?.receiver) {
+                    if (param == (invoked as? Method)?.receiver) {
                         (call as? MemberCallExpression)
                             ?.base
                             ?.prevDFGEdges
                             ?.addContextSensitive(param, callingContext = CallingContextOut(call))
-                    } else if (param is ParameterDeclaration) {
+                    } else if (param is Parameter) {
                         val arg = call.arguments[param.argumentIndex]
                         arg.prevDFGEdges.addContextSensitive(
                             param,
@@ -140,10 +140,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is IfStatement -> handleIfStatement(node)
             is ThrowExpression -> handleThrowExpression(node)
             // Declarations
-            is FieldDeclaration -> handleFieldDeclaration(node)
+            is Field -> handleField(node)
             is FunctionDeclaration -> handleFunctionDeclaration(node, functionSummaries)
-            is TupleDeclaration -> handleTupleDeclaration(node)
-            is VariableDeclaration -> handleVariableDeclaration(node)
+            is Tuple -> handleTuple(node)
+            is Variable -> handleVariable(node)
         }
     }
 
@@ -212,29 +212,26 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         when (node.access) {
             AccessValues.WRITE -> {
                 node.nextDFGEdges.add(node.base) {
-                    (node.refersTo as? FieldDeclaration)?.let { granularity = field(it) }
+                    (node.refersTo as? Field)?.let { granularity = field(it) }
                 }
             }
             AccessValues.READWRITE -> {
                 node.nextDFGEdges.add(node.base) {
-                    (node.refersTo as? FieldDeclaration)?.let { granularity = field(it) }
+                    (node.refersTo as? Field)?.let { granularity = field(it) }
                 }
                 // We do not make an edge in the other direction on purpose as a workaround for
                 // nested field accesses on the lhs of an assignment.
             }
             else -> {
                 node.prevDFGEdges.add(node.base) {
-                    (node.refersTo as? FieldDeclaration)?.let { granularity = field(it) }
+                    (node.refersTo as? Field)?.let { granularity = field(it) }
                 }
             }
         }
     }
 
-    /**
-     * Adds the DFG edges for a [TupleDeclaration]. The data flows from initializer to the tuple
-     * elements.
-     */
-    protected fun handleTupleDeclaration(node: TupleDeclaration) {
+    /** Adds the DFG edges for a [Tuple]. The data flows from initializer to the tuple elements. */
+    protected fun handleTuple(node: Tuple) {
         node.initializer?.let { initializer ->
             node.prevDFG += initializer
             node.elements.forEachIndexed { idx, variable ->
@@ -243,11 +240,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    /**
-     * Adds the DFG edge for a [VariableDeclaration]. The data flows from initializer to the
-     * variable.
-     */
-    protected fun handleVariableDeclaration(node: VariableDeclaration) {
+    /** Adds the DFG edge for a [Variable]. The data flows from initializer to the variable. */
+    protected fun handleVariable(node: Variable) {
         node.initializer?.let { node.prevDFGEdges += it }
     }
 
@@ -268,7 +262,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 // times, i.e., we only handle the declaration exactly once.
                 node.prevDFGEdges.addAll(node.parameters)
                 // If it's a method with a receiver, we connect that one too.
-                if (node is MethodDeclaration) {
+                if (node is Method) {
                     node.receiver?.let { node.prevDFGEdges += it }
                 }
             }
@@ -277,10 +271,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    /**
-     * Adds the DFG edge for a [FieldDeclaration]. The data flows from the initializer to the field.
-     */
-    protected fun handleFieldDeclaration(node: FieldDeclaration) {
+    /** Adds the DFG edge for a [Field]. The data flows from the initializer to the field. */
+    protected fun handleField(node: Field) {
         node.initializer?.let { node.prevDFGEdges += it }
     }
 
@@ -297,8 +289,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
      * [ForEachStatement.iterable] to the [ForEachStatement.variable]. However, since the
      * [ForEachStatement.variable] is a [Statement], we have to identify the variable which is used
      * in the loop. In most cases, we should have a [DeclarationStatement] which means that we can
-     * unwrap the [VariableDeclaration]. If this is not the case, we assume that the last
-     * [VariableDeclaration] in the statement is the one we care about.
+     * unwrap the [Variable]. If this is not the case, we assume that the last [Variable] in the
+     * statement is the one we care about.
      */
     protected fun handleForEachStatement(node: ForEachStatement) {
         node.iterable?.let { iterable ->
@@ -310,8 +302,8 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
                 node.variable.variables.lastOrNull()?.prevDFGEdges += iterable
                 node.assume(
                     AssumptionType.AmbiguityAssumption,
-                    "We assume that the last VariableDeclaration in the statement kept in \"variable\" is the variable we care about in the ForEachStatement if there is no DeclarationStatement related to the iterable.\n\n" +
-                        "To verify this assumption, we need to check if the last VariableDeclaration of the variable is indeed the one where we assign the iterable's elements to.",
+                    "We assume that the last Variable in the statement kept in \"variable\" is the variable we care about in the ForEachStatement if there is no DeclarationStatement related to the iterable.\n\n" +
+                        "To verify this assumption, we need to check if the last Variable of the variable is indeed the one where we assign the iterable's elements to.",
                 )
             }
         }

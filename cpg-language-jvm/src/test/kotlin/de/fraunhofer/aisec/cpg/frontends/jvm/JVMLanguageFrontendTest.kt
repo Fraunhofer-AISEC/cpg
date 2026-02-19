@@ -249,7 +249,7 @@ class JVMLanguageFrontendTest {
         // The new error handling should catch and handle any parsing issues gracefully
         assertTrue(
             tu.problems.isEmpty() ||
-                tu.problems.all { it is ProblemDeclaration || it is ProblemExpression }
+                tu.problems.all { it is Problem || it is ProblemExpression }
         )
     }
 

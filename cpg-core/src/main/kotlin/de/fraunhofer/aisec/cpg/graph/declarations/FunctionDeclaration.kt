@@ -61,7 +61,7 @@ open class FunctionDeclaration :
 
     /** The list of function parameters. */
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
-    var parameterEdges = astEdgesOf<ParameterDeclaration>()
+    var parameterEdges = astEdgesOf<Parameter>()
     /** Virtual property for accessing [parameterEdges] without property edges. */
     var parameters by unwrapping(FunctionDeclaration::parameterEdges)
 
@@ -141,9 +141,8 @@ open class FunctionDeclaration :
     }
 
     /**
-     * A list of default expressions for each item in [parameters]. If a [ParameterDeclaration] has
-     * no default, the list will be null at this index. This list must have the same size as
-     * [parameters].
+     * A list of default expressions for each item in [parameters]. If a [Parameter] has no default,
+     * the list will be null at this index. This list must have the same size as [parameters].
      */
     val defaultParameters: List<Expression?>
         get() {
@@ -183,7 +182,7 @@ open class FunctionDeclaration :
     override fun hashCode() = Objects.hash(super.hashCode(), body, parameters, throwsTypes)
 
     override fun addDeclaration(declaration: Declaration) {
-        if (declaration is ParameterDeclaration) {
+        if (declaration is Parameter) {
             addIfNotContains(parameterEdges, declaration)
         }
     }

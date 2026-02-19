@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.python.PythonHandler
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.refs
 import de.fraunhofer.aisec.cpg.graph.statements
 import de.fraunhofer.aisec.cpg.graph.statements.EmptyStatement
@@ -79,7 +79,7 @@ class WithStatementTest : BaseTest() {
         // Test: with open("file.txt", "r") as file:
         val blockStmts =
             result.statements.filterIsInstance<Block>().filter {
-                it.astParent is NamespaceDeclaration
+                it.astParent is Namespace
             }
 
         val ref = result.refs["contextManager_00000000-11a2-7efe-ffff-ffffbf8aaab8"]
@@ -177,7 +177,7 @@ class WithStatementTest : BaseTest() {
         // Test: with open("file.txt", "r"):
         val blockStmts =
             result.statements.filterIsInstance<Block>().filter {
-                it.astParent is NamespaceDeclaration
+                it.astParent is Namespace
             }
 
         val blockStmt = blockStmts[1]

@@ -32,7 +32,7 @@ import java.util.*
 import org.neo4j.ogm.annotation.Relationship
 
 /** Node representing a declaration of a FunctionTemplate */
-class FunctionTemplateDeclaration : TemplateDeclaration() {
+class FunctionTemplate : Template() {
     /**
      * Edges pointing to all FunctionDeclarations that are realized by the FunctionTemplate. Before
      * the expansion pass there is only a single FunctionDeclaration which is instantiated After the
@@ -40,13 +40,13 @@ class FunctionTemplateDeclaration : TemplateDeclaration() {
      */
     @Relationship(value = "REALIZATION", direction = Relationship.Direction.OUTGOING)
     val realizationEdges = astEdgesOf<FunctionDeclaration>()
-    val realization by unwrapping(FunctionTemplateDeclaration::realizationEdges)
+    val realization by unwrapping(FunctionTemplate::realizationEdges)
 
     override val realizations: List<Declaration>
         get() = ArrayList<Declaration>(realization)
 
     override fun addDeclaration(declaration: Declaration) {
-        if (declaration is TypeParameterDeclaration || declaration is ParameterDeclaration) {
+        if (declaration is TypeParameter || declaration is Parameter) {
             addIfNotContains(this.parameterEdges, declaration)
         } else if (declaration is FunctionDeclaration) {
             addIfNotContains(realizationEdges, declaration)
@@ -57,7 +57,7 @@ class FunctionTemplateDeclaration : TemplateDeclaration() {
         if (this === other) return true
         if (other == null || javaClass != other.javaClass) return false
         if (!super.equals(other)) return false
-        val that = other as FunctionTemplateDeclaration
+        val that = other as FunctionTemplate
         return realization == that.realization &&
             propertyEqualsList(realizationEdges, that.realizationEdges) &&
             parameters == that.parameters &&

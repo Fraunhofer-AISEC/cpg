@@ -183,7 +183,7 @@ open class CPPLanguage :
         if (
             targetType is ReferenceType &&
                 targetType.elementType == type &&
-                targetHint is ParameterDeclaration
+                targetHint is Parameter
         ) {
             return DirectMatch
         }
@@ -239,18 +239,18 @@ open class CPPLanguage :
      * @return true if resolution was successful, false if not
      */
     override fun handleTemplateFunctionCalls(
-        curClass: RecordDeclaration?,
+        curClass: Record?,
         templateCall: CallExpression,
         applyInference: Boolean,
         ctx: TranslationContext,
-        currentTU: TranslationUnitDeclaration?,
+        currentTU: TranslationUnit?,
         needsExactMatch: Boolean,
     ): Pair<Boolean, List<FunctionDeclaration>> {
         val instantiationCandidates =
-            ctx.scopeManager.lookupSymbolByNodeNameOfType<FunctionTemplateDeclaration>(templateCall)
+            ctx.scopeManager.lookupSymbolByNodeNameOfType<FunctionTemplate>(templateCall)
         for (functionTemplateDeclaration in instantiationCandidates) {
             val initializationType =
-                mutableMapOf<AstNode?, TemplateDeclaration.TemplateInitialization?>()
+                mutableMapOf<AstNode?, Template.TemplateInitialization?>()
             val orderedInitializationSignature = mutableMapOf<Declaration, Int>()
             val explicitInstantiation = mutableListOf<ParameterizedType>()
             if (
@@ -309,7 +309,7 @@ open class CPPLanguage :
             val edges = templateCall.templateArgumentEdges
             // Set instantiation propertyEdges
             for (edge in edges ?: listOf()) {
-                edge.instantiation = TemplateDeclaration.TemplateInitialization.EXPLICIT
+                edge.instantiation = Template.TemplateInitialization.EXPLICIT
             }
 
             if (functionTemplateDeclaration == null) {

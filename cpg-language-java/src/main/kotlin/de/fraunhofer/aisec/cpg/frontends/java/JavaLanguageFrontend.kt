@@ -56,8 +56,8 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
-import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
+import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -103,7 +103,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
     }
 
     @Throws(TranslationException::class)
-    override fun parse(file: File): TranslationUnitDeclaration {
+    override fun parse(file: File): TranslationUnit {
         // load in the file
         return try {
             val parserConfiguration = ParserConfiguration()
@@ -119,7 +119,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
             context?.setData(Node.SYMBOL_RESOLVER_KEY, javaSymbolResolver)
 
             // starting point is always a translation declaration
-            val tud = newTranslationUnitDeclaration(file.toString(), rawNode = context)
+            val tud = newTranslationUnit(file.toString(), rawNode = context)
             currentTU = tud
             scopeManager.resetToGlobal(tud)
             val packDecl = context?.packageDeclaration?.orElse(null)
@@ -129,11 +129,11 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
             // translation unit
             val holder =
                 packDecl?.name?.toString()?.split(language.namespaceDelimiter)?.fold(null) {
-                    previous: NamespaceDeclaration?,
+                    previous: Namespace?,
                     path ->
                     val fqn = previous?.name.fqn(path)
 
-                    val nsd = newNamespaceDeclaration(fqn, rawNode = packDecl)
+                    val nsd = newNamespace(fqn, rawNode = packDecl)
                     scopeManager.addDeclaration(nsd)
                     val holder = previous ?: tud
                     holder.addDeclaration(nsd)
@@ -156,7 +156,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
             // import would be visible as symbols in the whole namespace
             scopeManager.enterScope(tud)
             for (anImport in context?.imports ?: listOf()) {
-                val incl = newIncludeDeclaration(anImport.nameAsString)
+                val incl = newInclude(anImport.nameAsString)
                 scopeManager.addDeclaration(incl)
                 tud.addDeclaration(incl)
             }
@@ -172,8 +172,8 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
             tud.addDeclaration(decl)
             scopeManager.leaveScope(tud)
 
-            if (holder is NamespaceDeclaration) {
-                tud.allChildren<NamespaceDeclaration>().reversed().forEach {
+            if (holder is Namespace) {
+                tud.allChildren<Namespace>().reversed().forEach {
                     scopeManager.leaveScope(it)
                 }
             }
@@ -405,7 +405,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
     private fun getFQNInCurrentPackage(simpleName: String): String {
         // TODO: Somehow we cannot use scopeManager.currentNamespace. not sure why
         val theScope =
-            scopeManager.firstScopeOrNull { scope: Scope -> scope.astNode is NamespaceDeclaration }
+            scopeManager.firstScopeOrNull { scope: Scope -> scope.astNode is Namespace }
                 ?: return simpleName
         // If scope is null we are in a default package
         return theScope.name.fqn(simpleName).toString()

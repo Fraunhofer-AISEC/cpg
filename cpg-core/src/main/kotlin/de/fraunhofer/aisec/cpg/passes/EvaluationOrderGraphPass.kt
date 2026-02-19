@@ -129,7 +129,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         currentPredecessors.clear()
     }
 
-    override fun accept(tu: TranslationUnitDeclaration) {
+    override fun accept(tu: TranslationUnit) {
         handleEOG(tu)
         removeUnreachableEOGEdges(tu)
     }
@@ -138,7 +138,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * Removes EOG edges by first building the negative set of nodes that cannot be visited and then
      * remove their outgoing edges. This also removes cycles.
      */
-    protected fun removeUnreachableEOGEdges(tu: TranslationUnitDeclaration) {
+    protected fun removeUnreachableEOGEdges(tu: TranslationUnit) {
         // All nodes which have an eog edge
         val eogNodes = IdentitySet<Node>()
         eogNodes.addAll(
@@ -147,8 +147,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             }
         )
         // only eog entry points
-        var validStarts =
-            eogNodes.filter { it is EOGStarterHolder || it is VariableDeclaration }.toSet()
+        var validStarts = eogNodes.filter { it is EOGStarterHolder || it is Variable }.toSet()
         // Remove all nodes from eogNodes which are reachable from validStarts and transitively.
         val alreadySeen = IdentitySet<Node>()
         while (validStarts.isNotEmpty()) {
@@ -172,7 +171,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * See
      * [Specification for StatementHolder](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#statementholder)
      */
-    protected fun handleTranslationUnitDeclaration(node: TranslationUnitDeclaration) {
+    protected fun handleTranslationUnit(node: TranslationUnit) {
         handleStatementHolder(node as StatementHolder)
 
         // loop through functions
@@ -187,7 +186,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * See
      * [Specification for StatementHolder](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#statementholder)
      */
-    protected fun handleNamespaceDeclaration(node: NamespaceDeclaration) {
+    protected fun handleNamespace(node: Namespace) {
         handleStatementHolder(node)
 
         // loop through functions
@@ -199,11 +198,11 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     }
 
     /**
-     * The [ExtensionDeclaration] only contains other declarations and therefore does not introduce
-     * its own evaluation order or EOG nodes/edges. Instead, we simply traverse and build the EOG
-     * for each contained declaration individually.
+     * The [Extension] only contains other declarations and therefore does not introduce its own
+     * evaluation order or EOG nodes/edges. Instead, we simply traverse and build the EOG for each
+     * contained declaration individually.
      */
-    protected fun handleExtensionDeclaration(node: ExtensionDeclaration) {
+    protected fun handleExtension(node: Extension) {
         // Handle the declarations contained in the extension
         for (child in node.declarations) {
             currentPredecessors.clear()
@@ -214,9 +213,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     /**
      * See
-     * [Specification for VariableDeclaration](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#variabledeclaration)
+     * [Specification for Variable](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#variabledeclaration)
      */
-    protected fun handleVariableDeclaration(node: VariableDeclaration) {
+    protected fun handleVariable(node: Variable) {
         attachToEOG(node)
         // analyze the initializer
         handleEOG(node.initializer)
@@ -224,9 +223,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     /**
      * See
-     * [Specification for TupleDeclaration](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#tupledeclaration)
+     * [Specification for Tuple](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#tupledeclaration)
      */
-    protected fun handleTupleDeclaration(node: TupleDeclaration) {
+    protected fun handleTuple(node: Tuple) {
         attachToEOG(node)
         // analyze the initializer
         handleEOG(node.initializer)
@@ -236,7 +235,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * See
      * [Specification for StatementHolder](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#statementholder)
      */
-    protected open fun handleRecordDeclaration(node: RecordDeclaration) {
+    protected open fun handleRecord(node: Record) {
         handleStatementHolder(node)
         currentPredecessors.clear()
         for (constructor in node.constructors) {
@@ -361,13 +360,13 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         intermediateNodes.add(node)
 
         when (node) {
-            is TranslationUnitDeclaration -> handleTranslationUnitDeclaration(node)
-            is NamespaceDeclaration -> handleNamespaceDeclaration(node)
-            is RecordDeclaration -> handleRecordDeclaration(node)
-            is ExtensionDeclaration -> handleExtensionDeclaration(node)
+            is TranslationUnit -> handleTranslationUnit(node)
+            is Namespace -> handleNamespace(node)
+            is Record -> handleRecord(node)
+            is Extension -> handleExtension(node)
             is FunctionDeclaration -> handleFunctionDeclaration(node)
-            is TupleDeclaration -> handleTupleDeclaration(node)
-            is VariableDeclaration -> handleVariableDeclaration(node)
+            is Tuple -> handleTuple(node)
+            is Variable -> handleVariable(node)
             is ConstructExpression -> handleConstructExpression(node)
             is CallExpression -> handleCallExpression(node)
             is MemberExpression -> handleMemberExpression(node)
@@ -409,7 +408,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             is ThrowExpression -> handleThrowExpression(node)
             // For templates, we will just handle the declarations and not the realizations (for
             // now)
-            is TemplateDeclaration -> handleTemplate(node)
+            is Template -> handleTemplate(node)
             // These nodes will be added to the eog graph but no children will be handled
             is EmptyStatement -> handleDefault(node)
             is Literal<*> -> handleDefault(node)
@@ -418,12 +417,12 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             is Reference -> handleDefault(node)
             is ImportDeclaration -> handleDefault(node)
             // These nodes are not added to the EOG
-            is IncludeDeclaration -> doNothing()
+            is Include -> doNothing()
             else -> LOGGER.info("Parsing of type ${node.javaClass} is not supported (yet)")
         }
     }
 
-    protected fun handleTemplate(template: TemplateDeclaration) {
+    protected fun handleTemplate(template: Template) {
         // Handle the declarations
         for (decl in template.declarations) {
             handleEOG(decl)
@@ -483,9 +482,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     /**
      * See
-     * [Specification for IncludeDeclaration](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#includedeclaration)
+     * [Specification for Include](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#includedeclaration)
      */
-    protected fun handleIncludeDeclaration() {
+    protected fun handleInclude() {
         doNothing()
     }
 
@@ -561,7 +560,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
         for (declaration in node.declarations) {
             if (declaration is ImportDeclaration) {
                 handleEOG(declaration)
-            } else if (declaration is VariableDeclaration) {
+            } else if (declaration is Variable) {
                 // analyze the initializers if there is one
                 handleEOG(declaration)
             } else if (declaration is FunctionDeclaration) {

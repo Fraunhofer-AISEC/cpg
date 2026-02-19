@@ -56,12 +56,11 @@ import org.slf4j.LoggerFactory
  *
  * A field access is modeled with a [MemberExpression]. After AST building, its base and member
  * references are set to [Reference] stubs. This pass resolves those references and makes the member
- * point to the appropriate [FieldDeclaration] and the base to the "this" [FieldDeclaration] of the
- * containing class. It is also capable of resolving references to fields that are inherited from a
- * superclass and thus not declared in the actual base class. When base or member declarations are
- * not found in the graph, a new "inferred" [FieldDeclaration] is being created that is then used to
- * collect all usages to the same unknown declaration. [Reference] stubs are removed from the graph
- * after being resolved.
+ * point to the appropriate [Field] and the base to the "this" [Field] of the containing class. It
+ * is also capable of resolving references to fields that are inherited from a superclass and thus
+ * not declared in the actual base class. When base or member declarations are not found in the
+ * graph, a new "inferred" [Field] is being created that is then used to collect all usages to the
+ * same unknown declaration. [Reference] stubs are removed from the graph after being resolved.
  *
  * Accessing a local variable is modeled directly with a [Reference]. This step of the pass doesn't
  * remove the [Reference] nodes like in the field usage case but rather makes their "refersTo" point
@@ -71,13 +70,13 @@ import org.slf4j.LoggerFactory
  *
  * A [CallExpression] specifies the method that wants to be called via [CallExpression.name]. The
  * call target is a method of the same class the caller belongs to, so the name is resolved to the
- * appropriate [MethodDeclaration]. This pass also takes into consideration that a method might not
- * be present in the current class, but rather has its implementation in a superclass, and sets the
- * pointer accordingly.
+ * appropriate [Method]. This pass also takes into consideration that a method might not be present
+ * in the current class, but rather has its implementation in a superclass, and sets the pointer
+ * accordingly.
  *
  * Constructor calls with [ConstructExpression] are resolved in such a way that their
- * [ConstructExpression.instantiates] points to the correct [RecordDeclaration]. Additionally, the
- * [ConstructExpression.constructor] is set to the according [ConstructorDeclaration].
+ * [ConstructExpression.instantiates] points to the correct [Record]. Additionally, the
+ * [ConstructExpression.constructor] is set to the according [Constructor].
  *
  * This pass should NOT use any DFG edges because they are computed / adjusted in a later stage.
  */
@@ -111,7 +110,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
 
     protected lateinit var walker: ScopedWalker<Node>
 
-    protected val templateList = mutableListOf<TemplateDeclaration>()
+    protected val templateList = mutableListOf<Template>()
 
     /** Our configuration. */
     var passConfig = passConfig<Configuration>()
@@ -169,9 +168,9 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     }
 
     /**
-     * This function caches all [TemplateDeclaration]s into [templateList]. It either fetches the
-     * existing result from [componentsToTemplates] or fills [templateList] for the first time and
-     * then stores this result.
+     * This function caches all [Template]s into [templateList]. It either fetches the existing
+     * result from [componentsToTemplates] or fills [templateList] for the first time and then
+     * stores this result.
      */
     private fun cacheTemplates(component: Component?) {
         if (component in componentsToTemplates) {
@@ -185,7 +184,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
                     Strategy::AST_FORWARD,
                     object : IVisitor<AstNode>() {
                         override fun visit(t: AstNode) {
-                            if (t is TemplateDeclaration) {
+                            if (t is Template) {
                                 templateList.add(t)
                             }
                         }
@@ -211,12 +210,11 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
      *   viable option out of the candidates (if the reference is part of the
      *   [CallExpression.callee]).
      * - In the next step, we need to decide whether we are resolving a standalone reference (which
-     *   most likely points to a [VariableDeclaration]) or if we are part of a
-     *   [CallExpression.callee]. In the first case, we can directly assign [Reference.refersTo]
-     *   based on the candidates (at the moment we only assign it if we have exactly one candidate).
-     *   In the second case, we are finished and let [handleCallExpression] take care of the rest
-     *   once the EOG reaches the appropriate [CallExpression] (which should actually be just be the
-     *   next EOG node).
+     *   most likely points to a [Variable]) or if we are part of a [CallExpression.callee]. In the
+     *   first case, we can directly assign [Reference.refersTo] based on the candidates (at the
+     *   moment we only assign it if we have exactly one candidate). In the second case, we are
+     *   finished and let [handleCallExpression] take care of the rest once the EOG reaches the
+     *   appropriate [CallExpression] (which should actually be just be the next EOG node).
      */
     protected open fun handleReference(ref: Reference) {
         val language = ref.language
@@ -295,7 +293,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         // we later continue in the DynamicInvokeResolver, which sets the invokes edge.
         if (
             ref.resolutionHelper is CallExpression &&
-                (wouldResolveTo !is VariableDeclaration && wouldResolveTo !is ParameterDeclaration)
+                (wouldResolveTo !is Variable && wouldResolveTo !is Parameter)
         ) {
             return
         }
@@ -403,7 +401,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         ) {
             val result = resolveOperator(ex)
             val op = result?.bestViable?.singleOrNull()
-            if (result?.success == SUCCESSFUL && op is OperatorDeclaration) {
+            if (result?.success == SUCCESSFUL && op is Operator) {
                 type = op.returnTypes.singleOrNull()?.root ?: unknownType()
 
                 // We need to insert a new operator call expression in between
@@ -476,11 +474,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         // We have a dynamic invoke in two cases:
         // a) our callee is not a reference
         // b) our reference already refers to a variable rather than a function
-        if (
-            callee !is Reference ||
-                callee.refersTo is VariableDeclaration ||
-                callee.refersTo is ParameterDeclaration
-        ) {
+        if (callee !is Reference || callee.refersTo is Variable || callee.refersTo is Parameter) {
             return
         }
 
@@ -542,7 +536,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         constructExpression.instantiates = recordDeclaration
         for (template in templateList) {
             if (
-                template is RecordTemplateDeclaration &&
+                template is RecordTemplate &&
                     recordDeclaration != null &&
                     recordDeclaration in template.realizations &&
                     (constructExpression.templateArguments.size <= template.parameters.size)
@@ -563,7 +557,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
                         if (missingParam != null) {
                             constructExpression.addTemplateParameter(
                                 missingParam,
-                                TemplateDeclaration.TemplateInitialization.DEFAULT,
+                                Template.TemplateInitialization.DEFAULT,
                             )
                         }
                     }
@@ -594,11 +588,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         val functionDeclaration = result?.bestViable?.singleOrNull() ?: return
 
         // If the result was successful, we can replace the node
-        if (
-            result.success == SUCCESSFUL &&
-                functionDeclaration is OperatorDeclaration &&
-                op is Expression
-        ) {
+        if (result.success == SUCCESSFUL && functionDeclaration is Operator && op is Expression) {
             val call = operatorCallFromDeclaration(functionDeclaration, op)
             walker.replace(op.astParent, op, call)
         }
@@ -637,16 +627,14 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
         possibleTypes.addAll(op.operatorBase.assignedTypes)
 
         val candidates =
-            resolveMemberByName(symbol, possibleTypes)
-                .filterIsInstance<OperatorDeclaration>()
-                .toSet()
+            resolveMemberByName(symbol, possibleTypes).filterIsInstance<Operator>().toSet()
 
         return resolveWithArguments(candidates, op.operatorArguments, op as Expression)
     }
 
     private fun getInvocationCandidatesFromParents(
         name: Symbol,
-        possibleTypes: Set<RecordDeclaration>,
+        possibleTypes: Set<Record>,
     ): List<Declaration> {
         val workingPossibleTypes = mutableSetOf(*possibleTypes.toTypedArray())
         return if (possibleTypes.isEmpty()) {
@@ -691,7 +679,7 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     ): Set<FunctionDeclaration> {
         return declaration.overriddenBy
             .filter { f ->
-                if (f is MethodDeclaration) {
+                if (f is Method) {
                     val record = f.recordDeclaration
                     record != null && record.toType() in possibleSubTypes
                 } else {
@@ -710,8 +698,8 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
      */
     private fun getConstructorDeclaration(
         constructExpression: ConstructExpression,
-        recordDeclaration: RecordDeclaration,
-    ): ConstructorDeclaration? {
+        recordDeclaration: Record,
+    ): Constructor? {
         val signature = constructExpression.signature
         val constructorCandidate =
             recordDeclaration.constructors.firstOrNull {
@@ -731,14 +719,14 @@ open class SymbolResolver(ctx: TranslationContext) : EOGStarterPass(ctx) {
     companion object {
         val LOGGER: Logger = LoggerFactory.getLogger(SymbolResolver::class.java)
 
-        val componentsToTemplates = mutableMapOf<Component, MutableList<TemplateDeclaration>>()
+        val componentsToTemplates = mutableMapOf<Component, MutableList<Template>>()
 
         /**
          * Adds implicit duplicates of the TemplateParams to the implicit ConstructExpression
          *
-         * @param templateParams of the [VariableDeclaration]/[NewExpression]
+         * @param templateParams of the [Variable]/[NewExpression]
          * @param constructExpression duplicate TemplateParameters (implicit) to preserve AST, as
-         *   [ConstructExpression] uses AST as well as the [VariableDeclaration]/[NewExpression]
+         *   [ConstructExpression] uses AST as well as the [Variable]/[NewExpression]
          */
         fun addImplicitTemplateParametersToCall(
             templateParams: List<Node>,

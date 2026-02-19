@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.recordDeclaration
@@ -156,7 +156,7 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     private fun fixInitializers(node: Node) {
-        if (node is VariableDeclaration) {
+        if (node is Variable) {
             // check if we have the corresponding class for this type
             val record = node.type.root.recordDeclaration
             val typeString = node.type.root.name

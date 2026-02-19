@@ -33,14 +33,14 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** This declaration represents either an include or an import, depending on the language. */
-class IncludeDeclaration : Declaration() {
+class Include : Declaration() {
     @Relationship(value = "INCLUDES", direction = Relationship.Direction.OUTGOING)
-    val includeEdges = astEdgesOf<IncludeDeclaration>()
-    val includes by unwrapping(IncludeDeclaration::includeEdges)
+    val includeEdges = astEdgesOf<Include>()
+    val includes by unwrapping(Include::includeEdges)
 
     @Relationship(value = "PROBLEMS", direction = Relationship.Direction.OUTGOING)
-    val problemEdges = astEdgesOf<ProblemDeclaration>()
-    val problems by unwrapping(IncludeDeclaration::problemEdges)
+    val problemEdges = astEdgesOf<Problem>()
+    val problems by unwrapping(Include::problemEdges)
 
     /**
      * This property refers to the file or directory or path. For example, in C this refers to an
@@ -60,7 +60,7 @@ class IncludeDeclaration : Declaration() {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is IncludeDeclaration) return false
+        if (other !is Include) return false
         return ((super.equals(other) &&
             includes == other.includes &&
             propertyEqualsList(includeEdges, other.includeEdges) &&

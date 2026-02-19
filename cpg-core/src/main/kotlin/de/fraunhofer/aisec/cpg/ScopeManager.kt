@@ -46,8 +46,8 @@ import org.slf4j.LoggerFactory
  * identify outer scopes that should be the target of a jump (continue, break, throw).
  *
  * Language frontends MUST call [enterScope] and [leaveScope] when they encounter nodes that modify
- * the scope and [resetToGlobal] when they first handle a new [TranslationUnitDeclaration].
- * Afterward the currently valid "stack" of scopes within the tree can be accessed.
+ * the scope and [resetToGlobal] when they first handle a new [TranslationUnit]. Afterward the
+ * currently valid "stack" of scopes within the tree can be accessed.
  *
  * If a language frontend encounters a [Declaration] node, it MUST call [addDeclaration], rather
  * than adding the declaration to the node itself. This ensures that all declarations are properly
@@ -103,14 +103,13 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * The current method in the active scope tree, this ensures that 'this' keywords are mapped
      * correctly if a method contains a lambda or other types of function declarations
      */
-    val currentMethod: MethodDeclaration?
+    val currentMethod: Method?
         get() =
-            this.firstScopeOrNull { scope: Scope? -> scope?.astNode is MethodDeclaration }?.astNode
-                as? MethodDeclaration
+            this.firstScopeOrNull { scope: Scope? -> scope?.astNode is Method }?.astNode as? Method
 
     /** The current record, according to the scope that is currently active. */
-    val currentRecord: RecordDeclaration?
-        get() = this.firstScopeIsInstanceOrNull<RecordScope>()?.astNode as? RecordDeclaration
+    val currentRecord: Record?
+        get() = this.firstScopeIsInstanceOrNull<RecordScope>()?.astNode as? Record
 
     val currentNamespace: Name?
         get() {
@@ -200,7 +199,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
 
         scopeMap[scope.astNode] = scope
         if (scope is NameScope) {
-            // for this to work, it is essential that RecordDeclaration and NamespaceDeclaration
+            // for this to work, it is essential that Record and Namespace
             // nodes have a FQN as their name.
             val name = scope.astNode?.name
             if (name != null) {
@@ -243,10 +242,10 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                     is CollectionComprehension,
                     is Block -> LocalScope(nodeToScope)
                     is FunctionDeclaration -> FunctionScope(nodeToScope)
-                    is RecordDeclaration -> RecordScope(nodeToScope)
-                    is TemplateDeclaration -> TemplateScope(nodeToScope)
-                    is TranslationUnitDeclaration -> FileScope(nodeToScope)
-                    is NamespaceDeclaration -> newNamespaceIfNecessary(nodeToScope)
+                    is Record -> RecordScope(nodeToScope)
+                    is Template -> TemplateScope(nodeToScope)
+                    is TranslationUnit -> FileScope(nodeToScope)
+                    is Namespace -> newNamespaceIfNecessary(nodeToScope)
                     else -> {
                         LOGGER.error(
                             "No known scope for AST node of type {}",
@@ -279,18 +278,18 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * A small internal helper function used by [enterScope] to create a [NamespaceScope].
      *
      * The issue with name scopes, such as a namespace, is that it can exist across several files,
-     * i.e. translation units, represented by different [NamespaceDeclaration] nodes. But, in order
-     * to make namespace resolution work across files, only one [NameScope] must exist that holds
-     * all declarations, such as classes, independently of the translation units. Therefore, we need
-     * to check, whether such as node already exists. If it does already exist:
-     * - we update the scope map so that the current [NamespaceDeclaration] points to the existing
+     * i.e. translation units, represented by different [Namespace] nodes. But, in order to make
+     * namespace resolution work across files, only one [NameScope] must exist that holds all
+     * declarations, such as classes, independently of the translation units. Therefore, we need to
+     * check, whether such as node already exists. If it does already exist:
+     * - we update the scope map so that the current [Namespace] points to the existing
      *   [NamespaceScope]
      * - we return null, indicating to [enterScope], that no new scope needs to be pushed by
      *   [enterScope].
      *
      * Otherwise, we return a new namespace scope.
      */
-    private fun newNamespaceIfNecessary(nodeToScope: NamespaceDeclaration): NamespaceScope? {
+    private fun newNamespaceIfNecessary(nodeToScope: Namespace): NamespaceScope? {
         val existingScope =
             filterScopes { it is NamespaceScope && it.name == nodeToScope.name }.firstOrNull()
 
@@ -409,7 +408,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
 
     /** This function returns the [Scope] associated with a node. */
     fun lookupScope(node: Node): Scope? {
-        return if (node is TranslationUnitDeclaration) {
+        return if (node is TranslationUnit) {
             globalScope
         } else scopeMap[node]
     }
@@ -447,7 +446,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * This function MUST be called when a language frontend first enters a translation unit. It
      * sets the [GlobalScope] to the current translation unit specified in [declaration].
      */
-    fun resetToGlobal(declaration: TranslationUnitDeclaration?) {
+    fun resetToGlobal(declaration: TranslationUnit?) {
         val global = this.globalScope
         // update the AST node to this translation unit declaration
         global.astNode = declaration
@@ -458,7 +457,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
      * Adds typedefs to a [Scope]. The language frontend needs to decide on the scope of the
      * typedef. Most likely, typedefs are global. Therefore, the [GlobalScope] is set as default.
      */
-    fun addTypedef(typedef: TypedefDeclaration, scope: Scope = globalScope) {
+    fun addTypedef(typedef: Typedef, scope: Scope = globalScope) {
         scope.addTypedef(typedef)
     }
 
@@ -582,16 +581,14 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
             scope =
                 scope
                     .lookupSymbol(part.localName, languageOnly = language) {
-                        it is NamespaceDeclaration ||
-                            it is RecordDeclaration ||
-                            it is TypedefDeclaration
+                        it is Namespace || it is Record || it is Typedef
                     }
                     .map {
                         // If it is a typedef, we need to use the type's name instead of the
                         // declaration's name. Otherwise, we just take the name of the declaration
                         // to look up the corresponding scope.
                         nameScopeMap[
-                            if (it is TypedefDeclaration) {
+                            if (it is Typedef) {
                                 it.type.name
                             } else {
                                 it.name
@@ -647,17 +644,15 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
     }
 
     /**
-     * Retrieves the [RecordDeclaration] for the given name in the given scope.
+     * Retrieves the [Record] for the given name in the given scope.
      *
      * @param name the name
      * * @param scope the scope. Default is [currentScope]
      *
      * @return the declaration, or null if it does not exist
      */
-    fun getRecordForName(name: Name, language: Language<*>): RecordDeclaration? {
-        return lookupSymbolByName(name, language)
-            .filterIsInstance<RecordDeclaration>()
-            .singleOrNull()
+    fun getRecordForName(name: Name, language: Language<*>): Record? {
+        return lookupSymbolByName(name, language).filterIsInstance<Record>().singleOrNull()
     }
 
     fun typedefFor(
@@ -867,13 +862,13 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
     }
 
     /**
-     * Returns the [TranslationUnitDeclaration] that should be used for inference, especially for
-     * global declarations.
+     * Returns the [TranslationUnit] that should be used for inference, especially for global
+     * declarations.
      *
      * @param TypeToInfer the type of the node that should be inferred
      * @param source the source that was responsible for the inference
      */
-    fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnitDeclaration {
+    fun <TypeToInfer : Node> translationUnitForInference(source: Node): TranslationUnit {
         return source.language.translationUnitForInference<TypeToInfer>(source)
     }
 }

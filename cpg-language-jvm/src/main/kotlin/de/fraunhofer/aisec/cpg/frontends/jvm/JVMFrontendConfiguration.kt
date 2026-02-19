@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.jvm
 import de.fraunhofer.aisec.cpg.frontends.FrontendConfiguration
 import de.fraunhofer.aisec.cpg.graph.FrontendProvider
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.MethodDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
 
 class JVMFrontendConfiguration(val packagesToIgnore: List<String> = listOf()) :
     FrontendConfiguration<JVMLanguageFrontend>() {
@@ -43,7 +43,7 @@ class JVMFrontendConfiguration(val packagesToIgnore: List<String> = listOf()) :
     context(provider: FrontendProvider<JVMLanguageFrontend>)
     override fun doNotParseBody(node: FunctionDeclaration): Boolean {
         return this.packagesToIgnore.any {
-            (node as? MethodDeclaration)?.recordDeclaration?.name.toString().startsWith(it)
+            (node as? Method)?.recordDeclaration?.name.toString().startsWith(it)
         }
     }
 }

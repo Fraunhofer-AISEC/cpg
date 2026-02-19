@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
-import de.fraunhofer.aisec.cpg.graph.declarations.TemplateDeclaration.TemplateInitialization
+import de.fraunhofer.aisec.cpg.graph.declarations.Template.TemplateInitialization
 import de.fraunhofer.aisec.cpg.graph.edges.*
 import de.fraunhofer.aisec.cpg.graph.edges.Edge.Companion.propertyEqualsList
 import de.fraunhofer.aisec.cpg.graph.edges.ast.AstEdge
@@ -177,7 +177,7 @@ open class CallExpression :
      * directly. The invokes edge will still point to the realization of the template.
      */
     @Relationship(value = "TEMPLATE_INSTANTIATION", direction = Relationship.Direction.OUTGOING)
-    var templateInstantiation: TemplateDeclaration? = null
+    var templateInstantiation: Template? = null
         set(value) {
             field = value
             template = value != null
@@ -278,7 +278,7 @@ open class CallExpression :
     /**
      * Some languages allow to even overload "()", meaning that basically a normal call to [callee]
      * is overloaded. In this case we want the [operatorBase] to point to [callee], so we can take
-     * its type to lookup the necessary [OperatorDeclaration].
+     * its type to lookup the necessary [Operator].
      */
     override val operatorBase: Expression
         get() = callee

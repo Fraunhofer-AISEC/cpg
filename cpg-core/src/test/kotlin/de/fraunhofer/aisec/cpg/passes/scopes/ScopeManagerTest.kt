@@ -54,11 +54,11 @@ internal class ScopeManagerTest : BaseTest() {
         val frontend1 = TestLanguageFrontend(ctx1, language)
         val (func1, namespaceA1) =
             with(frontend1) {
-                val tu1 = frontend1.newTranslationUnitDeclaration("f1.cpp", null)
+                val tu1 = frontend1.newTranslationUnit("f1.cpp", null)
                 s1.resetToGlobal(tu1)
 
                 // build a namespace declaration in f1.cpp with the namespace A
-                val namespaceA1 = frontend1.newNamespaceDeclaration("A")
+                val namespaceA1 = frontend1.newNamespace("A")
                 s1.enterScope(namespaceA1)
 
                 val func1 = frontend1.newFunctionDeclaration("func1")
@@ -76,11 +76,11 @@ internal class ScopeManagerTest : BaseTest() {
         val frontend2 = TestLanguageFrontend(ctx2, language)
         val (func2, namespaceA2) =
             with(frontend2) {
-                val tu2 = frontend2.newTranslationUnitDeclaration("f1.cpp", null)
+                val tu2 = frontend2.newTranslationUnit("f1.cpp", null)
                 s2.resetToGlobal(tu2)
 
                 // and do the same in the other file
-                val namespaceA2 = frontend2.newNamespaceDeclaration("A")
+                val namespaceA2 = frontend2.newNamespace("A")
                 s2.enterScope(namespaceA2)
 
                 val func2 = frontend2.newFunctionDeclaration("func2")
@@ -140,18 +140,18 @@ internal class ScopeManagerTest : BaseTest() {
         val s = ctx.scopeManager
         val frontend = TestLanguageFrontend(ctx, TestLanguageWithColon())
         with(frontend) {
-            val tu = frontend.newTranslationUnitDeclaration("file.cpp", null)
+            val tu = frontend.newTranslationUnit("file.cpp", null)
             s.resetToGlobal(tu)
 
             assertNull(s.currentNamespace)
 
-            val namespaceA = frontend.newNamespaceDeclaration("A", null)
+            val namespaceA = frontend.newNamespace("A", null)
             s.enterScope(namespaceA)
 
             assertEquals("A", s.currentNamespace.toString())
 
             // nested namespace A::B
-            val namespaceB = frontend.newNamespaceDeclaration("B", null)
+            val namespaceB = frontend.newNamespace("B", null)
             s.enterScope(namespaceB)
 
             assertEquals("A::B", s.currentNamespace.toString())
@@ -176,14 +176,14 @@ internal class ScopeManagerTest : BaseTest() {
         val frontend = TestLanguageFrontend(TranslationContext(config))
         with(frontend) {
             val method =
-                newMethodDeclaration("testMethod").apply {
+                newMethod("testMethod").apply {
                     parameters =
                         mutableListOf(
-                            newParameterDeclaration("x", primitiveType("string")),
-                            newParameterDeclaration("y", primitiveType("boolean")).apply {
+                            newParameter("x", primitiveType("string")),
+                            newParameter("y", primitiveType("boolean")).apply {
                                 default = newLiteral(true, primitiveType("boolean"))
                             },
-                            newParameterDeclaration("kwargs", primitiveType("string")).apply {
+                            newParameter("kwargs", primitiveType("string")).apply {
                                 isVariadic = true
                             },
                         )

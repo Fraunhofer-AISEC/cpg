@@ -27,10 +27,10 @@ package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils
 
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
-import de.fraunhofer.aisec.cpg.graph.declarations.FieldDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ParameterDeclaration
-import de.fraunhofer.aisec.cpg.graph.declarations.RecordDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
+import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
 import kotlinx.serialization.Serializable
@@ -99,7 +99,7 @@ data class TypeInfo(val name: String) {
 @Serializable
 data class ParameterInfo(val name: String, val type: TypeInfo, val defaultValue: String? = null) {
     constructor(
-        parameterDeclaration: ParameterDeclaration
+        parameterDeclaration: Parameter
     ) : this(
         name = parameterDeclaration.name.toString(),
         type = TypeInfo(parameterDeclaration.type),
@@ -174,7 +174,7 @@ data class RecordInfo(
     val endColumn: Int?,
 ) {
     constructor(
-        recordDeclaration: RecordDeclaration
+        recordDeclaration: Record
     ) : this(
         nodeId = recordDeclaration.id.toString(),
         name = recordDeclaration.name.toString(),
@@ -200,7 +200,7 @@ data class FieldInfo(
     val endColumn: Int?,
 ) {
     constructor(
-        field: FieldDeclaration
+        field: Field
     ) : this(
         nodeId = field.id.toString(),
         name = field.name.toString(),
