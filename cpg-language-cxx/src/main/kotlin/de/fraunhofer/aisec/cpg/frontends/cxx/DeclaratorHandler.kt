@@ -96,7 +96,8 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     private fun handleDeclarator(ctx: IASTDeclarator): Declaration {
         // This is just a nested declarator, i.e. () wrapping the real declarator
         if (ctx.initializer == null && ctx.nestedDeclarator is IASTDeclarator) {
-            return handle(ctx.nestedDeclarator) ?: ProblemDeclaration("could not parse nested declaration")
+            return handle(ctx.nestedDeclarator)
+                ?: ProblemDeclaration("could not parse nested declaration")
         }
 
         val name = ctx.name.toString()

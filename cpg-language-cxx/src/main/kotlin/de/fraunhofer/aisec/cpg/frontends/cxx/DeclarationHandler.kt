@@ -169,7 +169,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val declaration = frontend.declaratorHandler.handle(ctx.declarator)
 
         if (declaration !is Function) {
-            return ProblemDeclaration("declarator of function definition is not a function declarator")
+            return ProblemDeclaration(
+                "declarator of function definition is not a function declarator"
+            )
         }
 
         // Retrieve the type. This should parse as a function type, otherwise it is unknown.
