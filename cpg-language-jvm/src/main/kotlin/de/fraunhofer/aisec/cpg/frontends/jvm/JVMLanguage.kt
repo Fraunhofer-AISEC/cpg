@@ -25,11 +25,13 @@
  */
 package de.fraunhofer.aisec.cpg.frontends.jvm
 
+import de.fraunhofer.aisec.cpg.frontends.HasClasses
+import de.fraunhofer.aisec.cpg.frontends.HasFunctionOverloading
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
 
-class JVMLanguage : Language<JVMLanguageFrontend>() {
+class JVMLanguage : Language<JVMLanguageFrontend>(), HasClasses, HasFunctionOverloading {
     override val fileExtensions: List<String> = listOf("class", "java", "jimple", "jar", "apk")
 
     override val namespaceDelimiter: String = "."
