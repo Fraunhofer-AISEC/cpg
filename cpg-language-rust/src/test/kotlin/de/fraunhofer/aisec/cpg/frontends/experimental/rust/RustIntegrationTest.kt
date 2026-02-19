@@ -125,8 +125,7 @@ class RustIntegrationTest : BaseTest() {
         assertTrue(labelStmt.any { it.label == "outer" })
 
         // mut counter should be mutable
-        val counterVar =
-            body.allChildren<VariableDeclaration>().firstOrNull { it.name.localName == "counter" }
+        val counterVar = body.variables["counter"]
         assertNotNull(counterVar)
         assertTrue("mut" in counterVar.modifiers)
 
@@ -181,13 +180,11 @@ class RustIntegrationTest : BaseTest() {
         assertTrue(constructs.isNotEmpty(), "Should have struct construction")
 
         // === Constants and statics ===
-        val piConst =
-            tu.allChildren<VariableDeclaration>().firstOrNull { it.name.localName == "PI" }
+        val piConst = tu.variables["PI"]
         assertNotNull(piConst, "Should have const PI")
         assertTrue("const" in piConst.modifiers, "PI should have const modifier")
 
-        val countStatic =
-            tu.allChildren<VariableDeclaration>().firstOrNull { it.name.localName == "COUNT" }
+        val countStatic = tu.variables["COUNT"]
         assertNotNull(countStatic, "Should have static COUNT")
         assertTrue("static" in countStatic.modifiers, "COUNT should have static modifier")
 

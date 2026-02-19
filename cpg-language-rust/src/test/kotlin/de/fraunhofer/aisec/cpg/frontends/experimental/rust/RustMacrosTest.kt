@@ -80,11 +80,7 @@ class RustMacrosTest : BaseTest() {
     fun testMacroArguments() {
         val topLevel = Path.of("src", "test", "resources", "rust", "macros")
         val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("macros_args.rs").toFile()),
-                topLevel,
-                true,
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("macros.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
             }
         assertNotNull(tu)
@@ -113,7 +109,7 @@ class RustMacrosTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_edge_cases.rs").toFile()),
+                listOf(topLevel.resolve("control_flow.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -132,11 +128,7 @@ class RustMacrosTest : BaseTest() {
     fun testBranchBlockMacroInvocationAtTopLevel() {
         val topLevel = Path.of("src", "test", "resources", "rust", "macros")
         val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_final.rs").toFile()),
-                topLevel,
-                true,
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("macros.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
             }
         assertNotNull(tu)
@@ -145,7 +137,7 @@ class RustMacrosTest : BaseTest() {
     }
 
     @Test
-    fun testDeepMacroInvocationDecl() {
+    fun testMacroInvocationDecl() {
         val topLevel = Path.of("src", "test", "resources", "rust", "integration")
         val tu =
             analyzeAndGetFirstTU(

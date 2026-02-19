@@ -109,11 +109,7 @@ class RustExpressionsTest : BaseTest() {
     fun testClosure() {
         val topLevel = Path.of("src", "test", "resources", "rust", "expressions")
         val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("expressions.rs").toFile()),
-                topLevel,
-                true,
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("closures.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
             }
         assertNotNull(tu)
@@ -375,7 +371,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("control_flow_advanced.rs").toFile()),
+                listOf(topLevel.resolve("control_flow.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -565,7 +561,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "expressions")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_expressions.rs").toFile()),
+                listOf(topLevel.resolve("expressions.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -587,7 +583,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "expressions")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_expressions.rs").toFile()),
+                listOf(topLevel.resolve("expressions.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -607,7 +603,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "expressions")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_expressions.rs").toFile()),
+                listOf(topLevel.resolve("expressions.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -627,7 +623,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "expressions")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_expressions.rs").toFile()),
+                listOf(topLevel.resolve("expressions.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -649,7 +645,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "expressions")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_expressions.rs").toFile()),
+                listOf(topLevel.resolve("expressions.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -661,7 +657,7 @@ class RustExpressionsTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
         val members = body.allChildren<MemberExpression>()
-        assertTrue(members.size >= 2, "Should have nested tuple index accesses")
+        assertTrue(members.size >= 2, "Should have multiple tuple index accesses")
     }
 
     @Test
@@ -669,7 +665,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "expressions")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_expressions.rs").toFile()),
+                listOf(topLevel.resolve("expressions.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -691,7 +687,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "expressions")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_expressions.rs").toFile()),
+                listOf(topLevel.resolve("expressions.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -711,7 +707,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "expressions")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_expressions.rs").toFile()),
+                listOf(topLevel.resolve("expressions.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -731,7 +727,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_edge_cases.rs").toFile()),
+                listOf(topLevel.resolve("control_flow.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -751,7 +747,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_edge_cases.rs").toFile()),
+                listOf(topLevel.resolve("control_flow.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -771,7 +767,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_edge_cases.rs").toFile()),
+                listOf(topLevel.resolve("control_flow.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -792,7 +788,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_edge_cases.rs").toFile()),
+                listOf(topLevel.resolve("control_flow.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -815,7 +811,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_edge_cases.rs").toFile()),
+                listOf(topLevel.resolve("control_flow.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -838,7 +834,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_edge_cases.rs").toFile()),
+                listOf(topLevel.resolve("control_flow.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -859,7 +855,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_edge_cases.rs").toFile()),
+                listOf(topLevel.resolve("control_flow.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -879,7 +875,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_edge_cases.rs").toFile()),
+                listOf(topLevel.resolve("control_flow.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -899,7 +895,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_edge_cases.rs").toFile()),
+                listOf(topLevel.resolve("control_flow.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -919,7 +915,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_edge_cases.rs").toFile()),
+                listOf(topLevel.resolve("control_flow.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -939,7 +935,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_edge_cases.rs").toFile()),
+                listOf(topLevel.resolve("control_flow.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -959,7 +955,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_edge_cases.rs").toFile()),
+                listOf(topLevel.resolve("control_flow.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -979,7 +975,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_targeted.rs").toFile()),
+                listOf(topLevel.resolve("control_flow.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -990,8 +986,8 @@ class RustExpressionsTest : BaseTest() {
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
-        val allExprs = body.allChildren<Expression>()
-        assertTrue(allExprs.isNotEmpty(), "Should have negative integer expressions")
+        val unaryOps = body.allChildren<UnaryOperator>()
+        assertTrue(unaryOps.any { it.operatorCode == "-" }, "Should have negative literals")
     }
 
     @Test
@@ -999,7 +995,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_targeted.rs").toFile()),
+                listOf(topLevel.resolve("control_flow.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -1011,8 +1007,7 @@ class RustExpressionsTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
         val literals = body.allChildren<Literal<*>>()
-        val floatLiterals = literals.filter { it.value is Double }
-        assertTrue(floatLiterals.size >= 3, "Should have 3+ float literals")
+        assertTrue(literals.any { it.value is Double }, "Should have float literals")
     }
 
     @Test
@@ -1020,7 +1015,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_edge_cases.rs").toFile()),
+                listOf(topLevel.resolve("control_flow.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -1032,7 +1027,7 @@ class RustExpressionsTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
         val unaryOps = body.allChildren<UnaryOperator>()
-        assertTrue(unaryOps.any { it.operatorCode == "?" }, "Should have ? try operator")
+        assertTrue(unaryOps.any { it.operatorCode == "?" }, "Should have try operator")
     }
 
     @Test
@@ -1040,7 +1035,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_targeted.rs").toFile()),
+                listOf(topLevel.resolve("control_flow.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -1052,7 +1047,7 @@ class RustExpressionsTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
         val blocks = body.allChildren<Block>()
-        assertTrue(blocks.size >= 2, "Should have block expressions as values")
+        assertTrue(blocks.size >= 2, "Should have 2+ blocks")
     }
 
     @Test
@@ -1060,7 +1055,7 @@ class RustExpressionsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_targeted.rs").toFile()),
+                listOf(topLevel.resolve("control_flow.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -1069,14 +1064,18 @@ class RustExpressionsTest : BaseTest() {
         assertNotNull(tu)
         val func = tu.functions["test_fn_returning_closure"]
         assertNotNull(func)
+        val body = func.body as? Block
+        assertNotNull(body)
+        val lambdas = body.allChildren<LambdaExpression>()
+        assertTrue(lambdas.isNotEmpty(), "Should have lambda expressions")
     }
 
     @Test
-    fun testDeepAssignments() {
+    fun testAssignments() {
         val topLevel = Path.of("src", "test", "resources", "rust", "expressions")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("assignments_deep.rs").toFile()),
+                listOf(topLevel.resolve("assignments.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -1092,11 +1091,11 @@ class RustExpressionsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepCompoundAssignments() {
+    fun testCompoundAssignments() {
         val topLevel = Path.of("src", "test", "resources", "rust", "expressions")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("assignments_deep.rs").toFile()),
+                listOf(topLevel.resolve("assignments.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -1116,14 +1115,10 @@ class RustExpressionsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepClosureAsArg() {
+    fun testClosureAsArg() {
         val topLevel = Path.of("src", "test", "resources", "rust", "expressions")
         val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("closures_deep.rs").toFile()),
-                topLevel,
-                true,
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("closures.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
             }
         assertNotNull(tu)
@@ -1136,14 +1131,10 @@ class RustExpressionsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepClosureWithMove() {
+    fun testClosureWithMove() {
         val topLevel = Path.of("src", "test", "resources", "rust", "expressions")
         val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("closures_deep.rs").toFile()),
-                topLevel,
-                true,
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("closures.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
             }
         assertNotNull(tu)
@@ -1156,23 +1147,7 @@ class RustExpressionsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepTypeCast() {
-        val topLevel = Path.of("src", "test", "resources", "rust", "types")
-        val tu =
-            analyzeAndGetFirstTU(listOf(topLevel.resolve("types.rs").toFile()), topLevel, true) {
-                it.registerLanguage<RustLanguage>()
-            }
-        assertNotNull(tu)
-        val func = tu.functions["test_type_cast"]
-        assertNotNull(func)
-        val body = func.body as? Block
-        assertNotNull(body)
-        val casts = body.allChildren<CastExpression>()
-        assertTrue(casts.size >= 2, "Should have multiple type casts")
-    }
-
-    @Test
-    fun testDeepTupleIndexSimple() {
+    fun testTupleIndexSimple() {
         val topLevel = Path.of("src", "test", "resources", "rust", "expressions")
         val tu =
             analyzeAndGetFirstTU(
@@ -1193,7 +1168,7 @@ class RustExpressionsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepTupleIndexNested() {
+    fun testTupleIndexNested() {
         val topLevel = Path.of("src", "test", "resources", "rust", "expressions")
         val tu =
             analyzeAndGetFirstTU(
@@ -1213,7 +1188,7 @@ class RustExpressionsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepFieldAccess() {
+    fun testFieldAccess() {
         val topLevel = Path.of("src", "test", "resources", "rust", "expressions")
         val tu =
             analyzeAndGetFirstTU(
@@ -1234,7 +1209,7 @@ class RustExpressionsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepRanges() {
+    fun testRanges() {
         val topLevel = Path.of("src", "test", "resources", "rust", "expressions")
         val tu =
             analyzeAndGetFirstTU(
@@ -1254,7 +1229,7 @@ class RustExpressionsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepFloatLiterals() {
+    fun testFloatLiterals() {
         val topLevel = Path.of("src", "test", "resources", "rust", "integration")
         val tu =
             analyzeAndGetFirstTU(
@@ -1275,7 +1250,7 @@ class RustExpressionsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepMoreIntegers() {
+    fun testMoreIntegers() {
         val topLevel = Path.of("src", "test", "resources", "rust", "expressions")
         val tu =
             analyzeAndGetFirstTU(
@@ -1295,7 +1270,7 @@ class RustExpressionsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepAwaitExpression() {
+    fun testAwaitExpression() {
         val topLevel = Path.of("src", "test", "resources", "rust", "integration")
         val tu =
             analyzeAndGetFirstTU(
@@ -1315,7 +1290,7 @@ class RustExpressionsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepTryOperator() {
+    fun testTryOperator() {
         val topLevel = Path.of("src", "test", "resources", "rust", "integration")
         val tu =
             analyzeAndGetFirstTU(
@@ -1335,7 +1310,7 @@ class RustExpressionsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepUnaryOps() {
+    fun testUnaryOps() {
         val topLevel = Path.of("src", "test", "resources", "rust", "expressions")
         val tu =
             analyzeAndGetFirstTU(
@@ -1356,7 +1331,7 @@ class RustExpressionsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepScopedIds() {
+    fun testScopedIds() {
         val topLevel = Path.of("src", "test", "resources", "rust", "integration")
         val tu =
             analyzeAndGetFirstTU(

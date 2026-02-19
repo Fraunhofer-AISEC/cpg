@@ -81,7 +81,11 @@ class RustDestructuringTest : BaseTest() {
         assertNotNull(body)
 
         val vars = body.variables
-        assertEquals(6, vars.size,"Should have fix VariableDeclarations: (x,y,z), x, y, z, sum, _)")
+        assertEquals(
+            6,
+            vars.size,
+            "Should have fix VariableDeclarations: (x,y,z), x, y, z, sum, _)",
+        )
 
         val x = vars.firstOrNull { it.name.localName == "x" }
         assertNotNull(x, "Should have binding 'x'")

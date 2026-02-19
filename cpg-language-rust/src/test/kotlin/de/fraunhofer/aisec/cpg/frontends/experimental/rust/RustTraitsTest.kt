@@ -153,7 +153,7 @@ class RustTraitsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("branch_coverage_edge_cases.rs").toFile()),
+                listOf(topLevel.resolve("control_flow.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -170,14 +170,10 @@ class RustTraitsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepTraitWithMethods() {
+    fun testTraitWithMethods() {
         val topLevel = Path.of("src", "test", "resources", "rust", "traits")
         val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("traits_deep.rs").toFile()),
-                topLevel,
-                true,
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("traits.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
             }
         assertNotNull(tu)
@@ -188,14 +184,10 @@ class RustTraitsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepTraitWithSuperTrait() {
+    fun testTraitWithSuperTrait() {
         val topLevel = Path.of("src", "test", "resources", "rust", "traits")
         val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("traits_deep.rs").toFile()),
-                topLevel,
-                true,
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("traits.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
             }
         assertNotNull(tu)
@@ -204,14 +196,10 @@ class RustTraitsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepImplTraitForStruct() {
+    fun testImplTraitForStruct() {
         val topLevel = Path.of("src", "test", "resources", "rust", "traits")
         val tu =
-            analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("traits_deep.rs").toFile()),
-                topLevel,
-                true,
-            ) {
+            analyzeAndGetFirstTU(listOf(topLevel.resolve("traits.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
             }
         assertNotNull(tu)

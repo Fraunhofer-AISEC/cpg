@@ -1,4 +1,3 @@
-// Assignments and compound assignments
 fn test_assignments() {
     let mut x = 0;
     x = 42;
@@ -6,6 +5,7 @@ fn test_assignments() {
     arr[0] = 10;
     let _ = (x, arr);
 }
+
 fn test_compound_assignments() {
     let mut x: i32 = 100;
     x += 1;
@@ -20,3 +20,4 @@ fn test_compound_assignments() {
     x >>= 1;
     let _ = x;
 }
+

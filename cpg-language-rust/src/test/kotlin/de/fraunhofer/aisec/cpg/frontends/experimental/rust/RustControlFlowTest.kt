@@ -182,7 +182,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testContinueWithLabel() {
-        val tu = parseTU("control_flow_advanced.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_continue_with_label"]
         assertNotNull(func)
@@ -196,7 +196,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testContinueSimple() {
-        val tu = parseTU("control_flow_advanced.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_continue_simple"]
         assertNotNull(func)
@@ -209,7 +209,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testBreakWithValue() {
-        val tu = parseTU("control_flow_advanced.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_break_with_value"]
         assertNotNull(func)
@@ -226,7 +226,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testIfElseChain() {
-        val tu = parseTU("control_flow_advanced.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_if_else_chain"]
         assertNotNull(func)
@@ -243,7 +243,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testWhileLetLoop() {
-        val tu = parseTU("control_flow_advanced.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_while_let"]
         assertNotNull(func)
@@ -256,7 +256,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testBranchWhileLet() {
-        val tu = parseTU("branch_coverage_statements.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_while_let"]
         assertNotNull(func, "Should have test_while_let function")
@@ -268,7 +268,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testBranchWhileLetOption() {
-        val tu = parseTU("branch_coverage_edge_cases.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_while_let_option"]
         assertNotNull(func, "Should have test_while_let_option function")
@@ -280,7 +280,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testBranchNestedIf() {
-        val tu = parseTU("branch_coverage_edge_cases.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_nested_if"]
         assertNotNull(func)
@@ -292,7 +292,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testBranchLabeledWhile() {
-        val tu = parseTU("branch_coverage_edge_cases.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_labeled_while"]
         assertNotNull(func)
@@ -306,7 +306,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testBranchLabeledFor() {
-        val tu = parseTU("branch_coverage_edge_cases.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_labeled_for"]
         assertNotNull(func)
@@ -318,7 +318,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testBranchLoopWithBreakValue() {
-        val tu = parseTU("branch_coverage_targeted.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_loop_with_break_value"]
         assertNotNull(func)
@@ -330,7 +330,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testBranchLabeledLoopBreak() {
-        val tu = parseTU("branch_coverage_targeted.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_labeled_loop_break"]
         assertNotNull(func)
@@ -342,7 +342,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testBranchIfLet() {
-        val tu = parseTU("branch_coverage_targeted.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_if_let"]
         assertNotNull(func)
@@ -354,7 +354,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testBranchIfLetChain() {
-        val tu = parseTU("branch_coverage_targeted.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_if_let_chain"]
         assertNotNull(func)
@@ -366,7 +366,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testBranchContinueWithLabel() {
-        val tu = parseTU("branch_coverage_targeted.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_continue_with_label"]
         assertNotNull(func)
@@ -378,7 +378,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testBranchAsyncFunction() {
-        val tu = parseTU("branch_coverage_edge_cases.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["async_helper"]
         assertNotNull(func, "Should have async_helper function")
@@ -386,7 +386,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testBranchAsyncAwait() {
-        val tu = parseTU("branch_coverage_edge_cases.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_async_await"]
         assertNotNull(func)
@@ -398,7 +398,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testBranchAsyncExpr() {
-        val tu = parseTU("branch_coverage_targeted.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_async_expr"]
         assertNotNull(func)
@@ -406,7 +406,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testBranchLetWhileValue() {
-        val tu = parseTU("branch_coverage_targeted.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_let_while_value"]
         assertNotNull(func)
@@ -414,7 +414,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testBranchLetForValue() {
-        val tu = parseTU("branch_coverage_targeted.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_let_for_value"]
         assertNotNull(func)
@@ -422,7 +422,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testBranchExpressionStatementVariants() {
-        val tu = parseTU("branch_coverage_targeted.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_expression_statement_variants"]
         assertNotNull(func)
@@ -434,7 +434,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testBranchMultipleReturns() {
-        val tu = parseTU("branch_coverage_targeted.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_multiple_returns"]
         assertNotNull(func)
@@ -446,7 +446,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testBranchUnsafeBlock() {
-        val tu = parseTU("branch_coverage_edge_cases.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_unsafe_block"]
         assertNotNull(func)
@@ -461,7 +461,7 @@ class RustControlFlowTest : BaseTest() {
 
     @Test
     fun testBranchAsyncBlock() {
-        val tu = parseTU("branch_coverage_edge_cases.rs")
+        val tu = parseTU("control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_async_block"]
         assertNotNull(func)
@@ -475,20 +475,8 @@ class RustControlFlowTest : BaseTest() {
     }
 
     @Test
-    fun testDeepIfLet() {
-        val tu = parseTU("if_expressions_deep.rs")
-        assertNotNull(tu)
-        val func = tu.functions["test_if_let"]
-        assertNotNull(func)
-        val body = func.body as? Block
-        assertNotNull(body)
-        val condExprs = body.allChildren<ConditionalExpression>()
-        assertTrue(condExprs.isNotEmpty(), "Should have if-let conditional expression")
-    }
-
-    @Test
-    fun testDeepIfLetNoElse() {
-        val tu = parseTU("if_expressions_deep.rs")
+    fun testIfLetNoElse() {
+        val tu = parseTU("if.rs")
         assertNotNull(tu)
         val func = tu.functions["test_if_let_no_else"]
         assertNotNull(func)
@@ -499,8 +487,8 @@ class RustControlFlowTest : BaseTest() {
     }
 
     @Test
-    fun testDeepIfElseIf() {
-        val tu = parseTU("if_expressions_deep.rs")
+    fun testIfElseIf() {
+        val tu = parseTU("if.rs")
         assertNotNull(tu)
         val func = tu.functions["test_if_else_if"]
         assertNotNull(func)
@@ -511,8 +499,8 @@ class RustControlFlowTest : BaseTest() {
     }
 
     @Test
-    fun testDeepIfSimple() {
-        val tu = parseTU("if_expressions_deep.rs")
+    fun testIfSimple() {
+        val tu = parseTU("if.rs")
         assertNotNull(tu)
         val func = tu.functions["test_if_simple"]
         assertNotNull(func)
@@ -523,7 +511,7 @@ class RustControlFlowTest : BaseTest() {
     }
 
     @Test
-    fun testDeepLabeledLoops() {
+    fun testLabeledLoops() {
         val tu = parseTU("loops_labeled.rs")
         assertNotNull(tu)
         val func = tu.functions["test_labeled_loops"]
@@ -537,7 +525,7 @@ class RustControlFlowTest : BaseTest() {
     }
 
     @Test
-    fun testDeepLoopWithBreak() {
+    fun testLoopWithBreak() {
         val tu = parseTU("loops_labeled.rs")
         assertNotNull(tu)
         val func = tu.functions["test_loop_with_break"]
@@ -549,7 +537,7 @@ class RustControlFlowTest : BaseTest() {
     }
 
     @Test
-    fun testDeepWhileCondition() {
+    fun testWhileCondition() {
         val tu = parseTU("loops_labeled.rs")
         assertNotNull(tu)
         val func = tu.functions["test_while_condition"]
@@ -559,5 +547,70 @@ class RustControlFlowTest : BaseTest() {
         val whiles = body.allChildren<WhileStatement>()
         assertTrue(whiles.isNotEmpty(), "Should have while loop")
         assertNotNull(whiles.first().condition, "While should have condition")
+    }
+
+    @Test
+    fun testBranchNegativeIntLiteral() {
+        val tu = parseTU("control_flow.rs")
+        assertNotNull(tu)
+        val func = tu.functions["test_negative_int_literal"]
+        assertNotNull(func)
+        val body = func.body as? Block
+        assertNotNull(body)
+        val literals = body.allChildren<Literal<*>>()
+        val unaryOps = body.allChildren<UnaryOperator>()
+        val hasNegativeInt =
+            literals.any { it.value is Long && (it.value as Long) < 0 } ||
+                unaryOps.any { it.operatorCode == "-" }
+        assertTrue(hasNegativeInt, "Should have negative integer literals")
+    }
+
+    @Test
+    fun testBranchFloatExponent() {
+        val tu = parseTU("control_flow.rs")
+        assertNotNull(tu)
+        val func = tu.functions["test_float_exponent"]
+        assertNotNull(func)
+        val body = func.body as? Block
+        assertNotNull(body)
+        val literals = body.allChildren<Literal<*>>()
+        val hasFloat = literals.any { it.value is Double }
+        assertTrue(hasFloat, "Should have float literals")
+    }
+
+    @Test
+    fun testBranchTryExpr() {
+        val tu = parseTU("control_flow.rs")
+        assertNotNull(tu)
+        val func = tu.functions["test_try_expr"]
+        assertNotNull(func)
+        val body = func.body as? Block
+        assertNotNull(body)
+        val unaryOps = body.allChildren<UnaryOperator>()
+        assertTrue(unaryOps.any { it.operatorCode == "?" }, "Should have try operator")
+    }
+
+    @Test
+    fun testBranchBlockAsValue() {
+        val tu = parseTU("control_flow.rs")
+        assertNotNull(tu)
+        val func = tu.functions["test_block_as_value"]
+        assertNotNull(func)
+        val body = func.body as? Block
+        assertNotNull(body)
+        val blocks = body.allChildren<Block>()
+        assertTrue(blocks.size >= 2, "Should have 2+ blocks")
+    }
+
+    @Test
+    fun testBranchFnReturningClosure() {
+        val tu = parseTU("control_flow.rs")
+        assertNotNull(tu)
+        val func = tu.functions["test_fn_returning_closure"]
+        assertNotNull(func)
+        val body = func.body as? Block
+        assertNotNull(body)
+        val lambdas = body.allChildren<LambdaExpression>()
+        assertTrue(lambdas.isNotEmpty(), "Should have lambda expressions")
     }
 }

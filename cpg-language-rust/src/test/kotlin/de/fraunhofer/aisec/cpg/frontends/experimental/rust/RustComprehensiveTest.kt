@@ -247,16 +247,15 @@ class RustComprehensiveTest : BaseTest() {
         val tu = parseTU("comprehensive.rs")
         assertNotNull(tu)
 
-        val vars = tu.allChildren<VariableDeclaration>()
-        val maxSize = vars.firstOrNull { it.name.localName == "MAX_SIZE" }
+        val maxSize = tu.variables["MAX_SIZE"]
         assertNotNull(maxSize, "Should find MAX_SIZE const")
         assertTrue("const" in maxSize.modifiers, "MAX_SIZE should have const modifier")
 
-        val global = vars.firstOrNull { it.name.localName == "GLOBAL" }
+        val global = tu.variables["GLOBAL"]
         assertNotNull(global, "Should find GLOBAL static")
         assertTrue("static" in global.modifiers, "GLOBAL should have static modifier")
 
-        val mutGlobal = vars.firstOrNull { it.name.localName == "MUTABLE_GLOBAL" }
+        val mutGlobal = tu.variables["MUTABLE_GLOBAL"]
         assertNotNull(mutGlobal, "Should find MUTABLE_GLOBAL")
         assertTrue("mut" in mutGlobal.modifiers, "MUTABLE_GLOBAL should have mut modifier")
     }

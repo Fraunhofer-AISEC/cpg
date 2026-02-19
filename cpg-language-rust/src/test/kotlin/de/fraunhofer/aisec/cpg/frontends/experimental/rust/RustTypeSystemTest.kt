@@ -29,27 +29,43 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
+import de.fraunhofer.aisec.cpg.graph.types.BooleanType
 import de.fraunhofer.aisec.cpg.graph.types.FunctionType
+import de.fraunhofer.aisec.cpg.graph.types.IntegerType
 import de.fraunhofer.aisec.cpg.graph.types.ObjectType
 import de.fraunhofer.aisec.cpg.graph.types.PointerType
+import de.fraunhofer.aisec.cpg.graph.types.StringType
 import de.fraunhofer.aisec.cpg.graph.types.TupleType
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
+import de.fraunhofer.aisec.cpg.test.assertLocalName
+import de.fraunhofer.aisec.cpg.test.assertTypes
 import java.nio.file.Path
 import kotlin.test.*
+import org.junit.jupiter.api.BeforeAll
 
 class RustTypeSystemTest : BaseTest() {
 
-    private val topLevel = Path.of("src", "test", "resources", "rust", "types")
+    companion object {
+        private val topLevel = Path.of("src", "test", "resources", "rust", "types")
+        private lateinit var tu: TranslationUnitDeclaration
 
-    private fun parseTU(file: String) =
-        analyzeAndGetFirstTU(listOf(topLevel.resolve(file).toFile()), topLevel, true) {
-            it.registerLanguage<RustLanguage>()
+        @JvmStatic
+        @BeforeAll
+        fun setUpOnce() {
+            tu =
+                analyzeAndGetFirstTU(
+                    listOf(topLevel.resolve("types.rs").toFile()),
+                    topLevel,
+                    true,
+                ) {
+                    it.registerLanguage<RustLanguage>()
+                }
         }
+    }
 
     @Test
     fun testGenericTypesPreserveArguments() {
-        val tu = parseTU("types.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_generic_types"]
@@ -58,27 +74,31 @@ class RustTypeSystemTest : BaseTest() {
         assertNotNull(body)
 
         // Vec<i32> should have "Vec" as base name with i32 as generic arg
-        val decls = body.allChildren<VariableDeclaration>()
-        val vecDecl = decls.firstOrNull { it.name.localName == "v" }
+        val vecDecl = body.variables["v"]
         assertNotNull(vecDecl, "Should find variable 'v'")
         val vecType = vecDecl.type
         assertIs<ObjectType>(vecType)
-        assertEquals("Vec", vecType.name.localName)
-        assertTrue(vecType.generics.isNotEmpty(), "Vec<i32> should preserve generic args")
-        assertEquals("i32", vecType.generics.first().name.localName)
+        assertLocalName("Vec", vecType)
+        val vecParameterType = vecType.generics.firstOrNull()
+        assertNotNull(vecParameterType, "Vec<i32> should preserve generic args")
+        assertIs<IntegerType>(vecParameterType)
+        assertLocalName("i32", vecParameterType)
 
         // Option<bool>
-        val optDecl = decls.firstOrNull { it.name.localName == "o" }
+        val optDecl = body.variables["o"]
         assertNotNull(optDecl, "Should find variable 'o'")
         val optType = optDecl.type
         assertIs<ObjectType>(optType)
-        assertEquals("Option", optType.name.localName)
+        assertLocalName("Option", optType)
         assertTrue(optType.generics.isNotEmpty(), "Option<bool> should preserve generic args")
+        val optParameterType = optType.generics.firstOrNull()
+        assertNotNull(optParameterType)
+        assertIs<BooleanType>(optParameterType)
+        assertLocalName("bool", optParameterType)
     }
 
     @Test
     fun testTupleType() {
-        val tu = parseTU("types.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_tuple_types"]
@@ -88,11 +108,26 @@ class RustTypeSystemTest : BaseTest() {
         val returnType = func.returnTypes.firstOrNull()
         assertIs<TupleType>(returnType, "Return type (i32, String, bool) should be TupleType")
         assertEquals(3, returnType.types.size)
+        assertTypes(
+            setOf(
+                "i32" to IntegerType::class,
+                "String" to StringType::class,
+                "bool" to BooleanType::class,
+            ),
+            returnType.types,
+        )
+        assertEquals(
+            setOf(
+                "i32" to IntegerType::class,
+                "String" to StringType::class,
+                "bool" to BooleanType::class,
+            ),
+            returnType.types.map { Pair(it.name.toString(), it::class) }.toSet(),
+        )
     }
 
     @Test
     fun testFunctionType() {
-        val tu = parseTU("types.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_function_types"]
@@ -100,42 +135,38 @@ class RustTypeSystemTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val decls = body.allChildren<VariableDeclaration>()
-        val fDecl = decls.firstOrNull { it.name.localName == "f" }
+        val fDecl = body.variables["f"]
         assertNotNull(fDecl, "Should find variable 'f'")
         val fnType = fDecl.type
         assertIs<FunctionType>(fnType, "fn(i32) -> bool should be FunctionType")
-        assertEquals(1, fnType.parameters.size)
-        assertEquals(1, fnType.returnTypes.size)
+        assertTypes(setOf("i32" to IntegerType::class), fnType.parameters)
+        assertTypes(setOf("bool" to BooleanType::class), fnType.returnTypes)
     }
 
     @Test
     fun testNeverType() {
-        val tu = parseTU("types.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_never_type"]
         assertNotNull(func)
         val returnType = func.returnTypes.firstOrNull()
         assertNotNull(returnType)
-        assertEquals("!", returnType.name.localName)
+        assertLocalName("!", returnType)
     }
 
     @Test
     fun testUnitType() {
-        val tu = parseTU("types.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_unit_type"]
         assertNotNull(func)
         val returnType = func.returnTypes.firstOrNull()
         assertNotNull(returnType)
-        assertEquals("()", returnType.name.localName)
+        assertLocalName("()", returnType)
     }
 
     @Test
     fun testPointerTypes() {
-        val tu = parseTU("types.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_pointer_types"]
@@ -143,18 +174,16 @@ class RustTypeSystemTest : BaseTest() {
         val body = func.body as? Block
         assertNotNull(body)
 
-        val decls = body.allChildren<VariableDeclaration>()
-        val pDecl = decls.firstOrNull { it.name.localName == "p" }
+        val pDecl = body.variables["p"]
         assertNotNull(pDecl, "Should find const pointer variable 'p'")
         assertIs<PointerType>(pDecl.type, "*const i32 should be PointerType")
 
-        val qDecl = decls.firstOrNull { it.name.localName == "q" }
+        val qDecl = body.variables["q"]
         assertNotNull(qDecl, "Should find mut pointer variable 'q'")
     }
 
     @Test
     fun testArrayType() {
-        val tu = parseTU("types.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_array_type"]
@@ -166,17 +195,15 @@ class RustTypeSystemTest : BaseTest() {
         val problems = body.allChildren<ProblemExpression>()
         assertTrue(
             problems.none { it.problem.contains("Unknown") },
-            "Array type test should not produce unknown problems: ${problems.map { it.problem }}",
+            "Array type test should not produce unknown problems: ${'$'}{problems.map { it.problem }}",
         )
 
-        val decls = body.allChildren<VariableDeclaration>()
-        val arrDecl = decls.firstOrNull { it.name.localName == "arr" }
+        val arrDecl = body.variables["arr"]
         assertNotNull(arrDecl, "Should find array variable 'arr'")
     }
 
     @Test
     fun testLifetimeRef() {
-        val tu = parseTU("types.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_lifetime_ref"]
@@ -193,7 +220,6 @@ class RustTypeSystemTest : BaseTest() {
 
     @Test
     fun testBranchBoundedType() {
-        val tu = parseTU("types.rs")
         assertNotNull(tu)
         val func = tu.functions["test_bounded_type"]
         assertNotNull(func, "Should have test_bounded_type function")
@@ -202,7 +228,6 @@ class RustTypeSystemTest : BaseTest() {
 
     @Test
     fun testBranchFnTypeNoReturn() {
-        val tu = parseTU("types.rs")
         assertNotNull(tu)
         val func = tu.functions["test_fn_type_no_return"]
         assertNotNull(func, "Should have test_fn_type_no_return function")
@@ -210,8 +235,7 @@ class RustTypeSystemTest : BaseTest() {
     }
 
     @Test
-    fun testDeepRawPointers() {
-        val tu = parseTU("types.rs")
+    fun testRawPointers() {
         assertNotNull(tu)
         val func = tu.functions["test_raw_pointers"]
         assertNotNull(func)
@@ -219,8 +243,7 @@ class RustTypeSystemTest : BaseTest() {
     }
 
     @Test
-    fun testDeepDynTrait() {
-        val tu = parseTU("types.rs")
+    fun testDynTrait() {
         assertNotNull(tu)
         val func = tu.functions["test_dyn_trait"]
         assertNotNull(func)
@@ -228,24 +251,14 @@ class RustTypeSystemTest : BaseTest() {
     }
 
     @Test
-    fun testDeepNeverType() {
-        val tu = parseTU("types.rs")
-        assertNotNull(tu)
-        val func = tu.functions["test_never"]
-        assertNotNull(func, "Should have function returning never type")
-    }
-
-    @Test
-    fun testDeepImplTraitReturn() {
-        val tu = parseTU("types.rs")
+    fun testImplTraitReturn() {
         assertNotNull(tu)
         val func = tu.functions["test_impl_trait"]
         assertNotNull(func, "Should have function returning impl trait")
     }
 
     @Test
-    fun testDeepGenericWithBounds() {
-        val tu = parseTU("types.rs")
+    fun testGenericWithBounds() {
         assertNotNull(tu)
         val func = tu.functions["test_generic_with_bounds"]
         assertNotNull(func, "Should have generic function with bounds")

@@ -48,8 +48,7 @@ class RustDeclarationsTest : BaseTest() {
         val tu = parseTU("declarations/declarations.rs")
         assertNotNull(tu)
 
-        val maxSize =
-            tu.allChildren<VariableDeclaration>().firstOrNull { it.name.localName == "MAX_SIZE" }
+        val maxSize = tu.variables["MAX_SIZE"]
         assertNotNull(maxSize, "Should have const MAX_SIZE")
         assertNotNull(maxSize.initializer, "Const should have initializer")
     }
@@ -59,10 +58,7 @@ class RustDeclarationsTest : BaseTest() {
         val tu = parseTU("declarations/declarations.rs")
         assertNotNull(tu)
 
-        val counter =
-            tu.allChildren<VariableDeclaration>().firstOrNull {
-                it.name.localName == "GLOBAL_COUNTER"
-            }
+        val counter = tu.variables["GLOBAL_COUNTER"]
         assertNotNull(counter, "Should have static GLOBAL_COUNTER")
     }
 
@@ -277,14 +273,14 @@ class RustDeclarationsTest : BaseTest() {
 
     @Test
     fun testBranchLetMutPattern() {
-        val tu = parseTU("control_flow/branch_coverage_statements.rs")
+        val tu = parseTU("control_flow/control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_let_mut_pattern"]
         assertNotNull(func, "Should have test_let_mut_pattern function")
         val body = func.body as? Block
         assertNotNull(body)
-        val decls = body.allChildren<VariableDeclaration>()
-        assertTrue(decls.any { it.name.localName == "x" }, "Should have variable x")
+        val xDecl = body.variables["x"]
+        assertNotNull(xDecl, "Should have variable x")
     }
 
     @Test
@@ -353,8 +349,8 @@ class RustDeclarationsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepLetMut() {
-        val tu = parseTU("patterns/let_declarations_deep.rs")
+    fun testLetMut() {
+        val tu = parseTU("patterns/let_declarations.rs")
         assertNotNull(tu)
         val func = tu.functions["test_let_mut"]
         assertNotNull(func)
@@ -365,8 +361,8 @@ class RustDeclarationsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepLetTypeAnnotation() {
-        val tu = parseTU("patterns/let_declarations_deep.rs")
+    fun testLetTypeAnnotation() {
+        val tu = parseTU("patterns/let_declarations.rs")
         assertNotNull(tu)
         val func = tu.functions["test_let_type_annotation"]
         assertNotNull(func)
@@ -377,8 +373,8 @@ class RustDeclarationsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepLetNoValue() {
-        val tu = parseTU("patterns/let_declarations_deep.rs")
+    fun testLetNoValue() {
+        val tu = parseTU("patterns/let_declarations.rs")
         assertNotNull(tu)
         val func = tu.functions["test_let_no_value"]
         assertNotNull(func)
@@ -389,8 +385,8 @@ class RustDeclarationsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepLetDestructureStruct() {
-        val tu = parseTU("patterns/let_declarations_deep.rs")
+    fun testLetDestructureStruct() {
+        val tu = parseTU("patterns/let_declarations.rs")
         assertNotNull(tu)
         val func = tu.functions["test_let_destructure_struct"]
         assertNotNull(func)
@@ -404,7 +400,7 @@ class RustDeclarationsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepModuleNamespace() {
+    fun testModuleNamespace() {
         val tu = parseTU("integration/comprehensive.rs")
         assertNotNull(tu)
         val namespaces = tu.allChildren<NamespaceDeclaration>()
@@ -415,7 +411,7 @@ class RustDeclarationsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepExternBlockFunctions() {
+    fun testExternBlockFunctions() {
         val tu = parseTU("declarations/declarations.rs")
         assertNotNull(tu)
         val allFuncs = tu.allChildren<FunctionDeclaration>()
@@ -423,16 +419,16 @@ class RustDeclarationsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepConstStatic() {
+    fun testConstStatic() {
         val tu = parseTU("integration/comprehensive.rs")
         assertNotNull(tu)
-        val decls = tu.allChildren<VariableDeclaration>()
-        assertTrue(decls.any { it.name.localName == "MAX_SIZE" }, "Should have const MAX_SIZE")
-        assertTrue(decls.any { it.name.localName == "GLOBAL" }, "Should have static GLOBAL")
+        val decls = tu.variables
+        assertNotNull(decls["MAX_SIZE"], "Should have const MAX_SIZE")
+        assertNotNull(decls["GLOBAL"], "Should have static GLOBAL")
     }
 
     @Test
-    fun testDeepTypeAlias() {
+    fun testTypeAlias() {
         val tu = parseTU("integration/comprehensive.rs")
         assertNotNull(tu)
         val allDecls = tu.allChildren<Declaration>()
@@ -443,7 +439,7 @@ class RustDeclarationsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepUseDecl() {
+    fun testUseDecl() {
         val tu = parseTU("integration/comprehensive.rs")
         assertNotNull(tu)
         val includes = tu.allChildren<IncludeDeclaration>()
@@ -451,7 +447,7 @@ class RustDeclarationsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepNestedFn() {
+    fun testNestedFn() {
         val tu = parseTU("types/advanced_features.rs")
         assertNotNull(tu)
         val func = tu.functions["test_nested_fn"]
@@ -466,16 +462,16 @@ class RustDeclarationsTest : BaseTest() {
     }
 
     @Test
-    fun testDeepEnumVariants() {
-        val tu = parseTU("adt/enums_advanced.rs")
+    fun testEnumVariants() {
+        val tu = parseTU("adt/enums.rs")
         assertNotNull(tu)
         val msg = tu.records["Message"]
         assertNotNull(msg, "Should have Message enum")
     }
 
     @Test
-    fun testDeepGenericStruct() {
-        val tu = parseTU("types/generics_deep.rs")
+    fun testGenericStruct() {
+        val tu = parseTU("types/generics.rs")
         assertNotNull(tu)
         val templates = tu.allChildren<TemplateDeclaration>()
         assertTrue(

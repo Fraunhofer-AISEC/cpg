@@ -94,7 +94,7 @@ class RustStructExprTest : BaseTest() {
 
     @Test
     fun testBranchStructFull() {
-        val tu = parseTU("control_flow/branch_coverage_edge_cases.rs")
+        val tu = parseTU("control_flow/control_flow.rs")
         assertNotNull(tu)
         val func = tu.functions["test_struct_full"]
         assertNotNull(func)
@@ -105,7 +105,7 @@ class RustStructExprTest : BaseTest() {
     }
 
     @Test
-    fun testDeepStructFieldInit() {
+    fun testStructFieldInit() {
         val tu = parseTU("structs/structs.rs")
         assertNotNull(tu)
         val func = tu.functions["test_struct_field_init"]
@@ -117,7 +117,7 @@ class RustStructExprTest : BaseTest() {
     }
 
     @Test
-    fun testDeepStructShorthand() {
+    fun testStructShorthand() {
         val tu = parseTU("structs/structs.rs")
         assertNotNull(tu)
         val func = tu.functions["test_struct_shorthand"]
@@ -129,7 +129,7 @@ class RustStructExprTest : BaseTest() {
     }
 
     @Test
-    fun testDeepStructSpread() {
+    fun testStructSpread() {
         val tu = parseTU("structs/structs.rs")
         assertNotNull(tu)
         val func = tu.functions["test_struct_spread"]

@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.experimental.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.types.ReferenceType
 import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyzeAndGetFirstTU
@@ -83,15 +84,16 @@ class RustLifetimesTest : BaseTest() {
         // The mutability_example function should have variables
         val func = tu.functions["mutability_example"]
         assertNotNull(func)
+        val body = func.body as? Block
+        assertNotNull(body)
 
         // `counter` should be marked as mutable
-        val vars = func.allChildren<VariableDeclaration>()
-        val counter = vars.firstOrNull { it.name.localName == "counter" }
+        val counter = body.variables["counter"]
         assertNotNull(counter)
         assertTrue("mut" in counter.modifiers)
 
         // `immutable` should NOT have a mut annotation
-        val immutable = vars.firstOrNull { it.name.localName == "immutable" }
+        val immutable = body.variables["immutable"]
         assertNotNull(immutable)
         assertFalse("mut" in immutable.modifiers)
     }
@@ -120,7 +122,7 @@ class RustLifetimesTest : BaseTest() {
     }
 
     @Test
-    fun testDeepMutableRef() {
+    fun testMutableRef() {
         val topLevel = Path.of("src", "test", "resources", "rust", "types")
         val tu =
             analyzeAndGetFirstTU(
@@ -137,7 +139,7 @@ class RustLifetimesTest : BaseTest() {
     }
 
     @Test
-    fun testDeepLifetimeRef() {
+    fun testLifetimeRef() {
         val topLevel = Path.of("src", "test", "resources", "rust", "types")
         val tu =
             analyzeAndGetFirstTU(
