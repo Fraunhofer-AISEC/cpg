@@ -314,6 +314,23 @@ class FulfilledAndFailedPaths(
  *
  * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
+ *
+ * This is a convenience wrapper around [followDFGEdgesUntilHit] with [Backward] direction,
+ * [OnlyFullDFG] and [ContextSensitive] sensitivities and [Interprocedural] scope.
+ *
+ * @param collectFailedPaths If `true` (the default), paths that do not reach a node satisfying
+ *   [predicate] are collected in [FulfilledAndFailedPaths.failed]. Set to `false` to ignore failed
+ *   paths and improve performance when only successful paths matter.
+ * @param findAllPossiblePaths If `true` (the default), all possible paths through the graph are
+ *   explored, even if a node has already been visited via another path. Set to `false` to visit
+ *   each `(Node, Context)` pair at most once, which is faster but potentially incomplete.
+ * @param earlyTermination A predicate called on each *next* candidate node and the current
+ *   [Context]. If it returns `true`, the path is immediately recorded as failed with reason
+ *   [FailureReason.HIT_EARLY_TERMINATION] and that branch is abandoned. Defaults to never
+ *   terminating early.
+ * @param predicate A predicate that identifies the target node(s). When a node satisfies this
+ *   predicate, the path leading to it is added to [FulfilledAndFailedPaths.fulfilled] and further
+ *   traversal along that branch stops.
  */
 fun Node.followPrevFullDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
@@ -375,6 +392,31 @@ fun Node.collectAllPrevDFGPaths(): List<NodePath> {
  *
  * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
+ *
+ * @param collectFailedPaths If `true` (the default), paths that do not reach a node satisfying
+ *   [predicate] are collected in [FulfilledAndFailedPaths.failed]. Set to `false` to ignore failed
+ *   paths and improve performance when only successful paths matter.
+ * @param findAllPossiblePaths If `true` (the default), all possible paths through the graph are
+ *   explored, even if a node has already been visited via another path. Set to `false` to visit
+ *   each `(Node, Context)` pair at most once, which is faster but potentially incomplete.
+ * @param direction The direction in which EOG edges are traversed. Use [Forward] with
+ *   [GraphToFollow.EOG] (the default) to walk the EOG in execution order, or [Backward] with
+ *   [GraphToFollow.EOG] to walk against the execution order.
+ * @param sensitivities One or more [AnalysisSensitivity] objects that filter which edges are
+ *   followed. Common choices are [FilterUnreachableEOG] (skips edges marked as unreachable,
+ *   included in the default) and [ContextSensitive] (respects the call stack). The defaults are
+ *   [FilterUnreachableEOG] and [ContextSensitive].
+ * @param scope Controls the interprocedural extent of the analysis. [Intraprocedural] restricts
+ *   traversal to the current function body, while [Interprocedural] (the default) follows EOG edges
+ *   across function-call boundaries. Both accept optional `maxSteps` / `maxCallDepth` limits. Use
+ *   `scope = Intraprocedural()` to limit the EOG traversal to the current function.
+ * @param earlyTermination A predicate called on each *next* candidate node and the current
+ *   [Context]. If it returns `true`, the path is immediately recorded as failed with reason
+ *   [FailureReason.HIT_EARLY_TERMINATION] and that branch is abandoned. Defaults to never
+ *   terminating early.
+ * @param predicate A predicate that identifies the target node(s). When a node satisfies this
+ *   predicate, the path leading to it is added to [FulfilledAndFailedPaths.fulfilled] and further
+ *   traversal along that branch stops.
  */
 fun Node.followEOGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
@@ -411,6 +453,39 @@ fun Node.followEOGEdgesUntilHit(
  *
  * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
+ *
+ * @param collectFailedPaths If `true` (the default), paths that do not reach a node satisfying
+ *   [predicate] are collected in [FulfilledAndFailedPaths.failed]. Set to `false` to ignore failed
+ *   paths and improve performance when only successful paths matter.
+ * @param findAllPossiblePaths If `true` (the default), all possible paths through the graph are
+ *   explored, even if a node has already been visited via another path. Set to `false` to visit
+ *   each `(Node, Context)` pair at most once, which is faster but potentially incomplete.
+ * @param direction The direction in which DFG edges are traversed. Use [Forward] with
+ *   [GraphToFollow.DFG] (the default) to follow the data flow forwards (from definitions to uses),
+ *   or [Backward] with [GraphToFollow.DFG] to follow it backwards (from uses to definitions).
+ * @param sensitivities One or more [AnalysisSensitivity] objects that act as additional filters on
+ *   which edges are followed. Common choices are [FieldSensitive] (tracks individual fields/indices
+ *   of aggregates), [ContextSensitive] (respects the call stack to avoid returning through the
+ *   wrong call site), [OnlyFullDFG] (skips partial-granularity DFG edges), and [Implicit] (also
+ *   follows implicit information flows via PDG edges). The defaults are [FieldSensitive] and
+ *   [ContextSensitive].
+ * @param scope Controls the interprocedural extent of the analysis. [Intraprocedural] restricts
+ *   traversal to the current function body, while [Interprocedural] (the default) follows edges
+ *   across function-call boundaries. Both accept optional `maxSteps` / `maxCallDepth` limits. Use
+ *   `scope = Intraprocedural()` to restrict the DFG traversal to the current function and not
+ *   follow any inter-procedural edges.
+ * @param ctx The initial [Context] (index stack, call stack, step counter). Usually the default is
+ *   sufficient; provide a custom context to pre-populate the call stack when the analysis starts
+ *   mid-call-chain.
+ * @param earlyTermination A predicate called on each *next* candidate node and the current
+ *   [Context]. If it returns `true`, the path is immediately recorded as failed with reason
+ *   [FailureReason.HIT_EARLY_TERMINATION] and that branch is abandoned. Defaults to never
+ *   terminating early. Example – stop whenever the traversal would cross into another
+ *   function: ```kotlin node.followDFGEdgesUntilHit( earlyTermination = { n, _ -> n is
+ *   FunctionDeclaration }, ) { it is Literal<*> } ```
+ * @param predicate A predicate that identifies the target node(s). When a node satisfies this
+ *   predicate, the path leading to it is added to [FulfilledAndFailedPaths.fulfilled] and further
+ *   traversal along that branch stops.
  */
 fun Node.followDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,
@@ -704,6 +779,23 @@ fun Node.collectAllNextCDGPaths(interproceduralAnalysis: Boolean): List<NodePath
  *
  * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
+ *
+ * @param collectFailedPaths If `true` (the default), paths that do not reach a node satisfying
+ *   [predicate] are collected in [FulfilledAndFailedPaths.failed]. Set to `false` to ignore failed
+ *   paths and improve performance when only successful paths matter.
+ * @param findAllPossiblePaths If `true` (the default), all possible paths through the graph are
+ *   explored, even if a node has already been visited via another path. Set to `false` to visit
+ *   each `(Node, Context)` pair at most once, which is faster but potentially incomplete.
+ * @param interproceduralAnalysis If `true`, the traversal also follows [CallExpression] invocations
+ *   (i.e. enters the body of called functions). Defaults to `false` for an intraprocedural
+ *   analysis.
+ * @param earlyTermination A predicate called on each *next* candidate node and the current
+ *   [Context]. If it returns `true`, the path is immediately recorded as failed with reason
+ *   [FailureReason.HIT_EARLY_TERMINATION] and that branch is abandoned. Defaults to never
+ *   terminating early.
+ * @param predicate A predicate that identifies the target node(s). When a node satisfies this
+ *   predicate, the path leading to it is added to [FulfilledAndFailedPaths.fulfilled] and further
+ *   traversal along that branch stops.
  */
 fun Node.followNextPDGUntilHit(
     collectFailedPaths: Boolean = true,
@@ -735,6 +827,23 @@ fun Node.followNextPDGUntilHit(
  *
  * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
+ *
+ * @param collectFailedPaths If `true` (the default), paths that do not reach a node satisfying
+ *   [predicate] are collected in [FulfilledAndFailedPaths.failed]. Set to `false` to ignore failed
+ *   paths and improve performance when only successful paths matter.
+ * @param findAllPossiblePaths If `true` (the default), all possible paths through the graph are
+ *   explored, even if a node has already been visited via another path. Set to `false` to visit
+ *   each `(Node, Context)` pair at most once, which is faster but potentially incomplete.
+ * @param interproceduralAnalysis If `true`, the traversal also follows [CallExpression] invocations
+ *   (i.e. enters the body of called functions). Defaults to `false` for an intraprocedural
+ *   analysis.
+ * @param earlyTermination A predicate called on each *next* candidate node and the current
+ *   [Context]. If it returns `true`, the path is immediately recorded as failed with reason
+ *   [FailureReason.HIT_EARLY_TERMINATION] and that branch is abandoned. Defaults to never
+ *   terminating early.
+ * @param predicate A predicate that identifies the target node(s). When a node satisfies this
+ *   predicate, the path leading to it is added to [FulfilledAndFailedPaths.fulfilled] and further
+ *   traversal along that branch stops.
  */
 fun Node.followNextCDGUntilHit(
     collectFailedPaths: Boolean = true,
@@ -767,6 +876,25 @@ fun Node.followNextCDGUntilHit(
  *
  * Hence, if "fulfilled" is a non-empty list, a CDG path from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
+ *
+ * @param collectFailedPaths If `true` (the default), paths that do not reach a node satisfying
+ *   [predicate] are collected in [FulfilledAndFailedPaths.failed]. Set to `false` to ignore failed
+ *   paths and improve performance when only successful paths matter.
+ * @param findAllPossiblePaths If `true` (the default), all possible paths through the graph are
+ *   explored, even if a node has already been visited via another path. Set to `false` to visit
+ *   each `(Node, Context)` pair at most once, which is faster but potentially incomplete.
+ * @param interproceduralAnalysis If `true`, the traversal also follows [FunctionDeclaration] usages
+ *   backwards across function-call boundaries (i.e. enters the callers). Defaults to `false` for an
+ *   intraprocedural analysis.
+ * @param interproceduralMaxDepth Optional limit on how many call levels are followed when
+ *   [interproceduralAnalysis] is `true`. `null` (the default) means unlimited.
+ * @param earlyTermination A predicate called on each *next* candidate node and the current
+ *   [Context]. If it returns `true`, the path is immediately recorded as failed with reason
+ *   [FailureReason.HIT_EARLY_TERMINATION] and that branch is abandoned. Defaults to never
+ *   terminating early.
+ * @param predicate A predicate that identifies the target node(s). When a node satisfies this
+ *   predicate, the path leading to it is added to [FulfilledAndFailedPaths.fulfilled] and further
+ *   traversal along that branch stops.
  */
 fun Node.followPrevPDGUntilHit(
     collectFailedPaths: Boolean = true,
@@ -809,6 +937,25 @@ fun Node.followPrevPDGUntilHit(
  *
  * Hence, if "fulfilled" is a non-empty list, a CDG path from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
+ *
+ * @param collectFailedPaths If `true` (the default), paths that do not reach a node satisfying
+ *   [predicate] are collected in [FulfilledAndFailedPaths.failed]. Set to `false` to ignore failed
+ *   paths and improve performance when only successful paths matter.
+ * @param findAllPossiblePaths If `true` (the default), all possible paths through the graph are
+ *   explored, even if a node has already been visited via another path. Set to `false` to visit
+ *   each `(Node, Context)` pair at most once, which is faster but potentially incomplete.
+ * @param interproceduralAnalysis If `true`, the traversal also follows [FunctionDeclaration] usages
+ *   backwards across function-call boundaries (i.e. enters the callers). Defaults to `false` for an
+ *   intraprocedural analysis.
+ * @param interproceduralMaxDepth Optional limit on how many call levels are followed when
+ *   [interproceduralAnalysis] is `true`. `null` (the default) means unlimited.
+ * @param earlyTermination A predicate called on each *next* candidate node and the current
+ *   [Context]. If it returns `true`, the path is immediately recorded as failed with reason
+ *   [FailureReason.HIT_EARLY_TERMINATION] and that branch is abandoned. Defaults to never
+ *   terminating early.
+ * @param predicate A predicate that identifies the target node(s). When a node satisfies this
+ *   predicate, the path leading to it is added to [FulfilledAndFailedPaths.fulfilled] and further
+ *   traversal along that branch stops.
  */
 fun Node.followPrevCDGUntilHit(
     collectFailedPaths: Boolean = true,
@@ -845,12 +992,37 @@ fun Node.followPrevCDGUntilHit(
 /**
  * Returns an instance of [FulfilledAndFailedPaths] where [FulfilledAndFailedPaths.fulfilled]
  * contains all possible shortest data flow paths (with [x] specifying how to fetch more nodes)
- * between the starting node [this] and the end node fulfilling [predicate] (backwards analysis).
- * The paths are represented as lists of nodes. Paths which do not end at such a node are included
- * in [FulfilledAndFailedPaths.failed].
+ * between the starting node [this] and the end node fulfilling [predicate]. The paths are
+ * represented as lists of nodes. Paths which do not end at such a node are included in
+ * [FulfilledAndFailedPaths.failed].
  *
  * Hence, if "fulfilled" is a non-empty list, a path from [this] to such a node is **possible but
  * not mandatory**. If the list "failed" is empty, the path is mandatory.
+ *
+ * @param x A function that, given the current node, the current [Context], the current path and the
+ *   list of already detected looping paths, returns the collection of next `(Node, Context)` pairs
+ *   to be explored. This is where the actual graph-traversal logic lives (e.g. following DFG or EOG
+ *   edges).
+ * @param collectFailedPaths If `true` (the default), paths that reach a dead end without satisfying
+ *   [predicate] – as well as paths stopped by [earlyTermination] – are collected in
+ *   [FulfilledAndFailedPaths.failed]. Set to `false` to skip collecting failed paths for better
+ *   performance when only fulfilled paths are of interest.
+ * @param findAllPossiblePaths If `true` (the default), every possible path through the graph is
+ *   explored, even if a node has already been visited via a different path. Set to `false` to visit
+ *   each `(Node, Context)` pair only once, which is faster but may miss some paths.
+ * @param ctx The initial [Context] for the traversal (index stack, call stack, step counter).
+ *   Usually the default value suffices; supply a custom context e.g. when the analysis should start
+ *   inside a specific call stack.
+ * @param earlyTermination A predicate called on each *next* node and the current [Context] before
+ *   the node is added to the worklist. If it returns `true`, the path is immediately recorded as
+ *   failed with reason [FailureReason.HIT_EARLY_TERMINATION] and traversal of that branch stops.
+ *   This is typically used to enforce analysis boundaries, for example to stop at the border of the
+ *   current function: ```kotlin node.followDFGEdgesUntilHit( scope = Interprocedural(),
+ *   earlyTermination = { nextNode, _ -> nextNode is FunctionDeclaration }, ) { it is Literal<*>
+ *   } ```
+ * @param predicate A predicate that marks the *target* of the path search. When a node satisfying
+ *   [predicate] is reached, the current path is added to [FulfilledAndFailedPaths.fulfilled] and
+ *   that branch of the traversal is stopped.
  */
 fun Node.followXUntilHit(
     x:
@@ -982,6 +1154,23 @@ fun isNodeWithCallStackInPath(
  *
  * Hence, if "fulfilled" is a non-empty list, a data flow from [this] to such a node is **possible
  * but not mandatory**. If the list "failed" is empty, the data flow is mandatory.
+ *
+ * This is a convenience wrapper around [followDFGEdgesUntilHit] with [Forward] direction,
+ * [OnlyFullDFG] and [ContextSensitive] sensitivities and [Interprocedural] scope.
+ *
+ * @param collectFailedPaths If `true` (the default), paths that do not reach a node satisfying
+ *   [predicate] are collected in [FulfilledAndFailedPaths.failed]. Set to `false` to ignore failed
+ *   paths and improve performance when only successful paths matter.
+ * @param findAllPossiblePaths If `true` (the default), all possible paths through the graph are
+ *   explored, even if a node has already been visited via another path. Set to `false` to visit
+ *   each `(Node, Context)` pair at most once, which is faster but potentially incomplete.
+ * @param earlyTermination A predicate called on each *next* candidate node and the current
+ *   [Context]. If it returns `true`, the path is immediately recorded as failed with reason
+ *   [FailureReason.HIT_EARLY_TERMINATION] and that branch is abandoned. Defaults to never
+ *   terminating early.
+ * @param predicate A predicate that identifies the target node(s). When a node satisfies this
+ *   predicate, the path leading to it is added to [FulfilledAndFailedPaths.fulfilled] and further
+ *   traversal along that branch stops.
  */
 fun Node.followNextFullDFGEdgesUntilHit(
     collectFailedPaths: Boolean = true,

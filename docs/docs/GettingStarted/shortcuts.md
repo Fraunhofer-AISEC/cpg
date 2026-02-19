@@ -102,59 +102,17 @@ stable than the information from above!
   functions call the specified function.
 * The methods
   ```kotlin
-  Node.followEOGEdgesUntilHit(
-      collectFailedPaths: Boolean,
-      findAllPossiblePaths: Boolean,
-      direction: AnalysisDirection,
-      vararg sensitivities: AnalysisSensitivity,
-      scope: AnalysisScope,
-      earlyTermination: (Node, Context) -> Boolean,
-      predicate: (Node) -> Boolean
-  ): FulfilledAndFailedPaths
+  Node.followEOGEdgesUntilHit(...)
+  Node.followDFGEdgesUntilHit(...)
   ```
-  and
-  ```kotlin
-  Node.followDFGEdgesUntilHit(
-      collectFailedPaths: Boolean,
-      findAllPossiblePaths: Boolean,
-      direction: AnalysisDirection,
-      vararg sensitivities: AnalysisSensitivity,
-      scope: AnalysisScope,
-      earlyTermination: (Node, Context) -> Boolean,
-      predicate: (Node) -> Boolean
-  ): FulfilledAndFailedPaths
-  ```
-  enable you a fine-grained configuration of how to collect EOG or DFG paths
-  between the node and the first node matching the `predicate` unless  there is
-  a node matching the `earlyTermination` criterion on the path.
-  - The `scope` allows to choose between an intraprocedural and interprocedural
-    analysis and to configure the number of steps or depth in the call chain to
-    follow.
-  - The methods can further be configured to collect failed paths (to see path
-    exists which does not fulfill a flow requirement) or to identify all
-    possible paths reaching the predicate.
-  - By default, they are configured to run a `Forward` analysis, but you can
-    equally opt for a `Backward` analysis by setting the `direction`
-    accordingly.
-  - The `sensitivities` allow you to filter which edges should be followed.
-    These are partially based on typical sensitivities for dataflow
-    analysis(`ContextSensitive`, `FieldSensitive`), but actually allow a wider
-    range of filters, e.g. to only follow full DFG edges, reachable EOG paths,
-    or even configure the whole analysis system to follow implicit dataflows by
-    following the program dependence graph.
-  - They return all failed and all fulfilled  paths. This allows reasoning more
-    precisely about the program's behavior.
-* The methods
- `Node.followPrevCDGEdgesUntilHit(collectFailedPaths: Boolean, findAllPossiblePaths: Boolean, interproceduralAnalysis: Boolean, predicate: (Node) -> Boolean)`,
- `Node.followNextCDGEdgesUntilHit(collectFailedPaths: Boolean, findAllPossiblePaths: Boolean, interproceduralAnalysis: Boolean, predicate: (Node) -> Boolean)`,
- `Node.followPrevPDGEdgesUntilHit(collectFailedPaths: Boolean, findAllPossiblePaths: Boolean, interproceduralAnalysis: Boolean, predicate: (Node) -> Boolean)`,
- `Node.followNextPDGEdgesUntilHit(collectFailedPaths: Boolean, findAllPossiblePaths: Boolean, interproceduralAnalysis: Boolean, predicate: (Node) -> Boolean)`,
-  collect the CDG/PDG path between the node and the first node
-  matching the predicate. The methods can be configured to collect failed
-  paths (to see if a path exists which does not fulfill a
-  requirement), to identify all possible paths reaching a predicate and
-  partially follow calls as well. They return all failed and all fulfilled
-  paths. This allows reasoning more precisely about the program's behavior.
+  and the related `followNextFullDFGEdgesUntilHit`, `followPrevFullDFGEdgesUntilHit`,
+  `followNextPDGUntilHit`, `followPrevPDGUntilHit`, `followNextCDGUntilHit`, and
+  `followPrevCDGUntilHit` enable fine-grained graph traversal. They return a
+  `FulfilledAndFailedPaths` object containing all paths that reached a target node
+  (`fulfilled`) and all paths that did not (`failed`). For a full description of all
+  parameters (`direction`, `scope`, `sensitivities`, `earlyTermination`,
+  `collectFailedPaths`, `findAllPossiblePaths`, `predicate`) and concrete usage
+  examples, see the dedicated **[Graph Traversal (followXXX)](graph-traversal/index.md)** page.
 * If you're interested in all nodes reachable via one of the sub-graphs from
   a certain node, the methods
   `Node.collectAllPrevFullDFGPaths()`,
@@ -164,6 +122,6 @@ stable than the information from above!
   `Node.collectAllPrevCDGPaths(interproceduralAnalysis: Boolean)`,
   `Node.collectAllNextCDGPaths(interproceduralAnalysis: Boolean)`,
   `Node.collectAllPrevPDGPaths(interproceduralAnalysis: Boolean)`,
-  `Node.collectAllNextPDGPaths(interproceduralAnalysis: Boolean)`
+  `Node.collectAllNextPDGGPaths(interproceduralAnalysis: Boolean)`
   can be used.
 

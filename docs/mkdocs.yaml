@@ -162,6 +162,10 @@ nav:
           - "Adding the Dependency": GettingStarted/library.md
           - "Using the Query API": GettingStarted/query.md
           - "Shortcuts to Explore the Graph": GettingStarted/shortcuts.md
+          - "Graph Traversal (followXXX)":
+              - "Overview & Parameters": GettingStarted/graph-traversal/index.md
+              - "Function Reference": GettingStarted/graph-traversal/reference.md
+              - "Examples": GettingStarted/graph-traversal/examples.md
       - "Using neo4j": GettingStarted/neo4j.md
   - "Specifications":
       - CPG/specs/index.md
