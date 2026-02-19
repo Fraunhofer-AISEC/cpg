@@ -33,6 +33,7 @@ import de.fraunhofer.aisec.cpg.assumptions.getCallerFileAndLine
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -194,18 +195,18 @@ fun LanguageFrontend<*, *>.import(name: CharSequence): Include {
 }
 
 /**
- * Creates a new [FunctionDeclaration] in the Fluent Node DSL with the given [name] and optional
- * [returnType]. The [init] block can be used to create further sub-nodes as well as configuring the
- * created node itself.
+ * Creates a new [Function] in the Fluent Node DSL with the given [name] and optional [returnType].
+ * The [init] block can be used to create further sub-nodes as well as configuring the created node
+ * itself.
  */
 context(holder: DeclarationHolder)
 fun LanguageFrontend<*, *>.function(
     name: CharSequence,
     returnType: Type = unknownType(),
     returnTypes: List<Type>? = null,
-    init: (FunctionDeclaration.() -> Unit)? = null,
-): FunctionDeclaration {
-    val node = newFunctionDeclaration(name).apply { this.location = getCallerFileAndLine() }
+    init: (Function.() -> Unit)? = null,
+): Function {
+    val node = newFunction(name).apply { this.location = getCallerFileAndLine() }
 
     if (returnTypes != null) {
         node.returnTypes = returnTypes
@@ -276,11 +277,11 @@ fun LanguageFrontend<*, *>.constructor(init: Constructor.() -> Unit): Constructo
 }
 
 /**
- * Creates a new [Block] in the Fluent Node DSL and sets it to the [FunctionDeclaration.body] of the
- * nearest enclosing [FunctionDeclaration]. The [init] block can be used to create further sub-nodes
- * as well as configuring the created node itself.
+ * Creates a new [Block] in the Fluent Node DSL and sets it to the [Function.body] of the nearest
+ * enclosing [Function]. The [init] block can be used to create further sub-nodes as well as
+ * configuring the created node itself.
  */
-context(func: FunctionDeclaration)
+context(func: Function)
 fun LanguageFrontend<*, *>.body(needsScope: Boolean = true, init: Block.() -> Unit): Block {
     val node = this.newBlock().apply { this.location = getCallerFileAndLine() }
 
@@ -291,9 +292,9 @@ fun LanguageFrontend<*, *>.body(needsScope: Boolean = true, init: Block.() -> Un
 }
 
 /**
- * Creates a new [Block] in the Fluent Node DSL and sets it to the [FunctionDeclaration.body] of the
- * nearest enclosing [FunctionDeclaration]. The [init] block can be used to create further sub-nodes
- * as well as configuring the created node itself.
+ * Creates a new [Block] in the Fluent Node DSL and sets it to the [Function.body] of the nearest
+ * enclosing [Function]. The [init] block can be used to create further sub-nodes as well as
+ * configuring the created node itself.
  */
 context(holder: StatementHolder)
 fun LanguageFrontend<*, *>.block(needsScope: Boolean = true, init: Block.() -> Unit): Block {
@@ -306,11 +307,11 @@ fun LanguageFrontend<*, *>.block(needsScope: Boolean = true, init: Block.() -> U
 }
 
 /**
- * Creates a new [Parameter] in the Fluent Node DSL and adds it to the
- * [FunctionDeclaration.parameters] of the nearest enclosing [FunctionDeclaration]. The [init] block
- * can be used to create further sub-nodes as well as configuring the created node itself.
+ * Creates a new [Parameter] in the Fluent Node DSL and adds it to the [Function.parameters] of the
+ * nearest enclosing [Function]. The [init] block can be used to create further sub-nodes as well as
+ * configuring the created node itself.
  */
-context(func: FunctionDeclaration)
+context(func: Function)
 fun LanguageFrontend<*, *>.param(
     name: CharSequence,
     type: Type = this.unknownType(),

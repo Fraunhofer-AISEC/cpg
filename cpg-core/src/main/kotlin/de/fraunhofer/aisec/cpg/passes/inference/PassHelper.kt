@@ -37,6 +37,7 @@ import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.calls
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.invoke
 import de.fraunhofer.aisec.cpg.graph.methods
 import de.fraunhofer.aisec.cpg.graph.scopes.GlobalScope
@@ -244,14 +245,13 @@ internal fun Pass<*>.tryFieldInference(ref: Reference, targetType: ObjectType): 
 }
 
 /**
- * Tries to infer a [FunctionDeclaration] or a [Method] from a [CallExpression]. This will return an
- * empty list, if inference was not possible, or if it was turned off in the
- * [InferenceConfiguration].
+ * Tries to infer a [Function] or a [Method] from a [CallExpression]. This will return an empty
+ * list, if inference was not possible, or if it was turned off in the [InferenceConfiguration].
  *
  * Depending on several factors, e.g., whether the callee has an FQN, was a [MemberExpression] or
  * whether the language supports [HasImplicitReceiver] we either infer
- * - a global [FunctionDeclaration]
- * - a [FunctionDeclaration] in a namespace
+ * - a global [Function]
+ * - a [Function] in a namespace
  * - a [Method] in a record using [tryMethodInference]
  *
  * Since potentially multiple suitable bases exist for the inference of methods (derived by
@@ -260,7 +260,7 @@ internal fun Pass<*>.tryFieldInference(ref: Reference, targetType: ObjectType): 
 internal fun Pass<*>.tryFunctionInference(
     call: CallExpression,
     result: CallResolutionResult,
-): List<FunctionDeclaration> {
+): List<Function> {
     // We need to see, whether we have any suitable base (e.g. a class) or not; There are two
     // main cases
     // a) we have a member expression -> easy
@@ -304,7 +304,7 @@ internal fun Pass<*>.tryFunctionInference(
     }
 }
 
-/** This function tries to infer a missing [FunctionDeclaration] from a function pointer usage. */
+/** This function tries to infer a missing [Function] from a function pointer usage. */
 internal fun Pass<*>.tryFunctionInferenceFromFunctionPointer(
     ref: Reference,
     type: FunctionPointerType,
@@ -324,7 +324,7 @@ internal fun Pass<*>.tryFunctionInferenceFromFunctionPointer(
 }
 
 /**
- * Creates an inferred [FunctionDeclaration] for each suitable [Type] (which points to a [Record]).
+ * Creates an inferred [Function] for each suitable [Type] (which points to a [Record]).
  *
  * There is a big challenge in this inference: We can not be 100 % sure, whether we really need to
  * infer a [Method] inside the [Record] or if this is a call to a global function (if [call] is a
@@ -342,7 +342,7 @@ internal fun Pass<*>.tryMethodInference(
     call: CallExpression,
     possibleContainingTypes: Set<Type>,
     bestGuess: Type?,
-): List<FunctionDeclaration> {
+): List<Function> {
     // We need to decide whether we want to infer a global function or not. We do this with a
     // simple heuristic. This will of course not be 100 % error-free, but this is the burden of
     // inference.

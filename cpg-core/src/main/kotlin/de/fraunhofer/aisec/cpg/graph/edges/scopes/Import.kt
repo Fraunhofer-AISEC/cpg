@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph.edges.scopes
 
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Import as ImportNode
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeSet
 import de.fraunhofer.aisec.cpg.graph.edges.collections.MirroredEdgeCollection
@@ -45,7 +45,7 @@ enum class ImportStyle {
      * with the same name as the imported symbol.
      *
      * Note: Some languages support importing more than one symbol at a time. In this case, the list
-     * is split into multiple [ImportDeclaration] nodes (and [Import] edges).
+     * is split into multiple [Import] nodes (and [Import] edges).
      */
     IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
 
@@ -69,7 +69,7 @@ enum class ImportStyle {
  * (e.g., whether only a certain symbol or the whole namespace is imported) is determined by the
  * [declaration].
  */
-class Import(start: Scope, end: NamespaceScope, var declaration: ImportDeclaration? = null) :
+class Import(start: Scope, end: NamespaceScope, var declaration: ImportNode? = null) :
     Edge<NamespaceScope>(start, end) {
 
     override var labels = setOf("SCOPE_IMPORT")

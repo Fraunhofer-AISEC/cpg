@@ -163,7 +163,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
 
             // We create an implicit import for "java.lang.*"
             val decl =
-                newImportDeclaration(
+                newImport(
                         parseName("java.lang"),
                         style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
                     )

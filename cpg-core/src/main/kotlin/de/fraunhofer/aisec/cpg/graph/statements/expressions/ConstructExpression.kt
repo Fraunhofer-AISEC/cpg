@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.graph.statements.expressions
 import de.fraunhofer.aisec.cpg.PopulatedByPass
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astOptionalEdgeOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
@@ -61,7 +62,7 @@ class ConstructExpression : CallExpression() {
 
             // Forward to CallExpression. This will also take care of DFG edges.
             if (value != null) {
-                invokes = mutableListOf(value as FunctionDeclaration)
+                invokes = mutableListOf(value as Function)
             }
         }
 

@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.graph
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.IfStatement
@@ -130,7 +130,7 @@ class ShortcutsTest {
 
     @Test
     fun testCalleesOf() {
-        val expected = mutableListOf<FunctionDeclaration>()
+        val expected = mutableListOf<Function>()
         val classDecl = shortcutClassResult.records["ShortcutClass"]
         assertNotNull(classDecl)
 
@@ -175,7 +175,7 @@ class ShortcutsTest {
         val print = classDecl.methods["print"]
         assertNotNull(print)
 
-        val expected = mutableListOf<FunctionDeclaration>()
+        val expected = mutableListOf<Function>()
         val main = classDecl.functions["main"]
         assertNotNull(main)
 

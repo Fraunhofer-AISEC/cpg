@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.InferenceConfiguration.Companion.builder
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -265,7 +266,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val function = declaration.declarations<FunctionDeclaration>(0)
+        val function = declaration.declarations<Function>(0)
         assertNotNull(function)
 
         val functionBody = function.body
@@ -290,7 +291,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val statements = declaration.declarations<FunctionDeclaration>(0)?.statements
+        val statements = declaration.declarations<Function>(0)?.statements
         assertNotNull(statements)
         assertEquals(6, statements.size)
 
@@ -323,7 +324,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val statements = declaration.declarations<FunctionDeclaration>(0)?.statements
+        val statements = declaration.declarations<Function>(0)?.statements
         assertNotNull(statements)
 
         val ifStatement = statements[0] as IfStatement
@@ -371,7 +372,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             val tu = result.components.firstOrNull()?.translationUnits?.firstOrNull()
             assertNotNull(tu)
 
-            val function = tu.declarations<FunctionDeclaration>(0)
+            val function = tu.declarations<Function>(0)
             val statements = function?.statements
             assertNotNull(statements)
             statements.forEach(
@@ -514,7 +515,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val functionDecl = declaration.declarations<FunctionDeclaration>(0)
+        val functionDecl = declaration.declarations<Function>(0)
         val statements = functionDecl?.statements
         assertNotNull(statements)
         assertTrue(statements[1] is BinaryOperator)
@@ -528,7 +529,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val statements = unit.declarations<FunctionDeclaration>(0)?.statements
+        val statements = unit.declarations<Function>(0)?.statements
         assertNotNull(statements)
 
         var line = -1
@@ -930,7 +931,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             assertNotNull(tu)
 
             // get the main method
-            val main = tu.declarations<FunctionDeclaration>(3)
+            val main = tu.declarations<Function>(3)
             val statement = main!!.body as Block
 
             // Integer i
@@ -978,7 +979,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         }
     }
 
-    private val FunctionDeclaration.statements: List<Statement>?
+    private val Function.statements: List<Statement>?
         get() {
             return (this.body as? Block)?.statements
         }
@@ -991,7 +992,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        val fdecl = declaration.declarations<FunctionDeclaration>(0)
+        val fdecl = declaration.declarations<Function>(0)
         val body = fdecl!!.body as Block
         val expected: MutableMap<String?, Region> = HashMap()
         expected["cout << \"bla\";"] = Region(4, 3, 4, 17)
@@ -1378,8 +1379,8 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CLanguage>()
             }
-        // TU should only contain three AST declarations (EnumDeclaration, Typedef and
-        // FunctionDeclaration), but NOT any EnumConstantDeclarations
+        // TU should only contain three AST declarations (Enumeration, Typedef and
+        // Function), but NOT any EnumConstantDeclarations
         assertEquals(3, tu.declarations.size)
         assertEquals(0, tu.declarations.filterIsInstance<EnumConstant>().size)
 
@@ -1399,7 +1400,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             analyzeAndGetFirstTU(listOf(file), file.parentFile.toPath(), true) {
                 it.registerLanguage<CPPLanguage>()
             }
-        // TU should only contain two AST declarations (EnumDeclaration and FunctionDeclaration),
+        // TU should only contain two AST declarations (Enumeration and Function),
         // but NOT any EnumConstantDeclarations
         assertEquals(2, tu.declarations.size)
 

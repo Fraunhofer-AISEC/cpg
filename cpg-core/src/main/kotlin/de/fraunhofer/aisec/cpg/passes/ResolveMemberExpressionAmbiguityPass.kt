@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.AstNode
 import de.fraunhofer.aisec.cpg.graph.HasBase
 import de.fraunhofer.aisec.cpg.graph.Name
 import de.fraunhofer.aisec.cpg.graph.codeAndLocationFrom
-import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Import
 import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
@@ -100,19 +100,19 @@ class ResolveMemberExpressionAmbiguityPass(ctx: TranslationContext) : Translatio
     private fun resolveReference(ref: Reference): Boolean {
         var candidates = scopeManager.lookupSymbolByNodeName(ref, replaceImports = false)
 
-        val singleImports = mutableListOf<ImportDeclaration>()
+        val singleImports = mutableListOf<Import>()
         var interesting = false
         for (candidate in candidates) {
             // If we have an import declaration in the candidates, then this reference is
             // definitely "interesting"
-            if (candidate is ImportDeclaration) {
+            if (candidate is Import) {
                 interesting = true
             }
 
             // If we have an import declaration importing a single symbol, we can add it to the list
             // of single imports. We will look at them later
             if (
-                candidate is ImportDeclaration &&
+                candidate is Import &&
                     candidate.style == ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE
             ) {
                 singleImports.add(candidate)

@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.OverlayNode
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -120,7 +120,7 @@ data class FunctionInfo(
     val endColumn: Int?,
 ) {
     constructor(
-        functionDeclaration: FunctionDeclaration
+        functionDeclaration: Function
     ) : this(
         nodeId = functionDeclaration.id.toString(),
         name = functionDeclaration.name.toString(),

@@ -39,9 +39,9 @@ import org.neo4j.ogm.annotation.Relationship
  * form a new namespace prefix. While RecordDeclarations in C++ and Java have their own namespace,
  * namespace declarations can be declared multiple times. At the beginning of a Java-file, a
  * namespace declaration is used to represent the package name as namespace. In its explicit
- * appearance a namespace declaration can contain [FunctionDeclaration] and [Record] similar to a
- * [Record] and the semantic difference between Namespace and [Record] lies in the
- * non-instantiability of a namespace.
+ * appearance a namespace declaration can contain [Function] and [Record] similar to a [Record] and
+ * the semantic difference between Namespace and [Record] lies in the non-instantiability of a
+ * namespace.
  *
  * The name property of this node need to be a FQN for property resolution.
  */

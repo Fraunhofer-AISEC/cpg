@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.query
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Literal
@@ -83,7 +83,7 @@ class DataflowQueriesTest {
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
-                    node.firstParentOrNull<FunctionDeclaration>(),
+                    node.firstParentOrNull<Function>(),
                     "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
                 )
             }
@@ -113,7 +113,7 @@ class DataflowQueriesTest {
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
-                    node.firstParentOrNull<FunctionDeclaration>(),
+                    node.firstParentOrNull<Function>(),
                     "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
                 )
             }
@@ -141,7 +141,7 @@ class DataflowQueriesTest {
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
-                    node.firstParentOrNull<FunctionDeclaration>(),
+                    node.firstParentOrNull<Function>(),
                     "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
                 )
             }
@@ -170,7 +170,7 @@ class DataflowQueriesTest {
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
-                    node.firstParentOrNull<FunctionDeclaration>(),
+                    node.firstParentOrNull<Function>(),
                     "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
                 )
             }
@@ -199,7 +199,7 @@ class DataflowQueriesTest {
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
-                    node.firstParentOrNull<FunctionDeclaration>(),
+                    node.firstParentOrNull<Function>(),
                     "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
                 )
             }
@@ -248,7 +248,7 @@ class DataflowQueriesTest {
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
-                    node.firstParentOrNull<FunctionDeclaration>(),
+                    node.firstParentOrNull<Function>(),
                     "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
                 )
             }
@@ -280,7 +280,7 @@ class DataflowQueriesTest {
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
-                    node.firstParentOrNull<FunctionDeclaration>(),
+                    node.firstParentOrNull<Function>(),
                     "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
                 )
             }
@@ -342,7 +342,7 @@ class DataflowQueriesTest {
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
-                    node.firstParentOrNull<FunctionDeclaration>(),
+                    node.firstParentOrNull<Function>(),
                     "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
                 )
             }
@@ -375,7 +375,7 @@ class DataflowQueriesTest {
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
-                    node.firstParentOrNull<FunctionDeclaration>(),
+                    node.firstParentOrNull<Function>(),
                     "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
                 )
             }
@@ -403,7 +403,7 @@ class DataflowQueriesTest {
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
-                    node.firstParentOrNull<FunctionDeclaration>(),
+                    node.firstParentOrNull<Function>(),
                     "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
                 )
             }
@@ -432,7 +432,7 @@ class DataflowQueriesTest {
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
-                    node.firstParentOrNull<FunctionDeclaration>(),
+                    node.firstParentOrNull<Function>(),
                     "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
                 )
             }
@@ -461,7 +461,7 @@ class DataflowQueriesTest {
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
-                    node.firstParentOrNull<FunctionDeclaration>(),
+                    node.firstParentOrNull<Function>(),
                     "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
                 )
             }
@@ -490,7 +490,7 @@ class DataflowQueriesTest {
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
-                    node.firstParentOrNull<FunctionDeclaration>(),
+                    node.firstParentOrNull<Function>(),
                     "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
                 )
             }
@@ -519,7 +519,7 @@ class DataflowQueriesTest {
                 assertIs<Node>(node, "The list should contain nodes")
                 assertLocalName(
                     "main",
-                    node.firstParentOrNull<FunctionDeclaration>(),
+                    node.firstParentOrNull<Function>(),
                     "We expect that all nodes are within the function \"main\". I.e., there's no node in foo.",
                 )
             }

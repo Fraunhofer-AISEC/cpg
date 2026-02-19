@@ -32,6 +32,7 @@ import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.Node.Companion.EMPTY_NAME
 import de.fraunhofer.aisec.cpg.graph.NodeBuilder.log
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
@@ -68,18 +69,18 @@ fun MetadataProvider.newTranslationUnit(name: CharSequence, rawNode: Any? = null
 }
 
 /**
- * Creates a new [FunctionDeclaration]. The [MetadataProvider] receiver will be used to fill
- * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
- * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
- * prepended argument.
+ * Creates a new [Function]. The [MetadataProvider] receiver will be used to fill different
+ * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
+ * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
+ * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newFunctionDeclaration(
+fun MetadataProvider.newFunction(
     name: CharSequence?,
     localNameOnly: Boolean = false,
     rawNode: Any? = null,
-): FunctionDeclaration {
-    val node = FunctionDeclaration()
+): Function {
+    val node = Function()
     node.applyMetadata(this, name, rawNode, localNameOnly)
 
     log(node)
@@ -280,17 +281,14 @@ fun MetadataProvider.newRecord(name: CharSequence, kind: String, rawNode: Any? =
 }
 
 /**
- * Creates a new [EnumDeclaration]. The [MetadataProvider] receiver will be used to fill different
+ * Creates a new [Enumeration]. The [MetadataProvider] receiver will be used to fill different
  * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
  * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
  * argument.
  */
 @JvmOverloads
-fun MetadataProvider.newEnumDeclaration(
-    name: CharSequence?,
-    rawNode: Any? = null,
-): EnumDeclaration {
-    val node = EnumDeclaration()
+fun MetadataProvider.newEnumeration(name: CharSequence?, rawNode: Any? = null): Enumeration {
+    val node = Enumeration()
     node.applyMetadata(this, name, rawNode)
 
     log(node)
@@ -443,19 +441,18 @@ fun MetadataProvider.newExtension(name: CharSequence, rawNode: Any? = null): Ext
 }
 
 /**
- * Creates a new [ImportDeclaration]. The [MetadataProvider] receiver will be used to fill different
- * meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires
- * an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended
- * argument.
+ * Creates a new [Import]. The [MetadataProvider] receiver will be used to fill different meta-data
+ * using [Node.applyMetadata]. Calling this extension function outside of Kotlin requires an
+ * appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional prepended argument.
  */
 @JvmOverloads
-fun MetadataProvider.newImportDeclaration(
+fun MetadataProvider.newImport(
     import: Name,
     style: ImportStyle,
     alias: Name? = null,
     rawNode: Any? = null,
-): ImportDeclaration {
-    val node = ImportDeclaration()
+): Import {
+    val node = Import()
     node.applyMetadata(this, alias ?: import, rawNode, doNotPrependNamespace = true)
     node.import = import
     node.alias = alias

@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -67,14 +67,14 @@ class CallResolverTest : BaseTest() {
     private fun checkCalls(
         intType: Type,
         stringType: Type,
-        methods: Collection<FunctionDeclaration>,
+        methods: Collection<Function>,
         calls: Collection<CallExpression>,
     ) {
         val signatures = listOf(listOf(), listOf(intType, intType), listOf(intType, stringType))
         for (signature in signatures) {
             for (call in calls.filter { it.signature == signature }) {
                 val target =
-                    findByUniquePredicate(methods) { m: FunctionDeclaration ->
+                    findByUniquePredicate(methods) { m: Function ->
                         m.matchesSignature(signature) != IncompatibleSignature
                     }
                 assertEquals(listOf(target), call.invokes)
@@ -86,7 +86,7 @@ class CallResolverTest : BaseTest() {
         for (inferredCall in
             calls.filter { c: CallExpression -> c.signature == inferenceSignature }) {
             val inferredTarget =
-                findByUniquePredicate(methods) { m: FunctionDeclaration ->
+                findByUniquePredicate(methods) { m: Function ->
                     m.matchesSignature(inferenceSignature) != IncompatibleSignature
                 }
             assertEquals(listOf(inferredTarget), inferredCall.invokes)
@@ -105,8 +105,8 @@ class CallResolverTest : BaseTest() {
         // TODO related to #204: Currently we have both the original and the overriding method in
         //  the invokes list. This check needs to be adjusted to the choice we make on solving #204
         assertTrue(call.invokes.contains(overridingMethod))
-        assertEquals<List<FunctionDeclaration>>(listOf(originalMethod), overridingMethod.overrides)
-        assertEquals<List<FunctionDeclaration>>(
+        assertEquals<List<Function>>(listOf(originalMethod), overridingMethod.overrides)
+        assertEquals<List<Function>>(
             listOf(overridingMethod),
             originalMethod.overriddenBy,
         )

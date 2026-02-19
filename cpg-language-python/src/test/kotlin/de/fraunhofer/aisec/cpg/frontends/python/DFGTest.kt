@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.python
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.IndexedDataflowGranularity
 import de.fraunhofer.aisec.cpg.graph.edges.flows.PartialDataflowGranularity
@@ -91,7 +91,7 @@ class DFGTest {
         assertTrue(d.prevDFG.isEmpty())
     }
 
-    fun checkReturnTuple(functionDeclaration: FunctionDeclaration) {
+    fun checkReturnTuple(functionDeclaration: Function) {
         val returnStmt = functionDeclaration.returns.singleOrNull()
         assertNotNull(returnStmt)
         val returnVal = returnStmt.returnValue

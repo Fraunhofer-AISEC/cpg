@@ -94,7 +94,7 @@ The PDG (Program Dependence Graph) combines the DFG and CDG to represent both da
 Each edge in the DFG, EOG, CDG and PDG works as follows: There is a source node and a target node and the source flows into target during a forward analysis, which is indicated by nextDFG, nextEOG, nextCDG or nextPDG.
 Each edge is mirrored in the reverse direction, i.e., there is a prevDFG, prevEOG, prevCDG or prevPDG edge. For the edges in the AST, the children are the target node of the ast edge, the opposite direction is called astParent.
 
-Further edges are the invokes edges which represent (potential) function and method calls between a CallExpression and a FunctionDeclaration or Method.
+Further edges are the invokes edges which represent (potential) function and method calls between a CallExpression and a Function or Method.
 The DFG is inter-procedural, meaning that it can also represent data flows between different functions or methods.
 
 Each node in the CPG has a unique ID, a name, a location in the file, and potentially one or multiple OverlayNodes which associate a node with additional information.

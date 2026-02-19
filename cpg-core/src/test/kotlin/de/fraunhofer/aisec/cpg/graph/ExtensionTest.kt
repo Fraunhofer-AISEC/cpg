@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.graph
 
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.test.assertLocalName
@@ -37,7 +37,7 @@ import kotlin.test.assertNotNull
 class ExtensionTest {
     @Test
     fun testBodyOrNull() {
-        var func = FunctionDeclaration()
+        var func = Function()
         var body = Block()
 
         for (i in 0 until 5) {
@@ -67,7 +67,7 @@ class ExtensionTest {
             val record = newRecord("MyClass", "class")
             tu.declarations += record
 
-            val func = newFunctionDeclaration("myFunc")
+            val func = newFunction("myFunc")
             val block = newBlock()
             func.body = block
             func.nextEOG += block

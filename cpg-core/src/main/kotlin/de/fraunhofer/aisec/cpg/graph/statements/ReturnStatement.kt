@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.statements
 
 import de.fraunhofer.aisec.cpg.graph.ArgumentHolder
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.ast.astEdgesOf
 import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import de.fraunhofer.aisec.cpg.graph.firstScopeParentOrNull
@@ -46,7 +46,7 @@ class ReturnStatement : Statement(), ArgumentHolder {
                 val func =
                     (this.scope as? FunctionScope
                             ?: this.scope?.firstScopeParentOrNull<FunctionScope>())
-                        ?.astNode as? FunctionDeclaration
+                        ?.astNode as? Function
                 if (func != null) {
                     edge.end.registerTypeObserver(func)
                 }

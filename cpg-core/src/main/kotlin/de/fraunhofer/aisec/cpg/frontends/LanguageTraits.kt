@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.HasOperatorCode
 import de.fraunhofer.aisec.cpg.graph.HasOverloadedOperation
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Name
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.scopes.*
@@ -70,7 +70,7 @@ interface HasTemplates : HasGenerics {
      * list of possible candidates.
      *
      * @return a pair in which the first member denotes whether resolution was successful and the
-     *   second parameter is a list of [FunctionDeclaration] candidates.
+     *   second parameter is a list of [Function] candidates.
      */
     fun handleTemplateFunctionCalls(
         curClass: Record?,
@@ -79,7 +79,7 @@ interface HasTemplates : HasGenerics {
         ctx: TranslationContext,
         currentTU: TranslationUnit?,
         needsExactMatch: Boolean,
-    ): Pair<Boolean, List<FunctionDeclaration>>
+    ): Pair<Boolean, List<Function>>
 }
 
 /**

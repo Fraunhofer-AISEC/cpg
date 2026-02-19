@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.ancestors
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.edges.*
@@ -196,10 +196,10 @@ class PythonFrontendTest : BaseTest() {
         assertNotNull(p)
 
         val foo = p.declarations.firstOrNull()
-        assertIs<FunctionDeclaration>(foo)
+        assertIs<Function>(foo)
 
         val bar = p.declarations[1]
-        assertIs<FunctionDeclaration>(bar)
+        assertIs<Function>(bar)
         assertEquals(2, bar.parameters.size)
 
         val fooBody = foo.body
@@ -1112,7 +1112,7 @@ class PythonFrontendTest : BaseTest() {
 
         assertEquals(9, commentedNodes.size)
 
-        val functions = commentedNodes.filterIsInstance<FunctionDeclaration>()
+        val functions = commentedNodes.filterIsInstance<Function>()
         assertEquals(1, functions.size)
         assertEquals("# a function", functions.firstOrNull()?.comment)
 

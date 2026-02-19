@@ -41,7 +41,7 @@ import java.util.regex.Pattern
  * Some piece of legacy code that deals with Java imports. We need to convert this to the new import
  * system.
  *
- * We need to remove this class and use [ImportResolver] and [ImportDeclaration] instead.
+ * We need to remove this class and use [ImportResolver] and [Import] instead.
  */
 @DependsOn(TypeHierarchyResolver::class)
 @RequiredFrontend(JavaLanguageFrontend::class)
@@ -91,7 +91,7 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
 
         for (asteriskImport in partitioned[true] ?: listOf()) {
             val base = importables[asteriskImport.replace(".*", "")]
-            if (base is EnumDeclaration) {
+            if (base is Enumeration) {
                 staticImports.addAll(base.entries)
             } else if (base is Record) {
                 val classes = listOf(base, *base.superTypeDeclarations.toTypedArray())
@@ -128,7 +128,7 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         )
 
         val memberEntries = mutableSetOf<EnumConstant>()
-        if (base is EnumDeclaration) {
+        if (base is Enumeration) {
             base.entries[name]?.let { memberEntries.add(it) }
         }
 

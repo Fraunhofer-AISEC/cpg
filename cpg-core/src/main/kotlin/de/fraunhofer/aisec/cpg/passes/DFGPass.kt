@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.assumptions.AssumptionType
 import de.fraunhofer.aisec.cpg.assumptions.assume
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.CallingContextOut
 import de.fraunhofer.aisec.cpg.graph.edges.flows.field
 import de.fraunhofer.aisec.cpg.graph.edges.flows.indexed
@@ -69,8 +70,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
 
     /**
      * For inferred functions which have function summaries encoded, we connect the arguments to
-     * modified parameter to propagate the changes to the arguments out of the [FunctionDeclaration]
-     * again.
+     * modified parameter to propagate the changes to the arguments out of the [Function] again.
      */
     private fun connectInferredCallArguments(functionSummaries: DFGFunctionSummaries) {
         for (call in callsInferredFunctions) {
@@ -141,7 +141,7 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
             is ThrowExpression -> handleThrowExpression(node)
             // Declarations
             is Field -> handleField(node)
-            is FunctionDeclaration -> handleFunctionDeclaration(node, functionSummaries)
+            is Function -> handleFunction(node, functionSummaries)
             is Tuple -> handleTuple(node)
             is Variable -> handleVariable(node)
         }
@@ -246,13 +246,10 @@ class DFGPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * Adds the DFG edge for a [FunctionDeclaration]. The data flows from the return statement(s) to
-     * the function.
+     * Adds the DFG edge for a [Function]. The data flows from the return statement(s) to the
+     * function.
      */
-    protected fun handleFunctionDeclaration(
-        node: FunctionDeclaration,
-        functionSummaries: DFGFunctionSummaries,
-    ) {
+    protected fun handleFunction(node: Function, functionSummaries: DFGFunctionSummaries) {
         if (node.isInferred) {
             val summaryExists = with(functionSummaries) { addFlowsToFunctionDeclaration(node) }
 

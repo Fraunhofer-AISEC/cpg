@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.llvm
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Problem
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -92,12 +92,12 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
     /**
      * Handles the parsing of [functions](https://llvm.org/docs/LangRef.html#functions). They can
      * either be pure declarations of (external) functions, which do not have a
-     * [FunctionDeclaration.body] or complete definitions of functions including a body of at least
+     * [Function.body] or complete definitions of functions including a body of at least
      * one basic block.
      */
-    private fun handleFunction(func: LLVMValueRef): FunctionDeclaration {
+    private fun handleFunction(func: LLVMValueRef): Function {
         val name = LLVMGetValueName(func)
-        val functionDeclaration = newFunctionDeclaration(name.string, rawNode = func)
+        val functionDeclaration = newFunction(name.string, rawNode = func)
 
         // return types are a bit tricky, because the type of the function is a pointer to the
         // function type, which then has the return type in it

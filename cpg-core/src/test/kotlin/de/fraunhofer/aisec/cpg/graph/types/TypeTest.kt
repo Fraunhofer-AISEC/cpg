@@ -41,7 +41,7 @@ class TypeTest {
             val tu = newTranslationUnit("file.extension")
             this.scopeManager.resetToGlobal(tu)
 
-            val func = newFunctionDeclaration("main")
+            val func = newFunction("main")
             assertLocalName("main", func)
 
             val simpleType = objectType("SomeObject")

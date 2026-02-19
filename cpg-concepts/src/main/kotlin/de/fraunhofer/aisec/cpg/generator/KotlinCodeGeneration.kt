@@ -517,8 +517,8 @@ private val dataPropertyTypeMap: Map<String, TypeName> =
         put("float", FLOAT)
         put("boolean", BOOLEAN)
         put(
-            "de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration",
-            ClassName("de.fraunhofer.aisec.cpg.graph.declarations", "FunctionDeclaration"),
+            "de.fraunhofer.aisec.cpg.graph.declarations.Function",
+            ClassName("de.fraunhofer.aisec.cpg.graph.declarations", "Function"),
         )
         put(
             "de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression",

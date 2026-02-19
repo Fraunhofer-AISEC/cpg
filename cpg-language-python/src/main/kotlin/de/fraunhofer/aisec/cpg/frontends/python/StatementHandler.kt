@@ -554,7 +554,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 // If we have an alias, we import the package with the alias and do NOT import the
                 // parent packages
                 val decl =
-                    newImportDeclaration(
+                    newImport(
                         parseName(imp.name),
                         style = ImportStyle.IMPORT_NAMESPACE,
                         parseName(alias),
@@ -569,7 +569,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 var importName: Name? = parseName(imp.name)
                 while (importName != null) {
                     val decl =
-                        newImportDeclaration(
+                        newImport(
                             importName,
                             style = ImportStyle.IMPORT_NAMESPACE,
                             rawNode = imp,
@@ -625,7 +625,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     // In the wildcard case, our "import" is the module name, and we set "wildcard"
                     // to true
                     conditionallyAddAdditionalSourcesToAnalysis(module)
-                    newImportDeclaration(
+                    newImport(
                         module,
                         style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
                         rawNode = imp,
@@ -637,14 +637,14 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                     val alias = imp.asname
                     conditionallyAddAdditionalSourcesToAnalysis(name)
                     if (alias != null) {
-                        newImportDeclaration(
+                        newImport(
                             name,
                             style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
                             parseName(alias),
                             rawNode = imp,
                         )
                     } else {
-                        newImportDeclaration(
+                        newImport(
                             name,
                             style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
                             rawNode = imp,

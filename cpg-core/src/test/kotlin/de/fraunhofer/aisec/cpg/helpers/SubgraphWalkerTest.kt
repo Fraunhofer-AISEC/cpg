@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.test.*
@@ -42,7 +42,7 @@ internal class SubgraphWalkerTest : BaseTest() {
         // Let's create an intentional loop
         val tu = TranslationUnit()
         val name = Namespace()
-        val func = FunctionDeclaration()
+        val func = Function()
         name.addDeclaration(tu)
         name.addDeclaration(func)
         tu.addDeclaration(name)

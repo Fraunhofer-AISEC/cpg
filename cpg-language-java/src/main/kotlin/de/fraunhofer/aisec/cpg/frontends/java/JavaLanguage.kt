@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.java
 import com.fasterxml.jackson.annotation.JsonIgnore
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
@@ -133,7 +133,7 @@ open class JavaLanguage :
         // therefore do some additional filtering of the candidates here, before handling it.
         if (ref.candidates.size > 1) {
             if (ref.resolutionHelper is CallExpression) {
-                ref.candidates = ref.candidates.filter { it is FunctionDeclaration }.toSet()
+                ref.candidates = ref.candidates.filter { it is Function }.toSet()
             } else {
                 ref.candidates = ref.candidates.filter { it is Variable }.toSet()
             }

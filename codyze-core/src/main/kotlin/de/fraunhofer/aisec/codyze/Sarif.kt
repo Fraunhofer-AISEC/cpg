@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
@@ -158,7 +158,7 @@ private fun Node?.toSarifMessage(): Message? {
  * current function.
  */
 private fun Node.toSarifCallStack(): List<Stack> {
-    val currentFunc = this.firstParentOrNull<FunctionDeclaration>()
+    val currentFunc = this.firstParentOrNull<Function>()
     return listOf(
         Stack(
             message = Message(text = "Stack"),
@@ -197,7 +197,7 @@ fun Node?.toSarifLocation(
 ): Location? {
     val location = this?.location ?: return null
 
-    return if (this is FunctionDeclaration && this.body != null && onlyFunctionHeader) {
+    return if (this is Function && this.body != null && onlyFunctionHeader) {
             // Try to calculate the end of the header by using the beginning of the body. This is
             // not entirely correct since in some programming languages we need to start the body
             // location at the first statement, since we are missing location information for the
@@ -274,7 +274,7 @@ fun de.fraunhofer.aisec.cpg.sarif.PhysicalLocation.toSarif(
  */
 private fun Node.toSarifKind(): String? {
     return when (this) {
-        is FunctionDeclaration -> "function"
+        is Function -> "function"
         is Field -> "member"
         is TranslationUnit -> "module"
         is Namespace -> "namespace"

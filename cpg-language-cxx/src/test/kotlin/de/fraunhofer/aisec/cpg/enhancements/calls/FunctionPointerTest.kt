@@ -30,7 +30,7 @@ import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.ConstructExpression
@@ -146,8 +146,8 @@ internal class FunctionPointerTest : BaseTest() {
         }
     }
 
-    private fun getSourceFunction(variable: Variable): FunctionDeclaration {
-        val functions: MutableList<FunctionDeclaration> = ArrayList()
+    private fun getSourceFunction(variable: Variable): Function {
+        val functions: MutableList<Function> = ArrayList()
         val worklist: Deque<Node> = ArrayDeque()
         val seen = Collections.newSetFromMap(IdentityHashMap<Node, Boolean>())
         worklist.push(variable)
@@ -156,7 +156,7 @@ internal class FunctionPointerTest : BaseTest() {
             if (!seen.add(curr)) {
                 continue
             }
-            if (curr is FunctionDeclaration) {
+            if (curr is Function) {
                 functions.add(curr)
             } else {
                 curr.prevDFG.forEach(Consumer { e: Node -> worklist.push(e) })
@@ -171,7 +171,7 @@ internal class FunctionPointerTest : BaseTest() {
                 if (!seen.add(curr)) {
                     continue
                 }
-                if (curr is FunctionDeclaration) {
+                if (curr is Function) {
                     functions.add(curr)
                 } else {
                     curr.prevDFG.forEach(Consumer { e: Node -> worklist.push(e) })

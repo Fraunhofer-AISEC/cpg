@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg
 import de.fraunhofer.aisec.cpg.frontends.*
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.scopes.*
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -92,8 +93,8 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         private set
 
     /** The current function, according to the scope that is currently active. */
-    val currentFunction: FunctionDeclaration?
-        get() = this.firstScopeIsInstanceOrNull<FunctionScope>()?.astNode as? FunctionDeclaration
+    val currentFunction: Function?
+        get() = this.firstScopeIsInstanceOrNull<FunctionScope>()?.astNode as? Function
 
     /** The current block, according to the scope that is currently active. */
     val currentBlock: Block?
@@ -241,7 +242,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
                     is CatchClause,
                     is CollectionComprehension,
                     is Block -> LocalScope(nodeToScope)
-                    is FunctionDeclaration -> FunctionScope(nodeToScope)
+                    is Function -> FunctionScope(nodeToScope)
                     is Record -> RecordScope(nodeToScope)
                     is Template -> TemplateScope(nodeToScope)
                     is TranslationUnit -> FileScope(nodeToScope)
@@ -550,8 +551,8 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
 
     /**
      * This function looks up a [Scope] by its [name] relative to [startScope]. The reason why this
-     * is necessary is that the [name] could potentially include aliases set by an
-     * [ImportDeclaration] and therefore can not directly be found in the [nameScopeMap].
+     * is necessary is that the [name] could potentially include aliases set by an [Import] and
+     * therefore can not directly be found in the [nameScopeMap].
      *
      * It works by splitting the name into its parts and then iteratively looking up the scope for
      * each part, starting at the "beginning". For example if we have a name `A::B::C`, we first
@@ -818,7 +819,7 @@ class ScopeManager(override var ctx: TranslationContext) : ScopeProvider, Contex
         val it = list.iterator()
         while (it.hasNext()) {
             val decl = it.next()
-            if (decl is FunctionDeclaration) {
+            if (decl is Function) {
                 val definition = decl.definition
                 if (!decl.isDefinition && definition != null && definition in list) {
                     it.remove()
@@ -878,9 +879,8 @@ fun <T : Declaration> ContextProvider.declare(declaration: T): T {
 }
 
 /**
- * [SignatureResult] will be the result of the function [FunctionDeclaration.matchesSignature] which
- * calculates whether the provided [CallExpression] will match the signature of the current
- * [FunctionDeclaration].
+ * [SignatureResult] will be the result of the function [Function.matchesSignature] which calculates
+ * whether the provided [CallExpression] will match the signature of the current [Function].
  */
 sealed class SignatureResult(open val casts: List<CastResult>? = null) {
     val ranking: Int
@@ -902,7 +902,7 @@ data object IncompatibleSignature : SignatureResult()
 
 data class SignatureMatches(override val casts: List<CastResult>) : SignatureResult(casts)
 
-fun FunctionDeclaration.matchesSignature(
+fun Function.matchesSignature(
     signature: List<Type>,
     arguments: List<Expression>? = null,
     useDefaultArguments: Boolean = false,
@@ -983,26 +983,26 @@ data class CallResolutionResult(
 
     /**
      * A set of candidate symbols we discovered based on the [CallExpression.callee] (using
-     * [ScopeManager.lookupSymbolByName]), more specifically a list of [FunctionDeclaration] nodes.
+     * [ScopeManager.lookupSymbolByName]), more specifically a list of [Function] nodes.
      */
-    var candidateFunctions: Set<FunctionDeclaration>,
+    var candidateFunctions: Set<Function>,
 
     /**
      * A set of functions, that restrict the [candidateFunctions] to those whose signature match.
      */
-    var viableFunctions: Set<FunctionDeclaration>,
+    var viableFunctions: Set<Function>,
 
     /**
-     * A helper map to store the [SignatureResult] of each call to
-     * [FunctionDeclaration.matchesSignature] for each function in [viableFunctions].
+     * A helper map to store the [SignatureResult] of each call to [Function.matchesSignature] for
+     * each function in [viableFunctions].
      */
-    var signatureResults: Map<FunctionDeclaration, SignatureResult>,
+    var signatureResults: Map<Function, SignatureResult>,
 
     /**
      * This set contains the best viable function(s) of the [viableFunctions]. Ideally this is only
      * one, but because of ambiguities or other factors, this can contain multiple functions.
      */
-    var bestViable: Set<FunctionDeclaration>,
+    var bestViable: Set<Function>,
 
     /** The kind of success this resolution had. */
     var success: SuccessKind,

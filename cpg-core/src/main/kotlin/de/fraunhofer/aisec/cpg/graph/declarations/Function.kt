@@ -49,7 +49,7 @@ import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
 /** Represents the declaration or definition of a function. */
-open class FunctionDeclaration :
+open class Function :
     ValueDeclaration(),
     DeclarationHolder,
     EOGStarterHolder,
@@ -57,34 +57,33 @@ open class FunctionDeclaration :
     HasSecondaryTypeEdge {
     @Relationship("BODY") var bodyEdge = astOptionalEdgeOf<Statement>()
     /** The function body. Usually a [Block]. */
-    var body by unwrapping(FunctionDeclaration::bodyEdge)
+    var body by unwrapping(Function::bodyEdge)
 
     /** The list of function parameters. */
     @Relationship(value = "PARAMETERS", direction = Relationship.Direction.OUTGOING)
     var parameterEdges = astEdgesOf<Parameter>()
     /** Virtual property for accessing [parameterEdges] without property edges. */
-    var parameters by unwrapping(FunctionDeclaration::parameterEdges)
+    var parameters by unwrapping(Function::parameterEdges)
 
     @Relationship(value = "THROWS_TYPES", direction = Relationship.Direction.OUTGOING)
     var throwsTypes = mutableListOf<Type>()
 
     @Relationship(value = "OVERRIDES", direction = Relationship.Direction.INCOMING)
-    val overriddenBy = mutableListOf<FunctionDeclaration>()
+    val overriddenBy = mutableListOf<Function>()
 
     @Relationship(value = "OVERRIDES", direction = Relationship.Direction.OUTGOING)
-    val overrides = mutableListOf<FunctionDeclaration>()
+    val overrides = mutableListOf<Function>()
 
     /**
      * The mirror property for [CallExpression.invokeEdges]. This holds all incoming [Invokes] edges
      * from [CallExpression] nodes to this function.
      */
     @Relationship(value = "INVOKES", direction = Relationship.Direction.INCOMING)
-    val calledByEdges: Invokes<FunctionDeclaration> =
-        Invokes<FunctionDeclaration>(this, CallExpression::invokeEdges, outgoing = false)
+    val calledByEdges: Invokes<Function> =
+        Invokes<Function>(this, CallExpression::invokeEdges, outgoing = false)
 
     /** Virtual property for accessing [calledByEdges] without property edges. */
-    val calledBy: MutableList<CallExpression> by
-        unwrappingIncoming(FunctionDeclaration::calledByEdges)
+    val calledBy: MutableList<CallExpression> by unwrappingIncoming(Function::calledByEdges)
 
     /** The list of return types. The default is an empty list. */
     var returnTypes = listOf<Type>()
@@ -97,7 +96,7 @@ open class FunctionDeclaration :
 
     /** If this is only a declaration, this provides a link to the definition of the function. */
     @Relationship(value = "DEFINES")
-    var definition: FunctionDeclaration? = null
+    var definition: Function? = null
         get() {
             return if (isDefinition) this else field
         }
@@ -110,23 +109,23 @@ open class FunctionDeclaration :
     val signature: String
         get() = buildSignature(this, returnTypes)
 
-    fun isOverrideCandidate(other: FunctionDeclaration): Boolean {
+    fun isOverrideCandidate(other: Function): Boolean {
         return other.name.localName == name.localName &&
             other.type == type &&
             other.signature == signature
     }
 
-    fun addOverriddenBy(c: Collection<FunctionDeclaration>) {
+    fun addOverriddenBy(c: Collection<Function>) {
         for (functionDeclaration in c) {
             addOverriddenBy(functionDeclaration)
         }
     }
 
-    fun addOverriddenBy(functionDeclaration: FunctionDeclaration) {
+    fun addOverriddenBy(functionDeclaration: Function) {
         addIfNotContains(overriddenBy, functionDeclaration)
     }
 
-    fun addOverrides(functionDeclaration: FunctionDeclaration) {
+    fun addOverrides(functionDeclaration: Function) {
         addIfNotContains(overrides, functionDeclaration)
     }
 
@@ -169,7 +168,7 @@ open class FunctionDeclaration :
         if (this === other) {
             return true
         }
-        if (other !is FunctionDeclaration) {
+        if (other !is Function) {
             return false
         }
         return (super.equals(other) &&

@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 
 class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
@@ -38,11 +39,11 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
     private fun handleNode(node: TypeScriptNode): Declaration {
         when (node.type) {
             "SourceFile" -> return handleSourceFile(node)
-            "FunctionDeclaration" -> return handleFunctionDeclaration(node)
-            "MethodDeclaration" -> return handleFunctionDeclaration(node)
-            "Constructor" -> return handleFunctionDeclaration(node)
-            "ArrowFunction" -> return handleFunctionDeclaration(node)
-            "FunctionExpression" -> return handleFunctionDeclaration(node)
+            "FunctionDeclaration" -> return handleFunction(node)
+            "MethodDeclaration" -> return handleFunction(node)
+            "Constructor" -> return handleFunction(node)
+            "ArrowFunction" -> return handleFunction(node)
+            "FunctionExpression" -> return handleFunction(node)
             "Parameter" -> return handleParameter(node)
             "PropertySignature" -> return handlePropertySignature(node)
             "PropertyDeclaration" -> return handlePropertySignature(node)
@@ -133,10 +134,10 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
         return tu
     }
 
-    private fun handleFunctionDeclaration(node: TypeScriptNode): FunctionDeclaration {
+    private fun handleFunction(node: TypeScriptNode): Function {
         val name = this.frontend.getIdentifierName(node)
 
-        val func: FunctionDeclaration =
+        val func: Function =
             when (node.type) {
                 "MethodDeclaration" -> {
                     val record = this.frontend.scopeManager.currentRecord
@@ -152,7 +153,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                         rawNode = node,
                     )
                 }
-                else -> newFunctionDeclaration(name, rawNode = node)
+                else -> newFunction(name, rawNode = node)
             }
 
         node.typeChildNode?.let { func.type = this.frontend.typeOf(it) }

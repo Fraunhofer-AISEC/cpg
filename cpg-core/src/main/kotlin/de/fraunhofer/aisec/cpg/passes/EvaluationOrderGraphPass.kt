@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.EOGStarterHolder
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.StatementHolder
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.flows.EvaluationOrder
 import de.fraunhofer.aisec.cpg.graph.firstParentOrNull
 import de.fraunhofer.aisec.cpg.graph.statements.*
@@ -93,9 +94,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected var nextEdgeBranch: Boolean? = null
 
     /**
-     * This maps nodes that have to handle throws, i.e. [TryStatement] and [FunctionDeclaration], to
-     * the [Type]s of errors that were thrown and the EOG exits of the throwing statements. Entries
-     * to the outer map will only be created if the node was identified to handle or relay a throw.
+     * This maps nodes that have to handle throws, i.e. [TryStatement] and [Function], to the
+     * [Type]s of errors that were thrown and the EOG exits of the throwing statements. Entries to
+     * the outer map will only be created if the node was identified to handle or relay a throw.
      * Entries to the inner throw will only be created when the mapping type was thrown.
      */
     val nodesToInternalThrows = mutableMapOf<Node, MutableMap<Type, MutableList<Node>>>()
@@ -304,9 +305,9 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
 
     /**
      * See
-     * [Specification for FunctionDeclaration](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#functiondeclaration)
+     * [Specification for Function](https://fraunhofer-aisec.github.io/cpg/CPG/specs/eog/#functiondeclaration)
      */
-    protected open fun handleFunctionDeclaration(node: FunctionDeclaration) {
+    protected open fun handleFunction(node: Function) {
         // reset EOG
         currentPredecessors.clear()
         // push the function declaration
@@ -364,7 +365,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             is Namespace -> handleNamespace(node)
             is Record -> handleRecord(node)
             is Extension -> handleExtension(node)
-            is FunctionDeclaration -> handleFunctionDeclaration(node)
+            is Function -> handleFunction(node)
             is Tuple -> handleTuple(node)
             is Variable -> handleVariable(node)
             is ConstructExpression -> handleConstructExpression(node)
@@ -415,7 +416,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             is DefaultStatement -> handleDefault(node)
             is TypeIdExpression -> handleDefault(node)
             is Reference -> handleDefault(node)
-            is ImportDeclaration -> handleDefault(node)
+            is Import -> handleDefault(node)
             // These nodes are not added to the EOG
             is Include -> doNothing()
             else -> LOGGER.info("Parsing of type ${node.javaClass} is not supported (yet)")
@@ -558,12 +559,12 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
     protected fun handleDeclarationStatement(node: DeclarationStatement) {
         // loop through declarations
         for (declaration in node.declarations) {
-            if (declaration is ImportDeclaration) {
+            if (declaration is Import) {
                 handleEOG(declaration)
             } else if (declaration is Variable) {
                 // analyze the initializers if there is one
                 handleEOG(declaration)
-            } else if (declaration is FunctionDeclaration) {
+            } else if (declaration is Function) {
                 // save the current EOG stack, because we can have a function declaration within an
                 // existing function and the EOG handler for handling function declarations will
                 // reset the
@@ -1341,7 +1342,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
             // Here, we identify the encapsulating ast node that can handle or relay a throw
             val handlingOrRelayingParent =
                 throwExpression.firstParentOrNull<Node> { parent ->
-                    parent is TryStatement || parent is FunctionDeclaration
+                    parent is TryStatement || parent is Function
                 }
             if (handlingOrRelayingParent != null) {
                 val throwByTypeMap =

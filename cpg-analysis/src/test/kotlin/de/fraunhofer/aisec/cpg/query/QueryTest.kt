@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.evaluation.MultiValueEvaluator
 import de.fraunhofer.aisec.cpg.evaluation.NumberSet
 import de.fraunhofer.aisec.cpg.frontends.TestLanguageFrontend
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.testcases.Query
 import kotlin.test.assertEquals
@@ -575,7 +575,7 @@ class QueryTest {
                 { it.name.localName == "toString" },
                 { n1 ->
                     result
-                        .all<FunctionDeclaration>(
+                        .all<Function>(
                             { it.name.localName == "print" },
                             { n2 -> dataFlow(n1) { node -> node == n2.parameters[0] }.value },
                         )
@@ -590,7 +590,7 @@ class QueryTest {
             result.allExtended<CallExpression>(
                 { it.name.localName == "toString" },
                 { n1 ->
-                    result.allExtended<FunctionDeclaration>(
+                    result.allExtended<Function>(
                         { it.name.localName == "print" },
                         { n2 -> dataFlow(n1) { node -> node == n2.parameters[0] } },
                     )
@@ -605,7 +605,7 @@ class QueryTest {
                 { it.name.localName == "test" },
                 { n1 ->
                     result
-                        .all<FunctionDeclaration>(
+                        .all<Function>(
                             { it.name.localName == "print" },
                             { n2 -> dataFlow(n1) { node -> node == n2.parameters[0] }.value },
                         )
@@ -620,7 +620,7 @@ class QueryTest {
             result.allExtended<CallExpression>(
                 { it.name.localName == "test" },
                 { n1 ->
-                    result.allExtended<FunctionDeclaration>(
+                    result.allExtended<Function>(
                         { it.name.localName == "print" },
                         { n2 -> dataFlow(n1) { node -> node == n2.parameters[0] } },
                     )
@@ -715,15 +715,15 @@ class QueryTest {
             assertNull(queryTree3.node)
 
             val tu = newTranslationUnit("tu")
-            val func1 = newFunctionDeclaration("func1")
+            val func1 = newFunction("func1")
             tu.declarations += func1
-            val func2 = newFunctionDeclaration("func2")
+            val func2 = newFunction("func2")
             tu.declarations += func2
-            val func3 = newFunctionDeclaration("func3")
+            val func3 = newFunction("func3")
             tu.declarations += func3
 
             val queryTree4 =
-                tu.allExtended<FunctionDeclaration>(
+                tu.allExtended<Function>(
                     mustSatisfy = { QueryTree(true, operator = GenericQueryOperators.EVALUATE) }
                 )
             assertNotNull(queryTree4)

@@ -30,10 +30,10 @@ import de.fraunhofer.aisec.cpg.graph.edges.unwrapping
 import org.apache.commons.lang3.builder.ToStringBuilder
 import org.neo4j.ogm.annotation.Relationship
 
-class EnumDeclaration : Record() {
+class Enumeration : Record() {
     @Relationship(value = "ENTRIES", direction = Relationship.Direction.OUTGOING)
     var entryEdges = astEdgesOf<EnumConstant>()
-    var entries by unwrapping(EnumDeclaration::entryEdges)
+    var entries by unwrapping(Enumeration::entryEdges)
 
     override fun toString(): String {
         return ToStringBuilder(this, TO_STRING_STYLE)

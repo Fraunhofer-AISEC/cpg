@@ -31,6 +31,7 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.IDENTIF
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_KEYWORD_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_POSITIONAL_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
@@ -97,12 +98,12 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
      *     - a [Constructor] if it appears in a record and its [name] is `__init__`
      *     - a [Method] if it appears in a record, and it isn't a
      *       [Constructor]
-     *     - a [FunctionDeclaration] if neither of the above apply
+     *     - a [Function] if neither of the above apply
      *
      * In case of a [Constructor] or[Method]: the first argument is the
      * `receiver` (most often called `self`).
      */
-    private fun handleFunctionDef(s: Python.AST.NormalOrAsyncFunctionDef): FunctionDeclaration {
+    private fun handleFunctionDef(s: Python.AST.NormalOrAsyncFunctionDef): Function {
         val recordDeclaration =
             (frontend.scopeManager.currentScope as? RecordScope)?.astNode as? Record
         val language = language
@@ -140,7 +141,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
                     )
                 }
             } else {
-                newFunctionDeclaration(name = s.name, rawNode = s)
+                newFunction(name = s.name, rawNode = s)
             }
         frontend.scopeManager.enterScope(func)
 
@@ -187,7 +188,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
     /** Adds the arguments to [func] which might be located in a [recordDeclaration]. */
     private fun handleArguments(
         args: Python.AST.arguments,
-        func: FunctionDeclaration,
+        func: Function,
         recordDeclaration: Record?,
     ) {
         // We can merge posonlyargs and args because both are positional arguments. We do not
@@ -218,10 +219,10 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
      * This function creates a [newParameter] for the argument, setting any modifiers
      * (like positional-only or keyword-only) and [defaultValue] if applicable.
      *
-     * This also adds the [Parameter] to the [FunctionDeclaration.parameters].
+     * This also adds the [Parameter] to the [Function.parameters].
      */
     internal fun handleArgument(
-        func: FunctionDeclaration,
+        func: Function,
         node: Python.AST.arg,
         isPosOnly: Boolean = false,
         isVariadic: Boolean = false,
@@ -261,7 +262,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
     private fun handleReceiverArgument(
         positionalArguments: List<Python.AST.arg>,
         args: Python.AST.arguments,
-        result: FunctionDeclaration,
+        result: Function,
         recordDeclaration: Record,
     ) {
         // first argument is the receiver
@@ -321,7 +322,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
      * From the Python docs: "If there are fewer defaults, they correspond to the last n arguments."
      */
     private fun handlePositionalArguments(
-        func: FunctionDeclaration,
+        func: Function,
         positionalArguments: List<Python.AST.arg>,
         args: Python.AST.arguments,
     ) {
@@ -351,7 +352,7 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
      * This method extracts the keyword-only arguments from [args] and maps them to the
      * corresponding function parameters.
      */
-    private fun handleKeywordOnlyArguments(func: FunctionDeclaration, args: Python.AST.arguments) {
+    private fun handleKeywordOnlyArguments(func: Function, args: Python.AST.arguments) {
         for (idx in args.kwonlyargs.indices) {
             val arg = args.kwonlyargs[idx]
             val default = args.kw_defaults.getOrNull(idx)

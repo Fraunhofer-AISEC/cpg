@@ -61,7 +61,7 @@ internal class ScopeManagerTest : BaseTest() {
                 val namespaceA1 = frontend1.newNamespace("A")
                 s1.enterScope(namespaceA1)
 
-                val func1 = frontend1.newFunctionDeclaration("func1")
+                val func1 = frontend1.newFunction("func1")
                 s1.addDeclaration(func1)
                 namespaceA1.declarations += func1
 
@@ -83,7 +83,7 @@ internal class ScopeManagerTest : BaseTest() {
                 val namespaceA2 = frontend2.newNamespace("A")
                 s2.enterScope(namespaceA2)
 
-                val func2 = frontend2.newFunctionDeclaration("func2")
+                val func2 = frontend2.newFunction("func2")
                 s2.addDeclaration(func2)
                 namespaceA2.declarations += func2
 
@@ -156,7 +156,7 @@ internal class ScopeManagerTest : BaseTest() {
 
             assertEquals("A::B", s.currentNamespace.toString())
 
-            val func = frontend.newFunctionDeclaration("func")
+            val func = frontend.newFunction("func")
             s.addDeclaration(func)
             tu.declarations += func
 

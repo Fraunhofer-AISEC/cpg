@@ -30,6 +30,7 @@ import de.fraunhofer.aisec.cpg.assumptions.Assumption
 import de.fraunhofer.aisec.cpg.assumptions.HasAssumptions
 import de.fraunhofer.aisec.cpg.assumptions.addAssumptionDependence
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.ControlDependence
 import de.fraunhofer.aisec.cpg.graph.edges.flows.FullDataflowGranularity
@@ -234,7 +235,7 @@ operator fun <T : Node> Collection<T>.invoke(lookup: String): List<T> {
  *
  * For convenience, `n` defaults to zero, so that the first statement is always easy to fetch.
  */
-inline fun <reified T : Statement> FunctionDeclaration.bodyOrNull(n: Int = 0): T? {
+inline fun <reified T : Statement> Function.bodyOrNull(n: Int = 0): T? {
     val body = this.body
     return if (body is Block) {
         val statements = body.statements
@@ -261,7 +262,7 @@ inline fun <reified T : Statement> FunctionDeclaration.bodyOrNull(n: Int = 0): T
  * For convenience, `n` defaults to zero, so that the first statement is always easy to fetch.
  */
 @Throws(StatementNotFound::class)
-inline fun <reified T : Statement> FunctionDeclaration.body(n: Int = 0): T {
+inline fun <reified T : Statement> Function.body(n: Int = 0): T {
     return bodyOrNull(n) ?: throw StatementNotFound()
 }
 
@@ -781,7 +782,7 @@ fun Node.followPrevPDGUntilHit(
             val nextNodes = currentNode.prevPDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll(
-                    (currentNode as? FunctionDeclaration)?.usages?.mapNotNull {
+                    (currentNode as? Function)?.usages?.mapNotNull {
                         val result =
                             if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true)
                                 it.astParent as? CallExpression
@@ -823,7 +824,7 @@ fun Node.followPrevCDGUntilHit(
             val nextNodes = currentNode.prevCDG.toMutableList()
             if (interproceduralAnalysis) {
                 nextNodes.addAll(
-                    (currentNode as? FunctionDeclaration)?.usages?.mapNotNull {
+                    (currentNode as? Function)?.usages?.mapNotNull {
                         val result =
                             if (interproceduralMaxDepth?.let { ctx.callStack.depth >= it } != true)
                                 it.astParent as? CallExpression
@@ -1001,11 +1002,11 @@ fun Node.followNextFullDFGEdgesUntilHit(
 }
 
 /**
- * Returns a [Collection] of last nodes in the EOG of this [FunctionDeclaration]. If there's no
- * function body, it will return a list of this function declaration. This function does not
- * propagate assumptions currently.
+ * Returns a [Collection] of last nodes in the EOG of this [Function]. If there's no function body,
+ * it will return a list of this function declaration. This function does not propagate assumptions
+ * currently.
  */
-val FunctionDeclaration.lastEOGNodes: Collection<Node>
+val Function.lastEOGNodes: Collection<Node>
     get() {
         val lastEOG = collectAllNextEOGPaths(false).flatMap { it.nodes.last().prevEOGEdges }
         return if (lastEOG.isEmpty()) {
@@ -1154,8 +1155,8 @@ val AstNode?.fields: List<Field>
 val AstNode?.parameters: List<Parameter>
     get() = this.allChildren()
 
-/** Returns all [FunctionDeclaration] children in this graph, starting with this [Node]. */
-val AstNode?.functions: List<FunctionDeclaration>
+/** Returns all [Function] children in this graph, starting with this [Node]. */
+val AstNode?.functions: List<Function>
     get() = this.allChildren()
 
 /** Returns all [Record] children in this graph, starting with this [Node]. */
@@ -1166,8 +1167,8 @@ val AstNode?.records: List<Record>
 val AstNode?.namespaces: List<Namespace>
     get() = this.allChildren()
 
-/** Returns all [ImportDeclaration] children in this graph, starting with this [Node]. */
-val AstNode?.imports: List<ImportDeclaration>
+/** Returns all [Import] children in this graph, starting with this [Node]. */
+val AstNode?.imports: List<Import>
     get() = this.allChildren()
 
 /** Returns all [Variable] children in this graph, starting with this [Node]. */
@@ -1363,11 +1364,11 @@ fun TranslationResult.callsByName(name: String): List<CallExpression> {
 }
 
 /** Set of all functions which are called from this function */
-val FunctionDeclaration.callees: Set<FunctionDeclaration>
+val Function.callees: Set<Function>
     get() {
         return this.calls
             .map { it.invokes }
-            .foldRight(mutableListOf<FunctionDeclaration>()) { l, res ->
+            .foldRight(mutableListOf<Function>()) { l, res ->
                 res.addAll(l)
                 res
             }
@@ -1375,7 +1376,7 @@ val FunctionDeclaration.callees: Set<FunctionDeclaration>
     }
 
 /** Retrieves the n-th statement of the body of this function declaration. */
-operator fun FunctionDeclaration.get(n: Int): Statement? {
+operator fun Function.get(n: Int): Statement? {
     val body = this.body
 
     if (body is Block) {
@@ -1388,7 +1389,7 @@ operator fun FunctionDeclaration.get(n: Int): Statement? {
 }
 
 /** Set of all functions calling [function] */
-fun TranslationResult.callersOf(function: FunctionDeclaration): Set<FunctionDeclaration> {
+fun TranslationResult.callersOf(function: Function): Set<Function> {
     return this.functions.filter { function in it.callees }.toSet()
 }
 
@@ -1404,7 +1405,7 @@ fun IfStatement.controls(): List<Node> {
 fun Node.controlledBy(): List<Node> {
     val result = mutableListOf<Node>()
     var checkedNode: Node? = this
-    while (checkedNode !is FunctionDeclaration) {
+    while (checkedNode !is Function) {
         checkedNode = checkedNode?.astParent
         if (checkedNode == null) {
             break
@@ -1510,12 +1511,12 @@ val Node.component: Component?
 
 /**
  * This helper function be used to find out if a particular expression (usually a [CallExpression]
- * or a [Reference]) is imported through a [ImportDeclaration].
+ * or a [Reference]) is imported through a [Import].
  *
  * It returns a [Pair], with the [Pair.first] being a boolean value whether it was imported and
- * [Pair.second] the [ImportDeclaration] if applicable.
+ * [Pair.second] the [Import] if applicable.
  */
-val Expression.importedFrom: List<ImportDeclaration>
+val Expression.importedFrom: List<Import>
     get() {
         when (this) {
             is CallExpression -> {

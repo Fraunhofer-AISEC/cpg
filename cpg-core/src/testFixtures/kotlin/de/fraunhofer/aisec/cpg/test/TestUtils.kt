@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.LanguageProvider
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.get
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -244,7 +244,7 @@ fun assertNotRefersTo(expression: Expression?, b: Declaration?, message: String?
  * Asserts, that the call expression given in [call] refers to the expected function declaration
  * [func].
  */
-fun assertInvokes(call: CallExpression?, func: FunctionDeclaration?, message: String? = null) {
+fun assertInvokes(call: CallExpression?, func: Function?, message: String? = null) {
     assertNotNull(call)
     assertContains(call.invokes, func, message)
 }

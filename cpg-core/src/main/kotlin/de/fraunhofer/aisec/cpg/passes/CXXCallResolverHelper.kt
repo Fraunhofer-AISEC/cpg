@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.frontends.CastNotPossible
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.tryCast
@@ -64,7 +65,7 @@ fun shouldContinueSearchInParent(recordDeclaration: Record?, name: String?): Boo
  * @param templateCall call to instantiate and invoke a function template
  * @param functionTemplateDeclaration functionTemplate we have identified that should be
  *   instantiated
- * @param function FunctionDeclaration representing the realization of the template
+ * @param function Function representing the realization of the template
  * @param initializationSignature mapping containing the all elements of the signature of the
  *   Template as key and the Type/Expression the Parameter is initialized with.
  * @param initializationType mapping of the instantiation value to the instantiation type (depends
@@ -74,11 +75,11 @@ fun shouldContinueSearchInParent(recordDeclaration: Record?, name: String?): Boo
 fun applyTemplateInstantiation(
     templateCall: CallExpression,
     functionTemplateDeclaration: FunctionTemplate?,
-    function: FunctionDeclaration,
+    function: Function,
     initializationSignature: Map<Declaration?, AstNode?>,
     initializationType: Map<AstNode?, Template.TemplateInitialization?>,
     orderedInitializationSignature: Map<Declaration, Int>,
-): List<FunctionDeclaration> {
+): List<Function> {
     val templateInstantiationParameters =
         mutableListOf<AstNode>(*orderedInitializationSignature.keys.toTypedArray())
     for ((key, value) in orderedInitializationSignature) {
@@ -136,10 +137,10 @@ fun applyTemplateInstantiation(
  * @param arguments arguments of the call
  * @param functionSignature Types of the signature of the possible invocation candidate
  * @return List containing either null on the i-th position (if the type of i-th argument of the
- *   call equals the type of the i-th argument of the FunctionDeclaration) or a CastExpression on
- *   the i-th position (if the argument of the call can be cast to match the type of the argument at
- *   the i-th position of the FunctionDeclaration). If the list is empty the signature of the
- *   FunctionDeclaration cannot be reached through implicit casts
+ *   call equals the type of the i-th argument of the Function) or a CastExpression on the i-th
+ *   position (if the argument of the call can be cast to match the type of the argument at the i-th
+ *   position of the Function). If the list is empty the signature of the Function cannot be reached
+ *   through implicit casts
  */
 fun signatureWithImplicitCastTransformation(
     call: CallExpression,
@@ -371,17 +372,17 @@ fun handleImplicitTemplateParameter(
 }
 
 /**
- * @param function FunctionDeclaration realization of the template
+ * @param function Function realization of the template
  * @param parameterizedTypeResolution mapping of ParameterizedTypes to the TypeParameterDeclarations
  *   that define them, used to backwards resolve
  * @param initializationSignature mapping between the ParamDeclaration of the template and the
  *   corresponding instantiations
- * @return List of Types representing the Signature of the FunctionDeclaration, but
- *   ParameterizedTypes (which depend on the specific instantiation of the template) are resolved to
- *   the values the Template is instantiated with.
+ * @return List of Types representing the Signature of the Function, but ParameterizedTypes (which
+ *   depend on the specific instantiation of the template) are resolved to the values the Template
+ *   is instantiated with.
  */
 fun getCallSignature(
-    function: FunctionDeclaration,
+    function: Function,
     parameterizedTypeResolution: Map<ParameterizedType, TypeParameter>,
     initializationSignature: Map<Declaration?, Node?>,
 ): List<Type> {
@@ -404,16 +405,16 @@ fun getCallSignature(
 }
 
 /**
- * @param functionDeclaration FunctionDeclaration realization of the template
- * @param functionDeclarationSignature Signature of the realization FunctionDeclaration, but
- *   replacing the ParameterizedTypes with the ones provided in the instantiation
+ * @param functionDeclaration Function realization of the template
+ * @param functionDeclarationSignature Signature of the realization Function, but replacing the
+ *   ParameterizedTypes with the ones provided in the instantiation
  * @param templateCallExpression CallExpression that instantiates the template
  * @param explicitInstantiation list of the explicitly instantiated type parameters
  * @return true if the instantiation of the template is compatible with the template declaration,
  *   false otherwise
  */
 fun checkArgumentValidity(
-    functionDeclaration: FunctionDeclaration,
+    functionDeclaration: Function,
     functionDeclarationSignature: List<Type>,
     templateCallExpression: CallExpression,
     explicitInstantiation: List<ParameterizedType>,

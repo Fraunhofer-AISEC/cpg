@@ -863,7 +863,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val result =
             analyze(".java", parentFile.toPath(), true) { it.registerLanguage<JavaLanguage>() }
 
-        val enum = result.records["Enums"] as EnumDeclaration
+        val enum = result.records["Enums"] as Enumeration
         assertNotNull(enum)
 
         assertNotNull(enum.imports["EnumsImport"])

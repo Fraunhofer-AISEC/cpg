@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.graph.scopes
 
 import de.fraunhofer.aisec.cpg.graph.ContextProvider
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
-import de.fraunhofer.aisec.cpg.graph.declarations.ImportDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Import
 import de.fraunhofer.aisec.cpg.graph.declarations.Namespace
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.Imports
 import de.fraunhofer.aisec.cpg.graph.edges.unwrappingIncoming
@@ -45,8 +45,8 @@ class NamespaceScope(astNode: Namespace) : NameScope(astNode) {
      * This is the mirror property to [Scope.importedScopeEdges]. It specifies which other [Scope]s
      * are importing this namespace.
      *
-     * This is used in [addSymbol] to update the [ImportDeclaration.importedSymbols] once we add a
-     * new symbol here, so that is it also visible in the scope of the [ImportDeclaration].
+     * This is used in [addSymbol] to update the [Import.importedSymbols] once we add a new symbol
+     * here, so that is it also visible in the scope of the [Import].
      */
     @Relationship(value = "IMPORTS_SCOPE", direction = Relationship.Direction.INCOMING)
     val importedByEdges: Imports =

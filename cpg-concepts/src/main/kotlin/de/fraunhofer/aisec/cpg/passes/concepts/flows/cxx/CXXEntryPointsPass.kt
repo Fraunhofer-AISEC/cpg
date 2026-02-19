@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.arch.Win32
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.EntryPoint
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.newLibraryEntryPoint
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.newMain
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.passes.Description
 import de.fraunhofer.aisec.cpg.passes.concepts.ConceptPass
@@ -45,12 +45,12 @@ class CXXEntryPointsPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
     override fun handleNode(node: Node, tu: TranslationUnit) {
         when (node) {
-            is FunctionDeclaration -> handleFunctionDeclaration(node, tu)
+            is Function -> handleFunction(node, tu)
         }
     }
 
-    /** Translates a suitable [FunctionDeclaration] into an [EntryPoint] concept. */
-    private fun handleFunctionDeclaration(func: FunctionDeclaration, tu: TranslationUnit) {
+    /** Translates a suitable [Function] into an [EntryPoint] concept. */
+    private fun handleFunction(func: Function, tu: TranslationUnit) {
         val entry =
             when (func.name.toString()) {
                 "main" ->

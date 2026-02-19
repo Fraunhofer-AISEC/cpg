@@ -72,7 +72,7 @@ class ExpressionHandler(lang: RubyLanguageFrontend) :
     private fun handleIterNode(node: IterNode): LambdaExpression {
         // a complete hack, to handle iter nodes, which is sort of a lambda expression
         // so we create an anonymous function declaration out of the bodyNode and varNode
-        val func = newFunctionDeclaration("", rawNode = node)
+        val func = newFunction("", rawNode = node)
 
         frontend.scopeManager.enterScope(func)
 

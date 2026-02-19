@@ -38,7 +38,7 @@ import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadLibrary
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.LoadSymbol
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.newLoadLibrary
 import de.fraunhofer.aisec.cpg.graph.concepts.memory.newLoadSymbol
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.declarations.ValueDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Variable
@@ -90,8 +90,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
 
     /**
      * This function handles the loading of a function. It creates a [LoadSymbol] concept and adds
-     * it to the [DynamicLoading] concept. The tricky part is to find the [FunctionDeclaration] that
-     * is loaded.
+     * it to the [DynamicLoading] concept. The tricky part is to find the [Function] that is loaded.
      */
     private fun handleLoadFunction(
         call: CallExpression,
@@ -119,7 +118,7 @@ class CXXDynamicLoadingPass(ctx: TranslationContext) : ConceptPass(ctx) {
         // helps us to determine the type of the operation.
         call.nextFullDFG.filterIsInstance<Expression>().forEach { assignee ->
             if (assignee.type is FunctionPointerType) {
-                candidates = candidates?.filterIsInstance<FunctionDeclaration>()
+                candidates = candidates?.filterIsInstance<Function>()
                 newLoadSymbol(
                         underlyingNode = call,
                         concept = concept,

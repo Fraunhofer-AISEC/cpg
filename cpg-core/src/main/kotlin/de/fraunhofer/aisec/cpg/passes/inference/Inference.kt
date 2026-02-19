@@ -35,6 +35,7 @@ import de.fraunhofer.aisec.cpg.frontends.HasClasses
 import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -82,7 +83,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         signature: List<Type?>,
         incomingReturnType: Type?,
         hint: CallExpression? = null,
-    ): FunctionDeclaration? {
+    ): Function? {
         if (!ctx.config.inferenceConfiguration.inferFunctions) {
             return null
         }
@@ -100,11 +101,11 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
         }
 
         return inferInScopeOf(start) {
-                val inferred: FunctionDeclaration =
+                val inferred: Function =
                     if (record != null) {
                         newMethod(name ?: "", isStatic, record)
                     } else {
-                        newFunctionDeclaration(name ?: "")
+                        newFunction(name ?: "")
                     }
                 inferred.code = code
 
@@ -208,7 +209,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
     }
 
     /** This function creates a [Parameter] for each parameter in the [function]'s [signature]. */
-    private fun createInferredParameters(function: FunctionDeclaration, signature: List<Type?>) {
+    private fun createInferredParameters(function: Function, signature: List<Type?>) {
         // To save some unnecessary scopes, we only want to "enter" the function if it is necessary,
         // e.g., if we need to create parameters
         if (signature.isNotEmpty()) {
@@ -589,8 +590,8 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
     }
 
     /**
-     * This function tries to infer a return type for an inferred [FunctionDeclaration] based the
-     * original [CallExpression] (as the [hint]) parameter that was used to infer the function.
+     * This function tries to infer a return type for an inferred [Function] based the original
+     * [CallExpression] (as the [hint]) parameter that was used to infer the function.
      */
     fun inferReturnType(hint: CallExpression): Type? {
         // Try to find out, if the supplied hint is part of an assignment. If yes, we can use their
@@ -638,7 +639,7 @@ class Inference internal constructor(val start: Node, override val ctx: Translat
             }
             is ReturnStatement -> {
                 // If this is part of a return statement, we can take the return type
-                val func = hint.firstParentOrNull<FunctionDeclaration>()
+                val func = hint.firstParentOrNull<Function>()
                 val returnTypes = func?.returnTypes
 
                 return if (returnTypes != null && returnTypes.size > 1) {
@@ -675,12 +676,12 @@ fun Node.startInference(ctx: TranslationContext): Inference? {
     return Inference(this, ctx)
 }
 
-/** Tries to infer a [FunctionDeclaration] from a [CallExpression]. */
+/** Tries to infer a [Function] from a [CallExpression]. */
 fun TranslationUnit.inferFunction(
     call: CallExpression,
     isStatic: Boolean = false,
     ctx: TranslationContext,
-): FunctionDeclaration? {
+): Function? {
     return startInference(ctx)
         ?.inferFunctionDeclaration(
             call.name.localName,
@@ -693,12 +694,12 @@ fun TranslationUnit.inferFunction(
         )
 }
 
-/** Tries to infer a [FunctionDeclaration] from a [CallExpression]. */
+/** Tries to infer a [Function] from a [CallExpression]. */
 fun Namespace.inferFunction(
     call: CallExpression,
     isStatic: Boolean = false,
     ctx: TranslationContext,
-): FunctionDeclaration? {
+): Function? {
     return startInference(ctx)
         ?.inferFunctionDeclaration(
             call.name,

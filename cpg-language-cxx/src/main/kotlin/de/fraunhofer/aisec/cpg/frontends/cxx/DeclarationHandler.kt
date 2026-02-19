@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
@@ -83,14 +84,14 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     /**
      * Translates a C++
      * [namespace alias](https://en.cppreference.com/w/cpp/language/namespace_alias) into an alias
-     * handled by an [ImportDeclaration].
+     * handled by an [Import].
      */
-    private fun handleNamespaceAlias(ctx: CPPASTNamespaceAlias): ImportDeclaration {
+    private fun handleNamespaceAlias(ctx: CPPASTNamespaceAlias): Import {
         val from = parseName(ctx.mappingName.toString())
         val to = parseName(ctx.alias.toString())
 
         val import =
-            newImportDeclaration(from, style = ImportStyle.IMPORT_NAMESPACE, to, rawNode = ctx)
+            newImport(from, style = ImportStyle.IMPORT_NAMESPACE, to, rawNode = ctx)
 
         return import
     }
@@ -98,12 +99,12 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     /**
      * Translates a C++
      * [using directive](https://en.cppreference.com/w/cpp/language/namespace#Using-directives) into
-     * a [ImportDeclaration].
+     * a [Import].
      */
     private fun handleUsingDirective(ctx: CPPASTUsingDirective): Declaration {
         val import = parseName(ctx.qualifiedName.toString())
         val declaration =
-            newImportDeclaration(
+            newImport(
                 import,
                 style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
                 rawNode = ctx,
@@ -115,12 +116,12 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     /**
      * Translates a C++
      * [using declaration](https://en.cppreference.com/w/cpp/language/using_declaration) into a
-     * [ImportDeclaration].
+     * [Import].
      */
     private fun handleUsingDeclaration(ctx: CPPASTUsingDeclaration): Declaration {
         val import = parseName(ctx.name.toString())
         val declaration =
-            newImportDeclaration(
+            newImport(
                 import,
                 style = ImportStyle.IMPORT_SINGLE_SYMBOL_FROM_NAMESPACE,
                 rawNode = ctx,
@@ -162,7 +163,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
     /**
      * Translates a C/C++ (function)[https://en.cppreference.com/w/cpp/language/functions]
-     * definition into a [FunctionDeclaration]. A definition, in contrast to a declaration also has
+     * definition into a [Function]. A definition, in contrast to a declaration also has
      * a function body. Function declarations are most likely handled by [handleSimpleDeclaration].
      * However, in both cases, the majority of the function is described by a declarator, which gets
      * parsed by [DeclaratorHandler.handleFunctionDeclarator].
@@ -172,7 +173,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         //  as throw(...) is not compiler enforced (Problem for TryStatement)
         val declaration = frontend.declaratorHandler.handle(ctx.declarator)
 
-        if (declaration !is FunctionDeclaration) {
+        if (declaration !is Function) {
             return Problem(
                 "declarator of function definition is not a function declarator"
             )
@@ -470,7 +471,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
                 // For function *declarations*, we need to update the return types based on the
                 // function type. For function *definitions*, this is done in
                 // [handleFunctionDefinition].
-                if (declaration is FunctionDeclaration) {
+                if (declaration is Function) {
                     declaration.returnTypes =
                         (type as? FunctionType)?.returnTypes ?: listOf(incompleteType())
                 }
@@ -646,9 +647,9 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     private fun handleEnum(
         ctx: IASTSimpleDeclaration,
         declSpecifier: IASTEnumerationSpecifier,
-    ): EnumDeclaration {
+    ): Enumeration {
         val entries = mutableListOf<EnumConstant>()
-        val enum = newEnumDeclaration(name = declSpecifier.name.toString(), rawNode = ctx)
+        val enum = newEnumeration(name = declSpecifier.name.toString(), rawNode = ctx)
 
         // Loop through its members
         for (enumerator in declSpecifier.enumerators) {

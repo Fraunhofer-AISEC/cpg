@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.allChildren
 import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.BinaryOperator
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
@@ -555,7 +555,7 @@ internal class EOGTest : BaseTest() {
     fun testSwitch(relPath: String, refNodeString: String) {
         val nodes = translateToNodes(relPath)
         val functions =
-            nodes.filterIsInstance<FunctionDeclaration>().filter { it !is Constructor }
+            nodes.filterIsInstance<Function>().filter { it !is Constructor }
 
         // main()
         var swch = functions[0].allChildren<SwitchStatement>()[0]

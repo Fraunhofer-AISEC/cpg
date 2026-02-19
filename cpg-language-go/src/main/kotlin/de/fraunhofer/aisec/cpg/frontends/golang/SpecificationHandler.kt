@@ -45,7 +45,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
         }
     }
 
-    private fun handleImportSpec(importSpec: GoStandardLibrary.Ast.ImportSpec): ImportDeclaration {
+    private fun handleImportSpec(importSpec: GoStandardLibrary.Ast.ImportSpec): Import {
         // We set the filename of the include declaration to the package path, i.e., its full path
         // including any module identifiers. This way we can match the include declaration back to
         // the namespace's path and name
@@ -65,7 +65,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
             }
 
         val import =
-            newImportDeclaration(
+            newImport(
                 import = name,
                 alias = alias,
                 style = ImportStyle.IMPORT_NAMESPACE,

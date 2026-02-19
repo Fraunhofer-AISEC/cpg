@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.Edge
 import de.fraunhofer.aisec.cpg.graph.edges.flows.*
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
@@ -56,8 +57,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
     class Configuration(
         /**
          * This specifies the maximum complexity (as calculated per
-         * [Statement.cyclomaticComplexity]) a [FunctionDeclaration] must have in order to be
-         * considered.
+         * [Statement.cyclomaticComplexity]) a [Function] must have in order to be considered.
          */
         var maxComplexity: Int? = null,
         /**
@@ -74,9 +74,9 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
 
     var purelyLocalNodes: Set<Node> = setOf()
 
-    /** We perform the actions for each [FunctionDeclaration]. */
+    /** We perform the actions for each [Function]. */
     override fun accept(node: Node) {
-        if (node is FunctionDeclaration && node.body == null) {
+        if (node is Function && node.body == null) {
             // We do not have a body for this function, so we cannot do anything here.
             // In fact, if we would continue, we would delete function summaries which would harm
             // more than it helps.
@@ -88,7 +88,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         if (node is FunctionTemplate) return
         // Calculate the complexity of the function and see, if it exceeds our threshold
         val max = passConfig<Configuration>()?.maxComplexity
-        val c = (node as? FunctionDeclaration)?.body?.cyclomaticComplexity ?: 0
+        val c = (node as? Function)?.body?.cyclomaticComplexity ?: 0
         if (max != null && c > max) {
             log.info(
                 "Ignoring function ${node.name} because its complexity (${c}) is greater than the configured maximum (${max})"
@@ -111,9 +111,9 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         val startState = DFGPassState<Set<Node>>()
 
         startState.declarationsState.push(node, PowersetLattice(identitySetOf()))
-        // If we start in a FunctionDeclaration, we have to add the parameters at the beginning
+        // If we start in a Function, we have to add the parameters at the beginning
         // because we won't visit them.
-        (node as? FunctionDeclaration)?.parameters?.forEach { param ->
+        (node as? Function)?.parameters?.forEach { param ->
             startState.declarationsState.push(param, PowersetLattice(identitySetOf(param)))
             param.default?.let { defaultValue ->
                 startState.push(param, PowersetLattice(identitySetOf(defaultValue)))
@@ -455,7 +455,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
                         PowersetLattice(identitySetOf(writtenTo))
                 }
             }
-        } else if (currentNode is FunctionDeclaration) {
+        } else if (currentNode is Function) {
             // We have to add the parameters
             currentNode.parameters.forEach {
                 doubleState.pushToDeclarationsState(it, PowersetLattice(identitySetOf(it)))
@@ -667,8 +667,7 @@ open class ControlFlowSensitiveDFGPass(ctx: TranslationContext) : EOGStarterPass
         node: Node,
         reachableReturnStatements: Collection<ReturnStatement>,
     ) {
-        val lastStatement =
-            ((node as? FunctionDeclaration)?.body as? Block)?.statements?.lastOrNull()
+        val lastStatement = ((node as? Function)?.body as? Block)?.statements?.lastOrNull()
         if (
             lastStatement is ReturnStatement &&
                 lastStatement.isImplicit &&

@@ -28,6 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.ResolveInFrontend
 import de.fraunhofer.aisec.cpg.frontends.isKnownOperatorName
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
@@ -69,7 +70,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     /**
      * The [CPPASTFunctionDeclarator] extends the [IASTStandardFunctionDeclarator] and has some more
      * attributes which we want to consider. Currently, this is the
-     * [CPPASTFunctionDeclarator.trailingReturnType] which will be added to the FunctionDeclaration.
+     * [CPPASTFunctionDeclarator.trailingReturnType] which will be added to the Function.
      * This represents the return-type of a lambda function.
      */
     private fun handleCPPFunctionDeclarator(node: CPPASTFunctionDeclarator): Declaration {
@@ -77,7 +78,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         val function = handleFunctionDeclarator(node)
 
         // If we have a trailing return type, we specify the return type of the (lambda) function
-        if (function is FunctionDeclaration && node.trailingReturnType != null) {
+        if (function is Function && node.trailingReturnType != null) {
             function.returnTypes = listOf(frontend.typeOf(node.trailingReturnType))
         }
 
@@ -151,7 +152,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
 
     /**
      * A small utility function that creates a [Constructor], [Method] or
-     * [FunctionDeclaration] depending on which scope the function should live in. This basically
+     * [Function] depending on which scope the function should live in. This basically
      * checks if the scope is a namespace or a record and if the name matches to the record (in case
      * of a constructor).
      */
@@ -159,7 +160,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         name: Name,
         scope: Scope?,
         ctx: IASTNode,
-    ): FunctionDeclaration {
+    ): Function {
         // Retrieve the AST node for the scope we need to put the function in
         val holder = scope?.astNode
 
@@ -185,7 +186,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 }
                 // It could also be a scoped function declaration.
                 scope?.astNode is Namespace -> {
-                    newFunctionDeclaration(name, rawNode = ctx)
+                    newFunction(name, rawNode = ctx)
                 }
                 // Otherwise, it's a method to a known or unknown record
                 else -> {
@@ -228,7 +229,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         if (nameDecl.name is CPPASTOperatorName && name.replace(" ", "").isKnownOperatorName) {
             name = name.replace(" ", "")
         }
-        val declaration: FunctionDeclaration
+        val declaration: Function
 
         // We need to check if this function is actually part of a named declaration, such as a
         // record or a namespace, but defined externally.
@@ -257,7 +258,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
                 createAppropriateFunction(name, frontend.scopeManager.currentScope, ctx.parent)
         } else {
             // a plain old function, outside any named scope
-            declaration = newFunctionDeclaration(name, rawNode = ctx.parent)
+            declaration = newFunction(name, rawNode = ctx.parent)
         }
 
         // We want to determine, whether we are currently outside a named scope on the AST

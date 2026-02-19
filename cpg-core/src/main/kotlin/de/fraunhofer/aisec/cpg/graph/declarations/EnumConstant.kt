@@ -33,7 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import org.neo4j.ogm.annotation.Relationship
 
 /**
- * Represents a constant within an [EnumDeclaration]. Depending on the language, this might have an
+ * Represents a constant within an [Enumeration]. Depending on the language, this might have an
  * explicit initializer value.
  */
 class EnumConstant : ValueDeclaration(), HasInitializer {

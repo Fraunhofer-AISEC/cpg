@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.golang
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.statements.ReturnStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -45,7 +46,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
         }
     }
 
-    private fun handleFuncDecl(funcDecl: GoStandardLibrary.Ast.FuncDecl): FunctionDeclaration {
+    private fun handleFuncDecl(funcDecl: GoStandardLibrary.Ast.FuncDecl): Function {
         val recv = funcDecl.recv
         val func =
             if (recv != null) {
@@ -95,7 +96,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
                     localNameOnly = true
                 }
 
-                newFunctionDeclaration(funcDecl.name.name, localNameOnly, rawNode = funcDecl)
+                newFunction(funcDecl.name.name, localNameOnly, rawNode = funcDecl)
             }
 
         frontend.scopeManager.enterScope(func)
@@ -165,7 +166,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
     }
 
     internal fun handleFuncParams(
-        func: FunctionDeclaration,
+        func: Function,
         list: GoStandardLibrary.Ast.FieldList,
     ) {
         for (param in list.list) {

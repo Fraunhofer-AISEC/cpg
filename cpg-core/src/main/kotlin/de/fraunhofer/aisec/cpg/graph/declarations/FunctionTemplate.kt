@@ -35,11 +35,11 @@ import org.neo4j.ogm.annotation.Relationship
 class FunctionTemplate : Template() {
     /**
      * Edges pointing to all FunctionDeclarations that are realized by the FunctionTemplate. Before
-     * the expansion pass there is only a single FunctionDeclaration which is instantiated After the
-     * expansion pass for each instantiation of the FunctionTemplate there will be a realization
+     * the expansion pass there is only a single Function which is instantiated After the expansion
+     * pass for each instantiation of the FunctionTemplate there will be a realization
      */
     @Relationship(value = "REALIZATION", direction = Relationship.Direction.OUTGOING)
-    val realizationEdges = astEdgesOf<FunctionDeclaration>()
+    val realizationEdges = astEdgesOf<Function>()
     val realization by unwrapping(FunctionTemplate::realizationEdges)
 
     override val realizations: List<Declaration>
@@ -48,7 +48,7 @@ class FunctionTemplate : Template() {
     override fun addDeclaration(declaration: Declaration) {
         if (declaration is TypeParameter || declaration is Parameter) {
             addIfNotContains(this.parameterEdges, declaration)
-        } else if (declaration is FunctionDeclaration) {
+        } else if (declaration is Function) {
             addIfNotContains(realizationEdges, declaration)
         }
     }

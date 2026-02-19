@@ -35,7 +35,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.concepts.arch.Agnostic
 import de.fraunhofer.aisec.cpg.graph.concepts.file.File
 import de.fraunhofer.aisec.cpg.graph.concepts.flows.Main
-import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
@@ -59,7 +59,7 @@ val mockTu =
     TranslationUnit().apply {
         name = Name("tu1")
         var func =
-            FunctionDeclaration().apply {
+            Function().apply {
                 name = Name("main")
                 Main(this, os = Agnostic(this))
                 body =

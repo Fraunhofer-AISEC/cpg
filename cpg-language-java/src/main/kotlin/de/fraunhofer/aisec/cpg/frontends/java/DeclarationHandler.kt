@@ -40,7 +40,7 @@ import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.EnumConstant
-import de.fraunhofer.aisec.cpg.graph.declarations.EnumDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.Enumeration
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
@@ -296,11 +296,11 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         return declarationSequence
     }
 
-    fun handleEnumDeclaration(
-        enumDecl: com.github.javaparser.ast.body.EnumDeclaration
-    ): EnumDeclaration {
+    fun handleEnumeration(
+        enumDecl: com.github.javaparser.ast.body.Enumeration
+    ): Enumeration {
         val name = enumDecl.nameAsString
-        val enumDeclaration = this.newEnumDeclaration(name, rawNode = enumDecl)
+        val enumDeclaration = this.newEnumeration(name, rawNode = enumDecl)
 
         val superTypes = enumDecl.implementedTypes.map { frontend.getTypeAsGoodAsPossible(it) }
         enumDeclaration.superClasses.addAll(superTypes)
@@ -359,7 +359,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     frontend.scopeManager.addDeclaration(cls)
                     recordDeclaration.records += cls
                 }
-                is com.github.javaparser.ast.body.EnumDeclaration -> {
+                is com.github.javaparser.ast.body.Enumeration -> {
                     val cls = handle(decl) as Record
                     frontend.scopeManager.addDeclaration(cls)
                     recordDeclaration.records += cls
@@ -507,8 +507,8 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
             HandlerInterface { decl ->
                 handleField(decl as com.github.javaparser.ast.body.Field)
             }
-        map[com.github.javaparser.ast.body.EnumDeclaration::class.java] = HandlerInterface { decl ->
-            handleEnumDeclaration(decl as com.github.javaparser.ast.body.EnumDeclaration)
+        map[com.github.javaparser.ast.body.Enumeration::class.java] = HandlerInterface { decl ->
+            handleEnumeration(decl as com.github.javaparser.ast.body.Enumeration)
         }
         map[com.github.javaparser.ast.body.EnumConstant::class.java] =
             HandlerInterface { decl ->
