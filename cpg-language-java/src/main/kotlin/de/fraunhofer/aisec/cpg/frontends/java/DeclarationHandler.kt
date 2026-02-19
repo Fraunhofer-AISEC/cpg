@@ -27,8 +27,9 @@ package de.fraunhofer.aisec.cpg.frontends.java
 
 import com.github.javaparser.ast.Node
 import com.github.javaparser.ast.body.*
-import com.github.javaparser.ast.body.Constructor
-import com.github.javaparser.ast.body.Method
+import com.github.javaparser.ast.body.ConstructorDeclaration
+import com.github.javaparser.ast.body.FieldDeclaration
+import com.github.javaparser.ast.body.MethodDeclaration
 import com.github.javaparser.ast.expr.Expression
 import com.github.javaparser.ast.stmt.BlockStmt
 import com.github.javaparser.ast.stmt.ReturnStmt
@@ -39,9 +40,11 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.frontends.HandlerInterface
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Constructor
 import de.fraunhofer.aisec.cpg.graph.declarations.EnumConstant
 import de.fraunhofer.aisec.cpg.graph.declarations.Enumeration
 import de.fraunhofer.aisec.cpg.graph.declarations.Field
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.NewArrayExpression
@@ -54,9 +57,7 @@ import java.util.function.Supplier
 
 open class DeclarationHandler(lang: JavaLanguageFrontend) :
     Handler<Declaration, Node, JavaLanguageFrontend>(Supplier { Problem() }, lang) {
-    fun handleConstructor(
-        constructorDeclaration: Constructor
-    ): de.fraunhofer.aisec.cpg.graph.declarations.Constructor {
+    fun handleConstructor(constructorDeclaration: ConstructorDeclaration): Constructor {
         val resolvedConstructor = constructorDeclaration.resolve()
         val currentRecordDecl = frontend.scopeManager.currentRecord
         val declaration =
@@ -100,7 +101,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         return declaration
     }
 
-    fun handleMethod(methodDecl: Method): de.fraunhofer.aisec.cpg.graph.declarations.Method {
+    fun handleMethod(methodDecl: MethodDeclaration): Method {
         val resolvedMethod = methodDecl.resolve()
         val currentRecordDecl = frontend.scopeManager.currentRecord
 
@@ -158,10 +159,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         return functionDeclaration
     }
 
-    private fun createMethodReceiver(
-        recordDeclaration: Record?,
-        functionDeclaration: de.fraunhofer.aisec.cpg.graph.declarations.Method,
-    ) {
+    private fun createMethodReceiver(recordDeclaration: Record?, functionDeclaration: Method) {
         // create the receiver
         val receiver =
             newVariable("this", recordDeclaration?.toType() ?: unknownType(), false)
@@ -232,7 +230,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         }
     }
 
-    fun handleField(fieldDecl: com.github.javaparser.ast.body.Field): DeclarationSequence {
+    fun handleField(fieldDecl: FieldDeclaration): DeclarationSequence {
         val declarationSequence = DeclarationSequence()
 
         for (variable in fieldDecl.variables) {
@@ -291,7 +289,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
         return declarationSequence
     }
 
-    fun handleEnumeration(enumDecl: com.github.javaparser.ast.body.Enumeration): Enumeration {
+    fun handleEnumeration(enumDecl: EnumDeclaration): Enumeration {
         val name = enumDecl.nameAsString
         val enumDeclaration = this.newEnumeration(name, rawNode = enumDecl)
 
@@ -327,20 +325,20 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     ) {
         for (decl in typeDecl.members) {
             when (decl) {
-                is Method -> {
-                    val md = handle(decl) as de.fraunhofer.aisec.cpg.graph.declarations.Method
+                is MethodDeclaration -> {
+                    val md = handle(decl) as Method
                     frontend.scopeManager.addDeclaration(md)
                     recordDeclaration.methods += md
                 }
-                is com.github.javaparser.ast.body.Field -> {
+                is FieldDeclaration -> {
                     val seq = handle(decl) as DeclarationSequence
                     seq.declarations.filterIsInstance<Field>().forEach {
                         frontend.scopeManager.addDeclaration(it)
                         recordDeclaration.fields += it
                     }
                 }
-                is Constructor -> {
-                    val c = handle(decl) as de.fraunhofer.aisec.cpg.graph.declarations.Constructor
+                is ConstructorDeclaration -> {
+                    val c = handle(decl) as Constructor
                     frontend.scopeManager.addDeclaration(c)
                     recordDeclaration.constructors += c
                 }
@@ -349,7 +347,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
                     frontend.scopeManager.addDeclaration(cls)
                     recordDeclaration.records += cls
                 }
-                is com.github.javaparser.ast.body.Enumeration -> {
+                is EnumDeclaration -> {
                     val cls = handle(decl) as Record
                     frontend.scopeManager.addDeclaration(cls)
                     recordDeclaration.records += cls
@@ -398,9 +396,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     }
 
     /* Not so sure about the place of Annotations in the CPG currently */
-    fun handleEnumConstant(
-        enumConstDecl: com.github.javaparser.ast.body.EnumConstant
-    ): EnumConstant {
+    fun handleEnumConstant(enumConstDecl: EnumConstantDeclaration): EnumConstant {
         val currentEnum = frontend.scopeManager.currentRecord
         val result = this.newEnumConstant(enumConstDecl.nameAsString, rawNode = enumConstDecl)
         if (enumConstDecl.arguments.isNotEmpty()) {
@@ -482,21 +478,23 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     }
 
     init {
-        map[Method::class.java] = HandlerInterface { decl -> handleMethod(decl as Method) }
-        map[Constructor::class.java] = HandlerInterface { decl ->
-            handleConstructor(decl as Constructor)
+        map[MethodDeclaration::class.java] = HandlerInterface { decl ->
+            handleMethod(decl as MethodDeclaration)
+        }
+        map[ConstructorDeclaration::class.java] = HandlerInterface { decl ->
+            handleConstructor(decl as ConstructorDeclaration)
         }
         map[ClassOrInterfaceDeclaration::class.java] = HandlerInterface { decl ->
             handleClassOrInterfaceDeclaration(decl as ClassOrInterfaceDeclaration)
         }
-        map[com.github.javaparser.ast.body.Field::class.java] = HandlerInterface { decl ->
-            handleField(decl as com.github.javaparser.ast.body.Field)
+        map[FieldDeclaration::class.java] = HandlerInterface { decl ->
+            handleField(decl as FieldDeclaration)
         }
-        map[com.github.javaparser.ast.body.Enumeration::class.java] = HandlerInterface { decl ->
-            handleEnumeration(decl as com.github.javaparser.ast.body.Enumeration)
+        map[EnumDeclaration::class.java] = HandlerInterface { decl ->
+            handleEnumeration(decl as EnumDeclaration)
         }
-        map[com.github.javaparser.ast.body.EnumConstant::class.java] = HandlerInterface { decl ->
-            handleEnumConstant(decl as com.github.javaparser.ast.body.EnumConstant)
+        map[EnumConstantDeclaration::class.java] = HandlerInterface { decl ->
+            handleEnumConstant(decl as EnumConstantDeclaration)
         }
     }
 }
