@@ -34,7 +34,7 @@ project {
          * This is a suppression for a query that checks for a function named "foo" and contains a
          * greater than sign in its string representation.
          *
-         * Foo is so common that we do not want to report it.
+         * "foo" is so common that we do not want to report it.
          */
         queryTree(
             { qt: QueryTree<Boolean> ->
