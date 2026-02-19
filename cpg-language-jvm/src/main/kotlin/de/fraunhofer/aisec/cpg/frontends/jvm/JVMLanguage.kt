@@ -69,7 +69,15 @@ class JVMLanguage : Language<JVMLanguageFrontend>(), HasClasses, HasFunctionOver
         // therefore do some additional filtering of the candidates here, before handling it.
         if (ref.candidates.size > 1) {
             if (ref.resolutionHelper is CallExpression) {
-                ref.candidates = ref.candidates.filter { it is FunctionDeclaration }.toSet()
+                val functionDecls = ref.candidates.filterIsInstance<FunctionDeclaration>()
+                // We can also check if the signature matches to account for overloading.
+                val targetType = ref.type as? FunctionType
+                val filteredFunctions =
+                    functionDecls
+                        .filter { it.parameters.map { it.type } == targetType?.parameters }
+                        .toSet()
+                if (filteredFunctions.isNotEmpty()) ref.candidates = filteredFunctions
+                else ref.candidates = functionDecls.toSet()
             } else {
                 ref.candidates = ref.candidates.filter { it is VariableDeclaration }.toSet()
             }
