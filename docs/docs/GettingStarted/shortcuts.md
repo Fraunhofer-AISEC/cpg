@@ -112,7 +112,7 @@ stable than the information from above!
   (`fulfilled`) and all paths that did not (`failed`). For a full description of all
   parameters (`direction`, `scope`, `sensitivities`, `earlyTermination`,
   `collectFailedPaths`, `findAllPossiblePaths`, `predicate`) and concrete usage
-  examples, see the dedicated **[Graph Traversal (followXXX)](graph-traversal.md)** page.
+  examples, see the dedicated **[Graph Traversal (followXXX)](graph-traversal/index.md)** page.
 * If you're interested in all nodes reachable via one of the sub-graphs from
   a certain node, the methods
   `Node.collectAllPrevFullDFGPaths()`,

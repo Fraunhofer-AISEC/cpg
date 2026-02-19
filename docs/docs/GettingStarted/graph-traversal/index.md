@@ -1,11 +1,7 @@
 ---
-title: "Graph Traversal with followXXX Functions"
+title: "Graph Traversal – Overview & Parameters"
 linkTitle: "Graph Traversal"
 weight: 25
-no_list: false
-menu:
-  main:
-    weight: 25
 description: >
     How to traverse DFG, EOG, PDG and CDG edges with the followXXX family of functions.
 ---
@@ -23,6 +19,10 @@ All functions reside in `de.fraunhofer.aisec.cpg.graph` and are available as ext
 ```kotlin
 import de.fraunhofer.aisec.cpg.graph.*
 ```
+
+For a quick overview of all available functions, see the
+[Function Reference](reference.md). For annotated end-to-end examples with C source code, see
+[Examples](examples.md).
 
 ---
 
@@ -54,6 +54,13 @@ It also supports the `+` operator to merge results from several starting nodes:
 ```kotlin
 val combined = result1 + result2
 ```
+
+!!! tip "May vs. Must analysis"
+    The two lists together enable both *may* and *must* reasoning:
+
+    - If `fulfilled` is **non-empty** → a path to the target *can* exist (may analysis).
+    - If `failed` is **empty** (and `fulfilled` is non-empty) → the target is reached on **every**
+      path (must analysis / mandatory flow).
 
 ---
 
@@ -263,182 +270,4 @@ pre-defined call chain (e.g. you already know which `CallExpression` invoked the
 ```kotlin
 val context = Context.ofCallStack(callExpr1, callExpr2)
 val (paths, _) = myNode.followDFGEdgesUntilHit(ctx = context) { it is Literal<*> }
-```
-
----
-
-## Function reference
-
-### DFG traversal
-
-| Function | Direction | Sensitivities (default) | Notes |
-|---|---|---|---|
-| `followDFGEdgesUntilHit(...)` | Configurable (default: `Forward`) | `FieldSensitive + ContextSensitive` | Most flexible; exposes all parameters. |
-| `followNextFullDFGEdgesUntilHit(...)` | `Forward` | `OnlyFullDFG + ContextSensitive` | Convenience wrapper. |
-| `followPrevFullDFGEdgesUntilHit(...)` | `Backward` | `OnlyFullDFG + ContextSensitive` | Convenience wrapper. |
-
-### EOG traversal
-
-| Function | Direction | Sensitivities (default) | Notes |
-|---|---|---|---|
-| `followEOGEdgesUntilHit(...)` | Configurable (default: `Forward`) | `FilterUnreachableEOG + ContextSensitive` | Most flexible; exposes all parameters. |
-
-### PDG / CDG traversal
-
-| Function | Direction | `interproceduralAnalysis` | Notes |
-|---|---|---|---|
-| `followNextPDGUntilHit(...)` | Forward (PDG) | Optional (`false` by default) | Follow program-dependence edges forward. |
-| `followPrevPDGUntilHit(...)` | Backward (PDG) | Optional + `interproceduralMaxDepth` | Follow program-dependence edges backward. |
-| `followNextCDGUntilHit(...)` | Forward (CDG) | Optional (`false` by default) | Follow control-dependence edges forward. |
-| `followPrevCDGUntilHit(...)` | Backward (CDG) | Optional + `interproceduralMaxDepth` | Follow control-dependence edges backward. |
-
-### Collecting all reachable paths (no target predicate)
-
-If you just want all nodes reachable from a starting node via a particular sub-graph, use the
-`collectAllXXX` helpers, which internally use a never-satisfied predicate so that all paths end up
-in `failed` and are returned:
-
-```kotlin
-val allNextDFGPaths: List<NodePath> = myNode.collectAllNextDFGPaths()
-val allPrevFullDFGPaths: List<NodePath> = myNode.collectAllPrevFullDFGPaths()
-val allNextEOGPaths: List<NodePath> = myNode.collectAllNextEOGPaths()
-val allPrevEOGPaths: List<NodePath> = myNode.collectAllPrevEOGPaths(interproceduralAnalysis = false)
-val allNextPDGPaths: List<NodePath> = myNode.collectAllNextPDGGPaths()
-val allPrevPDGPaths: List<NodePath> = myNode.collectAllPrevPDGPaths(interproceduralAnalysis = false)
-val allNextCDGPaths: List<NodePath> = myNode.collectAllNextCDGPaths(interproceduralAnalysis = false)
-val allPrevCDGPaths: List<NodePath> = myNode.collectAllPrevCDGPaths(interproceduralAnalysis = false)
-```
-
----
-
-## Examples
-
-### Example 1 – Check if a function argument always comes from a literal
-
-```kotlin
-// We want to know: does the first argument of every call to "encrypt" always
-// originate from a string literal (no variable reassignment)?
-
-val result = translationResult
-
-for (call in result.calls["encrypt"]) {
-    val arg = call.arguments[0]
-
-    // Follow DFG backwards from the argument to find its origin(s)
-    val (fulfilled, failed) = arg.followDFGEdgesUntilHit(
-        direction = Backward(GraphToFollow.DFG),
-        sensitivities = FieldSensitive + ContextSensitive,
-        scope = Interprocedural(),
-    ) { it is Literal<*> }
-
-    if (failed.isEmpty()) {
-        println("$call: argument always originates from a literal ✓")
-    } else {
-        println("$call: some paths do NOT originate from a literal ✗")
-        for ((reason, path) in failed) {
-            println("  Failed path ($reason): ${path.nodes}")
-        }
-    }
-}
-```
-
----
-
-### Example 2 – Intraprocedural DFG analysis (stay within the current function)
-
-Use `scope = Intraprocedural()` when you want to avoid following data flow across function-call
-boundaries:
-
-```kotlin
-val (paths, _) = myNode.followDFGEdgesUntilHit(
-    scope = Intraprocedural(),
-    collectFailedPaths = false,  // we only care whether the flow exists
-) { node ->
-    node is CallExpression && node.name.localName == "sanitize"
-}
-
-if (paths.isNotEmpty()) {
-    println("Data reaches sanitize() within the same function.")
-}
-```
-
----
-
-### Example 3 – Stop traversal at function borders with `earlyTermination`
-
-`earlyTermination` lets you abandon a path as soon as it would leave the current scope without
-needing to set `scope = Intraprocedural()`. This is useful when you want interprocedural traversal
-*except* for certain node types:
-
-```kotlin
-// Follow DFG forward across calls, but stop if the path ever reaches a
-// FunctionDeclaration node (i.e., tries to enter a new function body)
-val (paths, failed) = myNode.followDFGEdgesUntilHit(
-    scope = Interprocedural(),
-    earlyTermination = { nextNode, _ -> nextNode is FunctionDeclaration },
-) { it is Literal<*> }
-
-val earlyStops = failed.filter { it.first == FailureReason.HIT_EARLY_TERMINATION }
-println("${earlyStops.size} path(s) were stopped at a function border.")
-```
-
----
-
-### Example 4 – Limit call depth
-
-To perform interprocedural analysis but not go deeper than N call levels:
-
-```kotlin
-val (paths, _) = myNode.followDFGEdgesUntilHit(
-    scope = Interprocedural(maxCallDepth = 3),
-) { it is Literal<*> }
-```
-
----
-
-### Example 5 – EOG reachability: does execution always pass through a specific node?
-
-```kotlin
-// Does execution always reach a `ReturnStatement` from `startNode`?
-val (fulfilled, failed) = startNode.followEOGEdgesUntilHit(
-    direction = Forward(GraphToFollow.EOG),
-    scope = Intraprocedural(),
-) { it is ReturnStatement }
-
-when {
-    fulfilled.isNotEmpty() && failed.isEmpty() ->
-        println("Execution ALWAYS reaches a return statement.")
-    fulfilled.isNotEmpty() ->
-        println("Execution CAN reach a return statement, but not on every path.")
-    else ->
-        println("Execution NEVER reaches a return statement.")
-}
-```
-
----
-
-### Example 6 – PDG/CDG: find nodes that control execution of a target
-
-```kotlin
-// Which nodes control whether `myNode` is executed (backward CDG)?
-val (fulfilled, _) = myNode.followPrevCDGUntilHit(
-    interproceduralAnalysis = false,
-) { it is IfStatement }
-
-for (path in fulfilled) {
-    println("Controlled by if-statement: ${path.nodes.last()}")
-}
-```
-
----
-
-### Example 7 – Collecting all reachable DFG paths for further inspection
-
-```kotlin
-// Collect every path that data can take from myNode forward through the DFG
-val allPaths: List<NodePath> = myNode.collectAllNextDFGPaths()
-
-for (path in allPaths) {
-    println("Path: ${path.nodes.joinToString(" -> ")}")
-}
 ```
