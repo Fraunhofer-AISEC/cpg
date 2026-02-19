@@ -354,7 +354,7 @@ open class EvaluationOrderGraphPass(ctx: TranslationContext) : TranslationUnitPa
      * custom adaptation of control flow behavior when handling nodes that influence control flow,
      * e.g. [LoopStatement]s or [BreakStatement].
      */
-    fun handleEOG(node: Node?) {
+    open fun handleEOG(node: Node?) {
         if (node == null) {
             return
         }

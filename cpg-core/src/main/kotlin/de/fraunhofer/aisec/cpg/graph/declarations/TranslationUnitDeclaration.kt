@@ -56,6 +56,11 @@ class TranslationUnitDeclaration :
     override var statementEdges = astEdgesOf<Statement>()
     override var statements by unwrapping(TranslationUnitDeclaration::statementEdges)
 
+    /**
+     * A free-for-use collection of unique nodes. Nodes stored here will be exported to Neo4j, too.
+     */
+    val additionalNodes = mutableSetOf<Node>()
+
     override fun addDeclaration(declaration: Declaration) {
         addIfNotContains(declarationEdges, declaration)
     }

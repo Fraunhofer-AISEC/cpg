@@ -1,3 +1,6 @@
+# Quantum CPG
+This branch is currently undergoing export control checks. The source code will be made available here once these checks have been completed.
+
 # Code Property Graph 
 [![Actions Status](https://github.com/Fraunhofer-AISEC/cpg/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/Fraunhofer-AISEC/cpg/actions)
  [![codecov](https://codecov.io/gh/Fraunhofer-AISEC/cpg/graph/badge.svg?token=XBXZZOQIID)](https://codecov.io/gh/Fraunhofer-AISEC/cpg)

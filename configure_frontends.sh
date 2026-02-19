@@ -56,6 +56,10 @@ answerLLVM=$(ask "Do you want to enable the LLVM frontend? (currently $(getPrope
 setProperty "enableLLVMFrontend" $answerLLVM
 answerTypescript=$(ask "Do you want to enable the TypeScript frontend? (currently $(getProperty "enableTypeScriptFrontend"))")
 setProperty "enableTypeScriptFrontend" $answerTypescript
+answerPythonQiskit=$(ask "Do you want to enable the Python Qiskit frontend? (currently $(getProperty "enablePythonQiskitFrontend"))")
+setProperty "enablePythonQiskitFrontend" $answerPythonQiskit
+answerOpenQasm=$(ask "Do you want to enable the OpenQASM frontend? (currently $(getProperty "enableOpenQasmFrontend"))")
+setProperty "enableOpenQasmFrontend" $answerOpenQasm
 answerRuby=$(ask "Do you want to enable the Ruby frontend? (currently $(getProperty "enableRubyFrontend"))")
 setProperty "enableRubyFrontend" $answerRuby
 answerJVM=$(ask "Do you want to enable the JVM frontend? (currently $(getProperty "enableJVMFrontend"))")
