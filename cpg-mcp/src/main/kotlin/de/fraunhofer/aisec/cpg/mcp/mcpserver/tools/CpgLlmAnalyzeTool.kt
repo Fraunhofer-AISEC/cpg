@@ -42,10 +42,7 @@ import io.modelcontextprotocol.kotlin.sdk.types.ModelPreferences
 import io.modelcontextprotocol.kotlin.sdk.types.Role
 import io.modelcontextprotocol.kotlin.sdk.types.SamplingMessage
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
-
-@Serializable data class OverlaySuggestionsResponse(val items: List<OverlaySuggestion>)
 
 fun Server.addCpgLlmAnalyzeTool() {
     val toolDescription =
@@ -162,7 +159,7 @@ fun Server.addCpgLlmAnalyzeTool() {
                 appendLine(
                     """
                 {
-                  "items": [
+                  "conceptAssignments": [
                     {
                       "nodeId": "1234",
                       "overlay": "fully.qualified.class.Name",
@@ -220,12 +217,9 @@ fun Server.addCpgLlmAnalyzeTool() {
                 // Extract the LLM response
                 val llmResponse = (result.content as? TextContent)?.text ?: "No response from LLM"
 
-                // Extract and validate JSON
-                val jsonStr = extractJson(llmResponse)
-
                 // Parse LLM response and enrich with further node properties
                 try {
-                    val parsed = Json.decodeFromString<OverlaySuggestionsResponse>(jsonStr)
+                    val parsed = Json.decodeFromString<ConceptAssignmentResponse>(llmResponse)
                     val nodes = globalAnalysisResult?.nodes ?: emptyList()
 
                     val enrichedItems =
@@ -250,11 +244,11 @@ fun Server.addCpgLlmAnalyzeTool() {
                             )
                         }
 
-                    val response = OverlaySuggestionsResponse(items = enrichedItems)
+                    val response = ConceptAssignmentResponse(items = enrichedItems)
                     CallToolResult(content = listOf(TextContent(Json.encodeToString(response))))
                 } catch (_: Exception) {
                     // If parsing fails, return the extracted JSON anyway
-                    CallToolResult(content = listOf(TextContent(jsonStr)))
+                    CallToolResult(content = listOf(TextContent(llmResponse)))
                 }
             }
         } catch (e: Exception) {
@@ -266,27 +260,4 @@ fun Server.addCpgLlmAnalyzeTool() {
             )
         }
     }
-}
-
-/**
- * Extract JSON from LLM response that might be wrapped in markdown code blocks or contain extra
- * text
- */
-private fun extractJson(response: String): String {
-    val trimmed = response.trim()
-
-    val fencedMatch = Regex("(?s)```(?:json)?\\s*(\\{.*?\\})\\s*```").find(trimmed)
-    if (fencedMatch != null) {
-        return fencedMatch.groupValues[1]
-    }
-
-    // Try to extract JSON between first { and last }
-    val firstBrace = trimmed.indexOf('{')
-    val lastBrace = trimmed.lastIndexOf('}')
-    if (firstBrace >= 0 && lastBrace > firstBrace) {
-        return trimmed.substring(firstBrace, lastBrace + 1)
-    }
-
-    // Return as-is if no extraction worked
-    return trimmed
 }

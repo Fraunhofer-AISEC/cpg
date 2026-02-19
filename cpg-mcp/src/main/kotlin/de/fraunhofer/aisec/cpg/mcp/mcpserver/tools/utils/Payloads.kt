@@ -95,6 +95,8 @@ data class ConceptAssignment(
     val endLine: Int? = null,
 )
 
+@Serializable data class ConceptAssignmentResponse(val items: List<ConceptAssignment>)
+
 /**
  * This class represents the payload for a CPG data flow analysis request, containing the source and
  * target concept types.
