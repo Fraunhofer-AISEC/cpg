@@ -36,7 +36,7 @@ import kotlin.test.*
 
 class RustComprehensiveTest : BaseTest() {
 
-    private val topLevel = Path.of("src", "test", "resources", "rust")
+    private val topLevel = Path.of("src", "test", "resources", "rust", "integration")
 
     private fun parseTU(file: String) =
         analyzeAndGetFirstTU(listOf(topLevel.resolve(file).toFile()), topLevel, true) {

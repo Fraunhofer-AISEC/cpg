@@ -34,7 +34,7 @@ import kotlin.test.*
 class RustAdvancedTypesTest : BaseTest() {
     @Test
     fun testTupleStruct() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "types")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("types.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
@@ -48,7 +48,7 @@ class RustAdvancedTypesTest : BaseTest() {
 
     @Test
     fun testEnumWithData() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "types")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("types.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
@@ -62,7 +62,7 @@ class RustAdvancedTypesTest : BaseTest() {
 
     @Test
     fun testVisibility() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "types")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("types.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()

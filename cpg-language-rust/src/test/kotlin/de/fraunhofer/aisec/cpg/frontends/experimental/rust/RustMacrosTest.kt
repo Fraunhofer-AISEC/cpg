@@ -36,7 +36,7 @@ import kotlin.test.*
 class RustMacrosTest : BaseTest() {
     @Test
     fun testDeriveAttribute() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "macros")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("macros.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
@@ -59,7 +59,7 @@ class RustMacrosTest : BaseTest() {
 
     @Test
     fun testMacroInvocation() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "macros")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("macros.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
@@ -78,7 +78,7 @@ class RustMacrosTest : BaseTest() {
 
     @Test
     fun testMacroArguments() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "macros")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("macros_args.rs").toFile()),
@@ -110,7 +110,7 @@ class RustMacrosTest : BaseTest() {
 
     @Test
     fun testBranchMacros() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("branch_coverage_edge_cases.rs").toFile()),
@@ -130,7 +130,7 @@ class RustMacrosTest : BaseTest() {
 
     @Test
     fun testBranchBlockMacroInvocationAtTopLevel() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "macros")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("branch_coverage_final.rs").toFile()),
@@ -146,7 +146,7 @@ class RustMacrosTest : BaseTest() {
 
     @Test
     fun testDeepMacroInvocationDecl() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "integration")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("comprehensive.rs").toFile()),

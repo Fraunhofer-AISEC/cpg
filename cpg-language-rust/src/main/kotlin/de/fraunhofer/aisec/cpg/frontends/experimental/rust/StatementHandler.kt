@@ -26,6 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.experimental.rust
 
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.TupleDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
@@ -192,23 +193,41 @@ class StatementHandler(frontend: RustLanguageFrontend) :
     }
 
     /**
+     * Recursively builds a [TupleDeclaration] from a Rust `tuple_pattern`, which can be nested
+     * (e.g., `let ((a, b), c) = ...`). The initializer is only set for the top-level tuple; nested
+     * tuples will have null initializers since Rust does not allow separate initializers for nested
+     * patterns.
+     */
+    fun buildTuple(pattern: TSNode, initializer: Expression?): TupleDeclaration {
+        val elements = mutableListOf<VariableDeclaration>()
+        for (child in pattern.children) {
+            if (!child.isNamed) continue
+            when (child.type) {
+                "tuple_pattern" -> {
+                    val nested = buildTuple(child, null)
+                    elements += nested
+                }
+                "identifier" -> {
+                    val variable = newVariableDeclaration(child.text(), rawNode = child)
+                    elements += variable
+                }
+            }
+        }
+
+        val tuple = newTupleDeclaration(elements, initializer, rawNode = pattern)
+        // Add tuple and its elements to scope
+        frontend.scopeManager.addDeclaration(tuple)
+        elements.forEach { frontend.scopeManager.addDeclaration(it) }
+        return tuple
+    }
+
+    /**
      * Translates a Rust tuple-destructuring `let` (e.g., `let (a, b) = tuple`) into a
      * [DeclarationStatement] containing a [TupleDeclaration].
      */
     private fun handleTupleLetDeclaration(node: TSNode, patternNode: TSNode): DeclarationStatement {
         val declStmt = newDeclarationStatement(rawNode = node)
 
-        // Create a VariableDeclaration for each element in the tuple pattern
-        val elements = mutableListOf<VariableDeclaration>()
-        for (child in patternNode.children) {
-            if (child.isNamed) {
-                val name = child.text()
-                val variable = newVariableDeclaration(name, rawNode = child)
-                elements += variable
-            }
-        }
-
-        // Parse the initializer
         val valueNode = node["value"]
         val initializer =
             if (valueNode != null) {
@@ -217,13 +236,15 @@ class StatementHandler(frontend: RustLanguageFrontend) :
                 null
             }
 
-        val tuple = newTupleDeclaration(elements, initializer, rawNode = node)
+        val topLevelTuple = buildTuple(patternNode, initializer)
 
-        // Add tuple and all elements to scope
-        frontend.scopeManager.addDeclaration(tuple)
-        elements.forEach { frontend.scopeManager.addDeclaration(it) }
+        // Register all tuple declarations (nested + top-level) in this statement
+        fun addTupleDecls(tuple: TupleDeclaration) {
+            tuple.elements.filterIsInstance<TupleDeclaration>().forEach { addTupleDecls(it) }
+            declStmt.addDeclaration(tuple)
+        }
 
-        declStmt.addDeclaration(tuple)
+        addTupleDecls(topLevelTuple)
         return declStmt
     }
 

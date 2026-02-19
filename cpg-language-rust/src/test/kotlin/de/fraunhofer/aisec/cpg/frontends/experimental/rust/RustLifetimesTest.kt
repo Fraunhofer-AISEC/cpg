@@ -36,7 +36,7 @@ import kotlin.test.*
 class RustLifetimesTest : BaseTest() {
     @Test
     fun testLifetimeParameters() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "types")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("lifetimes.rs").toFile()),
@@ -69,7 +69,7 @@ class RustLifetimesTest : BaseTest() {
 
     @Test
     fun testMutability() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "types")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("lifetimes.rs").toFile()),
@@ -98,7 +98,7 @@ class RustLifetimesTest : BaseTest() {
 
     @Test
     fun testBorrowParameter() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "types")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("lifetimes.rs").toFile()),
@@ -121,7 +121,7 @@ class RustLifetimesTest : BaseTest() {
 
     @Test
     fun testDeepMutableRef() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "types")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("references_lifetimes.rs").toFile()),
@@ -138,7 +138,7 @@ class RustLifetimesTest : BaseTest() {
 
     @Test
     fun testDeepLifetimeRef() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "types")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("references_lifetimes.rs").toFile()),

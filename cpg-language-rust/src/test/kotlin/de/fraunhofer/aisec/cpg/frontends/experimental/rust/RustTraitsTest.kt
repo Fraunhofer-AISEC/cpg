@@ -35,7 +35,7 @@ import kotlin.test.*
 class RustTraitsTest : BaseTest() {
     @Test
     fun testTraits() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "traits")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("traits.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
@@ -81,7 +81,7 @@ class RustTraitsTest : BaseTest() {
 
     @Test
     fun testAssociatedTypes() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "traits")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("traits.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
@@ -115,7 +115,7 @@ class RustTraitsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("declarations.rs").toFile()),
+                listOf(topLevel.resolve("declarations/declarations.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -132,7 +132,7 @@ class RustTraitsTest : BaseTest() {
         val topLevel = Path.of("src", "test", "resources", "rust")
         val tu =
             analyzeAndGetFirstTU(
-                listOf(topLevel.resolve("declarations.rs").toFile()),
+                listOf(topLevel.resolve("declarations/declarations.rs").toFile()),
                 topLevel,
                 true,
             ) {
@@ -150,7 +150,7 @@ class RustTraitsTest : BaseTest() {
 
     @Test
     fun testBranchTraitImpl() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("branch_coverage_edge_cases.rs").toFile()),
@@ -171,7 +171,7 @@ class RustTraitsTest : BaseTest() {
 
     @Test
     fun testDeepTraitWithMethods() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "traits")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("traits_deep.rs").toFile()),
@@ -189,7 +189,7 @@ class RustTraitsTest : BaseTest() {
 
     @Test
     fun testDeepTraitWithSuperTrait() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "traits")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("traits_deep.rs").toFile()),
@@ -205,7 +205,7 @@ class RustTraitsTest : BaseTest() {
 
     @Test
     fun testDeepImplTraitForStruct() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "traits")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("traits_deep.rs").toFile()),

@@ -36,7 +36,7 @@ import kotlin.test.*
 class RustPatternsTest : BaseTest() {
     @Test
     fun testStructPattern() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "patterns")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("patterns.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
@@ -58,7 +58,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testOrPattern() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "patterns")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("patterns.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
@@ -80,7 +80,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testBranchRefPatternBinding() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("branch_coverage_statements.rs").toFile()),
@@ -102,7 +102,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testBranchMutPatternBinding() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("branch_coverage_statements.rs").toFile()),
@@ -124,7 +124,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testBranchMatchWildcard() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("branch_coverage_edge_cases.rs").toFile()),
@@ -144,7 +144,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testBranchEmptyMatchArm() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("branch_coverage_edge_cases.rs").toFile()),
@@ -164,7 +164,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testBranchNestedTupleMatch() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("branch_coverage_edge_cases.rs").toFile()),
@@ -184,7 +184,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testBranchEnumPatterns() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("branch_coverage_edge_cases.rs").toFile()),
@@ -204,7 +204,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testBranchMatchWithGuard() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("branch_coverage_targeted.rs").toFile()),
@@ -224,7 +224,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testBranchSingleAlternativePattern() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("branch_coverage_targeted.rs").toFile()),
@@ -244,7 +244,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testBranchStructPatternMatch() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("branch_coverage_targeted.rs").toFile()),
@@ -264,7 +264,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testBranchSlicePattern() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("branch_coverage_targeted.rs").toFile()),
@@ -284,7 +284,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testBranchFieldPatternBinding() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("branch_coverage_targeted.rs").toFile()),
@@ -304,7 +304,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testBranchMatchEmptyArms() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("branch_coverage_targeted.rs").toFile()),
@@ -324,7 +324,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testBranchOrPatternComplex() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("branch_coverage_targeted.rs").toFile()),
@@ -344,7 +344,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testBranchNestedMatch() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("branch_coverage_targeted.rs").toFile()),
@@ -364,7 +364,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testDeepMatchStructPattern() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "patterns")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("match_patterns_deep.rs").toFile()),
@@ -384,7 +384,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testDeepMatchStructRename() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "patterns")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("match_patterns_deep.rs").toFile()),
@@ -404,7 +404,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testDeepMatchTupleStruct() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "patterns")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("match_patterns_deep.rs").toFile()),
@@ -424,7 +424,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testDeepMatchOrPattern() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "patterns")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("match_patterns_deep.rs").toFile()),
@@ -444,7 +444,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testDeepMatchRefPattern() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "patterns")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("match_patterns_deep.rs").toFile()),
@@ -464,7 +464,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testDeepMatchGuard() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "patterns")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("match_patterns_deep.rs").toFile()),
@@ -484,7 +484,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testDeepMatchNestedTuple() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "patterns")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("match_patterns_deep.rs").toFile()),
@@ -504,7 +504,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testDeepMatchSlice() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "patterns")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("match_patterns_deep.rs").toFile()),
@@ -524,7 +524,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testDeepMatchNegativeLiteral() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "patterns")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("match_patterns_deep.rs").toFile()),
@@ -544,7 +544,7 @@ class RustPatternsTest : BaseTest() {
 
     @Test
     fun testDeepEnumMatch() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "adt")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("enums_advanced.rs").toFile()),

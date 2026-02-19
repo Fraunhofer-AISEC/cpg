@@ -38,7 +38,7 @@ class RustFrontendTest : BaseTest() {
 
     @Test
     fun testHelloWorld() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "integration")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("main.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
@@ -65,7 +65,7 @@ class RustFrontendTest : BaseTest() {
 
     @Test
     fun testIf() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("if.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
@@ -89,7 +89,7 @@ class RustFrontendTest : BaseTest() {
 
     @Test
     fun testExpressions() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "expressions")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("expressions.rs").toFile()),
@@ -150,7 +150,7 @@ class RustFrontendTest : BaseTest() {
 
     @Test
     fun testTypes() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "types")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("types.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
@@ -167,7 +167,7 @@ class RustFrontendTest : BaseTest() {
 
     @Test
     fun testMatch() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("match.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
@@ -191,7 +191,7 @@ class RustFrontendTest : BaseTest() {
 
     @Test
     fun testCoverage() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "integration")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("coverage.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
@@ -210,7 +210,7 @@ class RustFrontendTest : BaseTest() {
 
     @Test
     fun testComplex1() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "integration")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("complex_1.rs").toFile()),

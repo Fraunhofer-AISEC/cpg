@@ -35,7 +35,7 @@ import kotlin.test.*
 class RustTypeHandlerTest : BaseTest() {
     @Test
     fun testFunctionPointerType() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "types")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("types.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
@@ -53,7 +53,7 @@ class RustTypeHandlerTest : BaseTest() {
 
     @Test
     fun testImplTraitType() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "types")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("types.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()
@@ -71,7 +71,7 @@ class RustTypeHandlerTest : BaseTest() {
 
     @Test
     fun testRawPointerType() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "types")
         val tu =
             analyzeAndGetFirstTU(listOf(topLevel.resolve("types.rs").toFile()), topLevel, true) {
                 it.registerLanguage<RustLanguage>()

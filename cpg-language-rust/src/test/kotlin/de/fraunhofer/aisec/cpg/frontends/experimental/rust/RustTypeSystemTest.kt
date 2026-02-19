@@ -40,7 +40,7 @@ import kotlin.test.*
 
 class RustTypeSystemTest : BaseTest() {
 
-    private val topLevel = Path.of("src", "test", "resources", "rust")
+    private val topLevel = Path.of("src", "test", "resources", "rust", "types")
 
     private fun parseTU(file: String) =
         analyzeAndGetFirstTU(listOf(topLevel.resolve(file).toFile()), topLevel, true) {

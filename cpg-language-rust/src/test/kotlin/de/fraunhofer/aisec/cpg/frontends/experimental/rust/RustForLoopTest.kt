@@ -35,8 +35,8 @@ import kotlin.test.*
 
 class RustForLoopTest : BaseTest() {
     @Test
-    fun testBasicFor() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+    fun testForLoop() {
+        val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("for_loops.rs").toFile()),
@@ -69,8 +69,8 @@ class RustForLoopTest : BaseTest() {
     }
 
     @Test
-    fun testLabeledFor() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+    fun testForLoopPattern() {
+        val topLevel = Path.of("src", "test", "resources", "rust", "control_flow")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("for_loops.rs").toFile()),

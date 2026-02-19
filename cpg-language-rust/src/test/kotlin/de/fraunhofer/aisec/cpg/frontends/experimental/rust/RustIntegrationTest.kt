@@ -38,7 +38,7 @@ import kotlin.test.*
 class RustIntegrationTest : BaseTest() {
     @Test
     fun testKitchenSink() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "integration")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("kitchen_sink.rs").toFile()),

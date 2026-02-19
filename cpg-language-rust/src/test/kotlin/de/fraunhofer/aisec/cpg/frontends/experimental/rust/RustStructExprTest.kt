@@ -43,7 +43,7 @@ class RustStructExprTest : BaseTest() {
 
     @Test
     fun testStructExpression() {
-        val tu = parseTU("structs.rs")
+        val tu = parseTU("structs/structs.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_struct_expr"]
@@ -61,7 +61,7 @@ class RustStructExprTest : BaseTest() {
 
     @Test
     fun testMethodCall() {
-        val tu = parseTU("structs.rs")
+        val tu = parseTU("structs/structs.rs")
         assertNotNull(tu)
 
         val func = tu.functions["test_struct_expr"]
@@ -79,7 +79,7 @@ class RustStructExprTest : BaseTest() {
 
     @Test
     fun testShorthandStructInit() {
-        val tu = parseTU("structs.rs")
+        val tu = parseTU("structs/structs.rs")
         assertNotNull(tu)
         val func = tu.functions["test_shorthand_init"]
         assertNotNull(func)
@@ -94,7 +94,7 @@ class RustStructExprTest : BaseTest() {
 
     @Test
     fun testBranchStructFull() {
-        val tu = parseTU("branch_coverage_edge_cases.rs")
+        val tu = parseTU("control_flow/branch_coverage_edge_cases.rs")
         assertNotNull(tu)
         val func = tu.functions["test_struct_full"]
         assertNotNull(func)
@@ -106,7 +106,7 @@ class RustStructExprTest : BaseTest() {
 
     @Test
     fun testDeepStructFieldInit() {
-        val tu = parseTU("structs.rs")
+        val tu = parseTU("structs/structs.rs")
         assertNotNull(tu)
         val func = tu.functions["test_struct_field_init"]
         assertNotNull(func)
@@ -118,7 +118,7 @@ class RustStructExprTest : BaseTest() {
 
     @Test
     fun testDeepStructShorthand() {
-        val tu = parseTU("structs.rs")
+        val tu = parseTU("structs/structs.rs")
         assertNotNull(tu)
         val func = tu.functions["test_struct_shorthand"]
         assertNotNull(func)
@@ -130,7 +130,7 @@ class RustStructExprTest : BaseTest() {
 
     @Test
     fun testDeepStructSpread() {
-        val tu = parseTU("structs.rs")
+        val tu = parseTU("structs/structs.rs")
         assertNotNull(tu)
         val func = tu.functions["test_struct_spread"]
         assertNotNull(func)
@@ -147,7 +147,7 @@ class RustStructExprTest : BaseTest() {
 
     @Test
     fun testStructs() {
-        val tu = parseTU("structs.rs")
+        val tu = parseTU("structs/structs.rs")
         assertNotNull(tu)
 
         val myStruct = tu.records["MyStruct"]

@@ -35,7 +35,7 @@ import kotlin.test.*
 class RustBlockExprTest : BaseTest() {
     @Test
     fun testBlockAsExpression() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+        val topLevel = Path.of("src", "test", "resources", "rust", "expressions")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("block_expr.rs").toFile()),

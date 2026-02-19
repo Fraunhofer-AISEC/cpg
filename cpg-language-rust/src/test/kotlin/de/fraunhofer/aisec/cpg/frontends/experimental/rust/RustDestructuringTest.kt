@@ -35,8 +35,8 @@ import kotlin.test.*
 
 class RustDestructuringTest : BaseTest() {
     @Test
-    fun testTupleDestructuring() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+    fun testDestructuring() {
+        val topLevel = Path.of("src", "test", "resources", "rust", "patterns")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("destructuring.rs").toFile()),
@@ -47,24 +47,24 @@ class RustDestructuringTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val func = tu.functions["test_tuple_destructuring"]
+        val func = tu.functions["test_destructuring"]
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
 
-        val tuples = body.allChildren<TupleDeclaration>()
-        assertEquals(1, tuples.size, "Should have one TupleDeclaration")
+        val vars = body.variables
+        assertEquals(5, vars.size, "Should have five VariableDeclarations: (a,b), a, b, sum, _)")
 
-        val tuple = tuples.first()
-        assertEquals(2, tuple.elements.size, "Tuple should have 2 elements")
-        assertEquals("a", tuple.elements.getOrNull(0)?.name?.localName)
-        assertEquals("b", tuple.elements.getOrNull(1)?.name?.localName)
-        assertNotNull(tuple.initializer, "Tuple should have an initializer")
+        val a = vars["a"]
+        assertNotNull(a, "Should have binding 'a'")
+
+        val b = vars["b"]
+        assertNotNull(b, "Should have binding 'b'")
     }
 
     @Test
-    fun testSimpleLetStillWorks() {
-        val topLevel = Path.of("src", "test", "resources", "rust")
+    fun testDestructuringNested() {
+        val topLevel = Path.of("src", "test", "resources", "rust", "patterns")
         val tu =
             analyzeAndGetFirstTU(
                 listOf(topLevel.resolve("destructuring.rs").toFile()),
@@ -75,17 +75,21 @@ class RustDestructuringTest : BaseTest() {
             }
         assertNotNull(tu)
 
-        val func = tu.functions["test_simple_let"]
+        val func = tu.functions["test_destructuring_nested"]
         assertNotNull(func)
         val body = func.body as? Block
         assertNotNull(body)
 
-        val vars = body.allChildren<VariableDeclaration>()
-        val x = vars.firstOrNull { it.name.localName == "x" }
-        assertNotNull(x, "Simple let should still create VariableDeclaration")
+        val vars = body.variables
+        assertEquals(6, vars.size,"Should have fix VariableDeclarations: (x,y,z), x, y, z, sum, _)")
 
-        val literal = x.initializer as? Literal<*>
-        assertNotNull(literal, "x should have a literal initializer")
-        assertEquals(42L, literal.value)
+        val x = vars.firstOrNull { it.name.localName == "x" }
+        assertNotNull(x, "Should have binding 'x'")
+
+        val y = vars.firstOrNull { it.name.localName == "y" }
+        assertNotNull(y, "Should have binding 'y'")
+
+        val z = vars.firstOrNull { it.name.localName == "z" }
+        assertNotNull(z, "Should have binding 'z'")
     }
 }
