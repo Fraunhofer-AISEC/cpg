@@ -31,9 +31,12 @@ import de.fraunhofer.aisec.cpg.test.BaseTest
 import de.fraunhofer.aisec.cpg.test.analyze
 import java.io.File
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import org.junit.jupiter.api.assertNotNull
 
 class UriNodeIdTest : BaseTest() {
+
+    val astIds = mutableListOf<String>()
 
     @Test
     fun testUriNodeId() {
@@ -46,15 +49,26 @@ class UriNodeIdTest : BaseTest() {
 
         for (c in result.components) {
             printAst(c)
-            c.idAst
         }
+
+        assertEquals(
+            astIds.size,
+            astIds.toSet().size,
+            astIds
+                .toSet()
+                .filter { x -> astIds.count { it == x } > 1 }
+                .toSet()
+                .joinToString("\n", prefix = "Duplicate values:\n"),
+        )
     }
-}
 
-fun printAst(n: AstNode, depth: Int = 0) {
-    println("${"\t".repeat(depth)}: ${n.idAst} $n")
+    fun printAst(n: AstNode, depth: Int = 0) {
+        println("${"\t".repeat(depth)}${n.idAst}")
+        // println("${"\t".repeat(depth)}${n.idAst} $n")
+        astIds.add(n.idAst)
 
-    for (child in n.astChildren) {
-        printAst(child, depth + 1)
+        for (child in n.astChildren) {
+            printAst(child, depth)
+        }
     }
 }
