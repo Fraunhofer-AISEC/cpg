@@ -34,6 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
+import de.fraunhofer.aisec.cpg.graph.declarations.Method
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
@@ -46,7 +47,7 @@ import de.fraunhofer.aisec.cpg.sarif.PhysicalLocation
 import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.lang.reflect.Field
-import java.lang.reflect.Method
+import java.lang.reflect.Method as ReflectMethod
 import java.nio.file.Path
 import org.eclipse.cdt.core.dom.ast.*
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTReferenceOperator
@@ -448,7 +449,7 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
         type: Class<*>,
         methodName: String,
         vararg parameterTypes: Class<*>,
-    ): Method {
+    ): ReflectMethod {
         return try {
             type.getDeclaredMethod(methodName, *parameterTypes)
         } catch (e: NoSuchMethodException) {
