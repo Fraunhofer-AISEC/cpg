@@ -32,7 +32,7 @@ import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.helpers.Util
 
 class SpecificationHandler(frontend: GoLanguageFrontend) :
-    GoHandler<Declaration?, GoStandardLibrary.Ast.Spec>(::Problem, frontend) {
+    GoHandler<Declaration?, GoStandardLibrary.Ast.Spec>(::ProblemDeclaration, frontend) {
 
     override fun handleNode(node: GoStandardLibrary.Ast.Spec): Declaration? {
         return when (node) {
@@ -88,7 +88,7 @@ class SpecificationHandler(frontend: GoLanguageFrontend) :
                 is GoStandardLibrary.Ast.ArrayType,
                 is GoStandardLibrary.Ast.StarExpr,
                 is GoStandardLibrary.Ast.ChanType -> handleTypeDef(spec, type)
-                else -> return Problem("not parsing type of type ${type.goType} yet")
+                else -> return ProblemDeclaration("not parsing type of type ${type.goType} yet")
             }
 
         return decl

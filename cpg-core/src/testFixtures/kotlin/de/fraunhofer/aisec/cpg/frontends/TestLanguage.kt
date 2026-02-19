@@ -28,7 +28,7 @@ package de.fraunhofer.aisec.cpg.frontends
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.graph.Node
-import de.fraunhofer.aisec.cpg.graph.declarations.Problem
+import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnit
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.graph.unknownType
@@ -133,4 +133,4 @@ open class TestLanguageFrontend(
 }
 
 class TestHandler(frontend: TestLanguageFrontend) :
-    Handler<Node, Any, TestLanguageFrontend>(::Problem, frontend)
+    Handler<Node, Any, TestLanguageFrontend>(::ProblemDeclaration, frontend)

@@ -26,7 +26,7 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Problem
+import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.test.*
@@ -73,7 +73,7 @@ class CXXAmbiguitiesTest {
         val crazy = someFunction.allChildren<DeclarationStatement>().firstOrNull()
         assertNotNull(crazy) // if we ever fix it, this will FAIL
 
-        val problem = crazy.singleDeclaration as? Problem
+        val problem = crazy.singleDeclaration as? ProblemDeclaration
         assertNotNull(problem)
         assertContains(problem.problem, "CDT")
     }

@@ -34,7 +34,7 @@ import sootup.core.model.SootField
 import sootup.core.model.SootMethod
 
 class DeclarationHandler(frontend: JVMLanguageFrontend) :
-    Handler<Declaration, Any, JVMLanguageFrontend>(::Problem, frontend) {
+    Handler<Declaration, Any, JVMLanguageFrontend>(::ProblemDeclaration, frontend) {
 
     override fun handle(ctx: Any): Declaration {
         try {
@@ -45,7 +45,7 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
                 is Local -> handleLocal(ctx)
                 else -> {
                     log.warn("Unhandled declaration type: ${ctx.javaClass.simpleName}")
-                    newProblem(
+                    newProblemDeclaration(
                         "Unhandled declaration type: ${ctx.javaClass.simpleName}",
                         rawNode = ctx,
                     )
@@ -53,7 +53,7 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
             }
         } catch (e: Exception) {
             log.error("Error while handling a declaration", e)
-            return newProblem("Error handling declaration ${ctx}: ${e.message}", rawNode = ctx)
+            return newProblemDeclaration("Error handling declaration ${ctx}: ${e.message}", rawNode = ctx)
         }
     }
 

@@ -49,7 +49,7 @@ import de.fraunhofer.aisec.cpg.helpers.Util
  * [DeclarationHandler], for others, the [StatementHandler] will forward these statements to us.
  */
 class DeclarationHandler(frontend: PythonLanguageFrontend) :
-    PythonHandler<Declaration, Python.AST.Def>(::Problem, frontend) {
+    PythonHandler<Declaration, Python.AST.Def>(::ProblemDeclaration, frontend) {
     override fun handleNode(node: Python.AST.Def): Declaration {
         return when (node) {
             is Python.AST.FunctionDef -> handleFunctionDef(node)

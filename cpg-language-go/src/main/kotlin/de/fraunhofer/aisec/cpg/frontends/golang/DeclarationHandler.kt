@@ -34,7 +34,7 @@ import de.fraunhofer.aisec.cpg.graph.types.Type
 import de.fraunhofer.aisec.cpg.graph.types.UnknownType
 
 class DeclarationHandler(frontend: GoLanguageFrontend) :
-    GoHandler<Declaration?, GoStandardLibrary.Ast.Decl>(::Problem, frontend) {
+    GoHandler<Declaration?, GoStandardLibrary.Ast.Decl>(::ProblemDeclaration, frontend) {
 
     override fun handleNode(node: GoStandardLibrary.Ast.Decl): Declaration? {
         return when (node) {

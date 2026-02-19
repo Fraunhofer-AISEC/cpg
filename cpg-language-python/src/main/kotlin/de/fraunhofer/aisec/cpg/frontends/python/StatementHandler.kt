@@ -943,7 +943,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
     internal fun addAsyncWarning(mightBeAsync: Python.AST.AsyncOrNot, parentNode: Node) {
         if (mightBeAsync is IsAsync) {
             parentNode.additionalProblems +=
-                newProblem(
+                newProblemDeclaration(
                     problem = "The \"async\" keyword is not yet supported.",
                     problemType = ProblemNode.ProblemType.TRANSLATION,
                     rawNode = mightBeAsync,

@@ -39,7 +39,7 @@ class Include : Declaration() {
     val includes by unwrapping(Include::includeEdges)
 
     @Relationship(value = "PROBLEMS", direction = Relationship.Direction.OUTGOING)
-    val problemEdges = astEdgesOf<Problem>()
+    val problemEdges = astEdgesOf<ProblemDeclaration>()
     val problems by unwrapping(Include::problemEdges)
 
     /**

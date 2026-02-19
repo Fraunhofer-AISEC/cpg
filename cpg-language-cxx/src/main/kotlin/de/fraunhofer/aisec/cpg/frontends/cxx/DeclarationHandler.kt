@@ -61,7 +61,7 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.*
  * and the [DeclarationHandler] modifies the declaration depending on the declaration specifiers.
  */
 class DeclarationHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Declaration, IASTNode>(Supplier(::Problem), lang) {
+    CXXHandler<Declaration, IASTNode>(Supplier(::ProblemDeclaration), lang) {
 
     override fun handleNode(node: IASTNode): Declaration {
         return when (node) {
@@ -151,7 +151,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     private fun handleProblem(ctx: IASTProblemDeclaration): Declaration {
         Util.errorWithFileLocation(frontend, ctx, log, ctx.problem.message)
 
-        val problem = newProblem(ctx.problem.message)
+        val problem = newProblemDeclaration(ctx.problem.message)
 
         return problem
     }
@@ -169,7 +169,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val declaration = frontend.declaratorHandler.handle(ctx.declarator)
 
         if (declaration !is Function) {
-            return Problem("declarator of function definition is not a function declarator")
+            return ProblemDeclaration("declarator of function definition is not a function declarator")
         }
 
         // Retrieve the type. This should parse as a function type, otherwise it is unknown.
@@ -721,7 +721,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         // into other translation units
         frontend.scopeManager.resetToGlobal(node)
         frontend.currentTU = node
-        val problematicIncludes = HashMap<String?, HashSet<Problem>>()
+        val problematicIncludes = HashMap<String?, HashSet<ProblemDeclaration>>()
 
         for (declaration in translationUnit.declarations) {
             val decl = handle(declaration) ?: continue
@@ -755,7 +755,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
     private fun addIncludes(
         translationUnit: IASTTranslationUnit,
-        problematicIncludes: Map<String?, Set<Problem>>,
+        problematicIncludes: Map<String?, Set<ProblemDeclaration>>,
         node: TranslationUnit,
     ) {
         // TODO: Remark CB: I am not quite sure, what the point of the code beyond this line is.

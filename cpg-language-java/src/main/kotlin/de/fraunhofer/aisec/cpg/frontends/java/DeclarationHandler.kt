@@ -56,7 +56,7 @@ import de.fraunhofer.aisec.cpg.matchesSignature
 import java.util.function.Supplier
 
 open class DeclarationHandler(lang: JavaLanguageFrontend) :
-    Handler<Declaration, Node, JavaLanguageFrontend>(Supplier { Problem() }, lang) {
+    Handler<Declaration, Node, JavaLanguageFrontend>(Supplier { ProblemDeclaration() }, lang) {
     fun handleConstructor(constructorDeclaration: ConstructorDeclaration): Constructor {
         val resolvedConstructor = constructorDeclaration.resolve()
         val currentRecordDecl = frontend.scopeManager.currentRecord
@@ -425,7 +425,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     fun /* TODO refine return type*/ handleAnnotationDeclaration(
         annotationConstDecl: AnnotationDeclaration?
     ): Declaration {
-        return Problem(
+        return ProblemDeclaration(
             "AnnotationDeclaration not supported yet",
             ProblemNode.ProblemType.TRANSLATION,
         )
@@ -434,7 +434,7 @@ open class DeclarationHandler(lang: JavaLanguageFrontend) :
     fun /* TODO refine return type*/ handleAnnotationMemberDeclaration(
         annotationMemberDecl: AnnotationMemberDeclaration?
     ): Declaration {
-        return Problem(
+        return ProblemDeclaration(
             "AnnotationMemberDeclaration not supported yet",
             ProblemNode.ProblemType.TRANSLATION,
         )

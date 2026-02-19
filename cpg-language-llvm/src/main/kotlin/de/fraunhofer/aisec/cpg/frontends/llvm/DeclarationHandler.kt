@@ -29,7 +29,7 @@ import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
-import de.fraunhofer.aisec.cpg.graph.declarations.Problem
+import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Record
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -43,7 +43,7 @@ import org.bytedeco.llvm.global.LLVM.*
  * declarations, mainly functions and types.
  */
 class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
-    Handler<Declaration, Pointer, LLVMIRLanguageFrontend>(::Problem, lang) {
+    Handler<Declaration, Pointer, LLVMIRLanguageFrontend>(::ProblemDeclaration, lang) {
     init {
         map.put(LLVMValueRef::class.java) { handleValue(it as LLVMValueRef) }
         map.put(LLVMTypeRef::class.java) { handleStructureType(it as LLVMTypeRef) }
@@ -55,7 +55,7 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
             LLVMGlobalVariableValueKind -> handleGlobal(value)
             else -> {
                 log.error("Not handling declaration kind {} yet", kind)
-                newProblem(
+                newProblemDeclaration(
                     "Not handling declaration kind $kind yet.",
                     ProblemNode.ProblemType.TRANSLATION,
                     rawNode = value,

@@ -31,7 +31,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.*
 import de.fraunhofer.aisec.cpg.graph.declarations.Function
 
 class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
-    Handler<Declaration, TypeScriptNode, TypeScriptLanguageFrontend>(::Problem, lang) {
+    Handler<Declaration, TypeScriptNode, TypeScriptLanguageFrontend>(::ProblemDeclaration, lang) {
     init {
         map.put(TypeScriptNode::class.java, ::handleNode)
     }
@@ -52,7 +52,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
             "ClassDeclaration" -> return handleClassDeclaration(node)
         }
 
-        return Problem("No handler was implemented for node of type " + node.type)
+        return ProblemDeclaration("No handler was implemented for node of type " + node.type)
     }
 
     private fun handlePropertySignature(node: TypeScriptNode): Field {

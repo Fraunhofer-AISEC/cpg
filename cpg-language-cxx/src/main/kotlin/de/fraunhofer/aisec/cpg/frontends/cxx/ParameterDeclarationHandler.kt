@@ -27,7 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
 import de.fraunhofer.aisec.cpg.graph.declarations.Parameter
-import de.fraunhofer.aisec.cpg.graph.declarations.Problem
+import de.fraunhofer.aisec.cpg.graph.declarations.ProblemDeclaration
 import de.fraunhofer.aisec.cpg.graph.newParameter
 import java.util.function.Supplier
 import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier
@@ -37,7 +37,7 @@ import org.eclipse.cdt.internal.core.dom.parser.c.CASTSimpleDeclSpecifier
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTParameterDeclaration
 
 class ParameterDeclarationHandler(lang: CXXLanguageFrontend) :
-    CXXHandler<Declaration, IASTParameterDeclaration>(Supplier(::Problem), lang) {
+    CXXHandler<Declaration, IASTParameterDeclaration>(Supplier(::ProblemDeclaration), lang) {
 
     override fun handleNode(node: IASTParameterDeclaration): Declaration {
         return when (node) {

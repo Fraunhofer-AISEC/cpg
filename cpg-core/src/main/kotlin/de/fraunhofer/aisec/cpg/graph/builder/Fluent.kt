@@ -454,7 +454,7 @@ fun LanguageFrontend<*, *>.variable(
 }
 
 /**
- * Creates a new [Problem] in the Fluent Node DSL and adds it to the
+ * Creates a new [ProblemDeclaration] in the Fluent Node DSL and adds it to the
  * [DeclarationStatement.declarations] of the nearest enclosing [DeclarationStatement]. The [init]
  * block can be used to create further sub-nodes as well as configuring the created node itself.
  */
@@ -462,10 +462,10 @@ context(stmt: DeclarationStatement)
 fun LanguageFrontend<*, *>.problemDecl(
     description: String,
     type: ProblemNode.ProblemType = ProblemNode.ProblemType.TRANSLATION,
-    init: (Problem.() -> Unit)? = null,
-): Problem {
+    init: (ProblemDeclaration.() -> Unit)? = null,
+): ProblemDeclaration {
     val node =
-        this.newProblem(problem = description, problemType = type).apply {
+        this.newProblemDeclaration(problem = description, problemType = type).apply {
             this.location = getCallerFileAndLine()
         }
     if (init != null) init(node)
