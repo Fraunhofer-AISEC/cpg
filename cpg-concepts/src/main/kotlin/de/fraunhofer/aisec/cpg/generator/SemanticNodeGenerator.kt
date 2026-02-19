@@ -37,13 +37,14 @@ object SemanticNodeGenerator {
         var packageNameGo = "voc"
         var outputBaseJava = "output/java/"
         var packageNameJava = "de.fraunhofer.aisec.cpg.graph.concepts.ontology"
-        var outputBaseKotlin = "src/main/kotlin/de/fraunhofer/aisec/cpg/graph/concepts/ontology/"
+        var outputBaseKotlin =
+            "cpg-concepts/src/main/kotlin/de/fraunhofer/aisec/cpg/graph/concepts/ontology"
         var packageNameKotlin = "de.fraunhofer.aisec.cpg.graph.concepts.ontology"
         val resourceNameFromOwlFile = "Resource"
 
         // IMPORTANT: Only OWL/XML and RDF/XML are supported
 
-        var owlInputPath = "../external/security-metrics/ontology/1.0/ontology-merged.owx"
+        var owlInputPath = "external/security-metrics/ontology/v1/ontology-merged.owx"
 
         val file = File(owlInputPath)
         if (!file.exists()) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,14 +37,14 @@ import kotlin.collections.MutableList
 import kotlin.collections.MutableMap
 
 /** A key used for encryption algorithms. */
-public open class SelectorKey(
+public open class Key(
     public val algorithm: String?,
     public val keySize: Int?,
     enabled: Boolean?,
     expirationDate: ZonedDateTime?,
     isManaged: Boolean?,
     notBeforeDate: ZonedDateTime?,
-    usedByMultiple: Infrastructure?,
+    infrastructures: Infrastructure?,
     internetAccessibleEndpoint: Boolean?,
     geoLocation: GeoLocation?,
     loggings: MutableList<Logging?>,
@@ -64,7 +64,7 @@ public open class SelectorKey(
         expirationDate,
         isManaged,
         notBeforeDate,
-        usedByMultiple,
+        infrastructures,
         internetAccessibleEndpoint,
         geoLocation,
         loggings,
@@ -84,7 +84,7 @@ public open class SelectorKey(
     }
 
     override fun equals(other: Any?): Boolean =
-        other is SelectorKey &&
+        other is Key &&
             super.equals(other) &&
             other.algorithm == this.algorithm &&
             other.keySize == this.keySize

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,14 +33,11 @@ import kotlin.Boolean
 import kotlin.Int
 
 public open class InstallUpdateOperation(
-    public val automaticUpdates: AutomaticUpdates?,
-    linkedConcept: AutomaticUpdates,
+    operatesOn: AutomaticUpdates,
     underlyingNode: Node? = null,
-) : Operation(linkedConcept, underlyingNode) {
+) : Operation(operatesOn, underlyingNode) {
     override fun equals(other: Any?): Boolean =
-        other is InstallUpdateOperation &&
-            super.equals(other) &&
-            other.automaticUpdates == this.automaticUpdates
+        other is InstallUpdateOperation && super.equals(other)
 
-    override fun hashCode(): Int = Objects.hash(super.hashCode(), automaticUpdates)
+    override fun hashCode(): Int = Objects.hash(super.hashCode())
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,8 +32,8 @@ import kotlin.Boolean
 import kotlin.Int
 
 /** Represents an operation that checks whether a user or principal has access to a protected */
-public open class CheckAccess(linkedConcept: ProtectedAsset, underlyingNode: Node? = null) :
-    ProtectedAssetOperation(linkedConcept, underlyingNode) {
+public open class CheckAccess(operatesOn: ProtectedAsset, underlyingNode: Node? = null) :
+    ProtectedAssetOperation(operatesOn, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is CheckAccess && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())

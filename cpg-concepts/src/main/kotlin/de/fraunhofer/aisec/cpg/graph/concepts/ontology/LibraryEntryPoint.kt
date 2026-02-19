@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, Fraunhofer AISEC. All rights reserved.
+ * Copyright (c) 2026, Fraunhofer AISEC. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,9 +33,9 @@ import kotlin.Int
 
 /** Represents an entry point that is triggered if the code is loaded as a (dynamic) library. */
 public open class LibraryEntryPoint(
-    target: OperatingSystemArchitecture?,
+    usedBy: OperatingSystemArchitecture?,
     underlyingNode: Node? = null,
-) : LocalEntryPoint(target, underlyingNode) {
+) : LocalEntryPoint(usedBy, underlyingNode) {
     override fun equals(other: Any?): Boolean = other is LibraryEntryPoint && super.equals(other)
 
     override fun hashCode(): Int = Objects.hash(super.hashCode())
