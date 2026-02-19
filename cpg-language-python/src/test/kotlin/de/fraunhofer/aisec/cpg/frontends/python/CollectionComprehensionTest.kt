@@ -251,10 +251,7 @@ class CollectionComprehensionTest {
         )
 
         val paramX = listCompFunctionDeclaration.parameters[0]
-        assertIs<Parameter>(
-            paramX,
-            "The function \"list_comp\" has a parameter called \"x^\".",
-        )
+        assertIs<Parameter>(paramX, "The function \"list_comp\" has a parameter called \"x^\".")
         assertLocalName("x", paramX, "The function \"list_comp\" has a parameter called \"x\".")
 
         val body = listCompFunctionDeclaration.body

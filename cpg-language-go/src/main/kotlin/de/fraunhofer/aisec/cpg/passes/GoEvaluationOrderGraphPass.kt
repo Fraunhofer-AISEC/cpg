@@ -84,10 +84,10 @@ class GoEvaluationOrderGraphPass(ctx: TranslationContext) : EvaluationOrderGraph
     }
 
     /**
-     * We need to intentionally override [handleRecord] to NOT create the EOG for its
-     * children, e.g., [Record.methods]. The reason for this is that Go only has external
-     * methods declarations, and we do a little cheat by adding the methods both to the namespace of
-     * the current file and to the [Record.methods].
+     * We need to intentionally override [handleRecord] to NOT create the EOG for its children,
+     * e.g., [Record.methods]. The reason for this is that Go only has external methods
+     * declarations, and we do a little cheat by adding the methods both to the namespace of the
+     * current file and to the [Record.methods].
      *
      * But, due to this, the original [EvaluationOrderGraphPass] would create the EOG for methods
      * twice, once for the object in the [Record] and once for the declaration inside the

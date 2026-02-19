@@ -56,8 +56,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         frontend.scopeManager.enterScope(anonymousFunction)
         for (parameter in lambdaExpr.parameters) {
             val resolvedType = frontend.getTypeAsGoodAsPossible(parameter.type)
-            val param =
-                newParameter(parameter.nameAsString, resolvedType, parameter.isVarArgs)
+            val param = newParameter(parameter.nameAsString, resolvedType, parameter.isVarArgs)
             frontend.processAnnotations(param, parameter)
             frontend.scopeManager.addDeclaration(param)
             anonymousFunction.parameters += param
@@ -98,8 +97,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
     }
 
     /**
-     * Creates a new [NewArrayExpression], which is usually used as an initializer of a
-     * [Variable].
+     * Creates a new [NewArrayExpression], which is usually used as an initializer of a [Variable].
      *
      * @param expr the expression
      * @return the [NewArrayExpression]
@@ -613,8 +611,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
                         .implicit(anonymousRecord.name.localName)
 
                 ctor.arguments.forEachIndexed { i, arg ->
-                    constructorDeclaration.parameters +=
-                        newParameter("arg${i}", arg.type)
+                    constructorDeclaration.parameters += newParameter("arg${i}", arg.type)
                 }
                 frontend.scopeManager.addDeclaration(constructorDeclaration)
                 anonymousRecord.constructors += constructorDeclaration
@@ -646,9 +643,7 @@ class ExpressionHandler(lang: JavaLanguageFrontend) :
         map[InstanceOfExpr::class.java] = HandlerInterface { handleInstanceOfExpression(it) }
         map[UnaryExpr::class.java] = HandlerInterface { handleUnaryExpression(it) }
         map[BinaryExpr::class.java] = HandlerInterface { handleBinaryExpression(it) }
-        map[VariableDeclarationExpr::class.java] = HandlerInterface {
-            handleVariableExpr(it)
-        }
+        map[VariableDeclarationExpr::class.java] = HandlerInterface { handleVariableExpr(it) }
         map[MethodCallExpr::class.java] = HandlerInterface { handleMethodCallExpression(it) }
         map[ObjectCreationExpr::class.java] = HandlerInterface { handleObjectCreationExpr(it) }
         map[com.github.javaparser.ast.expr.ConditionalExpr::class.java] = HandlerInterface {

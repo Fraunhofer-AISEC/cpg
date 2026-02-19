@@ -78,9 +78,7 @@ class WithStatementTest : BaseTest() {
     fun testWithSingleStatement() {
         // Test: with open("file.txt", "r") as file:
         val blockStmts =
-            result.statements.filterIsInstance<Block>().filter {
-                it.astParent is Namespace
-            }
+            result.statements.filterIsInstance<Block>().filter { it.astParent is Namespace }
 
         val ref = result.refs["contextManager_00000000-11a2-7efe-ffff-ffffbf8aaab8"]
         assertNotNull(
@@ -176,9 +174,7 @@ class WithStatementTest : BaseTest() {
     fun testWithWithoutVar() {
         // Test: with open("file.txt", "r"):
         val blockStmts =
-            result.statements.filterIsInstance<Block>().filter {
-                it.astParent is Namespace
-            }
+            result.statements.filterIsInstance<Block>().filter { it.astParent is Namespace }
 
         val blockStmt = blockStmts[1]
         assertNotNull(blockStmt)

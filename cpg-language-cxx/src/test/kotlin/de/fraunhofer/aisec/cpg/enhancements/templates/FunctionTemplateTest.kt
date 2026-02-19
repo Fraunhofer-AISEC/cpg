@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.enhancements.templates
 
 import de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.test.*
@@ -207,8 +207,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertNotNull(ctx)
 
         val templateDeclaration =
-            findByUniquePredicate(result.allChildren<FunctionTemplate>()) {
-                t: FunctionTemplate ->
+            findByUniquePredicate(result.allChildren<FunctionTemplate>()) { t: FunctionTemplate ->
                 t.name.localName == "fixed_multiply"
             }
         val fixedMultiply =
@@ -253,8 +252,7 @@ internal class FunctionTemplateTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
             }
         val templateDeclaration =
-            findByUniquePredicate(result.allChildren<FunctionTemplate>()) {
-                t: FunctionTemplate ->
+            findByUniquePredicate(result.allChildren<FunctionTemplate>()) { t: FunctionTemplate ->
                 t.name.localName == "fixed_multiply"
             }
         val fixedMultiply =
@@ -350,8 +348,7 @@ internal class FunctionTemplateTest : BaseTest() {
         assertNotNull(ctx)
 
         val templateDeclaration =
-            findByUniquePredicate(result.allChildren<FunctionTemplate>()) {
-                t: FunctionTemplate ->
+            findByUniquePredicate(result.allChildren<FunctionTemplate>()) { t: FunctionTemplate ->
                 t.name.localName == "fixed_multiply"
             }
         val fixedMultiply =
@@ -396,8 +393,7 @@ internal class FunctionTemplateTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
             }
         val templateDeclaration =
-            findByUniquePredicate(result.allChildren<FunctionTemplate>()) {
-                t: FunctionTemplate ->
+            findByUniquePredicate(result.allChildren<FunctionTemplate>()) { t: FunctionTemplate ->
                 t.name.localName == "fixed_multiply"
             }
         val fixedMultiply =
@@ -455,8 +451,7 @@ internal class FunctionTemplateTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
             }
         val templateDeclaration =
-            findByUniquePredicate(result.allChildren<FunctionTemplate>()) {
-                t: FunctionTemplate ->
+            findByUniquePredicate(result.allChildren<FunctionTemplate>()) { t: FunctionTemplate ->
                 t.name.localName == "f" && !t.isInferred
             }
         val f =
@@ -507,12 +502,9 @@ internal class FunctionTemplateTest : BaseTest() {
                 it.registerLanguage<CPPLanguage>()
             }
         val recordDeclaration =
-            findByUniquePredicate(result.records) { c: Record ->
-                c.name.localName == "MyClass"
-            }
+            findByUniquePredicate(result.records) { c: Record -> c.name.localName == "MyClass" }
         val templateDeclaration =
-            findByUniquePredicate(result.allChildren<FunctionTemplate>()) {
-                t: FunctionTemplate ->
+            findByUniquePredicate(result.allChildren<FunctionTemplate>()) { t: FunctionTemplate ->
                 t.name.localName == "fixed_multiply" && !t.isImplicit
             }
         assertEquals(2, templateDeclaration.parameters.size)
@@ -567,8 +559,7 @@ internal class FunctionTemplateTest : BaseTest() {
 
         // Check inferred for first fixed_division call
         var templateDeclaration =
-            findByUniquePredicate(result.allChildren<FunctionTemplate>()) {
-                t: FunctionTemplate ->
+            findByUniquePredicate(result.allChildren<FunctionTemplate>()) { t: FunctionTemplate ->
                 t.code == "fixed_division<int,2>(10)"
             }
         var fixedDivision =
@@ -593,8 +584,7 @@ internal class FunctionTemplateTest : BaseTest() {
 
         // Check inferred for second fixed_division call
         templateDeclaration =
-            findByUniquePredicate(result.allChildren<FunctionTemplate>()) {
-                t: FunctionTemplate ->
+            findByUniquePredicate(result.allChildren<FunctionTemplate>()) { t: FunctionTemplate ->
                 t.code == "fixed_division<double,3>(10.0)"
             }
         fixedDivision =

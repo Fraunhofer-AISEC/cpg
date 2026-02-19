@@ -88,8 +88,7 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
     }
 
     /**
-     * This function will create a new dynamic [Variable] if there is a write access to
-     * the [ref].
+     * This function will create a new dynamic [Variable] if there is a write access to the [ref].
      */
     private fun handleWriteToReference(ref: Reference): Variable? {
         if (ref.access != AccessValues.WRITE) {
@@ -233,8 +232,8 @@ class PythonAddDeclarationsPass(ctx: TranslationContext) : ComponentPass(ctx), L
     }
 
     /**
-     * Generates a new [Variable] if [target] is a [Reference] and there is no existing
-     * declaration yet.
+     * Generates a new [Variable] if [target] is a [Reference] and there is no existing declaration
+     * yet.
      */
     private fun handleAssignmentToTarget(
         assignExpression: AssignExpression,

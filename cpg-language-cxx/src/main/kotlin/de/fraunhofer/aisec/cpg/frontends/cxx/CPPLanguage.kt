@@ -182,9 +182,7 @@ open class CPPLanguage :
         // call, this will match the type T because this means that the parameter is given by
         // reference rather than by value.
         if (
-            targetType is ReferenceType &&
-                targetType.elementType == type &&
-                targetHint is Parameter
+            targetType is ReferenceType && targetType.elementType == type && targetHint is Parameter
         ) {
             return DirectMatch
         }
@@ -250,8 +248,7 @@ open class CPPLanguage :
         val instantiationCandidates =
             ctx.scopeManager.lookupSymbolByNodeNameOfType<FunctionTemplate>(templateCall)
         for (functionTemplateDeclaration in instantiationCandidates) {
-            val initializationType =
-                mutableMapOf<AstNode?, Template.TemplateInitialization?>()
+            val initializationType = mutableMapOf<AstNode?, Template.TemplateInitialization?>()
             val orderedInitializationSignature = mutableMapOf<Declaration, Int>()
             val explicitInstantiation = mutableListOf<ParameterizedType>()
             if (

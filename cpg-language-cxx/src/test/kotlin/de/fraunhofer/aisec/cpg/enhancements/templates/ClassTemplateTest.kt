@@ -55,11 +55,7 @@ internal class ClassTemplateTest : BaseTest() {
         assertEquals(pair, template.realizations[0])
     }
 
-    private fun testClassTemplateFields(
-        pair: Record,
-        first: Field?,
-        second: Field?,
-    ) {
+    private fun testClassTemplateFields(pair: Record, first: Field?, second: Field?) {
         assertTrue(pair.fields.contains(first))
         assertTrue(pair.fields.contains(second))
     }
@@ -159,8 +155,7 @@ internal class ClassTemplateTest : BaseTest() {
         val receiver = constructor.receiver
         assertNotNull(receiver)
 
-        val pairConstructorDecl =
-            findByUniqueName(result.allChildren<Constructor>(), "Pair")
+        val pairConstructorDecl = findByUniqueName(result.allChildren<Constructor>(), "Pair")
         val constructExpression =
             findByUniquePredicate(result.allChildren()) { c: ConstructExpression ->
                 c.code == "Pair()"
@@ -210,8 +205,7 @@ internal class ClassTemplateTest : BaseTest() {
         val receiver = pair.constructors["Pair"]?.receiver
         assertNotNull(receiver)
 
-        val pairConstructorDecl =
-            findByUniqueName(result.allChildren<Constructor>(), "Pair")
+        val pairConstructorDecl = findByUniqueName(result.allChildren<Constructor>(), "Pair")
         val constructExpr =
             findByUniquePredicate(result.allChildren<ConstructExpression>()) { it.code == "Pair()" }
         val literal3 = findByUniquePredicate(result.literals) { it.value == 3 && !it.isImplicit }
@@ -298,11 +292,9 @@ internal class ClassTemplateTest : BaseTest() {
                 "template<class Type1, class Type2 = Type1> struct Pair",
             )
         val pair = findByUniqueName(result.records, "Pair")
-        val pairConstructorDecl =
-            findByUniqueName(result.allChildren<Constructor>(), "Pair")
+        val pairConstructorDecl = findByUniqueName(result.allChildren<Constructor>(), "Pair")
         val type1 = findByUniqueName(result.allChildren<TypeParameter>(), "class Type1")
-        val type2 =
-            findByUniqueName(result.allChildren<TypeParameter>(), "class Type2 = Type1")
+        val type2 = findByUniqueName(result.allChildren<TypeParameter>(), "class Type2 = Type1")
         val first = findByUniqueName(result.fields, "first")
         val second = findByUniqueName(result.fields, "second")
         val point1 = findByUniqueName(result.variables, "point1")

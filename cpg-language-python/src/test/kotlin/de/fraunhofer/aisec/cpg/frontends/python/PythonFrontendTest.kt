@@ -775,21 +775,16 @@ class PythonFrontendTest : BaseTest() {
         assertNull(classFieldNoInitializer.initializer)
 
         val localClassFieldNoInitializer =
-            methBar.variables[
-                    { it.name.localName == "classFieldNoInitializer" && it !is Field }]
+            methBar.variables[{ it.name.localName == "classFieldNoInitializer" && it !is Field }]
         assertNotNull(localClassFieldNoInitializer)
 
         val localClassFieldWithInit =
-            methBar.variables[
-                    { it.name.localName == "classFieldWithInit" && it !is Field }]
+            methBar.variables[{ it.name.localName == "classFieldWithInit" && it !is Field }]
         assertNotNull(localClassFieldNoInitializer)
 
         val localClassFieldDeclaredInFunction =
             methBar.variables[
-                    {
-                        it.name.localName == "classFieldDeclaredInFunction" &&
-                            it !is Field
-                    }]
+                    { it.name.localName == "classFieldDeclaredInFunction" && it !is Field }]
         assertNotNull(localClassFieldNoInitializer)
 
         // classFieldNoInitializer = classFieldWithInit

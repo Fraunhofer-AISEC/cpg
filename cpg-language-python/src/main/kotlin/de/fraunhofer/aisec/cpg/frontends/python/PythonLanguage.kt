@@ -310,15 +310,15 @@ class PythonLanguage :
     companion object {
         /**
          * This is a "modifier" to differentiate parameters in functions that are "positional" only.
-         * This information will be stored in [Parameter.modifiers] so that we can use is
-         * later in call resolving.
+         * This information will be stored in [Parameter.modifiers] so that we can use is later in
+         * call resolving.
          */
         const val MODIFIER_POSITIONAL_ONLY_ARGUMENT = "posonlyarg"
 
         /**
          * This is a "modifier" to differentiate parameters in functions that are "keyword" only.
-         * This information will be stored in [Parameter.modifiers] so that we can use is
-         * later in call resolving.
+         * This information will be stored in [Parameter.modifiers] so that we can use is later in
+         * call resolving.
          */
         const val MODIFIER_KEYWORD_ONLY_ARGUMENT = "kwonlyarg"
 

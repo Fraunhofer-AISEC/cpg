@@ -462,8 +462,7 @@ class ExpressionHandler(frontend: GoLanguageFrontend) :
     fun handleFuncLit(funcLit: GoStandardLibrary.Ast.FuncLit): LambdaExpression {
         val lambda = newLambdaExpression(rawNode = funcLit)
         // Parse the expression as a function declaration with a little trick
-        lambda.function =
-            frontend.declarationHandler.handle(funcLit.toDecl()) as? Function
+        lambda.function = frontend.declarationHandler.handle(funcLit.toDecl()) as? Function
 
         return lambda
     }

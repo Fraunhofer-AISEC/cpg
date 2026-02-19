@@ -525,9 +525,8 @@ inline fun <reified T : Node> runPassForNode(
  *   itself if it is a [TranslationResult].
  * - For [ComponentPass], it checks if the node is a [Component] or searches for the nearest
  *   [Component] parent or all children that are [Component]s.
- * - For [TranslationUnitPass], it checks if the node is a [TranslationUnit] or searches
- *   for the nearest [TranslationUnit] parent or all children that are
- *   [TranslationUnit]s.
+ * - For [TranslationUnitPass], it checks if the node is a [TranslationUnit] or searches for the
+ *   nearest [TranslationUnit] parent or all children that are [TranslationUnit]s.
  * - For [EOGStarterPass], it checks if the node is an [EOGStarterHolder] or searches for the
  *   nearest [EOGStarterHolder] parent with no previous EOG or all children that are
  *   [EOGStarterHolder]s with no previous EOG.

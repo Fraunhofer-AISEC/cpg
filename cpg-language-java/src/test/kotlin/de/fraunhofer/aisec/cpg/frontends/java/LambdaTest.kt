@@ -76,9 +76,7 @@ class JavaLambdaTest {
         val testfunctionArg =
             result.calls { it.name.localName == "testFunction" }[0].arguments.first()
         assertTrue(testfunctionArg is Reference)
-        assertTrue(
-            (testfunctionArg.refersTo as? Variable)?.initializer is LambdaExpression
-        )
+        assertTrue((testfunctionArg.refersTo as? Variable)?.initializer is LambdaExpression)
 
         val testfunctionBody = mapArg.function?.body as? BinaryOperator
         assertNotNull(testfunctionBody)

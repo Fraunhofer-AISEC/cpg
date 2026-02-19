@@ -569,11 +569,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
                 var importName: Name? = parseName(imp.name)
                 while (importName != null) {
                     val decl =
-                        newImport(
-                            importName,
-                            style = ImportStyle.IMPORT_NAMESPACE,
-                            rawNode = imp,
-                        )
+                        newImport(importName, style = ImportStyle.IMPORT_NAMESPACE, rawNode = imp)
                     conditionallyAddAdditionalSourcesToAnalysis(decl.import)
                     frontend.scopeManager.addDeclaration(decl)
                     declStmt.declarations += decl
@@ -690,8 +686,7 @@ class StatementHandler(frontend: PythonLanguageFrontend) :
 
     /** Small utility function to check, whether we are inside an __init__ module. */
     private fun isInitModule(): Boolean =
-        (frontend.scopeManager.firstScopeIsInstanceOrNull<NameScope>()?.astNode
-                as? Namespace)
+        (frontend.scopeManager.firstScopeIsInstanceOrNull<NameScope>()?.astNode as? Namespace)
             ?.path
             ?.endsWith(PythonLanguage.IDENTIFIER_INIT) == true
 

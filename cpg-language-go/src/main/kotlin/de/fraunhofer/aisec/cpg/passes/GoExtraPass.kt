@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.passes
 import de.fraunhofer.aisec.cpg.TranslationContext
 import de.fraunhofer.aisec.cpg.frontends.golang.*
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.ForEachStatement
@@ -79,8 +79,8 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  * a, b := 1, 2
  * ```
  *
- * In the frontend we only do the assignment, therefore we need to create a new
- * [Variable] for `b` and inject a [DeclarationStatement].
+ * In the frontend we only do the assignment, therefore we need to create a new [Variable] for `b`
+ * and inject a [DeclarationStatement].
  *
  * ## Adjust Names of Keys in Key Value Expressions to FQN
  *
@@ -91,8 +91,8 @@ import de.fraunhofer.aisec.cpg.processing.strategy.Strategy
  *
  * ## Add Methods of Embedded Structs to the Record's Scope
  *
- * This pass also adds methods of [Record.embeddedStructs] into the scope of the
- * [Record] itself, so that it can be resolved using the regular [SymbolResolver].
+ * This pass also adds methods of [Record.embeddedStructs] into the scope of the [Record] itself, so
+ * that it can be resolved using the regular [SymbolResolver].
  */
 @ExecuteBefore(SymbolResolver::class)
 @ExecuteBefore(EvaluationOrderGraphPass::class)
@@ -132,8 +132,8 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * This function adds methods of [Record.embeddedStructs] into the scope of the
-     * struct itself, so we can resolve method calls of embedded structs.
+     * This function adds methods of [Record.embeddedStructs] into the scope of the struct itself,
+     * so we can resolve method calls of embedded structs.
      *
      * For example, if a struct embeds another struct (see https://go.dev/ref/spec#Struct_types), we
      * can call any methods of the embedded struct on the one that embeds it:
@@ -326,13 +326,11 @@ class GoExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
                     val variable = forEach.variable
                     if (variable is DeclarationStatement) {
                         // The key is the first variable. It is always an int
-                        val keyVariable =
-                            variable.declarations.firstOrNull() as? Variable
+                        val keyVariable = variable.declarations.firstOrNull() as? Variable
                         keyVariable?.type = forEach.primitiveType("int")
 
                         // The value is the second one. Its type depends on the array type
-                        val valueVariable =
-                            variable.declarations.getOrNull(1) as? Variable
+                        val valueVariable = variable.declarations.getOrNull(1) as? Variable
                         ((forEach.iterable as? HasType)?.type as? PointerType)?.let {
                             valueVariable?.type = it.elementType
                         }

@@ -67,9 +67,7 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         }
     }
 
-    protected fun getStaticImports(
-        recordDeclaration: Record
-    ): MutableSet<ValueDeclaration> {
+    protected fun getStaticImports(recordDeclaration: Record): MutableSet<ValueDeclaration> {
         val partitioned =
             recordDeclaration.staticImportStatements.groupBy { it.endsWith("*") }.toMutableMap()
 
@@ -96,9 +94,7 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
             } else if (base is Record) {
                 val classes = listOf(base, *base.superTypeDeclarations.toTypedArray())
                 // Add all the static methods implemented in the class "base" and its superclasses
-                staticImports.addAll(
-                    classes.flatMap { it.methods }.filter(Method::isStatic)
-                )
+                staticImports.addAll(classes.flatMap { it.methods }.filter(Method::isStatic))
                 // Add all the static fields implemented in the class "base" and its superclasses
                 staticImports.addAll(
                     classes.flatMap { it.fields }.filter { "static" in it.modifiers }
@@ -142,13 +138,7 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
         if (result.isEmpty()) {
             // the target might be a field or a method, we don't know. Thus, we need to create both
             val targetField =
-                newField(
-                    name,
-                    UnknownType.getUnknownType(base.language),
-                    setOf(),
-                    null,
-                    false,
-                )
+                newField(name, UnknownType.getUnknownType(base.language), setOf(), null, false)
             targetField.language = base.language
             targetField.isInferred = true
 

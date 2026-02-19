@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.ResolveInFrontend
 import de.fraunhofer.aisec.cpg.frontends.isKnownOperatorName
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
@@ -70,8 +70,8 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     /**
      * The [CPPASTFunctionDeclarator] extends the [IASTStandardFunctionDeclarator] and has some more
      * attributes which we want to consider. Currently, this is the
-     * [CPPASTFunctionDeclarator.trailingReturnType] which will be added to the Function.
-     * This represents the return-type of a lambda function.
+     * [CPPASTFunctionDeclarator.trailingReturnType] which will be added to the Function. This
+     * represents the return-type of a lambda function.
      */
     private fun handleCPPFunctionDeclarator(node: CPPASTFunctionDeclarator): Declaration {
         // Handle it as a regular C function first
@@ -96,8 +96,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     private fun handleDeclarator(ctx: IASTDeclarator): Declaration {
         // This is just a nested declarator, i.e. () wrapping the real declarator
         if (ctx.initializer == null && ctx.nestedDeclarator is IASTDeclarator) {
-            return handle(ctx.nestedDeclarator)
-                ?: Problem("could not parse nested declaration")
+            return handle(ctx.nestedDeclarator) ?: Problem("could not parse nested declaration")
         }
 
         val name = ctx.name.toString()
@@ -151,16 +150,11 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     }
 
     /**
-     * A small utility function that creates a [Constructor], [Method] or
-     * [Function] depending on which scope the function should live in. This basically
-     * checks if the scope is a namespace or a record and if the name matches to the record (in case
-     * of a constructor).
+     * A small utility function that creates a [Constructor], [Method] or [Function] depending on
+     * which scope the function should live in. This basically checks if the scope is a namespace or
+     * a record and if the name matches to the record (in case of a constructor).
      */
-    private fun createAppropriateFunction(
-        name: Name,
-        scope: Scope?,
-        ctx: IASTNode,
-    ): Function {
+    private fun createAppropriateFunction(name: Name, scope: Scope?, ctx: IASTNode): Function {
         // Retrieve the AST node for the scope we need to put the function in
         val holder = scope?.astNode
 
@@ -361,8 +355,8 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
     }
 
     /**
-     * This function takes cares of creating a receiver and setting it to the supplied
-     * [Method]. In C++ this is called the
+     * This function takes cares of creating a receiver and setting it to the supplied [Method]. In
+     * C++ this is called the
      * [implicit object parameter](https://en.cppreference.com/w/cpp/language/overload_resolution#Implicit_object_parameter)
      * .
      */
@@ -375,8 +369,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         // Create the receiver. implicitInitializerAllowed must be false, otherwise fixInitializers
         // will create another implicit constructexpression for this variable, and we don't want
         // this.
-        val thisDeclaration =
-            newVariable("this", type = type, implicitInitializerAllowed = false)
+        val thisDeclaration = newVariable("this", type = type, implicitInitializerAllowed = false)
         // Yes, this is implicit
         thisDeclaration.isImplicit = true
 
@@ -395,12 +388,7 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
         if (recordDeclaration == null) {
             // variable
             result =
-                newVariable(
-                    name,
-                    unknownType(),
-                    implicitInitializerAllowed = true,
-                    rawNode = ctx,
-                )
+                newVariable(name, unknownType(), implicitInitializerAllowed = true, rawNode = ctx)
         } else {
             // field
             result =
@@ -467,16 +455,11 @@ class DeclaratorHandler(lang: CXXLanguageFrontend) :
      * @param ctx
      * @return TypeParameter with its name
      */
-    private fun handleTemplateTypeParameter(
-        ctx: CPPASTSimpleTypeTemplateParameter
-    ): TypeParameter {
+    private fun handleTemplateTypeParameter(ctx: CPPASTSimpleTypeTemplateParameter): TypeParameter {
         return newTypeParameter(ctx.rawSignature, rawNode = ctx)
     }
 
-    private fun processMembers(
-        recordDeclaration: Record,
-        ctx: IASTCompositeTypeSpecifier,
-    ) {
+    private fun processMembers(recordDeclaration: Record, ctx: IASTCompositeTypeSpecifier) {
         // Track current visibility - default depends on the record type
         var currentVisibility =
             when (recordDeclaration.kind) {

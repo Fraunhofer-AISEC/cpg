@@ -106,10 +106,7 @@ class CallResolverTest : BaseTest() {
         //  the invokes list. This check needs to be adjusted to the choice we make on solving #204
         assertTrue(call.invokes.contains(overridingMethod))
         assertEquals<List<Function>>(listOf(originalMethod), overridingMethod.overrides)
-        assertEquals<List<Function>>(
-            listOf(overridingMethod),
-            originalMethod.overriddenBy,
-        )
+        assertEquals<List<Function>>(listOf(overridingMethod), originalMethod.overriddenBy)
     }
 
     @Test

@@ -31,9 +31,9 @@ import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.IDENTIF
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_KEYWORD_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage.Companion.MODIFIER_POSITIONAL_ONLY_ARGUMENT
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Block
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
@@ -96,12 +96,11 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
      * We have to consider multiple things when matching Python's FunctionDef to the CPG:
      * - A [Python.AST.FunctionDef] could be one of
      *     - a [Constructor] if it appears in a record and its [name] is `__init__`
-     *     - a [Method] if it appears in a record, and it isn't a
-     *       [Constructor]
+     *     - a [Method] if it appears in a record, and it isn't a [Constructor]
      *     - a [Function] if neither of the above apply
      *
-     * In case of a [Constructor] or[Method]: the first argument is the
-     * `receiver` (most often called `self`).
+     * In case of a [Constructor] or[Method]: the first argument is the `receiver` (most often
+     * called `self`).
      */
     private fun handleFunctionDef(s: Python.AST.NormalOrAsyncFunctionDef): Function {
         val recordDeclaration =
@@ -216,8 +215,8 @@ class DeclarationHandler(frontend: PythonLanguageFrontend) :
     }
 
     /**
-     * This function creates a [newParameter] for the argument, setting any modifiers
-     * (like positional-only or keyword-only) and [defaultValue] if applicable.
+     * This function creates a [newParameter] for the argument, setting any modifiers (like
+     * positional-only or keyword-only) and [defaultValue] if applicable.
      *
      * This also adds the [Parameter] to the [Function.parameters].
      */

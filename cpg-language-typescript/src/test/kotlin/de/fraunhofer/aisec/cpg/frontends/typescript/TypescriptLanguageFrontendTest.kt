@@ -81,8 +81,7 @@ class TypeScriptLanguageFrontendTest {
 
         // actually, our frontend returns 3 functions (1 inferred), because our function inference
         // cannot handle non-typed languages very well
-        val functions =
-            tu.declarations.filterIsInstance<Function>().filter { !it.isInferred }
+        val functions = tu.declarations.filterIsInstance<Function>().filter { !it.isInferred }
         assertNotNull(functions)
 
         assertEquals(2, functions.size)

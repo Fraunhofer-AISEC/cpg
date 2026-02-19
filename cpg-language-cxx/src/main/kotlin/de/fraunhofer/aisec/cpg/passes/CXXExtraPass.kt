@@ -197,9 +197,9 @@ class CXXExtraPass(ctx: TranslationContext) : ComponentPass(ctx) {
     }
 
     /**
-     * This function connects a [Function] that is a definition (i.e., has a body) to
-     * possible declarations of the same function (has [Function.isDefinition] set to
-     * false) pointing to it by setting the field [Function.definition].
+     * This function connects a [Function] that is a definition (i.e., has a body) to possible
+     * declarations of the same function (has [Function.isDefinition] set to false) pointing to it
+     * by setting the field [Function.definition].
      *
      * This works across the whole [Component].
      */

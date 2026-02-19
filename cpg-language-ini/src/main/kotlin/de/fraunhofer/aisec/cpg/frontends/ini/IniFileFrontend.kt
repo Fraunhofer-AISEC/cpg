@@ -49,13 +49,12 @@ import org.ini4j.Profile.Section
  * The INI file frontend. This frontend utilizes the [ini4j library](https://ini4j.sourceforge.net/)
  * to parse the config file. The result consists of
  * - a [TranslationUnit] wrapping the entire result
- * - a [Namespace] wrapping the INI file and thus preventing collisions with other
- *   symbols which might have the same name
- * - a [Record] per `Section` (a section refers to a block of INI values marked with a
- *   line `[SectionName]`)
- * - a [Field] per entry in a section. The [Field.name] matches the `entry`s
- *   `name` field and the [Field.initializer] is set to a [Literal] with the
- *   corresponding `entry`s `value`.
+ * - a [Namespace] wrapping the INI file and thus preventing collisions with other symbols which
+ *   might have the same name
+ * - a [Record] per `Section` (a section refers to a block of INI values marked with a line
+ *   `[SectionName]`)
+ * - a [Field] per entry in a section. The [Field.name] matches the `entry`s `name` field and the
+ *   [Field.initializer] is set to a [Literal] with the corresponding `entry`s `value`.
  *
  * Note:
  * - the "ini4j" library does not provide any super type for all nodes. Thus, the frontend accepts
@@ -121,10 +120,7 @@ class IniFileFrontend(ctx: TranslationContext, language: Language<IniFileFronten
         return tud
     }
 
-    /**
-     * Translates a `Section` into a [Record] and handles all `entries` using
-     * [handleEntry].
-     */
+    /** Translates a `Section` into a [Record] and handles all `entries` using [handleEntry]. */
     private fun handleSection(section: Section): Record {
         val record = newRecord(name = section.name, kind = "section", rawNode = section)
         scopeManager.enterScope(record)
@@ -139,13 +135,14 @@ class IniFileFrontend(ctx: TranslationContext, language: Language<IniFileFronten
     }
 
     /**
-     * Translates an `MutableEntry` to a new [Field] with the
-     * [Field.initializer] being set to the `entry`s value.
+     * Translates an `MutableEntry` to a new [Field] with the [Field.initializer] being set to the
+     * `entry`s value.
      */
     private fun handleEntry(entry: MutableMap.MutableEntry<String?, String?>): Field {
         val field =
-            newField(name = entry.key, type = primitiveType("string"), rawNode = entry)
-                .apply { initializer = newLiteral(value = entry.value, rawNode = entry) }
+            newField(name = entry.key, type = primitiveType("string"), rawNode = entry).apply {
+                initializer = newLiteral(value = entry.value, rawNode = entry)
+            }
 
         return field
     }

@@ -100,8 +100,7 @@ abstract class GoHandler<ResultNode : Node?, HandlerNode : GoStandardLibrary.Ast
             val namespace =
                 frontend.scopeManager
                     .filterScopes {
-                        it is NamespaceScope &&
-                            (it.astNode as? Namespace)?.path == filename
+                        it is NamespaceScope && (it.astNode as? Namespace)?.path == filename
                     }
                     .firstOrNull()
                     ?.astNode as? Namespace

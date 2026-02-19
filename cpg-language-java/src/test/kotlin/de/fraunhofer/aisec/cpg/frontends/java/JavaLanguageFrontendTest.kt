@@ -602,9 +602,7 @@ internal class JavaLanguageFrontendTest : BaseTest() {
         val request =
             nodes
                 .stream()
-                .filter { node: Node ->
-                    (node is Variable && "request" == node.name.localName)
-                }
+                .filter { node: Node -> (node is Variable && "request" == node.name.localName) }
                 .map { node: Node? -> node as? Variable? }
                 .findFirst()
                 .orElse(null)

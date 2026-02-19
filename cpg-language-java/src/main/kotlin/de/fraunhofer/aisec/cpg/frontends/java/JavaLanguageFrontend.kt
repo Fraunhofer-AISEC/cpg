@@ -173,9 +173,7 @@ open class JavaLanguageFrontend(ctx: TranslationContext, language: Language<Java
             scopeManager.leaveScope(tud)
 
             if (holder is Namespace) {
-                tud.allChildren<Namespace>().reversed().forEach {
-                    scopeManager.leaveScope(it)
-                }
+                tud.allChildren<Namespace>().reversed().forEach { scopeManager.leaveScope(it) }
             }
             bench.addMeasurement()
             tud

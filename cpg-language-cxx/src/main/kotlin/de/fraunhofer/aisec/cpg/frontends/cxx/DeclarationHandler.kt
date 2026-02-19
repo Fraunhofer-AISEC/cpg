@@ -26,8 +26,8 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.edges.scopes.ImportStyle
 import de.fraunhofer.aisec.cpg.graph.scopes.NameScope
 import de.fraunhofer.aisec.cpg.graph.scopes.RecordScope
@@ -90,8 +90,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val from = parseName(ctx.mappingName.toString())
         val to = parseName(ctx.alias.toString())
 
-        val import =
-            newImport(from, style = ImportStyle.IMPORT_NAMESPACE, to, rawNode = ctx)
+        val import = newImport(from, style = ImportStyle.IMPORT_NAMESPACE, to, rawNode = ctx)
 
         return import
     }
@@ -104,11 +103,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     private fun handleUsingDirective(ctx: CPPASTUsingDirective): Declaration {
         val import = parseName(ctx.qualifiedName.toString())
         val declaration =
-            newImport(
-                import,
-                style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE,
-                rawNode = ctx,
-            )
+            newImport(import, style = ImportStyle.IMPORT_ALL_SYMBOLS_FROM_NAMESPACE, rawNode = ctx)
 
         return declaration
     }
@@ -163,10 +158,10 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
 
     /**
      * Translates a C/C++ (function)[https://en.cppreference.com/w/cpp/language/functions]
-     * definition into a [Function]. A definition, in contrast to a declaration also has
-     * a function body. Function declarations are most likely handled by [handleSimpleDeclaration].
-     * However, in both cases, the majority of the function is described by a declarator, which gets
-     * parsed by [DeclaratorHandler.handleFunctionDeclarator].
+     * definition into a [Function]. A definition, in contrast to a declaration also has a function
+     * body. Function declarations are most likely handled by [handleSimpleDeclaration]. However, in
+     * both cases, the majority of the function is described by a declarator, which gets parsed by
+     * [DeclaratorHandler.handleFunctionDeclarator].
      */
     private fun handleFunctionDefinition(ctx: IASTFunctionDefinition): Declaration {
         // TODO: A problem with cpp functions is that we cannot know if they may throw an exception
@@ -174,9 +169,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
         val declaration = frontend.declaratorHandler.handle(ctx.declarator)
 
         if (declaration !is Function) {
-            return Problem(
-                "declarator of function definition is not a function declarator"
-            )
+            return Problem("declarator of function definition is not a function declarator")
         }
 
         // Retrieve the type. This should parse as a function type, otherwise it is unknown.
@@ -583,8 +576,8 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     /**
-     * Extracts template parameters (used for [Variable.templateParameters]) out of the
-     * declaration (if it has any), otherwise null is returned.
+     * Extracts template parameters (used for [Variable.templateParameters]) out of the declaration
+     * (if it has any), otherwise null is returned.
      */
     private fun extractTemplateParams(
         ctx: IASTSimpleDeclaration,
@@ -636,8 +629,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             }
         // TODO(oxisto): What about namespaces?
 
-        val declaration =
-            frontend.newTypedef(type, frontend.typeOf(aliasName, doFqn = doFqn))
+        val declaration = frontend.newTypedef(type, frontend.typeOf(aliasName, doFqn = doFqn))
 
         frontend.scopeManager.addTypedef(declaration, scope)
 
@@ -659,8 +651,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
             // the enum constant `THIS` as well as `MyEnum::THIS` (at least in C++11). So we need to
             // put the symbol in the outer scope as well as the enum's scope.
             frontend.scopeManager.enterScope(enum)
-            val enumConst =
-                newEnumConstant(enumerator.name.toString(), rawNode = enumerator)
+            val enumConst = newEnumConstant(enumerator.name.toString(), rawNode = enumerator)
             frontend.scopeManager.addDeclaration(enumConst)
             entries += enumConst
 
@@ -723,8 +714,7 @@ class DeclarationHandler(lang: CXXLanguageFrontend) :
     }
 
     fun handleTranslationUnit(translationUnit: IASTTranslationUnit): TranslationUnit {
-        val node =
-            newTranslationUnit(translationUnit.filePath, rawNode = translationUnit)
+        val node = newTranslationUnit(translationUnit.filePath, rawNode = translationUnit)
 
         // There might have been errors in the previous translation unit and in any case
         // we need to reset the scope manager scope to global scope to avoid spilling scope errors

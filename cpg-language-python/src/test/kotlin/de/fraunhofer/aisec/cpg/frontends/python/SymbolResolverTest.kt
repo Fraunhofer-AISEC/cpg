@@ -48,8 +48,7 @@ class SymbolResolverTest {
             }
 
         val globalA =
-            result.namespaces["fields"]
-                .variables[{ it.name.localName == "a" && it !is Field }]
+            result.namespaces["fields"].variables[{ it.name.localName == "a" && it !is Field }]
         assertNotNull(globalA)
 
         // Make sure, we only have one (!) field a

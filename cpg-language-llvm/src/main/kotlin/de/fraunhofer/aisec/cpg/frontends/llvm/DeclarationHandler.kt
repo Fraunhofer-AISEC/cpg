@@ -91,9 +91,8 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
 
     /**
      * Handles the parsing of [functions](https://llvm.org/docs/LangRef.html#functions). They can
-     * either be pure declarations of (external) functions, which do not have a
-     * [Function.body] or complete definitions of functions including a body of at least
-     * one basic block.
+     * either be pure declarations of (external) functions, which do not have a [Function.body] or
+     * complete definitions of functions including a body of at least one basic block.
      */
     private fun handleFunction(func: LLVMValueRef): Function {
         val name = LLVMGetValueName(func)
@@ -179,8 +178,8 @@ class DeclarationHandler(lang: LLVMIRLanguageFrontend) :
      * there are two different types of structs:
      * - identified structs, which have a name are explicitly declared
      * - literal structs, which do not have a name, but are structurally unique To emulate this
-     *   uniqueness, we create a [Record] for each literal struct and name it according
-     *   to its element types (see [getLiteralStructName]).
+     *   uniqueness, we create a [Record] for each literal struct and name it according to its
+     *   element types (see [getLiteralStructName]).
      */
     fun handleStructureType(
         typeRef: LLVMTypeRef,

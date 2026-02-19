@@ -71,8 +71,7 @@ class CallResolverTest : BaseTest() {
     }
 
     /**
-     * Checks that method calls from a function outside a class are correctly resolved to the
-     * Method
+     * Checks that method calls from a function outside a class are correctly resolved to the Method
      *
      * @param result
      */
@@ -131,10 +130,7 @@ class CallResolverTest : BaseTest() {
         //  the invokes list. This check needs to be adjusted to the choice we make on solving #204
         assertTrue(call.invokes.contains(overridingMethod))
         assertEquals<List<Function>>(listOf(originalMethod), overridingMethod.overrides)
-        assertEquals<List<Function>>(
-            listOf(overridingMethod),
-            originalMethod.overriddenBy,
-        )
+        assertEquals<List<Function>>(listOf(overridingMethod), originalMethod.overriddenBy)
     }
 
     @Test
@@ -158,8 +154,7 @@ class CallResolverTest : BaseTest() {
         testOverriding(records)
 
         // Test functions (not methods!)
-        val functions =
-            result.functions { it.name.localName == "functionTarget" && it !is Method }
+        val functions = result.functions { it.name.localName == "functionTarget" && it !is Method }
         val calls = findByName(result.calls, "functionTarget")
         checkCalls(intType, stringType, functions, calls)
         ensureNoUnknownClassDummies(records)

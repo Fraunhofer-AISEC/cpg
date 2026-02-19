@@ -251,9 +251,7 @@ internal class ConstructorsTest : BaseTest() {
         val constructors = result.allChildren<Constructor>()
         val variables = result.variables
         val implicitConstructor =
-            findByUniquePredicate(constructors) { c: Constructor ->
-                c.name.localName == "I"
-            }
+            findByUniquePredicate(constructors) { c: Constructor -> c.name.localName == "I" }
         val literal10 = findByUniquePredicate(result.literals) { it.value == 10 }
         val i1 = findByUniqueName(variables, "i1")
         assertTrue(i1.initializer is ConstructExpression)
@@ -265,9 +263,7 @@ internal class ConstructorsTest : BaseTest() {
         assertLiteralValue(1.0, i1Constructor.arguments[0])
 
         val implicitConstructorWithDefault =
-            findByUniquePredicate(constructors) { c: Constructor ->
-                c.name.localName == "H"
-            }
+            findByUniquePredicate(constructors) { c: Constructor -> c.name.localName == "H" }
         val h1 = findByUniqueName(variables, "h1")
         assertTrue(h1.initializer is ConstructExpression)
 

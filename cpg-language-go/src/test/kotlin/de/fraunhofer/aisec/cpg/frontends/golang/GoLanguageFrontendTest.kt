@@ -600,9 +600,7 @@ class GoLanguageFrontendTest : BaseTest() {
         val body = main.body as? Block
         assertNotNull(body)
 
-        val b =
-            (body.statements.first() as? DeclarationStatement)?.singleDeclaration
-                as? Variable
+        val b = (body.statements.first() as? DeclarationStatement)?.singleDeclaration as? Variable
 
         assertNotNull(b)
         assertLocalName("b", b)

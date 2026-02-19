@@ -28,8 +28,8 @@ package de.fraunhofer.aisec.cpg.frontends.cxx
 import de.fraunhofer.aisec.cpg.InferenceConfiguration.Companion.builder
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.*
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
 import de.fraunhofer.aisec.cpg.graph.types.*
@@ -221,9 +221,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             val statement = main.body as Block
 
             // first statement is the variable declaration
-            val x =
-                (statement.statements[0] as DeclarationStatement).singleDeclaration
-                    as Variable
+            val x = (statement.statements[0] as DeclarationStatement).singleDeclaration as Variable
             assertNotNull(x)
             assertEquals(primitiveType("int").array(), x.type)
 
@@ -243,8 +241,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
 
             // third statement declares a pointer to an array
             val a =
-                (statement.statements[2] as? DeclarationStatement)?.singleDeclaration
-                    as? Variable
+                (statement.statements[2] as? DeclarationStatement)?.singleDeclaration as? Variable
             assertNotNull(a)
 
             val type = a.type
@@ -387,9 +384,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             )
 
             val declFromMultiplicateExpression =
-                (statements[0] as DeclarationStatement).getSingleDeclarationAs(
-                    Variable::class.java
-                )
+                (statements[0] as DeclarationStatement).getSingleDeclarationAs(Variable::class.java)
             assertEquals(
                 assertResolvedType("SSL_CTX").pointer(),
                 declFromMultiplicateExpression.type,
@@ -397,9 +392,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             assertLocalName("ptr", declFromMultiplicateExpression)
 
             val withInitializer =
-                (statements[1] as DeclarationStatement).getSingleDeclarationAs(
-                    Variable::class.java
-                )
+                (statements[1] as DeclarationStatement).getSingleDeclarationAs(Variable::class.java)
             var initializer = withInitializer.initializer
             assertNotNull(initializer)
             assertTrue(initializer is Literal<*>)
@@ -419,27 +412,21 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             assertEquals(primitiveType("int"), c.type)
 
             val withoutInitializer =
-                (statements[3] as DeclarationStatement).getSingleDeclarationAs(
-                    Variable::class.java
-                )
+                (statements[3] as DeclarationStatement).getSingleDeclarationAs(Variable::class.java)
             initializer = withoutInitializer.initializer
             assertEquals(primitiveType("int").reference(POINTER), withoutInitializer.type)
             assertLocalName("d", withoutInitializer)
             assertNull(initializer)
 
             val qualifiedType =
-                (statements[4] as DeclarationStatement).getSingleDeclarationAs(
-                    Variable::class.java
-                )
+                (statements[4] as DeclarationStatement).getSingleDeclarationAs(Variable::class.java)
             assertEquals(objectType("std::string"), qualifiedType.type)
             assertLocalName("text", qualifiedType)
             assertTrue(qualifiedType.initializer is Literal<*>)
             assertEquals("some text", (qualifiedType.initializer as? Literal<*>)?.value)
 
             val pointerWithAssign =
-                (statements[5] as DeclarationStatement).getSingleDeclarationAs(
-                    Variable::class.java
-                )
+                (statements[5] as DeclarationStatement).getSingleDeclarationAs(Variable::class.java)
             assertEquals(incompleteType().reference(POINTER), pointerWithAssign.type)
             assertLocalName("ptr2", pointerWithAssign)
             assertLiteralValue(null, pointerWithAssign.initializer)
@@ -935,9 +922,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             val statement = main!!.body as Block
 
             // Integer i
-            val i =
-                (statement.statements[0] as DeclarationStatement).singleDeclaration
-                    as Variable
+            val i = (statement.statements[0] as DeclarationStatement).singleDeclaration as Variable
             // type should be Integer
             assertEquals(assertResolvedType("Integer"), i.type)
 
@@ -948,9 +933,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
             assertEquals(assertResolvedType("Integer"), constructExpr.type)
 
             // auto (Integer) m
-            val m =
-                (statement.statements[6] as DeclarationStatement).singleDeclaration
-                    as Variable
+            val m = (statement.statements[6] as DeclarationStatement).singleDeclaration as Variable
             // type should be Integer*
             assertEquals(assertResolvedType("Integer").pointer(), m.type)
 
@@ -1053,8 +1036,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertTrue(statements[4] is ReturnStatement)
 
         var initializer =
-            ((statements[0] as DeclarationStatement).singleDeclaration as Variable)
-                .initializer
+            ((statements[0] as DeclarationStatement).singleDeclaration as Variable).initializer
         assertTrue(initializer is InitializerListExpression)
         assertEquals(3, initializer.initializers.size)
         assertTrue(initializer.initializers[0] is AssignExpression)
@@ -1080,8 +1062,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals(2, (die.rhs[0] as Literal<*>).value)
 
         initializer =
-            ((statements[1] as DeclarationStatement).singleDeclaration as Variable)
-                .initializer
+            ((statements[1] as DeclarationStatement).singleDeclaration as Variable).initializer
         assertTrue(initializer is InitializerListExpression)
         assertEquals(1, initializer.initializers.size)
         assertTrue(initializer.initializers[0] is AssignExpression)
@@ -1093,8 +1074,7 @@ internal class CXXLanguageFrontendTest : BaseTest() {
         assertEquals(20, (die.rhs[0] as Literal<*>).value)
 
         initializer =
-            ((statements[3] as DeclarationStatement).singleDeclaration as Variable)
-                .initializer
+            ((statements[3] as DeclarationStatement).singleDeclaration as Variable).initializer
         assertTrue(initializer is InitializerListExpression)
         assertEquals(2, initializer.initializers.size)
         assertTrue(initializer.initializers[0] is AssignExpression)

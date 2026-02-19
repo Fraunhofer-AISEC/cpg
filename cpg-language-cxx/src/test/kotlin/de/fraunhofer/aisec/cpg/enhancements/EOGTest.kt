@@ -593,8 +593,7 @@ internal class EOGTest : BaseTest() {
     @Throws(Exception::class)
     fun testSwitch(relPath: String, refNodeString: String) {
         val nodes = translateToNodes(relPath)
-        val functions =
-            nodes.filterIsInstance<Function>().filter { it !is Constructor }
+        val functions = nodes.filterIsInstance<Function>().filter { it !is Constructor }
 
         // main()
         var swch = functions[0].allChildren<SwitchStatement>()[0]

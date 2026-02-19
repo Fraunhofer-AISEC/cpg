@@ -31,9 +31,9 @@ import de.fraunhofer.aisec.cpg.frontends.Language
 import de.fraunhofer.aisec.cpg.frontends.LanguageFrontend
 import de.fraunhofer.aisec.cpg.frontends.TranslationException
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.Annotation
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.Expression
 import de.fraunhofer.aisec.cpg.graph.types.*
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
@@ -589,8 +589,7 @@ open class CXXLanguageFrontend(ctx: TranslationContext, language: Language<CXXLa
                 )
             }
             // The type of constructor declaration is always the declaration itself
-            specifier.type == IASTSimpleDeclSpecifier.t_unspecified &&
-                hint is Constructor -> {
+            specifier.type == IASTSimpleDeclSpecifier.t_unspecified && hint is Constructor -> {
                 hint.name.parent?.let { objectType(it, rawNode = specifier) } ?: unknownType()
             }
             // The type of conversion operator is also always the declaration itself

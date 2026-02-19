@@ -27,8 +27,8 @@ package de.fraunhofer.aisec.cpg.frontends.typescript
 
 import de.fraunhofer.aisec.cpg.frontends.Handler
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.*
+import de.fraunhofer.aisec.cpg.graph.declarations.Function
 
 class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
     Handler<Declaration, TypeScriptNode, TypeScriptLanguageFrontend>(::Problem, lang) {
@@ -147,11 +147,7 @@ class DeclarationHandler(lang: TypeScriptLanguageFrontend) :
                 "Constructor" -> {
                     val record = this.frontend.scopeManager.currentRecord
 
-                    newConstructor(
-                        record?.name?.toString() ?: "",
-                        record,
-                        rawNode = node,
-                    )
+                    newConstructor(record?.name?.toString() ?: "", record, rawNode = node)
                 }
                 else -> newFunction(name, rawNode = node)
             }

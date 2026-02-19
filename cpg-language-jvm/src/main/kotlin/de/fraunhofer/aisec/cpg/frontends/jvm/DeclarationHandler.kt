@@ -53,10 +53,7 @@ class DeclarationHandler(frontend: JVMLanguageFrontend) :
             }
         } catch (e: Exception) {
             log.error("Error while handling a declaration", e)
-            return newProblem(
-                "Error handling declaration ${ctx}: ${e.message}",
-                rawNode = ctx,
-            )
+            return newProblem("Error handling declaration ${ctx}: ${e.message}", rawNode = ctx)
         }
     }
 

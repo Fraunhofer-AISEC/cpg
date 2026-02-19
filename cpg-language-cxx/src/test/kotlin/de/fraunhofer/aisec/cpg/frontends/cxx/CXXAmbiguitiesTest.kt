@@ -26,7 +26,6 @@
 package de.fraunhofer.aisec.cpg.frontends.cxx
 
 import de.fraunhofer.aisec.cpg.graph.*
-import de.fraunhofer.aisec.cpg.graph.declarations.Function
 import de.fraunhofer.aisec.cpg.graph.declarations.Problem
 import de.fraunhofer.aisec.cpg.graph.statements.DeclarationStatement
 import de.fraunhofer.aisec.cpg.graph.statements.expressions.*
@@ -43,8 +42,8 @@ class CXXAmbiguitiesTest {
      * This test is somewhat tricky. CDT thinks that certain call expressions are function
      * declarations in function declarations (which is not possible, with the exception of lambdas).
      * The issue is that we cannot currently solve this ambiguity, but rather we can recognize it as
-     * a [Problem] and make sure that it is contained to the local function and the rest
-     * of the AST and its scope are not affected by it (too much).
+     * a [Problem] and make sure that it is contained to the local function and the rest of the AST
+     * and its scope are not affected by it (too much).
      *
      * If we ever fix the ambiguity, this test will probably FAIL and needs to be adjusted.
      */

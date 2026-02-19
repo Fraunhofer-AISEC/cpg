@@ -91,8 +91,8 @@ class JVMLanguageFrontend(
      * Because of a limitation in SootUp, we can only specify the whole classpath for soot to parse.
      * But in the CPG we need to specify one file. In this case, we take the
      * [TranslationConfiguration.topLevel] and hand it over to soot, which parses all appropriate
-     * files within this folder/classpath. This means that the returned [TranslationUnit]
-     * will contain not just the content of one file but the whole directory.
+     * files within this folder/classpath. This means that the returned [TranslationUnit] will
+     * contain not just the content of one file but the whole directory.
      */
     override fun parse(file: File): TranslationUnit {
         val view =

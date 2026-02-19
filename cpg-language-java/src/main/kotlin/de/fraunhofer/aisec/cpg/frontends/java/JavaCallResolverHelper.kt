@@ -101,10 +101,7 @@ fun SymbolResolver.handleSuperExpressionHelper(
     return false
 }
 
-fun SymbolResolver.handleSpecificSupertype(
-    callee: MemberExpression,
-    curClass: Record,
-): Record? {
+fun SymbolResolver.handleSpecificSupertype(callee: MemberExpression, curClass: Record): Record? {
     val baseName = callee.base.name.parent ?: return null
 
     val type = typeManager.lookupResolvedType(baseName.toString()) ?: callee.unknownType()
