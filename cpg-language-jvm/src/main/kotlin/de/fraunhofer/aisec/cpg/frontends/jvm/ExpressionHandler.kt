@@ -373,6 +373,8 @@ class ExpressionHandler(frontend: JVMLanguageFrontend) :
     private fun SootClassMemberSignature<*>.toStaticRef(): Reference {
         // First, construct the name using <parent-type>.<fun>
         val ref = newReference("${this.declClassType.fullyQualifiedName}.${this.name}")
+        frontend.typeManager.lookAlsoAtThis +=
+            objectType("${this.declClassType.fullyQualifiedName}")
 
         // Make it static
         ref.isStaticAccess = true

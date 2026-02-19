@@ -28,6 +28,11 @@ package de.fraunhofer.aisec.cpg.frontends.jvm
 import de.fraunhofer.aisec.cpg.frontends.HasClasses
 import de.fraunhofer.aisec.cpg.frontends.HasFunctionOverloading
 import de.fraunhofer.aisec.cpg.frontends.Language
+import de.fraunhofer.aisec.cpg.graph.declarations.Declaration
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
+import de.fraunhofer.aisec.cpg.graph.declarations.VariableDeclaration
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.CallExpression
+import de.fraunhofer.aisec.cpg.graph.statements.expressions.Reference
 import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
 
@@ -53,4 +58,23 @@ class JVMLanguage : Language<JVMLanguageFrontend>(), HasClasses, HasFunctionOver
         )
 
     override val compoundAssignmentOperators: Set<String> = setOf()
+
+    /**
+     * This function handles some specifics of the Java language when choosing a reference target
+     * before invoking [Language.bestViableReferenceCandidate].
+     */
+    override fun bestViableReferenceCandidate(ref: Reference): Declaration? {
+        // Java allows to have "ambiguous" symbol when importing static fields and methods.
+        // Therefore, it can be that we both import a field and a method with the same name. We
+        // therefore do some additional filtering of the candidates here, before handling it.
+        if (ref.candidates.size > 1) {
+            if (ref.resolutionHelper is CallExpression) {
+                ref.candidates = ref.candidates.filter { it is FunctionDeclaration }.toSet()
+            } else {
+                ref.candidates = ref.candidates.filter { it is VariableDeclaration }.toSet()
+            }
+        }
+
+        return super.bestViableReferenceCandidate(ref)
+    }
 }

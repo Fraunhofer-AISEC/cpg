@@ -67,6 +67,8 @@ class TypeManager {
      */
     val resolvedTypes = identitySetOf<Type>()
 
+    val lookAlsoAtThis = identitySetOf<Type>()
+
     /**
      * @param recordDeclaration that is instantiated by a template containing parameterizedtypes
      * @param name of the ParameterizedType we want to get
