@@ -25,7 +25,6 @@
  */
 package de.fraunhofer.aisec.cpg.helpers
 
-import de.fraunhofer.aisec.cpg.GraphExamples
 import de.fraunhofer.aisec.cpg.TranslationConfiguration
 import de.fraunhofer.aisec.cpg.frontends.TestLanguage
 import de.fraunhofer.aisec.cpg.graph.*
@@ -34,6 +33,7 @@ import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.NamespaceDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.test.*
+import de.fraunhofer.aisec.cpg.test.GraphExamples
 import kotlin.test.*
 
 internal class SubgraphWalkerTest : BaseTest() {

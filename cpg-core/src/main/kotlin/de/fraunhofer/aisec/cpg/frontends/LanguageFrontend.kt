@@ -27,6 +27,7 @@ package de.fraunhofer.aisec.cpg.frontends
 
 import de.fraunhofer.aisec.cpg.*
 import de.fraunhofer.aisec.cpg.graph.*
+import de.fraunhofer.aisec.cpg.graph.declarations.FunctionDeclaration
 import de.fraunhofer.aisec.cpg.graph.declarations.TranslationUnitDeclaration
 import de.fraunhofer.aisec.cpg.graph.scopes.Scope
 import de.fraunhofer.aisec.cpg.graph.types.Type
@@ -35,6 +36,19 @@ import de.fraunhofer.aisec.cpg.sarif.Region
 import java.io.File
 import java.util.*
 import org.slf4j.LoggerFactory
+
+/** Configuration specific to the frontend. */
+abstract class FrontendConfiguration<L : LanguageFrontend<*, *>> {
+    /**
+     * Determines whether the body of a function should NOT be parsed.
+     *
+     * @param frontend The language frontend
+     * @param node The function declaration to check
+     * @return true if the function's body should not be parsed, false otherwise (parse the body)
+     */
+    context(provider: FrontendProvider<L>)
+    abstract fun doNotParseBody(node: FunctionDeclaration): Boolean
+}
 
 /**
  * The main task of the language frontend is to translate the programming language-specific files to
@@ -65,6 +79,10 @@ abstract class LanguageFrontend<AstNode, TypeNode>(
     val scopeManager: ScopeManager = ctx.scopeManager
     val typeManager: TypeManager = ctx.typeManager
     val config: TranslationConfiguration = ctx.config
+
+    open val frontendConfiguration: FrontendConfiguration<out LanguageFrontend<*, *>>? by lazy {
+        this.ctx.config.frontendConfigurations[this::class]
+    }
 
     var currentTU: TranslationUnitDeclaration? = null
 

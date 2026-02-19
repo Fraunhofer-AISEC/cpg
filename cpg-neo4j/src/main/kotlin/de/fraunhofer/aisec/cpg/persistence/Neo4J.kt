@@ -23,18 +23,13 @@
  *                    \______/ \__|       \______/
  *
  */
-@file:Suppress("CONTEXT_RECEIVERS_DEPRECATED")
-
 package de.fraunhofer.aisec.cpg.persistence
 
 import de.fraunhofer.aisec.cpg.TranslationResult
 import de.fraunhofer.aisec.cpg.graph.Node
 import de.fraunhofer.aisec.cpg.graph.Persistable
-import de.fraunhofer.aisec.cpg.graph.edges.collections.EdgeCollection
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.helpers.Benchmark
-import de.fraunhofer.aisec.cpg.helpers.IdentitySet
-import de.fraunhofer.aisec.cpg.helpers.identitySetOf
 import java.net.ConnectException
 import org.neo4j.driver.GraphDatabase
 import org.neo4j.driver.Session
@@ -66,7 +61,7 @@ internal typealias Relationship = Map<String, Any?>
 
 /**
  * This function creates a new Neo4j session, optionally purges the database, and persists the
- * current [TranslationResult] into the database using the [persist] function (which requires a
+ * current [TranslationResult] into the database using the [persistNeo4j] function (which requires a
  * session context often not available at the call-site).
  *
  * @param noPurgeDb A boolean flag indicating whether to skip the database purge step. If set to
@@ -88,7 +83,7 @@ fun TranslationResult.pushToNeo4j(
     val session: Session = connect(protocol, host, port, neo4jUsername, neo4jPassword)
     with(session) {
         if (!noPurgeDb) executeWrite { tx -> tx.run("MATCH (n) DETACH DELETE n").consume() }
-        this@pushToNeo4j.persist()
+        this@pushToNeo4j.persistNeo4j()
     }
     session.close()
 }
@@ -113,10 +108,10 @@ fun TranslationResult.pushToNeo4j(
  * - A [Session] context to perform persistence actions.
  */
 context(_: Session)
-fun TranslationResult.persist() {
+fun TranslationResult.persistNeo4j() {
     val b = Benchmark(Persistable::class.java, "Persisting translation result")
 
-    val astNodes = this@persist.nodes
+    val astNodes = this@persistNeo4j.nodes
     val connected = astNodes.flatMap { it.connectedNodes }.toSet()
     val nodes = (astNodes + connected).distinct()
 
@@ -126,12 +121,12 @@ fun TranslationResult.persist() {
         astNodes.size,
         connected.size,
     )
-    nodes.persist()
+    nodes.persistNeo4j()
 
     val relationships = nodes.collectRelationships()
 
     log.info("Persisting {} relationships", relationships.size)
-    relationships.persist()
+    relationships.persistNeo4j()
 
     b.stop()
 }
@@ -151,15 +146,15 @@ fun TranslationResult.persist() {
  * it extracts the labels and properties and executes the Cypher query to persist the node.
  */
 context(session: Session)
-private fun List<Node>.persist() {
+private fun List<Node>.persistNeo4j() {
     this.chunked(nodeChunkSize).map { chunk ->
         val b = Benchmark(Persistable::class.java, "Persisting chunk of ${chunk.size} nodes")
         val params =
             mapOf("props" to chunk.map { mapOf("labels" to it::class.labels) + it.properties() })
         session.executeWrite { tx ->
             tx.run(
-                    """
-                   UNWIND ${"$"}props AS map
+                    $$"""
+                   UNWIND $props AS map
                    WITH map, apoc.map.removeKeys(map, ['labels']) AS properties
                    CALL apoc.create.node(map.labels, properties) YIELD node
                    RETURN node
@@ -191,7 +186,7 @@ private fun List<Node>.persist() {
  * - Relationship properties and labels are mapped before using database utilities for creation.
  */
 context(session: Session)
-private fun Collection<Relationship>.persist() {
+private fun Collection<Relationship>.persistNeo4j() {
     // Create an index for the "id" field of node, because we are "MATCH"ing on it in the edge
     // creation. We need to wait for this to be finished
     session.executeWrite { tx ->
@@ -214,8 +209,8 @@ private fun Session.createRelationships(props: List<Relationship>) {
     val params = mapOf("props" to props)
     executeWrite { tx ->
         tx.run(
-                """
-            UNWIND ${'$'}props AS map
+                $$"""
+            UNWIND $props AS map
             MATCH (s:Node {id: map.startId})
             MATCH (e:Node {id: map.endId})
             WITH s, e, map, apoc.map.removeKeys(map, ['startId', 'endId', 'type']) AS properties
@@ -231,87 +226,9 @@ private fun Session.createRelationships(props: List<Relationship>) {
 }
 
 /**
- * Returns all [Node] objects that are connected with this node with some kind of relationship
- * defined in [schemaRelationships].
- */
-val Persistable.connectedNodes: IdentitySet<Node>
-    get() {
-        val nodes = identitySetOf<Node>()
-
-        for (entry in this::class.schemaRelationships) {
-            val value = entry.value.call(this)
-            when (value) {
-                is EdgeCollection<*, *> -> {
-                    nodes += value.toNodeCollection()
-                }
-                is List<*> -> {
-                    nodes += value.filterIsInstance<Node>()
-                }
-                is Node -> {
-                    nodes += value
-                }
-            }
-        }
-
-        return nodes
-    }
-
-private fun List<Node>.collectRelationships(): List<Relationship> {
-    val relationships = mutableListOf<Relationship>()
-
-    for (node in this) {
-        for (entry in node::class.schemaRelationships) {
-            val value = entry.value.call(node)
-            when (value) {
-                is EdgeCollection<*, *> -> {
-                    relationships +=
-                        value.map { edge ->
-                            mapOf(
-                                "startId" to edge.start.id.toString(),
-                                "endId" to edge.end.id.toString(),
-                                "type" to entry.key,
-                            ) + edge.properties()
-                        }
-                }
-                is List<*> -> {
-                    relationships +=
-                        value.filterIsInstance<Node>().map { end ->
-                            mapOf(
-                                "startId" to node.id.toString(),
-                                "endId" to end.id.toString(),
-                                "type" to entry.key,
-                            )
-                        }
-                }
-                is Node -> {
-                    relationships +=
-                        mapOf(
-                            "startId" to node.id.toString(),
-                            "endId" to value.id.toString(),
-                            "type" to entry.key,
-                        )
-                }
-            }
-        }
-    }
-
-    // Since Neo4J does not support multiple labels on edges, but we do internally, we
-    // duplicate the edge for each label
-    /*edge.labels.map { label ->
-        mapOf(
-            "startId" to edge.start.id.toString(),
-            "endId" to edge.end.id.toString(),
-            "type" to label
-        ) + edge.properties()
-    }*/
-    return relationships
-}
-
-/**
  * Connects to the neo4j db.
  *
- * @return a Pair of Optionals of the Session and the SessionFactory, if it is possible to connect
- *   to neo4j. If it is not possible, the return value is a Pair of empty Optionals.
+ * @return the [Session] object for interacting with the database.
  * @throws InterruptedException, if the thread is interrupted while it tries to connect to the neo4j
  *   db.
  * @throws ConnectException, if there is no connection to bolt://localhost:7687 possible

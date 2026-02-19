@@ -30,30 +30,25 @@ import de.fraunhofer.aisec.cpg.graph.types.*
 import kotlin.reflect.KClass
 
 class JVMLanguage : Language<JVMLanguageFrontend>() {
-    override val fileExtensions: List<String>
-        get() = listOf("class", "java", "jimple", "jar", "apk")
+    override val fileExtensions: List<String> = listOf("class", "java", "jimple", "jar", "apk")
 
-    override val namespaceDelimiter: String
-        get() = "."
+    override val namespaceDelimiter: String = "."
 
-    override val frontend: KClass<out JVMLanguageFrontend>
-        get() = JVMLanguageFrontend::class
+    override val frontend: KClass<out JVMLanguageFrontend> = JVMLanguageFrontend::class
 
-    override val builtInTypes: Map<String, Type>
-        get() =
-            mapOf(
-                "float" to FloatingPointType("float", 32, this),
-                "double" to FloatingPointType("double", 64, this),
-                "char" to IntegerType("char", 8, this, NumericType.Modifier.UNSIGNED),
-                "boolean" to BooleanType("boolean", 1, this),
-                "byte" to IntegerType("byte", 8, this),
-                "short" to IntegerType("short", 16, this),
-                "int" to IntegerType("int", 32, this),
-                "long" to IntegerType("long", 64, this),
-                "java.lang.String" to StringType("java.lang.String", this),
-                "java.lang.Class" to ObjectType("java.lang.Class", listOf(), true, this),
-            )
+    override val builtInTypes: Map<String, Type> =
+        mapOf(
+            "float" to FloatingPointType("float", 32, this),
+            "double" to FloatingPointType("double", 64, this),
+            "char" to IntegerType("char", 8, this, NumericType.Modifier.UNSIGNED),
+            "boolean" to BooleanType("boolean", 1, this),
+            "byte" to IntegerType("byte", 8, this),
+            "short" to IntegerType("short", 16, this),
+            "int" to IntegerType("int", 32, this),
+            "long" to IntegerType("long", 64, this),
+            "java.lang.String" to StringType("java.lang.String", this),
+            "java.lang.Class" to ObjectType("java.lang.Class", listOf(), true, this),
+        )
 
-    override val compoundAssignmentOperators: Set<String>
-        get() = setOf()
+    override val compoundAssignmentOperators: Set<String> = setOf()
 }

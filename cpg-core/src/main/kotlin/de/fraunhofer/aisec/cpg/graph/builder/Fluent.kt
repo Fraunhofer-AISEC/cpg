@@ -119,6 +119,31 @@ fun LanguageFrontend<*, *>.namespace(
 }
 
 /**
+ * Creates a new [ExtensionDeclaration] in the Fluent Node DSL with the given [name].
+ *
+ * The scope for the [init] block is set to either the provided [extendedDeclaration] (if non-null)
+ * or to the newly created [ExtensionDeclaration] node itself. The [init] block can be used to
+ * create further sub-nodes as well as configuring the created node itself.
+ */
+context(holder: DeclarationHolder)
+fun LanguageFrontend<*, *>.extension(
+    name: CharSequence? = null,
+    extendedDeclaration: RecordDeclaration? = null,
+    init: ExtensionDeclaration.() -> Unit,
+): ExtensionDeclaration {
+    val node = newExtensionDeclaration(name ?: Node.EMPTY_NAME)
+    node.extendedDeclaration = extendedDeclaration
+
+    scopeManager.enterScope(extendedDeclaration ?: node)
+    init(node)
+    scopeManager.leaveScope(extendedDeclaration ?: node)
+    scopeManager.addDeclaration(node)
+    holder.addDeclaration(node)
+
+    return node
+}
+
+/**
  * Creates a new [RecordDeclaration] in the Fluent Node DSL with the given [name]. The declaration
  * will be set to the [ScopeManager.currentRecord]. The [init] block can be used to create further
  * sub-nodes as well as configuring the created node itself.
@@ -212,7 +237,7 @@ fun LanguageFrontend<*, *>.function(
  * [returnType]. The [init] block can be used to create further sub-nodes as well as configuring the
  * created node itself.
  */
-context(record: RecordDeclaration)
+context(holder: DeclarationHolder)
 fun LanguageFrontend<*, *>.method(
     name: CharSequence,
     returnType: Type = this.unknownType(),
@@ -230,7 +255,7 @@ fun LanguageFrontend<*, *>.method(
     scopeManager.leaveScope(node)
 
     scopeManager.addDeclaration(node)
-    record.methods += node
+    holder.addDeclaration(node)
 
     return node
 }
@@ -1255,7 +1280,7 @@ operator fun Expression.plus(rhs: Expression): BinaryOperator {
  * and adds it to the nearest enclosing [StatementHolder].
  */
 context(frontend: LanguageFrontend<*, *>, holder: StatementHolder)
-operator fun Expression.plusAssign(rhs: Expression) {
+infix operator fun Expression.plusAssign(rhs: Expression) {
     val node =
         frontend.newAssignExpression("+=", listOf(this), listOf(rhs)).apply {
             this.location = getCallerFileAndLine()

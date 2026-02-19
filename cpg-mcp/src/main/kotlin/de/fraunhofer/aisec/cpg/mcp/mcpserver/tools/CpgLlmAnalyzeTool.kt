@@ -28,6 +28,11 @@ package de.fraunhofer.aisec.cpg.mcp.mcpserver.tools
 import de.fraunhofer.aisec.cpg.graph.nodes
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.cpgDescription
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.*
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.CpgLlmAnalyzePayload
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableConcepts
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.getAvailableOperations
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toObject
+import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.utils.toSchema
 import de.fraunhofer.aisec.cpg.serialization.toJSON
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.types.CallToolResult
@@ -37,7 +42,6 @@ import io.modelcontextprotocol.kotlin.sdk.types.ModelPreferences
 import io.modelcontextprotocol.kotlin.sdk.types.Role
 import io.modelcontextprotocol.kotlin.sdk.types.SamplingMessage
 import io.modelcontextprotocol.kotlin.sdk.types.TextContent
-import io.modelcontextprotocol.kotlin.sdk.types.ToolSchema
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 
@@ -54,22 +58,10 @@ fun Server.addCpgLlmAnalyzeTool() {
         """
             .trimIndent()
 
-    val inputSchema =
-        ToolSchema(
-            properties =
-                buildJsonObject {
-                    putJsonObject("description") {
-                        put("type", "string")
-                        put("description", "Additional context for the analysis")
-                    }
-                },
-            required = listOf(),
-        )
-
     this.addTool(
         name = "cpg_llm_analyze",
         description = toolDescription,
-        inputSchema = inputSchema,
+        inputSchema = CpgLlmAnalyzePayload::class.toSchema(),
     ) { request ->
         try {
             val payload =

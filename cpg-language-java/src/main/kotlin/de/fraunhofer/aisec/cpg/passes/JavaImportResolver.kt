@@ -145,7 +145,7 @@ open class JavaImportResolver(ctx: TranslationContext) : ComponentPass(ctx) {
                 newFieldDeclaration(
                     name,
                     UnknownType.getUnknownType(base.language),
-                    ArrayList(),
+                    setOf(),
                     null,
                     false,
                 )

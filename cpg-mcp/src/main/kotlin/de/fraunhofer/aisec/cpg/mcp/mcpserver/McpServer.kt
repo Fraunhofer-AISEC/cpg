@@ -26,29 +26,29 @@
 package de.fraunhofer.aisec.cpg.mcp.mcpserver
 
 import de.fraunhofer.aisec.cpg.mcp.mcpserver.tools.*
-import io.modelcontextprotocol.kotlin.sdk.Implementation
-import io.modelcontextprotocol.kotlin.sdk.ServerCapabilities
 import io.modelcontextprotocol.kotlin.sdk.server.Server
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
+import io.modelcontextprotocol.kotlin.sdk.types.Implementation
+import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 
 fun configureServer(
     configure: Server.() -> Server = {
-        //        this.addCpgTranslate()
-        //        this.addListPasses()
-        //        this.addRunPass()
-        //        this.addCpgAnalyzeTool()
-        //        this.addCpgLlmAnalyzeTool()
-        //        this.addCpgApplyConceptsTool()
-        //        this.addCpgDataflowTool()
+        this.addCpgTranslate()
+        this.addListPasses()
+        this.addRunPass()
+        this.addCpgAnalyzeTool()
+        this.addCpgLlmAnalyzeTool()
+        this.addCpgApplyConceptsTool()
+        this.addCpgDataflowTool()
         this.listFunctions()
         this.listRecords()
         this.listCalls()
         this.listCallsTo()
-        //        this.listAvailableConcepts()
-        //        this.listAvailableOperations()
-        //        this.getAllArgs()
-        //        this.getArgByIndexOrName()
-        //        this.listConceptsAndOperations()
+        this.listAvailableConcepts()
+        this.listAvailableOperations()
+        this.getAllArgs()
+        this.getArgByIndexOrName()
+        this.listConceptsAndOperations()
         this.getNode()
         this.addDfgBackwardTool()
         this

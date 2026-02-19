@@ -380,7 +380,7 @@ fun MetadataProvider.newEnumConstantDeclaration(
 fun MetadataProvider.newFieldDeclaration(
     name: CharSequence?,
     type: Type = unknownType(),
-    modifiers: List<String>? = listOf(),
+    modifiers: Set<String> = setOf(),
     initializer: Expression? = null,
     implicitInitializerAllowed: Boolean = false,
     rawNode: Any? = null,
@@ -389,7 +389,7 @@ fun MetadataProvider.newFieldDeclaration(
     node.applyMetadata(this, name, rawNode)
 
     node.type = type
-    node.modifiers = modifiers ?: listOf()
+    node.modifiers = modifiers ?: setOf()
     node.isImplicitInitializerAllowed = implicitInitializerAllowed
     if (initializer != null) {
         if (initializer is NewArrayExpression) {
@@ -455,6 +455,24 @@ fun MetadataProvider.newNamespaceDeclaration(
     rawNode: Any? = null,
 ): NamespaceDeclaration {
     val node = NamespaceDeclaration()
+    node.applyMetadata(this, name, rawNode)
+
+    log(node)
+    return node
+}
+
+/**
+ * Creates a new [ExtensionDeclaration]. The [MetadataProvider] receiver will be used to fill
+ * different meta-data using [Node.applyMetadata]. Calling this extension function outside of Kotlin
+ * requires an appropriate [MetadataProvider], such as a [LanguageFrontend] as an additional
+ * prepended argument.
+ */
+@JvmOverloads
+fun MetadataProvider.newExtensionDeclaration(
+    name: CharSequence,
+    rawNode: Any? = null,
+): ExtensionDeclaration {
+    val node = ExtensionDeclaration()
     node.applyMetadata(this, name, rawNode)
 
     log(node)

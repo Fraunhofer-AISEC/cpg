@@ -41,7 +41,12 @@ class ControlDependence(
     start: Node,
     end: Node,
     /** A set of [EvaluationOrder.branch] values. */
-    var branches: Set<Boolean> = setOf(),
+    var branches: Set<Boolean> =
+        HashSet(
+            1
+        ), // We set the capacity to 1, as the node depends on the true or false branch, never both.
+    // This means, the maximum size of the set is 1, and we can save some memory by setting
+    // the initial capacity to 1.
 ) : ProgramDependence(start, end, DependenceType.CONTROL) {
 
     override var labels = super.labels.plus("CDG")

@@ -40,7 +40,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
             is GoStandardLibrary.Ast.FuncDecl -> handleFuncDecl(node)
             is GoStandardLibrary.Ast.GenDecl -> handleGenDecl(node)
             else -> {
-                return handleNotSupported(node, node.goType)
+                handleNotSupported(node, node.goType)
             }
         }
     }
@@ -139,7 +139,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
         handleFuncParams(func, funcDecl.type.params)
 
         // Only parse function body in non-dependencies
-        if (!frontend.isDependency) {
+        if (!frontend.frontendConfiguration.doNotParseBody(func)) {
             // Check, if the last statement is a return statement, otherwise we insert an implicit
             // one
             val body = funcDecl.body?.let { frontend.statementHandler.handle(it) }
@@ -201,7 +201,7 @@ class DeclarationHandler(frontend: GoLanguageFrontend) :
             // Create one param variable per name
             for (name in names) {
                 // Check for varargs. In this case we want to parse the element type
-                // (and make it an array afterwards)
+                // (and make it an array afterward)
                 val (type, variadic) = frontend.fieldTypeOf(param.type)
 
                 val p = newParameterDeclaration(name, type, variadic, rawNode = param)
